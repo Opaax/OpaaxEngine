@@ -55,7 +55,7 @@ namespace Opaax
     // DataAssetTypeRegistry — the struct types a .opaaxdata file can hold. Registering is the only
     //   step a game takes: the file format, the editor panel and "Create" all come from here.
     // =============================================================================
-    class OPAAX_API DataAssetTypeRegistry
+    class DataAssetTypeRegistry
     {
     public:
         DataAssetTypeRegistry() = default;

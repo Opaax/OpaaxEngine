@@ -24,7 +24,7 @@ namespace Opaax
     //   Four state colours tint its art (texture or sheet frame). Add a UIText child for a label.
     //   It handles its pointer events, so clicks do not reach the game.
     // =============================================================================
-    class OPAAX_API UIButton final : public UIWidget
+    class UIButton final : public UIWidget
     {
         // =============================================================================
         // Authored state

@@ -14,7 +14,7 @@ namespace Opaax
     // MoverModeRegistry — the movement modes a .opaaxmovemode can use.
     //   Modes are stateless: one instance of each, shared. Sealed before the first world.
     // =============================================================================
-    class OPAAX_API MoverModeRegistry
+    class MoverModeRegistry
     {
         // =========================================================================
         // CTORS - DTORS

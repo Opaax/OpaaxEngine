@@ -10,7 +10,7 @@ namespace Opaax
     // =============================================================================
     // IPlatform — OS abstraction (cores, time, env...).
     // =============================================================================
-    class OPAAX_API IPlatform : public IAppService
+    class IPlatform : public IAppService
     {
     public:
         OPAAX_SERVICE_TYPE(IPlatform)

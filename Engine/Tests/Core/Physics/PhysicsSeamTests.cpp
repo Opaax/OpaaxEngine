@@ -1,6 +1,6 @@
 // Suite: the physics interface (PhysicsAPI.h + IPhysicsWorld.h) with the real Box2D backend.
-// Never names a b2* type: Box2D is private to the engine DLL, so this also proves the interface
-// is properly exported. Physics needs no GL context, so it can be fully tested here.
+// Never names a b2* type: Box2D is private to the engine's physics code, so this also proves the
+// interface is enough on its own. Physics needs no GL context, so it can be fully tested here.
 #include <doctest.h>
 
 #include "Physics/Collision/CollisionChannel.h"

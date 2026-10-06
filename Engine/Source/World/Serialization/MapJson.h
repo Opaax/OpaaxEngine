@@ -65,7 +65,7 @@ namespace Opaax
          * Serializes InData. Entities sorted by guid (stable in git, needed by the dirty check).
          * Components are an object keyed by name. mapId is always written ("" for a non-map capture).
          */
-        OPAAX_API nlohmann::json ToJson(const MapData& InData);
+        nlohmann::json ToJson(const MapData& InData);
 
         /**
          * Parses InJson into OutData. Never throws; OutData is untouched on failure.
@@ -73,24 +73,24 @@ namespace Opaax
          * bad guid is skipped with a warning.
          * @return False if InJson is not an object, or its version is newer than MAP_FORMAT_VERSION
          */
-        OPAAX_API bool FromJson(const nlohmann::json& InJson, MapData& OutData);
+        bool FromJson(const nlohmann::json& InJson, MapData& OutData);
 
         /** ToJson + indented dump. */
-        OPAAX_API OpaaxString Serialize(const MapData& InData);
+        OpaaxString Serialize(const MapData& InData);
 
         /**
          * Same text, moving the component payloads instead of copying them. Use for temporaries.
          */
-        OPAAX_API OpaaxString Serialize(MapData&& InData);
+        OpaaxString Serialize(MapData&& InData);
 
         /**
          * Same JSON without whitespace, for the editor's dirty check only (not a file format).
          * Compare it only with text built the same way.
          */
-        OPAAX_API OpaaxString SerializeCompact(const MapData& InData);
-        OPAAX_API OpaaxString SerializeCompact(MapData&& InData);
+        OpaaxString SerializeCompact(const MapData& InData);
+        OpaaxString SerializeCompact(MapData&& InData);
 
         /** Parses text (never throws), then FromJson. @return False on malformed JSON. */
-        OPAAX_API bool Deserialize(const OpaaxString& InText, MapData& OutData);
+        bool Deserialize(const OpaaxString& InText, MapData& OutData);
     }
 }

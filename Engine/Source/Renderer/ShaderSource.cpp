@@ -1,6 +1,5 @@
 #include "ShaderSource.h"
 
-#include "RHI/ShaderCompiler.h"
 #include "Core/Log/Logger.h"
 
 #include <sstream>
@@ -54,9 +53,6 @@ namespace Opaax
             return ShaderDesc{};
         }
 
-        // Compile both stages to SPIR-V when glslang is available. Without it, OpenGL uses the GLSL source.
-        lDesc.VertexSpirv   = ShaderCompiler::CompileGLSLToSPIRV(EShaderStage::Vertex,   lDesc.VertexSrc,   lDesc.DebugName);
-        lDesc.FragmentSpirv = ShaderCompiler::CompileGLSLToSPIRV(EShaderStage::Fragment, lDesc.FragmentSrc, lDesc.DebugName);
         return lDesc;
     }
 }

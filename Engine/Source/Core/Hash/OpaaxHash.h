@@ -8,7 +8,7 @@
  
 namespace Opaax
 {
-    struct OPAAX_API OpaaxHash
+    struct OpaaxHash
     {
         // FNV-1a 32-bit constants
         static constexpr Uint32 FNV1a_Prime       = 16777619u;

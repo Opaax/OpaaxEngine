@@ -32,7 +32,7 @@ namespace Opaax
     // ResourceFormatRegistry — which resource type loads a file, by extension.
     //   One type can claim several extensions. Sealed before the first world.
     // =============================================================================
-    class OPAAX_API ResourceFormatRegistry
+    class ResourceFormatRegistry
     {
         // =========================================================================
         // CTORS - DTORS
@@ -45,7 +45,7 @@ namespace Opaax
         // Copy - Move Delete
         // =========================================================================
         //
-        // Required by OPAAX_API: the implicit copy would not compile.
+        // Owns its entries: not copyable.
         ResourceFormatRegistry(const ResourceFormatRegistry&)            = delete;
         ResourceFormatRegistry& operator=(const ResourceFormatRegistry&) = delete;
         ResourceFormatRegistry(ResourceFormatRegistry&&)                 = delete;
@@ -65,7 +65,7 @@ namespace Opaax
         template<CResourceFormat T>
         bool Register(OpaaxStringID InName)
         {
-            // Built here (T is known) but stored by an out-of-line function in the DLL.
+            // Built here (T is known), stored by an out-of-line function.
             return AddEntry(ResourceTypeID::Get<T>(), InName, &T::Format, &AcquireHold<T>);
         }
 

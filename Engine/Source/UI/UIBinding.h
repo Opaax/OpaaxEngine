@@ -23,7 +23,7 @@ namespace Opaax
     // =============================================================================
 
     /** A read value. The widget converts it to what it needs. */
-    struct OPAAX_API UIBoundValue
+    struct UIBoundValue
     {
         enum class EKind : Uint8 { None, Bool, Integer, Number, Text };
 
@@ -112,7 +112,7 @@ namespace Opaax
     // =============================================================================
     // UIBindingTable — the named sources a canvas's widgets can read. Owned by the canvas.
     // =============================================================================
-    class OPAAX_API UIBindingTable
+    class UIBindingTable
     {
     public:
         /** Registers InSource as InName; a second Add with the same name replaces the first. */
@@ -138,5 +138,5 @@ namespace Opaax
     };
 
     /** InFormat with its first "{}" replaced by InValue, or InValue alone when there is none. */
-    OPAAX_API OpaaxString FormatBoundText(const OpaaxString& InFormat, const OpaaxString& InValue);
+    OpaaxString FormatBoundText(const OpaaxString& InFormat, const OpaaxString& InValue);
 }

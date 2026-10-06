@@ -15,7 +15,7 @@ namespace Opaax
     // =============================================================================
     // MapFactory — creates a World's entities from MapData. Inverse of MapSerializer. Stateless.
     // =============================================================================
-    class OPAAX_API MapFactory
+    class MapFactory
     {
     public:
         /**

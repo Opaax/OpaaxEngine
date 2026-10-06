@@ -1,5 +1,5 @@
 // Suite: ModuleRegistrar routes — how a game module registers its types. The types below are
-// defined in the test exe, like a game module; the registries live in the DLL.
+// defined in the test exe, like a game module; the registries live in the engine library.
 #include <doctest.h>
 
 #include <optional>

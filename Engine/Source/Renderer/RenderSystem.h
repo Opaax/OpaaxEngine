@@ -26,7 +26,7 @@ namespace Opaax
     //   A pass renders into an IRenderTarget (backbuffer or offscreen framebuffer). Only the
     //   backbuffer is presented. Takes host state as plain data (RenderSystemDesc, RenderView).
     // =============================================================================
-    class OPAAX_API RenderSystem
+    class RenderSystem
     {
         // =============================================================================
         // CTORS - DTORS

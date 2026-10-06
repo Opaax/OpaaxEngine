@@ -14,7 +14,7 @@ namespace Opaax
     //   Jobs run on a worker thread. The optional OnComplete callback runs on the main
     //   thread during the next DrainCompletions() (once per frame).
     // =============================================================================
-    class OPAAX_API IJobSystem : public IAppService
+    class IJobSystem : public IAppService
     {
         // =============================================================================
         // Base Implementation
@@ -64,7 +64,7 @@ namespace Opaax
     // =============================================================================
     // JobSystem — spawns (core count - reserved) workers, at least 1.
     // =============================================================================
-    class OPAAX_API JobSystem final : public IJobSystem
+    class JobSystem final : public IJobSystem
     {
         // =============================================================================
         // CTORs - DTOR

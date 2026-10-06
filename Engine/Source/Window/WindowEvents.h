@@ -15,7 +15,7 @@ namespace Opaax
     // WindowClose
     struct WindowClose {};
 
-    class OPAAX_API WindowCloseEvent final : public Event
+    class WindowCloseEvent final : public Event
     {
     public:
         WindowCloseEvent() noexcept = default;
@@ -34,7 +34,7 @@ namespace Opaax
         Uint32 Height = 0;
     };
 
-    class OPAAX_API WindowResizeEvent final : public Event
+    class WindowResizeEvent final : public Event
     {
     public:
         explicit WindowResizeEvent(const WindowResize& InData) noexcept : m_Data(InData) {}
@@ -55,7 +55,7 @@ namespace Opaax
     // WindowFocus
     struct WindowFocus {};
 
-    class OPAAX_API WindowFocusEvent final : public Event
+    class WindowFocusEvent final : public Event
     {
     public:
         WindowFocusEvent() noexcept = default;
@@ -70,7 +70,7 @@ namespace Opaax
     // WindowLostFocus
     struct WindowLostFocus {};
 
-    class OPAAX_API WindowLostFocusEvent final : public Event
+    class WindowLostFocusEvent final : public Event
     {
     public:
         WindowLostFocusEvent() noexcept = default;
@@ -89,7 +89,7 @@ namespace Opaax
         Int32 Y = 0;
     };
 
-    class OPAAX_API WindowMovedEvent final : public Event
+    class WindowMovedEvent final : public Event
     {
     public:
         explicit WindowMovedEvent(const WindowMoved& InData) noexcept : m_Data(InData) {}

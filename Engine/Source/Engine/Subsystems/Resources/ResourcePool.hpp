@@ -21,7 +21,7 @@ namespace Opaax
     // =============================================================================
     // IResourcePool — type-erased interface for the manager.
     // =============================================================================
-    class OPAAX_API IResourcePool
+    class IResourcePool
     {
     public:
         virtual ~IResourcePool()                        = default;

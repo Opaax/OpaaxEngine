@@ -36,12 +36,12 @@ namespace Opaax
     }
 
     // Parses the .opaaxproj text. Bad JSON or missing fields give empty values; never throws.
-    OPAAX_API ProjectIdentity ParseProjectIdentity(const OpaaxString& InJsonText);
+    ProjectIdentity ParseProjectIdentity(const OpaaxString& InJsonText);
 
     // =============================================================================
     // IProjectManager — metadata of the active project, read from <ProjectRoot>/<Name>.opaaxproj.
     // =============================================================================
-    class OPAAX_API IProjectManager : public IAppService
+    class IProjectManager : public IAppService
     {
         // =============================================================================
         // Base Implementation
@@ -64,7 +64,7 @@ namespace Opaax
     // =============================================================================
     // ProjectManager — reads the project file at construction. Missing file gives empty values.
     // =============================================================================
-    class OPAAX_API ProjectManager final : public IProjectManager
+    class ProjectManager final : public IProjectManager
     {
         // =============================================================================
         // CTOR

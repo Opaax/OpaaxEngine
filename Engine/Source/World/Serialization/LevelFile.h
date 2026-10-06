@@ -60,14 +60,14 @@ namespace Opaax
          * Reads InAbsPath into OutData. Never throws; OutData is untouched on failure.
          * @return False if the file is missing, unreadable, not valid JSON, or a newer version
          */
-        OPAAX_API bool Load(const OpaaxString& InAbsPath, LevelData& OutData);
+        bool Load(const OpaaxString& InAbsPath, LevelData& OutData);
 
         /**
          * InData as the text Save writes (used by the editor's dirty check).
          */
-        OPAAX_API OpaaxString Serialize(const LevelData& InData);
+        OpaaxString Serialize(const LevelData& InData);
 
         /** Serializes and writes. @return False if the file could not be written. */
-        OPAAX_API bool Save(const OpaaxString& InAbsPath, const LevelData& InData);
+        bool Save(const OpaaxString& InAbsPath, const LevelData& InData);
     }
 }

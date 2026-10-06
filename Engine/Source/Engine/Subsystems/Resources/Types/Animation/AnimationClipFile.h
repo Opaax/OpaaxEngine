@@ -23,15 +23,15 @@ namespace Opaax
          * @param InAbsPath Absolute UTF-8 path
          * @return False if the file could not be written
          */
-        OPAAX_API bool Save(const OpaaxString& InAbsPath, const AnimationClipData& InData);
+        bool Save(const OpaaxString& InAbsPath, const AnimationClipData& InData);
 
         /**
          * Reads InAbsPath into OutData. OutData is untouched on failure.
          * @return False if the file is missing, empty, not JSON, or not an object
          */
-        OPAAX_API bool Load(const OpaaxString& InAbsPath, AnimationClipData& OutData);
+        bool Load(const OpaaxString& InAbsPath, AnimationClipData& OutData);
 
         /** InData as the exact text Save writes (used by the editor's dirty check). */
-        OPAAX_API OpaaxString Serialize(const AnimationClipData& InData);
+        OpaaxString Serialize(const AnimationClipData& InData);
     }
 }

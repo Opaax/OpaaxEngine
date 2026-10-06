@@ -29,7 +29,7 @@ namespace Opaax
     // PrefabFold — prefab instance entities <-> instance records.
     //   Fold on save to a .opaaxmap, Expand on load. Nothing else needs to know about prefabs.
     // =============================================================================
-    class OPAAX_API PrefabFold
+    class PrefabFold
     {
     public:
         /**

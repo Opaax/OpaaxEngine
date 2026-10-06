@@ -59,7 +59,7 @@ namespace Opaax
          * @param InSink Called per glyph. Empty to only measure.
          * @return The extent (same as Measure)
          */
-        OPAAX_API Vector2F Layout(const char* InUtf8, const Vector2F& InOrigin, const FontFaceView& InFace,
+        Vector2F Layout(const char* InUtf8, const Vector2F& InOrigin, const FontFaceView& InFace,
                                   const TextDrawParams& InParams, const FTextQuadSink& InSink);
 
         /**
@@ -72,20 +72,20 @@ namespace Opaax
          * @param InParams Colour, size, line height, kerning, layer
          * @return The extent (same as Measure)
          */
-        OPAAX_API Vector2F DrawString(Renderer2D& InRenderer, const char* InUtf8, const Vector2F& InWorldPos,
+        Vector2F DrawString(Renderer2D& InRenderer, const char* InUtf8, const Vector2F& InWorldPos,
                                       const FontFaceView& InFace, const TextDrawParams& InParams = {});
 
         /**
          * The size DrawString would use, without drawing.
          * @return { widest line, line count * line advance }
          */
-        OPAAX_API Vector2F Measure(const char* InUtf8, const FontFaceView& InFace,
+        Vector2F Measure(const char* InUtf8, const FontFaceView& InFace,
                                    const TextDrawParams& InParams = {});
 
         /**
          * A rough size without a font (for picking and selection outlines). Errs on the large side.
          * @return { codepoints * average advance, lines * line height }
          */
-        OPAAX_API Vector2F EstimateExtent(const char* InUtf8, const TextDrawParams& InParams = {});
+        Vector2F EstimateExtent(const char* InUtf8, const TextDrawParams& InParams = {});
     }
 }

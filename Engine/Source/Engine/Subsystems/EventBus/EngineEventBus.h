@@ -7,7 +7,7 @@ namespace Opaax
 {
     inline constexpr LogCategory LogEngineEventBus{"EngineEventBus"};
 
-    class OPAAX_API EngineEventBus final : public EngineSubsystemBase
+    class EngineEventBus final : public EngineSubsystemBase
     {
         // =============================================================================
         // Base Implementation

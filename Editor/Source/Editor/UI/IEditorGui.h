@@ -62,7 +62,6 @@ namespace Opaax::Editor
     //   ImGuiEditorGui is the one implementation. Panel contents are not here (panels call the
     //   backend directly); this covers the window chrome around them.
     //   Shortcuts use EKeyCode.
-    //   No OPAAX_API: OpaaxEditorLib is a static lib linked into the editor exe.
     // =============================================================================
     class IEditorGui
     {

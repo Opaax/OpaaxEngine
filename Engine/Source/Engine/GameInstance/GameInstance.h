@@ -17,7 +17,7 @@ namespace Opaax
     //   last Play world, so it survives level changes. Session-scoped features (input mapping,
     //   save, score, ...) are game-instance subsystems.
     // =============================================================================
-    class OPAAX_API GameInstance
+    class GameInstance
     {
         // =========================================================================
         // CTORS - DTORS

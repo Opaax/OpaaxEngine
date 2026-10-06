@@ -30,7 +30,7 @@ namespace Opaax
      * backend (Vulkan) it appends to the command buffer. Only binds and draws; resources are
      * created by the device.
      */
-    class OPAAX_API ICommandBuffer
+    class ICommandBuffer
     {
         // =============================================================================
         // DTOR

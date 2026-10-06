@@ -32,21 +32,21 @@ namespace Opaax
         inline constexpr const char* KEY_INSTANCES = EntityJson::KEY_INSTANCES;
 
         /** Serializes InData. Entities sorted by Guid. */
-        OPAAX_API nlohmann::json ToJson(const PrefabData& InData);
+        nlohmann::json ToJson(const PrefabData& InData);
 
         /**
          * Parses InJson into OutData. Never throws; OutData is untouched on failure.
          * @return False if InJson is not an object, or its version is newer than PREFAB_FORMAT_VERSION
          */
-        OPAAX_API bool FromJson(const nlohmann::json& InJson, PrefabData& OutData);
+        bool FromJson(const nlohmann::json& InJson, PrefabData& OutData);
 
         /** ToJson + indented dump. */
-        OPAAX_API OpaaxString Serialize(const PrefabData& InData);
+        OpaaxString Serialize(const PrefabData& InData);
 
         /** Same text, moving the component payloads instead of copying them. */
-        OPAAX_API OpaaxString Serialize(PrefabData&& InData);
+        OpaaxString Serialize(PrefabData&& InData);
 
         /** Parses text (never throws), then FromJson. @return False on malformed JSON. */
-        OPAAX_API bool Deserialize(const OpaaxString& InText, PrefabData& OutData);
+        bool Deserialize(const OpaaxString& InText, PrefabData& OutData);
     }
 }

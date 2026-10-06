@@ -25,7 +25,7 @@ namespace Opaax
      * Half-extent of an outlined quad's hole, in local 0..1 space. {0,0} is a solid quad.
      * Bad input (zero size, negative or too thick border) gives solid.
      */
-    OPAAX_API Vector2F MakeOutlineInnerHalf(const Vector2F& InSize, float InThickness) noexcept;
+    Vector2F MakeOutlineInnerHalf(const Vector2F& InSize, float InThickness) noexcept;
 
     /**
      * Masks a quad: a rect in the quad's space and a texture sampled across it.
@@ -64,7 +64,7 @@ namespace Opaax
      *
      * Init()/Shutdown() create/release the GPU resources; never call them mid-frame.
      */
-    class OPAAX_API Renderer2D
+    class Renderer2D
     {
         // =============================================================================
         // CTORS - DTORS

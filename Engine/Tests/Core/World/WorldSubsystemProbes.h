@@ -1,7 +1,7 @@
 #pragma once
 
-// Probe world subsystems shaped like a game module's: WorldSubsystemBase, OPAAX_SUBSYSTEM_TYPE,
-// not OPAAX_API. In a header included by two test TUs (like a static lib linked into the exe).
+// Probe world subsystems shaped like a game module's: WorldSubsystemBase, OPAAX_SUBSYSTEM_TYPE.
+// In a header included by two test TUs (like a static lib linked into the exe).
 // The namespace must have external linkage: an anonymous one would give each TU its own type.
 
 #include "Core/OpaaxTypes.h"

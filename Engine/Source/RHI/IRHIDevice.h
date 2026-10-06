@@ -20,7 +20,7 @@ namespace Opaax
     // IRHIDevice — the graphics device (created by RHIDevice::Create). Creates GPU resources
     //   and runs the frame, including Present.
     // =============================================================================
-    class OPAAX_API IRHIDevice
+    class IRHIDevice
     {
         // =============================================================================
         // DTOR

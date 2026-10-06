@@ -12,7 +12,7 @@ namespace Opaax
      * OpenGL IBindGroup: keeps the camera UBO and the textures, and binds the texture units in
      * Bind. The UBO is bound at its own construction.
      */
-    class OPAAX_API OpenGLBindGroup final : public IBindGroup
+    class OpenGLBindGroup final : public IBindGroup
     {
         // =============================================================================
         // CTOR - DTOR

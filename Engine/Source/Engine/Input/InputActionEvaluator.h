@@ -20,7 +20,7 @@ namespace Opaax
     //   Contexts are sorted by priority, highest first; a key consumed by a higher
     //   context is skipped by lower ones.
     // =============================================================================
-    class OPAAX_API InputActionEvaluator
+    class InputActionEvaluator
     {
         // =========================================================================
         // Actions

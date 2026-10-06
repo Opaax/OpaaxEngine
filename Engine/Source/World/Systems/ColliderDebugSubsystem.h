@@ -20,7 +20,7 @@ namespace Opaax
     //   Runs in Edit and Play worlds (colliders must be visible while editing) and reads the components.
     //   Drawn on DebugChannels::Physics, which can be toggled.
     // =============================================================================
-    class OPAAX_API ColliderDebugSubsystem final : public WorldSubsystemBase
+    class ColliderDebugSubsystem final : public WorldSubsystemBase
     {
         // =============================================================================
         // Base implementation

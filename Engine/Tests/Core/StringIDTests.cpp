@@ -1,8 +1,8 @@
 // Suite: OpaaxStringID — the interned-string handle.
 //
-// "One pool per process" is guaranteed at link time (GetPool() has one definition, in the DLL);
-// no single-module test can prove it. What these tests catch is a partial regression: the ctor
-// (writer) and PoolSize (reader) ending up in different modules' pools (growth would read 0).
+// "One pool per process" is guaranteed at link time (GetPool() has one definition, in the
+// engine library). What these tests catch is a partial regression: the ctor (writer) and PoolSize
+// (reader) ending up in different pools (growth would read 0).
 #include <doctest.h>
 
 #include "Core/String/OpaaxStringID.hpp"
@@ -50,7 +50,7 @@ TEST_CASE("OpaaxStringID: different text yields different ids, and round-trips b
     CHECK(lB.ToString() == OpaaxString("OpaaxStringIDTests_Beta"));
 }
 
-TEST_CASE("OpaaxStringID: one pool across the DLL boundary — a NEW string grows it by exactly 1")
+TEST_CASE("OpaaxStringID: one pool for the whole program — a NEW string grows it by exactly 1")
 {
     // The ctor writes, PoolSize reads: with a second pool in this module the growth would be 0.
     const Uint32 lBefore = OpaaxStringID::PoolSize();
@@ -63,7 +63,7 @@ TEST_CASE("OpaaxStringID: one pool across the DLL boundary — a NEW string grow
     CHECK(lAfter == lBefore + 1u);
 }
 
-TEST_CASE("OpaaxStringID: one pool across the DLL boundary — a REPEAT does not grow it")
+TEST_CASE("OpaaxStringID: one pool for the whole program — a REPEAT does not grow it")
 {
     // Intern once so the entry exists regardless of case order, then measure the repeat.
     const OpaaxStringID lFirst = OPAAX_ID("OpaaxStringIDTests_NoGrowthProbe");

@@ -17,7 +17,7 @@ namespace Opaax
 {
     inline constexpr LogCategory LogTextureResource{"TextureResource"};
 
-    struct OPAAX_API TextureResource final
+    struct TextureResource final
     {
         // =========================================================================
         // CTORS - DTORS
@@ -29,7 +29,7 @@ namespace Opaax
         // =========================================================================
         // Copy delete - Move
         // =========================================================================
-        // Required by OPAAX_API: the TUniquePtr member is move-only.
+        // The TUniquePtr member is move-only.
         TextureResource(const TextureResource&)            = delete;
         TextureResource& operator=(const TextureResource&) = delete;
         TextureResource(TextureResource&&)                 = default;

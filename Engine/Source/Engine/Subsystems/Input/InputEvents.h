@@ -20,7 +20,7 @@ namespace Opaax
         bool     bRepeat = false;
     };
 
-    class OPAAX_API KeyPressedEvent final : public Event
+    class KeyPressedEvent final : public Event
     {
     public:
         explicit KeyPressedEvent(const KeyPressed& InData) noexcept : m_Data(InData) {}
@@ -44,7 +44,7 @@ namespace Opaax
         EKeyCode Code = EKeyCode::None;
     };
 
-    class OPAAX_API KeyReleasedEvent final : public Event
+    class KeyReleasedEvent final : public Event
     {
     public:
         explicit KeyReleasedEvent(const KeyReleased& InData) noexcept : m_Data(InData) {}
@@ -67,7 +67,7 @@ namespace Opaax
         Uint32 Codepoint = 0;
     };
 
-    class OPAAX_API KeyTypedEvent final : public Event
+    class KeyTypedEvent final : public Event
     {
     public:
         explicit KeyTypedEvent(const KeyTyped& InData) noexcept : m_Data(InData) {}
@@ -89,7 +89,7 @@ namespace Opaax
         EKeyCode Button = EKeyCode::None;
     };
 
-    class OPAAX_API MouseButtonPressedEvent final : public Event
+    class MouseButtonPressedEvent final : public Event
     {
     public:
         explicit MouseButtonPressedEvent(const MouseButtonPressed& InData) noexcept : m_Data(InData) {}
@@ -112,7 +112,7 @@ namespace Opaax
         EKeyCode Button = EKeyCode::None;
     };
 
-    class OPAAX_API MouseButtonReleasedEvent final : public Event
+    class MouseButtonReleasedEvent final : public Event
     {
     public:
         explicit MouseButtonReleasedEvent(const MouseButtonReleased& InData) noexcept : m_Data(InData) {}
@@ -136,7 +136,7 @@ namespace Opaax
         float Y = 0.f;
     };
 
-    class OPAAX_API MouseMovedEvent final : public Event
+    class MouseMovedEvent final : public Event
     {
     public:
         explicit MouseMovedEvent(const MouseMoved& InData) noexcept : m_Data(InData) {}
@@ -161,7 +161,7 @@ namespace Opaax
         float YOffset = 0.f;
     };
 
-    class OPAAX_API MouseScrolledEvent final : public Event
+    class MouseScrolledEvent final : public Event
     {
     public:
         explicit MouseScrolledEvent(const MouseScrolled& InData) noexcept : m_Data(InData) {}

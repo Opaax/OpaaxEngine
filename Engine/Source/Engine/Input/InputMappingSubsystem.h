@@ -27,7 +27,7 @@ namespace Opaax
     //   Gameplay binds handlers with Bind(action, trigger, this, &T::Handler).
     //   The owner must call UnbindAll(this) in its Shutdown.
     // =============================================================================
-    class OPAAX_API InputMappingSubsystem final : public GameInstanceSubsystemBase
+    class InputMappingSubsystem final : public GameInstanceSubsystemBase
     {
         // =========================================================================
         // Base Implementation

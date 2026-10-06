@@ -11,7 +11,7 @@ namespace Opaax
 {
     // =============================================================================
     // Type identity, owned by the engine (no vendor). Built from the compiler's signature of a
-    //   function instantiated for T, so it is the same in every module (DLL or exe) and every run.
+    //   function instantiated for T, so it is the same in every translation unit and every run.
     // =============================================================================
 
     /** A type's id: a hash of its signature. Stable across modules and runs; not a dense index. */

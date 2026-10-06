@@ -56,7 +56,7 @@ namespace Opaax
          * @param OutPixels The atlas (AtlasWidth * AtlasHeight bytes). Untouched on failure.
          * @return False if the bytes are not a font, have no glyph in range, or the atlas is too big
          */
-        OPAAX_API bool Bake(const Uint8* InTtfBytes, Uint64 InByteCount, const BakeParams& InParams,
+        bool Bake(const Uint8* InTtfBytes, Uint64 InByteCount, const BakeParams& InParams,
                             FontFaceData& OutData, TDynArray<Uint8>& OutPixels);
     }
 }

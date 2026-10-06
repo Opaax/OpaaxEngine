@@ -12,7 +12,7 @@ namespace Opaax
     //       { EShaderDataType::Float2 },  // uv
     //       { EShaderDataType::Float  },  // texture index
     //   };
-    class OPAAX_API BufferLayout
+    class BufferLayout
     {
         // =============================================================================
         // CTOR 
@@ -50,7 +50,7 @@ namespace Opaax
     /**
      * Vertex buffer.
      */
-    class OPAAX_API IVertexBuffer
+    class IVertexBuffer
     {
         // =============================================================================
         // CTOR - DTOR
@@ -81,7 +81,7 @@ namespace Opaax
     /**
      * Index buffer.
      */
-    class OPAAX_API IIndexBuffer
+    class IIndexBuffer
     {
         // =============================================================================
         // CTOR - DTOR
@@ -106,7 +106,7 @@ namespace Opaax
     /**
      * Vertex array (vertex buffers + index buffer + layout).
      */
-    class OPAAX_API IVertexArray
+    class IVertexArray
     {
         // =============================================================================
         // CTOR - DTOR

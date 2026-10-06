@@ -189,16 +189,16 @@ TEST_CASE("WorldManager: a manager with no registries still creates worlds")
     CHECK(lManager.GetWorldCount() == 1u);
 }
 
-TEST_CASE("Engine: QuadComponent is registered natively, DLL-side, and found exe-side")
+TEST_CASE("Engine: QuadComponent is registered natively by the engine and found from a game TU")
 {
     // Natives are the ENGINE's job now, done in its ctor before any subsystem exists.
     // Constructing an Engine only queues subsystem factories + registers natives — nothing
     // starts, no service is touched.
     Engine lEngine;
 
-    // The cross-boundary statement: RegisterNativeTypes runs inside the DLL (Engine.cpp), the
-    // type id below is computed HERE in the exe. A mismatch returns null — see
-    // ComponentIdentityTests.cpp for why this can be trusted.
+    // The cross-TU statement: native registration runs inside the engine (Engine.cpp), the
+    // type id below is computed HERE. A mismatch returns null — see ComponentIdentityTests.cpp
+    // for why this can be trusted.
     const IComponentEntry* lEntry =
         lEngine.GetRegistries().Components().Find<QuadComponent>();
 

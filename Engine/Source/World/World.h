@@ -26,7 +26,7 @@ namespace Opaax
     //   a Guid -> entity lookup, its subsystems, its Level and its camera view.
     //   Game code reaches entities through Entity handles.
     // =============================================================================
-    class OPAAX_API World
+    class World
     {
         // =========================================================================
         // CTORS - DTORS

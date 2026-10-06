@@ -25,7 +25,7 @@ namespace Opaax
     // IEngine — the engine as an application service. Owns the engine subsystems
     // and ticks them each frame. The application drives its lifecycle.
     // =============================================================================
-    class OPAAX_API IEngine : public IAppService
+    class IEngine : public IAppService
     {
     public:
         OPAAX_SERVICE_TYPE(IEngine)

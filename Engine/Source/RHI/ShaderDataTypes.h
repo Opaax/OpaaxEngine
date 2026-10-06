@@ -40,7 +40,7 @@ namespace Opaax
     /**
      * One attribute in a BufferLayout.
      */
-    struct OPAAX_API BufferElement
+    struct BufferElement
     {
         // =============================================================================
         // CTOR

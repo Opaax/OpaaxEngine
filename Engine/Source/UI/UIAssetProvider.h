@@ -23,7 +23,7 @@ namespace Opaax
     //   so the UI module never touches the ResourceManager. Answers may be empty while loading;
     //   the widget then re-arms itself.
     // =============================================================================
-    class OPAAX_API IUIAssetProvider
+    class IUIAssetProvider
     {
     public:
         virtual ~IUIAssetProvider() = default;

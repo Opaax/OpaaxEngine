@@ -27,7 +27,7 @@ namespace Opaax
     //   CloneWorld makes the Play copy; the source is untouched, so Stop just re-activates it.
     //   Creates no world itself: Engine::FinishStartup creates the startup world.
     // =============================================================================
-    class OPAAX_API WorldManager final : public EngineSubsystemBase
+    class WorldManager final : public EngineSubsystemBase
     {
         // =========================================================================
         // Base Implementation

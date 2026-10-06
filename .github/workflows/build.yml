@@ -1,7 +1,6 @@
 name: build
 
-# Every push on every branch builds — a branch never goes unbuilt until its PR. A PR's
-# checks are its head commit's push run, so there is no separate pull_request trigger.
+# Every push on every branch builds and tests. A PR's checks are its head commit's push run.
 on:
   push:
     branches: ['**']
@@ -17,34 +16,44 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
     strategy:
       fail-fast: false
-      # Mirrors build.bat's preset -> config map. The VS 2022 generator is
-      # MULTI-CONFIG, so CMAKE_BUILD_TYPE in the preset is ignored and the
-      # compiled config MUST come from --config / -C (else everything builds Debug).
-      # Vulkan is disabled explicitly (not left to the runner image): CI proves the
-      # OpenGL-only build, the one a machine without the SDK gets.
       matrix:
         include:
-          - preset: debug-editor
+          - os: windows-latest
+            preset: debug-editor
             config: Debug
-          - preset: debug
-            config: Debug
-          - preset: release
+          - os: windows-latest
+            preset: release
             config: Release
-    name: ${{ matrix.preset }}
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }} / ${{ matrix.preset }}
     steps:
       - name: Checkout (recursive submodules)
         uses: actions/checkout@v5
         with:
           submodules: recursive
 
+      - name: Problem matchers
+        shell: bash
+        run: |
+          echo "::add-matcher::.github/problem-matchers/msvc.json"
+          echo "::add-matcher::.github/problem-matchers/gcc.json"
+          echo "::add-matcher::.github/problem-matchers/doctest.json"
+
       - name: Configure
-        run: cmake --preset ${{ matrix.preset }} -DCMAKE_DISABLE_FIND_PACKAGE_Vulkan=ON
+        run: cmake --preset ${{ matrix.preset }}
 
+      # Multi-config generators ignore CMAKE_BUILD_TYPE: the config comes from --config / -C.
+      # MSVC already compiles each project's files in parallel (/MP), so projects build one at a time.
       - name: Build
-        run: cmake --build build/${{ matrix.preset }} --config ${{ matrix.config }}
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cmake --build build/${{ matrix.preset }} --config ${{ matrix.config }}
+          else
+            cmake --build build/${{ matrix.preset }} --config ${{ matrix.config }} --parallel
+          fi
 
-      - name: Test (CTest)
+      - name: Test
         run: ctest --test-dir build/${{ matrix.preset }} -C ${{ matrix.config }} --output-on-failure

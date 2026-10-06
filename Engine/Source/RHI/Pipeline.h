@@ -44,7 +44,7 @@ namespace Opaax
     /**
      * Graphics pipeline state. Created by IRHIDevice::CreatePipeline, bound on the command buffer.
      */
-    class OPAAX_API IPipeline
+    class IPipeline
     {
         // =============================================================================
         // DTOR

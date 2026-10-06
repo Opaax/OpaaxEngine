@@ -30,7 +30,7 @@ namespace Opaax
      * @param InProjectArg Value of --project (relative to the workspace), or empty for
      *   <WorkspaceRoot>/<ExeName>/<ExeName>.opaaxproj
      */
-    OPAAX_API ProjectLayout ResolveProjectLayout(const OpaaxString& InExePath,
+    ProjectLayout ResolveProjectLayout(const OpaaxString& InExePath,
                                                  const OpaaxString& InWorkspaceDir,
                                                  const OpaaxString& InProjectArg);
 
@@ -47,7 +47,7 @@ namespace Opaax
     //         Assets/  Configs/  Source/  Save/  Temp/
     //         <Name>.opaaxproj
     // =============================================================================
-    class OPAAX_API IPaths : public IAppService
+    class IPaths : public IAppService
     {
         // =============================================================================
         // Base Implementation
@@ -98,7 +98,7 @@ namespace Opaax
     // Paths — resolves the layout from the executable path, --project and the workspace.
     //   EditorPaths derives from it to point at the edited project.
     // =============================================================================
-    class OPAAX_API Paths : public IPaths
+    class Paths : public IPaths
     {
         // =============================================================================
         // CTOR

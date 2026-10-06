@@ -15,7 +15,7 @@ namespace Opaax::FileIO
      * @param InAbsPath Absolute UTF-8 path
      * @return The contents, or an empty string if the file is missing or unreadable
      */
-    OPAAX_API OpaaxString ReadAllText(const OpaaxString& InAbsPath);
+    OpaaxString ReadAllText(const OpaaxString& InAbsPath);
 
     /**
      * Reads a whole file as raw bytes.
@@ -23,7 +23,7 @@ namespace Opaax::FileIO
      * @param OutBytes Receives the contents. Untouched on failure.
      * @return False if the file is missing or unreadable
      */
-    OPAAX_API bool ReadAllBytes(const OpaaxString& InAbsPath, TDynArray<Uint8>& OutBytes);
+    bool ReadAllBytes(const OpaaxString& InAbsPath, TDynArray<Uint8>& OutBytes);
 
     /**
      * Writes text to InAbsPath, replacing any content. Creates missing parent directories.
@@ -31,5 +31,5 @@ namespace Opaax::FileIO
      * @param InText Content to write
      * @return False if the file could not be written
      */
-    OPAAX_API bool WriteAllText(const OpaaxString& InAbsPath, const OpaaxString& InText);
+    bool WriteAllText(const OpaaxString& InAbsPath, const OpaaxString& InText);
 }

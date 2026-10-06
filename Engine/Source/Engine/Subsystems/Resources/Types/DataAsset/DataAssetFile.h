@@ -26,18 +26,18 @@ namespace Opaax
         };
 
         /** The exact text Save writes (dump(4), sorted keys). Used by the editor's dirty check. */
-        OPAAX_API OpaaxString Serialize(OpaaxStringID InType, const nlohmann::json& InData);
+        OpaaxString Serialize(OpaaxStringID InType, const nlohmann::json& InData);
 
         /**
          * Writes a data asset, replacing any content.
          * @return False if the file could not be written
          */
-        OPAAX_API bool Save(const OpaaxString& InAbsPath, OpaaxStringID InType, const nlohmann::json& InData);
+        bool Save(const OpaaxString& InAbsPath, OpaaxStringID InType, const nlohmann::json& InData);
 
         /**
          * Reads a data asset's type and raw data. OutContents is untouched on failure.
          * @return False if the file is missing, not JSON, or has no "Type" string / "Data" object
          */
-        OPAAX_API bool Load(const OpaaxString& InAbsPath, Contents& OutContents);
+        bool Load(const OpaaxString& InAbsPath, Contents& OutContents);
     }
 }

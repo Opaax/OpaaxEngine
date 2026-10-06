@@ -28,7 +28,7 @@ namespace Opaax
 
         /**
          * Stable per-type id, from a hash of the function signature.
-         * Same in every module (DLL-safe).
+         * Same in every translation unit and every run.
          */
         template<typename T>
         constexpr Uint64 EventTypeKey() noexcept
@@ -46,7 +46,7 @@ namespace Opaax
      * Publish dispatches now; Enqueue dispatches at the next Flush (preferred).
      * Unsubscribe before the subscriber is destroyed. Not thread-safe.
      */
-    class OPAAX_API EventBus
+    class EventBus
     {
         // =============================================================================
         // CTORs - DTOR

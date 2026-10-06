@@ -7,7 +7,7 @@ namespace Opaax
 	// =============================================================================
     // WindowManager — owns the main window, created from Config_Engine.
     // =============================================================================
-    class OPAAX_API WindowManager final : public IWindowManager
+    class WindowManager final : public IWindowManager
     {
         // =============================================================================
         // CTORs - DTOR

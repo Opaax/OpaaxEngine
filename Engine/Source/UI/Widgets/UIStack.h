@@ -46,7 +46,7 @@ namespace Opaax
     //   It owns the children's rects: a child's Rect.SizeDelta is its desired size; anchors, pivot
     //   and position are ignored. A hidden child keeps its slot. Draws nothing, not hit-testable.
     // =============================================================================
-    class OPAAX_API UIStack final : public UIWidget
+    class UIStack final : public UIWidget
     {
         // =============================================================================
         // Authored state

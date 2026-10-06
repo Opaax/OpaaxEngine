@@ -10,7 +10,7 @@ namespace Opaax
     // =============================================================================
     // IAppService — base for every application-level service.
     // =============================================================================
-    class OPAAX_API IAppService
+    class IAppService
     {
     public:
         virtual ~IAppService() = default;
@@ -22,7 +22,7 @@ namespace Opaax
 }
 
 // Add to each service interface (IPlatform, IPaths, ...). Define StaticTypeID in the
-// interface's .cpp so the ID is shared across the DLL/exe boundary.
+// interface's .cpp so there is exactly one ID per interface.
 #define OPAAX_SERVICE_TYPE(Interface)                                       \
 static ::Opaax::ServiceTypeID StaticTypeID() noexcept;                  \
 ::Opaax::ServiceTypeID GetTypeID() const noexcept override              \

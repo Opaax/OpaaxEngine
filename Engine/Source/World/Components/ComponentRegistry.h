@@ -33,7 +33,7 @@ namespace Opaax
     // IComponentEntry — type-erased entry for one registered component type.
     //   Works on the raw EntityRegistry, so it needs no World method per type.
     // =============================================================================
-    class OPAAX_API IComponentEntry
+    class IComponentEntry
     {
     public:
         virtual ~IComponentEntry() = default;
@@ -86,8 +86,8 @@ namespace Opaax
     };
 
     // =============================================================================
-    // TComponentEntry<T> — concrete entry for T. Header-only (no OPAAX_API), so game modules
-    //   can register their own component types.
+    // TComponentEntry<T> — concrete entry for T. Header-only, so game modules can register
+    //   their own component types.
     // =============================================================================
     template<CComponent T>
     class TComponentEntry final : public IComponentEntry
@@ -197,7 +197,7 @@ namespace Opaax
     //   Inspector's "Add Component" menu. Sealed at the first CreateWorld: later
     //   registrations are refused.
     // =============================================================================
-    class OPAAX_API ComponentRegistry
+    class ComponentRegistry
     {
         // =========================================================================
         // CTORS - DTORS
@@ -209,7 +209,7 @@ namespace Opaax
         // =========================================================================
         // Copy - Move Delete
         // =========================================================================
-        // Required by OPAAX_API: the implicit copy would not compile (C2280).
+        // Owns its entries: not copyable.
         ComponentRegistry(const ComponentRegistry&)            = delete;
         ComponentRegistry& operator=(const ComponentRegistry&) = delete;
         ComponentRegistry(ComponentRegistry&&)                 = delete;
@@ -230,7 +230,7 @@ namespace Opaax
         template<CComponent T>
         bool Register(OpaaxStringID InName, bool bInEssential = false)
         {
-            // Built here (T is known) but stored by an out-of-line function in the DLL.
+            // Built here (T is known), stored by an out-of-line function.
             return AddEntry(MakeUnique<TComponentEntry<T>>(InName, bInEssential),
                             TypeIdOf<T>());
         }

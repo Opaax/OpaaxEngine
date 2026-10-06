@@ -16,7 +16,7 @@ namespace Opaax
     namespace
     {
         // =====================================================================
-        // The single resource type registry, in the engine DLL, reached through the exported functions.
+        // The single resource type registry, reached through the functions below.
         // =====================================================================
         struct TypeEntry
         {

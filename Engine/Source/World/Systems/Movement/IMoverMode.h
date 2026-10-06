@@ -41,7 +41,7 @@ namespace Opaax
     //   Stateless: per-entity state is on the component, so one instance serves every entity.
     //   New movement = a new mode.
     // =============================================================================
-    class OPAAX_API IMoverMode
+    class IMoverMode
     {
         // =============================================================================
         // DTOR

@@ -1,16 +1,16 @@
 // Smoke test: the doctest harness runs and is found by CTest, the test exe can include engine
-// headers, and it links and loads OpaaxEngine.dll (ResolveProjectLayout is an exported,
-// out-of-line, pure function, so calling it proves a real cross-DLL import).
+// headers, and it links the engine library (ResolveProjectLayout is an out-of-line, pure
+// function, so calling it proves the link).
 #include <doctest.h>
 
 #include "Application/Services/IPaths.h"
 #include "Core/String/OpaaxString.hpp"
 
-TEST_CASE("smoke: harness runs and the engine DLL links")
+TEST_CASE("smoke: harness runs and the engine library links")
 {
     CHECK(1 + 1 == 2); // harness alive
 
-    // Cross-DLL symbol resolves + behaves.
+    // An engine symbol resolves + behaves.
     const Opaax::ProjectLayout lLayout = Opaax::ResolveProjectLayout(
         Opaax::OpaaxString("W:/ws/bin/Game.exe"),
         Opaax::OpaaxString("W:/ws"),

@@ -25,7 +25,7 @@ namespace Opaax
     //   On a crash it writes a minidump, logs the stack, copies the log next to the dump,
     //   shows a dialog, then the process ends.
     // =============================================================================
-    class OPAAX_API CrashHandler final
+    class CrashHandler final
     {
         // =============================================================================
         // Statics

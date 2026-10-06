@@ -11,21 +11,19 @@ namespace Opaax
     // ShaderDesc
     // =============================================================================
     /**
-     * A shader program description: per-stage GLSL source and compiled SPIR-V.
+     * A shader program description: per-stage GLSL source.
      */
     struct ShaderDesc
     {
-        OpaaxString        DebugName;       // identification / log label
-        OpaaxString        VertexSrc;       // vertex stage GLSL (compile input)
-        OpaaxString        FragmentSrc;     // fragment stage GLSL (compile input)
-        TDynArray<Uint32>  VertexSpirv;     // compiled vertex SPIR-V words
-        TDynArray<Uint32>  FragmentSpirv;   // compiled fragment SPIR-V words
+        OpaaxString DebugName;     // identification / log label
+        OpaaxString VertexSrc;     // vertex stage GLSL
+        OpaaxString FragmentSrc;   // fragment stage GLSL
     };
 
     /**
      * Shader program. Created by IRHIDevice::CreateShader.
      */
-    class OPAAX_API IShader
+    class IShader
     {
         // =============================================================================
         // DTOR

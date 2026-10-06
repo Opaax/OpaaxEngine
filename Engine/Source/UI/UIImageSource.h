@@ -30,7 +30,7 @@ namespace Opaax
      * @return True with Out filled when something drawable resolved; false when nothing is named
      *   (plain colour) or it is not ready yet (bOutNamed tells them apart)
      */
-    OPAAX_API bool ResolveImageSource(const UIBuildContext& InContext, ITexture2D* InRuntime,
+    bool ResolveImageSource(const UIBuildContext& InContext, ITexture2D* InRuntime,
                                       const TResourcePath<TextureResource>& InTexture,
                                       const TResourcePath<SpriteSheetResource>& InSheet, Int32 InFrame,
                                       UIResolvedImage& Out, bool& bOutNamed);

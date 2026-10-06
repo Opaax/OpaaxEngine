@@ -4,7 +4,7 @@
 
 namespace Opaax
 {
-    struct OPAAX_API FrameInfo
+    struct FrameInfo
     {
     public:
         FrameInfo() : 

@@ -13,7 +13,7 @@ namespace Opaax
     // =============================================================================
     // WindowsPlatform — IPlatform using Win32.
     // =============================================================================
-    class OPAAX_API WindowsPlatform final : public IPlatform
+    class WindowsPlatform final : public IPlatform
     {
         // =============================================================================
         // Override

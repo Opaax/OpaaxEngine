@@ -8,7 +8,7 @@ namespace Opaax
     // =============================================================================
     // FlyMoveMode — free flight: no gravity, no friction, no jump. Still collides (slides on walls).
     // =============================================================================
-    class OPAAX_API FlyMoveMode final : public IMoverMode
+    class FlyMoveMode final : public IMoverMode
     {
     public:
         //~Begin IMoverMode interface

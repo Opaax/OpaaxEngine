@@ -25,7 +25,7 @@ namespace Opaax
      * Offscreen render target (editor viewport, future post-process passes).
      * Created by IRHIDevice::CreateFramebuffer (editor code: IEngine::CreateFramebuffer).
      */
-    class OPAAX_API IFramebuffer
+    class IFramebuffer
     {
         // =============================================================================
         // DTOR

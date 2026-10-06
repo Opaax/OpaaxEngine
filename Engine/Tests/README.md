@@ -30,27 +30,19 @@ ctest --test-dir build/release -C Release --output-on-failure
 > The Visual Studio generator is multi-config, so CTest needs `-C <Config>` (Debug for `debug-editor`,
 > Release for `release`). `build.bat test` handles this for you.
 
-**CI:** every push runs this whole battery on a clean windows-latest runner across both presets
-(`.github/workflows/build.yml`). The runner has no Vulkan SDK, so CI also continuously proves the
-OpenGL-only (`OPAAX_HAS_VULKAN=0`) fallback build.
+**CI:** every push runs this whole battery on clean runners (`.github/workflows/build.yml`).
 
 ---
 
-## How tests reach engine code (the one thing to understand)
+## How tests reach engine code
 
-`OpaaxTests.exe` links the **`OpaaxEngine` import lib exactly like `Game.exe`**. A symbol is reachable two ways:
-
-1. **Header-inline logic** — anything `inline` / `constexpr` / `static`-in-header (e.g. `OpaaxString`,
-   `MakeSortKey`, `KerningLookup`). The test compiles it directly; **no DLL symbol needed**. Prefer this for
-   pure logic.
-2. **Out-of-line `OPAAX_API` symbols** — defined in a `.cpp` compiled into the engine DLL (e.g. `Hierarchy::*`,
-   `CollisionProfile::*`, `World`). Reachable because the class/function is marked `OPAAX_API`.
+`OpaaxTests` links the **`OpaaxEngine` static library exactly like a game executable**, so every engine
+symbol is reachable: header-inline logic compiles directly into the test, out-of-line code comes from
+the library.
 
 If the logic you want to test lives in a **private** member, **do NOT friend the test or make it public.**
 Instead **extract the pure logic into a free function in a header**, have the class delegate to it, and test
-the free function directly. Examples already in the tree:
-- `Renderer/Text/FontKerning.h` — `KerningLookup` (extracted from `FontAsset::GetKerning`)
-- `Assets/AssetIdResolve.h` — `ResolveCanonicalAssetId` (extracted from `AssetRegistry::Normalize`)
+the free function directly.
 
 ---
 
@@ -124,6 +116,6 @@ set(OPAAX_TEST_SOURCES
 Engine/Tests/
   CMakeLists.txt        # OpaaxTests target + explicit source list
   Main.cpp              # doctest main() + logger init/silence — don't add cases here
-  SmokeTest.cpp         # proves the harness + DLL link
+  SmokeTest.cpp         # proves the harness + engine link
   <Domain>/*Tests.cpp   # one file per area (Renderer/, Core/, ECS/, Physics/, Assets/)
 ```

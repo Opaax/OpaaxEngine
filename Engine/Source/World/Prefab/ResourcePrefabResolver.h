@@ -16,7 +16,7 @@ namespace Opaax
     //   Keeps the loaded prefabs alive: Resolve returns pointers into them, so keep the resolver
     //   alive while you use its results.
     // =============================================================================
-    class OPAAX_API ResourcePrefabResolver final : public IPrefabResolver
+    class ResourcePrefabResolver final : public IPrefabResolver
     {
         // =========================================================================
         // CTORS - DTORS

@@ -7,7 +7,7 @@
 
 namespace Opaax
 {
-    struct OPAAX_API Maths
+    struct Maths
     {
         // =============================================================================
         // Bounds

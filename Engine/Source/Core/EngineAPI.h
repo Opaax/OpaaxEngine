@@ -3,32 +3,27 @@
 // =============================================================================
 // Platform Detection
 // =============================================================================
-#ifdef _WIN32
-#ifdef _WIN64
-    #define OPAAX_PLATFORM_WINDOWS
-#else
-        #error "x86 not supported!"
-#endif
-#elif defined(__APPLE__) || defined(__MACH__)
+#if defined(_WIN32)
+    #if defined(_WIN64)
+        #define OPAAX_PLATFORM_WINDOWS
+    #else
+        #error "32-bit Windows is not supported."
+    #endif
+#elif defined(__APPLE__) && defined(__MACH__)
     #include <TargetConditionals.h>
-#if TARGET_OS_MAC == 1
+    #if TARGET_OS_OSX == 1
         #define OPAAX_PLATFORM_MACOS
-#else
-        #error "iOS not supported!"
-#endif
+    #else
+        #error "Only macOS is supported among Apple platforms."
+    #endif
 #elif defined(__linux__)
     #define OPAAX_PLATFORM_LINUX
 #else
-    #error "Platform not supported!"
+    #error "Platform not supported."
 #endif
 
-// =============================================================================
-// DLL Export / Import
-// =============================================================================
-#ifdef ENGINE_EXPORTS
-#define OPAAX_API __declspec(dllexport)
-#else
-    #define OPAAX_API __declspec(dllimport)
+#if defined(OPAAX_PLATFORM_LINUX) || defined(OPAAX_PLATFORM_MACOS)
+    #define OPAAX_PLATFORM_POSIX
 #endif
 
 // =============================================================================
@@ -36,7 +31,7 @@
 // Always inline. Use on hot trivial accessors only.
 // =============================================================================
 #if defined(_MSC_VER)
-#define FORCEINLINE __forceinline
+    #define FORCEINLINE __forceinline
 #elif defined(__GNUC__) || defined(__clang__)
     #define FORCEINLINE __attribute__((always_inline)) inline
 #else
@@ -58,14 +53,16 @@
 #endif
 
 #ifdef OPAAX_DEBUG
-#ifdef OPAAX_PLATFORM_WINDOWS
-    #define OPAAX_DEBUGBREAK() __debugbreak()
-#elif defined(OPAAX_PLATFORM_LINUX)
+    #if defined(_MSC_VER)
+        #define OPAAX_DEBUGBREAK() __debugbreak()
+    #elif defined(__clang__)
+        #define OPAAX_DEBUGBREAK() __builtin_debugtrap()
+    #elif defined(OPAAX_PLATFORM_POSIX)
         #include <signal.h>
         #define OPAAX_DEBUGBREAK() raise(SIGTRAP)
-#else
+    #else
         #define OPAAX_DEBUGBREAK()
-#endif
+    #endif
 #else
     #define OPAAX_DEBUGBREAK()
 #endif

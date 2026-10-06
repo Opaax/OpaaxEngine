@@ -10,15 +10,7 @@ namespace Opaax
 
     OpenGLShader::OpenGLShader(const ShaderDesc& InDesc)
     {
-        // Prefer SPIR-V; fall back to GLSL source when there is none (built without glslang).
-        if (!InDesc.VertexSpirv.empty() && !InDesc.FragmentSpirv.empty())
-        {
-            CreateFromSpirv(InDesc.VertexSpirv, InDesc.FragmentSpirv);
-        }
-        else
-        {
-            CompileAndLink(InDesc.VertexSrc.CStr(), InDesc.FragmentSrc.CStr());
-        }
+        CompileAndLink(InDesc.VertexSrc.CStr(), InDesc.FragmentSrc.CStr());
     }
     
     OpenGLShader::~OpenGLShader()
@@ -45,95 +37,8 @@ namespace Opaax
         return lLocation;
     }
     
-    namespace
-    {
-        // Check that the driver accepts SPIR-V (core in GL 4.6).
-        bool SpirvBinaryFormatSupported()
-        {
-            GLint lNumFormats = 0;
-            glGetIntegerv(GL_NUM_SHADER_BINARY_FORMATS, &lNumFormats);
-            if (lNumFormats <= 0) { return false; }
-
-            TDynArray<GLint> lFormats(static_cast<size_t>(lNumFormats));
-            glGetIntegerv(GL_SHADER_BINARY_FORMATS, lFormats.data());
-            for (const GLint lFmt : lFormats)
-            {
-                if (lFmt == GL_SHADER_BINARY_FORMAT_SPIR_V) { return true; }
-            }
-            return false;
-        }
-
-        // Loads and specializes one SPIR-V stage. Returns the shader object, or 0 on failure (logged).
-        GLuint MakeSpirvStage(GLenum InStage, const TDynArray<Uint32>& InSpirv)
-        {
-            const GLuint lShader = glCreateShader(InStage);
-            glShaderBinary(1, &lShader, GL_SHADER_BINARY_FORMAT_SPIR_V,
-                           InSpirv.data(),
-                           static_cast<GLsizei>(InSpirv.size() * sizeof(Uint32)));
-
-            // Specialize at entry point "main".
-            glSpecializeShader(lShader, "main", 0, nullptr, nullptr);
-
-            GLint lSuccess = 0;
-            glGetShaderiv(lShader, GL_COMPILE_STATUS, &lSuccess);
-            if (!lSuccess)
-            {
-                char lLog[512];
-                glGetShaderInfoLog(lShader, 512, nullptr, lLog);
-                OPAAX_ENGINE_LOG(Error, "OpenGLShader: SPIR-V specialization failed:\n{}", lLog);
-                glDeleteShader(lShader);
-                return 0;
-            }
-            return lShader;
-        }
-    }
-
-    void OpenGLShader::CreateFromSpirv(const TDynArray<Uint32>& InVertexSpirv,
-                                       const TDynArray<Uint32>& InFragmentSpirv)
-    {
-        if (!SpirvBinaryFormatSupported())
-        {
-            OPAAX_ENGINE_LOG(Error, "OpenGLShader: GL_SHADER_BINARY_FORMAT_SPIR_V not supported by this driver.");
-            OPAAX_CORE_ASSERT(false)
-            return;
-        }
-
-        const GLuint lVertexShader = MakeSpirvStage(GL_VERTEX_SHADER, InVertexSpirv);
-        if (lVertexShader == 0) { OPAAX_CORE_ASSERT(false) return; }
-
-        const GLuint lFragmentShader = MakeSpirvStage(GL_FRAGMENT_SHADER, InFragmentSpirv);
-        if (lFragmentShader == 0)
-        {
-            glDeleteShader(lVertexShader);
-            OPAAX_CORE_ASSERT(false)
-            return;
-        }
-
-        // Link
-        m_RendererID = glCreateProgram();
-        glAttachShader(m_RendererID, lVertexShader);
-        glAttachShader(m_RendererID, lFragmentShader);
-        glLinkProgram(m_RendererID);
-
-        GLint lSuccess = 0;
-        glGetProgramiv(m_RendererID, GL_LINK_STATUS, &lSuccess);
-        if (!lSuccess)
-        {
-            char lLog[512];
-            glGetProgramInfoLog(m_RendererID, 512, nullptr, lLog);
-            OPAAX_ENGINE_LOG(Error, "OpenGLShader: program link failed:\n{}", lLog);
-            glDeleteProgram(m_RendererID);
-            m_RendererID = 0;
-            OPAAX_CORE_ASSERT(false)
-        }
-
-        glDeleteShader(lVertexShader);
-        glDeleteShader(lFragmentShader);
-    }
-
     void OpenGLShader::CompileAndLink(const char* InVertexSrc, const char* InFragmentSrc)
     {
-        // GLSL fallback (no SPIR-V). Sprite.glsl is valid desktop GLSL (#version 450 core).
         const GLuint lVertexShader = glCreateShader(GL_VERTEX_SHADER);
         glShaderSource(lVertexShader, 1, &InVertexSrc, nullptr);
         glCompileShader(lVertexShader);

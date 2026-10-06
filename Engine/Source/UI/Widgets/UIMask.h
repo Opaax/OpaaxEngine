@@ -20,7 +20,7 @@ namespace Opaax
     //   An empty texture path clips to the rect. Draws nothing itself unless bShowMaskGraphic,
     //   and is not hit-testable.
     // =============================================================================
-    class OPAAX_API UIMask final : public UIWidget
+    class UIMask final : public UIWidget
     {
         // =============================================================================
         // Authored state

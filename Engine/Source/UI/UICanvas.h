@@ -39,7 +39,7 @@ namespace Opaax
     //   The host calls SetTargetSize and Update once per frame, Submit inside its pass, and HitTest
     //   with a point from ScreenToCanvas.
     // =============================================================================
-    class OPAAX_API UICanvas
+    class UICanvas
     {
         // =============================================================================
         // CTOR / DTOR

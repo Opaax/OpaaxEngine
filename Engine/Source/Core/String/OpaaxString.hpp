@@ -19,7 +19,7 @@ namespace Opaax
      * @see OpaaxStringID for interned strings.
      * @see Core/Hash/OpaaxHash.h for std::hash<OpaaxString>.
      */
-    class OPAAX_API OpaaxString final
+    class OpaaxString final
     {
         // =============================================================================
         // Statics

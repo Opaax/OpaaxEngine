@@ -25,7 +25,7 @@ namespace Opaax
     //
     //   Gameplay reaches it through WorldContext::UI.
     // =============================================================================
-    class OPAAX_API UISubsystem final : public GameInstanceSubsystemBase
+    class UISubsystem final : public GameInstanceSubsystemBase
     {
         // =========================================================================
         // Base Implementation

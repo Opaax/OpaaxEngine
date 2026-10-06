@@ -35,7 +35,7 @@ namespace Opaax
      * @param InLimits     Per-batch capacity (at least 1 quad and 2 slots)
      * @param OutPlan      Filled in draw order. Cleared first (capacity kept).
      */
-    OPAAX_API void PlanQuadBatches(const TDynArray<Uint64>&  InKeys,
+    void PlanQuadBatches(const TDynArray<Uint64>&  InKeys,
                                    const TDynArray<Uint32>&  InTextureIds,
                                    const TDynArray<Uint32>&  InMaskIds,
                                    const QuadBatchLimits&    InLimits,

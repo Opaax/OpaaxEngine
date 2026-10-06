@@ -12,7 +12,7 @@ namespace Opaax
     //   Converts UTF-8 to UTF-16 on the way in and back on the way out; the work uses
     //   std::filesystem on wide paths.
     // =============================================================================
-    class OPAAX_API WindowsFileSystem final : public IFileSystem
+    class WindowsFileSystem final : public IFileSystem
     {
         // =============================================================================
         // Override

@@ -19,7 +19,7 @@ namespace Opaax
 {
     inline constexpr LogCategory LogFontFaceResource{"FontFaceResource"};
 
-    struct OPAAX_API FontFaceResource final
+    struct FontFaceResource final
     {
         // =========================================================================
         // CTORS - DTORS
@@ -31,7 +31,7 @@ namespace Opaax
         // =========================================================================
         // Copy delete - Move
         // =========================================================================
-        // Required by OPAAX_API: the TUniquePtr member is move-only.
+        // The TUniquePtr member is move-only.
         FontFaceResource(const FontFaceResource&)            = delete;
         FontFaceResource& operator=(const FontFaceResource&) = delete;
         FontFaceResource(FontFaceResource&&)                 = default;

@@ -24,8 +24,7 @@
 //       OPAAX_PROPERTIES(MyConfigData, OPAAX_PROP(Value))                  // optional: editor display
 //   };
 //
-//   DECLARE_OPAAX_T_CONFIG(MyConfig, MyConfigData)   // in the engine DLL
-//   DECLARE_T_CONFIG(MyConfig, MyConfigData)         // anywhere else
+//   DECLARE_T_CONFIG(MyConfig, MyConfigData)
 //
 // In your .cpp:
 //   IMPL_T_CONFIG(MyConfig)
@@ -148,15 +147,8 @@ namespace Opaax
 }
     
 // =============================================================================
-// Which macro depends on the module that declares the config:
-//   DECLARE_OPAAX_T_CONFIG — in the engine DLL (exported).
-//   DECLARE_T_CONFIG       — in any other module (editor lib, game module). Not exported;
-//                            using OPAAX_API there gives C4273 then LNK2019.
+// Declares Config_<ConfigName>, saved as <ConfigName>.config. Pair with IMPL_T_CONFIG in a .cpp.
 // =============================================================================
-#define DECLARE_OPAAX_T_CONFIG(ConfigName, DataType)\
-class OPAAX_API Config_##ConfigName final : public TConfig<DataType> \
-{ public: OPAAX_CONFIG_TYPE(ConfigName) const char* FileName() const override { return STR(ConfigName) ".config"; } };
-
 #define DECLARE_T_CONFIG(ConfigName, DataType)\
 class Config_##ConfigName final : public TConfig<DataType> \
 { public: OPAAX_CONFIG_TYPE(ConfigName) const char* FileName() const override { return STR(ConfigName) ".config"; } };

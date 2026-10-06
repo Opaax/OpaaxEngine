@@ -40,7 +40,7 @@ namespace Opaax
     // Logger — the engine-wide logger (Get()); tests create their own.
     //   Lines logged before Init are held and replayed on Init.
     // =============================================================================
-    class OPAAX_API Logger final
+    class Logger final
     {
         // =============================================================================
         // Statics

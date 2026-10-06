@@ -32,7 +32,6 @@ namespace Opaax::Editor
     //   renderer. Kept editor-side so the engine stays ImGui-free.
     //   GetViewportImage shows the world's framebuffer (ViewportPanel); GetTextureImage shows a loaded
     //   texture (icons, thumbnails, Preview). OpenGL only for now.
-    //   No OPAAX_API: OpaaxEditorLib is a static lib linked into the editor exe.
     // =============================================================================
     class IEditorUIBackend
     {

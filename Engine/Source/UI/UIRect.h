@@ -49,13 +49,13 @@ namespace Opaax
     /**
      * The rect InRect gives inside InParent.
      */
-    OPAAX_API Bounds2D ResolveRect(const UIRect& InRect, const Bounds2D& InParent) noexcept;
+    Bounds2D ResolveRect(const UIRect& InRect, const Bounds2D& InParent) noexcept;
 
     /**
      * Inverse: sets InOutRect's SizeDelta and AnchoredPosition so ResolveRect gives InTarget.
      * Anchors and pivot are kept.
      */
-    OPAAX_API void FitRect(UIRect& InOutRect, const Bounds2D& InTarget, const Bounds2D& InParent) noexcept;
+    void FitRect(UIRect& InOutRect, const Bounds2D& InTarget, const Bounds2D& InParent) noexcept;
 
     // =============================================================================
     // Anchor presets — Unity's 4x4 grid
@@ -76,9 +76,9 @@ namespace Opaax
      * Sets InOutRect's anchors and pivot to the preset, then fits it to InCurrent so the widget
      * does not move on screen. The pivot follows the anchor (0.5 on a stretched axis).
      */
-    OPAAX_API void ApplyAnchorPreset(UIRect& InOutRect, EUIAnchorX InX, EUIAnchorY InY,
+    void ApplyAnchorPreset(UIRect& InOutRect, EUIAnchorX InX, EUIAnchorY InY,
                                      const Bounds2D& InCurrent, const Bounds2D& InParent) noexcept;
 
     /** The preset InRect's anchors match; bKnown = false if none. */
-    OPAAX_API UIAnchorPreset CurrentAnchorPreset(const UIRect& InRect) noexcept;
+    UIAnchorPreset CurrentAnchorPreset(const UIRect& InRect) noexcept;
 }

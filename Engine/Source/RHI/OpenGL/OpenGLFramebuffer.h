@@ -12,7 +12,7 @@ namespace Opaax
     /**
      * OpenGL IFramebuffer: one GL_RGBA8 colour texture and an optional GL_DEPTH24_STENCIL8 renderbuffer.
      */
-    class OPAAX_API OpenGLFramebuffer final : public IFramebuffer
+    class OpenGLFramebuffer final : public IFramebuffer
     {
         // =============================================================================
         // CTOR - DTOR

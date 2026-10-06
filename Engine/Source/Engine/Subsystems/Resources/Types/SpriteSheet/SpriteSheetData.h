@@ -108,11 +108,11 @@ namespace Opaax
      * InFrame's pixel rect as UVs of a texture InTexWidth x InTexHeight. Handles the V flip
      * (textures are bottom-up for GL). A zero size gives the whole texture.
      */
-    OPAAX_API SpriteUVRect MakeFrameUV(const SpriteFrame& InFrame, Uint32 InTexWidth, Uint32 InTexHeight);
+    SpriteUVRect MakeFrameUV(const SpriteFrame& InFrame, Uint32 InTexWidth, Uint32 InTexHeight);
 
     /**
      * The frames a grid cuts out of a texture, in row-major order (left to right, top to bottom).
      * Cells outside the texture are dropped.
      */
-    OPAAX_API TDynArray<SpriteFrame> SliceGrid(const SpriteSheetGrid& InGrid, Uint32 InTexWidth, Uint32 InTexHeight);
+    TDynArray<SpriteFrame> SliceGrid(const SpriteSheetGrid& InGrid, Uint32 InTexWidth, Uint32 InTexHeight);
 }

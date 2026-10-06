@@ -17,12 +17,12 @@ namespace Opaax
          * @param InValue    The value so far
          * @param InModifier The transform and its settings
          */
-        OPAAX_API Vector2F Apply(Vector2F InValue, const InputModifierData& InModifier) noexcept;
+        Vector2F Apply(Vector2F InValue, const InputModifierData& InModifier) noexcept;
 
         /**
          * Applies every modifier, in order (order matters: DeadZone then Scalar differs from
          * Scalar then DeadZone).
          */
-        OPAAX_API Vector2F ApplyAll(Vector2F InValue, const TDynArray<InputModifierData>& InModifiers) noexcept;
+        Vector2F ApplyAll(Vector2F InValue, const TDynArray<InputModifierData>& InModifiers) noexcept;
     }
 }

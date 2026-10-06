@@ -27,5 +27,5 @@ namespace Opaax
     { 
 		static NullPlatform s_Null; 
         return s_Null; 
-	}   // defined here: shared across the DLL/exe boundary
+	}   // defined here: one instance
 }

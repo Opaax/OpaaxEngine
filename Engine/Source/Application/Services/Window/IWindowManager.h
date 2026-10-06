@@ -14,12 +14,12 @@ namespace Opaax
 
     inline constexpr LogCategory LogWindowManager{"WindowManager"};
     
-    OPAAX_API WindowProps MakeWindowProps(const EngineConfigData& InData);
+    WindowProps MakeWindowProps(const EngineConfigData& InData);
 
     // =============================================================================
     // IWindowManager — owns the application's main window.
     // =============================================================================
-    class OPAAX_API IWindowManager : public IAppService
+    class IWindowManager : public IAppService
     {
         // =============================================================================
         // Base Implementation

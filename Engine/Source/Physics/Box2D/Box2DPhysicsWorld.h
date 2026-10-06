@@ -9,8 +9,7 @@ namespace Opaax
 {
     // =============================================================================
     // Box2DPhysicsWorld — IPhysicsWorld with Box2D 3.x. The only place b2* is used.
-    //   Not exported: created only through PhysicsAPI::Create, so Box2D stays private to the
-    //   engine DLL (one copy of its global state).
+    //   Created only through PhysicsAPI::Create, so no code outside Physics/ sees Box2D.
     // =============================================================================
     class Box2DPhysicsWorld final : public IPhysicsWorld
     {

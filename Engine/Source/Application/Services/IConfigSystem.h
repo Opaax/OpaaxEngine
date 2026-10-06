@@ -20,7 +20,7 @@ namespace Opaax
     //   Get<T>() registers the config on first use, so it never returns null.
     //   Configs are kept in registration order (the editor's Config panel lists them).
     // =============================================================================
-    class OPAAX_API IConfigSystem : public IAppService
+    class IConfigSystem : public IAppService
     {
         // =============================================================================
         // Base Implementation
@@ -114,7 +114,7 @@ namespace Opaax
     // =============================================================================
     // ConfigSystem — registry backed by <ProjectRoot>/Configs/.
     // =============================================================================
-    class OPAAX_API ConfigSystem final : public IConfigSystem
+    class ConfigSystem final : public IConfigSystem
     {
         // =============================================================================
         // CTOR

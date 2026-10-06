@@ -127,7 +127,7 @@ namespace Opaax
     }
 
     // =========================================================================
-    // Type tag + null object (defined here so they are shared across the DLL/exe boundary).
+    // Type tag + null object (defined here so there is one of each).
     // =========================================================================
     ServiceTypeID IPaths::StaticTypeID() noexcept
     {

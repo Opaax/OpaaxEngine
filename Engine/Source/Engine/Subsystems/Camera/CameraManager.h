@@ -32,7 +32,7 @@ namespace Opaax
     // CameraManager — sets the view of the active Play world from its CameraComponent.
     //   Edit worlds use the editor's camera instead. With several cameras, the first wins (warning).
     // =============================================================================
-    class OPAAX_API CameraManager final : public EngineSubsystemBase
+    class CameraManager final : public EngineSubsystemBase
     {
         // =============================================================================
         // Base Implementation

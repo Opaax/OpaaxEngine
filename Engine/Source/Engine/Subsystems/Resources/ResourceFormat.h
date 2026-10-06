@@ -53,5 +53,5 @@ namespace Opaax
      * @param InExtension Raw extension ("wave", ".WAVE")
      * @return The interned id, or an invalid id if InExtension is empty
      */
-    OPAAX_API OpaaxStringID NormalizeExtension(OpaaxStringView InExtension);
+    OpaaxStringID NormalizeExtension(OpaaxStringView InExtension);
 }

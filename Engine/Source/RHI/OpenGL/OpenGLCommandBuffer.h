@@ -9,7 +9,7 @@ namespace Opaax
     /**
      * OpenGL ICommandBuffer. Every call runs immediately (no record/submit).
      */
-    class OPAAX_API OpenGLCommandBuffer final : public ICommandBuffer
+    class OpenGLCommandBuffer final : public ICommandBuffer
     {
         // =============================================================================
         // CTOR - DTOR

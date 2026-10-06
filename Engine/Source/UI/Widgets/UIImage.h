@@ -43,7 +43,7 @@ namespace Opaax
     //   One quad, or nine with a Border (9-slice). FillAmount crops from the min edge (health bar)
     //   and works with 9-slice too.
     // =============================================================================
-    class OPAAX_API UIImage final : public UIWidget
+    class UIImage final : public UIWidget
     {
         // =============================================================================
         // Authored state

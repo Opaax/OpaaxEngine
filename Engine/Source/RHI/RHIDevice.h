@@ -13,7 +13,7 @@ namespace Opaax
     // =============================================================================
     // RHIDevice — creates the IRHIDevice for an EBackend and starts it on the surface.
     // =============================================================================
-    class OPAAX_API RHIDevice
+    class RHIDevice
     {
     public:
         static TUniquePtr<IRHIDevice> Create(EBackend InBackend, IGraphicsContext& InSurface);

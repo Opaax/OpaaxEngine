@@ -31,7 +31,7 @@ namespace Opaax
     //   Play worlds only. Runs in FixedUpdate after physics (registration order), so it sees
     //   this step's poses. Loads the tuning assets through its own caches.
     // =============================================================================
-    class OPAAX_API MoverSubsystem final : public WorldSubsystemBase
+    class MoverSubsystem final : public WorldSubsystemBase
     {
         // =============================================================================
         // Base implementation

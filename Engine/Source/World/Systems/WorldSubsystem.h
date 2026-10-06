@@ -7,11 +7,11 @@ namespace Opaax
     // =============================================================================
     // IWorldSubsystem — interface for world subsystems. Lives as long as its world.
     // =============================================================================
-    class OPAAX_API IWorldSubsystem : public Opaax::ISubsystem
+    class IWorldSubsystem : public Opaax::ISubsystem
     {
     };
 
-	class OPAAX_API WorldSubsystemBase : public Opaax::IWorldSubsystem
+	class WorldSubsystemBase : public Opaax::IWorldSubsystem
     {
         // =============================================================================
         // CTORS - DTORS
@@ -32,7 +32,7 @@ namespace Opaax
 	// =============================================================================
     // WorldSubsystemMgr — owns and ticks a world's subsystems.
     // =============================================================================
-    class OPAAX_API WorldSubsystemMgr : public ISubsystemManager<IWorldSubsystem>
+    class WorldSubsystemMgr : public ISubsystemManager<IWorldSubsystem>
     {
         // =============================================================================
         // CTORS - DTORS

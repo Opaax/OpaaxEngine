@@ -7,5 +7,5 @@
 
 namespace Opaax
 {
-    DECLARE_OPAAX_T_CONFIG(Renderer, RendererConfigData)
+    DECLARE_T_CONFIG(Renderer, RendererConfigData)
 }

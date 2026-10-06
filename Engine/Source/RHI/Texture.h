@@ -9,7 +9,7 @@ namespace Opaax
      * 2D GPU texture. Created by IRHIDevice::CreateTexture.
      * GetRendererID gives the raw handle, for the editor (ImGui::Image) only.
      */
-    class OPAAX_API ITexture2D
+    class ITexture2D
     {
         // =============================================================================
         // DTOR

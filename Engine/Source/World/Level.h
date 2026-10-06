@@ -26,7 +26,7 @@ namespace Opaax
     //   Unmounting destroys the entities of that map (a map is a subset of the world's registry).
     //   A clone copies this state without mounting again (WorldManager::CloneWorld).
     // =============================================================================
-    class OPAAX_API Level
+    class Level
     {
         // =========================================================================
         // Types

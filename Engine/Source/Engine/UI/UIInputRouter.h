@@ -22,7 +22,7 @@ namespace Opaax
          *  - UIOnly:    routed, and every key is marked in OutConsumed.
          * @param OutConsumed Pass it to InputMappingSubsystem::ConsumeThisFrame
          */
-        OPAAX_API void Route(const InputManager& InInput, UICanvas& InCanvas, EUIInputMode InMode,
+        void Route(const InputManager& InInput, UICanvas& InCanvas, EUIInputMode InMode,
                              InputKeyMask& OutConsumed);
     }
 }

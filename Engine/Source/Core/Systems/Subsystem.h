@@ -12,7 +12,7 @@ namespace Opaax
     /**
      * Base interface for subsystems.
      */
-    class OPAAX_API ISubsystem
+    class ISubsystem
     {
         // =============================================================================
         // CTORs
@@ -38,9 +38,8 @@ namespace Opaax
         virtual SubsystemTypeID GetTypeID() const noexcept          = 0;
     };
 
-    // Add to each concrete subsystem. One type tag per type. Works across the DLL/exe
-    // boundary because engine subsystems are OPAAX_API; a non-exported subsystem needs an
-    // out-of-line StaticTypeID (like OPAAX_SERVICE_TYPE).
+    // Add to each concrete subsystem. One type tag per type (the address of a function-local
+    // static, unique in the program).
 #define OPAAX_SUBSYSTEM_TYPE(ClassName)                                         \
 static ::Opaax::SubsystemTypeID StaticTypeID() noexcept                     \
 {                                                                            \
@@ -54,7 +53,6 @@ return StaticTypeID();                                                   \
 
     /**
      * Owns and ticks a group of subsystems (like Unreal's engine/world subsystems).
-     * Not OPAAX_API: never export a class template.
      * @tparam TSubsystem The subsystem base type this manager handles
      */
     template <class TSubsystem>

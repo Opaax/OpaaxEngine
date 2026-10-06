@@ -12,7 +12,7 @@ namespace Opaax
     // ServiceLocator — owns app services, resolves by interface type.
     //   Get<T>() NEVER returns null: a missing provider resolves to T::Null().
     // =============================================================================
-    class OPAAX_API AppServiceLocator
+    class AppServiceLocator
     {
         // =============================================================================
         // CTORs - DTOR

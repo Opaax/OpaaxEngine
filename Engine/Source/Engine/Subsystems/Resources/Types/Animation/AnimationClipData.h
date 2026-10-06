@@ -136,5 +136,5 @@ namespace Opaax
      * bFinished: nothing new will be shown (end of a Once clip, or a clip that cannot advance).
      * Loop and PingPong clips never finish. Bad input gives step 0.
      */
-    OPAAX_API AnimationSample SampleClip(const AnimationClipData& InClip, float InTimeSeconds);
+    AnimationSample SampleClip(const AnimationClipData& InClip, float InTimeSeconds);
 }

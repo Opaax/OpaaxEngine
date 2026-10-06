@@ -16,10 +16,10 @@ namespace Opaax
      * Interned string handle: O(1) comparison. Create with OPAAX_ID("MyString").
      * Case-sensitive. Thread-safe. Valid for the whole process.
      *
-     * Members that use the pool are defined in the .cpp, so every module (DLL/exe)
+     * Members that use the pool are defined in the .cpp, so the whole program
      * shares the same table.
      */
-    struct OPAAX_API OpaaxStringID final
+    struct OpaaxStringID final
     {
         // =============================================================================
         // CTOR - DTOR

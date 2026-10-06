@@ -10,7 +10,6 @@ namespace Opaax::Editor
     //   The result arrives through a callback, not a return value. The native implementation blocks
     //   and calls it before returning; an in-editor (multi-frame) implementation would call it later,
     //   and would then have to handle the world having changed in between.
-    //   No OPAAX_API: OpaaxEditorLib is a static lib linked into the editor exe.
     // =============================================================================
 
     enum class EDialogAnswer : Uint8

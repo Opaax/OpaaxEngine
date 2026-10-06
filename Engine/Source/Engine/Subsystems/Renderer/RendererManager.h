@@ -51,7 +51,7 @@ namespace Opaax
     //   config, services and paths, builds a RenderSystemDesc, owns the RenderSystem and
     //   drives its frame. The RenderSystem itself knows nothing about the engine.
     // =============================================================================
-    class OPAAX_API RendererManager final : public EngineSubsystemBase, public IUIAssetProvider
+    class RendererManager final : public EngineSubsystemBase, public IUIAssetProvider
     {
         // =============================================================================
         // Base Implementation

@@ -17,7 +17,7 @@ namespace Opaax
     //   Separate named captures (not one with an optional filter), so "the whole world"
     //   is never asked for by accident.
     // =============================================================================
-    class OPAAX_API MapSerializer
+    class MapSerializer
     {
     public:
         /**

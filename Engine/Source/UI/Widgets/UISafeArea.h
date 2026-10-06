@@ -11,7 +11,7 @@ namespace Opaax
     //   Children stay clear of overscan, notches and bezels. Insets are fractions of the rect
     //   (0.05 = 5% title-safe on any aspect). Draws nothing, not hit-testable.
     // =============================================================================
-    class OPAAX_API UISafeArea final : public UIWidget
+    class UISafeArea final : public UIWidget
     {
         // =============================================================================
         // Authored state

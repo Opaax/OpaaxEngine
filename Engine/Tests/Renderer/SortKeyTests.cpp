@@ -1,7 +1,7 @@
 // Suite: Renderer2D draw-order sort-key packing (Renderer/Renderer2DSortKey.h).
 //
 // MakeSortKey is header-inline + constexpr, so this suite compiles the function
-// itself — no DLL symbol needed. It pins the bit layout the batch sort relies on:
+// itself — no engine symbol needed. It pins the bit layout the batch sort relies on:
 //   [Layer : bits 32..39][biased OrderInLayer : bits 8..23][texSlot : bits 0..7]
 #include <doctest.h>
 

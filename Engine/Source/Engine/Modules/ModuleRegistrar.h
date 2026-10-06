@@ -19,7 +19,7 @@ namespace Opaax
     //   The name is optional (defaults to the type name) and is saved in map files:
     //   renaming the C++ type breaks saved maps unless the name is given explicitly.
     // =============================================================================
-    class OPAAX_API ComponentRoute
+    class ComponentRoute
     {
         // =========================================================================
         // Registration
@@ -67,7 +67,7 @@ namespace Opaax
     // WorldSubsystemRoute — registers world subsystems into the WorldSubsystemRegistry.
     //   The name is optional (defaults to the type name); it is only used in logs and the editor.
     // =============================================================================
-    class OPAAX_API WorldSubsystemRoute
+    class WorldSubsystemRoute
     {
         // =========================================================================
         // Registration
@@ -117,7 +117,7 @@ namespace Opaax
     // MoverModeRoute — registers mover modes into the MoverModeRegistry.
     //   The name is required: .opaaxmovemode files store it.
     // =============================================================================
-    class OPAAX_API MoverModeRoute
+    class MoverModeRoute
     {
         // =========================================================================
         // Registration
@@ -163,7 +163,7 @@ namespace Opaax
     // ResourceFormatRoute — registers resource types and their file extensions.
     //   The name is only used in logs and the editor.
     // =============================================================================
-    class OPAAX_API ResourceFormatRoute
+    class ResourceFormatRoute
     {
         // =========================================================================
         // Registration
@@ -211,7 +211,7 @@ namespace Opaax
     // DataAssetRoute — registers the struct types a .opaaxdata can hold. The saved name is the
     //   C++ type name (no namespace).
     // =============================================================================
-    class OPAAX_API DataAssetRoute
+    class DataAssetRoute
     {
     public:
         /**
@@ -253,7 +253,7 @@ namespace Opaax
     //     MoverModes()      -> MoverModeRegistry
     //     DataAssets()      -> DataAssetTypeRegistry
     // =============================================================================
-    class OPAAX_API ModuleRegistrar
+    class ModuleRegistrar
     {
     public:
         ComponentRoute&      Components()      noexcept { return m_Components; }

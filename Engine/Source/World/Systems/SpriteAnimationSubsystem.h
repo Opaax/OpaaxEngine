@@ -32,7 +32,7 @@ namespace Opaax
     //   into its SpriteComponent. Play worlds only (it changes components; the Play copy is
     //   thrown away, so the authored map is untouched).
     // =============================================================================
-    class OPAAX_API SpriteAnimationSubsystem final : public WorldSubsystemBase
+    class SpriteAnimationSubsystem final : public WorldSubsystemBase
     {
         // =============================================================================
         // Base implementation

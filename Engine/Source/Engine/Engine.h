@@ -29,7 +29,7 @@ namespace Opaax
     // Engine — the concrete IEngine. Owns the engine subsystems and runs the frame.
     // Provided last to the service locator, so it shuts down first (before the window).
     // =============================================================================
-    class OPAAX_API Engine final : public IEngine
+    class Engine final : public IEngine
     {
         // =============================================================================
         // CTORS - DTORS

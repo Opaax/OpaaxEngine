@@ -16,7 +16,7 @@ namespace Opaax
     //   anyone can open a scope or submit a counter. When disabled, a scope costs one branch.
     //   Main thread only: scopes and counters from other threads are ignored.
     // =============================================================================
-    class OPAAX_API Profiler final
+    class Profiler final
     {
         // =============================================================================
         // Statics

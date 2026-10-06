@@ -59,7 +59,7 @@ namespace Opaax
         bool           bFailed = true;
     };
 
-    class OPAAX_API ResourceManager final : public EngineSubsystemBase
+    class ResourceManager final : public EngineSubsystemBase
     {
         // =============================================================================
         // Base Implementation

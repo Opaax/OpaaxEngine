@@ -11,7 +11,7 @@ namespace Opaax
     //   Three virtual primitives (create, exists, list); GetPathIfNCreate is built on them.
     //   Paths are always UTF-8. Stateless (every call is const). Never throws.
     // =============================================================================
-    class OPAAX_API IFileSystem
+    class IFileSystem
     {
     public:
         virtual ~IFileSystem() {}
@@ -70,7 +70,7 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * A file system where every call fails. Defined in the .cpp (shared across the DLL/exe boundary).
+         * A file system where every call fails. Defined in the .cpp (one instance).
          */
         static const IFileSystem& Null();
     };

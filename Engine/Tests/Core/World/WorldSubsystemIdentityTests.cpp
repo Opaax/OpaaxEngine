@@ -1,9 +1,9 @@
-// Suite: type identity of a world subsystem the engine DLL never sees (a game module's).
+// Suite: type identity of a world subsystem the engine never sees (a game module's).
 //   GetSubsystem<T>() compares GetTypeID() with T::StaticTypeID() (the address of a function-local
-//   static). A game type is compiled into one module, so there is no second copy even though it is
-//   not exported. These tests go red if that changes.
+//   static in an inline function, so one per type for the whole program). These tests go red if
+//   that changes.
 //
-//   The test exe links the engine import lib like a game. The probes (WorldSubsystemProbes.h) are
+//   The test exe links the engine library like a game. The probes (WorldSubsystemProbes.h) are
 //   used from two TUs with external linkage, to tell "one tag per type" from "one tag per TU".
 #include <doctest.h>
 
@@ -38,22 +38,21 @@ TEST_CASE("world subsystem identity: structurally identical types get distinct t
     CHECK(ProbeTagFromOtherTU() != SecondProbeTagFromOtherTU());
 }
 
-TEST_CASE("world subsystem identity: an exe-side tag does not collide with a DLL-exported one")
+TEST_CASE("world subsystem identity: a game-side tag does not collide with an engine one")
 {
-    // WorldManager is OPAAX_API and stamped with the same macro, so its tag comes from the
-    // DLL's exported inline definition while the probe's comes from the exe. The tag space is
-    // shared (SubsystemTypeID is a plain uintptr_t), so this asserts the two modules' statics
-    // do not land on one address.
+    // WorldManager is stamped with the same macro, so its tag comes from the engine's inline
+    // definition while the probe's comes from this test. The tag space is shared
+    // (SubsystemTypeID is a plain uintptr_t), so this asserts the two statics do not land on
+    // one address.
     CHECK(ProbeWorldSubsystem::StaticTypeID() != WorldManager::StaticTypeID());
 }
 
 // =============================================================================
 // The behavioural statement — how the failure would actually bite
 // =============================================================================
-TEST_CASE("world subsystem identity: an instance registered in another TU resolves through the DLL's manager")
+TEST_CASE("world subsystem identity: an instance registered in another TU resolves through the engine's manager")
 {
-    // WorldSubsystemMgr is the DLL's type (dllimport here) — the same one World owns as
-    // m_Subsystems. The registration happens from the module's factory and the lookup
+    // WorldSubsystemMgr is the engine's type — the same one World owns as m_Subsystems. The registration happens from the module's factory and the lookup
     // from wherever game code asks, so the two halves are deliberately split across TUs.
     WorldSubsystemMgr lManager;
 
@@ -88,9 +87,9 @@ TEST_CASE("world subsystem identity: resolution refuses a type that was never re
 }
 
 // =============================================================================
-// The DLL-owned container drives exe-side overrides
+// The engine-owned container drives game-side overrides
 // =============================================================================
-TEST_CASE("world subsystem identity: the DLL's manager drives a non-exported subsystem's lifecycle")
+TEST_CASE("world subsystem identity: the engine's manager drives a game subsystem's lifecycle")
 {
     WorldSubsystemMgr lManager;
 
@@ -102,9 +101,9 @@ TEST_CASE("world subsystem identity: the DLL's manager drives a non-exported sub
 
     lManager.ShutdownAll();
 
-    // Virtual dispatch from the manager's list into an override the DLL cannot name. This is
-    // the half of the boundary that tag identity does not cover: the instance is allocated by
-    // the module's factory and stored in a container whose type belongs to the DLL.
+    // Virtual dispatch from the manager's list into an override the engine cannot name. This is
+    // the half that tag identity does not cover: the instance is allocated by the module's
+    // factory and stored in a container whose type belongs to the engine.
     CHECK(lProbe->GetStartupCount() == 1);
     CHECK(lProbe->GetShutdownCount() == 1);
 }

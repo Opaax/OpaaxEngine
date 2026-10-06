@@ -13,7 +13,7 @@ namespace Opaax
      * Unique id of one binding in a TMulticastDelegate or EventBus. Needed to remove it.
      * A default handle is invalid (id 0).
      */
-    class OPAAX_API DelegateHandle
+    class DelegateHandle
     {
         // =============================================================================
         // CTORs - DTOR

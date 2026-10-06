@@ -9,7 +9,7 @@ namespace Opaax
 {
     // =========================================================================
     // OpaaxStringIDPool — thread-safe intern table, OpaaxString <-> Uint32.
-    //   Defined in the .cpp so the engine DLL has the only instance.
+    //   Defined in the .cpp so there is only one instance.
     //   Index 0 is "None". Entries are never removed and never move, so returned
     //   references stay valid after the lock is released.
     // =========================================================================

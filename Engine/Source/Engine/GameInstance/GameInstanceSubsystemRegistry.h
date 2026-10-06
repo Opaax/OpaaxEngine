@@ -19,7 +19,7 @@ namespace Opaax
     // =============================================================================
     // IGameInstanceSubsystemEntry — type-erased entry for one registered game-instance subsystem type.
     // =============================================================================
-    class OPAAX_API IGameInstanceSubsystemEntry
+    class IGameInstanceSubsystemEntry
     {
     public:
         virtual ~IGameInstanceSubsystemEntry() = default;
@@ -34,8 +34,8 @@ namespace Opaax
     };
 
     // =============================================================================
-    // TGameInstanceSubsystemEntry<T> — concrete entry for T. Header-only (no OPAAX_API), so
-    //   game modules can register their own types.
+    // TGameInstanceSubsystemEntry<T> — concrete entry for T. Header-only, so game modules
+    //   can register their own types.
     // =============================================================================
     template<typename T>
     requires std::is_base_of_v<IGameInstanceSubsystem, T>
@@ -62,7 +62,7 @@ namespace Opaax
     // GameInstanceSubsystemRegistry — every game-instance subsystem type, in registration order.
     //   Every game creates all of them, in order. Closed (sealed) at the first CreateWorld.
     // =============================================================================
-    class OPAAX_API GameInstanceSubsystemRegistry
+    class GameInstanceSubsystemRegistry
     {
         // =========================================================================
         // CTORS - DTORS
@@ -74,7 +74,7 @@ namespace Opaax
         // =========================================================================
         // Copy - Move Delete
         // =========================================================================
-        // Required by OPAAX_API: the implicit copy would not compile (C2280).
+        // Owns its entries: not copyable.
         GameInstanceSubsystemRegistry(const GameInstanceSubsystemRegistry&)            = delete;
         GameInstanceSubsystemRegistry& operator=(const GameInstanceSubsystemRegistry&) = delete;
         GameInstanceSubsystemRegistry(GameInstanceSubsystemRegistry&&)                 = delete;
@@ -94,7 +94,7 @@ namespace Opaax
         requires std::is_base_of_v<IGameInstanceSubsystem, T>
         bool Register(OpaaxStringID InName)
         {
-            // Built here (T is known) but stored by an out-of-line function in the DLL.
+            // Built here (T is known), stored by an out-of-line function.
             return AddEntry(MakeUnique<TGameInstanceSubsystemEntry<T>>(InName), InName);
         }
 

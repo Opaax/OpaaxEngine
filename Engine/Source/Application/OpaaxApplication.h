@@ -24,7 +24,7 @@ namespace Opaax
     // OpaaxApplication — base application host. Owns the AppServiceLocator and boots
     // the app-level services (Platform, Paths, ...) in dependency order.
     // =============================================================================
-    class OPAAX_API OpaaxApplication
+    class OpaaxApplication
     {
         // =============================================================================
         // CTORS - DTORS

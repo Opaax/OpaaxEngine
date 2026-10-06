@@ -7,7 +7,7 @@ namespace Opaax
     // =============================================================================
     // IEngineSubsystem — interface for engine subsystems. Live from engine start to engine stop.
     // =============================================================================
-    class OPAAX_API IEngineSubsystem : public Opaax::ISubsystem
+    class IEngineSubsystem : public Opaax::ISubsystem
     {
     };
 
@@ -15,7 +15,7 @@ namespace Opaax
     // EngineSubsystemBase — base for concrete engine subsystems.
     //   Add OPAAX_SUBSYSTEM_TYPE(ClassName) to the concrete class.
     // =============================================================================
-    class OPAAX_API EngineSubsystemBase : public Opaax::IEngineSubsystem
+    class EngineSubsystemBase : public Opaax::IEngineSubsystem
     {
         // =============================================================================
         // CTORS - DTORS
@@ -35,7 +35,7 @@ namespace Opaax
     // EngineSubsystemMgr — owns and ticks the engine subsystems (registration order;
     //   reverse order for shutdown).
     // =============================================================================
-    class OPAAX_API EngineSubsystemMgr : public ISubsystemManager<IEngineSubsystem>
+    class EngineSubsystemMgr : public ISubsystemManager<IEngineSubsystem>
     {
         // =============================================================================
         // CTORS - DTORS

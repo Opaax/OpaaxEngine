@@ -36,16 +36,16 @@ namespace Opaax
          * @param InIgnore Component to skip (PrefabInstanceComponent's name)
          * @return An empty object when nothing differs
          */
-        OPAAX_API nlohmann::json Diff(const EntityData& InTemplate, const EntityData& InInstance,
+        nlohmann::json Diff(const EntityData& InTemplate, const EntityData& InInstance,
                                       OpaaxStringID InIgnore);
 
         /**
          * Applies InPatch to InOutEntity (a copy of the template). Inverse of Diff.
          * An unknown component is added; null removes; a malformed patch is ignored with a warning.
          */
-        OPAAX_API void Apply(const nlohmann::json& InPatch, EntityData& InOutEntity);
+        void Apply(const nlohmann::json& InPatch, EntityData& InOutEntity);
 
         /** @return True if InPatch changes nothing */
-        OPAAX_API bool IsEmpty(const nlohmann::json& InPatch);
+        bool IsEmpty(const nlohmann::json& InPatch);
     }
 }

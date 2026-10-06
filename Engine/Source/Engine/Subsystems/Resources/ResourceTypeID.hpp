@@ -10,7 +10,7 @@
 
 // =============================================================================
 // ResourceTypeID — Get<T>() maps a resource type to a dense Uint32 pool index.
-//   Same value in every module (one registry in the engine DLL) and every run.
+//   One registry for the whole program; the same type always maps to the same index.
 // =============================================================================
 namespace Opaax
 {
@@ -20,8 +20,8 @@ namespace Opaax
     // Registry functions (the registry lives in ResourceTypeID.cpp).
     //   InternResourceType: same hash but different name is fatal.
     // -------------------------------------------------------------------------
-    OPAAX_API Uint32 InternResourceType(Uint64 InHash, std::string_view InName);
-    OPAAX_API Uint32 GetResourceTypeCount();
+    Uint32 InternResourceType(Uint64 InHash, std::string_view InName);
+    Uint32 GetResourceTypeCount();
 
     // =============================================================================
     // ResourceTypeID

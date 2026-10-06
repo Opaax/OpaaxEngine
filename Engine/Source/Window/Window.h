@@ -72,7 +72,7 @@ namespace Opaax
     /**
      * Platform-independent window. Create with Window::Create.
      */
-    class OPAAX_API Window
+    class Window
     {
         // =============================================================================
         // Statics

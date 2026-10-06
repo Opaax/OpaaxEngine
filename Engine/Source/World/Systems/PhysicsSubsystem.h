@@ -26,7 +26,7 @@ namespace Opaax
     //   spawned at any time work, and component add order does not matter).
     //   One body per collider; a rigidbody without a collider is skipped.
     // =============================================================================
-    class OPAAX_API PhysicsSubsystem final : public WorldSubsystemBase
+    class PhysicsSubsystem final : public WorldSubsystemBase
     {
         // =============================================================================
         // Base implementation

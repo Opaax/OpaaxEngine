@@ -12,7 +12,7 @@ namespace Opaax
     // Guid — 128-bit stable identity for entities and other saved objects.
     //   All zero is invalid. New() returns a random non-zero value.
     // =============================================================================
-    struct OPAAX_API Guid
+    struct Guid
     {
         // =========================================================================
         // Data

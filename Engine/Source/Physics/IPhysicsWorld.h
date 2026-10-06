@@ -12,7 +12,7 @@ namespace Opaax
     //   directly; worlds are created through PhysicsAPI::Create. Works in world units, Y-up,
     //   with opaque handles.
     // =============================================================================
-    class OPAAX_API IPhysicsWorld
+    class IPhysicsWorld
     {
         // =============================================================================
         // DTOR

@@ -35,39 +35,39 @@ namespace Opaax
         /**
          * InDoc as text: dump(4), sorted keys, no trailing newline.
          */
-        OPAAX_API OpaaxString Serialize(const UICanvasDoc& InDoc);
+        OpaaxString Serialize(const UICanvasDoc& InDoc);
 
         /**
          * The same text from a root owned by someone else (the editor's live canvas).
          */
-        OPAAX_API OpaaxString Serialize(const UIWidget& InRoot, float InReferenceHeight);
+        OpaaxString Serialize(const UIWidget& InRoot, float InReferenceHeight);
 
         /**
          * Parses InText into OutDoc, creating widgets through InRegistry. OutDoc is untouched on failure.
          * @return False on malformed JSON or an unsupported version
          */
-        OPAAX_API bool Deserialize(const OpaaxString& InText, const UIWidgetRegistry& InRegistry, UICanvasDoc& OutDoc);
+        bool Deserialize(const OpaaxString& InText, const UIWidgetRegistry& InRegistry, UICanvasDoc& OutDoc);
 
         /** Writes InDoc to InAbsPath, replacing any content. */
-        OPAAX_API bool Save(const OpaaxString& InAbsPath, const UICanvasDoc& InDoc);
+        bool Save(const OpaaxString& InAbsPath, const UICanvasDoc& InDoc);
 
         /** Reads InAbsPath into OutDoc (same guarantees as Deserialize). */
-        OPAAX_API bool Load(const OpaaxString& InAbsPath, const UIWidgetRegistry& InRegistry, UICanvasDoc& OutDoc);
+        bool Load(const OpaaxString& InAbsPath, const UIWidgetRegistry& InRegistry, UICanvasDoc& OutDoc);
 
         /** Number of widgets in InRoot's subtree, itself included. */
-        OPAAX_API Uint64 CountWidgets(const UIWidget& InRoot);
+        Uint64 CountWidgets(const UIWidget& InRoot);
 
         // =============================================================================
         // One node (the clipboard unit, so paste works across documents).
         // =============================================================================
 
         /** InWidget and its subtree as text. */
-        OPAAX_API OpaaxString SerializeNode(const UIWidget& InWidget);
+        OpaaxString SerializeNode(const UIWidget& InWidget);
 
         /** A new subtree from InText, or null if it is not a node. */
-        OPAAX_API TUniquePtr<UIWidget> DeserializeNode(const OpaaxString& InText, const UIWidgetRegistry& InRegistry);
+        TUniquePtr<UIWidget> DeserializeNode(const OpaaxString& InText, const UIWidgetRegistry& InRegistry);
 
         /** A deep copy through the file format. */
-        OPAAX_API TUniquePtr<UIWidget> CloneWidget(const UIWidget& InWidget, const UIWidgetRegistry& InRegistry);
+        TUniquePtr<UIWidget> CloneWidget(const UIWidget& InWidget, const UIWidgetRegistry& InRegistry);
     }
 }

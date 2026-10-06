@@ -22,7 +22,7 @@ namespace Opaax
     //   Physical keys only; named actions are in InputMappingSubsystem.
     //   Keyboard and mouse only (gamepad codes are refused).
     // =============================================================================
-    class OPAAX_API InputManager final : public EngineSubsystemBase
+    class InputManager final : public EngineSubsystemBase
     {
         // =============================================================================
         // Base Implementation

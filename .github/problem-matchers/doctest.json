@@ -1,0 +1,16 @@
+{
+    "problemMatcher": [
+        {
+            "owner": "opaax-doctest",
+            "severity": "error",
+            "pattern": [
+                {
+                    "regexp": "^(.*?)(?:\((\d+)\)|:(\d+)):\s+(?:FATAL )?ERROR:\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "message": 4
+                }
+            ]
+        }
+    ]
+}
