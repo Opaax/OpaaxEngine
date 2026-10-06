@@ -5,15 +5,13 @@
 #include "Platform/CrashHandler.h"
 #include "Core/String/OpaaxUtf8.h"
 
-#ifdef OPAAX_PLATFORM_WINDOWS
-
 #include <filesystem>
 #include <fstream>
 #include <string>
 
 using namespace Opaax;
 
-TEST_CASE("CrashHandler: WriteReport writes a minidump and a copy of the log, without installing")
+TEST_CASE("CrashHandler: WriteReport writes a report and a copy of the log, without installing")
 {
     namespace fs = std::filesystem;
 
@@ -32,16 +30,22 @@ TEST_CASE("CrashHandler: WriteReport writes a minidump and a copy of the log, wi
         CrashHandler lHandler;
         lHandler.Configure({ Utf8::FromFsPath(lRoot / "Crashes"), Utf8::FromFsPath(lLog), false });
 
-        const OpaaxString lDump = lHandler.WriteReport(nullptr);
+        const OpaaxString lReport = lHandler.WriteReport(nullptr);
 
         CHECK_FALSE(lHandler.IsInstalled());
-        REQUIRE_FALSE(lDump.IsEmpty());
+        REQUIRE_FALSE(lReport.IsEmpty());
 
-        const fs::path lDumpPath = Utf8::ToFsPath(lDump);
-        CHECK(fs::exists(lDumpPath));
-        CHECK(fs::file_size(lDumpPath) > 0);
+        // A minidump on Windows, a text stack trace elsewhere.
+        const fs::path lReportPath = Utf8::ToFsPath(lReport);
+        CHECK(fs::exists(lReportPath));
+        CHECK(fs::file_size(lReportPath) > 0);
+#ifdef OPAAX_PLATFORM_WINDOWS
+        CHECK(lReportPath.extension() == ".dmp");
+#else
+        CHECK(lReportPath.extension() == ".txt");
+#endif
 
-        fs::path lLogCopy = lDumpPath;
+        fs::path lLogCopy = lReportPath;
         lLogCopy.replace_extension(".log");
         REQUIRE(fs::exists(lLogCopy));
 
@@ -52,5 +56,3 @@ TEST_CASE("CrashHandler: WriteReport writes a minidump and a copy of the log, wi
 
     fs::remove_all(lRoot, lError);
 }
-
-#endif

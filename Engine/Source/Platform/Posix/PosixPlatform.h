@@ -4,14 +4,14 @@
 #include "Platform/IPlatform.h"
 #include "Platform/StdFileSystem.h"
 
-#ifdef OPAAX_PLATFORM_WINDOWS
+#ifdef OPAAX_PLATFORM_POSIX
 
 namespace Opaax
 {
     // =============================================================================
-    // WindowsPlatform — IPlatform using Win32.
+    // PosixPlatform — IPlatform for Linux and macOS.
     // =============================================================================
-    class WindowsPlatform final : public IPlatform
+    class PosixPlatform final : public IPlatform
     {
         // =============================================================================
         // Override
@@ -21,10 +21,10 @@ namespace Opaax
         Uint32                              GetLogicalCoreCount()   const override;
         double                              GetTimeSeconds()        const override;
         OpaaxString                         GetExecutablePath()     const override;
-        OpaaxString                         GetPlatformName()       const override { return OpaaxString("Windows"); }
+        OpaaxString                         GetPlatformName()       const override;
         [[nodiscard]] const IFileSystem&    GetFileSystem()         const override { return m_FileSystem; }
         //~End IPlatform interface
-        
+
         // =============================================================================
         // Members
         // =============================================================================
@@ -33,4 +33,4 @@ namespace Opaax
     };
 }
 
-#endif // OPAAX_PLATFORM_WINDOWS
+#endif // OPAAX_PLATFORM_POSIX

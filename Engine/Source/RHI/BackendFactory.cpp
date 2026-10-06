@@ -62,9 +62,17 @@ namespace Opaax
     {
         switch (InBackend)
         {
-            // OpenGL: keep GLFW's defaults (a GL context).
             case EBackend::OpenGL:
             default:
+                // A core profile context. macOS offers 4.1 at most and needs forward compatibility.
+                glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+                glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#ifdef OPAAX_PLATFORM_MACOS
+                glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+                glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+#else
+                glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
+#endif
                 break;
         }
     }

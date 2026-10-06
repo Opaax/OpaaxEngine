@@ -2,25 +2,25 @@
 
 #include "Window/Window.h"
 #include "Core/Log/Logger.h"
-#include "GLFW/glfw3.h"
+#include <GLFW/glfw3.h>
 
 namespace Opaax
 {
     class IGraphicsContext;
     
-    inline constexpr LogCategory LogWindowsWindow{"WindowsWindow"};
+    inline constexpr LogCategory LogGlfwWindow{"GlfwWindow"};
 
     /**
-     * Window implementation with GLFW (Windows).
+     * Window implementation with GLFW (Windows, Linux, macOS).
      */
-    class WindowsWindow : public Window
+    class GlfwWindow : public Window
     {
         // =============================================================================
         // CTOR - DTOR
         // =============================================================================
     public:
-        WindowsWindow(const WindowProps& Props);
-        ~WindowsWindow() override;
+        GlfwWindow(const WindowProps& Props);
+        ~GlfwWindow() override;
 
         // =============================================================================
         // Functions

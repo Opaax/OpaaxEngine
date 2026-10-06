@@ -1,4 +1,4 @@
-// Suite: IFileSystem, through WindowsFileSystem. Each case uses its own directory under the OS
+// Suite: IFileSystem, through StdFileSystem. Each case uses its own directory under the OS
 // temp dir, removed afterwards.
 #include <doctest.h>
 
@@ -7,7 +7,7 @@
 #include <string>
 
 #include "Platform/IFileSystem.h"
-#include "Platform/Windows/WindowsFileSystem.h"
+#include "Platform/StdFileSystem.h"
 
 using namespace Opaax;
 
@@ -70,7 +70,7 @@ namespace
 TEST_CASE("IFileSystem: CreateDirectories builds a nested chain and is idempotent")
 {
     const ScopedTempDir lTemp("create_nested");
-    const WindowsFileSystem lFS;
+    const StdFileSystem lFS;
 
     const OpaaxString lNested = lTemp.Sub("A/B/C");
 
@@ -85,7 +85,7 @@ TEST_CASE("IFileSystem: CreateDirectories builds a nested chain and is idempoten
 
 TEST_CASE("IFileSystem: an empty path is rejected by every entry point, never crashes")
 {
-    const WindowsFileSystem lFS;
+    const StdFileSystem lFS;
     const OpaaxString lEmpty;
 
     CHECK_FALSE(lFS.CreateDirectories(lEmpty));
@@ -103,7 +103,7 @@ TEST_CASE("IFileSystem: an empty path is rejected by every entry point, never cr
 TEST_CASE("IFileSystem: ListDirectory separates files from directories, one level only")
 {
     const ScopedTempDir lTemp("list_one_level");
-    const WindowsFileSystem lFS;
+    const StdFileSystem lFS;
 
     REQUIRE(lFS.CreateDirectories(lTemp.Sub("Waves")));
     WriteFile(lTemp.Sub("Waves/Deep.wave"));       // one level DOWN — must not appear
@@ -133,7 +133,7 @@ TEST_CASE("IFileSystem: ListDirectory separates files from directories, one leve
 TEST_CASE("IFileSystem: ListDirectory reports false for a missing dir and for a file, leaving the output untouched")
 {
     const ScopedTempDir lTemp("list_bad_targets");
-    const WindowsFileSystem lFS;
+    const StdFileSystem lFS;
 
     WriteFile(lTemp.Sub("NotADir.txt"));
 
@@ -151,7 +151,7 @@ TEST_CASE("IFileSystem: ListDirectory reports false for a missing dir and for a 
 TEST_CASE("IFileSystem: ListDirectory APPENDS, so one container can accumulate several roots")
 {
     const ScopedTempDir lTemp("list_appends");
-    const WindowsFileSystem lFS;
+    const StdFileSystem lFS;
 
     REQUIRE(lFS.CreateDirectories(lTemp.Sub("RootA")));
     REQUIRE(lFS.CreateDirectories(lTemp.Sub("RootB")));
@@ -168,20 +168,20 @@ TEST_CASE("IFileSystem: ListDirectory APPENDS, so one container can accumulate s
 }
 
 // =============================================================================
-// Encoding — the reason WindowsFileSystem exists
+// Encoding
 // =============================================================================
 // The platform emits UTF-8, so the file system must read UTF-8 too (MSVC's
-// std::filesystem::path(const char*) uses the ANSI code page). The directory is created from a wide
-// literal, so the name on disk is really Unicode.
+// std::filesystem::path(const char*) uses the ANSI code page). The directory is created from a u8
+// literal, which std::filesystem always reads as UTF-8, so the name on disk is really Unicode.
 // =============================================================================
-TEST_CASE("WindowsFileSystem: non-ASCII paths round-trip as UTF-8, not as the ANSI code page")
+TEST_CASE("StdFileSystem: non-ASCII paths round-trip as UTF-8, not as the ANSI code page")
 {
-    const ScopedTempDir     lTemp("utf8_roundtrip");
-    const WindowsFileSystem lFS;
+    const ScopedTempDir lTemp("utf8_roundtrip");
+    const StdFileSystem lFS;
 
     // \u escapes, not literal characters: this file has no BOM and there is no /utf-8, so MSVC would
     // read literal bytes with the ANSI code page.
-    const fs::path lDir = fs::path(lTemp.Str().CStr()) / std::wstring(L"\u00C9clair_\u00DCnicode");
+    const fs::path lDir = fs::path(lTemp.Str().CStr()) / fs::path(u8"\u00C9clair_\u00DCnicode");
     std::error_code lError;
     fs::create_directories(lDir, lError);
     REQUIRE_FALSE(lError);
@@ -203,17 +203,17 @@ TEST_CASE("WindowsFileSystem: non-ASCII paths round-trip as UTF-8, not as the AN
     CHECK(lFS.IsPathExist(lEntries[0].AbsPath));
 }
 
-TEST_CASE("WindowsFileSystem: CreateDirectories accepts a non-ASCII name and the OS agrees it is there")
+TEST_CASE("StdFileSystem: CreateDirectories accepts a non-ASCII name and the OS agrees it is there")
 {
     const ScopedTempDir     lTemp("utf8_create");
-    const WindowsFileSystem lFS;
+    const StdFileSystem lFS;
 
     const OpaaxString lUtf8Dir(lTemp.Str() + OpaaxString("/\xE6\x97\xA5\xE6\x9C\xAC" "_Waves"));
     REQUIRE(lFS.CreateDirectories(lUtf8Dir));
 
     // Ask the OS through the WIDE API, so a self-consistent mis-encoding cannot fake this.
     // U+65E5 U+672C — outside CP-1252 entirely, so this one cannot survive an ANSI round trip at all.
-    const fs::path lExpected = fs::path(lTemp.Str().CStr()) / std::wstring(L"\u65E5\u672C_Waves");
+    const fs::path lExpected = fs::path(lTemp.Str().CStr()) / fs::path(u8"\u65E5\u672C_Waves");
     CHECK(fs::is_directory(lExpected));
 }
 
@@ -242,7 +242,7 @@ TEST_CASE("IFileSystem::Null: inert — every primitive fails and nothing reache
 TEST_CASE("IFileSystem: Entry paths use forward slashes and resolve back to the real file")
 {
     const ScopedTempDir lTemp("entry_paths");
-    const WindowsFileSystem lFS;
+    const StdFileSystem lFS;
 
     WriteFile(lTemp.Sub("Wave01.wave"));
 

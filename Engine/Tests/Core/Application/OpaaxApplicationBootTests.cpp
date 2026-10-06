@@ -19,10 +19,8 @@ TEST_CASE("OpaaxApplication: boot provides Platform + Paths through the locator"
         OpaaxApplication lApp(1, lArgv);
         lApp.Bootstrap(); // two-phase lifecycle: the ctor builds infra, Bootstrap provides services
 
-#ifdef OPAAX_PLATFORM_WINDOWS
         CHECK_FALSE(lApp.Platform().IsNull());
         CHECK_FALSE(lApp.Platform().GetExecutablePath().IsEmpty());
-#endif
 
         CHECK_FALSE(lApp.Paths().IsNull());
         CHECK_FALSE(lApp.Paths().ProjectRoot().IsEmpty());

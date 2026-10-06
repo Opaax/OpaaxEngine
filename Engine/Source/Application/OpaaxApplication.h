@@ -208,12 +208,19 @@ namespace Opaax
         IWindowManager&     WindowManager();
         IEngine&            Engine();
 
+        /** The process exit code main() returns. 0 unless something set it. */
+        int  GetExitCode() const noexcept { return m_ExitCode; }
+
+        /** Sets the process exit code (e.g. a failed automated test run). */
+        void SetExitCode(int InExitCode) noexcept { m_ExitCode = InExitCode; }
+
         // =============================================================================
         // Members
         // =============================================================================
     private:
-        int    m_Argc = 0;
-        char** m_Argv = nullptr;
+        int    m_Argc     = 0;
+        char** m_Argv     = nullptr;
+        int    m_ExitCode = 0;
         
         bool bHasBootstrap      = false;
         bool bHasInitialized    = false;

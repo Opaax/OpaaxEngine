@@ -7,10 +7,8 @@
 #include "Platform/IPlatform.h"
 #include "Core/OpaaxTypes.h"
 
-#ifdef OPAAX_PLATFORM_WINDOWS
 #include <string>
-#include "Platform/Windows/WindowsPlatform.h"
-#endif
+#include "Platform/NativePlatform.h"
 
 using namespace Opaax;
 
@@ -146,20 +144,23 @@ TEST_CASE("IPlatform: the null object is safe and self-identifying")
     CHECK(&lLocator.Get<IPlatform>() == &IPlatform::Null());
 }
 
-#ifdef OPAAX_PLATFORM_WINDOWS
-TEST_CASE("WindowsPlatform: reports real OS values through the locator")
+TEST_CASE("NativePlatform: reports real OS values through the locator")
 {
     AppServiceLocator lLocator;
-    IPlatform& lPlatform = lLocator.Provide<IPlatform, WindowsPlatform>();
+    IPlatform& lPlatform = lLocator.Provide<IPlatform, NativePlatform>();
 
     CHECK_FALSE(lPlatform.IsNull());
     CHECK(lPlatform.GetLogicalCoreCount() >= 1u);
+    CHECK_FALSE(lPlatform.GetPlatformName().IsEmpty());
+    CHECK(lPlatform.GetTimeSeconds() > 0.0);
 
     const OpaaxString lExe = lPlatform.GetExecutablePath();
     CHECK_FALSE(lExe.IsEmpty());
 
     const std::string lPath = lExe.CStr();
-    CHECK(lPath.find(".exe") != std::string::npos);
+    CHECK(lPath.find("OpaaxTests") != std::string::npos);
     CHECK(lPath.find('\\') == std::string::npos); // normalised to '/'
-}
+#ifdef OPAAX_PLATFORM_WINDOWS
+    CHECK(lPath.find(".exe") != std::string::npos);
 #endif
+}

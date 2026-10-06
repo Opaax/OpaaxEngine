@@ -29,9 +29,7 @@
 #include "Core/Events/EventTypes.hpp"
 #include "Services/Window/IWindowManager.h"
 
-#ifdef OPAAX_PLATFORM_WINDOWS
-#include "Platform/Windows/WindowsPlatform.h"
-#endif
+#include "Platform/NativePlatform.h"
 
 using namespace Opaax;
 
@@ -114,10 +112,7 @@ void OpaaxApplication::Bootstrap()
 
 IPlatform& OpaaxApplication::BootPlatform()
 {
-#ifdef OPAAX_PLATFORM_WINDOWS
-    //Windows
-    return m_Services.Provide<IPlatform, WindowsPlatform>();
-#endif
+    return m_Services.Provide<IPlatform, NativePlatform>();
 }
 
 IPaths& OpaaxApplication::BootPaths()

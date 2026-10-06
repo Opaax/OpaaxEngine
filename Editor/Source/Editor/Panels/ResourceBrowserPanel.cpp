@@ -20,6 +20,7 @@
 
 #include <imgui.h>
 
+#include <cstdio>
 #include <cstring>
 
 using namespace Opaax;
@@ -120,7 +121,7 @@ namespace Opaax::Editor
         if (ImguiWidgets::ToggleButton("List",  m_View == EBrowserView::List))  { m_View = EBrowserView::List; }
 
         char lBuffer[128];
-        strncpy_s(lBuffer, sizeof(lBuffer), m_Filter.CStr(), _TRUNCATE);
+        std::snprintf(lBuffer, sizeof(lBuffer), "%s", m_Filter.CStr());
         ImGui::SetNextItemWidth(-1.f);
         if (ImGui::InputTextWithHint("##ResourceFilter", "Filter by name...", lBuffer, sizeof(lBuffer)))
         {

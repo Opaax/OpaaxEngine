@@ -454,14 +454,12 @@ TEST_CASE("MapResource: ByteSize grows with the map")
 // =============================================================================
 TEST_CASE("MapFile: a map saves and loads under a NON-ASCII path")
 {
-    // \uXXXX escapes, never literal characters: this file has no BOM and the build sets no
-    // /utf-8, so MSVC would decode literals using the ANSI code page — the exact mechanism under
-    // test. U+65E5 U+672C are outside CP-1252 entirely, so this cannot pass by being
-    // consistently wrong.
+    // \uXXXX escapes in a u8 literal, which std::filesystem always reads as UTF-8.
+    // U+65E5 U+672C are outside CP-1252 entirely, so this cannot pass by being consistently wrong.
     namespace fs = std::filesystem;
 
-    const wchar_t* const lWideName = L"\u65E5\u672C_Caf\u00E9";
-    const fs::path       lDir      = fs::temp_directory_path() / "OpaaxMapFileTests_utf8" / lWideName;
+    const char8_t* const lUnicodeName = u8"\u65E5\u672C_Caf\u00E9";
+    const fs::path       lDir         = fs::temp_directory_path() / "OpaaxMapFileTests_utf8" / lUnicodeName;
 
     std::error_code lError;
     fs::remove_all(lDir.parent_path(), lError);
@@ -477,8 +475,8 @@ TEST_CASE("MapFile: a map saves and loads under a NON-ASCII path")
 
     REQUIRE(MapFile::Save(lPath, lData));
 
-    // Verified through the WIDE API — a different mechanism than the one under test.
-    CHECK(fs::exists(lDir / L"Main.opaaxmap"));
+    // Verified through std::filesystem — a different mechanism than the one under test.
+    CHECK(fs::exists(lDir / "Main.opaaxmap"));
 
     MapData lLoaded;
     REQUIRE(MapFile::Load(lPath, lLoaded));

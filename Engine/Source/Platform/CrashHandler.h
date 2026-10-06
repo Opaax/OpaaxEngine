@@ -4,26 +4,29 @@
 #include "Core/String/OpaaxString.hpp"
 
 #include <atomic>
-#include <string>
+#include <filesystem>
 
 namespace Opaax
 {
     struct CrashHandlerSettings
     {
-        /** Where Opaax_<timestamp>.dmp (and a copy of the log) are written. Created if missing. */
+        /**
+         * Where the report (Opaax_<timestamp>.dmp on Windows, .txt elsewhere) and a copy of the log
+         * are written. Created if missing.
+         */
         OpaaxString DumpDir;
 
-        /** The log file, copied next to the dump (the next launch overwrites the original). */
+        /** The log file, copied next to the report (the next launch overwrites the original). */
         OpaaxString LogFile;
 
-        /** A native message box naming the dump. */
+        /** Tells the user where the report is: a message box on Windows, stderr elsewhere. */
         bool bShowDialog = true;
     };
 
     // =============================================================================
     // CrashHandler — engine-wide crash reporting (Get()); tests create their own instance.
-    //   On a crash it writes a minidump, logs the stack, copies the log next to the dump,
-    //   shows a dialog, then the process ends.
+    //   On a crash it writes a report (a minidump on Windows, a stack trace elsewhere), logs the
+    //   stack, copies the log next to the report, tells the user, then the process ends.
     // =============================================================================
     class CrashHandler final
     {
@@ -61,14 +64,15 @@ namespace Opaax
         void Uninstall();
 
         /**
-         * Writes the dump, stack and log copy for InExceptionPointers (EXCEPTION_POINTERS*), or for
-         * the current thread when null. No dialog, no exit.
-         * @return The dump's path; empty if it could not be written
+         * Writes the report, stack and log copy. No dialog, no exit.
+         * @param InCrashContext The OS crash context (EXCEPTION_POINTERS* on Windows, a pointer to the
+         *   signal number elsewhere), or null for a report on the calling thread
+         * @return The report's path; empty if it could not be written
          */
-        OpaaxString WriteReport(void* InExceptionPointers);
+        OpaaxString WriteReport(void* InCrashContext);
 
-        /** WriteReport, the dialog, and the value the OS filter returns. */
-        long HandleCrash(void* InExceptionPointers);
+        /** WriteReport, then tells the user. Returns the value the Windows exception filter expects. */
+        long HandleCrash(void* InCrashContext);
 
         // =============================================================================
         // Getters
@@ -81,8 +85,10 @@ namespace Opaax
         // =============================================================================
     private:
         CrashHandlerSettings m_Settings;
-        std::wstring         m_DumpDirWide;
-        std::wstring         m_LogFileWide;
+
+        // Native path strings (UTF-16 on Windows), prepared at Configure so a crash does not convert.
+        std::filesystem::path::string_type m_DumpDirNative;
+        std::filesystem::path::string_type m_LogFileNative;
 
         void*            m_PreviousFilter   = nullptr;
         std::atomic_flag m_bHandling        = ATOMIC_FLAG_INIT;

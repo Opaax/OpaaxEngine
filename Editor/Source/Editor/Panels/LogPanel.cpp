@@ -62,7 +62,11 @@ namespace
     {
         const std::time_t lTime = std::chrono::system_clock::to_time_t(InTime);
         std::tm           lLocal{};
+#if defined(_WIN32)
         localtime_s(&lLocal, &lTime);
+#else
+        localtime_r(&lTime, &lLocal);
+#endif
         std::strftime(OutText, sizeof(OutText), "%H:%M:%S", &lLocal);
     }
 }

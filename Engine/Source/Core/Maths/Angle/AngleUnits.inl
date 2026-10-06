@@ -22,12 +22,12 @@ namespace Opaax
     template<CONCEPT_TIsFloat T>
     OpaaxString TDegree<T>::ToString(Uint8 Precision) const
     {
-        return OpaaxString(std::format("{:.{}} Degree", m_value, Precision).c_str());
+        return OpaaxString(fmt::format("{:.{}} Degree", m_value, static_cast<int>(Precision)).c_str());
     }
     
     template<CONCEPT_TIsFloat T>
     OpaaxString TRadian<T>::ToString(Uint8 Precision) const
     {
-        return OpaaxString(std::format("{:.{}} Radian", m_value, Precision).c_str());
+        return OpaaxString(fmt::format("{:.{}} Radian", m_value, static_cast<int>(Precision)).c_str());
     }
 }

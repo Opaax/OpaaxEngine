@@ -1,4 +1,4 @@
-﻿#include "WindowsWindow.h"
+﻿#include "GlfwWindow.h"
 
 #include <GLFW/glfw3.h>
 
@@ -20,31 +20,31 @@ namespace Opaax
     // =============================================================================
     Opaax::Window* Opaax::Window::Create(const WindowProps& props)
     {
-        return new WindowsWindow(props);
+        return new GlfwWindow(props);
     }
 
     // =============================================================================
-	// WindowsWindow Implementation
+	// GlfwWindow Implementation
 	// =============================================================================
 
 	static bool s_GLFWInitialized = false;
 
 	static void GLFWErrorCallback(int error, const char* description)
 	{
-		OPAAX_LOG(LogWindowsWindow, Error, "GLFW Error: {}: {}", error, description);
+		OPAAX_LOG(LogGlfwWindow, Error, "GLFW Error: {}: {}", error, description);
 	}
 	
-	WindowsWindow::WindowsWindow(const WindowProps& Props)
+	GlfwWindow::GlfwWindow(const WindowProps& Props)
 	{
 		Init(Props);
 	}
 
-	WindowsWindow::~WindowsWindow()
+	GlfwWindow::~GlfwWindow()
 	{
 		Shutdown();
 	}
 
-	void WindowsWindow::Init(const WindowProps& Props)
+	void GlfwWindow::Init(const WindowProps& Props)
 	{
 		m_Data.Title  		= Props.Title;
 		m_Data.Width  		= Props.Width;
@@ -84,7 +84,7 @@ namespace Opaax
 		OPAAX_CORE_ASSERT(m_Context)
 		if (!m_Context->Init())
 		{
-			OPAAX_LOG(LogWindowsWindow, Error, "WindowsWindow: graphics context failed to initialize.");
+			OPAAX_LOG(LogGlfwWindow, Error, "GlfwWindow: graphics context failed to initialize.");
 		}
 
 		// User pointer, so GLFW callbacks can reach WindowData.
@@ -93,7 +93,7 @@ namespace Opaax
 		RegisterGLFWCallbacks();
 	}
 
-	void WindowsWindow::RegisterGLFWCallbacks()
+	void GlfwWindow::RegisterGLFWCallbacks()
 	{
 		// ---- Window resize -------------------------------------------------------
         glfwSetWindowSizeCallback(m_Window, [](GLFWwindow* InWindow, int InWidth, int InHeight)
@@ -221,7 +221,7 @@ namespace Opaax
 
         	if (lButton == EKeyCode::None)
         	{
-        		OPAAX_LOG(LogWindowsWindow, Error, "Receive Mouse button pressed, but no conversion to Opaax Type is found");
+        		OPAAX_LOG(LogGlfwWindow, Error, "Receive Mouse button pressed, but no conversion to Opaax Type is found");
         		return;
         	}
         	
@@ -260,17 +260,17 @@ namespace Opaax
         });
     }
 
-	void WindowsWindow::PollEvents()
+	void GlfwWindow::PollEvents()
     {
     	glfwPollEvents();
     }
 
-	bool WindowsWindow::ShouldClose() const
+	bool GlfwWindow::ShouldClose() const
 	{
 		return m_Window && glfwWindowShouldClose(m_Window);
 	}
 
-	void WindowsWindow::RequestClose()
+	void GlfwWindow::RequestClose()
 	{
 		// Sets the flag ShouldClose reads: same path as clicking the X (WindowCloseEvent fires).
 		if (m_Window)
@@ -279,12 +279,12 @@ namespace Opaax
 		}
 	}
 
-	void WindowsWindow::SwapBuffers()
+	void GlfwWindow::SwapBuffers()
     {
 	    m_Context->SwapBuffers();
     }
 
-	void WindowsWindow::Shutdown()
+	void GlfwWindow::Shutdown()
 	{
 		if (!m_Window)
 		{
@@ -297,7 +297,7 @@ namespace Opaax
 		m_Window = nullptr;        // cannot be destroyed twice
 	}
 
-	void WindowsWindow::SetWindowMode(EWindowMode mode)
+	void GlfwWindow::SetWindowMode(EWindowMode mode)
 	{
 		SaveWindowedState();
 		
@@ -317,7 +317,7 @@ namespace Opaax
 		}
 	}
 
-	void WindowsWindow::SetWindowed()
+	void GlfwWindow::SetWindowed()
 	{
 		// Use the host's flag, not GLFW_TRUE: a window with a custom title bar is windowed and undecorated.
 		glfwSetWindowAttrib(
@@ -336,7 +336,7 @@ namespace Opaax
 		
 		m_Data.Mode = EWindowMode::Windowed;
 	}
-	void WindowsWindow::SetBorderless()
+	void GlfwWindow::SetBorderless()
 	{
 		GLFWmonitor* lMonitor = glfwGetPrimaryMonitor();
 
@@ -373,7 +373,7 @@ namespace Opaax
 		
 		m_Data.Mode = EWindowMode::Borderless;
 	}
-	void WindowsWindow::SetFullscreen()
+	void GlfwWindow::SetFullscreen()
 	{
 		GLFWmonitor* lMonitor = glfwGetPrimaryMonitor();
 
@@ -401,7 +401,7 @@ namespace Opaax
 		m_Data.Mode = EWindowMode::Fullscreen;
 	}
 
-	void WindowsWindow::SaveWindowedState()
+	void GlfwWindow::SaveWindowedState()
 	{
 		GLFWmonitor* monitor = glfwGetWindowMonitor(m_Window);
 
@@ -426,7 +426,7 @@ namespace Opaax
 	// Decoration
 	// =============================================================================
 
-	void WindowsWindow::SetDecorated(const bool bInDecorated)
+	void GlfwWindow::SetDecorated(const bool bInDecorated)
 	{
 		m_Data.bDecorated = bInDecorated;
 
@@ -435,11 +435,11 @@ namespace Opaax
 		glfwSetWindowAttrib(m_Window, GLFW_DECORATED, bInDecorated ? GLFW_TRUE : GLFW_FALSE);
 
 		// Read back from GLFW, so the log shows what actually happened.
-		OPAAX_LOG(LogWindowsWindow, Trace, "Window decoration requested {} — GLFW reports {}",
+		OPAAX_LOG(LogGlfwWindow, Trace, "Window decoration requested {} — GLFW reports {}",
 		          bInDecorated ? "on" : "off", IsDecorated() ? "on" : "off");
 	}
 
-	bool WindowsWindow::IsDecorated() const
+	bool GlfwWindow::IsDecorated() const
 	{
 		// Ask GLFW (Borderless turns decoration off without changing the preference).
 		return m_Window != nullptr && glfwGetWindowAttrib(m_Window, GLFW_DECORATED) == GLFW_TRUE;
@@ -449,7 +449,7 @@ namespace Opaax
 	// Placement
 	// =============================================================================
 
-	void WindowsWindow::GetPosition(Int32& OutX, Int32& OutY) const
+	void GlfwWindow::GetPosition(Int32& OutX, Int32& OutY) const
 	{
 		OutX = 0;
 		OutY = 0;
@@ -464,36 +464,36 @@ namespace Opaax
 		OutY = static_cast<Int32>(lPosY);
 	}
 
-	void WindowsWindow::SetPosition(const Int32 InX, const Int32 InY)
+	void GlfwWindow::SetPosition(const Int32 InX, const Int32 InY)
 	{
 		if (m_Window == nullptr) { return; }
 
 		glfwSetWindowPos(m_Window, static_cast<int>(InX), static_cast<int>(InY));
 	}
 
-	void WindowsWindow::SetSize(const Uint32 InWidth, const Uint32 InHeight)
+	void GlfwWindow::SetSize(const Uint32 InWidth, const Uint32 InHeight)
 	{
 		if (m_Window == nullptr) { return; }
 
 		glfwSetWindowSize(m_Window, static_cast<int>(InWidth), static_cast<int>(InHeight));
 	}
 
-	void WindowsWindow::Minimize()
+	void GlfwWindow::Minimize()
 	{
 		if (m_Window != nullptr) { glfwIconifyWindow(m_Window); }
 	}
 
-	void WindowsWindow::Maximize()
+	void GlfwWindow::Maximize()
 	{
 		if (m_Window != nullptr) { glfwMaximizeWindow(m_Window); }
 	}
 
-	void WindowsWindow::Restore()
+	void GlfwWindow::Restore()
 	{
 		if (m_Window != nullptr) { glfwRestoreWindow(m_Window); }
 	}
 
-	bool WindowsWindow::IsMaximized() const
+	bool GlfwWindow::IsMaximized() const
 	{
 		return m_Window != nullptr && glfwGetWindowAttrib(m_Window, GLFW_MAXIMIZED) == GLFW_TRUE;
 	}

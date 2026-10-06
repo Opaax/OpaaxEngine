@@ -1,7 +1,6 @@
 // Suite: Core/String/OpaaxUtf8.h and the code that opens files through it.
-// Unicode names are written as \u escapes (no BOM, no /utf-8: literal bytes would be read with
-// the ANSI code page). Checks go through std::filesystem's wide API.
-// U+65E5 U+672C are outside CP-1252, so they cannot pass by being wrong both ways.
+// Unicode names are written as \u escapes in u8 literals, which std::filesystem always reads as
+// UTF-8. U+65E5 U+672C are outside CP-1252, so they cannot pass by being wrong both ways.
 #include <doctest.h>
 
 #include <filesystem>
@@ -21,17 +20,18 @@ namespace
     namespace fs = std::filesystem;
 
     // The non-ASCII directory name, in both worlds. Same characters, stated twice on purpose:
-    // once as UTF-16 for the OS, once as UTF-8 bytes for the engine.
-    const wchar_t* const kWideDir = L"\u65E5\u672C_Caf\u00E9";
+    // once as a u8 literal for std::filesystem, once as UTF-8 bytes for the engine.
+    const char8_t* const kUnicodeDir = u8"\u65E5\u672C_Caf\u00E9";
     inline OpaaxString Utf8Dir() { return OpaaxString("\xE6\x97\xA5\xE6\x9C\xAC" "_Caf" "\xC3\xA9"); }
 
-    // A temp directory whose NAME is non-ASCII — created wide, so what is on disk is unambiguous.
+    // A temp directory whose NAME is non-ASCII, created through std::filesystem, so what is on
+    // disk is unambiguous.
     class ScopedUnicodeDir
     {
     public:
         explicit ScopedUnicodeDir(const char* InTag)
         {
-            m_Path = fs::temp_directory_path() / (std::string("OpaaxUtf8Tests_") + InTag) / kWideDir;
+            m_Path = fs::temp_directory_path() / (std::string("OpaaxUtf8Tests_") + InTag) / kUnicodeDir;
 
             std::error_code lError;
             fs::remove_all(m_Path.parent_path(), lError);
@@ -47,7 +47,7 @@ namespace
         ScopedUnicodeDir(const ScopedUnicodeDir&)            = delete;
         ScopedUnicodeDir& operator=(const ScopedUnicodeDir&) = delete;
 
-        const fs::path& Wide() const { return m_Path; }
+        const fs::path& Native() const { return m_Path; }
 
         // The same directory as the engine would carry it: UTF-8 bytes, forward slashes.
         OpaaxString Utf8() const { return Utf8::FromFsPath(m_Path); }
@@ -70,9 +70,9 @@ TEST_CASE("Utf8: ToFsPath/FromFsPath round-trip a non-ASCII path without touchin
     const OpaaxString lUtf8 = Utf8Dir();
     const fs::path    lPath = Utf8::ToFsPath(lUtf8);
 
-    // The path really holds the Unicode characters — compare against the WIDE literal, which cannot
+    // The path really holds the Unicode characters — compare against the u8 literal, which cannot
     // have been produced by a mis-decode of the UTF-8 bytes.
-    CHECK(lPath.wstring() == std::wstring(kWideDir));
+    CHECK(lPath == fs::path(kUnicodeDir));
 
     // ...and it survives the trip home.
     CHECK(Utf8::FromFsPath(lPath) == lUtf8);
@@ -81,11 +81,18 @@ TEST_CASE("Utf8: ToFsPath/FromFsPath round-trip a non-ASCII path without touchin
 TEST_CASE("Utf8: FromFsPath normalises separators to '/' (the engine's path convention)")
 {
     // Native separators in, generic separators out — that is the whole job.
+#ifdef OPAAX_PLATFORM_WINDOWS
     const fs::path    lPath = fs::path(L"C:\\A\\B\\c.txt");
     const OpaaxString lOut  = Utf8::FromFsPath(lPath);
 
     CHECK(lOut.Find("\\") == -1);
     CHECK(lOut == "C:/A/B/c.txt");
+#else
+    const fs::path    lPath = fs::path("/A/B/c.txt");
+    const OpaaxString lOut  = Utf8::FromFsPath(lPath);
+
+    CHECK(lOut == "/A/B/c.txt");
+#endif
 }
 
 TEST_CASE("Utf8: empty in, empty out — every entry point, no crash")
@@ -183,8 +190,8 @@ TEST_CASE("FileIO: text round-trips through a non-ASCII directory")
 
     REQUIRE(FileIO::WriteAllText(lFile, OpaaxString("{\"volume\":11}")));
 
-    // The file landed where the engine SAID it would — asked through the wide API.
-    CHECK(fs::exists(lDir.Wide() / L"Settings.json"));
+    // The file landed where the engine SAID it would — asked through std::filesystem.
+    CHECK(fs::exists(lDir.Native() / "Settings.json"));
 
     CHECK(FileIO::ReadAllText(lFile) == "{\"volume\":11}");
 }
@@ -195,7 +202,7 @@ TEST_CASE("FileIO: WriteAllText creates missing parents under a non-ASCII root")
     const OpaaxString      lFile = lDir.Utf8() + OpaaxString("/Nested/Deep/Settings.json");
 
     REQUIRE(FileIO::WriteAllText(lFile, OpaaxString("x")));
-    CHECK(fs::is_directory(lDir.Wide() / L"Nested" / L"Deep"));
+    CHECK(fs::is_directory(lDir.Native() / "Nested" / "Deep"));
 }
 
 TEST_CASE("FileIO: ReadAllBytes reads a non-ASCII path and leaves the output alone on failure")
@@ -203,7 +210,7 @@ TEST_CASE("FileIO: ReadAllBytes reads a non-ASCII path and leaves the output alo
     const ScopedUnicodeDir lDir("fileio_bytes");
 
     {
-        std::ofstream lOut(lDir.Wide() / L"blob.bin", std::ios::binary);   // written WIDE
+        std::ofstream lOut(lDir.Native() / "blob.bin", std::ios::binary);
         lOut << "opaax";
     }
 
@@ -233,7 +240,7 @@ TEST_CASE("BinaryResource: loads a file from a non-ASCII directory")
     const ScopedUnicodeDir lDir("binary");
 
     {
-        std::ofstream lOut(lDir.Wide() / L"blob.bin", std::ios::binary);   // written WIDE
+        std::ofstream lOut(lDir.Native() / "blob.bin", std::ios::binary);
         lOut << "opaax";
     }
 

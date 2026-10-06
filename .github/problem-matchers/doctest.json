@@ -1,14 +1,26 @@
 {
     "problemMatcher": [
         {
-            "owner": "opaax-doctest",
+            "owner": "opaax-doctest-msvc",
             "severity": "error",
             "pattern": [
                 {
-                    "regexp": "^(.*?)(?:\((\d+)\)|:(\d+)):\s+(?:FATAL )?ERROR:\s+(.*)$",
+                    "regexp": "^(.+?)\((\d+)\):\s+(?:FATAL )?ERROR:\s+(.*)$",
                     "file": 1,
                     "line": 2,
-                    "message": 4
+                    "message": 3
+                }
+            ]
+        },
+        {
+            "owner": "opaax-doctest-gcc",
+            "severity": "error",
+            "pattern": [
+                {
+                    "regexp": "^(.+?):(\d+):\s+(?:FATAL )?ERROR:\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "message": 3
                 }
             ]
         }

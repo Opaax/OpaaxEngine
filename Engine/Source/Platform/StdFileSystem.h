@@ -1,18 +1,14 @@
 #pragma once
 
 #include "Platform/IFileSystem.h"
-#include "Core/EngineAPI.h"
-
-#ifdef OPAAX_PLATFORM_WINDOWS
 
 namespace Opaax
 {
     // =============================================================================
-    // WindowsFileSystem — IFileSystem for Windows (held by WindowsPlatform).
-    //   Converts UTF-8 to UTF-16 on the way in and back on the way out; the work uses
-    //   std::filesystem on wide paths.
+    // StdFileSystem — IFileSystem on std::filesystem, for every platform. Paths go through
+    //   Utf8::ToFsPath / FromFsPath, so UTF-8 names work on Windows too.
     // =============================================================================
-    class WindowsFileSystem final : public IFileSystem
+    class StdFileSystem final : public IFileSystem
     {
         // =============================================================================
         // Override
@@ -25,5 +21,3 @@ namespace Opaax
         //~End IFileSystem interface
     };
 }
-
-#endif // OPAAX_PLATFORM_WINDOWS
