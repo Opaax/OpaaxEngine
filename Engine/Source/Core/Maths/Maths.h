@@ -1,6 +1,8 @@
 #pragma once
 
-#include <Core/OpaaxTRequire.hpp>
+#include <cmath>
+
+#include "Core/OpaaxTRequire.hpp"
 #include "Core/EngineAPI.h"
 #include "Core/Maths/MathsStatics.h"
 #include "Core/OpaaxTypes.h"
@@ -236,7 +238,7 @@ namespace Opaax
          * @param Value    The floating point number to convert
          * @return     The truncated 32-bit integer value of the input
          */
-        [[nodiscard]] static FORCEINLINE float TruncToFloat(float Value) { return truncf(Value); }
+        [[nodiscard]] static FORCEINLINE float TruncToFloat(float Value) { return std::trunc(Value); }
 
         /**
          * Converts a floating point number to a double by truncating towards zero.
@@ -244,7 +246,7 @@ namespace Opaax
          * @param Value    The floating point number to convert to double
          * @return     The truncated double value of the input
          */
-        [[nodiscard]] static FORCEINLINE double TruncToDouble(double Value) { return trunc(Value); }
+        [[nodiscard]] static FORCEINLINE double TruncToDouble(double Value) { return std::trunc(Value); }
         
         // End Truncate
         // =============================================================================
@@ -298,7 +300,7 @@ namespace Opaax
          */
         [[nodiscard]] static FORCEINLINE float FloorToFloat(float Value)
         {
-            return floorf(Value);
+            return std::floor(Value);
         }
 
         /**
@@ -309,7 +311,7 @@ namespace Opaax
          */
         [[nodiscard]] static FORCEINLINE double FloorToDouble(double Value)
         {
-            return floor(Value);
+            return std::floor(Value);
         }
         // End Floor
         // =============================================================================
@@ -422,7 +424,7 @@ namespace Opaax
          */
         [[nodiscard]] static FORCEINLINE float CeilToFloat(float Value)
         {
-            return ceilf(Value);
+            return std::ceil(Value);
         }
 
         /**
@@ -433,7 +435,7 @@ namespace Opaax
         */
         [[nodiscard]] static FORCEINLINE double CeilToDouble(double Value)
         {
-            return ceil(Value);
+            return std::ceil(Value);
         }
         // End Ceil
         // =============================================================================
@@ -455,7 +457,7 @@ namespace Opaax
           * @param Value     The input value in radians
           * @return          The sine of the input value
           */
-        [[nodiscard]] static FORCEINLINE float Sin(float Value) { return sinf(Value); }
+        [[nodiscard]] static FORCEINLINE float Sin(float Value) { return std::sin(Value); }
 
         /**
          *	Computes the sine of the specified value.
@@ -463,7 +465,7 @@ namespace Opaax
          *	@param Value	The input value in radians
          *	@return		    The sine of the input value
          */
-        [[nodiscard]] static FORCEINLINE double Sin(double Value) { return sin(Value); }
+        [[nodiscard]] static FORCEINLINE double Sin(double Value) { return std::sin(Value); }
 
         /**
          * Calculates the arcsine of a given floating point number.
@@ -473,7 +475,7 @@ namespace Opaax
          */
         [[nodiscard]] static FORCEINLINE float ASin(float Value)
         {
-            return asinf(Value < -1.f ? -1.f : Value < 1.f ? Value : 1.f);
+            return std::asin(Value < -1.f ? -1.f : Value < 1.f ? Value : 1.f);
         }
 
         /**
@@ -484,7 +486,7 @@ namespace Opaax
          */
         [[nodiscard]] static FORCEINLINE double ASin(double Value)
         {
-            return asin(Value < -1.0 ? -1.0 : Value < 1.0 ? Value : 1.0);
+            return std::asin(Value < -1.0 ? -1.0 : Value < 1.0 ? Value : 1.0);
         }
 
         /**
@@ -509,7 +511,7 @@ namespace Opaax
          *  @param Value    The input value in radians for which to calculate the cosine.
          *  @return         The cosine of the input value.
          */
-        [[nodiscard]] static FORCEINLINE float Cos(float Value) { return cosf(Value); }
+        [[nodiscard]] static FORCEINLINE float Cos(float Value) { return std::cos(Value); }
 
         /**
          *  Calculates the cosine of the given value.
@@ -517,7 +519,7 @@ namespace Opaax
          *  @param Value    The input value in radians for which to calculate the cosine.
          *  @return         The cosine of the input value.
          */
-        [[nodiscard]] static FORCEINLINE double Cos(double Value) { return cos(Value); }
+        [[nodiscard]] static FORCEINLINE double Cos(double Value) { return std::cos(Value); }
 
         /**
          * Calculate the arc cosine of a given value.
@@ -527,7 +529,7 @@ namespace Opaax
          */
         [[nodiscard]] static FORCEINLINE float ACos(float Value)
         {
-            return acosf(Value < -1.f ? -1.f : Value < 1.f ? Value : 1.f);
+            return std::acos(Value < -1.f ? -1.f : Value < 1.f ? Value : 1.f);
         }
 
         /**
@@ -538,7 +540,7 @@ namespace Opaax
          */
         [[nodiscard]] static FORCEINLINE double ACos(double Value)
         {
-            return acos(Value < -1.0 ? -1.0 : Value < 1.0 ? Value : 1.0);
+            return std::acos(Value < -1.0 ? -1.0 : Value < 1.0 ? Value : 1.0);
         }
 
         /**
@@ -563,7 +565,7 @@ namespace Opaax
          * @param Value     The angle in radians for which to calculate the tangent
          * @return          The tangent of the given angle
          */
-        [[nodiscard]] static FORCEINLINE float Tan(float Value) { return tanf(Value); }
+        [[nodiscard]] static FORCEINLINE float Tan(float Value) { return std::tan(Value); }
 
         /**
          * Calculates the tangent of a given angle in radians.
@@ -571,7 +573,7 @@ namespace Opaax
          * @param Value     The angle in radians for which to calculate the tangent
          * @return          The tangent of the given angle
          */
-        [[nodiscard]] static FORCEINLINE double Tan(double Value) { return tan(Value); }
+        [[nodiscard]] static FORCEINLINE double Tan(double Value) { return std::tan(Value); }
 
         /**
          * Calculates the arctangent of a specified value.
@@ -579,7 +581,7 @@ namespace Opaax
          * @param Value     The value for which to calculate the arctangent
          * @return          The arctangent value in radians
          */
-        [[nodiscard]] static FORCEINLINE float ATan(float Value) { return atanf(Value); }
+        [[nodiscard]] static FORCEINLINE float ATan(float Value) { return std::atan(Value); }
 
         /**
          * Calculates the arctangent of a specified value.
@@ -587,7 +589,7 @@ namespace Opaax
          * @param Value     The value for which to calculate the arctangent
          * @return          The arctangent value in radians
          */
-        [[nodiscard]] static FORCEINLINE double ATan(double Value) { return atan(Value); }
+        [[nodiscard]] static FORCEINLINE double ATan(double Value) { return std::atan(Value); }
 
         /**
          *	Returns the hyperbolic tangent of a floating point number.
@@ -634,7 +636,7 @@ namespace Opaax
          * @param Value The number for which the square root is to be calculated
          * @return      The square root of the input Value
          */
-        [[nodiscard]] static FORCEINLINE float Sqrt(float Value) { return sqrtf(Value); }
+        [[nodiscard]] static FORCEINLINE float Sqrt(float Value) { return std::sqrt(Value); }
 
         /**
          * Calculates the square root of a given double point number.
@@ -642,7 +644,7 @@ namespace Opaax
          * @param Value The number for which the square root is to be calculated
          * @return      The square root of the input Value
          */
-        [[nodiscard]] static FORCEINLINE double Sqrt(double Value) { return sqrt(Value); }
+        [[nodiscard]] static FORCEINLINE double Sqrt(double Value) { return std::sqrt(Value); }
 
         /**
          * Calculate the inverse square root of the given value.
@@ -655,7 +657,7 @@ namespace Opaax
          * @param InValue The input value for which the inverse square root will be calculated.
          * @return The inverse square root of the input value.
          */
-        [[nodiscard]] static float InvSqrt(float InValue) { return FONE / sqrtf(InValue); }
+        [[nodiscard]] static float InvSqrt(float InValue) { return FONE / std::sqrt(InValue); }
 
         /**
          * Calculate the inverse square root of the given value.
@@ -668,7 +670,7 @@ namespace Opaax
          * @param InValue The input value for which the inverse square root will be calculated.
          * @return The inverse square root of the input value.
          */
-        [[nodiscard]] static double InvSqrt(double InValue) { return DONE / sqrt(InValue); }
+        [[nodiscard]] static double InvSqrt(double InValue) { return DONE / std::sqrt(InValue); }
 
         /**
          * Computes the inverse square root of a given floating-point value using an approximation method.
@@ -716,7 +718,7 @@ namespace Opaax
          * @param B The exponent.
          * @return The result of A raised to the power of B.
          */
-        [[nodiscard]] static FORCEINLINE float Pow(float A, float B) { return powf(A, B); }
+        [[nodiscard]] static FORCEINLINE float Pow(float A, float B) { return std::pow(A, B); }
 
         /**
          * Calculates the power of a given number to another number.
@@ -725,7 +727,7 @@ namespace Opaax
          * @param B The exponent.
          * @return The result of A raised to the power of B.
          */
-        [[nodiscard]] static FORCEINLINE double Pow(double A, double B) { return pow(A, B); }
+        [[nodiscard]] static FORCEINLINE double Pow(double A, double B) { return std::pow(A, B); }
 
         /**
          *	Performs a linear interpolation between two values, Alpha ranges from 0-1
@@ -762,36 +764,36 @@ namespace Opaax
          * @param Value 
          * @return e^Value
          */
-        [[nodiscard]] static FORCEINLINE float  Exp( float Value )  { return expf(Value);   }
+        [[nodiscard]] static FORCEINLINE float  Exp( float Value )  { return std::exp(Value);   }
 
         /**
          * 
          * @param Value 
          * @return 
          */
-        [[nodiscard]] static FORCEINLINE double Exp(double Value)   { return exp(Value);    }
+        [[nodiscard]] static FORCEINLINE double Exp(double Value)   { return std::exp(Value);    }
 
         /**
          * 
          * @param Value 
          * @return 
          */
-        [[nodiscard]] static FORCEINLINE float  Exp2( float Value ) { return powf(2.f, Value); /*exp2f(Value);*/ }
-        [[nodiscard]] static FORCEINLINE double Exp2(double Value)  { return pow(2.0, Value); /*exp2(Value);*/ }
+        [[nodiscard]] static FORCEINLINE float  Exp2( float Value ) { return std::pow(2.f, Value); /*exp2f(Value);*/ }
+        [[nodiscard]] static FORCEINLINE double Exp2(double Value)  { return std::pow(2.0, Value); /*exp2(Value);*/ }
 
         /**
          * 
          * @param Value 
          * @return 
          */
-        [[nodiscard]] static FORCEINLINE float Logarithm( float Value ) { return logf(Value); }
+        [[nodiscard]] static FORCEINLINE float Logarithm( float Value ) { return std::log(Value); }
 
         /**
          * 
          * @param Value 
          * @return 
          */
-        [[nodiscard]] static FORCEINLINE double Logarithm(double Value) { return log(Value); }
+        [[nodiscard]] static FORCEINLINE double Logarithm(double Value) { return std::log(Value); }
 
         /**
          * 

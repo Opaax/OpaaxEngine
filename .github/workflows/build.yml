@@ -30,15 +30,19 @@ jobs:
           - os: ubuntu-24.04
             preset: debug-editor
             config: Debug
+            jobs: 4
           - os: ubuntu-24.04
             preset: release
             config: Release
+            jobs: 4
           - os: macos-14
             preset: debug-editor
             config: Debug
+            jobs: 3
           - os: macos-14
             preset: release
             config: Release
+            jobs: 3
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }} / ${{ matrix.preset }}
     steps:
@@ -56,26 +60,33 @@ jobs:
             libwayland-dev libwayland-bin wayland-protocols libxkbcommon-dev \
             libgl1-mesa-dev
 
-      - name: Problem matchers
-        shell: bash
-        run: |
-          echo "::add-matcher::.github/problem-matchers/msvc.json"
-          echo "::add-matcher::.github/problem-matchers/gcc.json"
-          echo "::add-matcher::.github/problem-matchers/doctest.json"
-
       - name: Configure
-        run: cmake --preset ${{ matrix.preset }}
+        shell: bash
+        run: cmake --preset ${{ matrix.preset }} 2>&1 | tee configure.log; exit ${PIPESTATUS[0]}
 
       # Multi-config generators ignore CMAKE_BUILD_TYPE: the config comes from --config / -C.
-      # MSVC already compiles each project's files in parallel (/MP), so projects build one at a time.
+      # MSVC already compiles each project's files in parallel (/MP), so projects build one at a
+      # time there. Elsewhere the job count is bounded (an unbounded make -j runs out of memory)
+      # and -k keeps going so one run reports as many errors as possible.
       - name: Build
         shell: bash
         run: |
           if [ "$RUNNER_OS" = "Windows" ]; then
-            cmake --build build/${{ matrix.preset }} --config ${{ matrix.config }}
+            cmake --build build/${{ matrix.preset }} --config ${{ matrix.config }} 2>&1 | tee build.log
           else
-            cmake --build build/${{ matrix.preset }} --config ${{ matrix.config }} --parallel
+            cmake --build build/${{ matrix.preset }} --config ${{ matrix.config }} --parallel ${{ matrix.jobs }} -- -k 2>&1 | tee build.log
           fi
+          exit ${PIPESTATUS[0]}
+
+      - name: Report errors
+        if: failure()
+        shell: bash
+        run: |
+          python3 .github/scripts/report_errors.py configure.log || python .github/scripts/report_errors.py configure.log
+          python3 .github/scripts/report_errors.py build.log || python .github/scripts/report_errors.py build.log
 
       - name: Test
-        run: ctest --test-dir build/${{ matrix.preset }} -C ${{ matrix.config }} --output-on-failure
+        shell: bash
+        run: |
+          echo "::add-matcher::.github/problem-matchers/doctest.json"
+          ctest --test-dir build/${{ matrix.preset }} -C ${{ matrix.config }} --output-on-failure

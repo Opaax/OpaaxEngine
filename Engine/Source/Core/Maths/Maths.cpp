@@ -1,5 +1,7 @@
 #include "Core/Maths/Maths.h"
 
+#include <cmath>
+
 using namespace Opaax;
 
 float Maths::Atan2(float Y, float X)
@@ -55,7 +57,7 @@ double Maths::Atan2(double Y, double X)
         return DZERO;
     }
 
-    return atan2(Y,X);
+    return std::atan2(Y,X);
 }
 
 float Maths::QuakeInvSqrt(float InValue)
@@ -83,7 +85,7 @@ float Maths::FMod(float X, float Y)
         return 0.0;
     }
 
-    return fmodf(X, Y);
+    return std::fmod(X, Y);
 }
 
 double Maths::FMod(double X, double Y)
@@ -94,5 +96,5 @@ double Maths::FMod(double X, double Y)
         return 0.0;
     }
 
-    return fmod(X, Y);
+    return std::fmod(X, Y);
 }
