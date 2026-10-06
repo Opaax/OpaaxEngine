@@ -21,7 +21,7 @@ namespace
 
 TEST_CASE("DebugDraw: a fresh queue is empty")
 {
-    const DebugDraw lDebug;
+    const DebugDraw lDebug{};
 
     CHECK(lDebug.IsEmpty());
     CHECK(lDebug.GetLines().empty());
@@ -325,7 +325,7 @@ TEST_CASE("MakeOutlineInnerHalf: a MIRRORED size is the same hole, not a solid q
 
 TEST_CASE("DebugDraw: an unknown channel is ENABLED, so a new producer is visible by default")
 {
-    const DebugDraw lDebug;
+    const DebugDraw lDebug{};
 
     CHECK(lDebug.IsChannelEnabled(DebugChannels::Default));
     CHECK(lDebug.IsChannelEnabled(DebugChannels::Physics));

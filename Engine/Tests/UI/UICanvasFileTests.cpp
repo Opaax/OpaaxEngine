@@ -178,7 +178,7 @@ TEST_CASE("UICanvasFile: a missing key takes the constructed default — a field
     UICanvasFile::UICanvasDoc lDoc;
     REQUIRE(UICanvasFile::Deserialize(lText, lRegistry, lDoc));
 
-    const UIText  lFresh;
+    const UIText  lFresh{};
     const auto*   lRead = dynamic_cast<const UIText*>(lDoc.Root->GetChildren()[0].get());
     REQUIRE(lRead != nullptr);
 

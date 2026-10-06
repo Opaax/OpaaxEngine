@@ -179,7 +179,7 @@ TEST_SUITE("FontBake")
 
     TEST_CASE("the default scan window stops before CJK, which is the project's stated line")
     {
-        const FontBake::BakeParams lParams;
+        const FontBake::BakeParams lParams{};
 
         CHECK(lParams.FirstCodepoint == 0x0020u);
         CHECK(lParams.LastCodepoint  == 0x33FFu);
@@ -290,7 +290,7 @@ TEST_SUITE("FontFamilyData")
 
     TEST_CASE("an empty family answers nullptr rather than reaching into nothing")
     {
-        const FontFamilyData lFamily;
+        const FontFamilyData lFamily{};
 
         CHECK(lFamily.EntryCount() == 0u);
         CHECK(lFamily.Find(FontStyleKey{}) == nullptr);
@@ -408,7 +408,7 @@ TEST_SUITE("Text2D::Measure")
         CHECK(Text2D::Measure("A", FontFaceView{}).x == doctest::Approx(0.f));
 
         // A value-initialised face has PixelHeight 0 — the divide FontFaceData::Tofu exists to avoid.
-        const FontFaceData lZero;
+        const FontFaceData lZero{};
         CHECK(Text2D::Measure("A", FontFaceView{ &lZero, nullptr }).x == doctest::Approx(0.f));
 
         // ...and the tofu face, which is what a failed load resolves to, measures normally.

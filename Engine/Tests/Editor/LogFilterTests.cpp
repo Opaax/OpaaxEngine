@@ -34,7 +34,7 @@ TEST_CASE("LogFilter: ContainsNoCase is an ASCII case-insensitive substring")
 
 TEST_CASE("LogFilter: default shows every line")
 {
-    const LogFilter lFilter;
+    const LogFilter lFilter{};
     for (const ELogLevel lLevel : { ELogLevel::Trace, ELogLevel::Info, ELogLevel::Warn, ELogLevel::Error, ELogLevel::Critical })
     {
         CHECK(lFilter.Passes(MakeEntry(lLevel, "x")));

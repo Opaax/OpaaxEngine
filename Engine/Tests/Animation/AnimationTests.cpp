@@ -242,7 +242,7 @@ TEST_CASE("StepAt: out of range answers NULL rather than clamping")
     CHECK(lClip.StepAt(2) == nullptr);
     CHECK(lClip.StepAt(999) == nullptr);
 
-    const AnimationClipData lEmpty;
+    const AnimationClipData lEmpty{};
     CHECK(lEmpty.StepAt(0) == nullptr);
 }
 
@@ -504,7 +504,7 @@ TEST_SUITE("AnimationLibrary")
 
     TEST_CASE("Find and FindExact: an empty library resolves nothing, either way")
     {
-        const AnimationLibraryData lEmpty;
+        const AnimationLibraryData lEmpty{};
 
         CHECK(lEmpty.Find(OpaaxStringID()) == nullptr);
         CHECK(lEmpty.Find(OPAAX_ID("Idle")) == nullptr);

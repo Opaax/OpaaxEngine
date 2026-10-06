@@ -10,7 +10,7 @@ using namespace Opaax;
 
 TEST_CASE("OpaaxTagContainer: a fresh container is empty and answers nothing")
 {
-    const OpaaxTagContainer lTags;
+    const OpaaxTagContainer lTags{};
 
     CHECK(lTags.IsEmpty());
     CHECK(lTags.Num() == 0u);
@@ -77,7 +77,7 @@ TEST_CASE("OpaaxTagContainer: HasAny / HasAll, including the empty-query convent
     CHECK_FALSE(lTags.HasAll(OpaaxTagContainer{"Damage", "Faction.Enemy"}));
 
     // Asking for nothing: nothing satisfies HasAny, everything satisfies HasAll.
-    const OpaaxTagContainer lEmpty;
+    const OpaaxTagContainer lEmpty{};
     CHECK_FALSE(lTags.HasAny(lEmpty));
     CHECK(lTags.HasAll(lEmpty));
 }

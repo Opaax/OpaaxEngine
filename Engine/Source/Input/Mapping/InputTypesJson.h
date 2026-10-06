@@ -23,7 +23,7 @@ namespace Opaax
 
     inline void from_json(const nlohmann::json& InJson, InputModifierData& InValue)
     {
-        const InputModifierData lDefaults;
+        const InputModifierData lDefaults{};
 
         InValue.Type          = InJson.value("Type", lDefaults.Type);
         InValue.Scale         = InJson.value("Scale", lDefaults.Scale);

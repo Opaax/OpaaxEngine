@@ -41,7 +41,7 @@ TEST_CASE("ResolveDisplayPose: no previous pose answers the CURRENT one exactly"
 
     // And the FIRST step: the component exists but has never been written. Blending from a
     // default-constructed pose would fling the entity in from the origin.
-    const TransformInterpolationComponent lUnwritten;
+    const TransformInterpolationComponent lUnwritten{};
     const DisplayPose lFirst = ResolveDisplayPose(lCurrent, &lUnwritten, 0.5f);
     CHECK(lFirst.Position.x == doctest::Approx(100.f));
     CHECK(lFirst.Position.y == doctest::Approx(200.f));

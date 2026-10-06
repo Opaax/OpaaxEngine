@@ -65,7 +65,7 @@ TEST_CASE("Guid: a random Guid survives the text round trip")
 
 TEST_CASE("Guid: an invalid Guid has a text form too, and it round-trips as invalid")
 {
-    const Guid lInvalid;
+    const Guid lInvalid{};
     REQUIRE_FALSE(lInvalid.IsValid());
 
     // Total, not special-cased: 32 zeros rather than an empty string, so a reader never has to
@@ -383,7 +383,7 @@ TEST_CASE("MapJson: a map with no entities array parses to an EMPTY map, not a f
 
 TEST_CASE("MapJson: an empty map round-trips")
 {
-    const MapData lEmpty;
+    const MapData lEmpty{};
 
     MapData lParsed;
     REQUIRE(MapJson::Deserialize(MapJson::Serialize(lEmpty), lParsed));

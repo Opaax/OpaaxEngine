@@ -121,7 +121,7 @@ TEST_CASE("GroundMoveMode: a mover falls and LANDS on the floor")
     TransformComponent lTransform;
     lTransform.Position = { 0.f, 400.f };
 
-    const MoveModeData lParams;   // the defaults are a walkable ground mode
+    const MoveModeData lParams{};   // the defaults are a walkable ground mode
 
     Drive(lMode, *lWorld, lMover, lTransform, lParams, 180);
 
@@ -141,7 +141,7 @@ TEST_CASE("GroundMoveMode: intent WALKS it, and the direction follows the sign")
     TransformComponent lTransform;
     lTransform.Position = { 0.f, 60.f };
 
-    const MoveModeData lParams;
+    const MoveModeData lParams{};
 
     Drive(lMode, *lWorld, lMover, lTransform, lParams, 30);   // settle
     const float lRestX = lTransform.Position.x;
@@ -166,7 +166,7 @@ TEST_CASE("GroundMoveMode: a jump LEAVES the ground, and the edge is consumed")
     TransformComponent lTransform;
     lTransform.Position = { 0.f, 60.f };
 
-    const MoveModeData lParams;
+    const MoveModeData lParams{};
 
     Drive(lMode, *lWorld, lMover, lTransform, lParams, 30);
     REQUIRE(lMover.bGrounded);
@@ -198,7 +198,7 @@ TEST_CASE("GroundMoveMode: a jump in MID-AIR is refused")
     TransformComponent lTransform;
     lTransform.Position = { 0.f, 600.f };   // falling, nothing underneath
 
-    const MoveModeData lParams;
+    const MoveModeData lParams{};
 
     Drive(lMode, *lWorld, lMover, lTransform, lParams, 5);
     REQUIRE_FALSE(lMover.bGrounded);
@@ -283,7 +283,7 @@ TEST_CASE("FlyMoveMode: OnModeEnter drops momentum carried in from a fall")
     TransformComponent lTransform;
     lTransform.Position = { 0.f, 600.f };
 
-    const MoveModeData lGroundParams;
+    const MoveModeData lGroundParams{};
 
     Drive(lGround, *lWorld, lMover, lTransform, lGroundParams, 20);
     REQUIRE(lMover.Velocity.y < -50.f);   // genuinely falling
@@ -332,7 +332,7 @@ TEST_CASE("IMoverMode: Owner reaches the entity's other components")
     BoostMoveMode      lMode;
     MoverComponent     lMover = MakeMover();
     TransformComponent lTransform;
-    const MoveModeData lParams;
+    const MoveModeData lParams{};
 
     MoverTickContext lTick{ *lPhysics, lMover, lTransform, lParams, 1.f / 60.f, 0, lEntity };
     lMode.Tick(lTick);

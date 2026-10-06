@@ -70,7 +70,7 @@ namespace
 TEST_CASE("IFileSystem: CreateDirectories builds a nested chain and is idempotent")
 {
     const ScopedTempDir lTemp("create_nested");
-    const StdFileSystem lFS;
+    const StdFileSystem lFS{};
 
     const OpaaxString lNested = lTemp.Sub("A/B/C");
 
@@ -85,8 +85,8 @@ TEST_CASE("IFileSystem: CreateDirectories builds a nested chain and is idempoten
 
 TEST_CASE("IFileSystem: an empty path is rejected by every entry point, never crashes")
 {
-    const StdFileSystem lFS;
-    const OpaaxString lEmpty;
+    const StdFileSystem lFS{};
+    const OpaaxString lEmpty{};
 
     CHECK_FALSE(lFS.CreateDirectories(lEmpty));
     CHECK_FALSE(lFS.IsPathExist(lEmpty));
@@ -103,7 +103,7 @@ TEST_CASE("IFileSystem: an empty path is rejected by every entry point, never cr
 TEST_CASE("IFileSystem: ListDirectory separates files from directories, one level only")
 {
     const ScopedTempDir lTemp("list_one_level");
-    const StdFileSystem lFS;
+    const StdFileSystem lFS{};
 
     REQUIRE(lFS.CreateDirectories(lTemp.Sub("Waves")));
     WriteFile(lTemp.Sub("Waves/Deep.wave"));       // one level DOWN — must not appear
@@ -133,7 +133,7 @@ TEST_CASE("IFileSystem: ListDirectory separates files from directories, one leve
 TEST_CASE("IFileSystem: ListDirectory reports false for a missing dir and for a file, leaving the output untouched")
 {
     const ScopedTempDir lTemp("list_bad_targets");
-    const StdFileSystem lFS;
+    const StdFileSystem lFS{};
 
     WriteFile(lTemp.Sub("NotADir.txt"));
 
@@ -151,7 +151,7 @@ TEST_CASE("IFileSystem: ListDirectory reports false for a missing dir and for a 
 TEST_CASE("IFileSystem: ListDirectory APPENDS, so one container can accumulate several roots")
 {
     const ScopedTempDir lTemp("list_appends");
-    const StdFileSystem lFS;
+    const StdFileSystem lFS{};
 
     REQUIRE(lFS.CreateDirectories(lTemp.Sub("RootA")));
     REQUIRE(lFS.CreateDirectories(lTemp.Sub("RootB")));
@@ -177,7 +177,7 @@ TEST_CASE("IFileSystem: ListDirectory APPENDS, so one container can accumulate s
 TEST_CASE("StdFileSystem: non-ASCII paths round-trip as UTF-8, not as the ANSI code page")
 {
     const ScopedTempDir lTemp("utf8_roundtrip");
-    const StdFileSystem lFS;
+    const StdFileSystem lFS{};
 
     // \u escapes, not literal characters: this file has no BOM and there is no /utf-8, so MSVC would
     // read literal bytes with the ANSI code page.
@@ -206,7 +206,7 @@ TEST_CASE("StdFileSystem: non-ASCII paths round-trip as UTF-8, not as the ANSI c
 TEST_CASE("StdFileSystem: CreateDirectories accepts a non-ASCII name and the OS agrees it is there")
 {
     const ScopedTempDir     lTemp("utf8_create");
-    const StdFileSystem lFS;
+    const StdFileSystem lFS{};
 
     const OpaaxString lUtf8Dir(lTemp.Str() + OpaaxString("/\xE6\x97\xA5\xE6\x9C\xAC" "_Waves"));
     REQUIRE(lFS.CreateDirectories(lUtf8Dir));
@@ -242,7 +242,7 @@ TEST_CASE("IFileSystem::Null: inert — every primitive fails and nothing reache
 TEST_CASE("IFileSystem: Entry paths use forward slashes and resolve back to the real file")
 {
     const ScopedTempDir lTemp("entry_paths");
-    const StdFileSystem lFS;
+    const StdFileSystem lFS{};
 
     WriteFile(lTemp.Sub("Wave01.wave"));
 

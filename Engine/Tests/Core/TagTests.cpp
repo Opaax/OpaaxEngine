@@ -39,7 +39,7 @@ TEST_CASE("OpaaxTag: a UTF-8 name is a tag like any other, and its hierarchy sti
 
 TEST_CASE("OpaaxTag: a default tag is invalid, and says so in every spelling")
 {
-    const OpaaxTag lTag;
+    const OpaaxTag lTag{};
 
     CHECK_FALSE(lTag.IsValid());
     CHECK(lTag.GetView().IsEmpty());            // NOT the pool's "None" — see the GetView note
@@ -93,7 +93,7 @@ TEST_CASE("OpaaxTag: MatchesTag is not a string prefix test")
 
 TEST_CASE("OpaaxTag: the invalid tag is inert in BOTH directions")
 {
-    const OpaaxTag lNone;
+    const OpaaxTag lNone{};
     const OpaaxTag lTag = OpaaxTag("Damage.Fire");
 
     CHECK_FALSE(lTag.MatchesTag(lNone));

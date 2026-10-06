@@ -285,7 +285,7 @@ TEST_CASE("ScopedStat: records the scope it wrapped, nested by block")
 
 TEST_CASE("TStatsHistory: empty answers zero for every statistic")
 {
-    const TStatsHistory<4> lHistory;
+    const TStatsHistory<4> lHistory{};
 
     CHECK(lHistory.Count() == 0u);
     CHECK(lHistory.Offset() == 0u);
@@ -634,7 +634,7 @@ TEST_CASE("FrameStats: GpuMs defaults to NEGATIVE, which means 'no reading'")
 {
     // Zero would be a lie a panel cannot distinguish from a free frame; negative is unmistakable,
     // and it is what a device with no timer support answers forever.
-    const FrameStats lStats;
+    const FrameStats lStats{};
 
     CHECK(lStats.GpuMs < 0.0);
 }

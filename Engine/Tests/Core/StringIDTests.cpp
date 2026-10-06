@@ -15,7 +15,7 @@ using namespace Opaax;
 
 TEST_CASE("OpaaxStringID: default-constructed is the invalid 'None' id")
 {
-    const OpaaxStringID lId;
+    const OpaaxStringID lId{};
 
     CHECK_FALSE(lId.IsValid());
     CHECK(lId.GetId() == 0u);

@@ -62,7 +62,7 @@ namespace
 
 TEST_CASE("MoveModeData: the defaults are a walkable ground mode")
 {
-    const MoveModeData lData;
+    const MoveModeData lData{};
 
     // The placeholder policy leans on this: a missing tuning yields something that MOVES, so a
     // broken reference degrades rather than freezing the entity.
@@ -184,7 +184,7 @@ TEST_CASE("MoverData: NO OPINION resolves to the default, then to the first entr
 
 TEST_CASE("MoverData: an EMPTY bag resolves nothing, both ways")
 {
-    const MoverData lData;
+    const MoverData lData{};
 
     CHECK(lData.EntryCount() == 0u);
     CHECK(lData.Find(OpaaxStringID{}) == nullptr);
@@ -225,7 +225,7 @@ TEST_CASE("MoverFile: an EMPTY bag saves and loads — it is what a freshly crea
     const ScopedTempDir lDir("moverEmpty");
     const OpaaxString   lPath = lDir.File("Empty.opaaxmover");
 
-    const MoverData lSaved;
+    const MoverData lSaved{};
     REQUIRE(MoverFile::Save(lPath, lSaved));
 
     MoverData lLoaded;

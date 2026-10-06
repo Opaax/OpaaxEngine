@@ -64,7 +64,7 @@ namespace Opaax
             return false;
         }
 
-        const StdFs::directory_iterator lEnd;
+        const StdFs::directory_iterator lEnd{};
         for (; lIt != lEnd && !lError; lIt.increment(lError))
         {
             std::error_code lEntryError;
