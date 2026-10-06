@@ -5,7 +5,7 @@
             "severity": "error",
             "pattern": [
                 {
-                    "regexp": "^(.+?)\((\d+)\):\s+(?:FATAL )?ERROR:\s+(.*)$",
+                    "regexp": "^(.+?)\\((\\d+)\\):\\s+(?:FATAL )?ERROR:\\s+(.*)$",
                     "file": 1,
                     "line": 2,
                     "message": 3
@@ -17,7 +17,7 @@
             "severity": "error",
             "pattern": [
                 {
-                    "regexp": "^(.+?):(\d+):\s+(?:FATAL )?ERROR:\s+(.*)$",
+                    "regexp": "^(.+?):(\\d+):\\s+(?:FATAL )?ERROR:\\s+(.*)$",
                     "file": 1,
                     "line": 2,
                     "message": 3
