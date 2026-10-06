@@ -3,7 +3,7 @@
 // not per-component). Pure JSON: no World, no registry.
 #include <doctest.h>
 
-#include "Engine/Subsystems/Resources/ResourcePathJson.h"
+#include "Resources/ResourcePathJson.h"
 #include "World/Components/ComponentRegistry.h"
 #include "World/Components/PrefabInstanceComponent.h"
 #include "World/Components/TransformComponent.h"

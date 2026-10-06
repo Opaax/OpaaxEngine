@@ -2,7 +2,7 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/String/OpaaxString.hpp"
-#include "Engine/Subsystems/Resources/Types/Animation/AnimationClipData.h"
+#include "Animation/AnimationClipData.h"
 
 namespace Opaax::Editor
 {

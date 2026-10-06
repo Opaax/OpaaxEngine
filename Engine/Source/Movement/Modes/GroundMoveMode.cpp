@@ -1,9 +1,9 @@
-#include "World/Systems/Movement/GroundMoveMode.h"
+#include "Movement/Modes/GroundMoveMode.h"
 
 #include "Core/Maths/Maths.h"
-#include "Engine/Subsystems/Resources/Types/Mover/MoveModeData.h"
+#include "Movement/Assets/MoveModeData.h"
 #include "Physics/IPhysicsWorld.h"
-#include "World/Components/MoverComponent.h"
+#include "Movement/MoverComponent.h"
 #include "World/Components/TransformComponent.h"
 
 namespace Opaax

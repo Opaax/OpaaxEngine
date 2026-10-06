@@ -5,7 +5,7 @@
 
 #include <optional>
 
-#include "Engine/Subsystems/Resources/ResourceFormatRegistry.h"
+#include "Resources/ResourceFormatRegistry.h"
 
 using namespace Opaax;
 

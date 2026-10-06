@@ -4,9 +4,9 @@
 
 #include <nlohmann/json.hpp>
 
-#include "Engine/Subsystems/Resources/ResourceFormat.h"
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAsset.h"
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetFile.h"
+#include "Resources/ResourceFormat.h"
+#include "Resources/DataAsset/DataAsset.h"
+#include "Resources/DataAsset/DataAssetFile.h"
 
 namespace Opaax
 {

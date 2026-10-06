@@ -1,7 +1,7 @@
-#include "Engine/UI/UIInputRouter.h"
+#include "UI/UIInputRouter.h"
 
-#include "Engine/Subsystems/Input/InputCodes.h"
-#include "Engine/Subsystems/Input/InputManager.h"
+#include "Input/InputCodes.h"
+#include "Input/InputManager.h"
 #include "UI/UICanvas.h"
 #include "UI/UIEvents.h"
 

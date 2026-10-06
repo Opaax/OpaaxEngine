@@ -3,11 +3,11 @@
 #include <Application/Services/IEngine.h>
 #include <Engine/Subsystems/EngineSubsystem.h>
 #include "Application/Services/IJobSystem.h"
-#include "Subsystems/Renderer/RendererManager.h"
-#include "FrameInfo.hpp"
+#include "Renderer/RendererManager.h"
+#include "Engine/FrameInfo.hpp"
 #include "Core/Events/EventBus.h"
 #include "Engine/Registries/EngineRegistries.h"
-#include "Engine/Subsystems/Resources/ResourceRef.hpp"
+#include "Resources/ResourceRef.hpp"
 
 namespace Opaax
 {

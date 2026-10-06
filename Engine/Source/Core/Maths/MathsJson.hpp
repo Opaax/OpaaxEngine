@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include <nlohmann/json.hpp>
-#include "MathTypes.h"
+#include "Core/Maths/MathTypes.h"
 
 namespace glm
 {

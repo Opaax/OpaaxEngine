@@ -10,7 +10,7 @@
 #include "Editor/Undo/EditorUndo.h"
 #include "Editor/Undo/UICanvasUndoables.h"
 #include "Engine/Registries/EngineRegistries.h"
-#include "Engine/Subsystems/Resources/Types/UI/UICanvasResource.h"
+#include "UI/UICanvasResource.h"
 #include "UI/UICanvasFile.h"
 #include "UI/UIWidget.h"
 #include "UI/UIWidgetRegistry.h"

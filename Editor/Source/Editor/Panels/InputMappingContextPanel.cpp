@@ -9,7 +9,7 @@
 #include "Editor/Resources/Types/Input/EditorInputMappingContextDocument.h"
 #include "Editor/Undo/EditorUndo.h"
 
-#include "Engine/Subsystems/Input/InputKeyNames.h"
+#include "Input/InputKeyNames.h"
 
 #include <imgui.h>
 

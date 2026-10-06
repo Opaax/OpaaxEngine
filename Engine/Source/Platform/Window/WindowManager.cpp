@@ -1,4 +1,4 @@
-﻿#include "Window/WindowManager.h"
+﻿#include "Platform/Window/WindowManager.h"
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IConfigSystem.h"

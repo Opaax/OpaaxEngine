@@ -2,8 +2,8 @@
 // so it only needs a World.
 #include <doctest.h>
 
-#include "Engine/Subsystems/Camera/CameraManager.h"
-#include "World/Components/CameraComponent.h"
+#include "Renderer/Camera/CameraManager.h"
+#include "Renderer/Camera/CameraComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/World.h"

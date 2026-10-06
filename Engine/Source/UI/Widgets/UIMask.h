@@ -3,8 +3,8 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
-#include "Engine/Subsystems/Resources/ResourcePath.h"
-#include "Engine/Subsystems/Resources/ResourcePathJson.h"
+#include "Resources/ResourcePath.h"
+#include "Resources/ResourcePathJson.h"
 #include "UI/UIWidget.h"
 
 namespace Opaax

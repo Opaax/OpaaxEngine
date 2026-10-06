@@ -4,7 +4,7 @@
 
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Data/EnemyStats.h"
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetRef.h"
+#include "Resources/DataAsset/DataAssetRef.h"
 
 namespace Sandbox
 {

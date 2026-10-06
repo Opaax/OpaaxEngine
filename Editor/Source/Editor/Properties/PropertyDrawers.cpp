@@ -3,7 +3,7 @@
 #include <cstring>   // memcpy
 #include <string>
 
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetResource.h"
+#include "Resources/DataAsset/DataAssetResource.h"
 
 #include <glm/gtc/type_ptr.hpp>   // value_ptr
 

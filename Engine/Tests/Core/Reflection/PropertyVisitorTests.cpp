@@ -4,7 +4,7 @@
 #include <string>
 
 #include "Engine/Reflection/PropertyVisitor.h"
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetRef.h"
+#include "Resources/DataAsset/DataAssetRef.h"
 
 using namespace Opaax;
 

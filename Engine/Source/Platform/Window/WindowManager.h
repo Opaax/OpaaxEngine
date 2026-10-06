@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "Application/Services/Window/IWindowManager.h"
+#include "Application/Services/IWindowManager.h"
 
 namespace Opaax
 {

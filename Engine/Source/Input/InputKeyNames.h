@@ -3,8 +3,8 @@
 
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxEnum.h"
-#include "Engine/Subsystems/Input/InputCodes.h"
-#include "Engine/Subsystems/Input/InputManager.h"   // KEY_STATE_COUNT
+#include "Input/InputCodes.h"
+#include "Input/InputManager.h"   // KEY_STATE_COUNT
 
 namespace Opaax
 {
@@ -19,7 +19,7 @@ namespace Opaax
         switch (InKey)
         {
         #define OPAAX_KEY_CODE(Name) case EKeyCode::Name: return #Name;
-        #include "Engine/Subsystems/Input/InputKeyCodeList.h"
+        #include "Input/InputKeyCodeList.h"
         #undef OPAAX_KEY_CODE
         }
 
@@ -48,7 +48,7 @@ namespace Opaax
         static constexpr EKeyCode Values[] =
         {
             #define OPAAX_KEY_CODE(Name) EKeyCode::Name,
-            #include "Engine/Subsystems/Input/InputKeyCodeList.h"
+            #include "Input/InputKeyCodeList.h"
             #undef OPAAX_KEY_CODE
         };
     };

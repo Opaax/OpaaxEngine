@@ -1,4 +1,4 @@
-#include "OpaaxApplication.h"
+#include "Application/OpaaxApplication.h"
 
 #include <cstring>
 
@@ -12,22 +12,22 @@
 
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/Engine.h"
-#include "Engine/Modules/ModuleRegistrar.h"
+#include "Engine/Registries/ModuleRegistrar.h"
 #include "World/WorldManager.h"
-#include "Engine/Subsystems/EventBus/EngineEventBus.h"
-#include "Engine/Subsystems/Input/InputEvents.h"
-#include "Engine/Subsystems/Input/InputManager.h"
+#include "Engine/Subsystems/EngineEventBus.h"
+#include "Input/InputEvents.h"
+#include "Input/InputManager.h"
 
-#include "Services/IConfigSystem.h"
-#include "Services/IEngine.h"
-#include "Window/WindowManager.h"
+#include "Application/Services/IConfigSystem.h"
+#include "Application/Services/IEngine.h"
+#include "Platform/Window/WindowManager.h"
 
-#include "Window/WindowEvents.h"
+#include "Platform/Window/WindowEvents.h"
 
 #include "Core/Events/Event.h"
 #include "Core/Events/EventBus.h"
 #include "Core/Events/EventTypes.hpp"
-#include "Services/Window/IWindowManager.h"
+#include "Application/Services/IWindowManager.h"
 
 #include "Platform/NativePlatform.h"
 

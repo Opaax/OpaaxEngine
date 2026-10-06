@@ -4,7 +4,7 @@
 
 #include "Core/Reflection/OpaaxEnum.h"
 #include "Core/Reflection/OpaaxEnumJson.h"
-#include "Window/Window.h"
+#include "Platform/Window/Window.h"
 #include "RHI/RHIBackend.h"
 
 using namespace Opaax;

@@ -4,7 +4,7 @@
 
 #include <optional>
 
-#include "Engine/Modules/ModuleRegistrar.h"
+#include "Engine/Registries/ModuleRegistrar.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "World/Components/ComponentRegistry.h"
 #include "World/Entity/Entity.h"

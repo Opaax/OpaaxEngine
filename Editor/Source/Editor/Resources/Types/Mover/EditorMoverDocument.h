@@ -2,7 +2,7 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/String/OpaaxString.hpp"
-#include "Engine/Subsystems/Resources/Types/Mover/MoverData.h"
+#include "Movement/Assets/MoverData.h"
 
 namespace Opaax::Editor
 {

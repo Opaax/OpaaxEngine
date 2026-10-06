@@ -4,9 +4,9 @@
 
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxProperty.h"
-#include "Engine/Subsystems/Resources/ResourcePath.h"
-#include "Engine/Subsystems/Resources/ResourcePathJson.h"
-#include "Engine/Subsystems/Resources/Types/Font/FontStyle.h"
+#include "Resources/ResourcePath.h"
+#include "Resources/ResourcePathJson.h"
+#include "Renderer/Text/FontStyle.h"
 
 namespace Opaax
 {

@@ -3,8 +3,8 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Log/Logger.h"
-#include "Engine/Input/InputTypes.h"
-#include "Engine/Subsystems/Input/InputManager.h"   // KEY_STATE_COUNT
+#include "Input/Mapping/InputTypes.h"
+#include "Input/InputManager.h"   // KEY_STATE_COUNT
 
 namespace Opaax
 {

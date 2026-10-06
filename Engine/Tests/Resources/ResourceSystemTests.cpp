@@ -13,9 +13,9 @@
 
 #include "Core/OpaaxTypes.h"
 #include "Application/Services/IJobSystem.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/ResourceView.hpp"
-#include "Engine/Subsystems/Resources/Types/BinaryResource.hpp"
+#include "Resources/ResourceManager.h"
+#include "Resources/ResourceView.hpp"
+#include "Resources/BinaryResource.hpp"
 
 using namespace Opaax;
 

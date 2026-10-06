@@ -2,9 +2,9 @@
 
 #include <optional>
 
-#include "Engine/Subsystems/Resources/ResourceFormat.h"
-#include "Engine/Subsystems/Resources/Types/Mover/MoveModeData.h"
-#include "Engine/Subsystems/Resources/Types/Mover/MoveModeFile.h"
+#include "Resources/ResourceFormat.h"
+#include "Movement/Assets/MoveModeData.h"
+#include "Movement/Assets/MoveModeFile.h"
 
 namespace Opaax
 {

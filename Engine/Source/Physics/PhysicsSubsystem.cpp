@@ -1,15 +1,15 @@
-#include "World/Systems/PhysicsSubsystem.h"
+#include "Physics/PhysicsSubsystem.h"
 
 #include "Core/Events/EventBus.h"
 #include "Core/Maths/Maths.h"   // DegreesToRadians
 #include "Core/Profiling/Profiler.h"
 #include "Engine/Config/EngineConfigData.h"
-#include "Engine/Subsystems/EventBus/EngineEventBus.h"
+#include "Engine/Subsystems/EngineEventBus.h"
 #include "Physics/Collision/CollisionChannel.h"
 #include "Physics/PhysicsAPI.h"
 #include "Physics/PhysicsEvents.h"
-#include "World/Components/ColliderComponent.h"
-#include "World/Components/RigidbodyComponent.h"
+#include "Physics/Components/ColliderComponent.h"
+#include "Physics/Components/RigidbodyComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Components/TransformInterpolationComponent.h"
 #include "World/Entity/EntityHierarchy.h"   // bodies are in world space

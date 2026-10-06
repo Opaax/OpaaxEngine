@@ -1,7 +1,7 @@
-#include "OpenGLCommandBuffer.h"
+#include "RHI/OpenGL/OpenGLCommandBuffer.h"
 
-#include "OpenGLPipeline.h"
-#include "OpenGLBindGroup.h"
+#include "RHI/OpenGL/OpenGLPipeline.h"
+#include "RHI/OpenGL/OpenGLBindGroup.h"
 #include "RHI/Buffer.h"
 #include "Renderer/RenderTarget.hpp"
 

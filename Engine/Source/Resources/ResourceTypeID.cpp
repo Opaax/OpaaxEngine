@@ -1,4 +1,4 @@
-#include "ResourceTypeID.hpp"
+#include "Resources/ResourceTypeID.hpp"
 
 #include <cstdlib>
 #include <string>

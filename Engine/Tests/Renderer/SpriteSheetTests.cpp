@@ -7,8 +7,8 @@
 #include <string>
 
 #include "Core/IO/FileIO.h"
-#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetData.h"
-#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetFile.h"
+#include "Renderer/Textures/SpriteSheetData.h"
+#include "Renderer/Textures/SpriteSheetFile.h"
 
 using namespace Opaax;
 

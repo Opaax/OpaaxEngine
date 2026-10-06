@@ -1,9 +1,9 @@
-#include "Engine/Subsystems/Resources/Types/Mover/MoveModeFile.h"
+#include "Movement/Assets/MoveModeFile.h"
 
 #include <nlohmann/json.hpp>
 
 #include "Core/IO/FileIO.h"
-#include "Engine/Subsystems/Resources/Types/Mover/MoveModeData.h"
+#include "Movement/Assets/MoveModeData.h"
 
 namespace Opaax
 {

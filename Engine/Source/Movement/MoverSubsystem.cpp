@@ -1,4 +1,4 @@
-#include "World/Systems/MoverSubsystem.h"
+#include "Movement/MoverSubsystem.h"
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"
@@ -6,16 +6,16 @@
 #include "Core/Maths/Maths.h"
 #include "Core/Profiling/Profiler.h"
 #include "Engine/Registries/EngineRegistries.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/Types/Mover/MoveModeResource.h"
-#include "Engine/Subsystems/Resources/Types/Mover/MoverResource.h"
+#include "Resources/ResourceManager.h"
+#include "Movement/Assets/MoveModeResource.h"
+#include "Movement/Assets/MoverResource.h"
 #include "Physics/IPhysicsWorld.h"
-#include "World/Components/MoverComponent.h"
+#include "Movement/MoverComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Components/TransformInterpolationComponent.h"
 #include "World/Entity/EntityHierarchy.h"   // modes move the world pose
-#include "World/Systems/Movement/MoverModeRegistry.h"
-#include "World/Systems/PhysicsSubsystem.h"
+#include "Movement/Modes/MoverModeRegistry.h"
+#include "Physics/PhysicsSubsystem.h"
 #include "World/Systems/WorldContext.h"
 #include "World/World.h"
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/OpaaxTypes.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"   // Load<T>
+#include "Resources/ResourceManager.h"   // Load<T>
 #include "Editor/Resources/ResourceScan.h"                 // ResourceFile
 
 namespace Opaax::Editor

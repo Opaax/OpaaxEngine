@@ -1,5 +1,5 @@
-#include "IConfigSystem.h"
-#include "IPaths.h"
+#include "Application/Services/IConfigSystem.h"
+#include "Application/Services/IPaths.h"
 
 #include "Core/String/OpaaxUtf8.h"
 

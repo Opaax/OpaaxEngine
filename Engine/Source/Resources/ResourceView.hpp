@@ -3,9 +3,9 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 
-#include "ResourceConcept.hpp"
-#include "ResourceHandle.hpp"
-#include "ResourceManager.h"
+#include "Resources/ResourceConcept.hpp"
+#include "Resources/ResourceHandle.hpp"
+#include "Resources/ResourceManager.h"
 
 // =============================================================================
 // CheckedView<T> — a Resolve() result that asserts (debug) if used after the next Update(),

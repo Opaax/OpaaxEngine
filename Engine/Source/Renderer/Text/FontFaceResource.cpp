@@ -1,4 +1,4 @@
-#include "FontFaceResource.h"
+#include "Renderer/Text/FontFaceResource.h"
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"

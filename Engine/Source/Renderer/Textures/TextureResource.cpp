@@ -1,4 +1,4 @@
-#include "TextureResource.h"
+#include "Renderer/Textures/TextureResource.h"
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"

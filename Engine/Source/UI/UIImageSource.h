@@ -3,7 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
-#include "Engine/Subsystems/Resources/ResourcePath.h"
+#include "Resources/ResourcePath.h"
 #include "UI/UIAssetProvider.h"
 
 namespace Opaax

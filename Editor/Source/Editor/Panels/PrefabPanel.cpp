@@ -19,7 +19,7 @@
 
 #include "Application/Services/IEngine.h"
 #include "Core/Maths/Bounds2D.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"   // before PrefabResource (completes LoadContext)
+#include "Resources/ResourceManager.h"   // before PrefabResource (completes LoadContext)
 #include "RHI/Framebuffer.h"
 #include "Renderer/CameraView.h"
 #include "Renderer/RenderTarget.hpp"        // OffscreenRenderTarget

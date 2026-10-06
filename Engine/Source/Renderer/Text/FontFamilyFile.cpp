@@ -1,9 +1,9 @@
-#include "Engine/Subsystems/Resources/Types/Font/FontFamilyFile.h"
+#include "Renderer/Text/FontFamilyFile.h"
 
 #include <nlohmann/json.hpp>
 
 #include "Core/IO/FileIO.h"
-#include "Engine/Subsystems/Resources/Types/Font/FontFamilyData.h"
+#include "Renderer/Text/FontFamilyData.h"
 
 namespace Opaax
 {

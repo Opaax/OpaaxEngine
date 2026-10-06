@@ -4,7 +4,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxStringID.hpp"
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAsset.h"
+#include "Resources/DataAsset/DataAsset.h"
 
 namespace Opaax
 {

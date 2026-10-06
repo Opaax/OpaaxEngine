@@ -1,9 +1,9 @@
-#include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryFile.h"
+#include "Animation/AnimationLibraryFile.h"
 
 #include <nlohmann/json.hpp>
 
 #include "Core/IO/FileIO.h"
-#include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryData.h"
+#include "Animation/AnimationLibraryData.h"
 
 namespace Opaax
 {

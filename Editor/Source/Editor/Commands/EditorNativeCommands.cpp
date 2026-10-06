@@ -46,7 +46,7 @@
 #include "Core/Log/Logger.h"
 #include "Application/Services/IPaths.h"
 #include "Platform/IFileSystem.h"
-#include "Window/Window.h"
+#include "Platform/Window/Window.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "World/Entity/Entity.h"   // EntityOps::Create returns one
 #include "World/Entity/EntityHierarchy.h"   // Delete takes the subtree

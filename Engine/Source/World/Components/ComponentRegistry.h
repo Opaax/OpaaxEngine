@@ -10,8 +10,8 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/Reflection/TypeInfo.h"
 #include "Engine/Reflection/PropertyVisitor.h"
-#include "Engine/Subsystems/Resources/ResourcePath.h"
-#include "Engine/Subsystems/Resources/ResourceTypeID.hpp"
+#include "Resources/ResourcePath.h"
+#include "Resources/ResourceTypeID.hpp"
 #include "World/Components/ComponentConcept.hpp"
 #include "World/Entity/EntityTypes.h"
 

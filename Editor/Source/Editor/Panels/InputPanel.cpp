@@ -6,8 +6,8 @@
 #include "Application/Services/IEngine.h"
 #include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
-#include "Engine/Input/InputMappingSubsystem.h"
-#include "Engine/Subsystems/Input/InputManager.h"
+#include "Input/Mapping/InputMappingSubsystem.h"
+#include "Input/InputManager.h"
 
 #include <imgui.h>
 

@@ -6,10 +6,10 @@
 #include <chrono>
 #include <filesystem>
 
-#include "Engine/Subsystems/Resources/ResourceFormatRegistry.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/ResourcePathJson.h"   // the json bridge the map writer uses for a path
-#include "Engine/Subsystems/Resources/ResourceTypeID.hpp"
+#include "Resources/ResourceFormatRegistry.h"
+#include "Resources/ResourceManager.h"
+#include "Resources/ResourcePathJson.h"   // the json bridge the map writer uses for a path
+#include "Resources/ResourceTypeID.hpp"
 #include "World/Components/ComponentRegistry.h"
 #include "World/Prefab/PrefabFile.h"
 #include "World/Prefab/PrefabResource.hpp"

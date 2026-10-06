@@ -1,6 +1,6 @@
 #include "__NAME__.h"
 
-#include "Engine/Modules/ModuleRegistrar.h"
+#include "Engine/Registries/ModuleRegistrar.h"
 
 void __NAME__Module::OnRegister(Opaax::ModuleRegistrar& InRegistrar)
 {

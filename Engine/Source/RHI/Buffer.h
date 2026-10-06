@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ShaderDataTypes.h"
+#include "RHI/ShaderDataTypes.h"
 
 namespace Opaax
 {

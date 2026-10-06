@@ -11,7 +11,7 @@
 
 #include <entt/entt.hpp>
 
-#include "World/Components/QuadComponent.h"
+#include "Renderer/Components/QuadComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
 #include "World/World.h"

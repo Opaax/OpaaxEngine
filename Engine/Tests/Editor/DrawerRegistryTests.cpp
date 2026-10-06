@@ -4,7 +4,7 @@
 #include <doctest.h>
 
 #include "Editor/Extensions/DrawerRegistry.h"
-#include "World/Components/QuadComponent.h"
+#include "Renderer/Components/QuadComponent.h"
 #include "World/Components/TransformComponent.h"
 
 using namespace Opaax;

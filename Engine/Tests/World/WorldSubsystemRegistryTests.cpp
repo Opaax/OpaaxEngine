@@ -8,9 +8,9 @@
 #include "Core/String/OpaaxStringID.hpp"
 #include "Engine/Config/EngineConfigData.h"   // the context's config reference
 #include "Engine/Registries/EngineRegistries.h"
-#include "Engine/Subsystems/EventBus/EngineEventBus.h"
-#include "Engine/Subsystems/Input/InputManager.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"
+#include "Engine/Subsystems/EngineEventBus.h"
+#include "Input/InputManager.h"
+#include "Resources/ResourceManager.h"
 #include "Renderer/DebugDraw.h"
 #include "World/Systems/WorldContext.h"
 #include "World/Systems/WorldSubsystem.h"

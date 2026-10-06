@@ -3,8 +3,8 @@
 // test runner can't provide, so CreateMainWindow() is never called on a real manager.
 #include <doctest.h>
 
-#include "Application/Services/Window/IWindowManager.h"
-#include "Window/WindowManager.h"
+#include "Application/Services/IWindowManager.h"
+#include "Platform/Window/WindowManager.h"
 #include "Application/Services/AppServiceLocator.h"
 #include "Engine/Config/EngineConfigData.h"
 #include "Core/String/OpaaxString.hpp"

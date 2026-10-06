@@ -1,9 +1,9 @@
-#include "Engine/Input/InputActionEvaluator.h"
+#include "Input/Mapping/InputActionEvaluator.h"
 
 #include <algorithm>
 
-#include "Engine/Input/InputModifiers.h"
-#include "Engine/Subsystems/Input/InputManager.h"
+#include "Input/Mapping/InputModifiers.h"
+#include "Input/InputManager.h"
 
 namespace Opaax
 {

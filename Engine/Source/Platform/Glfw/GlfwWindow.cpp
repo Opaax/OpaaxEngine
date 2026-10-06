@@ -4,11 +4,11 @@
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IConfigSystem.h"
-#include "Application/Services/Window/IWindowManager.h"
-#include "Window/WindowEvents.h"
+#include "Application/Services/IWindowManager.h"
+#include "Platform/Window/WindowEvents.h"
 #include "Engine/Config/Config_Engine.h"
 
-#include "Engine/Subsystems/Input/InputTypesFwd.hpp"
+#include "Input/InputTypesFwd.hpp"
 
 #include "RHI/RHIBackend.h"
 #include "RHI/IGraphicsContext.h"

@@ -16,7 +16,7 @@
 #include "Editor/Operation/EntityOps.h"          // gizmo drags write through it
 #include "Editor/EditorMapDocument.h"            // a drop goes into the focused map
 #include "Editor/Resources/ResourceDragDrop.h"   // typed drag payloads
-#include "Engine/Subsystems/Resources/ResourceManager.h"   // before PrefabResource (completes LoadContext)
+#include "Resources/ResourceManager.h"   // before PrefabResource (completes LoadContext)
 #include "World/Prefab/PrefabResource.hpp"
 #include "Editor/UI/IEditorUIBackend.h"
 #include "Editor/Viewport/ViewportOverlays.h"    // outline and icons, shared with the prefab panel

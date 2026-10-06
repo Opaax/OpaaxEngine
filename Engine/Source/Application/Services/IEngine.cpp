@@ -1,9 +1,9 @@
-#include "IEngine.h"
+#include "Application/Services/IEngine.h"
 
 #include "Engine/GameInstance/GameInstanceManager.h"
-#include "Engine/Subsystems/EventBus/EngineEventBus.h"
-#include "Engine/Subsystems/Input/InputManager.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"
+#include "Engine/Subsystems/EngineEventBus.h"
+#include "Input/InputManager.h"
+#include "Resources/ResourceManager.h"
 #include "Renderer/DebugDraw.h"
 #include "RHI/Framebuffer.h"
 #include "RHI/Texture.h"

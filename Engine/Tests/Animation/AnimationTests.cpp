@@ -7,13 +7,13 @@
 #include <string>
 
 #include "Core/IO/FileIO.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"        // completes LoadContext
-#include "Engine/Subsystems/Resources/ResourceFormatRegistry.h"
-#include "Engine/Subsystems/Resources/Types/Animation/AnimationClipData.h"
-#include "Engine/Subsystems/Resources/Types/Animation/AnimationClipFile.h"
-#include "Engine/Subsystems/Resources/Types/Animation/AnimationClipResource.h"
-#include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryData.h"
-#include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryFile.h"
+#include "Resources/ResourceManager.h"        // completes LoadContext
+#include "Resources/ResourceFormatRegistry.h"
+#include "Animation/AnimationClipData.h"
+#include "Animation/AnimationClipFile.h"
+#include "Animation/AnimationClipResource.h"
+#include "Animation/AnimationLibraryData.h"
+#include "Animation/AnimationLibraryFile.h"
 
 using namespace Opaax;
 

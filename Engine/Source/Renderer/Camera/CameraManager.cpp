@@ -1,4 +1,4 @@
-#include "CameraManager.h"
+#include "Renderer/Camera/CameraManager.h"
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"
@@ -7,7 +7,7 @@
 
 #include "World/World.h"
 #include "World/WorldManager.h"
-#include "World/Components/CameraComponent.h"
+#include "Renderer/Camera/CameraComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityHierarchy.h"

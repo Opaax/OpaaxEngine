@@ -2,13 +2,13 @@
 // real physics world (MoverSubsystem itself needs a started engine).
 #include <doctest.h>
 
-#include "Engine/Subsystems/Resources/Types/Mover/MoveModeData.h"
+#include "Movement/Assets/MoveModeData.h"
 #include "Physics/PhysicsAPI.h"
-#include "World/Components/MoverComponent.h"
+#include "Movement/MoverComponent.h"
 #include "World/Components/TransformComponent.h"
-#include "World/Systems/Movement/FlyMoveMode.h"
-#include "World/Systems/Movement/GroundMoveMode.h"
-#include "World/Systems/Movement/MoverModeRegistry.h"
+#include "Movement/Modes/FlyMoveMode.h"
+#include "Movement/Modes/GroundMoveMode.h"
+#include "Movement/Modes/MoverModeRegistry.h"
 
 using namespace Opaax;
 

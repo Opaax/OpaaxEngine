@@ -4,7 +4,7 @@
 
 #include "Core/Color/LinearColor.h"
 #include "Core/Color/LinearColorJson.h"
-#include "World/Components/QuadComponent.h"
+#include "Renderer/Components/QuadComponent.h"
 
 using namespace Opaax;
 

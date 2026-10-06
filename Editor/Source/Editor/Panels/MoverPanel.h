@@ -4,7 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Editor/Panels/IEditorPanel.h"
 
-#include "Engine/Subsystems/Resources/Types/Mover/MoverData.h"
+#include "Movement/Assets/MoverData.h"
 
 namespace Opaax
 {

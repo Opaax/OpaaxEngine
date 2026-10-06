@@ -1,6 +1,6 @@
 
 
-#include "EditorApplication.h"
+#include "Editor/Application/EditorApplication.h"
 
 #include "Editor/Application/Services/EditorService.h"
 #include "Editor/Application/Services/EditorPaths.h"

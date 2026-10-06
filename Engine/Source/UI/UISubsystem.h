@@ -3,7 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/Log/Logger.h"
 #include "Engine/GameInstance/IGameInstanceSubsystem.h"
-#include "Engine/UI/UIInputMode.h"
+#include "UI/UIInputMode.h"
 #include "UI/UICanvas.h"
 
 namespace Opaax

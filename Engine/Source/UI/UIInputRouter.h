@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
-#include "Engine/Input/InputActionEvaluator.h"   // InputKeyMask
-#include "Engine/UI/UIInputMode.h"
+#include "Input/Mapping/InputActionEvaluator.h"   // InputKeyMask
+#include "UI/UIInputMode.h"
 
 namespace Opaax
 {

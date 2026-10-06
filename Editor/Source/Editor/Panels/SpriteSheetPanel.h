@@ -3,7 +3,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
-#include "Engine/Subsystems/Resources/ResourceRef.hpp"   // claim on the sheet's image
+#include "Resources/ResourceRef.hpp"   // claim on the sheet's image
 #include "Editor/Panels/IEditorPanel.h"
 #include "Editor/UI/EditorRectGeometry.h"                // hit test and clamp
 #include "Editor/Undo/SpriteSheetUndoables.h"            // open edit gesture

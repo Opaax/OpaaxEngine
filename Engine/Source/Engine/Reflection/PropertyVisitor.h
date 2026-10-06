@@ -14,8 +14,8 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/Reflection/TypeInfo.h"
-#include "Engine/Subsystems/Resources/ResourcePath.h"
-#include "Engine/Subsystems/Resources/ResourceTypeID.hpp"
+#include "Resources/ResourcePath.h"
+#include "Resources/ResourceTypeID.hpp"
 
 namespace Opaax
 {

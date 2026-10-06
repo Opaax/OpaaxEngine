@@ -1,6 +1,6 @@
 #include "Sandbox.h"
 
-#include "Engine/Modules/ModuleRegistrar.h"
+#include "Engine/Registries/ModuleRegistrar.h"
 #include "Components/GunComponent.h"
 #include "Components/HealthComponent.h"
 #include "Components/TagsComponent.h"

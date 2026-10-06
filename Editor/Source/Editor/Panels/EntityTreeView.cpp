@@ -3,8 +3,8 @@
 #include "Editor/Operation/EditorSelection.hpp"
 #include "Editor/Resources/ResourceDragDrop.h"   // prefab drops on rows and headers
 
-#include "Engine/Subsystems/Resources/ResourceManager.h"   // before PrefabResource (completes LoadContext)
-#include "Engine/Subsystems/Resources/ResourceTypeID.hpp"
+#include "Resources/ResourceManager.h"   // before PrefabResource (completes LoadContext)
+#include "Resources/ResourceTypeID.hpp"
 #include "World/Prefab/PrefabResource.hpp"
 #include "World/Components/PrefabInstanceComponent.h"   // linked rows are blue
 #include "World/Entity/Entity.h"

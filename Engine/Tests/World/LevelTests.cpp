@@ -8,9 +8,9 @@
 #include <string>
 
 #include "Application/Services/IPaths.h"
-#include "Engine/Subsystems/Resources/ResourceFormatRegistry.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/ResourcePathJson.h"
+#include "Resources/ResourceFormatRegistry.h"
+#include "Resources/ResourceManager.h"
+#include "Resources/ResourcePathJson.h"
 #include "World/Components/ComponentRegistry.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"

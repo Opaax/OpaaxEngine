@@ -1,13 +1,13 @@
-#include "World/Systems/SpriteAnimationSubsystem.h"
+#include "Animation/SpriteAnimationSubsystem.h"
 
 #include "Application/Services/IPaths.h"
 #include "Core/Profiling/Profiler.h"   // OPAAX_STAT_SCOPE
-#include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/Types/Animation/AnimationClipResource.h"
-#include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryResource.h"
-#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetResource.h"
-#include "World/Components/SpriteAnimatorComponent.h"
-#include "World/Components/SpriteComponent.h"
+#include "Resources/ResourceManager.h"
+#include "Animation/AnimationClipResource.h"
+#include "Animation/AnimationLibraryResource.h"
+#include "Renderer/Textures/SpriteSheetResource.h"
+#include "Animation/SpriteAnimatorComponent.h"
+#include "Renderer/Components/SpriteComponent.h"
 #include "World/Systems/WorldContext.h"
 #include "World/World.h"
 

@@ -3,7 +3,7 @@
 // its default.
 #include <doctest.h>
 
-#include "Engine/Subsystems/Resources/Types/UI/UICanvasResource.h"
+#include "UI/UICanvasResource.h"
 #include "UI/UICanvasFile.h"
 #include "UI/UIWidgetRegistry.h"
 #include "UI/Widgets/UIButton.h"

@@ -9,8 +9,8 @@
 #include "Core/Reflection/OpaaxEnum.h"
 #include "Core/Reflection/OpaaxEnumJson.h"
 #include "Core/Reflection/OpaaxProperty.h"
-#include "Engine/Subsystems/Resources/ResourcePath.h"
-#include "Engine/Subsystems/Resources/ResourcePathJson.h"
+#include "Resources/ResourcePath.h"
+#include "Resources/ResourcePathJson.h"
 #include "Renderer/RenderLayer.h"
 
 namespace Opaax

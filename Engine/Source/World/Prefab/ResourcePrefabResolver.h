@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"   // before PrefabResource (completes LoadContext)
+#include "Resources/ResourceManager.h"   // before PrefabResource (completes LoadContext)
 
 #include "World/Prefab/PrefabFold.h"
 #include "World/Prefab/PrefabResource.hpp"

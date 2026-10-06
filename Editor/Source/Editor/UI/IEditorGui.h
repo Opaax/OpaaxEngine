@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Engine/Subsystems/Input/InputCodes.h"   // EKeyCode
+#include "Input/InputCodes.h"   // EKeyCode
 #include "Core/String/OpaaxString.hpp"
 #include "Core/Maths/MathTypes.h"               // Vector2F
 #include "Editor/TitleBar/EditorTitleBar.h"     // owned by value (needs the complete type)

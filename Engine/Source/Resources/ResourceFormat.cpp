@@ -1,4 +1,4 @@
-#include "ResourceFormat.h"
+#include "Resources/ResourceFormat.h"
 
 #include "Core/String/OpaaxString.hpp"
 

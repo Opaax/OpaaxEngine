@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <type_traits>
 
-#include "IAppService.h"
+#include "Application/Services/IAppService.h"
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTRequire.hpp"
 #include "Core/OpaaxTypes.h"

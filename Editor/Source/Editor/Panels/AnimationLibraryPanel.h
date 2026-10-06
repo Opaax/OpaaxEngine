@@ -4,7 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Editor/Panels/IEditorPanel.h"
 
-#include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryData.h"
+#include "Animation/AnimationLibraryData.h"
 
 namespace Opaax
 {

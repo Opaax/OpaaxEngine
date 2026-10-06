@@ -5,7 +5,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/IO/FileIO.h"
 #include "Core/Log/Logger.h"
-#include "Engine/Subsystems/Resources/ResourceConcept.hpp"
+#include "Resources/ResourceConcept.hpp"
 
 // =============================================================================
 // BinaryResource — a whole file loaded as raw bytes. The simplest resource type.

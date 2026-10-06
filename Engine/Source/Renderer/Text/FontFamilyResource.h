@@ -2,9 +2,9 @@
 
 #include <optional>
 
-#include "Engine/Subsystems/Resources/ResourceFormat.h"
-#include "Engine/Subsystems/Resources/Types/Font/FontFamilyData.h"
-#include "Engine/Subsystems/Resources/Types/Font/FontFamilyFile.h"
+#include "Resources/ResourceFormat.h"
+#include "Renderer/Text/FontFamilyData.h"
+#include "Renderer/Text/FontFamilyFile.h"
 
 namespace Opaax
 {

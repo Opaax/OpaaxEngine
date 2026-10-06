@@ -2,7 +2,7 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/String/OpaaxString.hpp"
-#include "Engine/Subsystems/Resources/ResourceRef.hpp"
+#include "Resources/ResourceRef.hpp"
 #include "Editor/Panels/IEditorPanel.h"
 #include "Editor/Resources/ResourceScan.h"
 #include "Editor/UI/IEditorUIBackend.h"                  // EditorImage

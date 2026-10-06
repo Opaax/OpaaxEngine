@@ -1,4 +1,4 @@
-#include "World/Systems/Movement/MoverModeRegistry.h"
+#include "Movement/Modes/MoverModeRegistry.h"
 
 namespace Opaax
 {

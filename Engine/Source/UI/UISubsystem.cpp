@@ -1,4 +1,4 @@
-#include "Engine/UI/UISubsystem.h"
+#include "UI/UISubsystem.h"
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"
@@ -8,12 +8,12 @@
 #include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceContext.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
-#include "Engine/Input/InputMappingSubsystem.h"
+#include "Input/Mapping/InputMappingSubsystem.h"
 #include "Engine/Registries/EngineRegistries.h"
-#include "Engine/Subsystems/EventBus/EngineEventBus.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/Types/UI/UICanvasResource.h"
-#include "Engine/UI/UIInputRouter.h"
+#include "Engine/Subsystems/EngineEventBus.h"
+#include "Resources/ResourceManager.h"
+#include "UI/UICanvasResource.h"
+#include "UI/UIInputRouter.h"
 #include "UI/UICanvasFile.h"
 #include "UI/Widgets/UIImage.h"
 

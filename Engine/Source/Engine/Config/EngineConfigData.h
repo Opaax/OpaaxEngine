@@ -10,7 +10,7 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringJson.h"
-#include "Window/Window.h"
+#include "Platform/Window/Window.h"
 #include "Physics/PhysicsBackend.h"
 #include "Physics/PhysicsTypes.h"
 #include "RHI/RHIBackend.h"

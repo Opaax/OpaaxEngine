@@ -1,4 +1,4 @@
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetFile.h"
+#include "Resources/DataAsset/DataAssetFile.h"
 
 #include "Core/IO/FileIO.h"
 

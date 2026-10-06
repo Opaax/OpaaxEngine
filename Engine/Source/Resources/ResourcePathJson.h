@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/String/OpaaxStringJson.h"
-#include "Engine/Subsystems/Resources/ResourcePath.h"
+#include "Resources/ResourcePath.h"
 
 namespace Opaax
 {

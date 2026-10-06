@@ -4,7 +4,7 @@
 
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringJson.h"
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAsset.h"
+#include "Resources/DataAsset/DataAsset.h"
 
 namespace Opaax
 {

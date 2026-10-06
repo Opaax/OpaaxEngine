@@ -2,9 +2,9 @@
 
 #include <optional>
 
-#include "Engine/Subsystems/Resources/ResourceFormat.h"
-#include "Engine/Subsystems/Resources/Types/Input/InputMappingContextData.h"
-#include "Engine/Subsystems/Resources/Types/Input/InputMappingContextFile.h"
+#include "Resources/ResourceFormat.h"
+#include "Input/Assets/InputMappingContextData.h"
+#include "Input/Assets/InputMappingContextFile.h"
 
 namespace Opaax
 {

@@ -4,8 +4,8 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/OpaaxStringID.hpp"
-#include "Engine/Subsystems/Resources/ResourceRef.hpp"
-#include "Engine/Subsystems/Resources/ResourcePath.h"
+#include "Resources/ResourceRef.hpp"
+#include "Resources/ResourcePath.h"
 #include "World/Entity/EntityTypes.h"
 #include "World/Systems/WorldSubsystem.h"
 

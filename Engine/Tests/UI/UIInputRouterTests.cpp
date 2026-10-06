@@ -2,9 +2,9 @@
 // canvas with a button under the pointer; what matters is which keys the game still gets.
 #include <doctest.h>
 
-#include "Engine/Subsystems/Input/InputCodes.h"
-#include "Engine/Subsystems/Input/InputManager.h"
-#include "Engine/UI/UIInputRouter.h"
+#include "Input/InputCodes.h"
+#include "Input/InputManager.h"
+#include "UI/UIInputRouter.h"
 #include "UI/UICanvas.h"
 #include "UI/Widgets/UIButton.h"
 

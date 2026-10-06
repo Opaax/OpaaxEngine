@@ -6,9 +6,9 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Engine/Reflection/PropertyVisitor.h"            // EnumLabels
-#include "Engine/Subsystems/Resources/ResourcePath.h"     // TResourcePath
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetRef.h"   // TDataAssetRef
-#include "Engine/Subsystems/Resources/ResourceTypeID.hpp" // ResourceTypeID
+#include "Resources/ResourcePath.h"     // TResourcePath
+#include "Resources/DataAsset/DataAssetRef.h"   // TDataAssetRef
+#include "Resources/ResourceTypeID.hpp" // ResourceTypeID
 #include "Editor/Properties/PropertyDrawer.h"
 #include "Editor/Resources/ResourceDragDrop.h"
 

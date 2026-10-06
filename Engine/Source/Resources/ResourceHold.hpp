@@ -2,9 +2,9 @@
 
 #include "Core/OpaaxTypes.h"
 
-#include "ResourceConcept.hpp"
-#include "ResourceManager.h"   // ResourceRef<T> members are defined there
-#include "ResourceRef.hpp"
+#include "Resources/ResourceConcept.hpp"
+#include "Resources/ResourceManager.h"   // ResourceRef<T> members are defined there
+#include "Resources/ResourceRef.hpp"
 
 // =============================================================================
 // ResourceHold — keeps a resource loaded without knowing its type (only its type id).

@@ -2,7 +2,7 @@
 
 #include "Core/OpaaxTypes.h"
 
-#include "ResourceHandle.hpp"
+#include "Resources/ResourceHandle.hpp"
 
 // =============================================================================
 // ResourceRef<T> — keeps a resource loaded (RAII, like shared_ptr). Used in code, not data.

@@ -1,4 +1,4 @@
-#include "Engine/Input/InputModifiers.h"
+#include "Input/Mapping/InputModifiers.h"
 
 #include <cmath>
 

@@ -1,4 +1,4 @@
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetTypeRegistry.h"
+#include "Resources/DataAsset/DataAssetTypeRegistry.h"
 
 #include <spdlog/fmt/ranges.h>   // fmt::join
 

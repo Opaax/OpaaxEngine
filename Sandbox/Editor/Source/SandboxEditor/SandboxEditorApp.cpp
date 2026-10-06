@@ -2,7 +2,7 @@
 
 #include "SandboxEditorModule.h"
 #include "Sandbox.h"
-#include "Engine/Modules/ModuleRegistrar.h"
+#include "Engine/Registries/ModuleRegistrar.h"
 
 SandboxEditorApp::SandboxEditorApp(int InArgc, char** InArgv)
     : Opaax::Editor::EditorApplication(InArgc, InArgv)

@@ -1,4 +1,4 @@
-#include "OpenGLTexture2D.h"
+#include "RHI/OpenGL/OpenGLTexture2D.h"
 
 // Logger.h first: through spdlog it includes windows.h, whose APIENTRY must come before glad.h
 // (otherwise warning C4005).

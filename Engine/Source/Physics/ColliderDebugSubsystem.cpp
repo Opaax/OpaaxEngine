@@ -1,9 +1,9 @@
-#include "World/Systems/ColliderDebugSubsystem.h"
+#include "Physics/ColliderDebugSubsystem.h"
 
 #include "Core/Maths/Maths.h"   // DegreesToRadians
 #include "Core/Profiling/Profiler.h"
 #include "Renderer/DebugDraw.h"
-#include "World/Components/ColliderComponent.h"
+#include "Physics/Components/ColliderComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/EntityHierarchy.h"
 #include "World/Systems/WorldContext.h"

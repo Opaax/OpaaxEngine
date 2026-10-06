@@ -2,7 +2,7 @@
 
 #include "Platform/IFileSystem.h"
 #include "Core/String/OpaaxPathString.h"                  // Extension
-#include "Engine/Subsystems/Resources/ResourceFormat.h"   // NormalizeExtension
+#include "Resources/ResourceFormat.h"   // NormalizeExtension
 
 #include <algorithm>
 #include <cstring>

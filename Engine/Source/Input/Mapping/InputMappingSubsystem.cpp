@@ -1,11 +1,11 @@
-#include "Engine/Input/InputMappingSubsystem.h"
+#include "Input/Mapping/InputMappingSubsystem.h"
 
 #include "Application/Services/IPaths.h"
 #include "Engine/GameInstance/GameInstanceContext.h"
-#include "Engine/Subsystems/Input/InputKeyNames.h"   // ToString(EKeyCode)
-#include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/Types/Input/InputActionResource.h"
-#include "Engine/Subsystems/Resources/Types/Input/InputMappingContextResource.h"
+#include "Input/InputKeyNames.h"   // ToString(EKeyCode)
+#include "Resources/ResourceManager.h"
+#include "Input/Assets/InputActionResource.h"
+#include "Input/Assets/InputMappingContextResource.h"
 #include "World/WorldManager.h"
 
 namespace Opaax

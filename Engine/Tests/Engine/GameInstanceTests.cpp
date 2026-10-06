@@ -13,9 +13,9 @@
 #include "Engine/GameInstance/GameInstanceSubsystemRegistry.h"
 #include "Engine/GameInstance/IGameInstanceSubsystem.h"
 #include "Engine/Registries/EngineRegistries.h"
-#include "Engine/Subsystems/EventBus/EngineEventBus.h"
-#include "Engine/Subsystems/Input/InputManager.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"
+#include "Engine/Subsystems/EngineEventBus.h"
+#include "Input/InputManager.h"
+#include "Resources/ResourceManager.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
 

@@ -4,9 +4,9 @@
 #include <doctest.h>
 
 #include "Core/Maths/Bounds2D.h"
-#include "World/Components/QuadComponent.h"
-#include "World/Components/SpriteComponent.h"
-#include "World/Components/TextComponent.h"
+#include "Renderer/Components/QuadComponent.h"
+#include "Renderer/Components/SpriteComponent.h"
+#include "Renderer/Components/TextComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityHierarchy.h"

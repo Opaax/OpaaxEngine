@@ -1,4 +1,4 @@
-#include "IConfig.h"
+#include "Core/Config/IConfig.h"
 
 #include "Core/String/OpaaxPathString.h"
 

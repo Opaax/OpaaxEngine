@@ -1,4 +1,4 @@
-#include "WorldManager.h"
+#include "World/WorldManager.h"
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IConfigSystem.h"
@@ -8,8 +8,8 @@
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
-#include "Engine/Input/InputMappingSubsystem.h"
-#include "Engine/UI/UISubsystem.h"
+#include "Input/Mapping/InputMappingSubsystem.h"
+#include "UI/UISubsystem.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "World/Level.h"
 #include "World/Serialization/MapFactory.h"

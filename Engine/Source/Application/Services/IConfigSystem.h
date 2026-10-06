@@ -2,7 +2,7 @@
 
 #include <type_traits>
 
-#include "IAppService.h"
+#include "Application/Services/IAppService.h"
 #include "Core/Log/Logger.h"
 
 #include "Core/OpaaxTypes.h"

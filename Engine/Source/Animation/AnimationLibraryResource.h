@@ -2,9 +2,9 @@
 
 #include <optional>
 
-#include "Engine/Subsystems/Resources/ResourceFormat.h"
-#include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryData.h"
-#include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryFile.h"
+#include "Resources/ResourceFormat.h"
+#include "Animation/AnimationLibraryData.h"
+#include "Animation/AnimationLibraryFile.h"
 
 namespace Opaax
 {

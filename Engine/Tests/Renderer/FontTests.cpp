@@ -3,13 +3,13 @@
 // "baked N glyph(s)" log line. Tables are keyed by codepoint: cases use codepoints above 0xFF.
 #include <doctest.h>
 
-#include "Engine/Subsystems/Resources/ResourceManager.h"   // completes LoadContext
-#include "Engine/Subsystems/Resources/Types/Font/FontFaceResource.h"
-#include "Engine/Subsystems/Resources/Types/Font/FontFamilyData.h"
+#include "Resources/ResourceManager.h"   // completes LoadContext
+#include "Renderer/Text/FontFaceResource.h"
+#include "Renderer/Text/FontFamilyData.h"
 #include "Renderer/Text/FontBake.h"
 #include "Renderer/Text/FontFaceData.h"
 #include "Renderer/Text/Text2D.h"
-#include "World/Components/TextComponent.h"
+#include "Renderer/Components/TextComponent.h"
 
 using namespace Opaax;
 

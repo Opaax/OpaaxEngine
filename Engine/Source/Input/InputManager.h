@@ -7,7 +7,7 @@
 #include "Core/Maths/MathTypes.h"
 #include "Core/Log/Logger.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
-#include "Engine/Subsystems/Input/InputCodes.h"
+#include "Input/InputCodes.h"
 
 // =============================================================================
 // InputManager

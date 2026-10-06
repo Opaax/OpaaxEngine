@@ -1,9 +1,9 @@
-#include "World/Systems/Movement/FlyMoveMode.h"
+#include "Movement/Modes/FlyMoveMode.h"
 
-#include "Engine/Subsystems/Resources/Types/Mover/MoveModeData.h"
+#include "Movement/Assets/MoveModeData.h"
 #include "Physics/Collision/CollisionChannel.h"
 #include "Physics/IPhysicsWorld.h"
-#include "World/Components/MoverComponent.h"
+#include "Movement/MoverComponent.h"
 #include "World/Components/TransformComponent.h"
 
 namespace Opaax

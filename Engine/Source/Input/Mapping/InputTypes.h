@@ -5,8 +5,8 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/Maths/MathTypes.h"
 #include "Core/String/OpaaxStringID.hpp"
-#include "Engine/Input/InputActionValue.h"
-#include "Engine/Subsystems/Input/InputCodes.h"
+#include "Input/Mapping/InputActionValue.h"
+#include "Input/InputCodes.h"
 
 namespace Opaax
 {

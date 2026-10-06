@@ -3,8 +3,8 @@
 #include <nlohmann/json.hpp>
 
 #include "Core/Reflection/OpaaxProperty.h"
-#include "Engine/Subsystems/Resources/ResourcePath.h"
-#include "Engine/Subsystems/Resources/ResourcePathJson.h"
+#include "Resources/ResourcePath.h"
+#include "Resources/ResourcePathJson.h"
 
 namespace Opaax
 {

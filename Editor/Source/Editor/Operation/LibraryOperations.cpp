@@ -7,9 +7,9 @@
 #include "Editor/Undo/AnimationLibraryUndoables.h"
 #include "Editor/Undo/EditorUndo.h"
 
-#include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryFile.h"
-#include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryResource.h"
+#include "Resources/ResourceManager.h"
+#include "Animation/AnimationLibraryFile.h"
+#include "Animation/AnimationLibraryResource.h"
 
 namespace Opaax::Editor
 {

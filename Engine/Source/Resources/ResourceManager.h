@@ -9,13 +9,13 @@
 
 #include "Application/Services/IJobSystem.h"
 
-#include "ResourceTypeID.hpp"
-#include "ResourceConcept.hpp"
-#include "ResourceHandle.hpp"
-#include "ResourceDependencyGraph.hpp"
-#include "ResourcePool.hpp"
-#include "ResourceRef.hpp"
-#include "LoadContext.hpp"
+#include "Resources/ResourceTypeID.hpp"
+#include "Resources/ResourceConcept.hpp"
+#include "Resources/ResourceHandle.hpp"
+#include "Resources/ResourceDependencyGraph.hpp"
+#include "Resources/ResourcePool.hpp"
+#include "Resources/ResourceRef.hpp"
+#include "Resources/LoadContext.hpp"
 
 // =============================================================================
 // ================================== USAGE ====================================

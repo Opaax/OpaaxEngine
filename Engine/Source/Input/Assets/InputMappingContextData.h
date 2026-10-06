@@ -5,11 +5,11 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxEnumJson.h"
 #include "Core/Reflection/OpaaxProperty.h"
-#include "Engine/Input/InputTypes.h"
-#include "Engine/Input/InputTypesJson.h"
-#include "Engine/Subsystems/Input/InputKeyNames.h"   // EKeyCode saved by name
-#include "Engine/Subsystems/Resources/ResourcePath.h"
-#include "Engine/Subsystems/Resources/ResourcePathJson.h"
+#include "Input/Mapping/InputTypes.h"
+#include "Input/Mapping/InputTypesJson.h"
+#include "Input/InputKeyNames.h"   // EKeyCode saved by name
+#include "Resources/ResourcePath.h"
+#include "Resources/ResourcePathJson.h"
 
 namespace Opaax
 {

@@ -3,7 +3,7 @@
 #include <optional>
 
 #include "Core/IO/FileIO.h"
-#include "Engine/Subsystems/Resources/ResourceFormat.h"
+#include "Resources/ResourceFormat.h"
 
 namespace Sandbox
 {

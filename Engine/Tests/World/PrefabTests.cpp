@@ -8,9 +8,9 @@
 #include <string>
 #include <unordered_set>
 
-#include "Engine/Subsystems/Resources/ResourceManager.h"   // before PrefabResource — completes LoadContext
+#include "Resources/ResourceManager.h"   // before PrefabResource — completes LoadContext
 #include "World/Components/ComponentRegistry.h"
-#include "World/Components/QuadComponent.h"
+#include "Renderer/Components/QuadComponent.h"
 #include "World/Components/PrefabInstanceComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"

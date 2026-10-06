@@ -2,7 +2,7 @@
 
 #include "__NAME__EditorModule.h"
 #include "__NAME__.h"
-#include "Engine/Modules/ModuleRegistrar.h"
+#include "Engine/Registries/ModuleRegistrar.h"
 
 __NAME__EditorApp::__NAME__EditorApp(int InArgc, char** InArgv)
     : Opaax::Editor::EditorApplication(InArgc, InArgv)

@@ -7,9 +7,9 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringJson.h"
-#include "Engine/Subsystems/Resources/ResourcePath.h"
-#include "Engine/Subsystems/Resources/ResourcePathJson.h"
-#include "Engine/Subsystems/Resources/Types/Font/FontStyle.h"
+#include "Resources/ResourcePath.h"
+#include "Resources/ResourcePathJson.h"
+#include "Renderer/Text/FontStyle.h"
 #include "Renderer/RenderLayer.h"
 
 namespace Opaax

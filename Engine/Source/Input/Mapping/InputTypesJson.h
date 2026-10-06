@@ -4,7 +4,7 @@
 
 #include "Core/Maths/MathsJson.hpp"
 #include "Core/Reflection/OpaaxEnumJson.h"
-#include "Engine/Input/InputTypes.h"
+#include "Input/Mapping/InputTypes.h"
 
 namespace Opaax
 {

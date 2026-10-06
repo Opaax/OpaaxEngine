@@ -1,4 +1,4 @@
-#include "WorldGuidRegistry.h"
+#include "World/WorldGuidRegistry.h"
 
 namespace Opaax
 {

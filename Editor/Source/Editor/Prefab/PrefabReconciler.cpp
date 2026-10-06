@@ -5,8 +5,8 @@
 
 #include "Application/Services/IEngine.h"
 #include "Engine/Registries/EngineRegistries.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/ResourceTypeID.hpp"
+#include "Resources/ResourceManager.h"
+#include "Resources/ResourceTypeID.hpp"
 
 #include "World/Components/ComponentRegistry.h"
 #include "World/Components/PrefabInstanceComponent.h"

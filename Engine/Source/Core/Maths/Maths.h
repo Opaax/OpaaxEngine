@@ -2,7 +2,7 @@
 
 #include <Core/OpaaxTRequire.hpp>
 #include "Core/EngineAPI.h"
-#include "MathsStatics.h"
+#include "Core/Maths/MathsStatics.h"
 #include "Core/OpaaxTypes.h"
 
 namespace Opaax

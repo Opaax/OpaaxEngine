@@ -7,10 +7,10 @@
 #include <string>
 
 #include "Core/IO/FileIO.h"
-#include "Engine/Subsystems/Resources/Types/Mover/MoveModeData.h"
-#include "Engine/Subsystems/Resources/Types/Mover/MoveModeFile.h"
-#include "Engine/Subsystems/Resources/Types/Mover/MoverData.h"
-#include "Engine/Subsystems/Resources/Types/Mover/MoverFile.h"
+#include "Movement/Assets/MoveModeData.h"
+#include "Movement/Assets/MoveModeFile.h"
+#include "Movement/Assets/MoverData.h"
+#include "Movement/Assets/MoverFile.h"
 
 using namespace Opaax;
 

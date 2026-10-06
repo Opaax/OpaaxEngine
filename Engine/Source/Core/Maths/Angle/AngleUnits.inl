@@ -1,7 +1,7 @@
 ﻿#pragma once
-#include "Radian.hpp"
-#include "Degree.hpp"
-#include "AngleTypes.hpp"
+#include "Core/Maths/Angle/Radian.hpp"
+#include "Core/Maths/Angle/Degree.hpp"
+#include "Core/Maths/Angle/AngleTypes.hpp"
 #include "Core/Maths/Maths.h"
 
 

@@ -14,9 +14,9 @@
 #include "Editor/Undo/EditorUndo.h"
 #include "Editor/UI/IEditorUIBackend.h"
 
-#include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetData.h"
-#include "Engine/Subsystems/Resources/Types/Texture/TextureResource.h"
+#include "Resources/ResourceManager.h"
+#include "Renderer/Textures/SpriteSheetData.h"
+#include "Renderer/Textures/TextureResource.h"
 #include "Application/Services/IPaths.h"
 
 #include <imgui.h>

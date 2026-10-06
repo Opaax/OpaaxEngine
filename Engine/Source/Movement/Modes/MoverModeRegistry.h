@@ -4,7 +4,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxStringID.hpp"
-#include "World/Systems/Movement/IMoverMode.h"
+#include "Movement/Modes/IMoverMode.h"
 
 namespace Opaax
 {

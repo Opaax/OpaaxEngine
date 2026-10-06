@@ -1,4 +1,4 @@
-#include "ResourceFormatRegistry.h"
+#include "Resources/ResourceFormatRegistry.h"
 
 #include <spdlog/fmt/ranges.h>   // fmt::join
 

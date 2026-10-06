@@ -5,9 +5,9 @@
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/Log/Logger.h"
 
-#include "ResourceFormat.h"
-#include "ResourceHold.hpp"    // ResourceHold, ResourceManager
-#include "ResourceTypeID.hpp"
+#include "Resources/ResourceFormat.h"
+#include "Resources/ResourceHold.hpp"    // ResourceHold, ResourceManager
+#include "Resources/ResourceTypeID.hpp"
 
 namespace Opaax
 {

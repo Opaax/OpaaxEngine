@@ -1,4 +1,4 @@
 ﻿#pragma once
 
-#include "Engine/Subsystems/Input/InputEvents.h"
-#include "Engine/Subsystems/Input/InputCodes.h"
+#include "Input/InputEvents.h"
+#include "Input/InputCodes.h"

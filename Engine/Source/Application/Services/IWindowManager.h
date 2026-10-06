@@ -4,7 +4,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/OpaaxString.hpp"
 
-#include "Window/Window.h"
+#include "Platform/Window/Window.h"
 
 #include "Application/Services/IAppService.h"
 

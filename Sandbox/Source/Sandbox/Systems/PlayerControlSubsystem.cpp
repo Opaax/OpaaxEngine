@@ -1,9 +1,9 @@
 #include "Systems/PlayerControlSubsystem.h"
 
-#include "Engine/Input/InputActionValue.h"
-#include "Engine/Input/InputMappingSubsystem.h"
-#include "Engine/Input/InputTypes.h"
-#include "World/Components/MoverComponent.h"
+#include "Input/Mapping/InputActionValue.h"
+#include "Input/Mapping/InputMappingSubsystem.h"
+#include "Input/Mapping/InputTypes.h"
+#include "Movement/MoverComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Systems/WorldContext.h"
 #include "World/World.h"

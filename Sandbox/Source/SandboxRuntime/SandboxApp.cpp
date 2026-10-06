@@ -1,6 +1,6 @@
 ﻿#include "SandboxApp.h"
 
-#include "Engine/Modules/ModuleRegistrar.h"
+#include "Engine/Registries/ModuleRegistrar.h"
 #include "Sandbox.h"
 
 SandboxApp::SandboxApp(int InArgc, char** InArgv) : Opaax::OpaaxApplication(InArgc, InArgv)

@@ -4,8 +4,8 @@
 
 #include "Core/GUID/Guid.h"
 #include "Core/GUID/GuidJson.h"
-#include "Engine/Subsystems/Resources/ResourcePath.h"
-#include "Engine/Subsystems/Resources/ResourcePathJson.h"
+#include "Resources/ResourcePath.h"
+#include "Resources/ResourcePathJson.h"
 
 namespace Opaax
 {

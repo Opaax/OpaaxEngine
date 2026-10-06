@@ -1,11 +1,11 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
-#include "Engine/Subsystems/Resources/ResourcePath.h"
+#include "Resources/ResourcePath.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Log/Logger.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
-#include "Engine/Subsystems/Resources/ResourceRef.hpp"
+#include "Resources/ResourceRef.hpp"
 #include "RHI/ICommandBuffer.h"    // ELoadOp
 #include "Renderer/CameraView.h"
 #include "Renderer/DebugDraw.h"

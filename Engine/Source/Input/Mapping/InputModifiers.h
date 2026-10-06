@@ -3,7 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/MathTypes.h"
-#include "Engine/Input/InputTypes.h"
+#include "Input/Mapping/InputTypes.h"
 
 namespace Opaax
 {

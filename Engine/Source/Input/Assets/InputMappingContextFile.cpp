@@ -1,9 +1,9 @@
-#include "Engine/Subsystems/Resources/Types/Input/InputMappingContextFile.h"
+#include "Input/Assets/InputMappingContextFile.h"
 
 #include <nlohmann/json.hpp>
 
 #include "Core/IO/FileIO.h"
-#include "Engine/Subsystems/Resources/Types/Input/InputMappingContextData.h"
+#include "Input/Assets/InputMappingContextData.h"
 
 namespace Opaax
 {

@@ -1,4 +1,4 @@
-#include "OpenGLVertexArray.h"
+#include "RHI/OpenGL/OpenGLVertexArray.h"
 #include "Core/Log/Logger.h"
 
 #include <glad/glad.h>

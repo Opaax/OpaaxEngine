@@ -3,9 +3,9 @@
 #include <cstddef>   // std::ptrdiff_t
 
 #include "Application/Services/IPaths.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"   // before the resources (completes LoadContext)
-#include "Engine/Subsystems/Resources/ResourceFormatRegistry.h"
-#include "Engine/Subsystems/Resources/ResourceHold.hpp"           // completes IResourceHold
+#include "Resources/ResourceManager.h"   // before the resources (completes LoadContext)
+#include "Resources/ResourceFormatRegistry.h"
+#include "Resources/ResourceHold.hpp"           // completes IResourceHold
 #include "World/Components/ComponentRegistry.h"
 #include "World/Entity/EntityMeta.h"
 #include "World/Serialization/HardReferences.h"

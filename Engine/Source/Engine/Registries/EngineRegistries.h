@@ -3,11 +3,11 @@
 #include "Core/EngineAPI.h"
 
 #include "Engine/GameInstance/GameInstanceSubsystemRegistry.h"
-#include "Engine/Subsystems/Resources/ResourceFormatRegistry.h"
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetTypeRegistry.h"
+#include "Resources/ResourceFormatRegistry.h"
+#include "Resources/DataAsset/DataAssetTypeRegistry.h"
 #include "UI/UIWidgetRegistry.h"
 #include "World/Components/ComponentRegistry.h"
-#include "World/Systems/Movement/MoverModeRegistry.h"
+#include "Movement/Modes/MoverModeRegistry.h"
 #include "World/Systems/WorldSubsystemRegistry.h"
 
 namespace Opaax

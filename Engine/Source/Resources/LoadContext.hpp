@@ -2,11 +2,11 @@
 
 #include "Core/OpaaxTypes.h"
 
-#include "ResourceConcept.hpp"
-#include "ResourceRef.hpp"
-#include "ResourceDependencyGraph.hpp"
-#include "ResourceManager.h"
-#include "ResourcePool.hpp"
+#include "Resources/ResourceConcept.hpp"
+#include "Resources/ResourceRef.hpp"
+#include "Resources/ResourceDependencyGraph.hpp"
+#include "Resources/ResourceManager.h"
+#include "Resources/ResourcePool.hpp"
 
 // =============================================================================
 // LoadContext — loading with dependencies (Level -> Textures).

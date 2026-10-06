@@ -2,7 +2,7 @@
 
 #include <nlohmann/json.hpp>
 
-#include "IConfig.h"
+#include "Core/Config/IConfig.h"
 #include "Core/IO/FileIO.h"
 #include "Core/Serialization/JsonConcept.h"
 #include "Core/String/OpaaxString.hpp"

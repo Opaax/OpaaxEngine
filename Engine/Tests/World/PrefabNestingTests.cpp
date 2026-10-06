@@ -4,7 +4,7 @@
 // ResourcePrefabResolver (cache, in-flight chain, cycle refused).
 #include <doctest.h>
 
-#include "Engine/Subsystems/Resources/ResourceManager.h"   // before PrefabResource — completes LoadContext
+#include "Resources/ResourceManager.h"   // before PrefabResource — completes LoadContext
 #include "World/Components/ComponentRegistry.h"
 #include "World/Components/PrefabInstanceComponent.h"
 #include "World/Components/TransformComponent.h"

@@ -1,7 +1,7 @@
-#include "RendererManager.h"
+#include "Renderer/RendererManager.h"
 
 #include "Application/OpaaxApplication.h"
-#include "Application/Services/Window/IWindowManager.h"
+#include "Application/Services/IWindowManager.h"
 #include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IPaths.h"
 #include "Application/Services/IEngine.h"
@@ -10,7 +10,7 @@
 #include "Renderer/Config/Config_Renderer.h"
 
 #include "Core/Events/EventBus.h"
-#include "Window/WindowEvents.h"
+#include "Platform/Window/WindowEvents.h"
 
 #include "RHI/RHIBackend.h"
 #include "RHI/IGraphicsContext.h"
@@ -30,25 +30,25 @@
 
 #include "World/WorldManager.h"
 #include "World/World.h"
-#include "World/Components/QuadComponent.h"
-#include "World/Components/SpriteComponent.h"
+#include "Renderer/Components/QuadComponent.h"
+#include "Renderer/Components/SpriteComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Components/TransformInterpolationComponent.h"
 #include "World/Entity/EntityHierarchy.h"   // ComposeChain
 
 #include "Core/Maths/Maths.h"
 
-#include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/Types/Texture/TextureResource.h"
-#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetResource.h"
-#include "Engine/Subsystems/Resources/Types/Font/FontFaceResource.h"
-#include "Engine/Subsystems/Resources/Types/Font/FontFamilyResource.h"
+#include "Resources/ResourceManager.h"
+#include "Renderer/Textures/TextureResource.h"
+#include "Renderer/Textures/SpriteSheetResource.h"
+#include "Renderer/Text/FontFaceResource.h"
+#include "Renderer/Text/FontFamilyResource.h"
 
 #include "Renderer/Text/Text2D.h"
-#include "World/Components/TextComponent.h"
+#include "Renderer/Components/TextComponent.h"
 
 #include "Engine/Config/Config_Engine.h"
-#include "Engine/Subsystems/EventBus/EngineEventBus.h"
+#include "Engine/Subsystems/EngineEventBus.h"
 
 namespace Opaax
 {

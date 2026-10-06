@@ -3,8 +3,8 @@
 #include "Core/OpaaxTypes.h"                    // TFunction, TDynArray, Uint64, Move
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
-#include "Engine/Subsystems/Resources/ResourceFormat.h"   // CResourceFormat
-#include "Engine/Subsystems/Resources/ResourceTypeID.hpp" // ResourceTypeID
+#include "Resources/ResourceFormat.h"   // CResourceFormat
+#include "Resources/ResourceTypeID.hpp" // ResourceTypeID
 #include "Editor/Resources/ResourceScan.h"      // ResourceFile (the callback's argument)
 #include "Editor/Resources/ResourcePreviewClaim.h" // FResourcePreviewOpen
 

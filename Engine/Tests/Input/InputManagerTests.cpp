@@ -2,8 +2,8 @@
 //   Every test feeds events then calls EndFrame, the order the application uses.
 #include <doctest.h>
 
-#include "Engine/Subsystems/Input/InputCodes.h"
-#include "Engine/Subsystems/Input/InputManager.h"
+#include "Input/InputCodes.h"
+#include "Input/InputManager.h"
 
 using namespace Opaax;
 

@@ -13,13 +13,13 @@
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
 #include "Editor/Panels/CameraPreviewPanel.h"
 
-#include "Engine/Modules/ModuleRegistrar.h"      // DeriveTypeLeafName
+#include "Engine/Registries/ModuleRegistrar.h"      // DeriveTypeLeafName
 
-#include "World/Components/CameraComponent.h"
+#include "Renderer/Camera/CameraComponent.h"
 #include "World/Components/PrefabInstanceComponent.h"
-#include "World/Components/SpriteAnimatorComponent.h"
-#include "World/Components/SpriteComponent.h"
-#include "World/Components/TextComponent.h"
+#include "Animation/SpriteAnimatorComponent.h"
+#include "Renderer/Components/SpriteComponent.h"
+#include "Renderer/Components/TextComponent.h"
 
 namespace Opaax::Editor::NativeComponentDrawers
 {

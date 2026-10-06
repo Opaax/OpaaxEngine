@@ -10,8 +10,8 @@
 #include "Core/String/OpaaxUtf8.h"
 #include "Core/IO/FileIO.h"
 #include "Application/Services/IPaths.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"   // before BinaryResource (completes LoadContext)
-#include "Engine/Subsystems/Resources/Types/BinaryResource.hpp"
+#include "Resources/ResourceManager.h"   // before BinaryResource (completes LoadContext)
+#include "Resources/BinaryResource.hpp"
 
 using namespace Opaax;
 

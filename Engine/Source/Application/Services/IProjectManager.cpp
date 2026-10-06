@@ -1,5 +1,5 @@
-#include "IProjectManager.h"
-#include "IPaths.h"
+#include "Application/Services/IProjectManager.h"
+#include "Application/Services/IPaths.h"
 
 #include "Core/IO/FileIO.h"
 

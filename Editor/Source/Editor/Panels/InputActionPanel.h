@@ -4,7 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Editor/Panels/IEditorPanel.h"
 
-#include "Engine/Subsystems/Resources/Types/Input/InputActionData.h"
+#include "Input/Assets/InputActionData.h"
 
 namespace Opaax
 {

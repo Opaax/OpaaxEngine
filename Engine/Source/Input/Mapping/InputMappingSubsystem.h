@@ -7,8 +7,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Events/Delegate.h"
 #include "Engine/GameInstance/IGameInstanceSubsystem.h"
-#include "Engine/Input/InputActionEvaluator.h"
-#include "Engine/Input/InputTypes.h"
+#include "Input/Mapping/InputActionEvaluator.h"
+#include "Input/Mapping/InputTypes.h"
 
 namespace Opaax
 {

@@ -7,8 +7,8 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxStringID.hpp"
 
-#include "ResourceConcept.hpp"
-#include "ResourceHandle.hpp"
+#include "Resources/ResourceConcept.hpp"
+#include "Resources/ResourceHandle.hpp"
 
 // =============================================================================
 // ResourcePool<T> — storage for one resource type (created on demand by the manager).

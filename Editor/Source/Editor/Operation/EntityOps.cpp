@@ -32,7 +32,7 @@
 #include "World/WorldManager.h"
 
 #include "Application/Services/IPaths.h"         // the marker stores an asset-relative path
-#include "Engine/Subsystems/Resources/ResourceManager.h"  // before PrefabResource (completes LoadContext)
+#include "Resources/ResourceManager.h"  // before PrefabResource (completes LoadContext)
 #include "World/Components/PrefabInstanceComponent.h"
 #include "World/Prefab/PrefabFactory.h"
 #include "World/Prefab/PrefabFile.h"

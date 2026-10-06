@@ -48,7 +48,7 @@ the free function directly.
 
 ## Adding a new suite (3 steps)
 
-**1. Create the file** at `Engine/Tests/<Domain>/<Thing>Tests.cpp`, mirroring `Engine/Source/<Domain>/`.
+**1. Create the file** at `Engine/Tests/<Module>/<Thing>Tests.cpp`, mirroring `Engine/Source/<Module>/`.
 
 ```cpp
 // Suite: <one line — what behaviour this pins>.
@@ -73,7 +73,7 @@ set(OPAAX_TEST_SOURCES
     Main.cpp
     SmokeTest.cpp
     ...
-    <Domain>/<Thing>Tests.cpp   # <-- add this line
+    <Module>/<Thing>Tests.cpp   # <-- add this line
 )
 ```
 
@@ -86,15 +86,14 @@ set(OPAAX_TEST_SOURCES
 
 ## Conventions in this codebase
 
-- **No `main()` in your suite.** `Main.cpp` owns it: it calls `OpaaxLog::Init()` then silences the log level,
-  so engine code under test can log (e.g. a missing-file asset ctor) without a null-logger crash and without
-  cluttering CTest output. Just write `TEST_CASE`s.
+- **No `main()` in your suite.** `Main.cpp` owns it. The Logger is never initialized there, so engine code
+  under test can log without cluttering CTest output. Just write `TEST_CASE`s.
 - **Naming matches the engine:** `l`-prefixed locals, `In`-prefixed params, mirror the surrounding style.
 - Use the **engine aliases** (`TDynArray`, `TUnorderedMap`, ...) not raw `std::`; use **`OPAAX_ID("Name")`** for
   string IDs.
 - **Floats:** always `doctest::Approx(expected)` (optionally `.epsilon(0.001)`), never `==`.
-- **ECS tests** build a headless `World` on the stack — `World lWorld; auto e = lWorld.CreateEntity("x");
-  lWorld.AddComponent<T>(e);` — no engine init, no scene needed. See `ECS/HierarchyTests.cpp`.
+- **World tests** build a headless `World` on the stack — `World lWorld; Entity lEntity = lWorld.CreateEntity("x");
+  lEntity.Add<T>();` — no engine init, no scene needed. See `World/WorldEntityTests.cpp`.
 
 ---
 
@@ -117,5 +116,5 @@ Engine/Tests/
   CMakeLists.txt        # OpaaxTests target + explicit source list
   Main.cpp              # doctest main() + logger init/silence — don't add cases here
   SmokeTest.cpp         # proves the harness + engine link
-  <Domain>/*Tests.cpp   # one file per area (Renderer/, Core/, ECS/, Physics/, Assets/)
+  <Module>/*Tests.cpp   # one folder per engine module (Core/, World/, Physics/, Renderer/, ...)
 ```

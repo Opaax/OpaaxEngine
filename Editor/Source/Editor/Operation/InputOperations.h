@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Core/OpaaxTypes.h"
-#include "Engine/Subsystems/Input/InputCodes.h"   // EKeyCode
-#include "Engine/Subsystems/Resources/Types/Input/InputMappingContextData.h"
+#include "Input/InputCodes.h"   // EKeyCode
+#include "Input/Assets/InputMappingContextData.h"
 
 namespace Opaax
 {

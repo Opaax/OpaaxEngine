@@ -10,8 +10,8 @@
 #include "Editor/UI/IEditorUIBackend.h"          // the atlas as an ImGui image
 
 #include "Application/Services/IPaths.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/Types/Font/FontFaceResource.h"
+#include "Resources/ResourceManager.h"
+#include "Renderer/Text/FontFaceResource.h"
 #include "Renderer/Text/Text2D.h"                // Layout: same as the viewport
 
 #include <imgui.h>

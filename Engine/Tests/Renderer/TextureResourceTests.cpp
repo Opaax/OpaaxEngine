@@ -12,9 +12,9 @@
 #include <fstream>
 #include <string>
 
-#include "Engine/Subsystems/Resources/ResourceManager.h"        // completes LoadContext
-#include "Engine/Subsystems/Resources/ResourceFormatRegistry.h"
-#include "Engine/Subsystems/Resources/Types/Texture/TextureResource.h"
+#include "Resources/ResourceManager.h"        // completes LoadContext
+#include "Resources/ResourceFormatRegistry.h"
+#include "Renderer/Textures/TextureResource.h"
 
 using namespace Opaax;
 

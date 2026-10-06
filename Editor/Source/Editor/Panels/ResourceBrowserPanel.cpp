@@ -12,11 +12,11 @@
 #include "Application/Services/IPaths.h"
 #include "Platform/IFileSystem.h"
 #include "Engine/Registries/EngineRegistries.h"   // extension -> resource type
-#include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/ResourceTypeID.hpp"
-#include "Engine/Subsystems/Resources/Types/Texture/TextureResource.h"
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetFile.h"
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetResource.h"
+#include "Resources/ResourceManager.h"
+#include "Resources/ResourceTypeID.hpp"
+#include "Renderer/Textures/TextureResource.h"
+#include "Resources/DataAsset/DataAssetFile.h"
+#include "Resources/DataAsset/DataAssetResource.h"
 
 #include <imgui.h>
 

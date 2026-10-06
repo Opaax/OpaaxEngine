@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/OpaaxTypes.h"                       
-#include "Engine/Modules/ModuleRegistrar.h"        
+#include "Engine/Registries/ModuleRegistrar.h"        
 #include "Editor/Extensions/PanelRegistry.h"       
 #include "Editor/Extensions/DrawerRegistry.h"      
 #include "Editor/Extensions/ResourceTypeRegistry.h"

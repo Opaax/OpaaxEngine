@@ -5,12 +5,12 @@
 #include <glm/geometric.hpp>   // glm::length
 
 #include "Core/Log/Logger.h"
-#include "Engine/Input/InputMappingSubsystem.h"
-#include "Engine/Input/InputTypes.h"
-#include "Engine/UI/UISubsystem.h"
+#include "Input/Mapping/InputMappingSubsystem.h"
+#include "Input/Mapping/InputTypes.h"
+#include "UI/UISubsystem.h"
 #include "UI/UIBinding.h"
 #include "UI/UICanvas.h"
-#include "World/Components/MoverComponent.h"
+#include "Movement/MoverComponent.h"
 #include "World/Systems/WorldContext.h"
 #include "World/World.h"
 

@@ -4,7 +4,7 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/Profiling/Profiler.h"   // OPAAX_STAT_SCOPE
-#include "World/Components/QuadComponent.h"
+#include "Renderer/Components/QuadComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/World.h"
 

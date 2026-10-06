@@ -1,7 +1,7 @@
 #include "Editor/Resources/Types/Input/EditorInputActionDocument.h"
 
 #include "Core/String/OpaaxPathString.h"
-#include "Engine/Subsystems/Resources/Types/Input/InputActionFile.h"
+#include "Input/Assets/InputActionFile.h"
 
 namespace Opaax::Editor
 {

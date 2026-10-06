@@ -3,7 +3,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxGlobal.h"
-#include "OpaaxString.hpp"
+#include "Core/String/OpaaxString.hpp"
 
 namespace Opaax
 {

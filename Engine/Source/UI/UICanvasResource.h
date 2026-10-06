@@ -7,7 +7,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/IO/FileIO.h"
-#include "Engine/Subsystems/Resources/ResourceFormat.h"
+#include "Resources/ResourceFormat.h"
 #include "UI/UICanvasFile.h"
 #include "UI/UIWidget.h"
 

@@ -6,8 +6,8 @@
 #include <entt/entt.hpp>
 
 #include "Core/Reflection/TypeInfo.h"
-#include "Engine/Subsystems/Resources/ResourcePath.h"
-#include "World/Components/QuadComponent.h"
+#include "Resources/ResourcePath.h"
+#include "Renderer/Components/QuadComponent.h"
 #include "World/Components/TransformComponent.h"
 
 using namespace Opaax;

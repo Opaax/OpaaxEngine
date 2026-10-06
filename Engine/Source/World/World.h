@@ -9,7 +9,7 @@
 
 #include "Core/GUID/Guid.h"
 #include "Renderer/CameraView.h"
-#include "Systems/WorldSubsystem.h"
+#include "World/Systems/WorldSubsystem.h"
 
 #include "World/Entity/EntityTypes.h"
 #include "World/Systems/WorldContext.h"

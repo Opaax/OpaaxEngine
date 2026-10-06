@@ -9,7 +9,7 @@
 #include "Editor/Operation/DataAssetOperations.h"
 #include "Editor/Properties/WidgetPropertyVisitor.h"
 #include "Editor/Resources/Types/DataAsset/EditorDataAssetDocument.h"
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAsset.h"
+#include "Resources/DataAsset/DataAsset.h"
 
 namespace Opaax::Editor
 {

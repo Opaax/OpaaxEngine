@@ -9,9 +9,9 @@
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/String/OpaaxStringIDJson.h"
 #include "Core/String/OpaaxStringJson.h"
-#include "Engine/Input/InputActionValue.h"
-#include "Engine/Input/InputTypes.h"
-#include "Engine/Input/InputTypesJson.h"
+#include "Input/Mapping/InputActionValue.h"
+#include "Input/Mapping/InputTypes.h"
+#include "Input/Mapping/InputTypesJson.h"
 
 namespace Opaax
 {

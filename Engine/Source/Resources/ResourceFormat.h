@@ -7,7 +7,7 @@
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/String/OpaaxStringView.hpp"
 
-#include "ResourceConcept.hpp"
+#include "Resources/ResourceConcept.hpp"
 
 // =============================================================================
 // ResourceFormat — a resource type's display name and file extensions.

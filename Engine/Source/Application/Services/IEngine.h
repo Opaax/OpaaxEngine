@@ -1,6 +1,6 @@
 #pragma once
 
-#include "IAppService.h"
+#include "Application/Services/IAppService.h"
 #include "Core/OpaaxTypes.h"
 #include "World/WorldSpec.h"
 

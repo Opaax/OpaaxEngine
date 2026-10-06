@@ -1,9 +1,9 @@
-#include "Engine/Subsystems/Resources/Types/Input/InputActionFile.h"
+#include "Input/Assets/InputActionFile.h"
 
 #include <nlohmann/json.hpp>
 
 #include "Core/IO/FileIO.h"
-#include "Engine/Subsystems/Resources/Types/Input/InputActionData.h"
+#include "Input/Assets/InputActionData.h"
 
 namespace Opaax
 {

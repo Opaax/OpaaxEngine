@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
-#include "World/Systems/Movement/IMoverMode.h"
+#include "Movement/Modes/IMoverMode.h"
 
 namespace Opaax
 {

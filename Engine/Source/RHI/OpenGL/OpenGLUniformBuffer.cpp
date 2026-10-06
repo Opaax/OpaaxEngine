@@ -1,4 +1,4 @@
-#include "OpenGLUniformBuffer.h"
+#include "RHI/OpenGL/OpenGLUniformBuffer.h"
 
 #include <glad/glad.h>
 

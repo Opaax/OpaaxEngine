@@ -8,11 +8,11 @@
 #include <fstream>
 #include <string>
 
-#include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetFile.h"
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetHandle.h"
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetResource.h"
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetTypeRegistry.h"
+#include "Resources/ResourceManager.h"
+#include "Resources/DataAsset/DataAssetFile.h"
+#include "Resources/DataAsset/DataAssetHandle.h"
+#include "Resources/DataAsset/DataAssetResource.h"
+#include "Resources/DataAsset/DataAssetTypeRegistry.h"
 
 using namespace Opaax;
 

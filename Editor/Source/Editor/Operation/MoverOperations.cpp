@@ -8,11 +8,11 @@
 #include "Editor/Undo/EditorUndo.h"
 #include "Editor/Undo/MoverUndoables.h"
 
-#include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/Types/Mover/MoveModeFile.h"
-#include "Engine/Subsystems/Resources/Types/Mover/MoveModeResource.h"
-#include "Engine/Subsystems/Resources/Types/Mover/MoverFile.h"
-#include "Engine/Subsystems/Resources/Types/Mover/MoverResource.h"
+#include "Resources/ResourceManager.h"
+#include "Movement/Assets/MoveModeFile.h"
+#include "Movement/Assets/MoveModeResource.h"
+#include "Movement/Assets/MoverFile.h"
+#include "Movement/Assets/MoverResource.h"
 
 namespace Opaax::Editor
 {

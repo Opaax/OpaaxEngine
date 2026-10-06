@@ -1,4 +1,4 @@
-#include "OpenGLShader.h"
+#include "RHI/OpenGL/OpenGLShader.h"
 #include <glm/gtc/type_ptr.hpp>
 
 #include "Core/Log/Logger.h"

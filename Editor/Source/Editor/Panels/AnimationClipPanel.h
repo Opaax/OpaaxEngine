@@ -3,7 +3,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
-#include "Engine/Subsystems/Resources/ResourceRef.hpp"   // claims on the sheet and textures
+#include "Resources/ResourceRef.hpp"   // claims on the sheet and textures
 #include "Editor/Panels/IEditorPanel.h"
 #include "Editor/Undo/AnimationClipUndoables.h"          // open edit gestures
 

@@ -3,7 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Events/Event.h"
-#include "Engine/Subsystems/Input/InputCodes.h"
+#include "Input/InputCodes.h"
 
 namespace Opaax
 {
