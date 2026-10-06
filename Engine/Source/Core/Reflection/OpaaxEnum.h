@@ -31,16 +31,20 @@ namespace Opaax
 }
 
 // =============================================================================
-// Put it right under the enum, so a new value is not forgotten:
+// Put it right under the enum, at global scope (it opens namespace Opaax), so a new value is not
+// forgotten. Name the enum with its namespace:
 //
-//   enum class EWindowMode { Windowed, Borderless, Fullscreen };
-//   OPAAX_ENUM_VALUES(EWindowMode, Windowed, Borderless, Fullscreen)
+//   namespace Game { enum class EWindowMode { Windowed, Borderless, Fullscreen }; }
+//   OPAAX_ENUM_VALUES(Game::EWindowMode, Windowed, Borderless, Fullscreen)
 //
 // Values are unqualified (the macro uses `using enum`).
 // =============================================================================
 #define OPAAX_ENUM_VALUES(EnumType, ...)                                        \
-    template<> struct ::Opaax::TEnumValues<EnumType>                            \
+    namespace Opaax                                                             \
     {                                                                           \
-        using enum EnumType;                                                    \
-        static constexpr EnumType Values[] = { __VA_ARGS__ };                   \
-    };
+        template<> struct TEnumValues<EnumType>                                 \
+        {                                                                       \
+            using enum EnumType;                                                \
+            static constexpr EnumType Values[] = { __VA_ARGS__ };               \
+        };                                                                      \
+    }

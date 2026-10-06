@@ -35,11 +35,11 @@ jobs:
             preset: release
             config: Release
             jobs: 4
-          - os: macos-14
+          - os: macos-15
             preset: debug-editor
             config: Debug
             jobs: 3
-          - os: macos-14
+          - os: macos-15
             preset: release
             config: Release
             jobs: 3

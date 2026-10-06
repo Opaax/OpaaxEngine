@@ -23,7 +23,7 @@ namespace Opaax
     // =============================================================================
     struct RenderView
     {
-        Matrix44F ViewProjection = Matrix44F(1.f);
-        Viewport  Viewport;
+        Matrix44F       ViewProjection = Matrix44F(1.f);
+        Opaax::Viewport Viewport;
     };
 }

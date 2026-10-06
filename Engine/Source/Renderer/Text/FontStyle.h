@@ -30,8 +30,13 @@ namespace Opaax
         Symbols
     };
 
-    OPAAX_ENUM_VALUES(EFontSubset, Latin, LatinExt, Greek, GreekExt, Cyrillic, CyrillicExt,
-                      Vietnamese, Math, Symbols)
+}
+
+OPAAX_ENUM_VALUES(Opaax::EFontSubset, Latin, LatinExt, Greek, GreekExt, Cyrillic, CyrillicExt,
+                  Vietnamese, Math, Symbols)
+
+namespace Opaax
+{
 
     inline const char* ToString(const EFontSubset InSubset) noexcept
     {
@@ -66,8 +71,13 @@ namespace Opaax
         Black      = 900
     };
 
-    OPAAX_ENUM_VALUES(EFontWeight, Thin, ExtraLight, Light, Regular, Medium, SemiBold, Bold,
-                      ExtraBold, Black)
+}
+
+OPAAX_ENUM_VALUES(Opaax::EFontWeight, Thin, ExtraLight, Light, Regular, Medium, SemiBold, Bold,
+                  ExtraBold, Black)
+
+namespace Opaax
+{
 
     inline const char* ToString(const EFontWeight InWeight) noexcept
     {
@@ -103,7 +113,12 @@ namespace Opaax
         Expanded
     };
 
-    OPAAX_ENUM_VALUES(EFontWidth, Condensed, SemiCondensed, Normal, Expanded)
+}
+
+OPAAX_ENUM_VALUES(Opaax::EFontWidth, Condensed, SemiCondensed, Normal, Expanded)
+
+namespace Opaax
+{
 
     inline const char* ToString(const EFontWidth InWidth) noexcept
     {
@@ -124,7 +139,12 @@ namespace Opaax
         Italic
     };
 
-    OPAAX_ENUM_VALUES(EFontSlant, Normal, Italic)
+}
+
+OPAAX_ENUM_VALUES(Opaax::EFontSlant, Normal, Italic)
+
+namespace Opaax
+{
 
     inline const char* ToString(const EFontSlant InSlant) noexcept
     {

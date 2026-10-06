@@ -35,7 +35,7 @@ namespace Opaax
         /** The persistent map. Empty when the level has no maps. */
         const OpaaxString& PersistentMap() const noexcept
         {
-            static const OpaaxString EMPTY;
+            static const OpaaxString EMPTY{};
             return IsEmpty() ? EMPTY : Maps[PersistentMapIndex];
         }
     };
