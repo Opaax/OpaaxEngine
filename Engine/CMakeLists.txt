@@ -1,6 +1,7 @@
 # =============================================================================
-# OpaaxEngine — the engine, as a static library. Game executables, the editor and the tests
-# link it. Every third-party library it uses lives in Engine/Vendors.
+# OpaaxEngine — the engine, as a static library (OpaaxEngineLib) linked whole through the
+# OpaaxEngine target. Game executables, the editor and the tests link OpaaxEngine.
+# Every third-party library it uses lives in Engine/Vendors.
 # =============================================================================
 
 file(GLOB_RECURSE OPAAX_ENGINE_SOURCES CONFIGURE_DEPENDS
@@ -91,14 +92,14 @@ find_package(OpenGL REQUIRED)
 # ==================================
 # The engine library
 # ==================================
-add_library(OpaaxEngine STATIC ${OPAAX_ENGINE_SOURCES})
-opaax_configure_target(OpaaxEngine)
+add_library(OpaaxEngineLib STATIC ${OPAAX_ENGINE_SOURCES})
+opaax_configure_target(OpaaxEngineLib)
 
-target_include_directories(OpaaxEngine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Source)
+target_include_directories(OpaaxEngineLib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Source)
 
 # Engine headers expose glm, entt, nlohmann and spdlog types, so those are PUBLIC.
 # The others are implementation details: no engine header includes them.
-target_link_libraries(OpaaxEngine
+target_link_libraries(OpaaxEngineLib
     PUBLIC
         glm
         entt
@@ -117,24 +118,29 @@ target_link_libraries(OpaaxEngine
 
 if(WIN32)
     # Crash handler: minidumps and symbolized stacks.
-    target_link_libraries(OpaaxEngine PRIVATE dbghelp)
+    target_link_libraries(OpaaxEngineLib PRIVATE dbghelp)
 endif()
 
 if(APPLE)
     # OpenGL is deprecated on macOS but still the portable backend.
-    target_compile_definitions(OpaaxEngine PRIVATE GL_SILENCE_DEPRECATION)
+    target_compile_definitions(OpaaxEngineLib PRIVATE GL_SILENCE_DEPRECATION)
 endif()
 
 # A dev build bakes the source-tree root, so paths resolve to the source assets and configs.
 # A ship build bakes nothing and resolves everything next to the executable.
 if(OPAAX_DEV_BUILD)
-    target_compile_definitions(OpaaxEngine PUBLIC OPAAX_WORKSPACE_DIR="${CMAKE_SOURCE_DIR}")
+    target_compile_definitions(OpaaxEngineLib PUBLIC OPAAX_WORKSPACE_DIR="${CMAKE_SOURCE_DIR}")
     message(STATUS "[Opaax] Dev build: workspace root ${CMAKE_SOURCE_DIR}")
 else()
     message(STATUS "[Opaax] Ship build: paths resolve next to the executable")
 endif()
 
-target_compile_definitions(OpaaxEngine PUBLIC $<$<CONFIG:Debug>:OPAAX_DEBUG>)
+target_compile_definitions(OpaaxEngineLib PUBLIC $<$<CONFIG:Debug>:OPAAX_DEBUG>)
+
+# What everything links: the engine library, linked whole. Types register themselves from files
+# nothing else references (OPAAX_REGISTER_* macros), and a plain static link would drop those files.
+add_library(OpaaxEngine INTERFACE)
+target_link_libraries(OpaaxEngine INTERFACE "$<LINK_LIBRARY:WHOLE_ARCHIVE,OpaaxEngineLib>")
 
 # Where the engine's own content lives (shaders, fonts, prototype textures). Games deploy it next
 # to their executable in ship builds (see opaax_add_game).

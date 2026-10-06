@@ -7,7 +7,7 @@
 //         CMakeLists.txt                <Name>Module (static) + <Name>.exe + <Name>Editor.exe
 //         Assets/                       project content (layout derived by convention — IPaths)
 //         Configs/                      Engine.config / Renderer.config
-//         Source/<Name>/                the game module (IRuntimeModule) — linked by BOTH exes
+//         Source/<Name>/                the game module (types register themselves) — linked by BOTH exes
 //         Source/<Name>Runtime/         runtime host (<Name>App : OpaaxApplication)
 //         Editor/Source/<Name>Editor/   editor host (<Name>EditorApp : EditorApplication
 //                                       + <Name>EditorModule : IEditorModule)

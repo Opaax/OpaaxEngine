@@ -55,27 +55,14 @@ namespace Opaax
         /** @return True if not started yet and the world is not null */
         bool CanFinishStartup();
     
-        void RegisterNativeComponents();
-
-        /** Registers the resource types the engine loads, and their extensions. */
-        void RegisterNativeResourceFormats();
+        /**
+         * Registers every self-registered type (OPAAX_REGISTER_* macros) of the engine and the game
+         * modules: components, behaviours, subsystems, resource formats, widgets, mover modes.
+         */
+        void RegisterTypes();
 
         /** Registers the default engine subsystems. */
         void RegisterNativeSubsystems();
-
-        /**
-         * Registers the engine's world subsystems (each world filters them with ShouldCreate).
-         */
-        void RegisterNativeWorldSubsystems();
-        void RegisterNativeMoverModes();
-
-        /**
-         * Registers the engine's game-instance subsystems (created by StartGame, in order).
-         */
-        void RegisterNativeGameInstanceSubsystems();
-
-        /** Registers the widget types a .opaaxui can use. */
-        void RegisterNativeUIWidgets();
         
         /** Caches frequently used subsystems. */
         void CacheSubsystems();

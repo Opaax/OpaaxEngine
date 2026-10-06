@@ -1,5 +1,7 @@
 #include "Systems/HudSubsystem.h"
 
+#include "Engine/Registries/AutoRegistration.h"
+
 #include <algorithm>
 
 #include <glm/geometric.hpp>   // glm::length
@@ -112,4 +114,7 @@ namespace Sandbox
 
         ++m_Model.Jumps;
     }
+
+    // The HUD: a jump counter and a speed bar under the GameInstance's canvas.
+    OPAAX_REGISTER_WORLD_SUBSYSTEM_ORDERED(HudSubsystem, Opaax::WorldSubsystemOrder::Presentation);
 }

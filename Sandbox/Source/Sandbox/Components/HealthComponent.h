@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 
 #include "Core/Reflection/OpaaxProperty.h"
+#include "Engine/Registries/AutoRegistration.h"
 
 namespace Sandbox
 {
@@ -23,4 +24,6 @@ namespace Sandbox
                          OPAAX_PROP(Current),
                          OPAAX_PROP(Max))
     };
+
+    OPAAX_REGISTER_COMPONENT(HealthComponent);
 }

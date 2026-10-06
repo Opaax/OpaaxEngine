@@ -5,6 +5,7 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Resources/ResourcePath.h"
 #include "Resources/ResourcePathJson.h"
+#include "Engine/Registries/AutoRegistration.h"
 
 namespace Opaax
 {
@@ -32,4 +33,7 @@ namespace Sandbox
                          OPAAX_PROP(MuzzleFlash),
                          OPAAX_PROP(RateOfFire))
     };
+
+    // A hard reference: a level loading a map with a gun keeps its bullet prefab loaded.
+    OPAAX_REGISTER_COMPONENT(GunComponent);
 }

@@ -4,6 +4,7 @@
 
 #include "Core/IO/FileIO.h"
 #include "Resources/ResourceFormat.h"
+#include "Engine/Registries/AutoRegistration.h"
 
 namespace Sandbox
 {
@@ -36,4 +37,7 @@ namespace Sandbox
 
         Opaax::Uint64 ByteSize() const noexcept { return static_cast<Opaax::Uint64>(Bytes.size()); }
     };
+
+    // Game content, so the runtime registers it too (not only the editor).
+    OPAAX_REGISTER_RESOURCE(WaveResource);
 }

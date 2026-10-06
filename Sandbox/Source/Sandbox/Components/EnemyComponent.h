@@ -5,6 +5,7 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Data/EnemyStats.h"
 #include "Resources/DataAsset/DataAssetRef.h"
+#include "Engine/Registries/AutoRegistration.h"
 
 namespace Sandbox
 {
@@ -22,4 +23,6 @@ namespace Sandbox
         OPAAX_PROPERTIES(EnemyComponent,
                          OPAAX_PROP(Stats).SetTooltip("The EnemyStats asset this enemy uses."))
     };
+
+    OPAAX_REGISTER_COMPONENT(EnemyComponent);
 }

@@ -1,5 +1,7 @@
 #include "Systems/PauseMenuSubsystem.h"
 
+#include "Engine/Registries/AutoRegistration.h"
+
 #include <algorithm>   // std::min / std::max
 
 #include "Application/OpaaxApplication.h"
@@ -262,4 +264,7 @@ namespace Sandbox
 
         Open();
     }
+
+    // The pause menu: a HUD button (GameAndUI) and a dimmed modal (UIOnly).
+    OPAAX_REGISTER_WORLD_SUBSYSTEM_ORDERED(PauseMenuSubsystem, Opaax::WorldSubsystemOrder::Presentation);
 }

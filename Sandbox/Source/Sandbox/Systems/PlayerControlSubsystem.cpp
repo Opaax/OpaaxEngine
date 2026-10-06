@@ -1,5 +1,7 @@
 #include "Systems/PlayerControlSubsystem.h"
 
+#include "Engine/Registries/AutoRegistration.h"
+
 #include "Input/Mapping/InputActionValue.h"
 #include "Input/Mapping/InputMappingSubsystem.h"
 #include "Input/Mapping/InputTypes.h"
@@ -149,4 +151,7 @@ namespace Sandbox
             OPAAX_LOG(LogPlayerControl, Info, "Driving {} mover(s)", lDriven);
         }
     }
+
+    // The game's side of the mover: input actions in, MoverInput out. Ticks before the movers.
+    OPAAX_REGISTER_WORLD_SUBSYSTEM_ORDERED(PlayerControlSubsystem, Opaax::WorldSubsystemOrder::Input);
 }

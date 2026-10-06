@@ -1,7 +1,5 @@
 #pragma once
 
-#include <entt/entt.hpp>
-
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxStringID.hpp"
@@ -9,6 +7,7 @@
 
 #include "Core/Reflection/TypeInfo.h"   // DeriveTypeLeafName
 #include "Engine/Registries/EngineRegistries.h"
+#include "World/Behaviour/Behaviour.h"
 
 namespace Opaax
 {
@@ -34,6 +33,8 @@ namespace Opaax
         template<CComponent T>
         bool Register(OpaaxStringID InName = {})
         {
+            static_assert(!std::derived_from<T, Behaviour>, "A behaviour is registered with Behaviours().Register<T>().");
+
             ++m_Count;
 
             if (m_Registry == nullptr)
@@ -45,6 +46,43 @@ namespace Opaax
             }
 
             return m_Registry->Register<T>(InName.IsValid() ? InName : DeriveTypeLeafName<T>());
+        }
+
+        /**
+         * Registers T as a component every entity has (World::CreateEntity adds it; it cannot be
+         * removed). The engine's TransformComponent is the only one.
+         * @return True if registered
+         */
+        template<CComponent T>
+        bool RegisterEssential(OpaaxStringID InName)
+        {
+            ++m_Count;
+
+            if (m_Registry == nullptr)
+            {
+                OPAAX_LOG(LogModuleRegistrar, Error,
+                          "Components().RegisterEssential — route is not bound to a ComponentRegistry; registration dropped.");
+                return false;
+            }
+
+            return m_Registry->Register<T>(InName, /*bInEssential*/true);
+        }
+
+        /**
+         * Lets files that still use an old component name load: InOldName resolves to the type
+         * registered as InName. Register InName first.
+         * @return True if the alias was added
+         */
+        bool AddAlias(OpaaxStringID InOldName, OpaaxStringID InName)
+        {
+            if (m_Registry == nullptr)
+            {
+                OPAAX_LOG(LogModuleRegistrar, Error,
+                          "Components().AddAlias — route is not bound to a ComponentRegistry; alias dropped.");
+                return false;
+            }
+
+            return m_Registry->AddAlias(InOldName, InName);
         }
 
         /** Connects this route to the registry. Called once, before any module registers. */
@@ -61,6 +99,52 @@ namespace Opaax
     private:
         ComponentRegistry* m_Registry = nullptr; // owned by the engine
         Uint64             m_Count    = 0;
+    };
+
+    // =============================================================================
+    // BehaviourRoute — registers behaviours. A behaviour is stored and saved like a component, under
+    //   its type name ("Coin", no namespace).
+    // =============================================================================
+    class BehaviourRoute
+    {
+        // =========================================================================
+        // Registration
+        // =========================================================================
+    public:
+        /**
+         * Registers T as a behaviour.
+         * @return True if registered
+         */
+        template<CBehaviour T>
+        bool Register()
+        {
+            ++m_Count;
+
+            if (m_Components == nullptr)
+            {
+                // Not bound: BindEngineRegistries was never called.
+                OPAAX_LOG(LogModuleRegistrar, Error,
+                          "Behaviours().Register — route is not bound to a ComponentRegistry; registration dropped.");
+                return false;
+            }
+
+            return m_Components->Register<T>(DeriveTypeLeafName<T>());
+        }
+
+        /** Connects this route to the registries. Called once, before any module registers. */
+        void Bind(ComponentRegistry* InComponents) noexcept { m_Components = InComponents; }
+
+        /**
+         * Number of registration requests, including refused ones.
+         */
+        Uint64 Count() const noexcept { return m_Count; }
+
+        // =========================================================================
+        // Members
+        // =========================================================================
+    private:
+        ComponentRegistry* m_Components = nullptr; // owned by the engine
+        Uint64             m_Count      = 0;
     };
 
     // =============================================================================
@@ -246,45 +330,137 @@ namespace Opaax
     };
 
     // =============================================================================
-    // ModuleRegistrar — what a game module registers into, before any world exists.
-    //     Components()      -> ComponentRegistry
-    //     WorldSubsystems() -> WorldSubsystemRegistry
-    //     Resources()       -> ResourceFormatRegistry
-    //     MoverModes()      -> MoverModeRegistry
-    //     DataAssets()      -> DataAssetTypeRegistry
+    // GameInstanceSubsystemRoute — registers subsystems every game session creates.
+    //   The name is optional (defaults to the type name); it is only used in logs.
+    // =============================================================================
+    class GameInstanceSubsystemRoute
+    {
+    public:
+        /**
+         * Registers T as a game instance subsystem (one per game session, created in registration order).
+         * @tparam T Derives IGameInstanceSubsystem, constructible from GameInstanceContext&
+         * @return True if registered
+         */
+        template<typename T>
+        requires std::is_base_of_v<IGameInstanceSubsystem, T>
+        bool Register(OpaaxStringID InName = {})
+        {
+            ++m_Count;
+
+            if (m_Registry == nullptr)
+            {
+                OPAAX_LOG(LogModuleRegistrar, Error,
+                          "GameInstanceSubsystems().Register — route is not bound; registration dropped.");
+                return false;
+            }
+
+            return m_Registry->Register<T>(InName.IsValid() ? InName : DeriveTypeLeafName<T>());
+        }
+
+        /** Connects this route to the registry. Called once, before any module registers. */
+        void Bind(GameInstanceSubsystemRegistry* InRegistry) noexcept { m_Registry = InRegistry; }
+
+        /** Number of registration requests, including refused ones. */
+        Uint64 Count() const noexcept { return m_Count; }
+
+    private:
+        GameInstanceSubsystemRegistry* m_Registry = nullptr; // owned by the engine
+        Uint64                         m_Count    = 0;
+    };
+
+    // =============================================================================
+    // UIWidgetRoute — registers the widget types a .opaaxui can use. The name is saved in the file.
+    // =============================================================================
+    class UIWidgetRoute
+    {
+    public:
+        /**
+         * Registers T as a widget type.
+         * @param InName The name .opaaxui files use. Optional: defaults to the type name.
+         * @return True if registered
+         */
+        template<typename T>
+        requires std::is_base_of_v<UIWidget, T>
+        bool Register(OpaaxStringID InName = {})
+        {
+            ++m_Count;
+
+            if (m_Registry == nullptr)
+            {
+                OPAAX_LOG(LogModuleRegistrar, Error, "UIWidgets().Register — route is not bound; registration dropped.");
+                return false;
+            }
+
+            return m_Registry->Register<T>(InName.IsValid() ? InName : DeriveTypeLeafName<T>());
+        }
+
+        /** Connects this route to the registry. Called once, before any module registers. */
+        void Bind(UIWidgetRegistry* InRegistry) noexcept { m_Registry = InRegistry; }
+
+        /** Number of registration requests, including refused ones. */
+        Uint64 Count() const noexcept { return m_Count; }
+
+    private:
+        UIWidgetRegistry* m_Registry = nullptr; // owned by the engine
+        Uint64            m_Count    = 0;
+    };
+
+    // =============================================================================
+    // ModuleRegistrar — what engine and game code register into, before any world exists.
+    //     Components()             -> ComponentRegistry
+    //     Behaviours()             -> ComponentRegistry (stored like components)
+    //     WorldSubsystems()        -> WorldSubsystemRegistry
+    //     GameInstanceSubsystems() -> GameInstanceSubsystemRegistry
+    //     Resources()              -> ResourceFormatRegistry
+    //     MoverModes()             -> MoverModeRegistry
+    //     DataAssets()             -> DataAssetTypeRegistry
+    //     UIWidgets()              -> UIWidgetRegistry
+    //   Most types register themselves with the OPAAX_REGISTER_* macros (AutoRegistration.h).
     // =============================================================================
     class ModuleRegistrar
     {
     public:
-        ComponentRoute&      Components()      noexcept { return m_Components; }
-        WorldSubsystemRoute& WorldSubsystems() noexcept { return m_WorldSubsystems; }
-        ResourceFormatRoute& Resources()       noexcept { return m_ResourceFormats; }
-        MoverModeRoute&      MoverModes()      noexcept { return m_MoverModes; }
-        DataAssetRoute&      DataAssets()      noexcept { return m_DataAssets; }
+        ComponentRoute&             Components()             noexcept { return m_Components; }
+        BehaviourRoute&             Behaviours()             noexcept { return m_Behaviours; }
+        WorldSubsystemRoute&        WorldSubsystems()        noexcept { return m_WorldSubsystems; }
+        GameInstanceSubsystemRoute& GameInstanceSubsystems() noexcept { return m_GameInstanceSubsystems; }
+        ResourceFormatRoute&        Resources()              noexcept { return m_ResourceFormats; }
+        MoverModeRoute&             MoverModes()             noexcept { return m_MoverModes; }
+        DataAssetRoute&             DataAssets()             noexcept { return m_DataAssets; }
+        UIWidgetRoute&              UIWidgets()              noexcept { return m_UIWidgets; }
 
-        const ComponentRoute&      Components()      const noexcept { return m_Components; }
-        const WorldSubsystemRoute& WorldSubsystems() const noexcept { return m_WorldSubsystems; }
-        const ResourceFormatRoute& Resources()       const noexcept { return m_ResourceFormats; }
-        const MoverModeRoute&      MoverModes()      const noexcept { return m_MoverModes; }
-        const DataAssetRoute&      DataAssets()      const noexcept { return m_DataAssets; }
+        const ComponentRoute&             Components()             const noexcept { return m_Components; }
+        const BehaviourRoute&             Behaviours()             const noexcept { return m_Behaviours; }
+        const WorldSubsystemRoute&        WorldSubsystems()        const noexcept { return m_WorldSubsystems; }
+        const GameInstanceSubsystemRoute& GameInstanceSubsystems() const noexcept { return m_GameInstanceSubsystems; }
+        const ResourceFormatRoute&        Resources()              const noexcept { return m_ResourceFormats; }
+        const MoverModeRoute&             MoverModes()             const noexcept { return m_MoverModes; }
+        const DataAssetRoute&             DataAssets()             const noexcept { return m_DataAssets; }
+        const UIWidgetRoute&              UIWidgets()              const noexcept { return m_UIWidgets; }
 
         /**
-         * Connects every route to the engine registries. Must run before any module registers.
+         * Connects every route to the engine registries. Must run before anything registers.
          */
         void BindEngineRegistries(EngineRegistries& InRegistries) noexcept
         {
             m_Components.Bind(&InRegistries.Components());
+            m_Behaviours.Bind(&InRegistries.Components());
             m_WorldSubsystems.Bind(&InRegistries.WorldSubsystems());
+            m_GameInstanceSubsystems.Bind(&InRegistries.GameInstanceSubsystems());
             m_ResourceFormats.Bind(&InRegistries.Resources());
             m_MoverModes.Bind(&InRegistries.MoverModes());
             m_DataAssets.Bind(&InRegistries.DataAssets());
+            m_UIWidgets.Bind(&InRegistries.UIWidgets());
         }
 
     private:
-        ComponentRoute      m_Components;
-        WorldSubsystemRoute m_WorldSubsystems;
-        ResourceFormatRoute m_ResourceFormats;
-        MoverModeRoute      m_MoverModes;
-        DataAssetRoute      m_DataAssets;
+        ComponentRoute             m_Components;
+        BehaviourRoute             m_Behaviours;
+        WorldSubsystemRoute        m_WorldSubsystems;
+        GameInstanceSubsystemRoute m_GameInstanceSubsystems;
+        ResourceFormatRoute        m_ResourceFormats;
+        MoverModeRoute             m_MoverModes;
+        DataAssetRoute             m_DataAssets;
+        UIWidgetRoute              m_UIWidgets;
     };
 }

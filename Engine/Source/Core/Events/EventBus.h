@@ -5,35 +5,20 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Events/DelegateHandle.h"
+#include "Core/Reflection/TypeInfo.h"
 
 namespace Opaax
 {
     // =============================================================================
-    // Type key — compile-time, module-stable
+    // Type key — compile-time, the same in every translation unit and every run
     // =============================================================================
 
     namespace Detail
     {
-        /** Compile-time FNV-1a over a null-terminated string. */
-        constexpr Uint64 Fnv1aHash(const char* InStr) noexcept
-        {
-            Uint64 lHash = 14695981039346656037ull;
-            while (*InStr != '\0')
-            {
-                lHash = (lHash ^ static_cast<Uint64>(*InStr)) * 1099511628211ull;
-                ++InStr;
-            }
-            return lHash;
-        }
-
-        /**
-         * Stable per-type id, from a hash of the function signature.
-         * Same in every translation unit and every run.
-         */
         template<typename T>
         constexpr Uint64 EventTypeKey() noexcept
         {
-            return Fnv1aHash(__FUNCSIG__);
+            return TypeIdOf<T>();
         }
     }
 

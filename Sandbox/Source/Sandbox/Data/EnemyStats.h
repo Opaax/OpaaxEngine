@@ -6,6 +6,7 @@
 #include "Core/Color/LinearColorJson.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxProperty.h"
+#include "Engine/Registries/AutoRegistration.h"
 
 namespace Sandbox
 {
@@ -31,4 +32,7 @@ namespace Sandbox
                          OPAAX_PROP(bFlying).SetTooltip("Ignores the ground."),
                          OPAAX_PROP(Tint))
     };
+
+    // This line is all it takes to get .opaaxdata files of it, editable in the editor.
+    OPAAX_REGISTER_DATA_ASSET(EnemyStats);
 }

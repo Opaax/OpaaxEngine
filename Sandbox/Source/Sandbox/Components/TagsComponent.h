@@ -4,6 +4,7 @@
 
 #include "Core/Tag/OpaaxTagContainer.h"
 #include "Core/Tag/OpaaxTagJson.h"
+#include "Engine/Registries/AutoRegistration.h"
 
 namespace Sandbox
 {
@@ -19,4 +20,7 @@ namespace Sandbox
         // _WITH_DEFAULT: a missing key keeps an empty container instead of throwing.
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(TagsComponent, Tags)
     };
+
+    // Tags are saved as an array of strings, readable in the .opaaxmap.
+    OPAAX_REGISTER_COMPONENT(TagsComponent);
 }

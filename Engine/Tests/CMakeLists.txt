@@ -19,6 +19,7 @@ set(OPAAX_TEST_SOURCES
     Core/PathStringTests.cpp
     Core/Profiling/StatsTests.cpp
     Core/Reflection/EnumTests.cpp
+    Core/Reflection/PropertyJsonTests.cpp
     Core/Reflection/PropertyTests.cpp
     Core/Reflection/PropertyVisitorTests.cpp
     Core/StringIDTests.cpp
@@ -40,6 +41,7 @@ set(OPAAX_TEST_SOURCES
     Application/Utf8PathTests.cpp
 
     # Engine
+    Engine/AutoRegistrationTests.cpp
     Engine/EngineEventsTests.cpp
     Engine/GameInstanceTests.cpp
     Engine/ModuleRegistrarTests.cpp
@@ -50,6 +52,7 @@ set(OPAAX_TEST_SOURCES
     Resources/ResourceSystemTests.cpp
 
     # World
+    World/BehaviourStorageTests.cpp
     World/ComponentIdentityTests.cpp
     World/ComponentRegistryTests.cpp
     World/EntityHierarchyTests.cpp
