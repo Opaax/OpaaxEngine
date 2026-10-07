@@ -25,6 +25,15 @@ namespace Opaax
             return b2_staticBody;
         }
 
+        // False for an invalid handle or a body already destroyed.
+        bool LoadLiveBody(const BodyHandle InBody, b2BodyId& OutId) noexcept
+        {
+            if (!InBody.IsValid()) { return false; }
+
+            OutId = b2LoadBodyId(InBody.Id);
+            return b2Body_IsValid(OutId);
+        }
+
         // 0 when the shape is stale (an end-touch event may name a destroyed shape).
         Uint64 EntityBitsFromShape(b2ShapeId InShape) noexcept
         {
@@ -111,6 +120,11 @@ namespace Opaax
     Vector2F Box2DPhysicsWorld::GetGravity() const
     {
         return ToVec2(b2World_GetGravity(m_WorldId));
+    }
+
+    float Box2DPhysicsWorld::GetMaxLinearSpeed() const
+    {
+        return b2World_GetMaximumLinearSpeed(m_WorldId);
     }
 
     // =============================================================================
@@ -206,6 +220,63 @@ namespace Opaax
 
         // Swept toward the target, so it creates contacts instead of teleporting.
         b2Body_SetTargetTransform(lId, lTarget, InDeltaTime, true);
+    }
+
+    // =============================================================================
+    // Body motion
+    // =============================================================================
+    Vector2F Box2DPhysicsWorld::GetLinearVelocity(BodyHandle InBody) const
+    {
+        b2BodyId lId = b2_nullBodyId;
+        return LoadLiveBody(InBody, lId) ? ToVec2(b2Body_GetLinearVelocity(lId)) : Vector2F{ 0.f, 0.f };
+    }
+
+    void Box2DPhysicsWorld::SetLinearVelocity(BodyHandle InBody, Vector2F InVelocity)
+    {
+        b2BodyId lId = b2_nullBodyId;
+        if (LoadLiveBody(InBody, lId)) { b2Body_SetLinearVelocity(lId, ToB2(InVelocity)); }
+    }
+
+    float Box2DPhysicsWorld::GetAngularVelocity(BodyHandle InBody) const
+    {
+        b2BodyId lId = b2_nullBodyId;
+        return LoadLiveBody(InBody, lId) ? b2Body_GetAngularVelocity(lId) : 0.f;
+    }
+
+    void Box2DPhysicsWorld::SetAngularVelocity(BodyHandle InBody, float InRadiansPerSecond)
+    {
+        b2BodyId lId = b2_nullBodyId;
+        if (LoadLiveBody(InBody, lId)) { b2Body_SetAngularVelocity(lId, InRadiansPerSecond); }
+    }
+
+    void Box2DPhysicsWorld::ApplyForce(BodyHandle InBody, Vector2F InForce)
+    {
+        b2BodyId lId = b2_nullBodyId;
+        if (LoadLiveBody(InBody, lId)) { b2Body_ApplyForceToCenter(lId, ToB2(InForce), /*wake*/true); }
+    }
+
+    void Box2DPhysicsWorld::ApplyLinearImpulse(BodyHandle InBody, Vector2F InImpulse)
+    {
+        b2BodyId lId = b2_nullBodyId;
+        if (LoadLiveBody(InBody, lId)) { b2Body_ApplyLinearImpulseToCenter(lId, ToB2(InImpulse), /*wake*/true); }
+    }
+
+    void Box2DPhysicsWorld::ApplyTorque(BodyHandle InBody, float InTorque)
+    {
+        b2BodyId lId = b2_nullBodyId;
+        if (LoadLiveBody(InBody, lId)) { b2Body_ApplyTorque(lId, InTorque, /*wake*/true); }
+    }
+
+    void Box2DPhysicsWorld::ApplyAngularImpulse(BodyHandle InBody, float InImpulse)
+    {
+        b2BodyId lId = b2_nullBodyId;
+        if (LoadLiveBody(InBody, lId)) { b2Body_ApplyAngularImpulse(lId, InImpulse, /*wake*/true); }
+    }
+
+    float Box2DPhysicsWorld::GetMass(BodyHandle InBody) const
+    {
+        b2BodyId lId = b2_nullBodyId;
+        return LoadLiveBody(InBody, lId) ? b2Body_GetMass(lId) : 0.f;
     }
 
     // =============================================================================

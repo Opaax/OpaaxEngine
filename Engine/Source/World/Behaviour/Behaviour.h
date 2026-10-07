@@ -358,6 +358,32 @@ namespace Opaax
         void ClearTimer(TimerHandle InHandle);
 
         // =============================================================================
+        // Physics — this entity's dynamic body (a Collider and a Dynamic Rigidbody). Without one
+        //   the setters do nothing (with a warning, once) and the getters return zero. A body
+        //   spawned this frame can be launched at once. Moving the Transform teleports the body.
+        // =============================================================================
+    public:
+        /** World units per second. */
+        Vector2F GetVelocity() const;
+        void     SetVelocity(const Vector2F& InVelocity);
+
+        /** Degrees per second, counter-clockwise. */
+        float GetAngularVelocity() const;
+        void  SetAngularVelocity(float InDegreesPerSecond);
+
+        /** Over the next fixed step (mass * units / s^2): call it every OnFixedUpdate for a steady push. */
+        void AddForce(const Vector2F& InForce);
+
+        /** An instant kick (mass * units / s): a jump, a hit. */
+        void AddImpulse(const Vector2F& InImpulse);
+
+        void AddTorque(float InTorque);
+        void AddAngularImpulse(float InImpulse);
+
+        /** From the collider's density and area. */
+        float GetMass() const;
+
+        // =============================================================================
         // Input
         // =============================================================================
     public:
@@ -396,6 +422,13 @@ namespace Opaax
         /** The world's services (resources, paths, input, event bus, ...). */
         WorldContext& GetContext() const;
 
+        /** One of this world's subsystems, the engine's or the game's (GetSubsystem<WaveSpawner>()), or null. */
+        template<typename T>
+        T* GetSubsystem() const
+        {
+            return (m_World != nullptr) ? m_World->GetSubsystems().template GetSubsystem<T>() : nullptr;
+        }
+
         // =============================================================================
         // Runtime binding (set by BehaviourSubsystem)
         // =============================================================================
@@ -413,12 +446,16 @@ namespace Opaax
         /** The runtime this behaviour is started in. Logs and returns null before OnStart and after OnDestroy. */
         BehaviourSubsystem* RequireRuntime(const char* InWhat) const;
 
+        /** Logs (once per behaviour) that a physics call found no dynamic body. */
+        void WarnNoBody(const char* InWhat);
+
         EntityID            m_Entity   = ENTITY_NONE;
         World*              m_World    = nullptr;
         BehaviourSubsystem* m_Runtime  = nullptr;   // set at OnStart, cleared after OnDestroy
         TypeId              m_Type     = 0;
         bool                m_bStarted = false;
         bool                m_bEnded   = false;
+        bool                m_bWarnedNoBody = false;
     };
 
     /**

@@ -36,6 +36,7 @@ namespace Opaax
         void     Step(float InDeltaTime, int InSubStepCount) override;
         void     SetGravity(Vector2F InGravity) override;
         Vector2F GetGravity() const override;
+        float    GetMaxLinearSpeed() const override;
 
         BodyHandle  CreateBody(const BodyDesc& InDesc) override;
         void        DestroyBody(BodyHandle InBody) override;
@@ -45,6 +46,16 @@ namespace Opaax
         void        SetBodyTransform(BodyHandle InBody, Vector2F InPosition, float InRotation) override;
         void        SetBodyTargetTransform(BodyHandle InBody, Vector2F InPosition, float InRotation,
                                            float InDeltaTime) override;
+
+        Vector2F GetLinearVelocity(BodyHandle InBody) const override;
+        void     SetLinearVelocity(BodyHandle InBody, Vector2F InVelocity) override;
+        float    GetAngularVelocity(BodyHandle InBody) const override;
+        void     SetAngularVelocity(BodyHandle InBody, float InRadiansPerSecond) override;
+        void     ApplyForce(BodyHandle InBody, Vector2F InForce) override;
+        void     ApplyLinearImpulse(BodyHandle InBody, Vector2F InImpulse) override;
+        void     ApplyTorque(BodyHandle InBody, float InTorque) override;
+        void     ApplyAngularImpulse(BodyHandle InBody, float InImpulse) override;
+        float    GetMass(BodyHandle InBody) const override;
 
         void GetSensorEvents(TDynArray<PhysicsContactPair>& OutBegan,
                              TDynArray<PhysicsContactPair>& OutEnded) override;

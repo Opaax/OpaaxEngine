@@ -35,6 +35,9 @@ namespace Opaax
         virtual void     SetGravity(Vector2F InGravity) = 0;
         virtual Vector2F GetGravity() const             = 0;
 
+        /** The fastest a body may move, world units / s: a longer move in one step is not swept. */
+        virtual float GetMaxLinearSpeed() const = 0;
+
         // =============================================================================
         // Bodies + shapes
         // =============================================================================
@@ -61,6 +64,33 @@ namespace Opaax
          */
         virtual void SetBodyTargetTransform(BodyHandle InBody, Vector2F InPosition,
                                             float InRotation, float InDeltaTime) = 0;
+
+        // =============================================================================
+        // Body motion — for dynamic bodies. A stale handle reads zero and ignores writes.
+        // =============================================================================
+    public:
+        /** World units per second. */
+        virtual Vector2F GetLinearVelocity(BodyHandle InBody) const = 0;
+        virtual void     SetLinearVelocity(BodyHandle InBody, Vector2F InVelocity) = 0;
+
+        /** Radians per second, counter-clockwise. */
+        virtual float GetAngularVelocity(BodyHandle InBody) const = 0;
+        virtual void  SetAngularVelocity(BodyHandle InBody, float InRadiansPerSecond) = 0;
+
+        /** A force at the centre of mass, over the next step (mass * units / s^2). Wakes the body. */
+        virtual void ApplyForce(BodyHandle InBody, Vector2F InForce) = 0;
+
+        /** An instant change of momentum at the centre of mass (mass * units / s). Wakes the body. */
+        virtual void ApplyLinearImpulse(BodyHandle InBody, Vector2F InImpulse) = 0;
+
+        /** Over the next step. Wakes the body. */
+        virtual void ApplyTorque(BodyHandle InBody, float InTorque) = 0;
+
+        /** Instant. Wakes the body. */
+        virtual void ApplyAngularImpulse(BodyHandle InBody, float InImpulse) = 0;
+
+        /** From the shapes' density and area. Zero for static and kinematic bodies. */
+        virtual float GetMass(BodyHandle InBody) const = 0;
 
         // =============================================================================
         // Events — read after Step

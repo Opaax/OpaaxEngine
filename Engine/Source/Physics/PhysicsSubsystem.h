@@ -25,6 +25,10 @@ namespace Opaax
     //   Bodies are reconciled every step: dead ones removed, missing ones created (so entities
     //   spawned at any time work, and component add order does not matter).
     //   One body per collider; a rigidbody without a collider is skipped.
+    //
+    //   Who owns the pose: a kinematic body follows its Transform (swept, so it pushes what it
+    //   meets); a dynamic body writes its Transform after each step, and a Transform moved by
+    //   gameplay in between teleports it. Static bodies do not move.
     // =============================================================================
     class PhysicsSubsystem final : public WorldSubsystemBase
     {
@@ -85,6 +89,36 @@ namespace Opaax
                          Uint64 InChannelMask = ~0ull);
 
         // =============================================================================
+        // Body motion, by entity — dynamic bodies only. Angles in degrees.
+        //   A body not built yet (an entity spawned this frame) is built on the first call, so a
+        //   new entity can be launched on the line that created it. The setters return false when
+        //   the entity has no dynamic body; the getters then return zero.
+        // =============================================================================
+    public:
+        /** World units per second. */
+        Vector2F GetLinearVelocity(EntityID InEntity) const;
+        bool     SetLinearVelocity(EntityID InEntity, Vector2F InVelocity);
+
+        /** Degrees per second, counter-clockwise. */
+        float GetAngularVelocity(EntityID InEntity) const;
+        bool  SetAngularVelocity(EntityID InEntity, float InDegreesPerSecond);
+
+        /** Over the next step (mass * units / s^2): call it every step for a steady push. */
+        bool ApplyForce(EntityID InEntity, Vector2F InForce);
+
+        /** Instant (mass * units / s). */
+        bool ApplyImpulse(EntityID InEntity, Vector2F InImpulse);
+
+        bool ApplyTorque(EntityID InEntity, float InTorque);
+        bool ApplyAngularImpulse(EntityID InEntity, float InImpulse);
+
+        /** From the collider's density and area. */
+        float GetMass(EntityID InEntity) const;
+
+        /** True when the entity has a dynamic body (built or buildable now). */
+        bool HasDynamicBody(EntityID InEntity);
+
+        // =============================================================================
         // Get
         // =============================================================================
     public:
@@ -113,8 +147,20 @@ namespace Opaax
         /** Destroys one entity's body. */
         void RemoveBodyForEntity(EntityID InEntity);
 
+        /**
+         * Before the step: kinematic bodies take their Transform as the target; a dynamic body whose
+         * Transform was moved since the last sync is teleported there.
+         */
+        void PushTransformsToBodies(World& InWorld, float InDeltaTime);
+
         /** Writes each dynamic body's pose back into its TransformComponent. */
         void SyncDynamicTransforms(World& InWorld);
+
+        /** InEntity's dynamic body, built now if it is missing. Invalid if it has none. */
+        BodyHandle FindOrBuildDynamicBody(EntityID InEntity);
+
+        /** InEntity's dynamic body if it is built, else an invalid handle. */
+        BodyHandle FindDynamicBody(EntityID InEntity) const;
 
         /**
          * Publishes this step's contact and overlap events: Began, then Ended, then Stayed
@@ -153,6 +199,10 @@ namespace Opaax
             BodyHandle Handle;
             EBodyType  BuiltType        = EBodyType::Static;
             bool       bSyncToTransform = false;
+
+            /** The world pose the Transform had when physics last wrote or read it (degrees). */
+            Vector2F SyncedPosition = { 0.f, 0.f };
+            float    SyncedRotation = 0.f;
         };
 
         /** Keyed by entity bits. */
@@ -187,6 +237,14 @@ namespace Opaax
          * Entities currently outside the bounds, so the event fires once per exit.
          */
         TUnorderedSet<Uint32> m_OutOfBounds;
+
+        /** Reused: entities that left the bounds this step, and where. */
+        struct BoundsExit
+        {
+            Uint32   Bits     = 0;
+            Vector2F Position = { 0.f, 0.f };
+        };
+        TDynArray<BoundsExit> m_BoundsExits;
 
         /** Reused: entities to remove this step. */
         TDynArray<Uint32> m_BoundsVictims;

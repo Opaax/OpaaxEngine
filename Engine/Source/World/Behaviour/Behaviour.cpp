@@ -5,6 +5,7 @@
 #include "Engine/EngineEvents.h"
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/InputManager.h"
+#include "Physics/PhysicsSubsystem.h"
 #include "World/Behaviour/BehaviourSubsystem.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/EntityHierarchy.h"
@@ -260,6 +261,91 @@ namespace Opaax
         {
             lRuntime->RemoveBehaviourLater(m_Entity, InBehaviourType);
         }
+    }
+
+    // =========================================================================
+    // Physics
+    // =========================================================================
+    void Behaviour::WarnNoBody(const char* InWhat)
+    {
+        if (!m_bWarnedNoBody)
+        {
+            m_bWarnedNoBody = true;
+            OPAAX_LOG(LogBehaviour, Warn, "{} on '{}': no dynamic body (a Collider and a Dynamic Rigidbody) — ignored",
+                      InWhat, GetEntityName().CStr());
+        }
+    }
+
+    Vector2F Behaviour::GetVelocity() const
+    {
+        const PhysicsSubsystem* lPhysics = GetSubsystem<PhysicsSubsystem>();
+        return (lPhysics != nullptr) ? lPhysics->GetLinearVelocity(m_Entity) : Vector2F{ 0.f, 0.f };
+    }
+
+    void Behaviour::SetVelocity(const Vector2F& InVelocity)
+    {
+        PhysicsSubsystem* lPhysics = GetSubsystem<PhysicsSubsystem>();
+        if (lPhysics == nullptr || !lPhysics->SetLinearVelocity(m_Entity, InVelocity))
+        {
+            WarnNoBody("SetVelocity");
+        }
+    }
+
+    float Behaviour::GetAngularVelocity() const
+    {
+        const PhysicsSubsystem* lPhysics = GetSubsystem<PhysicsSubsystem>();
+        return (lPhysics != nullptr) ? lPhysics->GetAngularVelocity(m_Entity) : 0.f;
+    }
+
+    void Behaviour::SetAngularVelocity(const float InDegreesPerSecond)
+    {
+        PhysicsSubsystem* lPhysics = GetSubsystem<PhysicsSubsystem>();
+        if (lPhysics == nullptr || !lPhysics->SetAngularVelocity(m_Entity, InDegreesPerSecond))
+        {
+            WarnNoBody("SetAngularVelocity");
+        }
+    }
+
+    void Behaviour::AddForce(const Vector2F& InForce)
+    {
+        PhysicsSubsystem* lPhysics = GetSubsystem<PhysicsSubsystem>();
+        if (lPhysics == nullptr || !lPhysics->ApplyForce(m_Entity, InForce))
+        {
+            WarnNoBody("AddForce");
+        }
+    }
+
+    void Behaviour::AddImpulse(const Vector2F& InImpulse)
+    {
+        PhysicsSubsystem* lPhysics = GetSubsystem<PhysicsSubsystem>();
+        if (lPhysics == nullptr || !lPhysics->ApplyImpulse(m_Entity, InImpulse))
+        {
+            WarnNoBody("AddImpulse");
+        }
+    }
+
+    void Behaviour::AddTorque(const float InTorque)
+    {
+        PhysicsSubsystem* lPhysics = GetSubsystem<PhysicsSubsystem>();
+        if (lPhysics == nullptr || !lPhysics->ApplyTorque(m_Entity, InTorque))
+        {
+            WarnNoBody("AddTorque");
+        }
+    }
+
+    void Behaviour::AddAngularImpulse(const float InImpulse)
+    {
+        PhysicsSubsystem* lPhysics = GetSubsystem<PhysicsSubsystem>();
+        if (lPhysics == nullptr || !lPhysics->ApplyAngularImpulse(m_Entity, InImpulse))
+        {
+            WarnNoBody("AddAngularImpulse");
+        }
+    }
+
+    float Behaviour::GetMass() const
+    {
+        const PhysicsSubsystem* lPhysics = GetSubsystem<PhysicsSubsystem>();
+        return (lPhysics != nullptr) ? lPhysics->GetMass(m_Entity) : 0.f;
     }
 
     // =========================================================================

@@ -348,6 +348,18 @@ namespace RuntimeProbes
         }
     };
 
+    /** Launches its own body from OnStart, on the frame its entity was created. */
+    struct Launcher final : Behaviour
+    {
+        void OnStart() override { SetVelocity(Vector2F{ 120.f, 0.f }); }
+    };
+
+    /** Kicks its entity every frame, body or not. */
+    struct Kicker final : Behaviour
+    {
+        void OnUpdate(float) override { AddImpulse(Vector2F{ 1.f, 0.f }); }
+    };
+
     struct KeyWatcher final : Behaviour
     {
         bool bDown     = false;
@@ -436,6 +448,8 @@ namespace
         REQUIRE(InRegistry.Register<Spawner>(OpaaxStringID("Spawner")));
         REQUIRE(InRegistry.Register<StartSpawner>(OpaaxStringID("StartSpawner")));
         REQUIRE(InRegistry.Register<ContactProbe>(OpaaxStringID("ContactProbe")));
+        REQUIRE(InRegistry.Register<Launcher>(OpaaxStringID("Launcher")));
+        REQUIRE(InRegistry.Register<Kicker>(OpaaxStringID("Kicker")));
         REQUIRE(InRegistry.Register<KeyWatcher>(OpaaxStringID("KeyWatcher")));
         REQUIRE(InRegistry.Register<Quitter>(OpaaxStringID("Quitter")));
         REQUIRE(InRegistry.Register<Traveller>(OpaaxStringID("Traveller")));
@@ -1227,6 +1241,62 @@ TEST_CASE("Behaviours: Spawn of a missing prefab gives an invalid entity")
 
     CHECK_FALSE(lGun.Get<Spawner>().Spawned.IsValid());
     CHECK(CountOf("Gun:SpawnFailed") == 1);
+}
+
+// =============================================================================
+// Physics
+// =============================================================================
+TEST_CASE("Behaviours: a behaviour drives its own body, from the frame its entity is created")
+{
+    RuntimeFixture lFix(IPaths::Null(), /*bInPhysics*/true);
+    lFix.TheWorld->GetSubsystems().GetSubsystem<PhysicsSubsystem>()->GetPhysicsWorld()->SetGravity({ 0.f, 0.f });
+
+    Entity lBall = MakeCollider(lFix, "Ball", { 0.f, 0.f }, { 50.f, 50.f }, EColliderMode::Solid, /*dynamic*/true);
+    lBall.Add<Launcher>();
+
+    lFix.Frames(60);   // one second
+
+    CHECK(lBall.Get<TransformComponent>().Position.x == doctest::Approx(120.f).epsilon(0.02));
+    CHECK(lBall.Get<Launcher>().GetVelocity().x == doctest::Approx(120.f));
+    CHECK(lBall.Get<Launcher>().GetMass() > 0.f);
+}
+
+TEST_CASE("Behaviours: physics calls on an entity without a body do nothing")
+{
+    SUBCASE("a world with physics, an entity without a collider")
+    {
+        RuntimeFixture lFix(IPaths::Null(), /*bInPhysics*/true);
+        Entity lGhost = lFix.Make("Ghost");
+        lGhost.Add<Kicker>();
+
+        lFix.Frames(3);
+        CHECK(lGhost.IsValid());
+        CHECK(lGhost.Get<Kicker>().GetVelocity().x == 0.f);
+        CHECK(lGhost.Get<Kicker>().GetMass() == 0.f);
+    }
+
+    SUBCASE("a world without physics")
+    {
+        RuntimeFixture lFix;
+        Entity lGhost = lFix.Make("Ghost");
+        lGhost.Add<Kicker>();
+
+        lFix.Frames(3);
+        CHECK(lGhost.IsValid());
+        CHECK(lGhost.Get<Kicker>().GetVelocity().x == 0.f);
+    }
+}
+
+TEST_CASE("Behaviours: GetSubsystem finds the world's subsystems")
+{
+    RuntimeFixture lFix;
+    Entity lEntity = lFix.Make("A");
+    lEntity.Add<Probe>();
+    lFix.Frame();
+
+    const Probe& lProbe = lEntity.Get<Probe>();
+    CHECK(lProbe.GetSubsystem<BehaviourSubsystem>() == lFix.Runtime);
+    CHECK(lProbe.GetSubsystem<PhysicsSubsystem>() == nullptr);
 }
 
 // =============================================================================

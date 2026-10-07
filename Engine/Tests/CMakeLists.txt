@@ -93,6 +93,7 @@ set(OPAAX_TEST_SOURCES
 
     # Physics (no GL context needed)
     Physics/PhysicsEventTests.cpp
+    Physics/PhysicsMotionTests.cpp
     Physics/PhysicsQueryTests.cpp
     Physics/PhysicsSeamTests.cpp
     Physics/PhysicsSubsystemTests.cpp

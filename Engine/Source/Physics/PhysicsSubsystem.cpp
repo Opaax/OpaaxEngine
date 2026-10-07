@@ -1,5 +1,7 @@
 #include "Physics/PhysicsSubsystem.h"
 
+#include <cmath>
+
 #include "Core/Events/EventBus.h"
 #include "Core/Maths/Maths.h"   // DegreesToRadians
 #include "Core/Profiling/Profiler.h"
@@ -37,6 +39,13 @@ namespace Opaax
                        ? ENTITY_NONE
                        : static_cast<EntityID>(static_cast<Uint32>(InUserData - 1ull));
         }
+
+        /** A Transform further than this from the last synced pose was moved by gameplay. */
+        constexpr float TELEPORT_POSITION_TOLERANCE = 1e-3f;
+        constexpr float TELEPORT_ROTATION_TOLERANCE = 1e-3f;   // degrees
+
+        /** The backend turns a body at most 45 degrees per step: a bigger turn is a jump, not a sweep. */
+        constexpr float KINEMATIC_MAX_SWEEP_DEGREES = 40.f;
     }
 
     // =========================================================================
@@ -110,6 +119,7 @@ namespace Opaax
         // Remove dead bodies first, so they emit no contacts.
         ReconcileDeadBodies(lWorld);
         ReconcileLiveBodies(lWorld);
+        PushTransformsToBodies(lWorld, static_cast<float>(InFixedDeltaTime));
 
         m_World->Step(static_cast<float>(InFixedDeltaTime), m_SubStepCount);
 
@@ -203,6 +213,8 @@ namespace Opaax
         lRecord.Handle           = lHandle;
         lRecord.BuiltType        = lBody.Type;
         lRecord.bSyncToTransform = lBody.Type == EBodyType::Dynamic;
+        lRecord.SyncedPosition   = lWorldXf.Position;
+        lRecord.SyncedRotation   = lWorldXf.Rotation;
 
         m_Bodies.emplace(EntityBits(InEntity), lRecord);
     }
@@ -237,9 +249,55 @@ namespace Opaax
     // =========================================================================
     // Transform sync
     // =========================================================================
+    void PhysicsSubsystem::PushTransformsToBodies(World& InWorld, const float InDeltaTime)
+    {
+        for (auto& [lBits, lRecord] : m_Bodies)
+        {
+            if (lRecord.BuiltType == EBodyType::Static)
+            {
+                continue;
+            }
+
+            const Entity             lLive{ static_cast<EntityID>(lBits), &InWorld };
+            const TransformComponent lWorldXf = EntityHierarchy::WorldTransform(lLive);
+            const float              lRadians = Maths::DegreesToRadians(lWorldXf.Rotation);
+
+            if (lRecord.BuiltType == EBodyType::Kinematic)
+            {
+                Vector2F lBodyPosition;
+                float    lBodyRadians = 0.f;
+                m_World->GetBodyTransform(lRecord.Handle, lBodyPosition, lBodyRadians);
+
+                // A move one step cannot sweep (the backend caps speeds) is a jump: placed at once.
+                const Vector2F lMove    = lWorldXf.Position - lBodyPosition;
+                const float    lMaxMove = m_World->GetMaxLinearSpeed() * InDeltaTime;
+                const float    lTurn    = std::abs(std::remainder(lWorldXf.Rotation - Maths::RadiansToDegrees(lBodyRadians), 360.f));
+                if (lMove.x * lMove.x + lMove.y * lMove.y > lMaxMove * lMaxMove || lTurn > KINEMATIC_MAX_SWEEP_DEGREES)
+                {
+                    m_World->SetBodyTransform(lRecord.Handle, lWorldXf.Position, lRadians);
+                }
+
+                // Every step, so a kinematic body at rest has no velocity left over.
+                m_World->SetBodyTargetTransform(lRecord.Handle, lWorldXf.Position, lRadians, InDeltaTime);
+                continue;
+            }
+
+            const bool bMoved = !Maths::IsNearlyEqual(lWorldXf.Position.x, lRecord.SyncedPosition.x, TELEPORT_POSITION_TOLERANCE)
+                             || !Maths::IsNearlyEqual(lWorldXf.Position.y, lRecord.SyncedPosition.y, TELEPORT_POSITION_TOLERANCE)
+                             || !Maths::IsNearlyEqual(lWorldXf.Rotation, lRecord.SyncedRotation, TELEPORT_ROTATION_TOLERANCE);
+            if (bMoved)
+            {
+                // Gameplay moved it since the last step: a teleport, velocity kept.
+                m_World->SetBodyTransform(lRecord.Handle, lWorldXf.Position, lRadians);
+                lRecord.SyncedPosition = lWorldXf.Position;
+                lRecord.SyncedRotation = lWorldXf.Rotation;
+            }
+        }
+    }
+
     void PhysicsSubsystem::SyncDynamicTransforms(World& InWorld)
     {
-        for (const auto& [lBits, lRecord] : m_Bodies)
+        for (auto& [lBits, lRecord] : m_Bodies)
         {
             // Static and kinematic bodies are driven, not read back.
             if (!lRecord.bSyncToTransform)
@@ -270,7 +328,152 @@ namespace Opaax
             lWorldXf.Position = lPosition;
             lWorldXf.Rotation = Maths::RadiansToDegrees(lRotation);
             EntityHierarchy::SetWorldTransform(lLive, lWorldXf);
+
+            lRecord.SyncedPosition = lWorldXf.Position;
+            lRecord.SyncedRotation = lWorldXf.Rotation;
         }
+    }
+
+    // =========================================================================
+    // Body motion
+    // =========================================================================
+    BodyHandle PhysicsSubsystem::FindDynamicBody(const EntityID InEntity) const
+    {
+        const auto lFound = m_Bodies.find(EntityBits(InEntity));
+        if (m_World == nullptr || lFound == m_Bodies.end() || lFound->second.BuiltType != EBodyType::Dynamic)
+        {
+            return BodyHandle{};
+        }
+
+        return lFound->second.Handle;
+    }
+
+    BodyHandle PhysicsSubsystem::FindOrBuildDynamicBody(const EntityID InEntity)
+    {
+        World& lWorld = m_Context->OwningWorld;
+        if (m_World == nullptr || !lWorld.IsValid(InEntity))
+        {
+            return BodyHandle{};
+        }
+
+        const auto* lRigidbody = lWorld.GetRegistry().try_get<RigidbodyComponent>(InEntity);
+        if (ResolveBodyType(lRigidbody) != EBodyType::Dynamic)
+        {
+            return BodyHandle{};
+        }
+
+        // Built already, possibly as another type (its Rigidbody changed): that one is rebuilt by
+        // the next step, never here, since this may run from an event handler during the step.
+        if (m_Bodies.find(EntityBits(InEntity)) != m_Bodies.end())
+        {
+            return FindDynamicBody(InEntity);
+        }
+
+        const auto* lCollider  = lWorld.GetRegistry().try_get<ColliderComponent>(InEntity);
+        const auto* lTransform = lWorld.GetRegistry().try_get<TransformComponent>(InEntity);
+        if (lCollider == nullptr || lTransform == nullptr)
+        {
+            return BodyHandle{};
+        }
+
+        // Spawned since the last step: built now, as the next step's reconcile would.
+        BuildBodyForEntity(lWorld, InEntity, *lCollider, *lTransform);
+        return FindDynamicBody(InEntity);
+    }
+
+    bool PhysicsSubsystem::HasDynamicBody(const EntityID InEntity)
+    {
+        return FindOrBuildDynamicBody(InEntity).IsValid();
+    }
+
+    Vector2F PhysicsSubsystem::GetLinearVelocity(const EntityID InEntity) const
+    {
+        const BodyHandle lBody = FindDynamicBody(InEntity);
+        return lBody.IsValid() ? m_World->GetLinearVelocity(lBody) : Vector2F{ 0.f, 0.f };
+    }
+
+    bool PhysicsSubsystem::SetLinearVelocity(const EntityID InEntity, const Vector2F InVelocity)
+    {
+        const BodyHandle lBody = FindOrBuildDynamicBody(InEntity);
+        if (!lBody.IsValid())
+        {
+            return false;
+        }
+
+        m_World->SetLinearVelocity(lBody, InVelocity);
+        return true;
+    }
+
+    float PhysicsSubsystem::GetAngularVelocity(const EntityID InEntity) const
+    {
+        const BodyHandle lBody = FindDynamicBody(InEntity);
+        return lBody.IsValid() ? Maths::RadiansToDegrees(m_World->GetAngularVelocity(lBody)) : 0.f;
+    }
+
+    bool PhysicsSubsystem::SetAngularVelocity(const EntityID InEntity, const float InDegreesPerSecond)
+    {
+        const BodyHandle lBody = FindOrBuildDynamicBody(InEntity);
+        if (!lBody.IsValid())
+        {
+            return false;
+        }
+
+        m_World->SetAngularVelocity(lBody, Maths::DegreesToRadians(InDegreesPerSecond));
+        return true;
+    }
+
+    bool PhysicsSubsystem::ApplyForce(const EntityID InEntity, const Vector2F InForce)
+    {
+        const BodyHandle lBody = FindOrBuildDynamicBody(InEntity);
+        if (!lBody.IsValid())
+        {
+            return false;
+        }
+
+        m_World->ApplyForce(lBody, InForce);
+        return true;
+    }
+
+    bool PhysicsSubsystem::ApplyImpulse(const EntityID InEntity, const Vector2F InImpulse)
+    {
+        const BodyHandle lBody = FindOrBuildDynamicBody(InEntity);
+        if (!lBody.IsValid())
+        {
+            return false;
+        }
+
+        m_World->ApplyLinearImpulse(lBody, InImpulse);
+        return true;
+    }
+
+    bool PhysicsSubsystem::ApplyTorque(const EntityID InEntity, const float InTorque)
+    {
+        const BodyHandle lBody = FindOrBuildDynamicBody(InEntity);
+        if (!lBody.IsValid())
+        {
+            return false;
+        }
+
+        m_World->ApplyTorque(lBody, InTorque);
+        return true;
+    }
+
+    bool PhysicsSubsystem::ApplyAngularImpulse(const EntityID InEntity, const float InImpulse)
+    {
+        const BodyHandle lBody = FindOrBuildDynamicBody(InEntity);
+        if (!lBody.IsValid())
+        {
+            return false;
+        }
+
+        m_World->ApplyAngularImpulse(lBody, InImpulse);
+        return true;
+    }
+
+    float PhysicsSubsystem::GetMass(const EntityID InEntity) const
+    {
+        const BodyHandle lBody = FindDynamicBody(InEntity);
+        return lBody.IsValid() ? m_World->GetMass(lBody) : 0.f;
     }
 
     // =========================================================================
@@ -443,6 +646,7 @@ namespace Opaax
 
         EventBus& lBus = m_Context->Events.GetEventBus();
 
+        m_BoundsExits.clear();
         m_BoundsVictims.clear();
 
         for (const auto& [lBits, lRecord] : m_Bodies)
@@ -474,13 +678,18 @@ namespace Opaax
             }
 
             m_OutOfBounds.insert(lBits);
+            m_BoundsExits.push_back(BoundsExit{ lBits, lPosition });
+        }
 
-            // Published before removal, so handlers see a live entity.
-            lBus.Publish(PhysicsExitedWorldBounds{ static_cast<EntityID>(lBits), lPosition, &InWorld });
+        // Published after the walk (a handler may build bodies) and before removal (handlers see a
+        // live entity).
+        for (const BoundsExit& lExit : m_BoundsExits)
+        {
+            lBus.Publish(PhysicsExitedWorldBounds{ static_cast<EntityID>(lExit.Bits), lExit.Position, &InWorld });
 
             if (m_WorldBoundsResponse == EWorldBoundsResponse::EventAndDestroy)
             {
-                m_BoundsVictims.push_back(lBits);
+                m_BoundsVictims.push_back(lExit.Bits);
             }
         }
 
