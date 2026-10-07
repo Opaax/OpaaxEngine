@@ -45,7 +45,7 @@ namespace Opaax
 
         m_ScenePipeline = MakeUnique<ScenePipeline2D>();
         m_ScenePipeline->Init(*m_Device, ScenePipelineShaders{ InDesc.TonemapShader, InDesc.ShadowShader,
-                                                               InDesc.AmbientOcclusionShader });
+                                                               InDesc.AmbientOcclusionShader, InDesc.BloomShader });
 
         return true;
     }

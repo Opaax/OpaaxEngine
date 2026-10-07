@@ -117,7 +117,7 @@ namespace Opaax
             OpaaxApplication::GetAppService<IPaths>().EngineToAbsolute("Assets/Shaders/Tonemap.glsl");
         const OpaaxString lTonemapSrc = FileIO::ReadAllText(lTonemapPath);
 
-        // The shadow map and ambient occlusion passes. Without them, there are none (logged).
+        // The shadow map, ambient occlusion and bloom passes. Without them, there are none (logged).
         const OpaaxString lShadowPath =
             OpaaxApplication::GetAppService<IPaths>().EngineToAbsolute("Assets/Shaders/Shadow2D.glsl");
         const OpaaxString lShadowSrc = FileIO::ReadAllText(lShadowPath);
@@ -126,11 +126,16 @@ namespace Opaax
             OpaaxApplication::GetAppService<IPaths>().EngineToAbsolute("Assets/Shaders/AmbientOcclusion2D.glsl");
         const OpaaxString lOcclusionSrc = FileIO::ReadAllText(lOcclusionPath);
 
+        const OpaaxString lBloomPath =
+            OpaaxApplication::GetAppService<IPaths>().EngineToAbsolute("Assets/Shaders/Bloom2D.glsl");
+        const OpaaxString lBloomSrc = FileIO::ReadAllText(lBloomPath);
+
         RenderSystemDesc lDesc;
         lDesc.TonemapShader = lTonemapSrc.IsEmpty() ? ShaderDesc{} : ShaderSource::FromSource(lTonemapSrc, lTonemapPath);
         lDesc.ShadowShader  = lShadowSrc.IsEmpty() ? ShaderDesc{} : ShaderSource::FromSource(lShadowSrc, lShadowPath);
         lDesc.AmbientOcclusionShader =
             lOcclusionSrc.IsEmpty() ? ShaderDesc{} : ShaderSource::FromSource(lOcclusionSrc, lOcclusionPath);
+        lDesc.BloomShader   = lBloomSrc.IsEmpty() ? ShaderDesc{} : ShaderSource::FromSource(lBloomSrc, lBloomPath);
         lDesc.Backend      = ResolveSupportedBackend(lEngineCfg.Render.Backend);
         lDesc.Surface      = lSurface;
         lDesc.Width        = lWindow->GetWidth();

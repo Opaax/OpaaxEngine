@@ -28,7 +28,7 @@ namespace Opaax
         /** Added light in the sprite's own colours, unaffected by the scene's lights. Black: none. */
         LinearColor EmissiveColor = { 0.f, 0.f, 0.f, 1.f };
 
-        /** Above 1 it is brighter than white (HDR). */
+        /** Above 1 it is brighter than white (HDR), and blooms when the Environment has bloom. */
         float EmissiveStrength = 1.f;
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(Material2D, bLit, NormalMap, EmissiveColor, EmissiveStrength)
@@ -39,6 +39,7 @@ namespace Opaax
                                                           "Same layout as the sprite's image or sheet."),
                          OPAAX_PROP(EmissiveColor).SetTooltip("Glow in the sprite's own colours. Black: none."),
                          OPAAX_PROP(EmissiveStrength).SetRange(0.f, 100.f).SetDragStep(0.05f)
-                                                     .SetTooltip("Above 1 it is brighter than white (HDR)."))
+                                                     .SetTooltip("Above 1 it is brighter than white (HDR),\n"
+                                                                 "and blooms when the Environment has bloom."))
     };
 }

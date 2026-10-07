@@ -16,12 +16,13 @@ void main()
 
 layout(location = 0) in vec2 v_UV;
 
-// The scene in linear HDR colour.
+// The scene in linear HDR colour, and its bloom (the light that bleeds around bright spots).
 layout(binding = 0) uniform sampler2D u_Scene;
+layout(binding = 1) uniform sampler2D u_Bloom;
 
 layout(std140, binding = 2) uniform PostUBO
 {
-    // x: exposure multiplier, y: tonemapper (0 none, 1 Reinhard, 2 ACES)
+    // x: exposure multiplier, y: tonemapper (0 none, 1 Reinhard, 2 ACES), z: bloom strength (0 none)
     vec4 u_Post;
 };
 
@@ -40,7 +41,12 @@ vec3 ACESFilm(vec3 InColor)
 
 void main()
 {
-    vec3 lColor = texture(u_Scene, v_UV).rgb * u_Post.x;
+    vec3 lColor = texture(u_Scene, v_UV).rgb;
+    if (u_Post.z > 0.0)
+    {
+        lColor += texture(u_Bloom, v_UV).rgb * u_Post.z;
+    }
+    lColor *= u_Post.x;
 
     int lTonemapper = int(u_Post.y + 0.5);
     if (lTonemapper == 1)

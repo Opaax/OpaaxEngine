@@ -152,7 +152,32 @@ TEST_CASE("Engine shaders: the tonemap shader ports with its scene and post bloc
     REQUIRE(lScene != nullptr);
     CHECK(lScene->Binding == 0);
 
+    const GLSLPort::ResourceBinding* lBloom = Find(lBindings, "u_Bloom");
+    REQUIRE(lBloom != nullptr);
+    CHECK(lBloom->Binding == 1);
+
     const GLSLPort::ResourceBinding* lPost = Find(lBindings, "PostUBO");
     REQUIRE(lPost != nullptr);
     CHECK(lPost->Binding == 2);
+}
+
+TEST_CASE("Engine shaders: the bloom shader ports with its source and block")
+{
+    const std::string lSource = ReadShader("Bloom2D.glsl");
+    REQUIRE_FALSE(lSource.empty());
+
+    const ShaderDesc lDesc = ShaderSource::FromSource(OpaaxString(lSource.c_str()), OpaaxString("Bloom2D.glsl"));
+    REQUIRE_FALSE(lDesc.VertexSrc.IsEmpty());
+    REQUIRE_FALSE(lDesc.FragmentSrc.IsEmpty());
+
+    PortStage(lDesc.VertexSrc);
+    const TDynArray<GLSLPort::ResourceBinding> lBindings = PortStage(lDesc.FragmentSrc);
+
+    const GLSLPort::ResourceBinding* lInput = Find(lBindings, "u_Source");
+    REQUIRE(lInput != nullptr);
+    CHECK(lInput->Binding == 0);
+
+    const GLSLPort::ResourceBinding* lBlock = Find(lBindings, "BloomUBO");
+    REQUIRE(lBlock != nullptr);
+    CHECK(lBlock->Binding == 6);
 }

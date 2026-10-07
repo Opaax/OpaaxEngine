@@ -88,7 +88,7 @@ namespace Opaax
                                                      "rotation, Global everywhere (a sun)."),
                          OPAAX_PROP(Color),
                          OPAAX_PROP(Intensity).SetRange(0.f, 50.f).SetDragStep(0.05f)
-                                              .SetTooltip("Above 1 the light can saturate colours."),
+                                              .SetTooltip("Above 1 the light can saturate colours (and bloom)."),
                          OPAAX_PROP(Radius).SetRange(1.f, 10000.f).SetTooltip("No light beyond. Point and Spot."),
                          OPAAX_PROP(Falloff).SetRange(0.1f, 8.f).SetDragStep(0.05f)
                                             .SetTooltip("How it fades to the radius: 1 linear, 2 quadratic."),

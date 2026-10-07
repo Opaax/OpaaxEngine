@@ -24,6 +24,14 @@ namespace Opaax
         /** The ambient occlusion passes' block (AmbientOcclusionUBO in AmbientOcclusion2D.glsl). */
         constexpr Uint32 AMBIENT_OCCLUSION_UBO_BINDING = 5;
 
+        /** The bloom passes' block (BloomUBO in Bloom2D.glsl). */
+        constexpr Uint32 BLOOM_UBO_BINDING = 6;
+
+        /** The modes of Bloom2D.glsl. */
+        constexpr Uint32 BLOOM_PASS_FIRST_DOWN = 0;
+        constexpr Uint32 BLOOM_PASS_DOWN       = 1;
+        constexpr Uint32 BLOOM_PASS_UP         = 2;
+
         /** The modes of AmbientOcclusion2D.glsl. */
         constexpr Uint32 AO_PASS_SHRINK      = 0;
         constexpr Uint32 AO_PASS_BLUR_ACROSS = 1;
@@ -34,15 +42,37 @@ namespace Opaax
             return !InShader.VertexSrc.IsEmpty() && !InShader.FragmentSrc.IsEmpty();
         }
 
-        /** A fullscreen pass over a target, without blending: every pixel written. */
-        TUniquePtr<IPipeline> MakeFullscreenPipeline(IRHIDevice& InDevice, IShader& InShader, const char* InName)
+        /** A fullscreen pass over a target: every pixel written (or added to, with Additive). */
+        TUniquePtr<IPipeline> MakeFullscreenPipeline(IRHIDevice& InDevice, IShader& InShader, const char* InName,
+                                                     const EBlendMode InBlend = EBlendMode::None)
         {
             PipelineDesc lDesc;
             lDesc.Shader    = &InShader;
-            lDesc.Blend     = EBlendMode::None;
+            lDesc.Blend     = InBlend;
             lDesc.DebugName = InName;
             return InDevice.CreatePipeline(lDesc);
         }
+    }
+
+    TDynArray<BloomLevel2D> MakeBloomLevels2D(const Uint32 InWidth, const Uint32 InHeight)
+    {
+        TDynArray<BloomLevel2D> lLevels;
+
+        BloomLevel2D lLevel{ std::max(InWidth / 2u, 1u), std::max(InHeight / 2u, 1u) };
+        lLevels.push_back(lLevel);
+
+        while (lLevels.size() < MAX_BLOOM_LEVELS_2D)
+        {
+            lLevel.Width  /= 2u;
+            lLevel.Height /= 2u;
+            if (lLevel.Width < 4u || lLevel.Height < 4u)
+            {
+                break;
+            }
+            lLevels.push_back(lLevel);
+        }
+
+        return lLevels;
     }
 
     ScenePipeline2D::ScenePipeline2D()  = default;
@@ -89,6 +119,19 @@ namespace Opaax
             OPAAX_LOG(LogScenePipeline2D, Warn, "No ambient occlusion shader: environments get none");
         }
 
+        if (HasStages(InShaders.Bloom))
+        {
+            m_BloomShader      = InDevice.CreateShader(InShaders.Bloom);
+            m_BloomPipeline    = MakeFullscreenPipeline(InDevice, *m_BloomShader, "ScenePipeline2D::Bloom");
+            m_BloomAddPipeline = MakeFullscreenPipeline(InDevice, *m_BloomShader, "ScenePipeline2D::BloomAdd",
+                                                        EBlendMode::Additive);
+            m_BloomUBO         = InDevice.CreateUniformBuffer(static_cast<Uint32>(sizeof(Vector4F)), BLOOM_UBO_BINDING);
+        }
+        else
+        {
+            OPAAX_LOG(LogScenePipeline2D, Warn, "No bloom shader: environments get none");
+        }
+
         return true;
     }
 
@@ -119,6 +162,13 @@ namespace Opaax
         m_AmbientOcclusionShader.reset();
         m_AmbientOcclusionUBO.reset();
 
+        m_BloomTargets.clear();
+        m_BloomLevels.clear();
+        m_BloomAddPipeline.reset();
+        m_BloomPipeline.reset();
+        m_BloomShader.reset();
+        m_BloomUBO.reset();
+
         m_Device = nullptr;
     }
 
@@ -135,6 +185,11 @@ namespace Opaax
     bool ScenePipeline2D::CanAmbientOcclusion() const noexcept
     {
         return IsReady() && m_AmbientOcclusionPipeline != nullptr && m_AmbientOcclusionUBO != nullptr;
+    }
+
+    bool ScenePipeline2D::CanBloom() const noexcept
+    {
+        return IsReady() && m_BloomPipeline != nullptr && m_BloomAddPipeline != nullptr && m_BloomUBO != nullptr;
     }
 
     // =========================================================================
@@ -168,13 +223,91 @@ namespace Opaax
             return;
         }
 
-        const Vector4F lPost{ std::exp2(InSettings.ExposureStops), static_cast<float>(InSettings.Tonemapper), 0.f, 0.f };
+        // The chain's levels add up: each counts for its share of the strength.
+        const Uint32 lBloomLevels = (InSettings.BloomIntensity > 0.f && CanBloom()) ? BuildBloom(InCmd, InSettings) : 0u;
+        const float  lBloom       = (lBloomLevels > 0) ? InSettings.BloomIntensity / static_cast<float>(lBloomLevels) : 0.f;
+
+        const Vector4F lPost{ std::exp2(InSettings.ExposureStops), static_cast<float>(InSettings.Tonemapper), lBloom, 0.f };
         m_PostUBO->SetData(&lPost, static_cast<Uint32>(sizeof(lPost)));
 
         // Every pixel is written: nothing to clear.
         InCmd.BeginRenderPass(InOutput, ELoadOp::Load, Vector4F{ 0.f, 0.f, 0.f, 1.f });
         InCmd.BindPipeline(*m_TonemapPipeline);
         m_Scene->BindColorTexture(0);
+
+        // Without bloom the unit still holds a texture; the shader does not read it.
+        if (lBloomLevels > 0)
+        {
+            m_BloomLevels[0]->BindColorTexture(1);
+        }
+        else
+        {
+            m_Scene->BindColorTexture(1);
+        }
+
+        InCmd.DrawFullscreen();
+        InCmd.EndRenderPass();
+    }
+
+    // =========================================================================
+    // Bloom
+    // =========================================================================
+    Uint32 ScenePipeline2D::BuildBloom(ICommandBuffer& InCmd, const PostSettings& InSettings)
+    {
+        if (m_Scene == nullptr)
+        {
+            return 0;
+        }
+
+        const TDynArray<BloomLevel2D> lLevels = MakeBloomLevels2D(m_Scene->GetWidth(), m_Scene->GetHeight());
+        const Uint32                  lCount  = static_cast<Uint32>(lLevels.size());
+
+        // The chain follows the scene's size; levels past what it needs now are kept for later.
+        for (Uint32 lIndex = 0; lIndex < lCount; ++lIndex)
+        {
+            if (lIndex >= m_BloomLevels.size())
+            {
+                FramebufferSpec lSpec;
+                lSpec.Width        = lLevels[lIndex].Width;
+                lSpec.Height       = lLevels[lIndex].Height;
+                lSpec.DepthStencil = false;
+                lSpec.ColorFormat  = ETextureFormat::RGBA16F;
+
+                m_BloomLevels.push_back(m_Device->CreateFramebuffer(lSpec));
+                m_BloomTargets.push_back(MakeUnique<OffscreenRenderTarget>(m_BloomLevels.back().get()));
+            }
+            else
+            {
+                m_BloomLevels[lIndex]->Resize(lLevels[lIndex].Width, lLevels[lIndex].Height);
+            }
+        }
+
+        // Down: the bright light into the first level, then halved level by level.
+        RunBloomPass(InCmd, BLOOM_PASS_FIRST_DOWN, InSettings, *m_Scene, *m_BloomTargets[0], false);
+        for (Uint32 lIndex = 1; lIndex < lCount; ++lIndex)
+        {
+            RunBloomPass(InCmd, BLOOM_PASS_DOWN, InSettings, *m_BloomLevels[lIndex - 1], *m_BloomTargets[lIndex], false);
+        }
+
+        // Up: each level blurred into the one above it, added to what it holds.
+        for (Uint32 lIndex = lCount - 1; lIndex > 0; --lIndex)
+        {
+            RunBloomPass(InCmd, BLOOM_PASS_UP, InSettings, *m_BloomLevels[lIndex], *m_BloomTargets[lIndex - 1], true);
+        }
+
+        return lCount;
+    }
+
+    void ScenePipeline2D::RunBloomPass(ICommandBuffer& InCmd, const Uint32 InMode, const PostSettings& InSettings,
+                                       const IFramebuffer& InSource, IRenderTarget& InTarget, const bool bInAdd)
+    {
+        const Vector4F lPass{ static_cast<float>(InMode), InSettings.BloomThreshold, InSettings.BloomSoftness, 0.f };
+        m_BloomUBO->SetData(&lPass, static_cast<Uint32>(sizeof(lPass)));
+
+        // Written whole, or added onto: nothing to clear either way.
+        InCmd.BeginRenderPass(InTarget, ELoadOp::Load, Vector4F{ 0.f, 0.f, 0.f, 1.f });
+        InCmd.BindPipeline(bInAdd ? *m_BloomAddPipeline : *m_BloomPipeline);
+        InSource.BindColorTexture(0);
         InCmd.DrawFullscreen();
         InCmd.EndRenderPass();
     }

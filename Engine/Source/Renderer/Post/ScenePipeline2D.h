@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+
 #include "Core/Log/Logger.h"
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
@@ -28,11 +30,38 @@ namespace Opaax
         float       ExposureStops = 0.f;
         ETonemapper Tonemapper    = ETonemapper::ACES;
 
+        /** 0: no bloom. */
+        float BloomIntensity = 0.f;
+        float BloomThreshold = 1.f;
+        float BloomSoftness  = 0.5f;
+
         static PostSettings From(const EnvironmentComponent& InEnvironment) noexcept
         {
-            return PostSettings{ InEnvironment.Exposure, InEnvironment.Tonemapper };
+            PostSettings lSettings;
+            lSettings.ExposureStops  = InEnvironment.Exposure;
+            lSettings.Tonemapper     = InEnvironment.Tonemapper;
+            lSettings.BloomIntensity = InEnvironment.bBloom ? std::max(InEnvironment.BloomIntensity, 0.f) : 0.f;
+            lSettings.BloomThreshold = std::max(InEnvironment.BloomThreshold, 0.f);
+            lSettings.BloomSoftness  = std::clamp(InEnvironment.BloomSoftness, 0.f, 1.f);
+            return lSettings;
         }
     };
+
+    /** The most levels a bloom chain has. */
+    inline constexpr Uint32 MAX_BLOOM_LEVELS_2D = 6;
+
+    /** One level of a bloom chain, pixels. */
+    struct BloomLevel2D
+    {
+        Uint32 Width  = 1;
+        Uint32 Height = 1;
+    };
+
+    /**
+     * The bloom chain of a scene InWidth x InHeight: half its size, then each level half the one
+     * before while both sides keep 4 pixels, MAX_BLOOM_LEVELS_2D at most. The first level always exists.
+     */
+    TDynArray<BloomLevel2D> MakeBloomLevels2D(Uint32 InWidth, Uint32 InHeight);
 
     /** The shaders of the HDR path. Only the tonemap is required: without another, its feature is off (logged). */
     struct ScenePipelineShaders
@@ -40,6 +69,7 @@ namespace Opaax
         ShaderDesc Tonemap;
         ShaderDesc Shadow;
         ShaderDesc AmbientOcclusion;
+        ShaderDesc Bloom;
     };
 
     // =============================================================================
@@ -48,6 +78,7 @@ namespace Opaax
     //   The shadow casters come first, drawn into an occlusion map. From it, a shadow map holds,
     //   for each shadowed light, how far it gets in every direction, and the ambient occlusion map
     //   how much of the casters surrounds each point (the coverage shrunk, then blurred).
+    //   Bloom is made in the composite: the bright light halved down a chain, then blurred back up.
     //   Owned by the RenderSystem; its targets follow the size of the view being drawn.
     // =============================================================================
     class ScenePipeline2D
@@ -78,6 +109,9 @@ namespace Opaax
         /** Whether BuildAmbientOcclusion can work. */
         bool CanAmbientOcclusion() const noexcept;
 
+        /** Whether the composite can add bloom. */
+        bool CanBloom() const noexcept;
+
         // =============================================================================
         // Frame
         // =============================================================================
@@ -85,7 +119,7 @@ namespace Opaax
         /** The HDR target the world is drawn into, sized InWidth x InHeight. */
         IRenderTarget& PrepareScene(Uint32 InWidth, Uint32 InHeight);
 
-        /** Writes every pixel of InOutput from the scene: exposure, tonemap, gamma. */
+        /** Writes every pixel of InOutput from the scene: bloom, exposure, tonemap, gamma. */
         void Composite(ICommandBuffer& InCmd, IRenderTarget& InOutput, const PostSettings& InSettings);
 
         /** The target the shadow casters are drawn into (coverage), sized InWidth x InHeight. */
@@ -111,6 +145,16 @@ namespace Opaax
         /** One fullscreen pass of the ambient occlusion shader, from InSource into InTarget. */
         void RunAmbientOcclusionPass(ICommandBuffer& InCmd, Uint32 InMode, float InSigma, const IFramebuffer& InSource,
                                      IRenderTarget& InTarget);
+
+        /**
+         * Makes the scene's bloom: down the chain, then back up, added into each level.
+         * @return Levels used (the result is in the first), 0 for none
+         */
+        Uint32 BuildBloom(ICommandBuffer& InCmd, const PostSettings& InSettings);
+
+        /** One fullscreen pass of the bloom shader, from InSource into InTarget (added into it when bInAdd). */
+        void RunBloomPass(ICommandBuffer& InCmd, Uint32 InMode, const PostSettings& InSettings,
+                          const IFramebuffer& InSource, IRenderTarget& InTarget, bool bInAdd);
 
         // =============================================================================
         // Members
@@ -144,5 +188,14 @@ namespace Opaax
         TUniquePtr<IShader>        m_AmbientOcclusionShader;
         TUniquePtr<IPipeline>      m_AmbientOcclusionPipeline;
         TUniquePtr<IUniformBuffer> m_AmbientOcclusionUBO;
+
+        // Bloom: a chain of HDR levels, each half the one before; [0] holds the result.
+        TDynArray<TUniquePtr<IFramebuffer>>          m_BloomLevels;
+        TDynArray<TUniquePtr<OffscreenRenderTarget>> m_BloomTargets;
+
+        TUniquePtr<IShader>        m_BloomShader;
+        TUniquePtr<IPipeline>      m_BloomPipeline;      // writes
+        TUniquePtr<IPipeline>      m_BloomAddPipeline;   // adds (the way back up)
+        TUniquePtr<IUniformBuffer> m_BloomUBO;
     };
 }
