@@ -5,6 +5,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "Audio/AudioTypes.h"
 #include "Core/EngineAPI.h"
 #include "Core/Events/EventBus.h"
 #include "Core/Log/Logger.h"
@@ -384,6 +385,22 @@ namespace Opaax
 
         /** From the collider's density and area. */
         float GetMass() const;
+
+        // =============================================================================
+        // Audio — the world's sounds (they stop when the world ends). Silent without audio.
+        // =============================================================================
+    public:
+        /** Plays a clip, not positioned (music, UI, a pickup): PlaySound("Audio/Coin.wav"). */
+        SoundHandle PlaySound(const OpaaxString& InClipPath, float InVolume = 1.f, float InPitch = 1.f) const;
+
+        /** Plays a clip at a place in the world, heard from the listener (panned, attenuated). */
+        SoundHandle PlaySoundAt(const OpaaxString& InClipPath, const Vector2F& InPosition, float InVolume = 1.f) const;
+
+        void StopSound(SoundHandle InSound) const;
+
+        /** Plays this entity's AudioSourceComponent from the start. */
+        void PlayAudioSource() const;
+        void StopAudioSource() const;
 
         // =============================================================================
         // Input

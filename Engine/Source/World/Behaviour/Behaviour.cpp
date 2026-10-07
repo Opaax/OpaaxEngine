@@ -2,6 +2,7 @@
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"
+#include "Audio/AudioSubsystem.h"
 #include "Engine/EngineEvents.h"
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/InputManager.h"
@@ -347,6 +348,62 @@ namespace Opaax
     {
         const PhysicsSubsystem* lPhysics = GetSubsystem<PhysicsSubsystem>();
         return (lPhysics != nullptr) ? lPhysics->GetMass(m_Entity) : 0.f;
+    }
+
+    // =========================================================================
+    // Audio
+    // =========================================================================
+    SoundHandle Behaviour::PlaySound(const OpaaxString& InClipPath, const float InVolume, const float InPitch) const
+    {
+        AudioSubsystem* lAudio = GetSubsystem<AudioSubsystem>();
+        if (lAudio == nullptr)
+        {
+            return SoundHandle{};
+        }
+
+        PlaySoundParams lParams;
+        lParams.Volume = InVolume;
+        lParams.Pitch  = InPitch;
+        return lAudio->PlaySound(InClipPath, lParams);
+    }
+
+    SoundHandle Behaviour::PlaySoundAt(const OpaaxString& InClipPath, const Vector2F& InPosition, const float InVolume) const
+    {
+        AudioSubsystem* lAudio = GetSubsystem<AudioSubsystem>();
+        if (lAudio == nullptr)
+        {
+            return SoundHandle{};
+        }
+
+        PlaySoundParams lParams;
+        lParams.Volume   = InVolume;
+        lParams.bSpatial = true;
+        lParams.Position = InPosition;
+        return lAudio->PlaySound(InClipPath, lParams);
+    }
+
+    void Behaviour::StopSound(const SoundHandle InSound) const
+    {
+        if (AudioSubsystem* lAudio = GetSubsystem<AudioSubsystem>())
+        {
+            lAudio->Stop(InSound);
+        }
+    }
+
+    void Behaviour::PlayAudioSource() const
+    {
+        if (AudioSubsystem* lAudio = GetSubsystem<AudioSubsystem>())
+        {
+            lAudio->PlaySource(m_Entity);
+        }
+    }
+
+    void Behaviour::StopAudioSource() const
+    {
+        if (AudioSubsystem* lAudio = GetSubsystem<AudioSubsystem>())
+        {
+            lAudio->StopSource(m_Entity);
+        }
     }
 
     // =========================================================================

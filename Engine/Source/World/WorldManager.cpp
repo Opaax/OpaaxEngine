@@ -4,10 +4,12 @@
 #include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IEngine.h"
 #include "Application/Services/IPaths.h"
+#include "Core/Events/EventBus.h"
 #include "Core/Profiling/Profiler.h"   // OPAAX_STAT_SCOPE
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
+#include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/Mapping/InputMappingSubsystem.h"
 #include "UI/UISubsystem.h"
 #include "Engine/Registries/EngineRegistries.h"
@@ -15,6 +17,7 @@
 #include "World/Serialization/MapFactory.h"
 #include "World/Serialization/MapSerializer.h"
 #include "World/Systems/WorldContext.h"
+#include "World/WorldEvents.h"
 
 namespace Opaax
 {
@@ -40,9 +43,26 @@ namespace Opaax
         m_Paths     = &OpaaxApplication::GetAppService<IPaths>();
         m_Config    = &OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>().GetData();
         m_Input     = &lEngine.GetInput();
+        m_Audio     = &lEngine.GetAudio();
         m_GameInstances = &lEngine.GetGameInstances();
 
         return true;
+    }
+
+    void WorldManager::SetPaused(const bool InPaused)
+    {
+        if (m_bPaused == InPaused)
+        {
+            return;
+        }
+
+        m_bPaused = InPaused;
+
+        // Told to whatever runs on its own (audio), since a paused world's subsystems do not tick.
+        if (m_Events != nullptr)
+        {
+            m_Events->GetEventBus().Publish(WorldPauseChanged{ InPaused });
+        }
     }
 
     // =========================================================================
@@ -231,7 +251,7 @@ namespace Opaax
         }
 
         InWorld.SetContext(WorldContext{InWorld, *m_Resources, *m_Paths, *m_Events, *m_Input, *m_Config,
-                                        lActions, lUI, *m_Debug, &m_Registries->Components()});
+                                        lActions, lUI, *m_Debug, &m_Registries->Components(), m_Audio});
 
         WorldContext* lContext = InWorld.GetContext();
         OPAAX_ASSERT(lContext != nullptr);

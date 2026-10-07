@@ -6,6 +6,7 @@
 
 namespace Opaax
 {
+    class AudioManager;
     class EngineEventBus;
     class ResourceManager;
     class WorldManager;
@@ -177,6 +178,11 @@ namespace Opaax
          * Keyboard and mouse state, fed by the application. Read-only for everyone else.
          */
         virtual InputManager& GetInput() = 0;
+
+        /**
+         * The sound mixer and audio device. Headless (silent) when there is no device.
+         */
+        virtual AudioManager& GetAudio() = 0;
 
         // End Foundation subsystems
         // =============================================================================

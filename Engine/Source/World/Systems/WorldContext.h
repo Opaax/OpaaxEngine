@@ -3,6 +3,7 @@
 namespace Opaax
 {
     class World;
+    class AudioManager;
     class ResourceManager;
     class EngineEventBus;
     class DebugDraw;
@@ -61,5 +62,8 @@ namespace Opaax
 
         /** Every registered component and behaviour type. Null in a bare test world. */
         const ComponentRegistry* Components = nullptr;
+
+        /** The sound mixer. Null in a bare test world. */
+        AudioManager* Audio = nullptr;
     };
 }

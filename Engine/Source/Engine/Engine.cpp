@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Application/Services/IJobSystem.h"
 #include "Application/Services/IPaths.h"
+#include "Audio/AudioManager.h"
 #include "Core/Profiling/Profiler.h"
 #include "Platform/IPlatform.h"
 
@@ -81,6 +82,9 @@ namespace Opaax
         m_Subsystems.RegisterSubsystem<ResourceManager>();
         m_Subsystems.RegisterSubsystem<InputManager>();
 
+        // Before the worlds: they stop their sounds when they end, so audio shuts down after them.
+        m_Subsystems.RegisterSubsystem<AudioManager>();
+
         // Before WorldManager: updates run in registration order (session before worlds)
         // and teardown in reverse (worlds destroyed before the session).
         m_Subsystems.RegisterSubsystem<GameInstanceManager>(&m_Registries);
@@ -98,6 +102,7 @@ namespace Opaax
         m_EngineEventBus  = m_Subsystems.GetSubsystem<EngineEventBus>();
         m_WorldManager    = m_Subsystems.GetSubsystem<WorldManager>();
         m_InputManager    = m_Subsystems.GetSubsystem<InputManager>();
+        m_AudioManager    = m_Subsystems.GetSubsystem<AudioManager>();
         m_GameInstances   = m_Subsystems.GetSubsystem<GameInstanceManager>();
     }
     
@@ -650,6 +655,24 @@ namespace Opaax
         return *m_InputManager;
     }
     
+    AudioManager& Engine::GetAudio()
+    {
+        // Look in the manager first (see GetResources).
+        if (m_AudioManager == nullptr)
+        {
+            m_AudioManager = m_Subsystems.GetSubsystem<AudioManager>();
+        }
+
+        if (m_AudioManager == nullptr && !m_bStarted)
+        {
+            Startup();
+            m_AudioManager = m_Subsystems.GetSubsystem<AudioManager>();
+        }
+
+        OPAAX_ASSERT(m_AudioManager != nullptr);
+        return *m_AudioManager;
+    }
+
     DebugDraw& Engine::GetDebugDraw()
     {
         // Look in the manager first (see GetResources).

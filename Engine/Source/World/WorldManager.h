@@ -10,6 +10,7 @@
 
 namespace Opaax
 {
+    class AudioManager;
     class EngineRegistries;
     class ResourceManager;
     class EngineEventBus;
@@ -101,7 +102,7 @@ namespace Opaax
         /**
          * Pauses the active world's tick (editor Pause). Works for any mode.
          */
-        void SetPaused(bool InPaused) noexcept { m_bPaused = InPaused; }
+        void SetPaused(bool InPaused);
         bool IsPaused() const noexcept         { return m_bPaused; }
 
         /**
@@ -167,6 +168,9 @@ namespace Opaax
 
         // This frame's input, given to every WorldContext.
         const InputManager* m_Input = nullptr;
+
+        // The sound mixer, given to every WorldContext.
+        AudioManager* m_Audio = nullptr;
 
         // The running game, if any. Looked up per world (games come and go across Play sessions).
         GameInstanceManager* m_GameInstances = nullptr;

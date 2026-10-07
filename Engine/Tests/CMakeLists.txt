@@ -8,6 +8,9 @@ set(OPAAX_TEST_SOURCES
     Main.cpp
     SmokeTest.cpp
 
+    # Audio
+    Audio/AudioTests.cpp
+
     # Core
     Core/ColorTests.cpp
     Core/Config/EngineConfigDataTests.cpp

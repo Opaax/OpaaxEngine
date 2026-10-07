@@ -14,6 +14,7 @@ namespace Opaax
     class IPlatform;
     class IPaths;
     class ResourceManager;
+    class AudioManager;
     class EngineEventBus;
     class WorldManager;
     class GameInstanceManager;
@@ -151,6 +152,7 @@ namespace Opaax
         GameInstanceManager& GetGameInstances() override;
         DebugDraw&          GetDebugDraw()      override;
         InputManager&       GetInput()          override;
+        AudioManager&       GetAudio()          override;
         //~End IEngine interface
 
         // =============================================================================
@@ -177,6 +179,7 @@ namespace Opaax
         RendererManager*    m_RendererManager = nullptr;
         WorldManager*       m_WorldManager = nullptr;
         InputManager*       m_InputManager = nullptr;
+        AudioManager*       m_AudioManager = nullptr;
         GameInstanceManager* m_GameInstances = nullptr;
 
         //Internal

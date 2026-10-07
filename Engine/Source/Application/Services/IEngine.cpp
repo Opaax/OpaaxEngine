@@ -1,5 +1,7 @@
 #include "Application/Services/IEngine.h"
 
+#include "Audio/AudioManager.h"
+
 #include "Engine/GameInstance/GameInstanceManager.h"
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/InputManager.h"
@@ -88,6 +90,13 @@ namespace Opaax
             {
                 static DebugDraw s_NullDebugDraw;
                 return s_NullDebugDraw;
+            }
+
+            // Never started: every sound is refused.
+            AudioManager& GetAudio() override
+            {
+                static AudioManager s_NullAudio{ AudioManager::Desc{} };
+                return s_NullAudio;
             }
         };
     }

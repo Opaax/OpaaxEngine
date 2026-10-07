@@ -42,6 +42,12 @@ namespace Opaax
         World* NewWorld = nullptr;
     };
 
+    /** The active world's tick was paused or resumed (WorldManager::SetPaused, the editor's Pause). */
+    struct WorldPauseChanged
+    {
+        bool bPaused = false;
+    };
+
     // =============================================================================
     // Delegates broadcast by WorldManager (safe to bind/unbind during a broadcast).
     // =============================================================================

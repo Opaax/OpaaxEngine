@@ -129,20 +129,51 @@ namespace Opaax
         OPAAX_PROPERTIES(StatsSettings, OPAAX_PROP(EnableInShipBuild))
     };
 
+    struct AudioSettings
+    {
+        /** Off: no audio device is opened; sounds play silently (a server, a headless run). */
+        bool bEnabled = true;
+
+        /** Linear volumes. Each bus is under the master. */
+        float MasterVolume   = 1.f;
+        float MusicVolume    = 1.f;
+        float EffectsVolume  = 1.f;
+        float AmbienceVolume = 1.f;
+        float UIVolume       = 1.f;
+
+        /** Sounds playing at once; one more is refused (with a warning). */
+        Uint32 MaxVoices = 64;
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(AudioSettings, bEnabled, MasterVolume, MusicVolume,
+                                                    EffectsVolume, AmbienceVolume, UIVolume, MaxVoices)
+
+        OPAAX_PROPERTIES(AudioSettings,
+                         OPAAX_PROP(bEnabled).SetFlags(EPropertyFlags::NeedRestart)
+                                             .SetTooltip("Off: no audio device; sounds play silently."),
+                         OPAAX_PROP(MasterVolume).SetRange(0.f, 1.f),
+                         OPAAX_PROP(MusicVolume).SetRange(0.f, 1.f),
+                         OPAAX_PROP(EffectsVolume).SetRange(0.f, 1.f),
+                         OPAAX_PROP(AmbienceVolume).SetRange(0.f, 1.f),
+                         OPAAX_PROP(UIVolume).SetRange(0.f, 1.f),
+                         OPAAX_PROP(MaxVoices).SetRange(1.f, 512.f).SetFlags(EPropertyFlags::NeedRestart))
+    };
+
     struct EngineConfigData
     {
         WindowSettings  Window;
         RenderSettings  Render;
         PhysicsSettings Physics;
+        AudioSettings   Audio;
         StatsSettings   Stats;
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(EngineConfigData, Window, Render, Physics, Stats)
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(EngineConfigData, Window, Render, Physics, Audio, Stats)
 
-        // NeedRestart on groups read at startup. Render is mixed, so only Backend has the flag.
+        // NeedRestart on groups read at startup. Render and Audio are mixed, so only some fields have it.
         OPAAX_PROPERTIES(EngineConfigData,
                          OPAAX_PROP(Window).SetFlags(EPropertyFlags::NeedRestart),
                          OPAAX_PROP(Render),
                          OPAAX_PROP(Physics).SetFlags(EPropertyFlags::NeedRestart),
+                         OPAAX_PROP(Audio),
                          OPAAX_PROP(Stats).SetFlags(EPropertyFlags::NeedRestart))
     };
 }
