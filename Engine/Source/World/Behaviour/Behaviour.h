@@ -1,32 +1,124 @@
 #pragma once
 
 #include <concepts>
+#include <type_traits>
 
 #include <nlohmann/json.hpp>
 
 #include "Core/EngineAPI.h"
+#include "Core/Events/EventBus.h"
 #include "Core/Log/Logger.h"
+#include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/Reflection/TypeInfo.h"
+#include "Core/String/OpaaxString.hpp"
 #include "Engine/Reflection/PropertyJson.h"
+#include "Input/InputCodes.h"
+#include "World/Entity/Entity.h"
+#include "World/World.h"
+
+// =============================================================================
+// ================================== USAGE ====================================
+// =============================================================================
+// A behaviour is gameplay logic on an entity: a class with its own fields (saved like a
+// component's, from OPAAX_PROPERTIES) and lifecycle hooks. One of each type per entity.
+//
+//   class Coin : public Opaax::Behaviour
+//   {
+//   public:
+//       Opaax::Int32 Value = 1;
+//       OPAAX_PROPERTIES(Coin, OPAAX_PROP(Value))
+//
+//       void OnStart() override { Listen<&Coin::OnOverlap>(); }
+//       void OnOverlap(const Opaax::OverlapBegan& InEvent) { Destroy(); }
+//   };
+//   OPAAX_REGISTER_BEHAVIOUR(Coin);
+//
+// Lifecycle (Play worlds only), the same whatever created the entity (map load, Play copy,
+// Spawn, code):
+//   OnStart       once, after the entity's whole batch exists, before any update or event
+//   OnUpdate      every frame          OnFixedUpdate  every fixed step, before physics
+//   OnDestroy     once, for every started behaviour, whatever ended it. The entity still has all
+//                 its components, and the behaviour can still spawn, send and broadcast
+//                 (IsWorldEnding() tells the end of the level from a gameplay destroy).
+// Destroying an entity from gameplay code (Destroy) is deferred to the end of the current pass.
+// =============================================================================
+// ================================ END USAGE ==================================
+// =============================================================================
 
 namespace Opaax
 {
+    class Behaviour;
+    class BehaviourSubsystem;
+    class DebugDraw;
+    class InputManager;
+    struct TransformComponent;
+    struct WorldContext;
+
     inline constexpr LogCategory LogBehaviour{"Behaviour"};
 
+    /** Calls a behaviour's event handler with an untyped event. */
+    using FBehaviourEventThunk = void (*)(Behaviour&, const void*);
+
+    /** Calls a behaviour's timer handler. */
+    using FBehaviourTimerThunk = void (*)(Behaviour&);
+
+    /**
+     * An entity event that climbs the parent chain after its target, until a handler calls
+     * StopPropagation(). Opt in with `static constexpr bool Bubbles = true;` in the event struct.
+     */
+    template<typename E>
+    concept CBubblingEvent = requires { { E::Bubbles } -> std::convertible_to<bool>; } && E::Bubbles;
+
+    /** Identifies a timer, for ClearTimer. Zero is no timer. */
+    struct TimerHandle
+    {
+        Uint64 Id = 0;
+
+        bool IsValid() const noexcept { return Id != 0; }
+    };
+
+    namespace BehaviourDetail
+    {
+        /** The class and event type of a handler `void (C::*)(const E&)`. */
+        template<typename TMethod>
+        struct TEventMethodTraits;
+
+        template<typename C, typename E>
+        struct TEventMethodTraits<void (C::*)(const E&)>
+        {
+            using Class = C;
+            using Event = E;
+        };
+
+        /** The class of a handler `void (C::*)()`. */
+        template<typename TMethod>
+        struct TTimerMethodTraits;
+
+        template<typename C>
+        struct TTimerMethodTraits<void (C::*)()>
+        {
+            using Class = C;
+        };
+
+        template<typename C, typename E, auto Method>
+        void CallEventHandler(Behaviour& InSelf, const void* InEvent)
+        {
+            (static_cast<C&>(InSelf).*Method)(*static_cast<const E*>(InEvent));
+        }
+
+        template<typename C, auto Method>
+        void CallTimerHandler(Behaviour& InSelf)
+        {
+            (static_cast<C&>(InSelf).*Method)();
+        }
+    }
+
     // =============================================================================
-    // Behaviour — gameplay logic on an entity: a class with its own fields and lifecycle hooks.
-    //   Stored and saved like a component: only the fields listed in OPAAX_PROPERTIES are saved.
-    //   Register with Behaviours().Register<T>(). One of each type per entity.
-    //
-    //     struct Coin : Opaax::Behaviour
-    //     {
-    //         Int32 Value = 1;
-    //         OPAAX_PROPERTIES(Coin, OPAAX_PROP(Value))
-    //
-    //         void OnUpdate(float InDeltaTime) override { ... }
-    //     };
+    // Behaviour — the base of every gameplay behaviour. See the usage notes above.
+    //   Stored like a component (entt): instances never move, so `this` stays valid for the
+    //   behaviour's whole life. Copies carry the fields, never the runtime binding.
     // =============================================================================
     class Behaviour
     {
@@ -45,11 +137,11 @@ namespace Opaax
 
     protected:
         // Protected: a behaviour cannot be copied or moved as a plain Behaviour (no slicing).
-        Behaviour()                                = default;
-        Behaviour(const Behaviour&)                = default;
-        Behaviour(Behaviour&&) noexcept            = default;
-        Behaviour& operator=(const Behaviour&)     = default;
-        Behaviour& operator=(Behaviour&&) noexcept = default;
+        Behaviour() = default;
+        Behaviour(const Behaviour&) noexcept {}
+        Behaviour(Behaviour&&) noexcept {}
+        Behaviour& operator=(const Behaviour&) noexcept { return *this; }
+        Behaviour& operator=(Behaviour&&) noexcept { return *this; }
 
         // =============================================================================
         // Lifecycle
@@ -61,11 +153,272 @@ namespace Opaax
         /** Every frame. */
         virtual void OnUpdate(float /*InDeltaTime*/) {}
 
-        /** Every fixed step, with physics. */
+        /** Every fixed step, before physics. */
         virtual void OnFixedUpdate(float /*InFixedDeltaTime*/) {}
 
-        /** Once, when the behaviour or its entity ends. Only if OnStart ran. */
+        /** Once, when the behaviour or its entity ends, the entity still whole. Only if OnStart ran. */
         virtual void OnDestroy() {}
+
+        // =============================================================================
+        // Entity
+        // =============================================================================
+    public:
+        /** The entity this behaviour is on. Invalid before OnStart. */
+        Entity GetEntity() const noexcept { return Entity(m_Entity, m_World); }
+
+        /** The world the entity lives in. Valid from OnStart to OnDestroy. */
+        World& GetWorld() const;
+
+        /** True between OnStart and OnDestroy. */
+        bool IsStarted() const noexcept { return m_bStarted && !m_bEnded; }
+
+        /** The entity's name. */
+        const OpaaxString& GetEntityName() const;
+
+        /** A component (or behaviour) on this entity, or null. */
+        template<typename T>
+        T* TryGet() const
+        {
+            return (m_World != nullptr) ? m_World->GetRegistry().try_get<T>(m_Entity) : nullptr;
+        }
+
+        /** A component on this entity that must exist. */
+        template<typename T>
+        T& Get() const { return m_World->GetRegistry().get<T>(m_Entity); }
+
+        template<typename T>
+        bool Has() const { return m_World != nullptr && m_World->GetRegistry().all_of<T>(m_Entity); }
+
+        /** Adds a component (or behaviour) to this entity. A behaviour starts at the next start point. */
+        template<typename T, typename... TArgs>
+        T& Add(TArgs&&... InArgs)
+        {
+            return m_World->GetRegistry().get_or_emplace<T>(m_Entity, Forward<TArgs>(InArgs)...);
+        }
+
+        /** Removes a component; a behaviour is removed at the end of the current pass. */
+        template<typename T>
+        void Remove()
+        {
+            if constexpr (std::derived_from<T, Behaviour>) { RemoveBehaviourLater(TypeIdOf<T>()); }
+            else                                           { m_World->GetRegistry().remove<T>(m_Entity); }
+        }
+
+        // =============================================================================
+        // Transform (local to the parent; the World variants compose the parent chain)
+        // =============================================================================
+    public:
+        TransformComponent& GetTransform() const;
+
+        Vector2F GetPosition() const;
+        void     SetPosition(const Vector2F& InPosition);
+
+        /** Degrees, counter-clockwise. */
+        float GetRotation() const;
+        void  SetRotation(float InDegrees);
+
+        Vector2F GetWorldPosition() const;
+        void     SetWorldPosition(const Vector2F& InPosition);
+
+        // =============================================================================
+        // Creating and destroying
+        // =============================================================================
+    public:
+        /** Destroys this entity (and its children) at the end of the current pass. */
+        void Destroy();
+
+        /** Destroys InEntity (and its children) at the end of the current pass. */
+        void Destroy(Entity InEntity) const;
+
+        /** Destroys this entity after InSeconds. */
+        void DestroyAfter(float InSeconds);
+
+        /** A new empty entity (runtime-spawned: never saved). */
+        Entity CreateEntity(const OpaaxString& InName = OpaaxString("Entity")) const;
+
+        /**
+         * An instance of a prefab, its root at InPosition. Its behaviours have started when this
+         * returns, so the caller can Send to it on the next line.
+         * @param InPrefabPath Asset-relative ("Prefabs/Bullet.opaaxprefab")
+         * @return The root entity, or an invalid Entity if the prefab cannot be loaded
+         */
+        Entity Spawn(const OpaaxString& InPrefabPath, const Vector2F& InPosition, float InRotationDegrees = 0.f) const;
+
+        // =============================================================================
+        // Finding
+        // =============================================================================
+    public:
+        /** The first entity named InName, or an invalid Entity. */
+        Entity FindEntity(const OpaaxString& InName) const;
+
+        /** The first started behaviour of type T in the world, or null. */
+        template<typename T>
+        T* FindBehaviour() const
+        {
+            T* lFound = nullptr;
+            for (const auto [lEntity, lBehaviour] : m_World->GetRegistry().view<T>().each())
+            {
+                if (lBehaviour.IsStarted()) { lFound = &lBehaviour; break; }
+            }
+            return lFound;
+        }
+
+        /** Calls InFunc(T&) for every started behaviour of type T in the world. */
+        template<typename T, typename TFunc>
+        void ForEachBehaviour(TFunc&& InFunc) const
+        {
+            for (const auto [lEntity, lBehaviour] : m_World->GetRegistry().view<T>().each())
+            {
+                if (lBehaviour.IsStarted()) { InFunc(lBehaviour); }
+            }
+        }
+
+        /** The parent entity, or an invalid Entity for a root. */
+        Entity GetParent() const;
+
+        /** Attaches this entity under InParent (invalid detaches). Keeps the world pose by default. */
+        void SetParent(Entity InParent, bool bInKeepWorldPose = true);
+
+        // =============================================================================
+        // Entity events — targeted, typed, delivered immediately
+        // =============================================================================
+    public:
+        /** Delivers InEvent to the behaviours on InTarget that Listen for E. */
+        template<typename E>
+        void Send(Entity InTarget, const E& InEvent) const
+        {
+            SendErased(InTarget.GetHandle(), TypeIdOf<E>(), &InEvent, CBubblingEvent<E>);
+        }
+
+        /**
+         * Starts receiving events of the handler's type sent to this entity, until OnDestroy:
+         *   Listen<&Door::OnOpen>();   // void Door::OnOpen(const OpenDoor&)
+         */
+        template<auto Method>
+        void Listen()
+        {
+            using Traits = BehaviourDetail::TEventMethodTraits<decltype(Method)>;
+            using Class  = typename Traits::Class;
+            using Event  = typename Traits::Event;
+            static_assert(std::derived_from<Class, Behaviour>, "Listen: the handler must be a behaviour's member.");
+
+            ListenErased(TypeIdOf<Event>(), TypeIdOf<Class>(), &BehaviourDetail::CallEventHandler<Class, Event, Method>);
+        }
+
+        /** Inside a handler of a bubbling event: the event goes no further up the parent chain. */
+        void StopPropagation() const;
+
+        // =============================================================================
+        // Global events — the engine EventBus, for "whoever cares"
+        // =============================================================================
+    public:
+        /** Publishes InEvent on the engine EventBus, now. */
+        template<typename E>
+        void Broadcast(const E& InEvent) const
+        {
+            static_assert(std::is_trivially_copyable_v<E>, "EventBus payloads must be trivially-copyable structs");
+            BroadcastErased(Detail::EventTypeKey<E>(), &InEvent);
+        }
+
+        /**
+         * Receives every E published on the engine EventBus until OnDestroy:
+         *   Subscribe<&Hud::OnScore>();   // void Hud::OnScore(const ScoreChanged&)
+         */
+        template<auto Method>
+        void Subscribe()
+        {
+            using Traits = BehaviourDetail::TEventMethodTraits<decltype(Method)>;
+            using Class  = typename Traits::Class;
+            using Event  = typename Traits::Event;
+            static_assert(std::derived_from<Class, Behaviour>, "Subscribe: the handler must be a behaviour's member.");
+            static_assert(std::is_trivially_copyable_v<Event>, "EventBus payloads must be trivially-copyable structs");
+
+            SubscribeErased(Detail::EventTypeKey<Event>(), TypeIdOf<Class>(),
+                            &BehaviourDetail::CallEventHandler<Class, Event, Method>);
+        }
+
+        // =============================================================================
+        // Timers — world time, checked once per frame after the updates; cleared at OnDestroy
+        // =============================================================================
+    public:
+        /** Calls Method after InSeconds (every InSeconds if bInRepeat): SetTimer<&Turret::Fire>(0.5f, true). */
+        template<auto Method>
+        TimerHandle SetTimer(float InSeconds, bool bInRepeat = false)
+        {
+            using Class = typename BehaviourDetail::TTimerMethodTraits<decltype(Method)>::Class;
+            static_assert(std::derived_from<Class, Behaviour>, "SetTimer: the handler must be a behaviour's member.");
+
+            return SetTimerErased(InSeconds, bInRepeat, TypeIdOf<Class>(),
+                                  &BehaviourDetail::CallTimerHandler<Class, Method>, {});
+        }
+
+        /** Calls InCallback after InSeconds (every InSeconds if bInRepeat). */
+        TimerHandle SetTimer(float InSeconds, TFunction<void()> InCallback, bool bInRepeat = false);
+
+        void ClearTimer(TimerHandle InHandle);
+
+        // =============================================================================
+        // Input
+        // =============================================================================
+    public:
+        const InputManager& GetInput() const;
+
+        bool IsKeyDown(EKeyCode InKey) const;
+
+        /** True on the frame the key went down. */
+        bool WasKeyPressed(EKeyCode InKey) const;
+
+        /** True on the frame the key went up. */
+        bool WasKeyReleased(EKeyCode InKey) const;
+
+        // =============================================================================
+        // Time and game
+        // =============================================================================
+    public:
+        /** In OnDestroy: true when the whole world is ending (level change, quit), not just this entity. */
+        bool IsWorldEnding() const;
+
+        /** Seconds the world has been playing. */
+        double GetTime() const;
+
+        /** This frame's delta time, in seconds. */
+        float GetDeltaTime() const;
+
+        /** Opens a level at the start of the next frame (asset-relative .opaaxlevel). */
+        void OpenLevel(const OpaaxString& InLevelPath) const;
+
+        /** Closes the game at the start of the next frame (the editor stops Play instead). */
+        void QuitGame() const;
+
+        /** Debug shapes, drawn this frame only. */
+        DebugDraw& GetDebugDraw() const;
+
+        /** The world's services (resources, paths, input, event bus, ...). */
+        WorldContext& GetContext() const;
+
+        // =============================================================================
+        // Runtime binding (set by BehaviourSubsystem)
+        // =============================================================================
+    private:
+        friend class BehaviourSubsystem;
+
+        void SendErased(EntityID InTarget, TypeId InEventType, const void* InEvent, bool bInBubbles) const;
+        void ListenErased(TypeId InEventType, TypeId InBehaviourType, FBehaviourEventThunk InThunk);
+        void BroadcastErased(Uint64 InEventKey, const void* InEvent) const;
+        void SubscribeErased(Uint64 InEventKey, TypeId InBehaviourType, FBehaviourEventThunk InThunk);
+        TimerHandle SetTimerErased(float InSeconds, bool bInRepeat, TypeId InBehaviourType,
+                                   FBehaviourTimerThunk InThunk, TFunction<void()> InCallback);
+        void RemoveBehaviourLater(TypeId InBehaviourType);
+
+        /** The runtime this behaviour is started in. Logs and returns null before OnStart and after OnDestroy. */
+        BehaviourSubsystem* RequireRuntime(const char* InWhat) const;
+
+        EntityID            m_Entity   = ENTITY_NONE;
+        World*              m_World    = nullptr;
+        BehaviourSubsystem* m_Runtime  = nullptr;   // set at OnStart, cleared after OnDestroy
+        TypeId              m_Type     = 0;
+        bool                m_bStarted = false;
+        bool                m_bEnded   = false;
     };
 
     /**

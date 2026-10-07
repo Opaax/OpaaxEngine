@@ -56,6 +56,10 @@ namespace Opaax::Editor
     public:
         void PostEngineStartup() override;
         void OnEvent(Event& InEvent) override;
+
+    protected:
+        /** A game asking to quit stops Play; the editor stays open. */
+        void OnQuitGameRequested() override;
         //~End OpaaxApplication Interface
     };
 }

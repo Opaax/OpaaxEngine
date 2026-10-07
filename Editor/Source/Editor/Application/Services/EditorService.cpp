@@ -971,6 +971,14 @@ namespace Opaax::Editor
     // =============================================================================
     // =============================================================================
     
+    void EditorService::StopPlay()
+    {
+        if (m_PIE != nullptr && !m_PIE->IsEdit())
+        {
+            m_PIE->Stop();
+        }
+    }
+
     void EditorService::RegisterExtensions(const TFunction<void(EditorExtensionRegistrar&)>& InCollect)
     {
         RegisterNativePanels();

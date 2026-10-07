@@ -123,7 +123,14 @@ namespace Opaax
             OPAAX_LOG(LogWorld, Warn, "DestroyEntity — invalid entity ignored");
             return;
         }
-        
+
+        // Announced while the entity and its children are whole. A listener may destroy it itself.
+        m_OnEntityDestroying.Broadcast(InEntity);
+        if (!m_Registry.valid(InEntity))
+        {
+            return;
+        }
+
         if (const EntityMeta* lMeta = m_Registry.try_get<EntityMeta>(InEntity))
         {
             // Cascade: children die with their parent. Collected first (destroying inside the view is unsafe).
@@ -136,11 +143,18 @@ namespace Opaax
                 if (InChild.Parent == lId) { lChildren.emplace_back(InId); }
             });
 
-            for (const EntityID lChild : lChildren) { DestroyEntity(lChild); }
+            // A listener may have destroyed a sibling, or this entity, meanwhile.
+            for (const EntityID lChild : lChildren)
+            {
+                if (m_Registry.valid(lChild)) { DestroyEntity(lChild); }
+            }
         }
 
-        m_Registry.destroy(InEntity);
-        RemoveEntityCount();
+        if (m_Registry.valid(InEntity))
+        {
+            m_Registry.destroy(InEntity);
+            RemoveEntityCount();
+        }
     }
 
     Entity World::FindByGuid(const Guid& InGuid)
@@ -165,6 +179,19 @@ namespace Opaax
 
     void World::Clear() noexcept
     {
+        // Every entity is announced first, in no particular order. Collected first: a listener may
+        // create or destroy entities.
+        if (m_OnEntityDestroying.IsBound())
+        {
+            TDynArray<EntityID> lEntities;
+            m_Registry.view<EntityMeta>().each([&](const EntityID InId, const EntityMeta&) { lEntities.emplace_back(InId); });
+
+            for (const EntityID lEntity : lEntities)
+            {
+                if (m_Registry.valid(lEntity)) { m_OnEntityDestroying.Broadcast(lEntity); }
+            }
+        }
+
         m_Registry.clear();
         m_Guids.Clear();
         m_EntityCount = 0;

@@ -10,6 +10,7 @@ namespace Opaax
     class InputManager;
     class InputMappingSubsystem;
     class UISubsystem;
+    class ComponentRegistry;
     struct EngineConfigData;
 
     // =============================================================================
@@ -57,5 +58,8 @@ namespace Opaax
          * Debug shapes, cleared every frame: submit every frame. The only way a world subsystem draws.
          */
         DebugDraw& Debug;
+
+        /** Every registered component and behaviour type. Null in a bare test world. */
+        const ComponentRegistry* Components = nullptr;
     };
 }

@@ -80,6 +80,15 @@ namespace Opaax
                 });
         }
 
+        /**
+         * Subscribes a handler that receives the payload untyped, for code that only knows the event
+         * by its key (Detail::EventTypeKey<T>()). @return Handle for Unsubscribe.
+         */
+        DelegateHandle SubscribeErased(Uint64 InTypeKey, void* InOwner, TFunction<void(const void*)> InHandler)
+        {
+            return SubscribeImpl(InTypeKey, InOwner, Move(InHandler));
+        }
+
         /** Remove one subscription by handle. @return true if removed. */
         bool Unsubscribe(DelegateHandle InHandle);
 
@@ -98,6 +107,12 @@ namespace Opaax
                 "EventBus payloads must be trivially-copyable POD structs");
 
             PublishImpl(Detail::EventTypeKey<TEvent>(), &InEvent);
+        }
+
+        /** Dispatches now, by key. InPayload must point to an event of the type InTypeKey names. */
+        void PublishErased(Uint64 InTypeKey, const void* InPayload)
+        {
+            PublishImpl(InTypeKey, InPayload);
         }
 
         /**

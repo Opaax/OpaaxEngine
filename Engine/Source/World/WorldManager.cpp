@@ -231,7 +231,7 @@ namespace Opaax
         }
 
         InWorld.SetContext(WorldContext{InWorld, *m_Resources, *m_Paths, *m_Events, *m_Input, *m_Config,
-                                        lActions, lUI, *m_Debug});
+                                        lActions, lUI, *m_Debug, &m_Registries->Components()});
 
         WorldContext* lContext = InWorld.GetContext();
         OPAAX_ASSERT(lContext != nullptr);

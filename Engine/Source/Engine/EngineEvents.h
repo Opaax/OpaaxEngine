@@ -25,4 +25,10 @@ namespace Opaax
 
     /** The level change is done: the new world is active and the old one is gone. */
     struct LevelLoadFinished {};
+
+    /**
+     * Gameplay asked to quit (Behaviour::QuitGame). Queued, so it arrives at the start of the next
+     * frame, outside any world update. The game host closes its window; the editor stops Play instead.
+     */
+    struct QuitGameRequested {};
 }

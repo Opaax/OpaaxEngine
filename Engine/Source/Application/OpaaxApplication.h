@@ -149,6 +149,12 @@ namespace Opaax
         virtual void PostEngineStartup(){}
         
         void EngineTeardown();
+
+    protected:
+        /** Gameplay asked to quit (QuitGameRequested). Closes the main window; the editor stops Play. */
+        virtual void OnQuitGameRequested();
+
+    public:
         
         // Engine
         // =============================================================================

@@ -55,6 +55,9 @@ namespace Opaax::Editor
          */
         virtual void RegisterExtensions(const TFunction<void(EditorExtensionRegistrar&)>& InCollect) = 0;
 
+        /** Stops Play In Editor if it is running or paused (a game asking to quit). */
+        virtual void StopPlay() = 0;
+
         //----- null object ----------------------------------------------------
         static IEditorService& Null();
     };

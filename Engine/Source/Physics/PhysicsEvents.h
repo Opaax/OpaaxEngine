@@ -5,6 +5,8 @@
 
 namespace Opaax
 {
+    class World;
+
     // =============================================================================
     // PhysicsEvents.h — events published on the EventBus by PhysicsSubsystem after each step.
     //   Published immediately (not enqueued), right after the step that produced them.
@@ -21,6 +23,9 @@ namespace Opaax
     {
         EntityID OverlapEntity = ENTITY_NONE;
         EntityID OtherEntity   = ENTITY_NONE;
+
+        /** The world whose physics produced the event. */
+        const World* SourceWorld = nullptr;
     };
 
     /**
@@ -30,6 +35,9 @@ namespace Opaax
     {
         EntityID OverlapEntity = ENTITY_NONE;
         EntityID OtherEntity   = ENTITY_NONE;
+
+        /** The world whose physics produced the event. */
+        const World* SourceWorld = nullptr;
     };
 
     /** A visitor left a sensor. Same fields as Began. */
@@ -37,6 +45,9 @@ namespace Opaax
     {
         EntityID OverlapEntity = ENTITY_NONE;
         EntityID OtherEntity   = ENTITY_NONE;
+
+        /** The world whose physics produced the event. */
+        const World* SourceWorld = nullptr;
     };
 
     // =============================================================================
@@ -49,6 +60,9 @@ namespace Opaax
     {
         EntityID EntityA = ENTITY_NONE;
         EntityID EntityB = ENTITY_NONE;
+
+        /** The world whose physics produced the event. */
+        const World* SourceWorld = nullptr;
     };
 
     /** Two solid colliders stopped touching. Same fields as Began. */
@@ -56,6 +70,9 @@ namespace Opaax
     {
         EntityID EntityA = ENTITY_NONE;
         EntityID EntityB = ENTITY_NONE;
+
+        /** The world whose physics produced the event. */
+        const World* SourceWorld = nullptr;
     };
 
     // =============================================================================
@@ -70,5 +87,8 @@ namespace Opaax
     {
         EntityID Entity       = ENTITY_NONE;
         Vector2F LastPosition = { 0.f, 0.f };
+
+        /** The world whose physics produced the event. */
+        const World* SourceWorld = nullptr;
     };
 }

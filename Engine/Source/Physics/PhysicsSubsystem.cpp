@@ -303,7 +303,7 @@ namespace Opaax
 
             m_LiveOverlaps[PairKey(lPair.EntityA, lPair.EntityB)] = lPair;
 
-            lBus.Publish(PhysicsOverlapBegan{ lSensor, lVisitor });
+            lBus.Publish(PhysicsOverlapBegan{ lSensor, lVisitor, &InWorld });
         }
 
         // ---- overlap: Ended, before Stayed ----------------------------------------------------
@@ -319,7 +319,7 @@ namespace Opaax
                 continue;
             }
 
-            lBus.Publish(PhysicsOverlapEnded{ lSensor, lVisitor });
+            lBus.Publish(PhysicsOverlapEnded{ lSensor, lVisitor, &InWorld });
         }
 
         // ---- overlap: Stayed -------------------------------------------------------------------
@@ -337,7 +337,7 @@ namespace Opaax
                 continue;
             }
 
-            lBus.Publish(PhysicsOverlapStayed{ lSensor, lVisitor });
+            lBus.Publish(PhysicsOverlapStayed{ lSensor, lVisitor, &InWorld });
         }
 
         for (const Uint64 lKey : m_StaleOverlaps)
@@ -356,7 +356,7 @@ namespace Opaax
                 continue;
             }
 
-            lBus.Publish(PhysicsCollisionBegan{ lA, lB });
+            lBus.Publish(PhysicsCollisionBegan{ lA, lB, &InWorld });
         }
 
         for (const PhysicsContactPair& lPair : m_ContactEnded)
@@ -369,7 +369,7 @@ namespace Opaax
                 continue;
             }
 
-            lBus.Publish(PhysicsCollisionEnded{ lA, lB });
+            lBus.Publish(PhysicsCollisionEnded{ lA, lB, &InWorld });
         }
     }
 
@@ -476,7 +476,7 @@ namespace Opaax
             m_OutOfBounds.insert(lBits);
 
             // Published before removal, so handlers see a live entity.
-            lBus.Publish(PhysicsExitedWorldBounds{ static_cast<EntityID>(lBits), lPosition });
+            lBus.Publish(PhysicsExitedWorldBounds{ static_cast<EntityID>(lBits), lPosition, &InWorld });
 
             if (m_WorldBoundsResponse == EWorldBoundsResponse::EventAndDestroy)
             {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
+#include "Core/Events/Delegate.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/Log/Logger.h"
@@ -20,6 +21,8 @@ namespace Opaax
     class Level;
 
     inline constexpr LogCategory LogWorld{"World"};
+
+    DECLARE_MULTICAST_DELEGATE_OneParam(FOnEntityDestroying, EntityID /*Entity*/)
 
     // =============================================================================
     // World — a runtime simulation container (the ECS boundary). Owns its EntityRegistry,
@@ -92,7 +95,13 @@ namespace Opaax
          * @return The entity with InGuid, or an invalid Entity if unknown
          */
         Entity FindByGuid(const Guid& InGuid);
-        
+
+        /**
+         * Broadcast with each entity about to be destroyed (DestroyEntity, Clear), while it still has
+         * all its components. DestroyEntity announces a parent before its children.
+         */
+        FOnEntityDestroying& OnEntityDestroying() noexcept { return m_OnEntityDestroying; }
+
         // End Entity
         // =========================================================================
 
@@ -234,6 +243,7 @@ namespace Opaax
 
         EntityRegistry m_Registry;
         WorldGuidRegistry   m_Guids;
+        FOnEntityDestroying m_OnEntityDestroying;
         Guid           m_Id;
         OpaaxString    m_Name;
         EWorldMode     m_Mode = EWorldMode::Play; // set in the ctor only

@@ -116,6 +116,11 @@ namespace Opaax::Editor
         }
     }
     
+    void EditorApplication::OnQuitGameRequested()
+    {
+        Editor().StopPlay();
+    }
+
     void EditorApplication::OnEvent(Event& InEvent)
     {
         if (Editor().RouteInput(InEvent))

@@ -52,6 +52,7 @@ set(OPAAX_TEST_SOURCES
     Resources/ResourceSystemTests.cpp
 
     # World
+    World/BehaviourRuntimeTests.cpp
     World/BehaviourStorageTests.cpp
     World/ComponentIdentityTests.cpp
     World/ComponentRegistryTests.cpp

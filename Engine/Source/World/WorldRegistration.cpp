@@ -1,5 +1,6 @@
 // The World module's types. Each registers itself; see Engine/Registries/AutoRegistration.h.
 #include "Engine/Registries/AutoRegistration.h"
+#include "World/Behaviour/BehaviourSubsystem.h"
 #include "World/Components/PrefabInstanceComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Prefab/PrefabResource.hpp"
@@ -19,4 +20,7 @@ namespace Opaax
 
     // A prefab is loaded once, however many instances a level places.
     OPAAX_REGISTER_NAMED_RESOURCE(PrefabResource, "Prefab");
+
+    // Runs gameplay behaviours in Play worlds, before physics so what they apply is simulated this step.
+    OPAAX_REGISTER_NAMED_WORLD_SUBSYSTEM(BehaviourSubsystem, "Behaviours", WorldSubsystemOrder::Gameplay);
 }

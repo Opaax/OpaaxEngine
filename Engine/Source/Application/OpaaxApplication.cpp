@@ -11,6 +11,7 @@
 #include "Application/Services/IJobSystem.h"
 
 #include "Engine/Config/Config_Engine.h"
+#include "Engine/EngineEvents.h"
 #include "Engine/Engine.h"
 #include "Engine/Registries/ModuleRegistrar.h"
 #include "World/WorldManager.h"
@@ -331,6 +332,10 @@ void OpaaxApplication::EngineStartup()
     // 1. Start every subsystem. No world exists yet, so the registries stay open.
     Engine().Startup();
 
+    // Gameplay may ask to quit; the host decides what quitting means.
+    Engine().GetEngineEventBus().GetEventBus().Subscribe<QuitGameRequested>(
+        [this](const QuitGameRequested&) { OnQuitGameRequested(); });
+
     // 2. Content types: engine first, then the game modules.
     PopulateEngineRegistries();
     RegisterModules(*m_ModuleRegistrar);
@@ -364,6 +369,16 @@ WorldSpec OpaaxApplication::GetStartupWorldSpec() const
     lSpec.Mode      = EWorldMode::Play;
 
     return lSpec;
+}
+
+void OpaaxApplication::OnQuitGameRequested()
+{
+    OPAAX_APP_LOG(Info, "Quit requested by the game");
+
+    if (Window* lWindow = WindowManager().GetMainWindow())
+    {
+        lWindow->RequestClose();
+    }
 }
 
 void OpaaxApplication::EngineTeardown()

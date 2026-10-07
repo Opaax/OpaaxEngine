@@ -15,12 +15,28 @@
 #include "World/Components/ComponentConcept.hpp"
 #include "World/Entity/EntityTypes.h"
 
+#include <concepts>
 #include <tuple>       // std::apply
 #include <type_traits>
 
 namespace Opaax
 {
+    class Behaviour;
+
     inline constexpr LogCategory LogComponentRegistry{"ComponentRegistry"};
+
+    // =============================================================================
+    // IBehaviourSignalSink — told when a behaviour is added to or removed from an entity (the
+    //   behaviour runtime). Removal is reported while the behaviour still exists.
+    // =============================================================================
+    class IBehaviourSignalSink
+    {
+    public:
+        virtual ~IBehaviourSignalSink() = default;
+
+        virtual void OnBehaviourConstructed(EntityID InEntity, TypeId InType) = 0;
+        virtual void OnBehaviourDestroyed(EntityID InEntity, TypeId InType, Behaviour& InBehaviour) = 0;
+    };
 
     /** One hard resource field of a component: its JSON key and resource type id. */
     struct HardRefField
@@ -83,6 +99,24 @@ namespace Opaax
          * @return False when InEntity has no such component, or the type is not reflected
          */
         virtual bool VisitProperties(EntityRegistry& InRegistry, EntityID InEntity, IPropertyVisitor& InVisitor) const = 0;
+
+        // =========================================================================
+        // Behaviours (types deriving from Behaviour). The defaults answer for data components.
+        // =========================================================================
+
+        /** True when the type derives from Behaviour. */
+        virtual bool IsBehaviour() const { return false; }
+
+        /** InEntity's behaviour of this type, or null (also for a data component). */
+        virtual Behaviour* TryGetBehaviour(EntityRegistry& /*InRegistry*/, EntityID /*InEntity*/) const { return nullptr; }
+
+        /** Every instance of this behaviour type in InRegistry. */
+        virtual void ForEachBehaviour(EntityRegistry& /*InRegistry*/,
+                                      const TFunction<void(EntityID, Behaviour&)>& /*InFunc*/) const {}
+
+        /** Reports this behaviour type's additions and removals to InSink until disconnected. */
+        virtual void ConnectBehaviourSignals(EntityRegistry& /*InRegistry*/, IBehaviourSignalSink& /*InSink*/) const {}
+        virtual void DisconnectBehaviourSignals(EntityRegistry& /*InRegistry*/, IBehaviourSignalSink& /*InSink*/) const {}
     };
 
     // =============================================================================
@@ -154,6 +188,67 @@ namespace Opaax
                 }
             }
             return false;
+        }
+
+        bool IsBehaviour() const override { return std::derived_from<T, Behaviour>; }
+
+        Behaviour* TryGetBehaviour(EntityRegistry& InRegistry, EntityID InEntity) const override
+        {
+            if constexpr (std::derived_from<T, Behaviour>)
+            {
+                return InRegistry.try_get<T>(InEntity);
+            }
+            else
+            {
+                return nullptr;
+            }
+        }
+
+        void ForEachBehaviour(EntityRegistry& InRegistry,
+                              const TFunction<void(EntityID, Behaviour&)>& InFunc) const override
+        {
+            if constexpr (std::derived_from<T, Behaviour>)
+            {
+                for (const auto [lEntity, lBehaviour] : InRegistry.view<T>().each())
+                {
+                    InFunc(lEntity, lBehaviour);
+                }
+            }
+        }
+
+        void ConnectBehaviourSignals(EntityRegistry& InRegistry, IBehaviourSignalSink& InSink) const override
+        {
+            if constexpr (std::derived_from<T, Behaviour>)
+            {
+                InRegistry.on_construct<T>().template connect<&TComponentEntry::OnBehaviourConstructed>(InSink);
+                InRegistry.on_destroy<T>().template connect<&TComponentEntry::OnBehaviourDestroyed>(InSink);
+            }
+        }
+
+        void DisconnectBehaviourSignals(EntityRegistry& InRegistry, IBehaviourSignalSink& InSink) const override
+        {
+            if constexpr (std::derived_from<T, Behaviour>)
+            {
+                InRegistry.on_construct<T>().template disconnect<&TComponentEntry::OnBehaviourConstructed>(InSink);
+                InRegistry.on_destroy<T>().template disconnect<&TComponentEntry::OnBehaviourDestroyed>(InSink);
+            }
+        }
+
+    private:
+        static void OnBehaviourConstructed(IBehaviourSignalSink& InSink, EntityRegistry& /*InRegistry*/, EntityID InEntity)
+        {
+            InSink.OnBehaviourConstructed(InEntity, TypeIdOf<T>());
+        }
+
+        static void OnBehaviourDestroyed(IBehaviourSignalSink& InSink, EntityRegistry& InRegistry, EntityID InEntity)
+        {
+            if constexpr (std::derived_from<T, Behaviour>)
+            {
+                if (T* lBehaviour = InRegistry.try_get<T>(InEntity))
+                {
+                    InSink.OnBehaviourDestroyed(InEntity, TypeIdOf<T>(), *lBehaviour);
+                }
+            }
         }
 
     private:
