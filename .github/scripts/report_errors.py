@@ -15,6 +15,10 @@ MSVC = re.compile(r"^\s*(?:\d+>)?(?P<file>[^\s].*?)\((?P<line>\d+)(?:,(?P<col>\d
 CMAKE = re.compile(r"^CMake Error at (?P<file>[^:]+):(?P<line>\d+)")
 LINKER = re.compile(r"(undefined reference to|unresolved external symbol|ld: symbol\(s\) not found|error LNK\d+)")
 
+# When nothing above matched (a failed custom command, a killed compiler), the last lines that look
+# like a failure are reported instead.
+FALLBACK = re.compile(r"(error|\*\*\*|failed|killed|segmentation fault|abort)", re.IGNORECASE)
+
 
 def main():
     log = Path(sys.argv[1])
@@ -22,9 +26,10 @@ def main():
         print("no build log")
         return
 
+    lines = log.read_text(encoding="utf-8", errors="replace").splitlines()
     seen = set()
     errors = []
-    for raw in log.read_text(encoding="utf-8", errors="replace").splitlines():
+    for raw in lines:
         line = raw.rstrip()
         for pattern in (GCC, MSVC, CMAKE):
             match = pattern.match(line)
@@ -41,6 +46,11 @@ def main():
                 errors.append(("", "", line))
 
     print(f"{len(errors)} distinct error(s) in the build log")
+
+    if not errors:
+        failures = [line.strip() for line in lines if FALLBACK.search(line)]
+        errors = [("", "", line) for line in failures[-10:]]
+        print(f"no compiler or linker error recognised; reporting the last {len(errors)} failure line(s)")
 
     root = str(Path.cwd()).replace("\\", "/") + "/"
     for index, (file, line, msg) in enumerate(errors[:30]):

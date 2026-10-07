@@ -3,6 +3,7 @@
 // (exe-dir) branches — with zero dependency on build-time defines. The Paths ctor is
 // then smoke-tested with an absolute --project (workspace-independent, so deterministic
 // regardless of the suite's own OPAAX_WORKSPACE_DIR).
+// Fixture paths are built with Abs(): "W:/repo" is absolute on Windows only.
 #include <doctest.h>
 
 #include <algorithm>
@@ -31,6 +32,16 @@ namespace
     private:
         OpaaxString m_Exe;
     };
+
+    /** An absolute path on this platform: "<InDrive>:/<InRest>" on Windows, "/<InRest>" elsewhere. */
+    OpaaxString Abs(const char* InRest, [[maybe_unused]] const char InDrive = 'W')
+    {
+#ifdef OPAAX_PLATFORM_WINDOWS
+        return OpaaxString((std::string(1, InDrive) + ":/" + InRest).c_str());
+#else
+        return OpaaxString((std::string("/") + InRest).c_str());
+#endif
+    }
 }
 
 // =============================================================================
@@ -40,65 +51,78 @@ TEST_CASE("ResolveProjectLayout: editor build resolves to the SOURCE workspace, 
 {
     // Editor: workspace dir is baked (source tree); the binary lives in a build output dir.
     const ProjectLayout lLayout = ResolveProjectLayout(
-        OpaaxString("W:/repo/build/bin/Debug/Game.exe"),
-        OpaaxString("W:/repo"),   // OPAAX_WORKSPACE_DIR
+        Abs("repo/build/bin/Debug/Game.exe"),
+        Abs("repo"),              // OPAAX_WORKSPACE_DIR
         OpaaxString());           // no --project
 
-    CHECK(lLayout.WorkspaceRoot == "W:/repo");
-    CHECK(lLayout.EngineRoot    == "W:/repo/Engine");
-    CHECK(lLayout.ProjectRoot   == "W:/repo/Game");          // SOURCE folder, not .../build/bin/Debug
-    CHECK(lLayout.ProjectFile   == "W:/repo/Game/Game.opaaxproj");
-    CHECK(lLayout.AssetsDir     == "W:/repo/Game/Assets");
-    CHECK(lLayout.ConfigsDir    == "W:/repo/Game/Configs");
-    CHECK(lLayout.SaveDir       == "W:/repo/Game/Save");
+    CHECK(lLayout.WorkspaceRoot == Abs("repo"));
+    CHECK(lLayout.EngineRoot    == Abs("repo/Engine"));
+    CHECK(lLayout.ProjectRoot   == Abs("repo/Game"));          // SOURCE folder, not .../build/bin/Debug
+    CHECK(lLayout.ProjectFile   == Abs("repo/Game/Game.opaaxproj"));
+    CHECK(lLayout.AssetsDir     == Abs("repo/Game/Assets"));
+    CHECK(lLayout.ConfigsDir    == Abs("repo/Game/Configs"));
+    CHECK(lLayout.SaveDir       == Abs("repo/Game/Save"));
 }
 
 TEST_CASE("ResolveProjectLayout: release build (no workspace) anchors on the executable dir")
 {
     const ProjectLayout lLayout = ResolveProjectLayout(
-        OpaaxString("W:/deploy/bin/Game.exe"),
+        Abs("deploy/bin/Game.exe"),
         OpaaxString(),            // release -> empty
         OpaaxString());
 
-    CHECK(lLayout.WorkspaceRoot == "W:/deploy/bin");
-    CHECK(lLayout.EngineRoot    == "W:/deploy/bin/Engine");
-    CHECK(lLayout.ProjectRoot   == "W:/deploy/bin/Game");
-    CHECK(lLayout.ProjectFile   == "W:/deploy/bin/Game/Game.opaaxproj");
+    CHECK(lLayout.WorkspaceRoot == Abs("deploy/bin"));
+    CHECK(lLayout.EngineRoot    == Abs("deploy/bin/Engine"));
+    CHECK(lLayout.ProjectRoot   == Abs("deploy/bin/Game_Data"));
+    CHECK(lLayout.ProjectFile   == Abs("deploy/bin/Game_Data/Game.opaaxproj"));
+    CHECK(lLayout.AssetsDir     == Abs("deploy/bin/Game_Data/Assets"));
+}
+
+TEST_CASE("ResolveProjectLayout: a shipped executable without extension does not share its project folder's name")
+{
+    // Linux and macOS: the executable "Game" and a folder "Game" cannot sit in the same directory.
+    const ProjectLayout lLayout = ResolveProjectLayout(
+        Abs("deploy/bin/Game"),
+        OpaaxString(),
+        OpaaxString());
+
+    CHECK(lLayout.ProjectRoot == Abs("deploy/bin/Game_Data"));
+    CHECK(lLayout.ProjectFile == Abs("deploy/bin/Game_Data/Game.opaaxproj"));
 }
 
 TEST_CASE("ResolveProjectLayout: AppName tracks the executable stem")
 {
     const ProjectLayout lLayout = ResolveProjectLayout(
-        OpaaxString("W:/repo/build/bin/Debug/Sandbox.exe"),
-        OpaaxString("W:/repo"),
+        Abs("repo/build/bin/Debug/Sandbox.exe"),
+        Abs("repo"),
         OpaaxString());
 
-    CHECK(lLayout.ProjectRoot == "W:/repo/Sandbox");
-    CHECK(lLayout.ProjectFile == "W:/repo/Sandbox/Sandbox.opaaxproj");
+    CHECK(lLayout.ProjectRoot == Abs("repo/Sandbox"));
+    CHECK(lLayout.ProjectFile == Abs("repo/Sandbox/Sandbox.opaaxproj"));
 }
 
 TEST_CASE("ResolveProjectLayout: relative --project resolves under the workspace root")
 {
     const ProjectLayout lLayout = ResolveProjectLayout(
-        OpaaxString("W:/repo/build/bin/Debug/Game.exe"),
-        OpaaxString("W:/repo"),
+        Abs("repo/build/bin/Debug/Game.exe"),
+        Abs("repo"),
         OpaaxString("Sandbox/Sandbox.opaaxproj")); // workspace-relative
 
-    CHECK(lLayout.ProjectRoot == "W:/repo/Sandbox");
-    CHECK(lLayout.ProjectFile == "W:/repo/Sandbox/Sandbox.opaaxproj");
-    CHECK(lLayout.AssetsDir   == "W:/repo/Sandbox/Assets");
+    CHECK(lLayout.ProjectRoot == Abs("repo/Sandbox"));
+    CHECK(lLayout.ProjectFile == Abs("repo/Sandbox/Sandbox.opaaxproj"));
+    CHECK(lLayout.AssetsDir   == Abs("repo/Sandbox/Assets"));
 }
 
 TEST_CASE("ResolveProjectLayout: absolute --project overrides the workspace")
 {
     const ProjectLayout lLayout = ResolveProjectLayout(
-        OpaaxString("W:/repo/build/bin/Debug/Game.exe"),
-        OpaaxString("W:/repo"),
-        OpaaxString("D:/external/Cool/Cool.opaaxproj")); // absolute -> wins
+        Abs("repo/build/bin/Debug/Game.exe"),
+        Abs("repo"),
+        Abs("external/Cool/Cool.opaaxproj", 'D')); // absolute -> wins
 
-    CHECK(lLayout.ProjectRoot == "D:/external/Cool");
-    CHECK(lLayout.ProjectFile == "D:/external/Cool/Cool.opaaxproj");
-    CHECK(lLayout.SaveDir     == "D:/external/Cool/Save");
+    CHECK(lLayout.ProjectRoot == Abs("external/Cool", 'D'));
+    CHECK(lLayout.ProjectFile == Abs("external/Cool/Cool.opaaxproj", 'D'));
+    CHECK(lLayout.SaveDir     == Abs("external/Cool/Save", 'D'));
 }
 
 // =============================================================================
@@ -106,20 +130,21 @@ TEST_CASE("ResolveProjectLayout: absolute --project overrides the workspace")
 // =============================================================================
 TEST_CASE("Paths: ctor + resolvers (absolute --project is workspace-independent)")
 {
-    StubPlatform lPlatform(OpaaxString("W:/deploy/bin/Game.exe"));
+    StubPlatform lPlatform(Abs("deploy/bin/Game.exe"));
+    std::string  lProject(Abs("proj/MyGame/MyGame.opaaxproj").CStr());
+
     char  lArg0[] = "Game.exe";
     char  lArg1[] = "--project";
-    char  lArg2[] = "W:/proj/MyGame/MyGame.opaaxproj";
-    char* lArgv[] = { lArg0, lArg1, lArg2 };
+    char* lArgv[] = { lArg0, lArg1, lProject.data() };
 
     const Paths lPaths(lPlatform, 3, lArgv);
 
-    CHECK(lPaths.ProjectRoot() == "W:/proj/MyGame");
-    CHECK(lPaths.AssetsDir()   == "W:/proj/MyGame/Assets");
+    CHECK(lPaths.ProjectRoot() == Abs("proj/MyGame"));
+    CHECK(lPaths.AssetsDir()   == Abs("proj/MyGame/Assets"));
     CHECK(lPaths.AssetToAbsolute(OpaaxString("Scenes/Main.opaaxscene"))
-          == "W:/proj/MyGame/Assets/Scenes/Main.opaaxscene");
+          == Abs("proj/MyGame/Assets/Scenes/Main.opaaxscene"));
     CHECK(lPaths.ProjectToAbsolute(OpaaxString("Source/Player.cpp"))
-          == "W:/proj/MyGame/Source/Player.cpp");
+          == Abs("proj/MyGame/Source/Player.cpp"));
 
     // EngineRoot depends on the suite's own workspace (editor define) — assert shape only.
     const std::string lEngineRel = lPaths.EngineToAbsolute(OpaaxString("Assets/Shaders")).CStr();
@@ -139,7 +164,7 @@ TEST_CASE("Paths: AbsoluteToAsset is the inverse of AssetToAbsolute")
     fs::remove_all(lRoot, lError);
     fs::create_directories(lRoot / "Assets" / "Maps", lError);
 
-    StubPlatform lPlatform(OpaaxString("W:/deploy/bin/Game.exe"));
+    StubPlatform lPlatform(Abs("deploy/bin/Game.exe"));
     std::string  lProject = (lRoot / "MyGame.opaaxproj").string();
 
     char  lArg0[] = "Game.exe";
@@ -183,11 +208,12 @@ TEST_CASE("Paths: AbsoluteToAsset is the inverse of AssetToAbsolute")
 // =============================================================================
 TEST_CASE("Paths: ENGINE_MOUNT resolves against the engine's assets, not the project's")
 {
-    StubPlatform lPlatform(OpaaxString("W:/deploy/bin/Game.exe"));
+    StubPlatform lPlatform(Abs("deploy/bin/Game.exe"));
+    std::string  lProject(Abs("proj/MyGame/MyGame.opaaxproj").CStr());
+
     char  lArg0[] = "Game.exe";
     char  lArg1[] = "--project";
-    char  lArg2[] = "W:/proj/MyGame/MyGame.opaaxproj";
-    char* lArgv[] = { lArg0, lArg1, lArg2 };
+    char* lArgv[] = { lArg0, lArg1, lProject.data() };
 
     const Paths lPaths(lPlatform, 3, lArgv);
 
@@ -202,14 +228,14 @@ TEST_CASE("Paths: ENGINE_MOUNT resolves against the engine's assets, not the pro
     SUBCASE("an UNPREFIXED path is untouched — every existing .opaaxmap stays valid")
     {
         CHECK(lPaths.AssetToAbsolute(OpaaxString("Textures/Hero.png"))
-              == "W:/proj/MyGame/Assets/Textures/Hero.png");
+              == Abs("proj/MyGame/Assets/Textures/Hero.png"));
     }
 
     SUBCASE("a path merely CONTAINING the mount word is project content")
     {
         // The discriminator is the leading '/', not the word: a project folder may be called Engine.
         CHECK(lPaths.AssetToAbsolute(OpaaxString("Engine/Notes.png"))
-              == "W:/proj/MyGame/Assets/Engine/Notes.png");
+              == Abs("proj/MyGame/Assets/Engine/Notes.png"));
     }
 }
 
@@ -226,7 +252,7 @@ TEST_CASE("Paths: AbsoluteToAsset names engine content by its mount")
     fs::remove_all(lRoot, lError);
     fs::create_directories(lRoot / "Assets" / "Textures", lError);
 
-    StubPlatform lPlatform(OpaaxString("W:/deploy/bin/Game.exe"));
+    StubPlatform lPlatform(Abs("deploy/bin/Game.exe"));
     std::string  lProject = (lRoot / "MyGame.opaaxproj").string();
 
     char  lArg0[] = "Game.exe";

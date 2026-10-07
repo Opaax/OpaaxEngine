@@ -11,7 +11,11 @@
 #
 # Ship builds (OPAAX_DEV_BUILD=OFF) copy the project and engine content next to the executable and
 # declare install rules, so `cmake --install <build> --component <Name> --prefix <dir>` produces a
-# folder that runs on another machine.
+# folder that runs on another machine:
+#
+#   <Name>(.exe)                      the game
+#   <Name>_Data/                      <Name>.opaaxproj, Assets/, Configs/
+#   Engine/Assets/                    engine content
 # =============================================================================
 function(opaax_add_game InName)
     set(lRoot "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -101,9 +105,11 @@ function(_opaax_generate_module_types InName InModuleDir)
     target_sources(${InName}Module PRIVATE "${lFile}")
 endfunction()
 
-# Copies the project and the engine content next to the executable after each build.
+# Copies the project and the engine content next to the executable after each build. The project
+# goes in <Name>_Data (see SHIPPED_PROJECT_DIR_SUFFIX in IPaths.h): on Linux and macOS the
+# executable has no extension, so a <Name> folder would collide with it.
 function(_opaax_deploy_game_content InName InRoot)
-    set(lProjectDest "$<TARGET_FILE_DIR:${InName}>/${InName}")
+    set(lProjectDest "$<TARGET_FILE_DIR:${InName}>/${InName}_Data")
 
     add_custom_command(TARGET ${InName} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory "${lProjectDest}"
@@ -127,11 +133,11 @@ endfunction()
 # Install rules used by the export: one install component per game.
 function(_opaax_install_game InName InRoot)
     install(TARGETS ${InName} RUNTIME DESTINATION . COMPONENT ${InName})
-    install(FILES "${InRoot}/${InName}.opaaxproj" DESTINATION ${InName} COMPONENT ${InName})
+    install(FILES "${InRoot}/${InName}.opaaxproj" DESTINATION ${InName}_Data COMPONENT ${InName})
 
     foreach(lDir Assets Configs)
         if(EXISTS "${InRoot}/${lDir}")
-            install(DIRECTORY "${InRoot}/${lDir}" DESTINATION ${InName} COMPONENT ${InName})
+            install(DIRECTORY "${InRoot}/${lDir}" DESTINATION ${InName}_Data COMPONENT ${InName})
         endif()
     endforeach()
 

@@ -23,6 +23,16 @@
                     "message": 3
                 }
             ]
+        },
+        {
+            "owner": "opaax-doctest-values",
+            "severity": "warning",
+            "pattern": [
+                {
+                    "regexp": "^\\s+values:\\s+(.*)$",
+                    "message": 1
+                }
+            ]
         }
     ]
 }

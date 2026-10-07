@@ -96,7 +96,8 @@ namespace Opaax
                                         ? lExeDir
                                         : Utf8::ToFsPath(InWorkspaceDir);
 
-        // --project (relative to the workspace), else <workspace>/<AppName>/<AppName>.opaaxproj.
+        // --project (relative to the workspace), else <workspace>/<AppName>/<AppName>.opaaxproj in a
+        // dev build and <exe dir>/<AppName>_Data/<AppName>.opaaxproj in a ship build.
         fs::path lProjFile;
         if (!InProjectArg.IsEmpty())
         {
@@ -105,9 +106,15 @@ namespace Opaax
         }
         else
         {
+            fs::path lProjDir = lAppName;
+            if (InWorkspaceDir.IsEmpty())
+            {
+                lProjDir += SHIPPED_PROJECT_DIR_SUFFIX;
+            }
+
             fs::path lLeaf = lAppName;
             lLeaf += ".opaaxproj";
-            lProjFile = lWorkspace / lAppName / lLeaf;
+            lProjFile = lWorkspace / lProjDir / lLeaf;
         }
         lProjFile = lProjFile.lexically_normal();
 

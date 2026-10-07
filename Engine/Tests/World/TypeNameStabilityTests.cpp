@@ -3,6 +3,8 @@
 // entt: any difference would change the keys written in map files.
 #include <doctest.h>
 
+#include <string>
+
 #include <entt/entt.hpp>
 
 #include "Core/Reflection/TypeInfo.h"
@@ -27,7 +29,10 @@ namespace
     template<typename T>
     void CheckSameAsEntt()
     {
-        CHECK(TypeNameOf<T>() == entt::type_name<T>::value());
+        // As strings, so a failure prints both names.
+        const std::string lOurs(TypeNameOf<T>());
+        const std::string lEntt(entt::type_name<T>::value());
+        CHECK(lOurs == lEntt);
     }
 }
 

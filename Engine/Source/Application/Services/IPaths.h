@@ -20,15 +20,20 @@ namespace Opaax
         OpaaxString ConfigsDir;      // <ProjectRoot>/Configs   
         OpaaxString SourceDir;       // <ProjectRoot>/Source 
         OpaaxString SaveDir;         // <ProjectRoot>/Save 
-        OpaaxString TempDir;         // <ProjectRoot>/Temp 
+        OpaaxString TempDir;         // <ProjectRoot>/Temp
     };
+
+    /** A ship build's project folder, next to the executable, is <ExeName> followed by this. */
+    inline constexpr const char* SHIPPED_PROJECT_DIR_SUFFIX = "_Data";
 
     /**
      * Resolves every engine and project directory. No OS calls.
      * @param InExePath Absolute path to the running executable
      * @param InWorkspaceDir Source workspace in dev builds; empty in release (uses the exe directory)
-     * @param InProjectArg Value of --project (relative to the workspace), or empty for
-     *   <WorkspaceRoot>/<ExeName>/<ExeName>.opaaxproj
+     * @param InProjectArg Value of --project (relative to the workspace), or empty for the default:
+     *   dev build:  <WorkspaceRoot>/<ExeName>/<ExeName>.opaaxproj (the project's source folder)
+     *   ship build: <WorkspaceRoot>/<ExeName>_Data/<ExeName>.opaaxproj. Not <ExeName>/: an
+     *   executable has no extension on Linux and macOS, so a folder named like it cannot sit next to it.
      */
     ProjectLayout ResolveProjectLayout(const OpaaxString& InExePath,
                                                  const OpaaxString& InWorkspaceDir,
