@@ -86,6 +86,8 @@ namespace Opaax::Editor
 
         ViewportOverlays::EnqueueSelectionOutline(
             m_Context.Engine.GetDebugDraw(), *lWorld, m_Context.PrefabDocument.Selection().Ids(), lAnchor);
+        ViewportOverlays::EnqueueLightGizmos(
+            m_Context.Engine.GetDebugDraw(), *lWorld, m_Context.PrefabDocument.Selection().Ids(), lAnchor);
         ViewportOverlays::EnqueueEntityIcons(m_Context.Engine.GetDebugDraw(), *lWorld, lAnchor);
 
         // This panel's own world, framed by this panel's camera.

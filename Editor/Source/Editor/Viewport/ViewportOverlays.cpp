@@ -1,9 +1,14 @@
 #include "Editor/Viewport/ViewportOverlays.h"
 
+#include <algorithm>
+
 #include "Core/Maths/Bounds2D.h"
 #include "Renderer/CameraView.h"
+#include "Renderer/Components/Light2DComponent.h"
 #include "Renderer/DebugDraw.h"
+#include "Renderer/Lighting/Light2DGizmo.h"
 #include "World/Entity/Entity.h"
+#include "World/Entity/EntityHierarchy.h"   // the light's world pose
 #include "World/Entity/EntityMeta.h"    // the all-entities view, for icons
 #include "World/Entity/EntityQuery.h"   // entity bounds for outline and icon
 #include "World/World.h"
@@ -21,6 +26,24 @@ namespace Opaax::Editor::ViewportOverlays
         constexpr float    k_IconHalfPx    = 9.f;
         constexpr Vector4F k_IconColor     = { 0.55f, 0.75f, 1.f, 1.f };
         constexpr float    k_IconThickness = 2.f;
+
+        // A light's reach, in screen pixels: line thickness, and a global light's arrow length.
+        constexpr float k_LightThicknessPx = 1.5f;
+        constexpr float k_LightArrowPx     = 60.f;
+
+        /** The light's colour at full brightness (black, which lights nothing, shows white). */
+        Vector4F GizmoColor(const Light2DComponent& InLight)
+        {
+            const LinearColor& lColor = InLight.Color;
+            const float        lPeak  = std::max(lColor.r, std::max(lColor.g, lColor.b));
+            const float        lAlpha = InLight.bEnabled ? 0.9f : 0.35f;
+
+            if (lPeak < 0.05f)
+            {
+                return Vector4F{ 1.f, 1.f, 1.f, lAlpha };
+            }
+            return Vector4F{ lColor.r / lPeak, lColor.g / lPeak, lColor.b / lPeak, lAlpha };
+        }
     }
 
     float AnchorHalfExtent(const CameraView& InView, const Vector2F& InViewportPx)
@@ -73,6 +96,39 @@ namespace Opaax::Editor::ViewportOverlays
                               DebugChannels::Default, &InWorld);
             ++lDrawn;
         });
+
+        return lDrawn;
+    }
+
+    Uint64 EnqueueLightGizmos(DebugDraw& InDraw, World& InWorld, const TDynArray<EntityID>& InIds,
+                              const float InAnchorHalfExtent)
+    {
+        // The anchor is k_IconHalfPx pixels: the gizmo keeps its on-screen size at any zoom.
+        const float lPixel = InAnchorHalfExtent / k_IconHalfPx;
+
+        TDynArray<GizmoLine2D> lLines;
+        Uint64                 lDrawn = 0;
+
+        for (const EntityID lId : InIds)
+        {
+            Entity                        lEntity{ lId, &InWorld };
+            const Light2DComponent* const lLight = lEntity.TryGet<Light2DComponent>();
+            if (lLight == nullptr)
+            {
+                continue;
+            }
+
+            const TransformComponent lPose = EntityHierarchy::WorldTransform(lEntity);
+            BuildLight2DGizmo(*lLight, lPose.Position, lPose.Rotation, k_LightArrowPx * lPixel, lLines);
+
+            const Vector4F lColor = GizmoColor(*lLight);
+            for (const GizmoLine2D& lLine : lLines)
+            {
+                InDraw.DrawLine(lLine.Start, lLine.End, lColor, k_LightThicknessPx * lPixel, ERenderLayer::Debug,
+                                DebugChannels::Default, &InWorld);
+            }
+            ++lDrawn;
+        }
 
         return lDrawn;
     }

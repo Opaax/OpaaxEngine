@@ -321,6 +321,8 @@ namespace Opaax::Editor
 
         ViewportOverlays::EnqueueSelectionOutline(
             m_Context.Engine.GetDebugDraw(), *lWorld, m_Context.Selection.Ids(), AnchorHalfExtent());
+        ViewportOverlays::EnqueueLightGizmos(
+            m_Context.Engine.GetDebugDraw(), *lWorld, m_Context.Selection.Ids(), AnchorHalfExtent());
     }
 
     void ViewportPanel::EnqueueEntityIcons()

@@ -12,6 +12,7 @@
 #include "Renderer/Components/Light2DComponent.h"
 #include "Renderer/Components/ShadowCaster2DComponent.h"
 #include "Renderer/Components/SpriteComponent.h"
+#include "Renderer/Lighting/Light2DGizmo.h"
 #include "Renderer/Lighting/Lighting2D.h"
 #include "Renderer/Materials/Material2D.h"
 
@@ -344,6 +345,89 @@ TEST_CASE("Ambient occlusion: its map reaches past an occlusion map that is not 
     CHECK(lBlock.AORect.z == doctest::Approx(1004.f));
     CHECK(lBlock.AORect.w == doctest::Approx(600.f));
     CHECK(lBlock.AOParams.x == doctest::Approx(0.5f));
+}
+
+// =============================================================================
+// The editor's outline of a light.
+// =============================================================================
+
+namespace
+{
+    float DistanceBetween(const Vector2F& InA, const Vector2F& InB)
+    {
+        const Vector2F lOffset = InA - InB;
+        return std::sqrt(lOffset.x * lOffset.x + lOffset.y * lOffset.y);
+    }
+}
+
+TEST_CASE("Light gizmo: a point light is its radius circle, closed")
+{
+    const Light2DComponent lLight = PointLight(150.f);
+    const Vector2F         lAt{ 10.f, -20.f };
+
+    TDynArray<GizmoLine2D> lLines;
+    BuildLight2DGizmo(lLight, lAt, 0.f, 50.f, lLines);
+
+    REQUIRE(lLines.size() == 48);
+    for (const GizmoLine2D& lLine : lLines)
+    {
+        CHECK(DistanceBetween(lLine.Start, lAt) == doctest::Approx(150.f));
+        CHECK(DistanceBetween(lLine.End, lAt) == doctest::Approx(150.f));
+    }
+    CHECK(DistanceBetween(lLines.back().End, lLines.front().Start) == doctest::Approx(0.f).epsilon(1e-3));
+}
+
+TEST_CASE("Light gizmo: a spot light is its cone along the entity's rotation, inner edges included")
+{
+    Light2DComponent lLight;
+    lLight.Type         = ELight2DType::Spot;
+    lLight.Radius       = 100.f;
+    lLight.ConeAngle    = 90.f;
+    lLight.ConeSoftness = 0.5f;
+
+    TDynArray<GizmoLine2D> lLines;
+    BuildLight2DGizmo(lLight, Vector2F{ 0.f, 0.f }, 90.f, 50.f, lLines);   // points up
+
+    // Two edges, the arc (90 degrees, a segment per 7.5), two inner edges.
+    REQUIRE(lLines.size() == 2 + 12 + 2);
+
+    const float lDiagonal = 100.f * std::sqrt(0.5f);
+    CHECK(lLines[0].End.x == doctest::Approx(lDiagonal));    // 45 degrees
+    CHECK(lLines[0].End.y == doctest::Approx(lDiagonal));
+    CHECK(lLines[1].End.x == doctest::Approx(-lDiagonal));   // 135 degrees
+    CHECK(lLines[1].End.y == doctest::Approx(lDiagonal));
+
+    // The arc stays on the radius, above the light.
+    for (Uint64 lIndex = 2; lIndex < 14; ++lIndex)
+    {
+        CHECK(DistanceBetween(lLines[lIndex].Start, Vector2F{ 0.f, 0.f }) == doctest::Approx(100.f));
+        CHECK(lLines[lIndex].Start.y > 0.f);
+    }
+
+    // The inner cone: 22.5 degrees each side of up.
+    CHECK(lLines[14].End.x == doctest::Approx(100.f * std::sin(3.14159265f / 8.f)));
+    CHECK(lLines[15].End.x == doctest::Approx(-100.f * std::sin(3.14159265f / 8.f)));
+}
+
+TEST_CASE("Light gizmo: a hard spot has no inner edges; a global light is an arrow of the given length")
+{
+    Light2DComponent lHard;
+    lHard.Type         = ELight2DType::Spot;
+    lHard.ConeAngle    = 30.f;
+    lHard.ConeSoftness = 0.f;
+
+    TDynArray<GizmoLine2D> lLines;
+    BuildLight2DGizmo(lHard, Vector2F{ 0.f, 0.f }, 0.f, 50.f, lLines);
+    CHECK(lLines.size() == 2 + 4);   // 30 degrees: 4 arc segments
+
+    Light2DComponent lSun;
+    lSun.Type = ELight2DType::Global;
+    BuildLight2DGizmo(lSun, Vector2F{ 5.f, 5.f }, 180.f, 40.f, lLines);
+
+    REQUIRE(lLines.size() == 3);
+    CHECK(lLines[0].End.x == doctest::Approx(-35.f));   // pointing left, 40 long
+    CHECK(lLines[0].End.y == doctest::Approx(5.f).epsilon(1e-4));
+    CHECK(lLines[1].Start.x == doctest::Approx(-35.f));   // the head starts at the tip
 }
 
 TEST_CASE("ShadowCaster2D and a light's shadow settings round-trip; older lights load without shadows")
