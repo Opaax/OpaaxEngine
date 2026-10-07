@@ -49,3 +49,5 @@ if(OPAAX_EDITOR_SUPPORT)
 else()
     set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Sandbox)
 endif()
+
+add_subdirectory(TestWorld) # added by OpaaxCreator

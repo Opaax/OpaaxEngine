@@ -1,0 +1,40 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Audio.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.5
+        }
+    },
+    {
+        "id": "played",
+        "command": "expect.value",
+        "params": {
+            "entity": "Probe",
+            "path": "AudioProbe/bPlayed",
+            "equals": true
+        }
+    },
+    {
+        "id": "source",
+        "command": "expect.count",
+        "params": {
+            "component": "AudioSource",
+            "equals": 1
+        }
+    },
+    {
+        "id": "listener",
+        "command": "expect.count",
+        "params": {
+            "component": "AudioListener",
+            "equals": 1
+        }
+    }
+]

@@ -1,0 +1,186 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "a004f1c388685c73bfb26b03a419cb94",
+            "name": "Camera",
+            "ownerMap": "Behaviours"
+        },
+        {
+            "components": {
+                "LifecycleProbe": {},
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "da3000af6b695bc0b78a6cec7923bf38",
+            "name": "Lifecycle",
+            "ownerMap": "Behaviours"
+        },
+        {
+            "components": {
+                "TimerProbe": {
+                    "Delay": 0.25,
+                    "Period": 0.1,
+                    "RepeatLimit": 3
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "a73db74eb3c05871a209666ba271e68f",
+            "name": "Timers",
+            "ownerMap": "Behaviours"
+        },
+        {
+            "components": {
+                "EventProbe": {
+                    "Target": "PingReceiver",
+                    "bAnnounce": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "e5aa515340fd5761b75ad0abcf6f2e43",
+            "name": "PingSender",
+            "ownerMap": "Behaviours"
+        },
+        {
+            "components": {
+                "EventProbe": {},
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "54447ad140d65dcd9d88ca83f33a75b2",
+            "name": "PingReceiver",
+            "ownerMap": "Behaviours"
+        },
+        {
+            "components": {
+                "SpawnProbe": {
+                    "Prefab": "Prefabs/Crate.opaaxprefab",
+                    "Count": 3,
+                    "Spacing": 80.0,
+                    "DestroyAfter": 0.2
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -200.0,
+                        "y": 100.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "6e3a183784fd5087b4661e3dda61a77f",
+            "name": "Spawner",
+            "ownerMap": "Behaviours"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Size": {
+                        "x": 60.0,
+                        "y": 60.0
+                    },
+                    "Color": {
+                        "x": 0.9,
+                        "y": 0.2,
+                        "z": 0.2,
+                        "w": 1.0
+                    }
+                },
+                "SelfDestructProbe": {
+                    "Seconds": 0.3
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 200.0,
+                        "y": 100.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "b6caef19e2665e3b909586d32c2fab99",
+            "name": "Doomed",
+            "ownerMap": "Behaviours"
+        },
+        {
+            "components": {
+                "InputProbe": {},
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "62d2ca6805a65df6ba2ff984fcb7a188",
+            "name": "Input",
+            "ownerMap": "Behaviours"
+        }
+    ],
+    "mapId": "Behaviours",
+    "version": 4
+}

@@ -1,0 +1,64 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Rendering.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 1.0
+        }
+    },
+    {
+        "id": "sprites",
+        "command": "expect.count",
+        "params": {
+            "component": "Sprite",
+            "equals": 8
+        }
+    },
+    {
+        "id": "quads",
+        "command": "expect.count",
+        "params": {
+            "component": "Quad",
+            "equals": 2
+        }
+    },
+    {
+        "id": "texts",
+        "command": "expect.count",
+        "params": {
+            "component": "Text",
+            "equals": 3
+        }
+    },
+    {
+        "id": "animated",
+        "command": "expect.value",
+        "params": {
+            "entity": "SpriteAnimated",
+            "path": "Sprite/Frame",
+            "greater": -1
+        }
+    },
+    {
+        "id": "flipped",
+        "command": "expect.value",
+        "params": {
+            "entity": "SpriteFlipped",
+            "path": "Transform/Scale/x",
+            "equals": -1
+        }
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "Rendering.png"
+        }
+    }
+]

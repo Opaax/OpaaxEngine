@@ -1,0 +1,195 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Behaviours.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 1.0
+        }
+    },
+    {
+        "id": "started-once",
+        "command": "expect.value",
+        "params": {
+            "entity": "Lifecycle",
+            "path": "LifecycleProbe/StartCount",
+            "equals": 1
+        }
+    },
+    {
+        "id": "updates",
+        "command": "expect.value",
+        "params": {
+            "entity": "Lifecycle",
+            "path": "LifecycleProbe/UpdateCount",
+            "greater": 10
+        }
+    },
+    {
+        "id": "fixed-updates",
+        "command": "expect.value",
+        "params": {
+            "entity": "Lifecycle",
+            "path": "LifecycleProbe/FixedUpdateCount",
+            "greater": 10
+        }
+    },
+    {
+        "id": "timer-fired",
+        "command": "expect.value",
+        "params": {
+            "entity": "Timers",
+            "path": "TimerProbe/bFired",
+            "equals": true
+        }
+    },
+    {
+        "id": "timer-cleared",
+        "command": "expect.value",
+        "params": {
+            "entity": "Timers",
+            "path": "TimerProbe/Ticks",
+            "equals": 3
+        }
+    },
+    {
+        "id": "ping",
+        "command": "expect.value",
+        "params": {
+            "entity": "PingReceiver",
+            "path": "EventProbe/Pings",
+            "equals": 1
+        }
+    },
+    {
+        "id": "ping-value",
+        "command": "expect.value",
+        "params": {
+            "entity": "PingReceiver",
+            "path": "EventProbe/PingValue",
+            "equals": 42
+        }
+    },
+    {
+        "id": "announce-received",
+        "command": "expect.value",
+        "params": {
+            "entity": "PingReceiver",
+            "path": "EventProbe/Announces",
+            "equals": 1
+        }
+    },
+    {
+        "id": "announce-self",
+        "command": "expect.value",
+        "params": {
+            "entity": "PingSender",
+            "path": "EventProbe/Announces",
+            "equals": 1
+        }
+    },
+    {
+        "id": "spawned",
+        "command": "expect.value",
+        "params": {
+            "entity": "Spawner",
+            "path": "SpawnProbe/Spawned",
+            "equals": 3
+        }
+    },
+    {
+        "id": "crates-left",
+        "command": "expect.count",
+        "params": {
+            "name": "Crate",
+            "equals": 2
+        }
+    },
+    {
+        "id": "created",
+        "command": "expect.entity",
+        "params": {
+            "entity": "ProbeCreated"
+        }
+    },
+    {
+        "id": "destroyed",
+        "command": "expect.entity",
+        "params": {
+            "entity": "Doomed",
+            "exists": false
+        }
+    },
+    {
+        "id": "space-1",
+        "command": "input.key",
+        "params": {
+            "key": "Space",
+            "action": "tap"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.2
+        }
+    },
+    {
+        "id": "space-2",
+        "command": "input.key",
+        "params": {
+            "key": "Space",
+            "action": "tap"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.2
+        }
+    },
+    {
+        "id": "fire",
+        "command": "input.key",
+        "params": {
+            "key": "F",
+            "action": "tap"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.2
+        }
+    },
+    {
+        "id": "space-counted",
+        "command": "expect.value",
+        "params": {
+            "entity": "Input",
+            "path": "InputProbe/SpacePresses",
+            "equals": 2
+        }
+    },
+    {
+        "id": "fire-counted",
+        "command": "expect.value",
+        "params": {
+            "entity": "Input",
+            "path": "InputProbe/Fires",
+            "equals": 1
+        }
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "Behaviours.png"
+        }
+    }
+]

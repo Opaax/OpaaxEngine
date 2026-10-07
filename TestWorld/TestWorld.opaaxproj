@@ -1,0 +1,6 @@
+{
+    "name": "TestWorld",
+    "id": "2d3593f6-640e-46de-90c8-c7271b5845a0",
+    "engineVersion": "1.0.0",
+    "startupLevel": "Levels/Main.opaaxlevel"
+}

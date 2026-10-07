@@ -85,11 +85,12 @@ jobs:
           python3 .github/scripts/report_errors.py configure.log || python .github/scripts/report_errors.py configure.log
           python3 .github/scripts/report_errors.py build.log || python .github/scripts/report_errors.py build.log
 
+      # Unit tests. The TestWorld feature tests draw, so they run below, where there is a screen.
       - name: Test
         shell: bash
         run: |
           echo "::add-matcher::.github/problem-matchers/doctest.json"
-          ctest --test-dir build/${{ matrix.preset }} -C ${{ matrix.config }} --output-on-failure
+          ctest --test-dir build/${{ matrix.preset }} -C ${{ matrix.config }} --output-on-failure -LE feature
 
       # The game draws on a virtual screen with Mesa's software OpenGL, stricter than desktop
       # drivers: a crash, or an error logged while starting and drawing (a shader that does not
@@ -111,4 +112,19 @@ jobs:
         with:
           name: capture-${{ matrix.preset }}
           path: capture.png
+          if-no-files-found: ignore
+
+      # TestWorld: each feature's level played and checked by its script (TestWorld/Tests), on the
+      # same virtual screen. The answers and screenshots are kept as an artifact.
+      - name: Feature tests
+        if: runner.os == 'Linux'
+        shell: bash
+        run: xvfb-run -a -s "-screen 0 1280x720x24" ctest --test-dir build/${{ matrix.preset }} -C ${{ matrix.config }} -L feature --output-on-failure
+
+      - name: Upload feature results
+        if: runner.os == 'Linux' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testworld-${{ matrix.preset }}
+          path: build/${{ matrix.preset }}/TestWorldResults
           if-no-files-found: ignore

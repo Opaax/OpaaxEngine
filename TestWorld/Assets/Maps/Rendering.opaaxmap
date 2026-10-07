@@ -1,0 +1,513 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "57fb423f21535477baabadff0f078111",
+            "name": "Camera",
+            "ownerMap": "Rendering"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Texture": "/Engine/Textures/T_Square_256_White.png",
+                    "Sheet": "",
+                    "Frame": -1,
+                    "Size": {
+                        "x": 1100.0,
+                        "y": 620.0
+                    },
+                    "Color": {
+                        "x": 0.16,
+                        "y": 0.17,
+                        "z": 0.2,
+                        "w": 1.0
+                    },
+                    "Layer": "Background",
+                    "OrderInLayer": 0,
+                    "Material": "",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "1d08ec6ab31f52fdbcf7142468dcdf03",
+            "name": "Background",
+            "ownerMap": "Rendering"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Size": {
+                        "x": 80.0,
+                        "y": 80.0
+                    },
+                    "Color": {
+                        "x": 0.9,
+                        "y": 0.2,
+                        "z": 0.2,
+                        "w": 1.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -420.0,
+                        "y": 190.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "3c68ac1496b551978ddd8b5a61db8a28",
+            "name": "QuadRed",
+            "ownerMap": "Rendering"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Size": {
+                        "x": 80.0,
+                        "y": 80.0
+                    },
+                    "Color": {
+                        "x": 0.2,
+                        "y": 0.8,
+                        "z": 0.3,
+                        "w": 1.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -300.0,
+                        "y": 190.0
+                    },
+                    "Rotation": 30.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "dd9e45d397195a8e9773ef0d4abfb65d",
+            "name": "QuadGreen",
+            "ownerMap": "Rendering"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Texture": "/Engine/Textures/T_Checker_128.png",
+                    "Sheet": "",
+                    "Frame": -1,
+                    "Size": {
+                        "x": 100.0,
+                        "y": 100.0
+                    },
+                    "Color": {
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0,
+                        "w": 1.0
+                    },
+                    "Layer": "Default",
+                    "OrderInLayer": 0,
+                    "Material": "",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -160.0,
+                        "y": 190.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "bee7008557e35fd9ab93fdf8f53b593e",
+            "name": "SpriteChecker",
+            "ownerMap": "Rendering"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Texture": "/Engine/Textures/T_Square_256_White.png",
+                    "Sheet": "",
+                    "Frame": -1,
+                    "Size": {
+                        "x": 80.0,
+                        "y": 80.0
+                    },
+                    "Color": {
+                        "x": 1.0,
+                        "y": 0.85,
+                        "z": 0.2,
+                        "w": 1.0
+                    },
+                    "Layer": "Default",
+                    "OrderInLayer": 0,
+                    "Material": "",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -20.0,
+                        "y": 190.0
+                    },
+                    "Rotation": 45.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "39fcc04a6a61531696c26e8d92cc5a13",
+            "name": "SpriteTinted",
+            "ownerMap": "Rendering"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Texture": "",
+                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxsheet",
+                    "Frame": 2,
+                    "Size": {
+                        "x": 100.0,
+                        "y": 100.0
+                    },
+                    "Color": {
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0,
+                        "w": 1.0
+                    },
+                    "Layer": "Default",
+                    "OrderInLayer": 0,
+                    "Material": "",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 120.0,
+                        "y": 190.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "0afa5a364be254c187e4c24a0b17448a",
+            "name": "SpriteFrame",
+            "ownerMap": "Rendering"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Texture": "",
+                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxsheet",
+                    "Frame": 0,
+                    "Size": {
+                        "x": 100.0,
+                        "y": 100.0
+                    },
+                    "Color": {
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0,
+                        "w": 1.0
+                    },
+                    "Layer": "Default",
+                    "OrderInLayer": 0,
+                    "Material": "",
+                    "bVisible": true
+                },
+                "SpriteAnimator": {
+                    "ClipAsset": "Anims/Cycle.opaaxclip",
+                    "Clip": "",
+                    "Library": "",
+                    "Speed": 1.0,
+                    "bPlaying": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 260.0,
+                        "y": 190.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "e0ec420874e25526b847a3e45e5608ae",
+            "name": "SpriteAnimated",
+            "ownerMap": "Rendering"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Texture": "/Engine/Textures/T_Checker_128.png",
+                    "Sheet": "",
+                    "Frame": -1,
+                    "Size": {
+                        "x": 100.0,
+                        "y": 100.0
+                    },
+                    "Color": {
+                        "x": 0.6,
+                        "y": 0.8,
+                        "z": 1.0,
+                        "w": 1.0
+                    },
+                    "Layer": "Default",
+                    "OrderInLayer": 0,
+                    "Material": "",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 400.0,
+                        "y": 190.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": -1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "8422efd69b935458b9d95997d54e166c",
+            "name": "SpriteFlipped",
+            "ownerMap": "Rendering"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Texture": "/Engine/Textures/T_Square_256_White.png",
+                    "Sheet": "",
+                    "Frame": -1,
+                    "Size": {
+                        "x": 140.0,
+                        "y": 140.0
+                    },
+                    "Color": {
+                        "x": 0.3,
+                        "y": 0.4,
+                        "z": 0.9,
+                        "w": 1.0
+                    },
+                    "Layer": "Background",
+                    "OrderInLayer": 5,
+                    "Material": "",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 250.0,
+                        "y": -40.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "688c106b3df75173b1417edd6e44067e",
+            "name": "LayerBack",
+            "ownerMap": "Rendering"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Texture": "/Engine/Textures/T_Square_256_White.png",
+                    "Sheet": "",
+                    "Frame": -1,
+                    "Size": {
+                        "x": 100.0,
+                        "y": 100.0
+                    },
+                    "Color": {
+                        "x": 0.95,
+                        "y": 0.5,
+                        "z": 0.2,
+                        "w": 1.0
+                    },
+                    "Layer": "Foreground",
+                    "OrderInLayer": 0,
+                    "Material": "",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 300.0,
+                        "y": -80.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "36a384d9c369543bb82a6429c90595a8",
+            "name": "LayerFront",
+            "ownerMap": "Rendering"
+        },
+        {
+            "components": {
+                "Text": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Face": "",
+                    "Font": "/Engine/Fonts/Roboto.opaaxfont",
+                    "Layer": "Foreground",
+                    "LineHeightScale": 1.0,
+                    "OrderInLayer": 0,
+                    "Size": 40.0,
+                    "Style": {
+                        "Slant": "Normal",
+                        "Subset": "Latin",
+                        "Weight": "Bold",
+                        "Width": "Normal"
+                    },
+                    "Text": "Opaax TestWorld",
+                    "bKerning": true,
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -480.0,
+                        "y": 20.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "992f84f9f54c5a78a164cb4e3c775d69",
+            "name": "TextLatin",
+            "ownerMap": "Rendering"
+        },
+        {
+            "components": {
+                "Text": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.550000011920929,
+                        "y": 0.8500000238418579,
+                        "z": 1.0
+                    },
+                    "Face": "",
+                    "Font": "/Engine/Fonts/Roboto.opaaxfont",
+                    "Layer": "Foreground",
+                    "LineHeightScale": 1.0,
+                    "OrderInLayer": 0,
+                    "Size": 40.0,
+                    "Style": {
+                        "Slant": "Normal",
+                        "Subset": "Greek",
+                        "Weight": "Regular",
+                        "Width": "Normal"
+                    },
+                    "Text": "Γειά σου κόσμε",
+                    "bKerning": true,
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -480.0,
+                        "y": -80.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "30328214661057f08f068b98e93e7d00",
+            "name": "TextGreek",
+            "ownerMap": "Rendering"
+        },
+        {
+            "components": {
+                "Text": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 0.75,
+                        "z": 0.3499999940395355
+                    },
+                    "Face": "",
+                    "Font": "/Engine/Fonts/Roboto.opaaxfont",
+                    "Layer": "Foreground",
+                    "LineHeightScale": 1.0,
+                    "OrderInLayer": 0,
+                    "Size": 40.0,
+                    "Style": {
+                        "Slant": "Italic",
+                        "Subset": "Cyrillic",
+                        "Weight": "Medium",
+                        "Width": "Normal"
+                    },
+                    "Text": "Привет мир",
+                    "bKerning": true,
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -480.0,
+                        "y": -170.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "50d62f1e9cc352c399679b957bfb9592",
+            "name": "TextCyrillic",
+            "ownerMap": "Rendering"
+        }
+    ],
+    "mapId": "Rendering",
+    "version": 4
+}

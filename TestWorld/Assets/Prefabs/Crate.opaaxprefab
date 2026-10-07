@@ -1,0 +1,35 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Quad": {
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    },
+                    "Color": {
+                        "x": 0.6,
+                        "y": 0.45,
+                        "z": 0.25,
+                        "w": 1.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "8b1a221fb827565b8bb32f96fe70968e",
+            "name": "Crate",
+            "ownerMap": ""
+        }
+    ],
+    "version": 1
+}

@@ -1,0 +1,80 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Physics.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 3.0
+        }
+    },
+    {
+        "id": "crate-rests",
+        "command": "expect.value",
+        "params": {
+            "entity": "Crate1",
+            "path": "Transform/Position/y",
+            "near": -205,
+            "tolerance": 3
+        }
+    },
+    {
+        "id": "stack-holds",
+        "command": "expect.value",
+        "params": {
+            "entity": "Crate3",
+            "path": "Transform/Position/y",
+            "near": -105,
+            "tolerance": 6
+        }
+    },
+    {
+        "id": "crate-stays",
+        "command": "expect.value",
+        "params": {
+            "entity": "Crate1",
+            "path": "Transform/Position/x",
+            "near": -100,
+            "tolerance": 5
+        }
+    },
+    {
+        "id": "ball-rests",
+        "command": "expect.value",
+        "params": {
+            "entity": "Ball",
+            "path": "Transform/Position/y",
+            "near": -205,
+            "tolerance": 5
+        }
+    },
+    {
+        "id": "launched",
+        "command": "expect.value",
+        "params": {
+            "entity": "Launcher",
+            "path": "LaunchProbe/PeakY",
+            "greater": -110
+        }
+    },
+    {
+        "id": "mass",
+        "command": "expect.value",
+        "params": {
+            "entity": "Launcher",
+            "path": "LaunchProbe/Mass",
+            "greater": 0
+        }
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "Physics.png"
+        }
+    }
+]

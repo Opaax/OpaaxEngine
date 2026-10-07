@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/Lighting.opaaxmap"
+    ],
+    "name": "Lighting",
+    "persistentMap": "Maps/Lighting.opaaxmap",
+    "version": 1
+}

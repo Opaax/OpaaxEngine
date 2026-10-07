@@ -1,0 +1,68 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "c1c7ced182b151d197282efb856e3da0",
+            "name": "Camera",
+            "ownerMap": "Main"
+        },
+        {
+            "components": {
+                "Text": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Face": "",
+                    "Font": "/Engine/Fonts/Roboto.opaaxfont",
+                    "Layer": "Foreground",
+                    "LineHeightScale": 1.0,
+                    "OrderInLayer": 0,
+                    "Size": 28.0,
+                    "Style": {
+                        "Slant": "Normal",
+                        "Subset": "Latin",
+                        "Weight": "Bold",
+                        "Width": "Normal"
+                    },
+                    "Text": "TestWorld\nOne level per engine feature:\nRendering, Lighting, Physics, Behaviours, Audio\nTests: TestWorld/Tests",
+                    "bKerning": true,
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -480.0,
+                        "y": 120.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "4e25cbd3367e5f979b7b715ecf339b03",
+            "name": "Readme",
+            "ownerMap": "Main"
+        }
+    ],
+    "mapId": "Main",
+    "version": 4
+}

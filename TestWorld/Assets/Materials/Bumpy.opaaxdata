@@ -1,0 +1,7 @@
+{
+    "Type": "Material2D",
+    "Data": {
+        "bLit": true,
+        "NormalMap": "Textures/Bumps_N.png"
+    }
+}

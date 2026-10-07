@@ -1,0 +1,80 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                },
+                "AudioListener": {
+                    "bActive": true
+                }
+            },
+            "guid": "7bc5ae87e5fa54a7be6afb01b046ab43",
+            "name": "Camera",
+            "ownerMap": "Audio"
+        },
+        {
+            "components": {
+                "AudioSource": {
+                    "Clip": "Audio/Beep.wav",
+                    "Bus": "Effects",
+                    "Volume": 0.5,
+                    "Pitch": 1.0,
+                    "bLoop": true,
+                    "bPlayOnStart": true,
+                    "bSpatial": true,
+                    "MinDistance": 100.0,
+                    "MaxDistance": 1500.0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 200.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "04027758e0145555b2177998e74e65a9",
+            "name": "Speaker",
+            "ownerMap": "Audio"
+        },
+        {
+            "components": {
+                "AudioProbe": {
+                    "Clip": "Audio/Beep.wav"
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "376c79b1acd954148e8641800f43d89c",
+            "name": "Probe",
+            "ownerMap": "Audio"
+        }
+    ],
+    "mapId": "Audio",
+    "version": 4
+}
