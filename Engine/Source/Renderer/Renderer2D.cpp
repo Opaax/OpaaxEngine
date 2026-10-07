@@ -26,7 +26,8 @@ namespace Opaax
     // Batch constants. The per-batch limits come from RenderLimits (config).
     // =============================================================================
     static constexpr Uint32 SHADER_TEXTURE_SLOTS = 16;      // length of u_Textures[] in Sprite.glsl
-    static constexpr Uint32 MAX_BATCH_QUADS      = 65536;   // upper bound (~12 MB of vertices)
+    static constexpr Uint32 SHADOW_MAP_SLOT      = SHADER_TEXTURE_SLOTS - 1;   // SHADOW_SLOT in Sprite.glsl
+    static constexpr Uint32 MAX_BATCH_QUADS      = 65536;   // upper bound (~23 MB of vertices)
 
     // =============================================================================
     // Vertex layout
@@ -47,8 +48,9 @@ namespace Opaax
         Vector2F MaskUV;
         float    MaskIndex;
 
-        // Lighting (HDR passes): the normal map's slot or -1, the emissive colour and whether the
-        // quad is lit (w), and the quad's rotation (cos, sin) to turn its normals into the world.
+        // Lighting (HDR passes): the normal map's slot or -1, the emissive colour and how the quad
+        // takes light (w: 0 unlit, 1 lit, 2 lit and never shadowed), and the quad's rotation
+        // (cos, sin) to turn its normals into the world.
         float    NormalIndex;
         Vector4F Emissive;
         Vector2F RotationCS;
@@ -61,7 +63,7 @@ namespace Opaax
     struct CameraBlock
     {
         glm::mat4 ViewProjection = glm::mat4(1.f);
-        glm::vec4 PassParams     = glm::vec4(0.f);   // x: 1 for a linear-colour (HDR) pass
+        glm::vec4 PassParams     = glm::vec4(0.f);   // x: 1 for a linear-colour (HDR) pass, y: 1 for occlusion
     };
 
     // =============================================================================
@@ -94,6 +96,9 @@ namespace Opaax
         TDynArray<QuadPlacement> Plan;
         TDynArray<QuadVertex>    UploadBuffer;   // one batch of vertices
         TDynArray<ITexture2D*>   SlotTextures;   // this batch's textures
+
+        // The shadow map of lit passes, in the last slot. Not owned.
+        ITexture2D* ShadowMap = nullptr;
 
         glm::mat4 ViewProjection = glm::mat4(1.f);
 
@@ -246,6 +251,11 @@ namespace Opaax
         }
     }
 
+    void Renderer2D::SetShadowMap(ITexture2D* InShadowMap) noexcept
+    {
+        m_Data->ShadowMap = InShadowMap;
+    }
+
     // =============================================================================
     // Begin / End
     // =============================================================================
@@ -262,6 +272,7 @@ namespace Opaax
         CameraBlock lCamera;
         lCamera.ViewProjection = m_Data->ViewProjection;
         lCamera.PassParams.x   = InView.bLinearColor ? 1.f : 0.f;
+        lCamera.PassParams.y   = InView.bOcclusion ? 1.f : 0.f;
         m_Data->CameraUBO->SetData(&lCamera, static_cast<Uint32>(sizeof(CameraBlock)));
         StartPass();
     }
@@ -303,8 +314,15 @@ namespace Opaax
     {
         if (m_Data->PassKeys.empty()) { return; }
 
+        // A shadow map keeps the last slot for itself.
+        QuadBatchLimits lLimits = m_Data->Limits;
+        if (m_Data->ShadowMap != nullptr)
+        {
+            lLimits.MaxTextureSlots = std::min(lLimits.MaxTextureSlots, SHADOW_MAP_SLOT);
+        }
+
         PlanQuadBatches(m_Data->PassKeys, m_Data->PassTexIds, m_Data->PassMaskIds, m_Data->PassNormalIds,
-                        m_Data->Limits, m_Data->Plan);
+                        lLimits, m_Data->Plan);
 
         // Every batch starts from white (a slot from the previous pass may be stale).
         m_Data->SlotTextures.assign(SHADER_TEXTURE_SLOTS, m_Data->WhiteTexture.get());
@@ -387,6 +405,11 @@ namespace Opaax
 
         const Uint32 lDataSize = InQuadCount * 4u * static_cast<Uint32>(sizeof(QuadVertex));
         m_Data->QuadVBO->SetData(m_Data->UploadBuffer.data(), lDataSize);
+
+        if (m_Data->ShadowMap != nullptr)
+        {
+            m_Data->SlotTextures[SHADOW_MAP_SLOT] = m_Data->ShadowMap;
+        }
 
         // Unused units point at the white texture.
         for (Uint32 i = 0; i < SHADER_TEXTURE_SLOTS; ++i)
@@ -512,8 +535,9 @@ namespace Opaax
         const Vector2F lRotationCS = (InRotationRad == 0.f)
                                          ? Vector2F{ 1.f, 0.f }
                                          : Vector2F{ Maths::Cos(InRotationRad), Maths::Sin(InRotationRad) };
-        const Vector4F lEmissive{ InLighting.Emissive.x, InLighting.Emissive.y, InLighting.Emissive.z,
-                                  InLighting.bLit ? 1.f : 0.f };
+        // w: 0 unlit, 1 lit, 2 lit but never shadowed.
+        const float    lLitCode = InLighting.bLit ? (InLighting.bReceiveShadows ? 1.f : 2.f) : 0.f;
+        const Vector4F lEmissive{ InLighting.Emissive.x, InLighting.Emissive.y, InLighting.Emissive.z, lLitCode };
 
         Vector2F lBL, lBR, lTR, lTL;
         if (InRotationRad == 0.f)

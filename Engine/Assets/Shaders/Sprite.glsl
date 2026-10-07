@@ -9,7 +9,7 @@ layout(location = 4) in vec2  a_InnerHalf;
 layout(location = 5) in vec2  a_MaskUV;
 layout(location = 6) in float a_MaskIndex;
 layout(location = 7) in float a_NormalIndex;
-layout(location = 8) in vec4  a_Emissive;     // rgb: linear glow, w: 1 when lit
+layout(location = 8) in vec4  a_Emissive;     // rgb: linear glow, w: 0 unlit, 1 lit, 2 lit and never shadowed
 layout(location = 9) in vec2  a_RotationCS;   // the quad's rotation (cos, sin)
 
 // SPIR-V forbids default-block uniforms — view-projection rides a UBO. Binding 1 so it shares
@@ -78,8 +78,18 @@ layout(std140, binding = 3) uniform LightsUBO
     vec4 u_LightPosition[MAX_LIGHTS];    // xy: position, z: radius, w: 0 point, 1 spot, 2 global
     vec4 u_LightColor[MAX_LIGHTS];       // rgb: colour, w: falloff exponent
     vec4 u_LightDirection[MAX_LIGHTS];   // xy: where it points, z: cos(outer half-angle), w: cos(inner)
-    vec4 u_LightParams[MAX_LIGHTS];      // x: height (point, spot) or sin(elevation) (global)
+    vec4 u_LightParams[MAX_LIGHTS];      // x: height (point, spot) or sin(elevation) (global),
+                                         // y: shadow map row (-1 none), z: shadow softness, w: shadow strength
 };
+
+// The shadow map (Lighting2D.h): a row per shadowed light, a column per direction around it, each
+// holding how far the light gets (0..1 of its radius) before a caster stops it. It takes the last
+// sampler while a pass is shadowed.
+const int   SHADOW_SLOT   = 15;
+const float SHADOW_ROWS   = 16.0;
+const float SHADOW_ANGLES = 1024.0;
+const float SHADOW_BIAS   = 0.003;
+const float PI            = 3.14159265;
 
 layout(location = 0) out vec4 FragColor;
 
@@ -109,9 +119,73 @@ vec4 SampleSlot(int InSlot, vec2 InUV)
     return vec4(1.0, 0.0, 1.0, 1.0);
 }
 
+// How far a shadowed light gets in direction InU (0..1 around it), on row InV.
+float ShadowDepth(float InU, float InV)
+{
+    return textureLod(u_Textures[SHADOW_SLOT], vec2(fract(InU), InV), 0.0).r;
+}
+
+// Whether a point InDistance away in direction InU is lit, compared at the two nearest directions
+// and blended between them, so a shadow's edge has no steps.
+float LitAt(float InU, float InV, float InDistance)
+{
+    float lTexel = InU * SHADOW_ANGLES - 0.5;
+    float lBase  = floor(lTexel);
+    float lA     = step(InDistance, ShadowDepth((lBase + 0.5) / SHADOW_ANGLES, InV) + SHADOW_BIAS);
+    float lB     = step(InDistance, ShadowDepth((lBase + 1.5) / SHADOW_ANGLES, InV) + SHADOW_BIAS);
+    return mix(lA, lB, lTexel - lBase);
+}
+
+// How much of a light reaches a point InDistance (0..1 of the radius) away along InFromLight:
+// 1 lit, 0 in full shadow. The shadow's edge is hard where it leaves the caster and softens with
+// the distance behind it.
+float ShadowAt(float InRow, vec2 InFromLight, float InDistance, float InSoftness)
+{
+    float lU = atan(InFromLight.y, InFromLight.x) / (2.0 * PI) + 0.5;
+    float lV = (InRow + 0.5) / SHADOW_ROWS;
+
+    // The casters in the directions around this one, and how far they are on average.
+    float lSearch   = (1.0 + 16.0 * InSoftness) / SHADOW_ANGLES;
+    float lBlockers = 0.0;
+    float lFound    = 0.0;
+    for (int i = -3; i <= 3; ++i)
+    {
+        float lDepth = ShadowDepth(lU + float(i) * lSearch / 3.0, lV);
+        if (lDepth + SHADOW_BIAS < InDistance)
+        {
+            lBlockers += lDepth;
+            lFound    += 1.0;
+        }
+    }
+
+    // Clear of every caster, or deep in the shadow: no edge to soften.
+    if (lFound == 0.0)
+    {
+        return 1.0;
+    }
+    if (lFound == 7.0)
+    {
+        return 0.0;
+    }
+
+    // The penumbra grows with the gap between the casters and the point.
+    float lBlocker = lBlockers / lFound;
+    float lWidth   = (1.0 + 16.0 * InSoftness * (InDistance - lBlocker) / max(InDistance, 1e-4)) / SHADOW_ANGLES;
+
+    // Tent-weighted taps across it.
+    float lLit = 0.0;
+    for (int i = -8; i <= 8; ++i)
+    {
+        lLit += (9.0 - abs(float(i))) * LitAt(lU + float(i) * lWidth / 8.0, lV, InDistance);
+    }
+
+    return lLit / 81.0;
+}
+
 // The light reaching a point: ambient, plus every light. Without a normal map the surface faces the
 // viewer and every light reaches it fully; with one, a light counts by the angle it arrives at.
-vec3 LightAt(vec2 InPosition, vec3 InNormal, bool bInHasNormal)
+// Shadowed lights are blocked by the casters, unless bInShadowed is off.
+vec3 LightAt(vec2 InPosition, vec3 InNormal, bool bInHasNormal, bool bInShadowed)
 {
     vec3 lLight = u_Ambient.rgb;
     int  lCount = int(u_Ambient.w + 0.5);
@@ -126,7 +200,8 @@ vec3 LightAt(vec2 InPosition, vec3 InNormal, bool bInHasNormal)
         vec4  lPosition = u_LightPosition[i];
         vec4  lColor    = u_LightColor[i];
         vec4  lCone     = u_LightDirection[i];
-        float lHeight   = u_LightParams[i].x;
+        vec4  lParams   = u_LightParams[i];
+        float lHeight   = lParams.x;
         int   lType     = int(lPosition.w + 0.5);
 
         float lReach = 1.0;
@@ -154,6 +229,12 @@ vec3 LightAt(vec2 InPosition, vec3 InNormal, bool bInHasNormal)
                 // Full light inside the inner cone, none outside the outer one.
                 float lCos = (lDistance > 0.0) ? dot(-lDelta / lDistance, lCone.xy) : 1.0;
                 lReach *= clamp((lCos - lCone.z) / max(lCone.w - lCone.z, 1e-4), 0.0, 1.0);
+            }
+
+            if (bInShadowed && lParams.y >= 0.0 && lReach > 0.0)
+            {
+                float lLit = ShadowAt(lParams.y, -lDelta, lDistance / lPosition.z, lParams.z);
+                lReach *= mix(1.0, lLit, lParams.w);
             }
 
             lToLight = normalize(vec3(lDelta, lHeight));
@@ -200,7 +281,15 @@ void main()
     }
 
     vec4 lSample = SampleSlot(int(v_TexIndex), v_TexCoord);
-    FragColor    = lSample * v_Color * vec4(1.0, 1.0, 1.0, lMask);
+
+    // An occlusion pass only records where the shadow casters are: white times their coverage.
+    if (u_PassParams.y > 0.5)
+    {
+        FragColor = vec4(1.0, 1.0, 1.0, lSample.a * v_Color.a * lMask);
+        return;
+    }
+
+    FragColor = lSample * v_Color * vec4(1.0, 1.0, 1.0, lMask);
 
     // An HDR pass works in linear colour (textures and tints are authored in screen colour), and
     // lights its lit quads.
@@ -209,6 +298,7 @@ void main()
         vec3 lAlbedo = pow(FragColor.rgb, vec3(2.2));
         vec3 lColor  = lAlbedo;
 
+        // v_Emissive.w: 0 unlit, 1 lit, 2 lit but never shadowed (a caster without self shadows).
         if (v_Emissive.w > 0.5)
         {
             vec3 lNormal     = vec3(0.0, 0.0, 1.0);
@@ -222,7 +312,7 @@ void main()
                                          lMapped.z));
             }
 
-            lColor *= LightAt(v_WorldPosition, lNormal, bHasNormal);
+            lColor *= LightAt(v_WorldPosition, lNormal, bHasNormal, v_Emissive.w < 1.5);
         }
 
         // The glow is the sprite's own colour, unaffected by the lights.

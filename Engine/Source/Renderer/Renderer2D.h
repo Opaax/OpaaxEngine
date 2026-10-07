@@ -51,6 +51,9 @@ namespace Opaax
         ITexture2D* NormalMap = nullptr;          // borrowed for the batch; tangent space, Y up
         Vector3F    Emissive  = { 0.f, 0.f, 0.f };   // linear, times the quad's own colour, added after lighting
         bool        bLit      = true;
+
+        /** Off for a shadow caster that must not be darkened by its own silhouette. */
+        bool        bReceiveShadows = true;
     };
 
     /**
@@ -200,6 +203,12 @@ namespace Opaax
     public:
         /** The lights of the next passes (only HDR passes are lit). Lit quads see the ambient alone by default. */
         void SetLighting(const LightsBlock2D& InLights);
+
+        /**
+         * The shadow map of the next passes, or null. While set, it takes the last sampler slot
+         * (Sprite.glsl reads it there) and batches keep one slot fewer.
+         */
+        void SetShadowMap(ITexture2D* InShadowMap) noexcept;
 
         // =============================================================================
         // Internal

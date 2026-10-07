@@ -123,10 +123,111 @@ namespace Opaax
                                                    std::max(lLight.Falloff, 0.01f) };
             OutBlock.Direction[lIndex] = Vector4F{ std::cos(lRotation), std::sin(lRotation),
                                                    std::cos(lHalfOuter), std::cos(lHalfInner) };
-            OutBlock.Params[lIndex]    = Vector4F{ lHeight, -1.f, 0.f, 0.f };
+            OutBlock.Params[lIndex]    = Vector4F{ lHeight, -1.f, std::max(lLight.ShadowSoftness, 0.f),
+                                                   std::clamp(lLight.ShadowStrength, 0.f, 1.f) };
         }
 
-        OutBlock.Ambient.w = static_cast<float>(lCandidates.size());
+        // Shadow map rows: the strongest shadowed point and spot lights first.
+        const Uint32      lKept = static_cast<Uint32>(lCandidates.size());
+        TDynArray<Uint32> lShadowed;
+        for (Uint32 lIndex = 0; lIndex < lKept; ++lIndex)
+        {
+            const Light2DComponent& lLight = *lCandidates[lIndex].Instance->Light;
+            if (lLight.bCastShadows && lLight.Type != ELight2DType::Global)
+            {
+                lShadowed.push_back(lIndex);
+            }
+        }
+
+        std::stable_sort(lShadowed.begin(), lShadowed.end(), [&lCandidates](const Uint32 InA, const Uint32 InB)
+        {
+            return lCandidates[InA].Score > lCandidates[InB].Score;
+        });
+
+        const Uint32 lRows = std::min(static_cast<Uint32>(lShadowed.size()), MAX_SHADOWED_LIGHTS_2D);
+        for (Uint32 lRow = 0; lRow < lRows; ++lRow)
+        {
+            OutBlock.Params[lShadowed[lRow]].y = static_cast<float>(lRow);
+        }
+
+        OutBlock.Ambient.w = static_cast<float>(lKept);
         return lReaching;
+    }
+
+    void ClearShadowRows2D(LightsBlock2D& InOutBlock) noexcept
+    {
+        for (Uint32 lIndex = 0; lIndex < InOutBlock.GetCount() && lIndex < MAX_LIGHTS_2D; ++lIndex)
+        {
+            InOutBlock.Params[lIndex].y = -1.f;
+        }
+    }
+
+    Uint32 BuildShadowBlock2D(const LightsBlock2D& InLights, ShadowBlock2D& OutBlock) noexcept
+    {
+        OutBlock = ShadowBlock2D{};
+
+        Uint32 lRows = 0;
+        for (Uint32 lIndex = 0; lIndex < InLights.GetCount() && lIndex < MAX_LIGHTS_2D; ++lIndex)
+        {
+            const float lRow = InLights.Params[lIndex].y;
+            if (lRow < 0.f || lRow >= static_cast<float>(MAX_SHADOWED_LIGHTS_2D))
+            {
+                continue;
+            }
+
+            const Uint32    lRowIndex = static_cast<Uint32>(lRow);
+            const Vector4F& lLight    = InLights.Position[lIndex];
+            OutBlock.Light[lRowIndex] = Vector4F{ lLight.x, lLight.y, lLight.z, 0.f };
+            lRows = std::max(lRows, lRowIndex + 1u);
+        }
+
+        OutBlock.Info.x = static_cast<float>(lRows);
+        return lRows;
+    }
+
+    OcclusionLayout2D MakeOcclusionLayout2D(const Bounds2D& InView, const float InPixelsPerUnit,
+                                            const ShadowBlock2D& InShadows) noexcept
+    {
+        // The view, grown to take in what the shadowed lights reach (casters just off screen cast into it).
+        Vector2F lMin = InView.Min();
+        Vector2F lMax = InView.Max();
+        for (Uint32 lRow = 0; lRow < InShadows.GetCount() && lRow < MAX_SHADOWED_LIGHTS_2D; ++lRow)
+        {
+            const Vector4F& lLight = InShadows.Light[lRow];
+            lMin = Vector2F{ std::min(lMin.x, lLight.x - lLight.z), std::min(lMin.y, lLight.y - lLight.z) };
+            lMax = Vector2F{ std::max(lMax.x, lLight.x + lLight.z), std::max(lMax.y, lLight.y + lLight.z) };
+        }
+
+        // At most a few times the view: the shadows of farther casters are not worth the pixels.
+        const Vector2F lLimit = InView.HalfExtent * OCCLUSION_MAX_SCALE_2D;
+        lMin = Vector2F{ std::max(lMin.x, InView.Center.x - lLimit.x), std::max(lMin.y, InView.Center.y - lLimit.y) };
+        lMax = Vector2F{ std::min(lMax.x, InView.Center.x + lLimit.x), std::min(lMax.y, InView.Center.y + lLimit.y) };
+
+        const Vector2F lSize{ std::max(lMax.x - lMin.x, 0.f), std::max(lMax.y - lMin.y, 0.f) };
+
+        // Screen density, unless the map would grow past its largest size.
+        const float lLargest = std::max(lSize.x, lSize.y);
+        float       lDensity = (InPixelsPerUnit > 0.f) ? InPixelsPerUnit : 1.f;
+        if (lLargest * lDensity > static_cast<float>(OCCLUSION_MAX_SIZE_2D))
+        {
+            lDensity = static_cast<float>(OCCLUSION_MAX_SIZE_2D) / lLargest;
+        }
+
+        // Rounded up, past a float's noise (1000 * 1.2f is a hair above 1200).
+        const auto lPixels = [lDensity](const float InExtent)
+        {
+            const float lExact = std::ceil(InExtent * lDensity - 1.0e-3f);
+            return std::clamp(static_cast<Uint32>(std::max(lExact, 0.f)), 1u, OCCLUSION_MAX_SIZE_2D);
+        };
+
+        OcclusionLayout2D lLayout;
+        lLayout.Width  = lPixels(lSize.x);
+        lLayout.Height = lPixels(lSize.y);
+
+        // Whole pixels: a view of Height pixels over HalfExtent.y gives exactly Width over HalfExtent.x.
+        lLayout.Bounds.Center     = (lMin + lMax) * 0.5f;
+        lLayout.Bounds.HalfExtent = Vector2F{ static_cast<float>(lLayout.Width), static_cast<float>(lLayout.Height) }
+                                  / (2.f * lDensity);
+        return lLayout;
     }
 }

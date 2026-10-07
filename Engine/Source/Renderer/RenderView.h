@@ -28,5 +28,8 @@ namespace Opaax
 
         /** Draws in linear colour (into an HDR target): sprite and tint colours are decoded. */
         bool            bLinearColor = false;
+
+        /** Draws coverage only (white times alpha): the shadow casters' occlusion map. */
+        bool            bOcclusion = false;
     };
 }

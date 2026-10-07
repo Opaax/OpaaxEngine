@@ -110,6 +110,7 @@ set(OPAAX_TEST_SOURCES
     Renderer/CameraResolveTests.cpp
     Renderer/CameraViewTests.cpp
     Renderer/DebugDrawTests.cpp
+    Renderer/EngineShaderTests.cpp
     Renderer/EnvironmentTests.cpp
     Renderer/FontTests.cpp
     Renderer/Lighting2DTests.cpp
@@ -163,5 +164,8 @@ target_include_directories(OpaaxTests PRIVATE
 # doctest includes the real standard headers instead of forward-declaring std types
 # (recent MSVC rejects re-declaring standard templates).
 target_compile_definitions(OpaaxTests PRIVATE DOCTEST_CONFIG_USE_STD_HEADERS)
+
+# The engine's own asset files, read by the tests that check them (shaders), in every build.
+target_compile_definitions(OpaaxTests PRIVATE OPAAX_TEST_ENGINE_ASSETS="${CMAKE_CURRENT_SOURCE_DIR}/../Assets")
 
 add_test(NAME OpaaxTests COMMAND OpaaxTests)

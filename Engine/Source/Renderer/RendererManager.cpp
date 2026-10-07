@@ -32,6 +32,7 @@
 #include "World/World.h"
 #include "Renderer/Components/EnvironmentComponent.h"
 #include "Renderer/Components/Light2DComponent.h"
+#include "Renderer/Components/ShadowCaster2DComponent.h"
 #include "Renderer/Lighting/Lighting2D.h"
 #include "Resources/DataAsset/DataAssetHandle.h"
 #include "Renderer/Components/QuadComponent.h"
@@ -39,6 +40,7 @@
 #include "Renderer/Components/SpriteComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Components/TransformInterpolationComponent.h"
+#include "World/Entity/Entity.h"
 #include "World/Entity/EntityHierarchy.h"   // ComposeChain
 
 #include "Core/Maths/Maths.h"
@@ -115,8 +117,14 @@ namespace Opaax
             OpaaxApplication::GetAppService<IPaths>().EngineToAbsolute("Assets/Shaders/Tonemap.glsl");
         const OpaaxString lTonemapSrc = FileIO::ReadAllText(lTonemapPath);
 
+        // The shadow map pass. Without it, lights cast no shadows (logged).
+        const OpaaxString lShadowPath =
+            OpaaxApplication::GetAppService<IPaths>().EngineToAbsolute("Assets/Shaders/Shadow2D.glsl");
+        const OpaaxString lShadowSrc = FileIO::ReadAllText(lShadowPath);
+
         RenderSystemDesc lDesc;
         lDesc.TonemapShader = lTonemapSrc.IsEmpty() ? ShaderDesc{} : ShaderSource::FromSource(lTonemapSrc, lTonemapPath);
+        lDesc.ShadowShader  = lShadowSrc.IsEmpty() ? ShaderDesc{} : ShaderSource::FromSource(lShadowSrc, lShadowPath);
         lDesc.Backend      = ResolveSupportedBackend(lEngineCfg.Render.Backend);
         lDesc.Surface      = lSurface;
         lDesc.Width        = lWindow->GetWidth();
@@ -390,13 +398,25 @@ namespace Opaax
 
             LightsBlock2D lLights;
             PackLights2D(CollectLights(*InWorld), lViewBounds, lAmbient, lEnvironment->AmbientIntensity, lLights);
+
+            // Shadows first: they are drawn from passes of their own.
+            const float lPixelsPerUnit = static_cast<float>(lHeight) / std::max(2.f * InView.OrthoSize, 1e-3f);
+            ITexture2D* lShadowMap     = RenderShadowMap(*InWorld, lRenderer, lViewBounds, lPixelsPerUnit, lLights);
+            if (lShadowMap == nullptr)
+            {
+                ClearShadowRows2D(lLights);
+            }
+
             lRenderer.SetLighting(lLights);
+            lRenderer.SetShadowMap(lShadowMap);
 
             // Overlays meant to be behind the world (the grid) go in with it.
             m_RenderSystem->BeginPass(lPipeline.PrepareScene(lWidth, lHeight), lSceneView, ELoadOp::Clear, &lLinearClear);
             DrawWorld(*InWorld, lRenderer);
             if (bInDrawOverlays) { DrawOverlays(InWorld, lRenderer, EOverlayFilter::BehindWorld); }
             m_RenderSystem->EndPass();
+
+            lRenderer.SetShadowMap(nullptr);
 
             lPipeline.Composite(*lCommands, InTarget, PostSettings::From(*lEnvironment));
 
@@ -490,6 +510,92 @@ namespace Opaax
         return lLighting;
     }
 
+    ITexture2D* RendererManager::RenderShadowMap(World& InWorld, Renderer2D& InRenderer, const Bounds2D& InView,
+                                                 const float InPixelsPerUnit, const LightsBlock2D& InLights)
+    {
+        ScenePipeline2D& lPipeline = m_RenderSystem->GetScenePipeline();
+        ICommandBuffer*  lCommands = m_RenderSystem->GetCommandBuffer();
+
+        ShadowBlock2D lShadows;
+        if (!lPipeline.CanShadow() || lCommands == nullptr || BuildShadowBlock2D(InLights, lShadows) == 0)
+        {
+            return nullptr;
+        }
+
+        bool bHasCaster = false;
+        InWorld.Each<ShadowCaster2DComponent>([&bHasCaster](EntityID, const ShadowCaster2DComponent& InCaster)
+        {
+            bHasCaster = bHasCaster || InCaster.bEnabled;
+        });
+
+        if (!bHasCaster)
+        {
+            return nullptr;
+        }
+
+        const OcclusionLayout2D lLayout = MakeOcclusionLayout2D(InView, InPixelsPerUnit, lShadows);
+        const Vector2F          lMin    = lLayout.Bounds.Min();
+        const Vector2F          lSize   = lLayout.Bounds.Size();
+        lShadows.OcclusionRect = Vector4F{ lMin.x, lMin.y, lSize.x, lSize.y };
+
+        // The casters' coverage over the layout's area: its bounds match its pixels exactly.
+        RenderView lView;
+        lView.ViewProjection = MakeViewProjection(CameraView{ lLayout.Bounds.Center, lLayout.Bounds.HalfExtent.y },
+                                                  lLayout.Width, lLayout.Height);
+        lView.Viewport       = Viewport{ 0, 0, lLayout.Width, lLayout.Height };
+        lView.bOcclusion     = true;
+
+        const Vector4F lNothing{ 0.f, 0.f, 0.f, 0.f };
+        m_RenderSystem->BeginPass(lPipeline.PrepareOcclusion(lLayout.Width, lLayout.Height), lView, ELoadOp::Clear, &lNothing);
+        const Uint32 lCasters = DrawShadowCasters(InWorld, InRenderer);
+        m_RenderSystem->EndPass();
+
+        // Every caster hidden: nothing can cast.
+        return (lCasters > 0) ? lPipeline.BuildShadowMap(*lCommands, lShadows) : nullptr;
+    }
+
+    Uint32 RendererManager::DrawShadowCasters(World& InWorld, Renderer2D& InRenderer)
+    {
+        Uint32 lDrawn = 0;
+        InWorld.Each<TransformComponent, ShadowCaster2DComponent>(
+            [this, &InRenderer, &InWorld, &lDrawn](EntityID InEntity, TransformComponent& InXf, ShadowCaster2DComponent& InCaster)
+            {
+                if (!InCaster.bEnabled)
+                {
+                    return;
+                }
+
+                Entity            lEntity(InEntity, &InWorld);
+                const DisplayPose lPose     = PoseFor(InWorld, InEntity, InXf);
+                const float       lRotation = Maths::DegreesToRadians(lPose.RotationDeg);
+
+                // Its silhouette: the sprite's alpha, or the whole quad.
+                if (const SpriteComponent* lSprite = lEntity.TryGet<SpriteComponent>())
+                {
+                    ITexture2D*  lTexture = nullptr;
+                    SpriteUVRect lUV;
+                    if (lSprite->bVisible && ResolveSpriteDraw(*lSprite, lTexture, lUV))
+                    {
+                        InRenderer.DrawSprite(lPose.Position, lSprite->Size * lPose.Scale, *lTexture, lSprite->Color,
+                                              lRotation, lSprite->Layer, lSprite->OrderInLayer, lUV.UVMin, lUV.UVMax);
+                        ++lDrawn;
+                    }
+                }
+                else if (const QuadComponent* lQuad = lEntity.TryGet<QuadComponent>())
+                {
+                    InRenderer.DrawQuad(lPose.Position, lQuad->Size * lPose.Scale, lQuad->Color, lRotation);
+                    ++lDrawn;
+                }
+            });
+        return lDrawn;
+    }
+
+    bool RendererManager::ReceivesShadows(World& InWorld, const EntityID InEntity)
+    {
+        const ShadowCaster2DComponent* lCaster = Entity(InEntity, &InWorld).TryGet<ShadowCaster2DComponent>();
+        return lCaster == nullptr || !lCaster->bEnabled || lCaster->bSelfShadows;
+    }
+
     const EnvironmentComponent* RendererManager::FindEnvironment(World& InWorld)
     {
         const EnvironmentComponent* lFound = nullptr;
@@ -508,9 +614,13 @@ namespace Opaax
             {
                 const DisplayPose lPose = PoseFor(InWorld, InEntity, InXf);
 
+                QuadLighting lLighting;
+                lLighting.bReceiveShadows = ReceivesShadows(InWorld, InEntity);
+
                 // Scale multiplies the component's Size.
                 InRenderer.DrawQuad(lPose.Position, InComp.Size * lPose.Scale, InComp.Color,
-                                    Maths::DegreesToRadians(lPose.RotationDeg));
+                                    Maths::DegreesToRadians(lPose.RotationDeg), ERenderLayer::Default, 0,
+                                    QuadMask{}, lLighting);
             });
 
         DrawWorldSprites(InWorld, InRenderer);
@@ -643,10 +753,13 @@ namespace Opaax
 
                 const DisplayPose lPose = PoseFor(InWorld, InEntity, InXf);
 
+                QuadLighting lLighting    = ResolveLighting(InSprite.Material);
+                lLighting.bReceiveShadows = ReceivesShadows(InWorld, InEntity);
+
                 InRenderer.DrawSprite(lPose.Position, InSprite.Size * lPose.Scale, *lTexture, InSprite.Color,
                                       Maths::DegreesToRadians(lPose.RotationDeg),
                                       InSprite.Layer, InSprite.OrderInLayer,
-                                      lUV.UVMin, lUV.UVMax, QuadMask{}, ResolveLighting(InSprite.Material));
+                                      lUV.UVMin, lUV.UVMax, QuadMask{}, lLighting);
             });
     }
 

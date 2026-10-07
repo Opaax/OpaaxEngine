@@ -1,6 +1,7 @@
 // Suite: 2D lighting on the CPU side — which lights reach a view and how they are packed for the
-// sprite shader (LightsBlock2D), plus the material data asset. The shading itself needs a GPU:
-// it is checked by captures and the CI render check.
+// sprite shader (LightsBlock2D), which of them get shadows and where the casters are drawn, plus
+// the material data asset. The shading itself needs a GPU: it is checked by captures and the CI
+// render check.
 #include <doctest.h>
 
 #include <cmath>
@@ -9,6 +10,7 @@
 #include <nlohmann/json.hpp>
 
 #include "Renderer/Components/Light2DComponent.h"
+#include "Renderer/Components/ShadowCaster2DComponent.h"
 #include "Renderer/Components/SpriteComponent.h"
 #include "Renderer/Lighting/Lighting2D.h"
 #include "Renderer/Materials/Material2D.h"
@@ -148,6 +150,170 @@ TEST_CASE("Lights: past the limit, global lights and the strongest point lights 
     float lWeakest = 1.0e9f;
     for (Uint32 lIndex = 1; lIndex < MAX_LIGHTS_2D; ++lIndex) { lWeakest = std::min(lWeakest, lBlock.Color[lIndex].x); }
     CHECK(lWeakest == doctest::Approx(10.f));
+}
+
+// =============================================================================
+// Shadows: which lights get a shadow map row, and where the casters are drawn.
+// =============================================================================
+
+TEST_CASE("Shadows: shadowed point and spot lights get rows, the strongest first; global lights never")
+{
+    Light2DComponent lWeak   = PointLight(200.f, 1.f);
+    Light2DComponent lStrong = PointLight(200.f, 5.f);
+    Light2DComponent lPlain  = PointLight(200.f, 9.f);
+    Light2DComponent lSun    = PointLight(1.f, 1.f);
+    lWeak.bCastShadows   = true;
+    lStrong.bCastShadows = true;
+    lSun.bCastShadows    = true;
+    lSun.Type            = ELight2DType::Global;
+
+    lStrong.ShadowSoftness = 2.f;
+    lStrong.ShadowStrength = 0.75f;
+
+    LightsBlock2D lBlock;
+    PackLights2D({ { &lWeak, { 0.f, 0.f }, 0.f }, { &lStrong, { 10.f, 0.f }, 0.f },
+                   { &lPlain, { 20.f, 0.f }, 0.f }, { &lSun, { 0.f, 0.f }, 0.f } },
+                 VIEW, WHITE, 1.f, lBlock);
+    REQUIRE(lBlock.GetCount() == 4);
+
+    CHECK(lBlock.Params[1].y == 0.f);    // the strongest shadowed light takes the first row
+    CHECK(lBlock.Params[0].y == 1.f);
+    CHECK(lBlock.Params[2].y == -1.f);   // casts no shadow
+    CHECK(lBlock.Params[3].y == -1.f);   // a global light has no shadow map
+
+    CHECK(lBlock.Params[1].z == doctest::Approx(2.f));
+    CHECK(lBlock.Params[1].w == doctest::Approx(0.75f));
+}
+
+TEST_CASE("Shadows: past 16 shadowed lights, the weakest go without")
+{
+    TDynArray<Light2DComponent> lComponents(20);
+    TDynArray<Light2DInstance>  lLights;
+    for (Uint32 lIndex = 0; lIndex < 20; ++lIndex)
+    {
+        lComponents[lIndex]              = PointLight(100.f, 1.f + static_cast<float>(lIndex));
+        lComponents[lIndex].bCastShadows = true;
+        lLights.push_back({ &lComponents[lIndex], { 0.f, 0.f }, 0.f });
+    }
+
+    LightsBlock2D lBlock;
+    PackLights2D(lLights, VIEW, WHITE, 1.f, lBlock);
+    REQUIRE(lBlock.GetCount() == 20);
+
+    // Lights 0..3 are the weakest; the others share rows 0..15, the strongest (19) first.
+    TDynArray<bool> lRowUsed(MAX_SHADOWED_LIGHTS_2D, false);
+    for (Uint32 lIndex = 0; lIndex < 20; ++lIndex)
+    {
+        const float lRow = lBlock.Params[lIndex].y;
+        if (lIndex < 4)
+        {
+            CHECK(lRow == -1.f);
+            continue;
+        }
+
+        REQUIRE(lRow >= 0.f);
+        REQUIRE(lRow < static_cast<float>(MAX_SHADOWED_LIGHTS_2D));
+        CHECK_FALSE(lRowUsed[static_cast<Uint32>(lRow)]);
+        lRowUsed[static_cast<Uint32>(lRow)] = true;
+    }
+    CHECK(lBlock.Params[19].y == 0.f);
+}
+
+TEST_CASE("Shadows: the shadow block lists each row's light; cleared rows list none")
+{
+    Light2DComponent lWeak   = PointLight(150.f, 1.f);
+    Light2DComponent lStrong = PointLight(250.f, 4.f);
+    lWeak.bCastShadows   = true;
+    lStrong.bCastShadows = true;
+
+    LightsBlock2D lBlock;
+    PackLights2D({ { &lWeak, { -10.f, 5.f }, 0.f }, { &lStrong, { 30.f, 40.f }, 0.f } }, VIEW, WHITE, 1.f, lBlock);
+
+    ShadowBlock2D lShadows;
+    REQUIRE(BuildShadowBlock2D(lBlock, lShadows) == 2);
+    CHECK(lShadows.GetCount() == 2);
+    CHECK(lShadows.Info.y == doctest::Approx(static_cast<float>(SHADOW_MAP_ANGLES_2D)));
+
+    CHECK(lShadows.Light[0].x == doctest::Approx(30.f));   // row 0: the strong light
+    CHECK(lShadows.Light[0].y == doctest::Approx(40.f));
+    CHECK(lShadows.Light[0].z == doctest::Approx(250.f));
+    CHECK(lShadows.Light[1].x == doctest::Approx(-10.f));
+    CHECK(lShadows.Light[1].z == doctest::Approx(150.f));
+
+    ClearShadowRows2D(lBlock);
+    CHECK(lBlock.Params[0].y == -1.f);
+    CHECK(lBlock.Params[1].y == -1.f);
+    CHECK(BuildShadowBlock2D(lBlock, lShadows) == 0);
+}
+
+TEST_CASE("Shadows: without shadowed lights, the occlusion map is the view at screen density")
+{
+    const OcclusionLayout2D lLayout = MakeOcclusionLayout2D(VIEW, 1.2f, ShadowBlock2D{});
+
+    CHECK(lLayout.Width == 1200);
+    CHECK(lLayout.Height == 720);
+    CHECK(lLayout.Bounds.Center.x == doctest::Approx(0.f));
+    CHECK(lLayout.Bounds.Center.y == doctest::Approx(0.f));
+    CHECK(lLayout.Bounds.HalfExtent.x == doctest::Approx(500.f));
+    CHECK(lLayout.Bounds.HalfExtent.y == doctest::Approx(300.f));
+}
+
+TEST_CASE("Shadows: the occlusion map takes in a shadowed light's reach, up to three times the view")
+{
+    ShadowBlock2D lShadows;
+    lShadows.Info.x   = 2.f;
+    lShadows.Light[0] = Vector4F{ 600.f, 0.f, 300.f, 0.f };    // reaches x = 900, beyond the view's 500
+    lShadows.Light[1] = Vector4F{ 0.f, 5000.f, 400.f, 0.f };   // far above: cut at 3 x 300 = 900
+
+    const OcclusionLayout2D lLayout = MakeOcclusionLayout2D(VIEW, 1.f, lShadows);
+
+    // x: -500 .. 900, y: -300 .. 900.
+    CHECK(lLayout.Width == 1400);
+    CHECK(lLayout.Height == 1200);
+    CHECK(lLayout.Bounds.Center.x == doctest::Approx(200.f));
+    CHECK(lLayout.Bounds.Center.y == doctest::Approx(300.f));
+    CHECK(lLayout.Bounds.HalfExtent.x == doctest::Approx(700.f));
+    CHECK(lLayout.Bounds.HalfExtent.y == doctest::Approx(600.f));
+}
+
+TEST_CASE("Shadows: a dense occlusion map stops at its largest size and keeps whole pixels")
+{
+    // 10 pixels a unit would be 10000 x 6000: it gets coarser instead.
+    const OcclusionLayout2D lLayout = MakeOcclusionLayout2D(VIEW, 10.f, ShadowBlock2D{});
+
+    CHECK(lLayout.Width == OCCLUSION_MAX_SIZE_2D);
+    CHECK(lLayout.Height == 2458);   // 6000 * 4096 / 10000, rounded up
+    CHECK(lLayout.Bounds.HalfExtent.x == doctest::Approx(500.f));
+
+    // The bounds match the pixels' aspect exactly, so a view of Height pixels over HalfExtent.y
+    // spans HalfExtent.x across Width.
+    CHECK(lLayout.Bounds.HalfExtent.y / lLayout.Bounds.HalfExtent.x
+          == doctest::Approx(static_cast<float>(lLayout.Height) / static_cast<float>(lLayout.Width)));
+}
+
+TEST_CASE("ShadowCaster2D and a light's shadow settings round-trip; older lights load without shadows")
+{
+    ShadowCaster2DComponent lCaster;
+    lCaster.bSelfShadows = true;
+    lCaster.bEnabled     = false;
+
+    const ShadowCaster2DComponent lCasterBack = nlohmann::json(lCaster).get<ShadowCaster2DComponent>();
+    CHECK(lCasterBack.bSelfShadows);
+    CHECK_FALSE(lCasterBack.bEnabled);
+
+    Light2DComponent lLight;
+    lLight.bCastShadows   = true;
+    lLight.ShadowSoftness = 1.5f;
+    lLight.ShadowStrength = 0.25f;
+
+    const Light2DComponent lLightBack = nlohmann::json(lLight).get<Light2DComponent>();
+    CHECK(lLightBack.bCastShadows);
+    CHECK(lLightBack.ShadowSoftness == doctest::Approx(1.5f));
+    CHECK(lLightBack.ShadowStrength == doctest::Approx(0.25f));
+
+    const Light2DComponent lOld = nlohmann::json{ { "Radius", 123.0 } }.get<Light2DComponent>();
+    CHECK_FALSE(lOld.bCastShadows);
+    CHECK(lOld.Radius == doctest::Approx(123.f));
 }
 
 TEST_CASE("Material2D: a data asset round-trips; a sprite saved before materials still loads")

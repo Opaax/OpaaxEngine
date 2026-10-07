@@ -134,6 +134,21 @@ namespace Opaax
         /** How a sprite with InMaterial takes light (cached per material path). */
         QuadLighting ResolveLighting(const TDataAssetRef<Material2D>& InMaterial);
 
+        /**
+         * Draws InWorld's shadow casters into the occlusion map around InView, then fills the
+         * shadow map for InLights' shadowed lights.
+         * @param InPixelsPerUnit The view's density, kept by the occlusion map when it can
+         * @return The shadow map, or null when nothing casts a shadow this frame
+         */
+        ITexture2D* RenderShadowMap(World& InWorld, Renderer2D& InRenderer, const Bounds2D& InView,
+                                    float InPixelsPerUnit, const LightsBlock2D& InLights);
+
+        /** Draws the silhouettes of InWorld's enabled shadow casters (sprite or quad). */
+        Uint32 DrawShadowCasters(World& InWorld, Renderer2D& InRenderer);
+
+        /** False for a shadow caster that does not shadow itself. */
+        static bool ReceivesShadows(World& InWorld, EntityID InEntity);
+
         /** Draws InWorld's quads, sprites and texts. */
         void DrawWorld(World& InWorld, Renderer2D& InRenderer);
 

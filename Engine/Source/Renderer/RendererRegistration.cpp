@@ -3,6 +3,7 @@
 #include "Renderer/Camera/CameraComponent.h"
 #include "Renderer/Components/EnvironmentComponent.h"
 #include "Renderer/Components/Light2DComponent.h"
+#include "Renderer/Components/ShadowCaster2DComponent.h"
 #include "Renderer/Materials/Material2D.h"
 #include "Renderer/Components/QuadComponent.h"
 #include "Renderer/Components/SpriteComponent.h"
@@ -26,6 +27,7 @@ namespace Opaax
     // How a world's picture is made (HDR, ambient, exposure, tonemap): one per level.
     OPAAX_REGISTER_NAMED_COMPONENT(EnvironmentComponent, "Environment");
     OPAAX_REGISTER_NAMED_COMPONENT(Light2DComponent, "Light2D");
+    OPAAX_REGISTER_NAMED_COMPONENT(ShadowCaster2DComponent, "ShadowCaster2D");
 
     // How a sprite takes light, shared by the sprites that point at it.
     OPAAX_REGISTER_DATA_ASSET(Material2D);

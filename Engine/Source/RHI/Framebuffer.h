@@ -2,6 +2,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
+#include "RHI/Texture.h"
 
 namespace Opaax
 {
@@ -68,5 +69,32 @@ namespace Opaax
         virtual Uint32 GetColorAttachmentID() const noexcept = 0;
         virtual Uint32 GetWidth()             const noexcept = 0;
         virtual Uint32 GetHeight()            const noexcept = 0;
+    };
+
+    // =============================================================================
+    // FramebufferTexture — a framebuffer's colour attachment seen as a texture, so a draw can
+    //   sample it like any other (a shadow map in a sprite batch). Does not own the framebuffer
+    //   and follows its resizes.
+    // =============================================================================
+    class FramebufferTexture final : public ITexture2D
+    {
+    public:
+        explicit FramebufferTexture(const IFramebuffer& InFramebuffer) noexcept : m_Framebuffer(&InFramebuffer) {}
+
+        //~Begin ITexture2D interface
+    public:
+        void Bind(Uint32 InSlot = 0) const override { m_Framebuffer->BindColorTexture(InSlot); }
+
+        // Nothing to undo: the next texture bound to the unit replaces it.
+        void Unbind() const override {}
+
+        Uint32 GetWidth()      const noexcept override { return m_Framebuffer->GetWidth(); }
+        Uint32 GetHeight()     const noexcept override { return m_Framebuffer->GetHeight(); }
+        Uint32 GetRendererID() const noexcept override { return m_Framebuffer->GetColorAttachmentID(); }
+        bool   IsLoaded()      const noexcept override { return m_Framebuffer->GetColorAttachmentID() != 0; }
+        //~End ITexture2D interface
+
+    private:
+        const IFramebuffer* m_Framebuffer = nullptr;
     };
 }

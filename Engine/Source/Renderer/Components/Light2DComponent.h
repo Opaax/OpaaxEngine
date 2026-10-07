@@ -68,10 +68,20 @@ namespace Opaax
         /** Global: the light's angle above the scene, degrees (90 is straight down). */
         float Elevation = 45.f;
 
+        /** Point and spot: ShadowCaster2Ds block it. A view shadows its 16 strongest such lights. */
+        bool bCastShadows = false;
+
+        /** 0: hard shadow edges. Higher: edges soften with the distance behind the caster. */
+        float ShadowSoftness = 0.5f;
+
+        /** 0: no shadow, 1: no light at all in the shadow. */
+        float ShadowStrength = 1.f;
+
         bool bEnabled = true;
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(Light2DComponent, Type, Color, Intensity, Radius, Falloff,
-                                                    ConeAngle, ConeSoftness, Height, Elevation, bEnabled)
+                                                    ConeAngle, ConeSoftness, Height, Elevation, bCastShadows,
+                                                    ShadowSoftness, ShadowStrength, bEnabled)
 
         OPAAX_PROPERTIES(Light2DComponent,
                          OPAAX_PROP(Type).SetTooltip("Point lights all around, Spot a cone along the entity's\n"
@@ -89,6 +99,13 @@ namespace Opaax
                                            .SetTooltip("Height above the scene. Low lights graze normal maps."),
                          OPAAX_PROP(Elevation).SetRange(1.f, 90.f)
                                               .SetTooltip("Global: the light's angle above the scene (90 = from above)."),
+                         OPAAX_PROP(bCastShadows).SetTooltip("Point and Spot: ShadowCaster2Ds block this light.\n"
+                                                             "A view shadows its 16 strongest shadowed lights."),
+                         OPAAX_PROP(ShadowSoftness).SetRange(0.f, 4.f).SetDragStep(0.01f)
+                                                   .SetTooltip("0: hard edges. Higher: edges soften with the\n"
+                                                               "distance behind the caster."),
+                         OPAAX_PROP(ShadowStrength).SetRange(0.f, 1.f).SetDragStep(0.01f)
+                                                   .SetTooltip("0: no shadow, 1: no light at all in the shadow."),
                          OPAAX_PROP(bEnabled))
     };
 }

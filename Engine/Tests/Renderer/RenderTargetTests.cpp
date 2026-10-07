@@ -17,7 +17,7 @@ namespace
         void Bind()   override { ++BindCount;   }
         void Unbind() override { ++UnbindCount; }
         void Resize(Uint32 InWidth, Uint32 InHeight) override { Width = InWidth; Height = InHeight; }
-        void BindColorTexture(Uint32) const override {}
+        void BindColorTexture(Uint32 InSlot) const override { LastColorSlot = InSlot; }
 
         Uint32 GetColorAttachmentID() const noexcept override { return ColorID; }
         Uint32 GetWidth()             const noexcept override { return Width;   }
@@ -28,7 +28,27 @@ namespace
         Uint32 ColorID     = 42;
         int    BindCount   = 0;
         int    UnbindCount = 0;
+
+        mutable Uint32 LastColorSlot = ~0u;
     };
+}
+
+TEST_CASE("FramebufferTexture: binds the colour attachment where asked and reads its size through")
+{
+    StubFramebuffer          lFb;
+    const FramebufferTexture lTexture(lFb);
+
+    lTexture.Bind(15);
+    CHECK(lFb.LastColorSlot == 15u);
+    CHECK(lTexture.GetRendererID() == 42u);
+    CHECK(lTexture.IsLoaded());
+
+    lFb.Resize(64, 16);
+    CHECK(lTexture.GetWidth()  == 64u);
+    CHECK(lTexture.GetHeight() == 16u);
+
+    lFb.ColorID = 0;
+    CHECK_FALSE(lTexture.IsLoaded());
 }
 
 TEST_CASE("OffscreenRenderTarget: size reads through to the wrapped framebuffer")
