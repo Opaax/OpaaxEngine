@@ -1,6 +1,7 @@
 #include "Automation/EngineAutomationCommands.h"
 
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
 
 #include "Application/OpaaxApplication.h"
@@ -9,11 +10,13 @@
 #include "Engine/Registries/EngineRegistries.h"
 #include "Input/InputKeyNames.h"
 #include "Input/InputManager.h"
+#include "World/Behaviour/BehaviourSubsystem.h"
 #include "World/Components/ComponentRegistry.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
+#include "World/WorldSpec.h"
 
 namespace Opaax::EngineAutomation
 {
@@ -66,6 +69,78 @@ namespace Opaax::EngineAutomation
                 OutError = "no active world";
             }
             return lWorld;
+        }
+
+        /** How far apart two numbers can be and still be "equal" (floats written back and forth). */
+        constexpr double EQUALS_TOLERANCE = 1.0e-4;
+
+        /**
+         * Whether InActual matches InExpected: numbers within InTolerance, an object on the fields
+         * InExpected gives, arrays element by element, anything else exactly.
+         */
+        bool Matches(const nlohmann::json& InActual, const nlohmann::json& InExpected, const double InTolerance)
+        {
+            if (InActual.is_number() && InExpected.is_number())
+            {
+                return std::abs(InActual.get<double>() - InExpected.get<double>()) <= InTolerance;
+            }
+
+            if (InActual.is_object() && InExpected.is_object())
+            {
+                for (const auto& [lKey, lValue] : InExpected.items())
+                {
+                    const auto lField = InActual.find(lKey);
+                    if (lField == InActual.end() || !Matches(*lField, lValue, InTolerance))
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            if (InActual.is_array() && InExpected.is_array())
+            {
+                if (InActual.size() != InExpected.size())
+                {
+                    return false;
+                }
+                for (Uint64 lIndex = 0; lIndex < InActual.size(); ++lIndex)
+                {
+                    if (!Matches(InActual[lIndex], InExpected[lIndex], InTolerance))
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            return InActual == InExpected;
+        }
+
+        /** The entities of InWorld whose name is InName (any when empty) and that have InComponent (any when empty). */
+        Uint64 CountEntities(World& InWorld, const ComponentRegistry& InTypes, const std::string& InName,
+                             const std::string& InComponent)
+        {
+            const IComponentEntry* lEntry = InComponent.empty() ? nullptr : InTypes.FindByName(OpaaxStringID(InComponent.c_str()));
+            if (!InComponent.empty() && lEntry == nullptr)
+            {
+                return 0;
+            }
+
+            Uint64 lCount = 0;
+            InWorld.Each<EntityMeta>([&](const EntityID InId, const EntityMeta& InMeta)
+            {
+                if (!InName.empty() && InName != InMeta.Name.CStr())
+                {
+                    return;
+                }
+                if (lEntry != nullptr && !lEntry->Has(InWorld.GetRegistry(), InId))
+                {
+                    return;
+                }
+                ++lCount;
+            });
+            return lCount;
         }
 
         // =========================================================================
@@ -268,6 +343,162 @@ namespace Opaax::EngineAutomation
                     return AutomationResult::Ok(DescribeEntity(lEntity, lTypes, true));
                 });
         }
+
+        // =========================================================================
+        // Levels
+        // =========================================================================
+        void RegisterLevels(AutomationRunner& InRunner, IEngine& InEngine)
+        {
+            InRunner.Register("level.play",
+                "Opens the level at {path} (relative to the project's assets) in a new play world; the next request "
+                "runs once it is open.",
+                [&InEngine](const nlohmann::json& InParams)
+                {
+                    const std::string lPath = InParams.value("path", std::string());
+                    const OpaaxString lAbsolute =
+                        OpaaxApplication::GetAppService<IPaths>().AssetToAbsolute(OpaaxString(lPath.c_str()));
+                    if (lPath.empty() || !std::filesystem::is_regular_file(std::filesystem::path(lAbsolute.CStr())))
+                    {
+                        return AutomationResult::Fail("no level at '" + lPath + "' (paths are relative to the assets)");
+                    }
+
+                    WorldSpec lSpec;
+                    lSpec.LevelPath = OpaaxString(lPath.c_str());
+                    lSpec.Mode      = EWorldMode::Play;
+                    InEngine.RequestOpenLevel(lSpec);
+
+                    // Opened at the start of the next frame, started during it.
+                    AutomationResult lResult = AutomationResult::Ok(nlohmann::json{ { "path", lPath } });
+                    lResult.WaitFrames = 2;
+                    return lResult;
+                });
+
+            InRunner.Register("world.wait",
+                "Lets the playing world's clock advance {seconds} (game time, whatever the frame rate) before the "
+                "next request. Ends early if the world changes.",
+                [&InEngine](const nlohmann::json& InParams)
+                {
+                    std::string  lError;
+                    World* const lWorld = ActiveWorld(InEngine, lError);
+                    if (lWorld == nullptr)
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    const BehaviourSubsystem* lRuntime = lWorld->GetSubsystems().GetSubsystem<BehaviourSubsystem>();
+                    if (lRuntime == nullptr)
+                    {
+                        return AutomationResult::Fail("the active world is not playing: it has no game clock");
+                    }
+
+                    const double lUntil = lRuntime->GetTime() + InParams.value("seconds", 1.0);
+
+                    AutomationResult lResult;
+                    lResult.WaitUntil = [&InEngine, lWorld, lUntil]()
+                    {
+                        World* const lActive = InEngine.GetWorldManager().GetActiveWorld();
+                        if (lActive != lWorld)
+                        {
+                            return true;
+                        }
+                        const BehaviourSubsystem* lClock = lActive->GetSubsystems().GetSubsystem<BehaviourSubsystem>();
+                        return lClock == nullptr || lClock->GetTime() >= lUntil;
+                    };
+                    return lResult;
+                });
+        }
+
+        // =========================================================================
+        // Expectations: a failed one fails the request, so a script's exit code fails a test run
+        // =========================================================================
+        void RegisterExpectations(AutomationRunner& InRunner, IEngine& InEngine)
+        {
+            InRunner.Register("expect.value",
+                "Fails unless {entity}'s value at {path} (\"Transform/Position/x\") meets: equals, near (with "
+                "tolerance), greater, less or between [min, max].",
+                [&InEngine](const nlohmann::json& InParams)
+                {
+                    std::string  lError;
+                    World* const lWorld = ActiveWorld(InEngine, lError);
+                    if (lWorld == nullptr)
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    const Entity lEntity = FindEntity(*lWorld, InParams, lError);
+                    if (!lEntity.IsValid())
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    const std::string    lPath    = InParams.value("path", std::string());
+                    const nlohmann::json lValues  = DescribeEntity(lEntity, InEngine.GetRegistries().Components(), true);
+                    const auto           lPointer = nlohmann::json::json_pointer("/components/" + lPath);
+                    if (lPath.empty() || !lValues.contains(lPointer))
+                    {
+                        return AutomationResult::Fail("no value at '" + lPath + "' (Component/Field/...)");
+                    }
+
+                    const nlohmann::json& lActual = lValues.at(lPointer);
+                    if (!CheckExpectation(lActual, InParams, lError))
+                    {
+                        return AutomationResult::Fail(InParams.at("entity").get<std::string>() + " " + lPath + ": " + lError);
+                    }
+                    return AutomationResult::Ok(nlohmann::json{ { "value", lActual } });
+                });
+
+            InRunner.Register("expect.count",
+                "Fails unless the number of entities ({name}, {component} filter them) meets: equals, greater, "
+                "less or between [min, max].",
+                [&InEngine](const nlohmann::json& InParams)
+                {
+                    std::string  lError;
+                    World* const lWorld = ActiveWorld(InEngine, lError);
+                    if (lWorld == nullptr)
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    const Uint64 lCount = CountEntities(*lWorld, InEngine.GetRegistries().Components(),
+                                                        InParams.value("name", std::string()),
+                                                        InParams.value("component", std::string()));
+                    if (!CheckExpectation(nlohmann::json(lCount), InParams, lError))
+                    {
+                        return AutomationResult::Fail("entity count: " + lError);
+                    }
+                    return AutomationResult::Ok(nlohmann::json{ { "count", lCount } });
+                });
+
+            InRunner.Register("expect.entity",
+                "Fails unless an entity named {entity} (or with that id) exists; with {exists: false}, unless none does.",
+                [&InEngine](const nlohmann::json& InParams)
+                {
+                    std::string  lError;
+                    World* const lWorld = ActiveWorld(InEngine, lError);
+                    if (lWorld == nullptr)
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    const std::string lRef = InParams.value("entity", std::string());
+                    if (lRef.empty())
+                    {
+                        return AutomationResult::Fail("\"entity\" names an entity: its id or its name");
+                    }
+
+                    // By name, any number of them counts.
+                    const bool bWanted = InParams.value("exists", true);
+                    Guid       lId;
+                    const bool bFound  = Guid::FromString(OpaaxString(lRef.c_str()), lId)
+                                             ? lWorld->FindByGuid(lId).IsValid()
+                                             : CountEntities(*lWorld, InEngine.GetRegistries().Components(), lRef, {}) > 0;
+                    if (bFound != bWanted)
+                    {
+                        return AutomationResult::Fail("'" + lRef + (bFound ? "' exists" : "' does not exist"));
+                    }
+                    return AutomationResult::Ok(nlohmann::json{ { "exists", bFound } });
+                });
+        }
     }
 
     void Register(AutomationRunner& InRunner, IEngine& InEngine, IAutomationHost& InHost)
@@ -275,6 +506,67 @@ namespace Opaax::EngineAutomation
         RegisterApp(InRunner, InHost);
         RegisterInput(InRunner, InEngine);
         RegisterWorld(InRunner, InEngine);
+        RegisterLevels(InRunner, InEngine);
+        RegisterExpectations(InRunner, InEngine);
+    }
+
+    bool CheckExpectation(const nlohmann::json& InActual, const nlohmann::json& InParams, std::string& OutError)
+    {
+        const auto lFail = [&InActual, &OutError](const std::string& InExpected)
+        {
+            OutError = "expected " + InExpected + ", found " + InActual.dump();
+            return false;
+        };
+
+        if (const auto lEquals = InParams.find("equals"); lEquals != InParams.end()
+            && !Matches(InActual, *lEquals, EQUALS_TOLERANCE))
+        {
+            return lFail(lEquals->dump());
+        }
+
+        if (const auto lNear = InParams.find("near"); lNear != InParams.end())
+        {
+            const double lTolerance = InParams.value("tolerance", 0.01);
+            if (!Matches(InActual, *lNear, lTolerance))
+            {
+                return lFail(lNear->dump() + " within " + nlohmann::json(lTolerance).dump());
+            }
+        }
+
+        // The comparisons need a number.
+        const bool bCompares = InParams.contains("greater") || InParams.contains("less") || InParams.contains("between");
+        if (bCompares && !InActual.is_number())
+        {
+            return lFail("a number");
+        }
+
+        if (const auto lGreater = InParams.find("greater"); lGreater != InParams.end()
+            && !(InActual.get<double>() > lGreater->get<double>()))
+        {
+            return lFail("more than " + lGreater->dump());
+        }
+
+        if (const auto lLess = InParams.find("less"); lLess != InParams.end()
+            && !(InActual.get<double>() < lLess->get<double>()))
+        {
+            return lFail("less than " + lLess->dump());
+        }
+
+        if (const auto lBetween = InParams.find("between"); lBetween != InParams.end())
+        {
+            const double lValue = InActual.get<double>();
+            if (!lBetween->is_array() || lBetween->size() != 2)
+            {
+                OutError = "\"between\" is [min, max]";
+                return false;
+            }
+            if (lValue < (*lBetween)[0].get<double>() || lValue > (*lBetween)[1].get<double>())
+            {
+                return lFail("between " + (*lBetween)[0].dump() + " and " + (*lBetween)[1].dump());
+            }
+        }
+
+        return true;
     }
 
     Entity FindEntity(World& InWorld, const nlohmann::json& InParams, std::string& OutError)

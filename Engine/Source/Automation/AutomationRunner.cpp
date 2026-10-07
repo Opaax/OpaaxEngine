@@ -77,28 +77,42 @@ namespace Opaax
 
     void AutomationRunner::Tick()
     {
-        // The frames a request asked for: this tick is one more of them gone by.
-        if (m_WaitFrames > 0)
+        if (IsHolding())
         {
-            --m_WaitFrames;
-            if (m_WaitFrames > 0)
+            // The frames a request asked for: this tick is one more of them gone by.
+            if (m_WaitFrames > 0 && --m_WaitFrames > 0)
             {
                 return;
             }
 
-            if (m_AfterWait)
+            // Then its condition, checked once a frame.
+            if (m_WaitUntil)
             {
-                const TFunction<void()> lAfter = Move(m_AfterWait);
-                m_AfterWait = nullptr;
-                lAfter();
+                if (!m_WaitUntil())
+                {
+                    return;
+                }
+                m_WaitUntil = nullptr;
             }
+
+            FinishWait();
         }
 
-        while (!m_Queue.empty() && m_WaitFrames == 0)
+        while (!m_Queue.empty() && !IsHolding())
         {
             const AutomationRequest lRequest = Move(m_Queue.front());
             m_Queue.pop();
             Run(lRequest);
+        }
+    }
+
+    void AutomationRunner::FinishWait()
+    {
+        if (m_AfterWait)
+        {
+            const TFunction<void()> lAfter = Move(m_AfterWait);
+            m_AfterWait = nullptr;
+            lAfter();
         }
     }
 
@@ -109,7 +123,7 @@ namespace Opaax
 
     bool AutomationRunner::IsIdle() const noexcept
     {
-        return m_Queue.empty() && m_WaitFrames == 0;
+        return m_Queue.empty() && !IsHolding();
     }
 
     void AutomationRunner::Run(const AutomationRequest& InRequest)
@@ -143,14 +157,13 @@ namespace Opaax
             if (lResult.bOk)
             {
                 m_WaitFrames = lResult.WaitFrames;
+                m_WaitUntil  = Move(lResult.WaitUntil);
                 m_AfterWait  = Move(lResult.AfterWait);
 
                 // Nothing to wait for: what comes after the wait happens now.
-                if (m_WaitFrames == 0 && m_AfterWait)
+                if (!IsHolding())
                 {
-                    const TFunction<void()> lAfter = Move(m_AfterWait);
-                    m_AfterWait = nullptr;
-                    lAfter();
+                    FinishWait();
                 }
             }
         }

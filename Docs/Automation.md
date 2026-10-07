@@ -31,9 +31,10 @@ position. In the inbox, the file's name is the id.
 ## Frames
 
 Requests run at the start of a frame, one after another, until one holds the queue:
-`frames.wait` lets frames run, `screenshot` waits until the frame is drawn, a tapped key stays down
-for its frames. Everything else is immediate: let the game run (`frames.wait`) before checking what
-a change did.
+`frames.wait` lets frames run, `world.wait` lets game time pass, `screenshot` waits until the frame
+is drawn, a tapped key stays down for its frames. Everything else is immediate: let the game run
+before checking what a change did. Prefer `world.wait` in tests: frames go by faster or slower
+depending on the machine, game time does not.
 
 ## Commands
 
@@ -46,6 +47,7 @@ saved in `.opaaxmap` files.
 | `app.info` | | Frame number and the project's folders |
 | `app.quit` | | Closes the app at the end of the frame |
 | `frames.wait` | `count` | Lets frames run before the next request |
+| `world.wait` | `seconds` | Lets the playing world's clock advance (game time, whatever the frame rate) |
 | `screenshot` | `path` | Saves the frame as a PNG (in the editor: the whole editor) |
 | `input.key` | `key`, `action`, `frames` | `press`, `release` or `tap` a key (`Space`, `A`, `Mouse_Left`...) as if from the keyboard |
 | `input.mouse` | `x`, `y` | Moves the game's pointer (pixels of the game view) |
@@ -53,12 +55,21 @@ saved in `.opaaxmap` files.
 | `entity.list` | `name`, `component` | The entities (optionally filtered) with their components |
 | `entity.get` | `entity` | One entity with its components' values |
 | `component.set` | `entity`, `type`, `value` | Merges `value` into the component (adds it when missing) |
+| `level.play` | `path` | Opens a level (relative to the project's assets) in a new play world |
+| `expect.value` | `entity`, `path`, check | Fails unless the value at `path` (`Transform/Position/x`) passes the check |
+| `expect.count` | `name`, `component`, check | Fails unless the number of matching entities passes the check |
+| `expect.entity` | `entity`, `exists` | Fails unless an entity with that name or id exists (or, with `exists: false`, none does) |
+
+A check is any of `equals` (numbers within 1e-4; for an object, the fields given), `near` with a
+`tolerance` (0.01 by default), `greater`, `less`, `between: [min, max]`. A failed expectation fails
+its request, so a script of expectations is a test: its exit code is 1 when one fails.
 
 The editor adds:
 
 | Command | Params | Does |
 |---|---|---|
 | `editor.play`, `editor.stop`, `editor.pause`, `editor.step` | | Play In Editor |
+| `level.play` | `path` | Opens a level, then plays it in the editor |
 | `editor.undo`, `editor.redo` | | Undo and redo, as the Edit menu does |
 | `editor.command` | `tag` | Any editor command without arguments, by tag (`Editor.Command.FocusSelected`) |
 | `level.open`, `map.open` | `path` | Opens a level or a map (relative to the project's assets) |
@@ -75,14 +86,16 @@ Edits made by the editor's commands are the same as a user's: undoable, and save
 
 ```json
 [
+    { "command": "level.play", "params": { "path": "Levels/Main.opaaxlevel" } },
     { "command": "frames.wait", "params": { "count": 30 } },
-    { "id": "before", "command": "entity.get", "params": { "entity": "Player" } },
+    { "command": "expect.value", "params": { "entity": "Player", "path": "Transform/Position/y", "near": 0, "tolerance": 1 } },
     { "command": "input.key", "params": { "key": "Space", "action": "tap" } },
     { "command": "frames.wait", "params": { "count": 10 } },
-    { "id": "after", "command": "entity.get", "params": { "entity": "Player" } },
+    { "command": "expect.value", "params": { "entity": "Player", "path": "Transform/Position/y", "greater": 20 } },
     { "command": "screenshot", "params": { "path": "jump.png" } }
 ]
 ```
 
-`Sandbox --exec jump.json` runs it and closes; `jump.out.json` holds the player's transform before
-and after, and `jump.png` what the screen showed.
+`Sandbox --exec jump.json` runs it and closes with exit code 0 when the player rose, 1 otherwise;
+`jump.out.json` holds every answer and `jump.png` what the screen showed. The TestWorld project
+runs scripts like this one for every engine feature (see `TestWorld/Tests`).

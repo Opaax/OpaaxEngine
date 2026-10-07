@@ -59,5 +59,13 @@ namespace Opaax
          */
         bool PatchComponent(Entity InEntity, const ComponentRegistry& InTypes, const nlohmann::json& InParams,
                             std::string& OutError);
+
+        /**
+         * Whether InActual meets what InParams expects: "equals" (numbers within 1e-4, objects and
+         * arrays member by member), "near" within "tolerance" (default 0.01), "greater", "less",
+         * "between" [min, max]. With none of them, any value passes. OutError tells what was found
+         * when it does not.
+         */
+        bool CheckExpectation(const nlohmann::json& InActual, const nlohmann::json& InParams, std::string& OutError);
     }
 }

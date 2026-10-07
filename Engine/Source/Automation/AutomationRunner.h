@@ -39,7 +39,10 @@ namespace Opaax
         /** Frames to let run before the next request (a screenshot taken, a key held, a wait). */
         Uint32 WaitFrames = 0;
 
-        /** Runs once those frames have run, before the next request (a held key released). */
+        /** After those frames, holds the queue frame after frame until it returns true (a game clock). */
+        TFunction<bool()> WaitUntil;
+
+        /** Runs once the wait is over, before the next request (a held key released). */
         TFunction<void()> AfterWait;
 
         static AutomationResult Ok(nlohmann::json InValue = nlohmann::json::object());
@@ -102,6 +105,12 @@ namespace Opaax
     private:
         void Run(const AutomationRequest& InRequest);
 
+        /** A request's wait is not over. */
+        bool IsHolding() const noexcept { return m_WaitFrames > 0 || m_WaitUntil != nullptr; }
+
+        /** Runs what comes after the wait, once. */
+        void FinishWait();
+
         // =============================================================================
         // Members
         // =============================================================================
@@ -116,6 +125,7 @@ namespace Opaax
         TQueue<AutomationRequest>           m_Queue;
 
         Uint32            m_WaitFrames = 0;
+        TFunction<bool()> m_WaitUntil;
         TFunction<void()> m_AfterWait;
 
         TFunction<void(const AutomationResponse&)> m_Sink;

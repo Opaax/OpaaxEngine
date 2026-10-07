@@ -147,6 +147,38 @@ TEST_CASE("Automation: what comes after a wait runs before the next request")
     CHECK(lRecorder.Responses[1].Result.at("released") == true);
 }
 
+TEST_CASE("Automation: a condition holds the queue, after the frames, until it is true")
+{
+    Recorder lRecorder;
+    Uint32   lClock    = 0;
+    bool     bReleased = false;
+
+    lRecorder.Runner.Register("until-3", "Holds until the clock reaches 3.", [&](const nlohmann::json&)
+    {
+        AutomationResult lResult;
+        lResult.WaitFrames = 1;
+        lResult.WaitUntil  = [&lClock] { return lClock >= 3; };
+        lResult.AfterWait  = [&bReleased] { bReleased = true; };
+        return lResult;
+    });
+
+    lRecorder.Runner.Enqueue(Request("1", "until-3"));
+    lRecorder.Runner.Enqueue(Request("2", "echo"));
+
+    lRecorder.Runner.Tick();   // runs until-3; the clock is 0
+    for (lClock = 1; lClock < 3; ++lClock)
+    {
+        lRecorder.Runner.Tick();
+        CHECK(lRecorder.Responses.size() == 1);
+        CHECK_FALSE(bReleased);
+    }
+
+    lRecorder.Runner.Tick();   // the clock reached 3
+    CHECK(bReleased);
+    REQUIRE(lRecorder.Responses.size() == 2);
+    CHECK(lRecorder.Runner.IsIdle());
+}
+
 TEST_CASE("Automation: an unknown command and bad params fail, and the queue goes on")
 {
     Recorder lRecorder;
@@ -307,6 +339,44 @@ TEST_CASE("Automation entities: described with their components, and patched fie
     CHECK(lError.find("unknown component") != std::string::npos);
     CHECK_FALSE(EngineAutomation::PatchComponent(
         lHero, lTypes, nlohmann::json{ { "type", "Transform" }, { "value", 3 } }, lError));
+}
+
+TEST_CASE("Automation expectations: equals, near, greater, less and between, with what was found")
+{
+    std::string lError;
+
+    // equals: numbers within 1e-4, objects on the fields given, arrays element by element.
+    CHECK(EngineAutomation::CheckExpectation(1.00001, nlohmann::json{ { "equals", 1.0 } }, lError));
+    CHECK_FALSE(EngineAutomation::CheckExpectation(1.01, nlohmann::json{ { "equals", 1.0 } }, lError));
+    CHECK(lError == "expected 1.0, found 1.01");
+
+    const nlohmann::json lPosition{ { "x", 3.0 }, { "y", 4.0 } };
+    CHECK(EngineAutomation::CheckExpectation(lPosition, nlohmann::json{ { "equals", { { "x", 3.0 } } } }, lError));
+    CHECK_FALSE(EngineAutomation::CheckExpectation(lPosition, nlohmann::json{ { "equals", { { "z", 0.0 } } } }, lError));
+    CHECK(EngineAutomation::CheckExpectation("Spot", nlohmann::json{ { "equals", "Spot" } }, lError));
+    CHECK(EngineAutomation::CheckExpectation(nlohmann::json::array({ 1, 2 }),
+                                             nlohmann::json{ { "equals", nlohmann::json::array({ 1, 2 }) } }, lError));
+    CHECK_FALSE(EngineAutomation::CheckExpectation(nlohmann::json::array({ 1, 2 }),
+                                                   nlohmann::json{ { "equals", nlohmann::json::array({ 1 }) } }, lError));
+
+    // near: a tolerance, 0.01 by default.
+    CHECK(EngineAutomation::CheckExpectation(10.005, nlohmann::json{ { "near", 10.0 } }, lError));
+    CHECK_FALSE(EngineAutomation::CheckExpectation(10.5, nlohmann::json{ { "near", 10.0 } }, lError));
+    CHECK(EngineAutomation::CheckExpectation(10.5, nlohmann::json{ { "near", 10.0 }, { "tolerance", 1.0 } }, lError));
+
+    // Comparisons, together or alone; they need a number.
+    CHECK(EngineAutomation::CheckExpectation(5, nlohmann::json{ { "greater", 4 }, { "less", 6 } }, lError));
+    CHECK_FALSE(EngineAutomation::CheckExpectation(5, nlohmann::json{ { "greater", 5 } }, lError));
+    CHECK(lError == "expected more than 5, found 5");
+    CHECK_FALSE(EngineAutomation::CheckExpectation(5, nlohmann::json{ { "less", 2 } }, lError));
+    CHECK(EngineAutomation::CheckExpectation(5, nlohmann::json{ { "between", { 5, 9 } } }, lError));
+    CHECK_FALSE(EngineAutomation::CheckExpectation(10, nlohmann::json{ { "between", { 5, 9 } } }, lError));
+    CHECK_FALSE(EngineAutomation::CheckExpectation(5, nlohmann::json{ { "between", 3 } }, lError));
+    CHECK_FALSE(EngineAutomation::CheckExpectation("text", nlohmann::json{ { "greater", 1 } }, lError));
+    CHECK(lError == "expected a number, found \"text\"");
+
+    // Nothing expected: anything passes.
+    CHECK(EngineAutomation::CheckExpectation(nullptr, nlohmann::json::object(), lError));
 }
 
 TEST_CASE("Automation script: answers are written as they come, then marked done")

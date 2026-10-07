@@ -165,6 +165,25 @@ namespace Opaax::Editor::EditorAutomation
                     return WorldState(InContext);
                 });
 
+            // Replaces the engine's: the editor plays a level by opening it, then Play In Editor.
+            InRunner.Register("level.play",
+                "Opens the level at {path} (relative to the project's assets) and plays it in the editor; the next "
+                "request runs once it plays.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString lPath;
+                    std::string lError;
+                    if (!AssetPath(InContext, InParams, lPath, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+                    InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_LEVEL_AT, InContext, LevelPathParams{ lPath });
+
+                    AutomationResult lResult = Dispatch(InContext, Tags::EDITOR_COMMAND_PLAY);
+                    lResult.WaitFrames       = lResult.bOk ? 2u : 0u;
+                    return lResult;
+                });
+
             InRunner.Register("map.open", "Opens the map at {path} (relative to the project's assets).",
                 [&InContext](const nlohmann::json& InParams)
                 {
