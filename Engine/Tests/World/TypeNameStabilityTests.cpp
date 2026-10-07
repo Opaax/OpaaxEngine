@@ -24,6 +24,10 @@ namespace TypeNameProbes
     struct TextureLike {};
 }
 
+// The same name in the global namespace and in the engine's.
+struct SameNameProbe {};
+namespace Opaax { struct SameNameProbe {}; }
+
 namespace
 {
     template<typename T>
@@ -64,4 +68,13 @@ TEST_CASE("TypeIdOf: one id per type, the same every time it is asked")
 
     // Usable at compile time.
     static_assert(TypeIdOf<GlobalNamespaceProbe>() != 0);
+}
+
+TEST_CASE("TypeIdOf: a global type and an engine type of the same name stay distinct")
+{
+    // GCC spells a type relative to the signature function's namespace: were that function in
+    // Opaax, both would read "SameNameProbe" and share one id.
+    CHECK(TypeIdOf<::SameNameProbe>() != TypeIdOf<Opaax::SameNameProbe>());
+    CHECK(std::string(TypeNameOf<::SameNameProbe>()) != std::string(TypeNameOf<Opaax::SameNameProbe>()));
+    CHECK(DeriveTypeLeafName<Opaax::SameNameProbe>() == OpaaxStringID("SameNameProbe"));
 }
