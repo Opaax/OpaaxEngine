@@ -4,6 +4,7 @@
 #include "Renderer/RenderView.h"
 #include "Renderer/RenderTarget.hpp"
 #include "Renderer/Renderer2D.h"
+#include "Renderer/Post/ScenePipeline2D.h"
 
 #include "RHI/RHIDevice.h"
 #include "RHI/IRHIDevice.h"
@@ -42,6 +43,9 @@ namespace Opaax
         m_Renderer2D = MakeUnique<Renderer2D>();
         m_Renderer2D->Init(*m_Device, InDesc.Limits, InDesc.SpriteShader);
 
+        m_ScenePipeline = MakeUnique<ScenePipeline2D>();
+        m_ScenePipeline->Init(*m_Device, InDesc.TonemapShader);
+
         return true;
     }
 
@@ -53,6 +57,7 @@ namespace Opaax
             m_Device->WaitIdle();
         } 
         
+        m_ScenePipeline.reset();
         m_Renderer2D.reset();
         m_Backbuffer.reset();
         m_Device.reset();
@@ -133,14 +138,20 @@ namespace Opaax
         return m_Device->ReadBackbufferPixels(OutWidth, OutHeight, OutRGBA);
     }
 
-    void RenderSystem::BeginPass(IRenderTarget& InTarget, const RenderView& InView, const ELoadOp InLoadOp)
+    ICommandBuffer* RenderSystem::GetCommandBuffer() const
+    {
+        return IsValidDevice() ? &m_Device->GetCommandBuffer() : nullptr;
+    }
+
+    void RenderSystem::BeginPass(IRenderTarget& InTarget, const RenderView& InView, const ELoadOp InLoadOp,
+                                 const Vector4F* InClearColor)
     {
         if (!IsValidDevice() || !IsValidRenderer2D())
         {
             return;
         }
 
-        m_Device->GetCommandBuffer().BeginRenderPass(InTarget, InLoadOp, m_ClearColor);
+        m_Device->GetCommandBuffer().BeginRenderPass(InTarget, InLoadOp, InClearColor != nullptr ? *InClearColor : m_ClearColor);
         m_Renderer2D->BeginPass(InView, m_Device->GetCommandBuffer());
     }
 

@@ -15,6 +15,7 @@ layout(location = 6) in float a_MaskIndex;
 layout(std140, binding = 1) uniform CameraUBO
 {
     mat4 u_ViewProjection;
+    vec4 u_PassParams;   // x: 1 when the pass draws linear colour (an HDR target)
 };
 
 layout(location = 0) out vec4  v_Color;
@@ -47,6 +48,12 @@ layout(location = 5) in float v_MaskIndex;
 
 // Explicit binding — the array spans texture units 0..15 (replaces the SetIntArray call).
 layout(binding = 0) uniform sampler2D u_Textures[16];
+
+layout(std140, binding = 1) uniform CameraUBO
+{
+    mat4 u_ViewProjection;
+    vec4 u_PassParams;
+};
 
 layout(location = 0) out vec4 FragColor;
 
@@ -112,4 +119,10 @@ void main()
     int   lIdx    = int(v_TexIndex);
     vec4  lSample = SampleSlot(lIdx, v_TexCoord);
     FragColor     = lSample * v_Color * vec4(1.0, 1.0, 1.0, lMask);
+
+    // An HDR pass works in linear colour; textures and tints are authored in screen colour.
+    if (u_PassParams.x > 0.5)
+    {
+        FragColor.rgb = pow(FragColor.rgb, vec3(2.2));
+    }
 }

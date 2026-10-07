@@ -17,6 +17,7 @@ namespace
         void Bind()   override { ++BindCount;   }
         void Unbind() override { ++UnbindCount; }
         void Resize(Uint32 InWidth, Uint32 InHeight) override { Width = InWidth; Height = InHeight; }
+        void BindColorTexture(Uint32) const override {}
 
         Uint32 GetColorAttachmentID() const noexcept override { return ColorID; }
         Uint32 GetWidth()             const noexcept override { return Width;   }

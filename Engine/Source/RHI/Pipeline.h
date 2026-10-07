@@ -14,7 +14,8 @@ namespace Opaax
     enum class EBlendMode
     {
         None,
-        Alpha   // src-alpha / one-minus-src-alpha (standard 2D transparency)
+        Alpha,     // src-alpha / one-minus-src-alpha (standard 2D transparency)
+        Additive   // one / one (light, bloom)
     };
 
     enum class EPrimitiveTopology

@@ -57,6 +57,12 @@ namespace Opaax
         virtual void BindVertexArray(IVertexArray& InVertexArray) = 0;
 
         virtual void DrawIndexed(Uint32 InIndexCount) = 0;
+
+        /**
+         * One triangle covering the target, with no vertex buffer: the vertex shader makes the
+         * positions from the vertex index (0, 1, 2). For post-process passes.
+         */
+        virtual void DrawFullscreen() = 0;
     };
 
 } // namespace Opaax

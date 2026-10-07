@@ -1,6 +1,7 @@
 // The Renderer module's types. Each registers itself; see Engine/Registries/AutoRegistration.h.
 #include "Engine/Registries/AutoRegistration.h"
 #include "Renderer/Camera/CameraComponent.h"
+#include "Renderer/Components/EnvironmentComponent.h"
 #include "Renderer/Components/QuadComponent.h"
 #include "Renderer/Components/SpriteComponent.h"
 #include "Renderer/Components/TextComponent.h"
@@ -19,6 +20,9 @@ namespace Opaax
     OPAAX_REGISTER_NAMED_COMPONENT(SpriteComponent, "Sprite");
     OPAAX_REGISTER_NAMED_COMPONENT(CameraComponent, "Camera");
     OPAAX_REGISTER_NAMED_COMPONENT(TextComponent, "Text");
+
+    // How a world's picture is made (HDR, exposure, tonemap): one per level.
+    OPAAX_REGISTER_NAMED_COMPONENT(EnvironmentComponent, "Environment");
 
     OPAAX_REGISTER_NAMED_RESOURCE(TextureResource, "Texture");
     OPAAX_REGISTER_NAMED_RESOURCE(SpriteSheetResource, "SpriteSheet");

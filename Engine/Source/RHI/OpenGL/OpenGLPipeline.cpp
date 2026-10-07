@@ -22,6 +22,10 @@ namespace Opaax
                 glEnable(GL_BLEND);
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
                 break;
+            case EBlendMode::Additive:
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_ONE, GL_ONE);
+                break;
             case EBlendMode::None:
                 glDisable(GL_BLEND);
                 break;

@@ -30,7 +30,9 @@
 
 #include "World/WorldManager.h"
 #include "World/World.h"
+#include "Renderer/Components/EnvironmentComponent.h"
 #include "Renderer/Components/QuadComponent.h"
+#include "Renderer/Post/ScenePipeline2D.h"
 #include "Renderer/Components/SpriteComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Components/TransformInterpolationComponent.h"
@@ -105,7 +107,13 @@ namespace Opaax
             OPAAX_LOG(LogRendererManager, Error, "cannot read shader file '{}'", lShaderPath.CStr());
         }
 
+        // The HDR composite of worlds with an Environment. Without it they are drawn directly (logged).
+        const OpaaxString lTonemapPath =
+            OpaaxApplication::GetAppService<IPaths>().EngineToAbsolute("Assets/Shaders/Tonemap.glsl");
+        const OpaaxString lTonemapSrc = FileIO::ReadAllText(lTonemapPath);
+
         RenderSystemDesc lDesc;
+        lDesc.TonemapShader = lTonemapSrc.IsEmpty() ? ShaderDesc{} : ShaderSource::FromSource(lTonemapSrc, lTonemapPath);
         lDesc.Backend      = ResolveSupportedBackend(lEngineCfg.Render.Backend);
         lDesc.Surface      = lSurface;
         lDesc.Width        = lWindow->GetWidth();
@@ -353,58 +361,116 @@ namespace Opaax
         lView.ViewProjection = MakeViewProjection(InView, lWidth, lHeight);
         lView.Viewport       = Viewport{ 0, 0, lWidth, lHeight };
 
-        m_RenderSystem->BeginPass(InTarget, lView);
-
         Renderer2D& lRenderer = m_RenderSystem->GetRenderer2D();
 
-        // Draw the active world: a solid quad per QuadComponent, a textured one per Sprite.
-        if (InWorld != nullptr)
+        // A world with an Environment is drawn in HDR (linear colour), then composited into the target.
+        const EnvironmentComponent* lEnvironment = (InWorld != nullptr) ? FindEnvironment(*InWorld) : nullptr;
+        ScenePipeline2D&            lPipeline    = m_RenderSystem->GetScenePipeline();
+        ICommandBuffer*             lCommands    = m_RenderSystem->GetCommandBuffer();
+
+        if (lEnvironment != nullptr && lPipeline.IsReady() && lCommands != nullptr)
         {
-            InWorld->Each<TransformComponent, QuadComponent>(
-                [this, &lRenderer, InWorld](EntityID InEntity, TransformComponent& InXf, QuadComponent& InComp)
-                {
-                    const DisplayPose lPose = PoseFor(*InWorld, InEntity, InXf);
+            RenderView lSceneView   = lView;
+            lSceneView.bLinearColor = true;
 
-                    // Scale multiplies the component's Size.
-                    lRenderer.DrawQuad(lPose.Position, InComp.Size * lPose.Scale, InComp.Color,
-                                       Maths::DegreesToRadians(lPose.RotationDeg));
-                });
+            // The clear colour is authored in screen colour too.
+            const Vector4F& lClear = m_RenderSystem->GetClearColor();
+            const Vector4F  lLinearClear{ Maths::Pow(lClear.r, 2.2f), Maths::Pow(lClear.g, 2.2f),
+                                          Maths::Pow(lClear.b, 2.2f), lClear.a };
 
-            DrawWorldSprites(*InWorld, lRenderer);
-            DrawWorldTexts(*InWorld, lRenderer);
+            // Overlays meant to be behind the world (the grid) go in with it.
+            m_RenderSystem->BeginPass(lPipeline.PrepareScene(lWidth, lHeight), lSceneView, ELoadOp::Clear, &lLinearClear);
+            DrawWorld(*InWorld, lRenderer);
+            if (bInDrawOverlays) { DrawOverlays(InWorld, lRenderer, EOverlayFilter::BehindWorld); }
+            m_RenderSystem->EndPass();
+
+            lPipeline.Composite(*lCommands, InTarget, PostSettings::From(*lEnvironment));
+
+            // The other overlays over the finished picture, in screen colour.
+            if (bInDrawOverlays)
+            {
+                m_RenderSystem->BeginPass(InTarget, lView, ELoadOp::Load);
+                DrawOverlays(InWorld, lRenderer, EOverlayFilter::OverWorld);
+                m_RenderSystem->EndPass();
+            }
+            return;
         }
 
-        // Debug overlay — each line is a thin rotated quad in the world batch.
-        //   Read per pass, cleared once per frame. A primitive without a world belongs to the
-        //   active world; other worlds only draw what was queued for them.
+        m_RenderSystem->BeginPass(InTarget, lView);
+
+        if (InWorld != nullptr)
+        {
+            DrawWorld(*InWorld, lRenderer);
+        }
+
         if (bInDrawOverlays)
         {
-            const World* const lActive = (m_WorldManager != nullptr) ? m_WorldManager->GetActiveWorld() : nullptr;
-            const auto lBelongsHere = [InWorld, lActive](const World* InSource)
-            {
-                return (InSource != nullptr ? InSource : lActive) == InWorld;
-            };
-
-            for (const DebugLine& lLine : m_DebugDraw.GetLines())
-            {
-                if (!lBelongsHere(lLine.Source)) { continue; }
-
-                const DebugQuad lQuad = ToQuad(lLine);
-                // The line's own layer: the grid must be behind world geometry.
-                lRenderer.DrawQuad(lQuad.Center, lQuad.Size, lLine.Color, lQuad.RotationRad, lLine.Layer);
-            }
-
-            // Boxes are one hollow quad each, same layer rule.
-            for (const DebugBox& lBox : m_DebugDraw.GetBoxes())
-            {
-                if (!lBelongsHere(lBox.Source)) { continue; }
-
-                lRenderer.DrawQuadOutline(lBox.Center, lBox.Size, lBox.Color, lBox.Thickness,
-                                          lBox.RotationRad, lBox.Layer);
-            }
+            DrawOverlays(InWorld, lRenderer, EOverlayFilter::All);
         }
 
         m_RenderSystem->EndPass();
+    }
+
+    const EnvironmentComponent* RendererManager::FindEnvironment(World& InWorld)
+    {
+        const EnvironmentComponent* lFound = nullptr;
+        InWorld.Each<EnvironmentComponent>([&lFound](EntityID, const EnvironmentComponent& InEnvironment)
+        {
+            if (lFound == nullptr) { lFound = &InEnvironment; }
+        });
+        return lFound;
+    }
+
+    void RendererManager::DrawWorld(World& InWorld, Renderer2D& InRenderer)
+    {
+        // A solid quad per QuadComponent, a textured one per Sprite, glyphs per Text.
+        InWorld.Each<TransformComponent, QuadComponent>(
+            [this, &InRenderer, &InWorld](EntityID InEntity, TransformComponent& InXf, QuadComponent& InComp)
+            {
+                const DisplayPose lPose = PoseFor(InWorld, InEntity, InXf);
+
+                // Scale multiplies the component's Size.
+                InRenderer.DrawQuad(lPose.Position, InComp.Size * lPose.Scale, InComp.Color,
+                                    Maths::DegreesToRadians(lPose.RotationDeg));
+            });
+
+        DrawWorldSprites(InWorld, InRenderer);
+        DrawWorldTexts(InWorld, InRenderer);
+    }
+
+    void RendererManager::DrawOverlays(World* InWorld, Renderer2D& InRenderer, const EOverlayFilter InFilter)
+    {
+        // Read per pass, cleared once per frame. A primitive without a world belongs to the active
+        // world; other worlds only draw what was queued for them.
+        const World* const lActive = (m_WorldManager != nullptr) ? m_WorldManager->GetActiveWorld() : nullptr;
+        const auto lBelongsHere = [InWorld, lActive](const World* InSource)
+        {
+            return (InSource != nullptr ? InSource : lActive) == InWorld;
+        };
+
+        const auto lPasses = [InFilter](const ERenderLayer InLayer)
+        {
+            const bool bBehind = InLayer < ERenderLayer::Default;
+            return InFilter == EOverlayFilter::All || (InFilter == EOverlayFilter::BehindWorld) == bBehind;
+        };
+
+        // Each line is a thin rotated quad, on its own layer (the grid is behind world geometry).
+        for (const DebugLine& lLine : m_DebugDraw.GetLines())
+        {
+            if (!lBelongsHere(lLine.Source) || !lPasses(lLine.Layer)) { continue; }
+
+            const DebugQuad lQuad = ToQuad(lLine);
+            InRenderer.DrawQuad(lQuad.Center, lQuad.Size, lLine.Color, lQuad.RotationRad, lLine.Layer);
+        }
+
+        // Boxes are one hollow quad each, same layer rule.
+        for (const DebugBox& lBox : m_DebugDraw.GetBoxes())
+        {
+            if (!lBelongsHere(lBox.Source) || !lPasses(lBox.Layer)) { continue; }
+
+            InRenderer.DrawQuadOutline(lBox.Center, lBox.Size, lBox.Color, lBox.Thickness,
+                                       lBox.RotationRad, lBox.Layer);
+        }
     }
 
     void RendererManager::RenderCanvases(IRenderTarget& InTarget)

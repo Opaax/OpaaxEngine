@@ -110,6 +110,7 @@ set(OPAAX_TEST_SOURCES
     Renderer/CameraResolveTests.cpp
     Renderer/CameraViewTests.cpp
     Renderer/DebugDrawTests.cpp
+    Renderer/EnvironmentTests.cpp
     Renderer/FontTests.cpp
     Renderer/RenderTargetTests.cpp
     Renderer/SortKeyTests.cpp

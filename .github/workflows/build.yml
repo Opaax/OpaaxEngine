@@ -90,3 +90,25 @@ jobs:
         run: |
           echo "::add-matcher::.github/problem-matchers/doctest.json"
           ctest --test-dir build/${{ matrix.preset }} -C ${{ matrix.config }} --output-on-failure
+
+      # The game draws on a virtual screen with Mesa's software OpenGL, stricter than desktop
+      # drivers: a crash, or an error logged while starting and drawing (a shader that does not
+      # compile), fails the job. The frame is kept as an artifact.
+      - name: Render check
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri
+          if [ "${{ matrix.preset }}" = "release" ]; then LOG=build/release/bin/Sandbox_Data/Save/Log/OpaaxEngine.log; else LOG=Sandbox/Save/Log/OpaaxEngine.log; fi
+          rm -f "$LOG"
+          xvfb-run -a -s "-screen 0 1280x720x24" build/${{ matrix.preset }}/bin/Sandbox --capture "$PWD/capture.png" --capture-frame 30
+          test -s capture.png
+          if grep -E "\] \[(error|critical)\]" "$LOG"; then echo "::error::Errors were logged while rendering"; exit 1; fi
+
+      - name: Upload capture
+        if: runner.os == 'Linux' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capture-${{ matrix.preset }}
+          path: capture.png
+          if-no-files-found: ignore

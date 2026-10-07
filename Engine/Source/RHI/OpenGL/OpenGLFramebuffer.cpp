@@ -14,6 +14,8 @@ namespace Opaax
         : m_Width(InSpec.Width  ? InSpec.Width  : 1u)   // avoid a zero size
         , m_Height(InSpec.Height ? InSpec.Height : 1u)
         , m_DepthStencil(InSpec.DepthStencil)
+        , m_Format(InSpec.ColorFormat)
+        , m_bLinearFilter(InSpec.bLinearFilter)
     {
         Invalidate();
     }
@@ -35,14 +37,31 @@ namespace Opaax
 
     void OpenGLFramebuffer::Invalidate()
     {
+        GLint  lInternal = GL_RGBA8;
+        GLenum lFormat   = GL_RGBA;
+        GLenum lType     = GL_UNSIGNED_BYTE;
+        switch (m_Format)
+        {
+            case ETextureFormat::RGBA8:   lInternal = GL_RGBA8;   lFormat = GL_RGBA; lType = GL_UNSIGNED_BYTE; break;
+            case ETextureFormat::RGBA16F: lInternal = GL_RGBA16F; lFormat = GL_RGBA; lType = GL_HALF_FLOAT;    break;
+            case ETextureFormat::R8:      lInternal = GL_R8;      lFormat = GL_RED;  lType = GL_UNSIGNED_BYTE; break;
+            case ETextureFormat::R16F:    lInternal = GL_R16F;    lFormat = GL_RED;  lType = GL_HALF_FLOAT;    break;
+        }
+
+        const GLint lFilter = m_bLinearFilter ? GL_LINEAR : GL_NEAREST;
+
         glGenTextures(1, &m_ColorTexture);
         glBindTexture(GL_TEXTURE_2D, m_ColorTexture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
+        glTexImage2D(GL_TEXTURE_2D, 0, lInternal,
             static_cast<GLsizei>(m_Width),
             static_cast<GLsizei>(m_Height),
-            0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            0, lFormat, lType, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, lFilter);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, lFilter);
+
+        // Sampled by post-process passes: reads past the edge repeat the edge, never wrap around.
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glBindTexture(GL_TEXTURE_2D, 0);
 
         if (m_DepthStencil)
@@ -85,6 +104,12 @@ namespace Opaax
     void OpenGLFramebuffer::Unbind()
     {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    void OpenGLFramebuffer::BindColorTexture(const Uint32 InSlot) const
+    {
+        glActiveTexture(GL_TEXTURE0 + InSlot);
+        glBindTexture(GL_TEXTURE_2D, m_ColorTexture);
     }
 
     void OpenGLFramebuffer::Resize(Uint32 InWidth, Uint32 InHeight)

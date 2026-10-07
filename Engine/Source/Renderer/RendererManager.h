@@ -23,6 +23,7 @@ namespace Opaax
     class Config_Renderer;
     class Config_Engine;
     class World;
+    struct EnvironmentComponent;
     class WorldManager;
     class IFramebuffer;
     class IRenderTarget;
@@ -119,6 +120,23 @@ namespace Opaax
          * Logs once the first time a frame needs more than one pass.
          */
         void ReportPassCount(Uint32 InPasses);
+
+        /** The first EnvironmentComponent of InWorld, or null (then the world is drawn without HDR). */
+        static const EnvironmentComponent* FindEnvironment(World& InWorld);
+
+        /** Draws InWorld's quads, sprites and texts. */
+        void DrawWorld(World& InWorld, Renderer2D& InRenderer);
+
+        /** Which debug overlays a pass draws: all of them, or those behind / over the world. */
+        enum class EOverlayFilter : Uint8
+        {
+            All,
+            BehindWorld,   // layers below Default (the grid)
+            OverWorld
+        };
+
+        /** Draws the debug shapes queued for InWorld that pass InFilter. */
+        void DrawOverlays(World* InWorld, Renderer2D& InRenderer, EOverlayFilter InFilter);
 
         /** Draws every SpriteComponent in InWorld. */
         void DrawWorldSprites(World& InWorld, Renderer2D& InRenderer);

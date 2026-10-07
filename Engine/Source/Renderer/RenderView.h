@@ -25,5 +25,8 @@ namespace Opaax
     {
         Matrix44F       ViewProjection = Matrix44F(1.f);
         Opaax::Viewport Viewport;
+
+        /** Draws in linear colour (into an HDR target): sprite and tint colours are decoded. */
+        bool            bLinearColor = false;
     };
 }

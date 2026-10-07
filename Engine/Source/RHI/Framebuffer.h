@@ -8,14 +8,27 @@ namespace Opaax
     // =============================================================================
     // FramebufferSpec
     // =============================================================================
+    /** The format of a framebuffer's colour attachment. */
+    enum class ETextureFormat : Uint8
+    {
+        RGBA8,     // colour, 8 bits per channel
+        RGBA16F,   // HDR colour (values above 1)
+        R8,        // one 8-bit channel (a mask)
+        R16F       // one float channel (distances)
+    };
+
     /**
-     * An offscreen render target: one RGBA8 colour attachment and an optional depth/stencil.
+     * An offscreen render target: one colour attachment and an optional depth/stencil.
      */
     struct FramebufferSpec
     {
-        Uint32 Width        = 1;
-        Uint32 Height       = 1;
-        bool   DepthStencil = true;
+        Uint32         Width         = 1;
+        Uint32         Height        = 1;
+        bool           DepthStencil  = true;
+        ETextureFormat ColorFormat   = ETextureFormat::RGBA8;
+
+        /** How the colour is filtered when sampled as a texture (off: nearest texel). */
+        bool           bLinearFilter = true;
     };
 
     // =============================================================================
@@ -47,6 +60,9 @@ namespace Opaax
 
         //------------------------------------------------------------------------------
         // Get
+
+        /** Binds the colour attachment to texture unit InSlot, to be sampled by the next draws. */
+        virtual void BindColorTexture(Uint32 InSlot) const = 0;
 
         // Raw colour attachment handle, for editor display (ImGui::Image) only.
         virtual Uint32 GetColorAttachmentID() const noexcept = 0;

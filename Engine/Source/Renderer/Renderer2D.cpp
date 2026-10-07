@@ -47,6 +47,13 @@ namespace Opaax
         float    MaskIndex;
     };
 
+    /** The camera block of Sprite.glsl (std140). */
+    struct CameraBlock
+    {
+        glm::mat4 ViewProjection = glm::mat4(1.f);
+        glm::vec4 PassParams     = glm::vec4(0.f);   // x: 1 for a linear-colour (HDR) pass
+    };
+
     // =============================================================================
     // Renderer2DData — the pImpl: every GPU and batch resource of one Renderer2D.
     // =============================================================================
@@ -56,7 +63,7 @@ namespace Opaax
         IVertexBuffer*            QuadVBO      = nullptr;  // owned by the VAO
         TUniquePtr<IShader>        QuadShader;
         TUniquePtr<ITexture2D>     WhiteTexture;
-        TUniquePtr<IUniformBuffer> CameraUBO;  // binding 1: u_ViewProjection (std140)
+        TUniquePtr<IUniformBuffer> CameraUBO;  // binding 1: CameraBlock (std140)
         TUniquePtr<IPipeline>      QuadPipeline;     // shader + layout + alpha blend
         TUniquePtr<IBindGroup>     QuadBindGroup;    // camera UBO + 16 samplers
         ICommandBuffer*           Cmd          = nullptr;  // set in Begin, not owned
@@ -191,7 +198,7 @@ namespace Opaax
         m_Data->SlotTextures.assign(SHADER_TEXTURE_SLOTS, m_Data->WhiteTexture.get());
 
         m_Data->QuadShader   = InDevice.CreateShader(InShader);
-        m_Data->CameraUBO    = InDevice.CreateUniformBuffer(static_cast<Uint32>(sizeof(glm::mat4)), 1);
+        m_Data->CameraUBO    = InDevice.CreateUniformBuffer(static_cast<Uint32>(sizeof(CameraBlock)), 1);
         m_Data->QuadPipeline = InDevice.CreatePipeline(MakeSpritePipelineDesc(m_Data->QuadShader.get()));
 
         // Bind all 16 samplers; unused ones get the white texture.
@@ -221,10 +228,13 @@ namespace Opaax
         m_Data->Cmd            = &InCmd;
         m_Data->ViewProjection = InView.ViewProjection;
 
-        // Bind the sprite pipeline; upload the view-projection to the camera UBO.
+        // Bind the sprite pipeline; upload the camera block.
         m_Data->Cmd->BindPipeline(*m_Data->QuadPipeline);
-        m_Data->CameraUBO->SetData(glm::value_ptr(m_Data->ViewProjection),
-                                   static_cast<Uint32>(sizeof(glm::mat4)));
+
+        CameraBlock lCamera;
+        lCamera.ViewProjection = m_Data->ViewProjection;
+        lCamera.PassParams.x   = InView.bLinearColor ? 1.f : 0.f;
+        m_Data->CameraUBO->SetData(&lCamera, static_cast<Uint32>(sizeof(CameraBlock)));
         StartPass();
     }
 

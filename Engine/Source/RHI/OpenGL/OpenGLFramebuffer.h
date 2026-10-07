@@ -10,7 +10,8 @@ namespace Opaax
     OPAAX_LOG_CATEGORY(OpenGLFramebuffer);
     
     /**
-     * OpenGL IFramebuffer: one GL_RGBA8 colour texture and an optional GL_DEPTH24_STENCIL8 renderbuffer.
+     * OpenGL IFramebuffer: one colour texture (RGBA8, RGBA16F, R8 or R16F) and an optional
+     * GL_DEPTH24_STENCIL8 renderbuffer.
      */
     class OpenGLFramebuffer final : public IFramebuffer
     {
@@ -44,6 +45,7 @@ namespace Opaax
         void Bind()   override;
         void Unbind() override;
         void Resize(Uint32 InWidth, Uint32 InHeight) override;
+        void BindColorTexture(Uint32 InSlot) const override;
 
         Uint32 GetColorAttachmentID() const noexcept override { return m_ColorTexture; }
         Uint32 GetWidth()             const noexcept override { return m_Width;        }
@@ -60,5 +62,8 @@ namespace Opaax
         Uint32 m_Width        = 1;
         Uint32 m_Height       = 1;
         bool   m_DepthStencil = true;
+
+        ETextureFormat m_Format        = ETextureFormat::RGBA8;
+        bool           m_bLinearFilter = true;
     };
 }

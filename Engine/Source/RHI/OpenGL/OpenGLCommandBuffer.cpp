@@ -59,4 +59,23 @@ namespace Opaax
     {
         glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(InIndexCount), GL_UNSIGNED_INT, nullptr);
     }
+
+    OpenGLCommandBuffer::~OpenGLCommandBuffer()
+    {
+        if (m_EmptyVertexArray != 0)
+        {
+            glDeleteVertexArrays(1, &m_EmptyVertexArray);
+        }
+    }
+
+    void OpenGLCommandBuffer::DrawFullscreen()
+    {
+        if (m_EmptyVertexArray == 0)
+        {
+            glGenVertexArrays(1, &m_EmptyVertexArray);
+        }
+
+        glBindVertexArray(m_EmptyVertexArray);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+    }
 }
