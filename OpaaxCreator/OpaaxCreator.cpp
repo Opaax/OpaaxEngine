@@ -243,9 +243,9 @@ int main(int argc, char* argv[])
     std::cout << (lAdded
         ? "[Opaax] Registered in CMakeLists.txt: add_subdirectory(" + lName + ")\n"
         : "[Opaax] CMakeLists.txt already registers this project — left as is.\n");
-    std::cout << "\nNext steps:\n"
-              << "  build.bat                ->  " << lName << "Editor.exe  (Debug + Editor)\n"
-              << "  build.bat release        ->  " << lName << ".exe        (runtime only)\n"
+    std::cout << "\nNext steps (build.bat on Windows, ./build.sh on Linux and macOS):\n"
+              << "  build                    ->  " << lName << "Editor  (Debug + Editor)\n"
+              << "  build release            ->  " << lName << "        (runtime only)\n"
               << "  Game code    : " << lName << "/Source/" << lName << "/\n"
               << "  Editor code  : " << lName << "/Editor/Source/" << lName << "Editor/" << std::endl;
     return 0;
