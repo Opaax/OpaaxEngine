@@ -7,9 +7,11 @@ namespace Opaax
 
     OpenGLUniformBuffer::OpenGLUniformBuffer(Uint32 InSize, Uint32 InBinding)
     {
-        glCreateBuffers(1, &m_RendererID);
+        glGenBuffers(1, &m_RendererID);
+        glBindBuffer(GL_UNIFORM_BUFFER, m_RendererID);
         // GL_DYNAMIC_DRAW: rewritten every frame.
-        glNamedBufferData(m_RendererID, InSize, nullptr, GL_DYNAMIC_DRAW);
+        glBufferData(GL_UNIFORM_BUFFER, InSize, nullptr, GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
         glBindBufferBase(GL_UNIFORM_BUFFER, InBinding, m_RendererID);
     }
 
@@ -20,7 +22,9 @@ namespace Opaax
 
     void OpenGLUniformBuffer::SetData(const void* InData, Uint32 InSize, Uint32 InOffset)
     {
-        glNamedBufferSubData(m_RendererID, InOffset, InSize, InData);
+        glBindBuffer(GL_UNIFORM_BUFFER, m_RendererID);
+        glBufferSubData(GL_UNIFORM_BUFFER, InOffset, InSize, InData);
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
     }
 
 } // namespace Opaax

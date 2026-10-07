@@ -855,6 +855,11 @@ namespace Opaax
         }
     }
 
+    bool RendererManager::CaptureBackbuffer(TDynArray<Uint8>& OutRGBA, Uint32& OutWidth, Uint32& OutHeight) const
+    {
+        return m_RenderSystem != nullptr && m_RenderSystem->CaptureBackbuffer(OutRGBA, OutWidth, OutHeight);
+    }
+
     // =========================================================================
     // Window resize (event bus): resizes the backbuffer.
     //   Offscreen targets (editor viewport) are sized by their owner.

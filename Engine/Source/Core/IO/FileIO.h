@@ -32,4 +32,11 @@ namespace Opaax::FileIO
      * @return False if the file could not be written
      */
     bool WriteAllText(const OpaaxString& InAbsPath, const OpaaxString& InText);
+
+    /**
+     * Writes raw bytes to InAbsPath, replacing any content. Creates missing parent directories.
+     * @param InAbsPath Absolute UTF-8 path
+     * @return False if the file could not be written
+     */
+    bool WriteAllBytes(const OpaaxString& InAbsPath, const Uint8* InData, Uint64 InSize);
 }

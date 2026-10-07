@@ -12,19 +12,21 @@ namespace Opaax
 
     OpenGLTexture2D::OpenGLTexture2D(Uint32 InWidth, Uint32 InHeight)
     {
-        // White pixel: multiplied by the tint in the shader.
-        glCreateTextures(GL_TEXTURE_2D, 1, &m_RendererID);
-        glTextureStorage2D(m_RendererID, 1, GL_RGBA8, static_cast<GLsizei>(InWidth), static_cast<GLsizei>(InHeight));
+        // White pixels: multiplied by the tint in the shader.
+        m_Width  = InWidth;
+        m_Height = InHeight;
+        const TDynArray<Uint32> lWhite(static_cast<size_t>(InWidth) * InHeight, 0xFFFFFFFFu);
 
-        glTextureParameteri(m_RendererID, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTextureParameteri(m_RendererID, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glGenTextures(1, &m_RendererID);
+        glBindTexture(GL_TEXTURE_2D, m_RendererID);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, static_cast<GLsizei>(InWidth), static_cast<GLsizei>(InHeight), 0,
+                     GL_RGBA, GL_UNSIGNED_BYTE, lWhite.data());
 
-        const Uint32 lWhite = 0xFFFFFFFF;
-        glTextureSubImage2D(m_RendererID, 0, 0, 0,
-                            static_cast<GLsizei>(InWidth), static_cast<GLsizei>(InHeight),
-                            GL_RGBA, GL_UNSIGNED_BYTE, &lWhite);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glBindTexture(GL_TEXTURE_2D, 0);
 
         m_bLoaded = true;
     }
@@ -56,14 +58,13 @@ namespace Opaax
                                      : (InChannels == 1) ? GL_RED
                                      : GL_RGB;
 
-        glCreateTextures(GL_TEXTURE_2D, 1, &m_RendererID);
-        glTextureStorage2D(m_RendererID, 1, lInternalFormat,
-                           static_cast<GLsizei>(InWidth), static_cast<GLsizei>(InHeight));
+        glGenTextures(1, &m_RendererID);
+        glBindTexture(GL_TEXTURE_2D, m_RendererID);
 
-        glTextureParameteri(m_RendererID, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTextureParameteri(m_RendererID, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_S,     GL_REPEAT);
-        glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_T,     GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_REPEAT);
 
         const bool lIsR8 = (InChannels == 1);
         if (lIsR8)
@@ -71,20 +72,25 @@ namespace Opaax
             // Swizzle coverage into alpha, so the RGBA sprite shader reads (1,1,1,coverage).
             // LINEAR + CLAMP_TO_EDGE avoids bleeding between atlas cells.
             const GLint lSwizzle[4] = { GL_ONE, GL_ONE, GL_ONE, GL_RED };
-            glTextureParameteriv(m_RendererID, GL_TEXTURE_SWIZZLE_RGBA, lSwizzle);
-            glTextureParameteri(m_RendererID, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_S,     GL_CLAMP_TO_EDGE);
-            glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_T,     GL_CLAMP_TO_EDGE);
+            glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, lSwizzle);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_CLAMP_TO_EDGE);
+        }
 
-            // 1-byte rows: widths not multiple of 4 break the default 4-byte alignment.
+        // Tightly packed rows: a 1- or 3-byte pixel row is not a multiple of the default 4 bytes.
+        const bool bTightRows = (InChannels != 4);
+        if (bTightRows)
+        {
             glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         }
 
-        glTextureSubImage2D(m_RendererID, 0, 0, 0,
-                            static_cast<GLsizei>(InWidth), static_cast<GLsizei>(InHeight),
-                            lDataFormat, GL_UNSIGNED_BYTE, InData);
+        glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(lInternalFormat),
+                     static_cast<GLsizei>(InWidth), static_cast<GLsizei>(InHeight), 0,
+                     lDataFormat, GL_UNSIGNED_BYTE, InData);
+        glBindTexture(GL_TEXTURE_2D, 0);
 
-        if (lIsR8)
+        if (bTightRows)
         {
             glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
         }
@@ -92,6 +98,15 @@ namespace Opaax
         m_bLoaded = true;
     }
     
-    void OpenGLTexture2D::Bind(Uint32 InSlot) const { glBindTextureUnit(InSlot, m_RendererID); }
-    void OpenGLTexture2D::Unbind() const { glBindTextureUnit(0, 0); }
+    void OpenGLTexture2D::Bind(Uint32 InSlot) const
+    {
+        glActiveTexture(GL_TEXTURE0 + InSlot);
+        glBindTexture(GL_TEXTURE_2D, m_RendererID);
+    }
+
+    void OpenGLTexture2D::Unbind() const
+    {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
 }

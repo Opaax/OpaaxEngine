@@ -129,6 +129,13 @@ namespace Opaax
          */
         double GetGpuFrameTimeMs() const;
 
+        /**
+         * The frame drawn so far into the backbuffer (call before Present).
+         * @param OutRGBA RGBA, rows from top to bottom
+         * @return False without a device, or when it cannot be read
+         */
+        bool CaptureBackbuffer(TDynArray<Uint8>& OutRGBA, Uint32& OutWidth, Uint32& OutHeight) const;
+
         /** Clear colour of passes that clear. Applied from the next frame. */
         void SetClearColor(const Vector4F& InColor) noexcept { m_ClearColor = InColor; }
         // End Getters - Setters

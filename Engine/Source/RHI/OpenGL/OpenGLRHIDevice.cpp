@@ -1,5 +1,7 @@
 #include "RHI/OpenGL/OpenGLRHIDevice.h"
 
+#include <algorithm>
+
 #include "Core/Log/Logger.h"
 
 #include "RHI/RHIDevice.h"
@@ -147,6 +149,49 @@ namespace Opaax
     }
 
     void OpenGLRHIDevice::WaitIdle() { glFinish(); }
+
+    bool OpenGLRHIDevice::ReadBackbufferPixels(const Uint32 InWidth, const Uint32 InHeight, TDynArray<Uint8>& OutRGBA)
+    {
+        if (InWidth == 0 || InHeight == 0)
+        {
+            return false;
+        }
+
+        // Errors from earlier calls must not be taken for this one's.
+        while (glGetError() != GL_NO_ERROR) {}
+
+        const size_t lRowBytes = static_cast<size_t>(InWidth) * 4;
+        TDynArray<Uint8> lBottomUp(lRowBytes * InHeight);
+
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+        glReadBuffer(GL_BACK);
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
+        glReadPixels(0, 0, static_cast<GLsizei>(InWidth), static_cast<GLsizei>(InHeight), GL_RGBA, GL_UNSIGNED_BYTE,
+                     lBottomUp.data());
+        glPixelStorei(GL_PACK_ALIGNMENT, 4);
+
+        if (glGetError() != GL_NO_ERROR)
+        {
+            OPAAX_LOG(LogOpenGLRHIDevice, Error, "The backbuffer could not be read ({}x{})", InWidth, InHeight);
+            return false;
+        }
+
+        // GL reads from the bottom row up. What the window shows is opaque, whatever the alpha.
+        OutRGBA.resize(lBottomUp.size());
+        for (Uint32 lRow = 0; lRow < InHeight; ++lRow)
+        {
+            const Uint8* lSource = lBottomUp.data() + (InHeight - 1 - lRow) * lRowBytes;
+            Uint8*       lTarget = OutRGBA.data() + lRow * lRowBytes;
+            std::copy(lSource, lSource + lRowBytes, lTarget);
+
+            for (size_t lAlpha = 3; lAlpha < lRowBytes; lAlpha += 4)
+            {
+                lTarget[lAlpha] = 255;
+            }
+        }
+
+        return true;
+    }
 
     // =========================================================================
     // Factory — OpenGL only for now.

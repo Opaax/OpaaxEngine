@@ -56,6 +56,7 @@ namespace Opaax
         void            Resize(Uint32 InWidth, Uint32 InHeight)                         override;
         void            WaitIdle()                                                      override;
         double          GetLastGpuFrameTimeMs() const                                   override { return m_LastGpuMs; }
+        bool            ReadBackbufferPixels(Uint32 InWidth, Uint32 InHeight, TDynArray<Uint8>& OutRGBA) override;
         //~End IRHIDevice interface
 
         // =============================================================================

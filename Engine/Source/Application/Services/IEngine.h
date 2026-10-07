@@ -89,6 +89,13 @@ namespace Opaax
         virtual void PresentBackbuffer()                = 0;
 
         /**
+         * Saves the frame drawn so far (world, UI, editor) as a PNG. Call before PresentBackbuffer.
+         * @param InPngPath Absolute path; its folders are created
+         * @return False without a render device, or when the file cannot be written (logged)
+         */
+        virtual bool CaptureFrame(const OpaaxString& InPngPath) = 0;
+
+        /**
          * Draws the active world into InTarget for this frame only. Submit again every frame.
          * With no submission, the world is drawn to the backbuffer.
          * @param InTarget Borrowed for the frame

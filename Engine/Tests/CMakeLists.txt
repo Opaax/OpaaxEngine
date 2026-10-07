@@ -15,6 +15,7 @@ set(OPAAX_TEST_SOURCES
     Core/ColorTests.cpp
     Core/Config/EngineConfigDataTests.cpp
     Core/GuidTests.cpp
+    Core/Image/PngWriterTests.cpp
     Core/Log/LogHistoryTests.cpp
     Core/Log/LoggerTests.cpp
     Core/Maths/AngleTests.cpp
@@ -100,6 +101,9 @@ set(OPAAX_TEST_SOURCES
     Physics/PhysicsQueryTests.cpp
     Physics/PhysicsSeamTests.cpp
     Physics/PhysicsSubsystemTests.cpp
+
+    # RHI
+    RHI/GLSLPortTests.cpp
 
     # Renderer (the parts that need no GL context)
     Renderer/BatchPlanTests.cpp

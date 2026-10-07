@@ -10,7 +10,7 @@ namespace Opaax
 
     OpenGLVertexBuffer::OpenGLVertexBuffer(Uint32 InSize)
     {
-        glCreateBuffers(1, &m_RendererID);
+        glGenBuffers(1, &m_RendererID);
         glBindBuffer(GL_ARRAY_BUFFER, m_RendererID);
         // GL_DYNAMIC_DRAW: updated every frame.
         glBufferData(GL_ARRAY_BUFFER, InSize, nullptr, GL_DYNAMIC_DRAW);
@@ -18,7 +18,7 @@ namespace Opaax
     
     OpenGLVertexBuffer::OpenGLVertexBuffer(const float* InVertices, Uint32 InSize)
     {
-        glCreateBuffers(1, &m_RendererID);
+        glGenBuffers(1, &m_RendererID);
         glBindBuffer(GL_ARRAY_BUFFER, m_RendererID);
         glBufferData(GL_ARRAY_BUFFER, InSize, InVertices, GL_STATIC_DRAW);
     }
@@ -51,7 +51,7 @@ namespace Opaax
     OpenGLIndexBuffer::OpenGLIndexBuffer(const Uint32* InIndices, Uint32 InCount)
     {
         // The element buffer binding is stored in the VAO: the VAO must be bound here.
-        glCreateBuffers(1, &m_RendererID);
+        glGenBuffers(1, &m_RendererID);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_RendererID);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,
                      static_cast<GLsizeiptr>(InCount * sizeof(Uint32)),

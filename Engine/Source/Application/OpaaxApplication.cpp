@@ -1,5 +1,7 @@
 #include "Application/OpaaxApplication.h"
 
+#include <algorithm>
+#include <cstdlib>
 #include <cstring>
 
 #include "Platform/CrashHandler.h"
@@ -44,6 +46,19 @@ namespace
         }
         return false;
     }
+
+    /** The argument after InFlag, or null. */
+    const char* FindCommandLineValue(const int InArgc, char** InArgv, const char* InFlag)
+    {
+        for (int i = 1; i + 1 < InArgc; ++i)
+        {
+            if (InArgv[i] != nullptr && std::strcmp(InArgv[i], InFlag) == 0) { return InArgv[i + 1]; }
+        }
+        return nullptr;
+    }
+
+    /** Frames drawn before a --capture is taken, when --capture-frame does not say. */
+    constexpr Uint64 DEFAULT_CAPTURE_FRAME = 60;
 }
 
 AppServiceLocator OpaaxApplication::m_Services = AppServiceLocator();
@@ -229,7 +244,14 @@ void OpaaxApplication::RunApplication()
         CrashHandler::TriggerTestCrash();
     }
 #endif
-    
+
+    // --capture <file.png> [--capture-frame N]: saves frame N (default 60) as a PNG, then quits.
+    // What an automated check or an agent uses to see the game.
+    const char*  lCapturePath  = FindCommandLineValue(m_Argc, m_Argv, "--capture");
+    const char*  lCaptureFrame = FindCommandLineValue(m_Argc, m_Argv, "--capture-frame");
+    const Uint64 lCaptureAt    = (lCaptureFrame != nullptr) ? std::strtoull(lCaptureFrame, nullptr, 10) : DEFAULT_CAPTURE_FRAME;
+    Uint64       lFrameIndex   = 0;
+
     while (bIsRunning)
     {
         Window* lWindow = WindowManager().GetMainWindow();
@@ -269,6 +291,16 @@ void OpaaxApplication::RunApplication()
         // 2. Tick (the editor adds its UI around Engine().Loop())
         // ----------------------------------------------------------------
         TickFrame();
+
+        // ----------------------------------------------------------------
+        // 2.1 Capture, before the swap (the backbuffer holds the frame).
+        // ----------------------------------------------------------------
+        ++lFrameIndex;
+        if (lCapturePath != nullptr && lFrameIndex == std::max<Uint64>(lCaptureAt, 1))
+        {
+            Engine().CaptureFrame(OpaaxString(lCapturePath));
+            lWindow->RequestClose();
+        }
 
         // ----------------------------------------------------------------
         // 3. Present — after TickFrame, so the editor UI is on the backbuffer before the swap.

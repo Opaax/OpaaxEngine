@@ -181,6 +181,13 @@ namespace Opaax
         void Present();
 
         /**
+         * The frame drawn so far into the backbuffer (call before Present).
+         * @param OutRGBA RGBA, rows from top to bottom
+         * @return False if the render core failed to start, or the frame cannot be read
+         */
+        bool CaptureBackbuffer(TDynArray<Uint8>& OutRGBA, Uint32& OutWidth, Uint32& OutHeight) const;
+
+        /**
          * Draws the active world into InTarget for this frame only. Submit again every frame.
          * With no submission, the world is drawn to the backbuffer.
          * @param InTarget Borrowed for the frame

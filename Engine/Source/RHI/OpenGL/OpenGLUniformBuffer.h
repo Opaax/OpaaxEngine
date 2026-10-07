@@ -5,7 +5,7 @@
 namespace Opaax
 {
     /**
-     * OpenGL uniform buffer (DSA). Bound to its binding point at construction.
+     * OpenGL uniform buffer. Bound to its binding point at construction.
      */
     class OpenGLUniformBuffer final : public IUniformBuffer
     {

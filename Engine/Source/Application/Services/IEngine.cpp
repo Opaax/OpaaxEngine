@@ -36,6 +36,7 @@ namespace Opaax
 
             void Loop()                   override {}
             void PresentBackbuffer()      override {}
+            bool CaptureFrame(const OpaaxString&) override { return false; }
             void SubmitRenderView(IRenderTarget&, const CameraView&, bool, World*, bool) override {}
             void SubmitUICanvas(UICanvas&, IRenderTarget*, const CameraView*) override {}
 

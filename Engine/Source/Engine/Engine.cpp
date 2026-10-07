@@ -10,6 +10,7 @@
 #include "Core/Profiling/Profiler.h"
 #include "Platform/IPlatform.h"
 
+#include "Core/Image/PngWriter.h"
 #include "Core/Maths/MathsStatics.h"
 #include "Engine/EngineEvents.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
@@ -522,6 +523,28 @@ namespace Opaax
         }
     }
     
+    bool Engine::CaptureFrame(const OpaaxString& InPngPath)
+    {
+        TDynArray<Uint8> lPixels;
+        Uint32           lWidth  = 0;
+        Uint32           lHeight = 0;
+
+        if (m_RendererManager == nullptr || !m_RendererManager->CaptureBackbuffer(lPixels, lWidth, lHeight))
+        {
+            OPAAX_ENGINE_LOG(Error, "CaptureFrame: no frame to read (no render device)");
+            return false;
+        }
+
+        if (!PngWriter::Write(InPngPath, lWidth, lHeight, 4, lPixels.data()))
+        {
+            OPAAX_ENGINE_LOG(Error, "CaptureFrame: '{}' could not be written", InPngPath.CStr());
+            return false;
+        }
+
+        OPAAX_ENGINE_LOG(Info, "Frame captured to '{}' ({}x{})", InPngPath.CStr(), lWidth, lHeight);
+        return true;
+    }
+
     void Engine::SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView, bool bInDrawOverlays,
                                   World* InSource, bool bInDrawUI)
     {

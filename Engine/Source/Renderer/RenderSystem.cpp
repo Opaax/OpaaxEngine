@@ -121,6 +121,18 @@ namespace Opaax
         return IsValidDevice() ? m_Device->GetLastGpuFrameTimeMs() : -1.0;
     }
 
+    bool RenderSystem::CaptureBackbuffer(TDynArray<Uint8>& OutRGBA, Uint32& OutWidth, Uint32& OutHeight) const
+    {
+        if (!IsValidDevice() || m_Backbuffer == nullptr)
+        {
+            return false;
+        }
+
+        OutWidth  = m_Backbuffer->GetWidth();
+        OutHeight = m_Backbuffer->GetHeight();
+        return m_Device->ReadBackbufferPixels(OutWidth, OutHeight, OutRGBA);
+    }
+
     void RenderSystem::BeginPass(IRenderTarget& InTarget, const RenderView& InView, const ELoadOp InLoadOp)
     {
         if (!IsValidDevice() || !IsValidRenderer2D())

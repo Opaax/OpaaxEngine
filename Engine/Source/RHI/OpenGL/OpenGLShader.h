@@ -39,7 +39,7 @@ namespace Opaax
         // =============================================================================
     private:
         Int32 GetUniformLocation(const char* InName);
-        void  CompileAndLink(const char* InVertexSrc, const char* InFragmentSrc);
+        void  CompileAndLink(const ShaderDesc& InDesc);
         
         // =============================================================================
         // Override
@@ -66,6 +66,9 @@ namespace Opaax
         // =============================================================================
     private:
         Uint32 m_RendererID = 0;
+
+        /** For the logs. */
+        OpaaxString m_DebugName;
 
         // Uniform lookup by name (per draw call, not per vertex).
         TUnorderedMap<OpaaxString, Int32, OpaaxHash> m_UniformLocationCache;

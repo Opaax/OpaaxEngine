@@ -50,6 +50,32 @@ layout(binding = 0) uniform sampler2D u_Textures[16];
 
 layout(location = 0) out vec4 FragColor;
 
+// One constant index per case: GLSL leaves a sampler index that varies within a draw undefined
+// (some drivers show it), and the sprites of one batch use different textures.
+vec4 SampleSlot(int InSlot, vec2 InUV)
+{
+    switch (InSlot)
+    {
+        case 0:  return texture(u_Textures[0],  InUV);
+        case 1:  return texture(u_Textures[1],  InUV);
+        case 2:  return texture(u_Textures[2],  InUV);
+        case 3:  return texture(u_Textures[3],  InUV);
+        case 4:  return texture(u_Textures[4],  InUV);
+        case 5:  return texture(u_Textures[5],  InUV);
+        case 6:  return texture(u_Textures[6],  InUV);
+        case 7:  return texture(u_Textures[7],  InUV);
+        case 8:  return texture(u_Textures[8],  InUV);
+        case 9:  return texture(u_Textures[9],  InUV);
+        case 10: return texture(u_Textures[10], InUV);
+        case 11: return texture(u_Textures[11], InUV);
+        case 12: return texture(u_Textures[12], InUV);
+        case 13: return texture(u_Textures[13], InUV);
+        case 14: return texture(u_Textures[14], InUV);
+        case 15: return texture(u_Textures[15], InUV);
+    }
+    return vec4(1.0, 0.0, 1.0, 1.0);
+}
+
 void main()
 {
     // A HOLLOW quad carves its middle out here. v_InnerHalf is {0,0} for every ordinary draw, so
@@ -79,11 +105,11 @@ void main()
             discard;
         }
 
-        vec4 lMaskSample = texture(u_Textures[int(v_MaskIndex)], v_MaskUV);
+        vec4 lMaskSample = SampleSlot(int(v_MaskIndex), v_MaskUV);
         lMask            = lMaskSample.r * lMaskSample.a;
     }
 
     int   lIdx    = int(v_TexIndex);
-    vec4  lSample = texture(u_Textures[lIdx], v_TexCoord);
+    vec4  lSample = SampleSlot(lIdx, v_TexCoord);
     FragColor     = lSample * v_Color * vec4(1.0, 1.0, 1.0, lMask);
 }
