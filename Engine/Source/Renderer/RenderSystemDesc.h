@@ -32,8 +32,9 @@ namespace Opaax
         Uint32            Height  = 0;
         RenderLimits      Limits;
         ShaderDesc        SpriteShader;
-        ShaderDesc        TonemapShader;   // empty: worlds are never drawn in HDR
-        ShaderDesc        ShadowShader;    // empty: lights cast no shadows
+        ShaderDesc        TonemapShader;            // empty: worlds are never drawn in HDR
+        ShaderDesc        ShadowShader;             // empty: lights cast no shadows
+        ShaderDesc        AmbientOcclusionShader;   // empty: no ambient occlusion
         Vector4F          ClearColor{0.f, 0.f, 0.f, 1.f};
     };
 }

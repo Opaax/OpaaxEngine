@@ -27,6 +27,7 @@ namespace Opaax
     // =============================================================================
     static constexpr Uint32 SHADER_TEXTURE_SLOTS = 16;      // length of u_Textures[] in Sprite.glsl
     static constexpr Uint32 SHADOW_MAP_SLOT      = SHADER_TEXTURE_SLOTS - 1;   // SHADOW_SLOT in Sprite.glsl
+    static constexpr Uint32 AO_MAP_SLOT          = SHADER_TEXTURE_SLOTS - 2;   // AO_SLOT in Sprite.glsl
     static constexpr Uint32 MAX_BATCH_QUADS      = 65536;   // upper bound (~23 MB of vertices)
 
     // =============================================================================
@@ -97,8 +98,9 @@ namespace Opaax
         TDynArray<QuadVertex>    UploadBuffer;   // one batch of vertices
         TDynArray<ITexture2D*>   SlotTextures;   // this batch's textures
 
-        // The shadow map of lit passes, in the last slot. Not owned.
-        ITexture2D* ShadowMap = nullptr;
+        // The lighting maps of lit passes, in the last two slots. Not owned.
+        ITexture2D* ShadowMap           = nullptr;
+        ITexture2D* AmbientOcclusionMap = nullptr;
 
         glm::mat4 ViewProjection = glm::mat4(1.f);
 
@@ -251,9 +253,10 @@ namespace Opaax
         }
     }
 
-    void Renderer2D::SetShadowMap(ITexture2D* InShadowMap) noexcept
+    void Renderer2D::SetLightingMaps(ITexture2D* InShadowMap, ITexture2D* InAmbientOcclusion) noexcept
     {
-        m_Data->ShadowMap = InShadowMap;
+        m_Data->ShadowMap           = InShadowMap;
+        m_Data->AmbientOcclusionMap = InAmbientOcclusion;
     }
 
     // =============================================================================
@@ -314,11 +317,11 @@ namespace Opaax
     {
         if (m_Data->PassKeys.empty()) { return; }
 
-        // A shadow map keeps the last slot for itself.
+        // The lighting maps keep the last two slots for themselves.
         QuadBatchLimits lLimits = m_Data->Limits;
-        if (m_Data->ShadowMap != nullptr)
+        if (m_Data->ShadowMap != nullptr || m_Data->AmbientOcclusionMap != nullptr)
         {
-            lLimits.MaxTextureSlots = std::min(lLimits.MaxTextureSlots, SHADOW_MAP_SLOT);
+            lLimits.MaxTextureSlots = std::min(lLimits.MaxTextureSlots, AO_MAP_SLOT);
         }
 
         PlanQuadBatches(m_Data->PassKeys, m_Data->PassTexIds, m_Data->PassMaskIds, m_Data->PassNormalIds,
@@ -409,6 +412,11 @@ namespace Opaax
         if (m_Data->ShadowMap != nullptr)
         {
             m_Data->SlotTextures[SHADOW_MAP_SLOT] = m_Data->ShadowMap;
+        }
+
+        if (m_Data->AmbientOcclusionMap != nullptr)
+        {
+            m_Data->SlotTextures[AO_MAP_SLOT] = m_Data->AmbientOcclusionMap;
         }
 
         // Unused units point at the white texture.

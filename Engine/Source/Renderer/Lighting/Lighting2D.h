@@ -28,14 +28,19 @@ namespace Opaax
     /** The occlusion map's largest side, pixels: past it, it gets coarser rather than bigger. */
     inline constexpr Uint32 OCCLUSION_MAX_SIZE_2D = 4096;
 
+    /** The ambient occlusion map has one texel per this many occlusion map texels, each way. */
+    inline constexpr Uint32 AO_DOWNSAMPLE_2D = 4;
+
     // =============================================================================
     // LightsBlock2D — the LightsUBO block of Sprite.glsl (std140: every member a vec4).
     //   Colours are linear (decoded from screen colour) and already multiplied by intensity.
     // =============================================================================
     struct LightsBlock2D
     {
-        Vector4F Ambient = { 1.f, 1.f, 1.f, 0.f };   // rgb: ambient light, w: light count
-        Vector4F Position[MAX_LIGHTS_2D]{};          // xy: position, z: radius, w: type code
+        Vector4F Ambient   = { 1.f, 1.f, 1.f, 0.f };   // rgb: ambient light, w: light count
+        Vector4F AORect    = { 0.f, 0.f, 1.f, 1.f };   // xy: the ambient occlusion map's world min, zw: its world size
+        Vector4F AOParams  = { 0.f, 0.f, 0.f, 0.f };   // x: strength (0: no ambient occlusion)
+        Vector4F Position[MAX_LIGHTS_2D]{};            // xy: position, z: radius, w: type code
         Vector4F Color[MAX_LIGHTS_2D]{};             // rgb: colour * intensity, w: falloff exponent
         Vector4F Direction[MAX_LIGHTS_2D]{};         // xy: where it points, z: cos(outer half-angle), w: cos(inner)
 
@@ -46,7 +51,7 @@ namespace Opaax
         Uint32 GetCount() const noexcept { return static_cast<Uint32>(Ambient.w); }
     };
 
-    static_assert(sizeof(LightsBlock2D) == sizeof(Vector4F) * (1 + 4 * MAX_LIGHTS_2D), "std140: vec4 members only");
+    static_assert(sizeof(LightsBlock2D) == sizeof(Vector4F) * (3 + 4 * MAX_LIGHTS_2D), "std140: vec4 members only");
 
     // =============================================================================
     // ShadowBlock2D — the ShadowUBO block of Shadow2D.glsl, the pass that fills the shadow map:
@@ -112,4 +117,16 @@ namespace Opaax
      */
     OcclusionLayout2D MakeOcclusionLayout2D(const Bounds2D& InView, float InPixelsPerUnit,
                                             const ShadowBlock2D& InShadows) noexcept;
+
+    /** The ambient occlusion map's size along one side, from the occlusion map's. */
+    Uint32 AmbientOcclusionExtent2D(Uint32 InOcclusionExtent) noexcept;
+
+    /**
+     * The blur that turns the casters' coverage into ambient occlusion, in ambient occlusion map
+     * texels: half of InRadius (world units), so the darkening fades out by InRadius.
+     */
+    float AmbientOcclusionSigma2D(float InRadius, const OcclusionLayout2D& InLayout) noexcept;
+
+    /** Turns ambient occlusion on in InOutBlock: its map covers InLayout's area. */
+    void PackAmbientOcclusion2D(LightsBlock2D& InOutBlock, const OcclusionLayout2D& InLayout, float InStrength) noexcept;
 }

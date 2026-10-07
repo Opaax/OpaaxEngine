@@ -44,7 +44,8 @@ namespace Opaax
         m_Renderer2D->Init(*m_Device, InDesc.Limits, InDesc.SpriteShader);
 
         m_ScenePipeline = MakeUnique<ScenePipeline2D>();
-        m_ScenePipeline->Init(*m_Device, InDesc.TonemapShader, InDesc.ShadowShader);
+        m_ScenePipeline->Init(*m_Device, ScenePipelineShaders{ InDesc.TonemapShader, InDesc.ShadowShader,
+                                                               InDesc.AmbientOcclusionShader });
 
         return true;
     }

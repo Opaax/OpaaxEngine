@@ -52,7 +52,7 @@ namespace Opaax
         Vector3F    Emissive  = { 0.f, 0.f, 0.f };   // linear, times the quad's own colour, added after lighting
         bool        bLit      = true;
 
-        /** Off for a shadow caster that must not be darkened by its own silhouette. */
+        /** Off for a shadow caster that must not be darkened by its own silhouette (shadows, occlusion). */
         bool        bReceiveShadows = true;
     };
 
@@ -205,10 +205,10 @@ namespace Opaax
         void SetLighting(const LightsBlock2D& InLights);
 
         /**
-         * The shadow map of the next passes, or null. While set, it takes the last sampler slot
-         * (Sprite.glsl reads it there) and batches keep one slot fewer.
+         * The lighting maps of the next passes (each may be null). While either is set, they take
+         * the last two sampler slots (Sprite.glsl reads them there) and batches keep two fewer.
          */
-        void SetShadowMap(ITexture2D* InShadowMap) noexcept;
+        void SetLightingMaps(ITexture2D* InShadowMap, ITexture2D* InAmbientOcclusion) noexcept;
 
         // =============================================================================
         // Internal

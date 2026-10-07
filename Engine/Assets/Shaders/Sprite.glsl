@@ -75,6 +75,8 @@ const int MAX_LIGHTS = 32;
 layout(std140, binding = 3) uniform LightsUBO
 {
     vec4 u_Ambient;                      // rgb: ambient light, w: light count
+    vec4 u_AORect;                       // xy: the ambient occlusion map's world min, zw: its world size
+    vec4 u_AOParams;                     // x: ambient occlusion strength (0: none)
     vec4 u_LightPosition[MAX_LIGHTS];    // xy: position, z: radius, w: 0 point, 1 spot, 2 global
     vec4 u_LightColor[MAX_LIGHTS];       // rgb: colour, w: falloff exponent
     vec4 u_LightDirection[MAX_LIGHTS];   // xy: where it points, z: cos(outer half-angle), w: cos(inner)
@@ -83,8 +85,10 @@ layout(std140, binding = 3) uniform LightsUBO
 };
 
 // The shadow map (Lighting2D.h): a row per shadowed light, a column per direction around it, each
-// holding how far the light gets (0..1 of its radius) before a caster stops it. It takes the last
-// sampler while a pass is shadowed.
+// holding how far the light gets (0..1 of its radius) before a caster stops it. The ambient
+// occlusion map: how much of the casters surrounds each point. They take the last two samplers
+// while a pass is lit.
+const int   AO_SLOT       = 14;
 const int   SHADOW_SLOT   = 15;
 const float SHADOW_ROWS   = 16.0;
 const float SHADOW_ANGLES = 1024.0;
@@ -182,12 +186,28 @@ float ShadowAt(float InRow, vec2 InFromLight, float InDistance, float InSoftness
     return lLit / 81.0;
 }
 
+// How much of the ambient light reaches a point: less near the shadow casters.
+float AmbientOcclusionAt(vec2 InPosition)
+{
+    if (u_AOParams.x <= 0.0)
+    {
+        return 1.0;
+    }
+
+    vec2  lUV       = clamp((InPosition - u_AORect.xy) / u_AORect.zw, 0.0, 1.0);
+    float lCoverage = textureLod(u_Textures[AO_SLOT], lUV, 0.0).r;
+
+    // A caster's edge is half covered: the darkest a point beside it gets.
+    return 1.0 - u_AOParams.x * min(lCoverage * 2.0, 1.0);
+}
+
 // The light reaching a point: ambient, plus every light. Without a normal map the surface faces the
 // viewer and every light reaches it fully; with one, a light counts by the angle it arrives at.
-// Shadowed lights are blocked by the casters, unless bInShadowed is off.
+// Unless bInShadowed is off, shadowed lights are blocked by the casters and the ambient light is
+// occluded near them.
 vec3 LightAt(vec2 InPosition, vec3 InNormal, bool bInHasNormal, bool bInShadowed)
 {
-    vec3 lLight = u_Ambient.rgb;
+    vec3 lLight = u_Ambient.rgb * (bInShadowed ? AmbientOcclusionAt(InPosition) : 1.0);
     int  lCount = int(u_Ambient.w + 0.5);
 
     for (int i = 0; i < MAX_LIGHTS; ++i)

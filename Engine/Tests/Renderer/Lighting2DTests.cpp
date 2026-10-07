@@ -291,6 +291,61 @@ TEST_CASE("Shadows: a dense occlusion map stops at its largest size and keeps wh
           == doctest::Approx(static_cast<float>(lLayout.Height) / static_cast<float>(lLayout.Width)));
 }
 
+// =============================================================================
+// Ambient occlusion: a blurred, smaller copy of the occlusion map.
+// =============================================================================
+
+TEST_CASE("Ambient occlusion: its map is a quarter of the occlusion map each way, at least one texel")
+{
+    CHECK(AmbientOcclusionExtent2D(1200) == 300);
+    CHECK(AmbientOcclusionExtent2D(1201) == 301);
+    CHECK(AmbientOcclusionExtent2D(3) == 1);
+    CHECK(AmbientOcclusionExtent2D(0) == 1);
+}
+
+TEST_CASE("Ambient occlusion: the blur is half the radius, in the ambient occlusion map's texels")
+{
+    // 1.2 occlusion texels a unit, 4 of them to an ambient occlusion texel: 48 units -> 24 -> 7.2.
+    const OcclusionLayout2D lLayout = MakeOcclusionLayout2D(VIEW, 1.2f, ShadowBlock2D{});
+    CHECK(AmbientOcclusionSigma2D(48.f, lLayout) == doctest::Approx(7.2f));
+    CHECK(AmbientOcclusionSigma2D(-5.f, lLayout) == doctest::Approx(0.f));
+}
+
+TEST_CASE("Ambient occlusion: packing places its map and strength; packing the lights turns it off")
+{
+    const OcclusionLayout2D lLayout = MakeOcclusionLayout2D(VIEW, 1.f, ShadowBlock2D{});
+
+    LightsBlock2D lBlock;
+    CHECK(lBlock.AOParams.x == 0.f);   // off by default
+
+    PackAmbientOcclusion2D(lBlock, lLayout, 1.5f);
+    CHECK(lBlock.AORect.x == doctest::Approx(-500.f));
+    CHECK(lBlock.AORect.y == doctest::Approx(-300.f));
+    CHECK(lBlock.AORect.z == doctest::Approx(1000.f));
+    CHECK(lBlock.AORect.w == doctest::Approx(600.f));
+    CHECK(lBlock.AOParams.x == doctest::Approx(1.f));   // at most full strength
+
+    PackLights2D({}, VIEW, WHITE, 1.f, lBlock);
+    CHECK(lBlock.AOParams.x == 0.f);
+}
+
+TEST_CASE("Ambient occlusion: its map reaches past an occlusion map that is not a multiple of its texels")
+{
+    // 1001 occlusion texels across: 251 ambient occlusion texels cover 1004 of them.
+    OcclusionLayout2D lLayout;
+    lLayout.Bounds = Bounds2D{ { 0.f, 0.f }, { 500.5f, 300.f } };
+    lLayout.Width  = 1001;
+    lLayout.Height = 600;
+
+    LightsBlock2D lBlock;
+    PackAmbientOcclusion2D(lBlock, lLayout, 0.5f);
+
+    CHECK(lBlock.AORect.x == doctest::Approx(-500.5f));
+    CHECK(lBlock.AORect.z == doctest::Approx(1004.f));
+    CHECK(lBlock.AORect.w == doctest::Approx(600.f));
+    CHECK(lBlock.AOParams.x == doctest::Approx(0.5f));
+}
+
 TEST_CASE("ShadowCaster2D and a light's shadow settings round-trip; older lights load without shadows")
 {
     ShadowCaster2DComponent lCaster;

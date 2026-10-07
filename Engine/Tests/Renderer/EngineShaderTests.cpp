@@ -85,8 +85,32 @@ TEST_CASE("Engine shaders: the sprite shader's lighting constants match Lighting
     CHECK(ConstantIn(lSource, "SHADOW_ROWS") == doctest::Approx(MAX_SHADOWED_LIGHTS_2D));
     CHECK(ConstantIn(lSource, "SHADOW_ANGLES") == doctest::Approx(SHADOW_MAP_ANGLES_2D));
 
-    // The shadow map rides in the last of the 16 samplers (Renderer2D's SHADOW_MAP_SLOT).
+    // The lighting maps ride in the last two of the 16 samplers (Renderer2D's AO_MAP_SLOT, SHADOW_MAP_SLOT).
+    CHECK(ConstantIn(lSource, "AO_SLOT") == doctest::Approx(14));
     CHECK(ConstantIn(lSource, "SHADOW_SLOT") == doctest::Approx(15));
+}
+
+TEST_CASE("Engine shaders: the ambient occlusion shader ports with its source and block")
+{
+    const std::string lSource = ReadShader("AmbientOcclusion2D.glsl");
+    REQUIRE_FALSE(lSource.empty());
+
+    const ShaderDesc lDesc = ShaderSource::FromSource(OpaaxString(lSource.c_str()), OpaaxString("AmbientOcclusion2D.glsl"));
+    REQUIRE_FALSE(lDesc.VertexSrc.IsEmpty());
+    REQUIRE_FALSE(lDesc.FragmentSrc.IsEmpty());
+
+    PortStage(lDesc.VertexSrc);
+    const TDynArray<GLSLPort::ResourceBinding> lBindings = PortStage(lDesc.FragmentSrc);
+
+    const GLSLPort::ResourceBinding* lInput = Find(lBindings, "u_Source");
+    REQUIRE(lInput != nullptr);
+    CHECK(lInput->Binding == 0);
+
+    const GLSLPort::ResourceBinding* lBlock = Find(lBindings, "AmbientOcclusionUBO");
+    REQUIRE(lBlock != nullptr);
+    CHECK(lBlock->Binding == 5);
+
+    CHECK(ConstantIn(lSource, "DOWNSAMPLE") == doctest::Approx(AO_DOWNSAMPLE_2D));
 }
 
 TEST_CASE("Engine shaders: the shadow map shader ports with its occlusion map and block")

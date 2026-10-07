@@ -4,6 +4,7 @@
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
 #include "Renderer/Components/EnvironmentComponent.h"
+#include "RHI/Shader.h"
 
 namespace Opaax
 {
@@ -17,7 +18,6 @@ namespace Opaax
     class ITexture2D;
     class IUniformBuffer;
     class OffscreenRenderTarget;
-    struct ShaderDesc;
     struct ShadowBlock2D;
 
     OPAAX_LOG_CATEGORY(ScenePipeline2D);
@@ -34,11 +34,20 @@ namespace Opaax
         }
     };
 
+    /** The shaders of the HDR path. Only the tonemap is required: without another, its feature is off (logged). */
+    struct ScenePipelineShaders
+    {
+        ShaderDesc Tonemap;
+        ShaderDesc Shadow;
+        ShaderDesc AmbientOcclusion;
+    };
+
     // =============================================================================
     // ScenePipeline2D — the HDR path of a world view: the world is drawn into a linear HDR target,
     //   then composited (exposure, tonemap, back to the screen's gamma) into the view's target.
-    //   Shadows come first: the casters are drawn into an occlusion map, from which a shadow map
-    //   holds, for each shadowed light, how far it gets in every direction.
+    //   The shadow casters come first, drawn into an occlusion map. From it, a shadow map holds,
+    //   for each shadowed light, how far it gets in every direction, and the ambient occlusion map
+    //   how much of the casters surrounds each point (the coverage shrunk, then blurred).
     //   Owned by the RenderSystem; its targets follow the size of the view being drawn.
     // =============================================================================
     class ScenePipeline2D
@@ -57,17 +66,17 @@ namespace Opaax
         // Lifecycle
         // =============================================================================
     public:
-        /**
-         * Creates the shaders and buffers. False (logged) when the tonemap shader is missing.
-         * Without a shadow shader (logged), lights cast no shadows.
-         */
-        bool Init(IRHIDevice& InDevice, const ShaderDesc& InTonemapShader, const ShaderDesc& InShadowShader);
+        /** Creates the shaders and buffers. False (logged) when the tonemap shader is missing. */
+        bool Init(IRHIDevice& InDevice, const ScenePipelineShaders& InShaders);
         void Shutdown();
 
         bool IsReady() const noexcept;
 
         /** Whether BuildShadowMap can work. */
         bool CanShadow() const noexcept;
+
+        /** Whether BuildAmbientOcclusion can work. */
+        bool CanAmbientOcclusion() const noexcept;
 
         // =============================================================================
         // Frame
@@ -87,6 +96,21 @@ namespace Opaax
          * @return The shadow map to sample, or null (no shadow this frame)
          */
         ITexture2D* BuildShadowMap(ICommandBuffer& InCmd, const ShadowBlock2D& InShadows);
+
+        /**
+         * Fills the ambient occlusion map from the occlusion map: its coverage, shrunk then blurred.
+         * @param InSigma The blur, ambient occlusion map texels (AmbientOcclusionSigma2D)
+         * @return The ambient occlusion map to sample, or null
+         */
+        ITexture2D* BuildAmbientOcclusion(ICommandBuffer& InCmd, float InSigma);
+
+        // =============================================================================
+        // Internal
+        // =============================================================================
+    private:
+        /** One fullscreen pass of the ambient occlusion shader, from InSource into InTarget. */
+        void RunAmbientOcclusionPass(ICommandBuffer& InCmd, Uint32 InMode, float InSigma, const IFramebuffer& InSource,
+                                     IRenderTarget& InTarget);
 
         // =============================================================================
         // Members
@@ -111,5 +135,14 @@ namespace Opaax
         TUniquePtr<IShader>        m_ShadowShader;
         TUniquePtr<IPipeline>      m_ShadowPipeline;
         TUniquePtr<IUniformBuffer> m_ShadowUBO;
+
+        // Ambient occlusion: two small R8 maps the passes go back and forth between; [0] is the result.
+        TUniquePtr<IFramebuffer>          m_AmbientOcclusion[2];
+        TUniquePtr<OffscreenRenderTarget> m_AmbientOcclusionTarget[2];
+        TUniquePtr<FramebufferTexture>    m_AmbientOcclusionTexture;
+
+        TUniquePtr<IShader>        m_AmbientOcclusionShader;
+        TUniquePtr<IPipeline>      m_AmbientOcclusionPipeline;
+        TUniquePtr<IUniformBuffer> m_AmbientOcclusionUBO;
     };
 }

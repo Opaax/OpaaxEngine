@@ -117,14 +117,20 @@ namespace Opaax
             OpaaxApplication::GetAppService<IPaths>().EngineToAbsolute("Assets/Shaders/Tonemap.glsl");
         const OpaaxString lTonemapSrc = FileIO::ReadAllText(lTonemapPath);
 
-        // The shadow map pass. Without it, lights cast no shadows (logged).
+        // The shadow map and ambient occlusion passes. Without them, there are none (logged).
         const OpaaxString lShadowPath =
             OpaaxApplication::GetAppService<IPaths>().EngineToAbsolute("Assets/Shaders/Shadow2D.glsl");
         const OpaaxString lShadowSrc = FileIO::ReadAllText(lShadowPath);
 
+        const OpaaxString lOcclusionPath =
+            OpaaxApplication::GetAppService<IPaths>().EngineToAbsolute("Assets/Shaders/AmbientOcclusion2D.glsl");
+        const OpaaxString lOcclusionSrc = FileIO::ReadAllText(lOcclusionPath);
+
         RenderSystemDesc lDesc;
         lDesc.TonemapShader = lTonemapSrc.IsEmpty() ? ShaderDesc{} : ShaderSource::FromSource(lTonemapSrc, lTonemapPath);
         lDesc.ShadowShader  = lShadowSrc.IsEmpty() ? ShaderDesc{} : ShaderSource::FromSource(lShadowSrc, lShadowPath);
+        lDesc.AmbientOcclusionShader =
+            lOcclusionSrc.IsEmpty() ? ShaderDesc{} : ShaderSource::FromSource(lOcclusionSrc, lOcclusionPath);
         lDesc.Backend      = ResolveSupportedBackend(lEngineCfg.Render.Backend);
         lDesc.Surface      = lSurface;
         lDesc.Width        = lWindow->GetWidth();
@@ -399,16 +405,13 @@ namespace Opaax
             LightsBlock2D lLights;
             PackLights2D(CollectLights(*InWorld), lViewBounds, lAmbient, lEnvironment->AmbientIntensity, lLights);
 
-            // Shadows first: they are drawn from passes of their own.
-            const float lPixelsPerUnit = static_cast<float>(lHeight) / std::max(2.f * InView.OrthoSize, 1e-3f);
-            ITexture2D* lShadowMap     = RenderShadowMap(*InWorld, lRenderer, lViewBounds, lPixelsPerUnit, lLights);
-            if (lShadowMap == nullptr)
-            {
-                ClearShadowRows2D(lLights);
-            }
+            // Shadows and ambient occlusion first: they are drawn from passes of their own.
+            const float        lPixelsPerUnit = static_cast<float>(lHeight) / std::max(2.f * InView.OrthoSize, 1e-3f);
+            const LightingMaps lMaps          = RenderLightingMaps(*InWorld, lRenderer, lViewBounds, lPixelsPerUnit,
+                                                                   *lEnvironment, lLights);
 
             lRenderer.SetLighting(lLights);
-            lRenderer.SetShadowMap(lShadowMap);
+            lRenderer.SetLightingMaps(lMaps.Shadow, lMaps.AmbientOcclusion);
 
             // Overlays meant to be behind the world (the grid) go in with it.
             m_RenderSystem->BeginPass(lPipeline.PrepareScene(lWidth, lHeight), lSceneView, ELoadOp::Clear, &lLinearClear);
@@ -416,7 +419,7 @@ namespace Opaax
             if (bInDrawOverlays) { DrawOverlays(InWorld, lRenderer, EOverlayFilter::BehindWorld); }
             m_RenderSystem->EndPass();
 
-            lRenderer.SetShadowMap(nullptr);
+            lRenderer.SetLightingMaps(nullptr, nullptr);
 
             lPipeline.Composite(*lCommands, InTarget, PostSettings::From(*lEnvironment));
 
@@ -510,30 +513,38 @@ namespace Opaax
         return lLighting;
     }
 
-    ITexture2D* RendererManager::RenderShadowMap(World& InWorld, Renderer2D& InRenderer, const Bounds2D& InView,
-                                                 const float InPixelsPerUnit, const LightsBlock2D& InLights)
+    RendererManager::LightingMaps RendererManager::RenderLightingMaps(World& InWorld, Renderer2D& InRenderer,
+                                                                      const Bounds2D& InView, const float InPixelsPerUnit,
+                                                                      const EnvironmentComponent& InEnvironment,
+                                                                      LightsBlock2D& InOutLights)
     {
         ScenePipeline2D& lPipeline = m_RenderSystem->GetScenePipeline();
         ICommandBuffer*  lCommands = m_RenderSystem->GetCommandBuffer();
 
+        // What the view needs from the casters.
         ShadowBlock2D lShadows;
-        if (!lPipeline.CanShadow() || lCommands == nullptr || BuildShadowBlock2D(InLights, lShadows) == 0)
-        {
-            return nullptr;
-        }
+        const bool bShadows   = lPipeline.CanShadow() && BuildShadowBlock2D(InOutLights, lShadows) > 0;
+        const bool bOcclusion = lPipeline.CanAmbientOcclusion() && InEnvironment.bAmbientOcclusion
+                             && InEnvironment.AOStrength > 0.f;
 
         bool bHasCaster = false;
-        InWorld.Each<ShadowCaster2DComponent>([&bHasCaster](EntityID, const ShadowCaster2DComponent& InCaster)
+        if (bShadows || bOcclusion)
         {
-            bHasCaster = bHasCaster || InCaster.bEnabled;
-        });
-
-        if (!bHasCaster)
-        {
-            return nullptr;
+            InWorld.Each<ShadowCaster2DComponent>([&bHasCaster](EntityID, const ShadowCaster2DComponent& InCaster)
+            {
+                bHasCaster = bHasCaster || InCaster.bEnabled;
+            });
         }
 
-        const OcclusionLayout2D lLayout = MakeOcclusionLayout2D(InView, InPixelsPerUnit, lShadows);
+        LightingMaps lMaps;
+        if (lCommands == nullptr || !bHasCaster)
+        {
+            ClearShadowRows2D(InOutLights);
+            return lMaps;
+        }
+
+        // Shadows need the lights' reach; ambient occlusion only the view.
+        const OcclusionLayout2D lLayout = MakeOcclusionLayout2D(InView, InPixelsPerUnit, bShadows ? lShadows : ShadowBlock2D{});
         const Vector2F          lMin    = lLayout.Bounds.Min();
         const Vector2F          lSize   = lLayout.Bounds.Size();
         lShadows.OcclusionRect = Vector4F{ lMin.x, lMin.y, lSize.x, lSize.y };
@@ -550,8 +561,28 @@ namespace Opaax
         const Uint32 lCasters = DrawShadowCasters(InWorld, InRenderer);
         m_RenderSystem->EndPass();
 
-        // Every caster hidden: nothing can cast.
-        return (lCasters > 0) ? lPipeline.BuildShadowMap(*lCommands, lShadows) : nullptr;
+        // Every caster hidden: nothing can cast or occlude.
+        if (lCasters > 0 && bShadows)
+        {
+            lMaps.Shadow = lPipeline.BuildShadowMap(*lCommands, lShadows);
+        }
+
+        if (lMaps.Shadow == nullptr)
+        {
+            ClearShadowRows2D(InOutLights);
+        }
+
+        if (lCasters > 0 && bOcclusion)
+        {
+            lMaps.AmbientOcclusion = lPipeline.BuildAmbientOcclusion(
+                *lCommands, AmbientOcclusionSigma2D(InEnvironment.AORadius, lLayout));
+            if (lMaps.AmbientOcclusion != nullptr)
+            {
+                PackAmbientOcclusion2D(InOutLights, lLayout, InEnvironment.AOStrength);
+            }
+        }
+
+        return lMaps;
     }
 
     Uint32 RendererManager::DrawShadowCasters(World& InWorld, Renderer2D& InRenderer)

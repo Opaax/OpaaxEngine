@@ -230,4 +230,38 @@ namespace Opaax
                                   / (2.f * lDensity);
         return lLayout;
     }
+
+    Uint32 AmbientOcclusionExtent2D(const Uint32 InOcclusionExtent) noexcept
+    {
+        return std::max((InOcclusionExtent + AO_DOWNSAMPLE_2D - 1) / AO_DOWNSAMPLE_2D, 1u);
+    }
+
+    float AmbientOcclusionSigma2D(const float InRadius, const OcclusionLayout2D& InLayout) noexcept
+    {
+        const float lWorldWidth = InLayout.Bounds.HalfExtent.x * 2.f;
+        if (lWorldWidth <= 0.f)
+        {
+            return 0.f;
+        }
+
+        // World units -> occlusion texels -> ambient occlusion texels.
+        const float lDensity = static_cast<float>(InLayout.Width) / lWorldWidth;
+        return std::max(InRadius, 0.f) * 0.5f * lDensity / static_cast<float>(AO_DOWNSAMPLE_2D);
+    }
+
+    void PackAmbientOcclusion2D(LightsBlock2D& InOutBlock, const OcclusionLayout2D& InLayout, const float InStrength) noexcept
+    {
+        // Each of its texels covers AO_DOWNSAMPLE_2D occlusion texels a side, so it can reach a little past them.
+        const auto lCovered = [](const Uint32 InExtent)
+        {
+            const Uint32 lExtent = std::max(InExtent, 1u);
+            return static_cast<float>(AmbientOcclusionExtent2D(lExtent) * AO_DOWNSAMPLE_2D) / static_cast<float>(lExtent);
+        };
+
+        const Vector2F lMin  = InLayout.Bounds.Min();
+        const Vector2F lSize = InLayout.Bounds.Size();
+
+        InOutBlock.AORect   = Vector4F{ lMin.x, lMin.y, lSize.x * lCovered(InLayout.Width), lSize.y * lCovered(InLayout.Height) };
+        InOutBlock.AOParams = Vector4F{ std::clamp(InStrength, 0.f, 1.f), 0.f, 0.f, 0.f };
+    }
 }

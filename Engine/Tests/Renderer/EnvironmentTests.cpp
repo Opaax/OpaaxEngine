@@ -30,6 +30,26 @@ TEST_CASE("Environment: a map entry round-trips, and a missing key keeps its def
     CHECK(lPartial.Tonemapper == ETonemapper::ACES);
 }
 
+TEST_CASE("Environment: the ambient light and its occlusion round-trip; older environments load without occlusion")
+{
+    EnvironmentComponent lEnvironment;
+    lEnvironment.AmbientIntensity  = 0.25f;
+    lEnvironment.bAmbientOcclusion = true;
+    lEnvironment.AORadius          = 80.f;
+    lEnvironment.AOStrength        = 0.3f;
+
+    const EnvironmentComponent lBack = nlohmann::json(lEnvironment).get<EnvironmentComponent>();
+    CHECK(lBack.AmbientIntensity == doctest::Approx(0.25f));
+    CHECK(lBack.bAmbientOcclusion);
+    CHECK(lBack.AORadius == doctest::Approx(80.f));
+    CHECK(lBack.AOStrength == doctest::Approx(0.3f));
+
+    const EnvironmentComponent lOld = nlohmann::json{ { "Exposure", 1.0 } }.get<EnvironmentComponent>();
+    CHECK_FALSE(lOld.bAmbientOcclusion);
+    CHECK(lOld.AORadius == doctest::Approx(48.f));
+    CHECK(lOld.AmbientIntensity == doctest::Approx(1.f));
+}
+
 TEST_CASE("Environment: a view's post settings come from it")
 {
     EnvironmentComponent lEnvironment;
