@@ -291,6 +291,22 @@ namespace RuntimeProbes
         void OnStart() override { DestroyAfter(0.25f); }
     };
 
+    /** Handlers that change nothing of the behaviour's own state can be const members. */
+    struct ConstHandlers final : Behaviour
+    {
+        mutable Int32 Timers = 0;
+        mutable Int32 Scores = 0;
+
+        void OnStart() override
+        {
+            SetTimer<&ConstHandlers::OnTimer>(0.25f);
+            Subscribe<&ConstHandlers::OnScore>();
+        }
+
+        void OnTimer() const { ++Timers; }
+        void OnScore(const ScoreChanged&) const { ++Scores; }
+    };
+
     /** Spawns Prefab during its first update, then sends the new root a Hit. */
     struct Spawner final : Behaviour
     {
@@ -463,6 +479,7 @@ namespace
         REQUIRE(InRegistry.Register<ScoreKeeper>(OpaaxStringID("ScoreKeeper")));
         REQUIRE(InRegistry.Register<Dier>(OpaaxStringID("Dier")));
         REQUIRE(InRegistry.Register<TimerUser>(OpaaxStringID("TimerUser")));
+        REQUIRE(InRegistry.Register<ConstHandlers>(OpaaxStringID("ConstHandlers")));
         REQUIRE(InRegistry.Register<Fuse>(OpaaxStringID("Fuse")));
         REQUIRE(InRegistry.Register<Spawner>(OpaaxStringID("Spawner")));
         REQUIRE(InRegistry.Register<StartSpawner>(OpaaxStringID("StartSpawner")));
@@ -1111,6 +1128,20 @@ TEST_CASE("Behaviours: physics events from another world are ignored")
 // =============================================================================
 // Global events
 // =============================================================================
+TEST_CASE("Behaviours: a const member can handle a timer and an event")
+{
+    RuntimeFixture lFix;
+    Entity lEntity = lFix.Make("Const");
+    lEntity.Add<ConstHandlers>();
+    lFix.Frame();
+
+    lFix.Worlds.Update(0.5);
+    lFix.Events.GetEventBus().Publish(ScoreChanged{ 3 });
+
+    CHECK(lEntity.Get<ConstHandlers>().Timers == 1);
+    CHECK(lEntity.Get<ConstHandlers>().Scores == 1);
+}
+
 TEST_CASE("Behaviours: Subscribe receives engine events until the behaviour ends")
 {
     RuntimeFixture lFix;

@@ -280,7 +280,7 @@ namespace Opaax
 
     Vector2F Behaviour::GetVelocity() const
     {
-        const PhysicsSubsystem* lPhysics = GetSubsystem<PhysicsSubsystem>();
+        PhysicsSubsystem* lPhysics = GetSubsystem<PhysicsSubsystem>();
         return (lPhysics != nullptr) ? lPhysics->GetLinearVelocity(m_Entity) : Vector2F{ 0.f, 0.f };
     }
 
@@ -295,7 +295,7 @@ namespace Opaax
 
     float Behaviour::GetAngularVelocity() const
     {
-        const PhysicsSubsystem* lPhysics = GetSubsystem<PhysicsSubsystem>();
+        PhysicsSubsystem* lPhysics = GetSubsystem<PhysicsSubsystem>();
         return (lPhysics != nullptr) ? lPhysics->GetAngularVelocity(m_Entity) : 0.f;
     }
 
@@ -346,7 +346,7 @@ namespace Opaax
 
     float Behaviour::GetMass() const
     {
-        const PhysicsSubsystem* lPhysics = GetSubsystem<PhysicsSubsystem>();
+        PhysicsSubsystem* lPhysics = GetSubsystem<PhysicsSubsystem>();
         return (lPhysics != nullptr) ? lPhysics->GetMass(m_Entity) : 0.f;
     }
 

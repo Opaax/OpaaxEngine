@@ -17,6 +17,7 @@
 #include "Engine/Reflection/PropertyJson.h"
 #include "Input/InputCodes.h"
 #include "Input/Mapping/InputTypes.h"
+#include "World/Components/TransformComponent.h"   // GetTransform(): every behaviour moves something
 #include "World/Entity/Entity.h"
 #include "World/World.h"
 
@@ -56,7 +57,6 @@ namespace Opaax
     class DebugDraw;
     class InputManager;
     struct InputActionState;
-    struct TransformComponent;
     struct WorldContext;
 
     inline constexpr LogCategory LogBehaviour{"Behaviour"};
@@ -95,6 +95,10 @@ namespace Opaax
             using Event = E;
         };
 
+        /** A const handler is a handler too. */
+        template<typename C, typename E>
+        struct TEventMethodTraits<void (C::*)(const E&) const> : TEventMethodTraits<void (C::*)(const E&)> {};
+
         /** The class of a handler `void (C::*)()`. */
         template<typename TMethod>
         struct TTimerMethodTraits;
@@ -104,6 +108,9 @@ namespace Opaax
         {
             using Class = C;
         };
+
+        template<typename C>
+        struct TTimerMethodTraits<void (C::*)() const> : TTimerMethodTraits<void (C::*)()> {};
 
         template<typename C, typename E, auto Method>
         void CallEventHandler(Behaviour& InSelf, const void* InEvent)

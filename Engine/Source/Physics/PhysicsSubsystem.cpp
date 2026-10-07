@@ -386,9 +386,9 @@ namespace Opaax
         return FindOrBuildDynamicBody(InEntity).IsValid();
     }
 
-    Vector2F PhysicsSubsystem::GetLinearVelocity(const EntityID InEntity) const
+    Vector2F PhysicsSubsystem::GetLinearVelocity(const EntityID InEntity)
     {
-        const BodyHandle lBody = FindDynamicBody(InEntity);
+        const BodyHandle lBody = FindOrBuildDynamicBody(InEntity);
         return lBody.IsValid() ? m_World->GetLinearVelocity(lBody) : Vector2F{ 0.f, 0.f };
     }
 
@@ -404,9 +404,9 @@ namespace Opaax
         return true;
     }
 
-    float PhysicsSubsystem::GetAngularVelocity(const EntityID InEntity) const
+    float PhysicsSubsystem::GetAngularVelocity(const EntityID InEntity)
     {
-        const BodyHandle lBody = FindDynamicBody(InEntity);
+        const BodyHandle lBody = FindOrBuildDynamicBody(InEntity);
         return lBody.IsValid() ? Maths::RadiansToDegrees(m_World->GetAngularVelocity(lBody)) : 0.f;
     }
 
@@ -470,9 +470,9 @@ namespace Opaax
         return true;
     }
 
-    float PhysicsSubsystem::GetMass(const EntityID InEntity) const
+    float PhysicsSubsystem::GetMass(const EntityID InEntity)
     {
-        const BodyHandle lBody = FindDynamicBody(InEntity);
+        const BodyHandle lBody = FindOrBuildDynamicBody(InEntity);
         return lBody.IsValid() ? m_World->GetMass(lBody) : 0.f;
     }
 

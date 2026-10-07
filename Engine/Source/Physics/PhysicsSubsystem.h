@@ -90,17 +90,18 @@ namespace Opaax
 
         // =============================================================================
         // Body motion, by entity — dynamic bodies only. Angles in degrees.
-        //   A body not built yet (an entity spawned this frame) is built on the first call, so a
-        //   new entity can be launched on the line that created it. The setters return false when
-        //   the entity has no dynamic body; the getters then return zero.
+        //   A body not built yet (an entity spawned this frame) is built on the first call, getters
+        //   included, so a new entity can be launched, or its mass read, on the line that created
+        //   it. The setters return false when the entity has no dynamic body; the getters then
+        //   return zero.
         // =============================================================================
     public:
         /** World units per second. */
-        Vector2F GetLinearVelocity(EntityID InEntity) const;
+        Vector2F GetLinearVelocity(EntityID InEntity);
         bool     SetLinearVelocity(EntityID InEntity, Vector2F InVelocity);
 
         /** Degrees per second, counter-clockwise. */
-        float GetAngularVelocity(EntityID InEntity) const;
+        float GetAngularVelocity(EntityID InEntity);
         bool  SetAngularVelocity(EntityID InEntity, float InDegreesPerSecond);
 
         /** Over the next step (mass * units / s^2): call it every step for a steady push. */
@@ -113,7 +114,7 @@ namespace Opaax
         bool ApplyAngularImpulse(EntityID InEntity, float InImpulse);
 
         /** From the collider's density and area. */
-        float GetMass(EntityID InEntity) const;
+        float GetMass(EntityID InEntity);
 
         /** True when the entity has a dynamic body (built or buildable now). */
         bool HasDynamicBody(EntityID InEntity);

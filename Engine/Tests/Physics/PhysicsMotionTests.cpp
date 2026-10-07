@@ -115,6 +115,19 @@ TEST_CASE("PhysicsMotion: a body launched on the frame it is created moves at th
     CHECK(lFix.Physics->GetBodyCount() == 1);   // the reconcile did not build a second one
 }
 
+TEST_CASE("PhysicsMotion: a body created this frame reads its mass and velocity at once")
+{
+    MotionFixture lFix;
+    Entity lBox = lFix.Box({ 0.f, 0.f }, true);
+
+    // Read first, before any step or launch: the getters build the body too.
+    CHECK(lFix.Physics->GetBodyCount() == 0);
+    CHECK(lFix.Physics->GetMass(lBox.GetHandle()) > 0.f);
+    CHECK(lFix.Physics->GetBodyCount() == 1);
+    CHECK(lFix.Physics->GetLinearVelocity(lBox.GetHandle()).x == doctest::Approx(0.f));
+    CHECK(lFix.Physics->GetAngularVelocity(lBox.GetHandle()) == doctest::Approx(0.f));
+}
+
 TEST_CASE("PhysicsMotion: an impulse changes the velocity by impulse / mass, at once")
 {
     MotionFixture lFix;
