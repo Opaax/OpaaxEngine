@@ -11,7 +11,9 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Resources/ResourcePath.h"
 #include "Resources/ResourcePathJson.h"
+#include "Renderer/Materials/Material2D.h"
 #include "Renderer/RenderLayer.h"
+#include "Resources/DataAsset/DataAssetRef.h"
 
 namespace Opaax
 {
@@ -45,9 +47,13 @@ namespace Opaax
         ERenderLayer Layer        = ERenderLayer::Default;
         Int16        OrderInLayer = 0;
 
+        /** How it takes light (.opaaxdata). Empty: lit, flat, no glow. Needs an Environment in the level. */
+        TDataAssetRef<Material2D> Material;
+
         // _WITH_DEFAULT: a missing key keeps its default, so maps saved before a new field still load.
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(SpriteComponent,
-                                                    Texture, Sheet, Frame, Size, Color, bVisible, Layer, OrderInLayer)
+                                                    Texture, Sheet, Frame, Size, Color, bVisible, Layer, OrderInLayer,
+                                                    Material)
 
         // Editable in the Inspector (each field type has its own drawer).
         OPAAX_PROPERTIES(SpriteComponent,
@@ -62,6 +68,8 @@ namespace Opaax
                          OPAAX_PROP(Color),
                          OPAAX_PROP(bVisible),
                          OPAAX_PROP(Layer),
-                         OPAAX_PROP(OrderInLayer))
+                         OPAAX_PROP(OrderInLayer),
+                         OPAAX_PROP(Material).SetTooltip("How it takes light: normal map, glow, lit or not.\n"
+                                                         "Empty: lit and flat. Lighting needs an Environment."))
     };
 }

@@ -2,6 +2,8 @@
 
 #include <nlohmann/json.hpp>
 
+#include "Core/Color/LinearColor.h"
+#include "Core/Color/LinearColorJson.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxEnum.h"
 #include "Core/Reflection/OpaaxEnumJson.h"
@@ -38,18 +40,28 @@ namespace Opaax
     // =============================================================================
     // EnvironmentComponent — how a world's picture is made. Put one on any entity of the level
     //   (the first found is used). With it, the world is drawn in HDR: colour in linear space,
-    //   then exposure and tonemapping. Without it, the world is drawn as before, directly.
+    //   lit by its Light2Ds and the ambient light, then exposure and tonemapping. Without it,
+    //   the world is drawn as before, directly, and lights are ignored.
     // =============================================================================
     struct EnvironmentComponent
     {
+        /** The light everything lit gets, in screen colour. White at 1 is the unlit look: dim it for night. */
+        LinearColor AmbientColor     = { 1.f, 1.f, 1.f, 1.f };
+        float       AmbientIntensity = 1.f;
+
         /** Brightness in stops: +1 doubles, -1 halves. */
         float Exposure = 0.f;
 
         ETonemapper Tonemapper = ETonemapper::ACES;
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(EnvironmentComponent, Exposure, Tonemapper)
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(EnvironmentComponent, AmbientColor, AmbientIntensity, Exposure,
+                                                    Tonemapper)
 
         OPAAX_PROPERTIES(EnvironmentComponent,
+                         OPAAX_PROP(AmbientColor).SetTooltip("The light everything lit gets, without any Light2D."),
+                         OPAAX_PROP(AmbientIntensity).SetRange(0.f, 10.f).SetDragStep(0.01f)
+                                                     .SetTooltip("1 with a white colour: sprites as drawn.\n"
+                                                                 "Lower it and the lights show."),
                          OPAAX_PROP(Exposure).SetRange(-8.f, 8.f)
                                              .SetTooltip("Brightness in stops: +1 doubles the light, -1 halves it."),
                          OPAAX_PROP(Tonemapper).SetTooltip("How bright colours are brought into the screen's range.\n"

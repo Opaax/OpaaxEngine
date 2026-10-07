@@ -31,6 +31,9 @@
 #include "World/WorldManager.h"
 #include "World/World.h"
 #include "Renderer/Components/EnvironmentComponent.h"
+#include "Renderer/Components/Light2DComponent.h"
+#include "Renderer/Lighting/Lighting2D.h"
+#include "Resources/DataAsset/DataAssetHandle.h"
 #include "Renderer/Components/QuadComponent.h"
 #include "Renderer/Post/ScenePipeline2D.h"
 #include "Renderer/Components/SpriteComponent.h"
@@ -174,6 +177,7 @@ namespace Opaax
         m_SheetCache.clear();
         m_FaceCache.clear();     // holds the font atlases
         m_FamilyCache.clear();
+        m_MaterialCache.clear();
 
         m_RenderSystem.reset(); // waits idle, then tears down
     }
@@ -378,6 +382,16 @@ namespace Opaax
             const Vector4F  lLinearClear{ Maths::Pow(lClear.r, 2.2f), Maths::Pow(lClear.g, 2.2f),
                                           Maths::Pow(lClear.b, 2.2f), lClear.a };
 
+            // The lights that reach this view.
+            const float    lHalfHeight = InView.OrthoSize;
+            const float    lHalfWidth  = lHalfHeight * (static_cast<float>(lWidth) / static_cast<float>(std::max(lHeight, 1u)));
+            const Bounds2D lViewBounds{ InView.Position, { lHalfWidth, lHalfHeight } };
+            const Vector3F lAmbient{ lEnvironment->AmbientColor.r, lEnvironment->AmbientColor.g, lEnvironment->AmbientColor.b };
+
+            LightsBlock2D lLights;
+            PackLights2D(CollectLights(*InWorld), lViewBounds, lAmbient, lEnvironment->AmbientIntensity, lLights);
+            lRenderer.SetLighting(lLights);
+
             // Overlays meant to be behind the world (the grid) go in with it.
             m_RenderSystem->BeginPass(lPipeline.PrepareScene(lWidth, lHeight), lSceneView, ELoadOp::Clear, &lLinearClear);
             DrawWorld(*InWorld, lRenderer);
@@ -396,6 +410,24 @@ namespace Opaax
             return;
         }
 
+        // Lights need the HDR path: said once, since a level without an Environment ignores them.
+        if (InWorld != nullptr && !m_bWarnedLightsIgnored && lEnvironment == nullptr)
+        {
+            bool bHasLight = false;
+            InWorld->Each<Light2DComponent>([&bHasLight](EntityID, const Light2DComponent& InLight)
+            {
+                bHasLight = bHasLight || InLight.bEnabled;
+            });
+
+            if (bHasLight)
+            {
+                m_bWarnedLightsIgnored = true;
+                OPAAX_LOG(LogRendererManager, Warn,
+                          "World '{}' has Light2Ds but no EnvironmentComponent: they light nothing until one is added",
+                          InWorld->GetName().CStr());
+            }
+        }
+
         m_RenderSystem->BeginPass(InTarget, lView);
 
         if (InWorld != nullptr)
@@ -409,6 +441,53 @@ namespace Opaax
         }
 
         m_RenderSystem->EndPass();
+    }
+
+    TDynArray<Light2DInstance> RendererManager::CollectLights(World& InWorld)
+    {
+        TDynArray<Light2DInstance> lLights;
+        InWorld.Each<TransformComponent, Light2DComponent>(
+            [this, &InWorld, &lLights](EntityID InEntity, TransformComponent& InXf, Light2DComponent& InLight)
+            {
+                // Where the entity is drawn this frame, so a light carried by a sprite stays on it.
+                const DisplayPose lPose = PoseFor(InWorld, InEntity, InXf);
+                lLights.push_back(Light2DInstance{ &InLight, lPose.Position, lPose.RotationDeg });
+            });
+        return lLights;
+    }
+
+    QuadLighting RendererManager::ResolveLighting(const TDataAssetRef<Material2D>& InMaterial)
+    {
+        QuadLighting lLighting;
+        if (InMaterial.IsEmpty())
+        {
+            return lLighting;
+        }
+
+        const OpaaxStringID lKey(InMaterial.Path);
+        auto lIt = m_MaterialCache.find(lKey.GetId());
+        if (lIt == m_MaterialCache.end())
+        {
+            // Kept even when it fails to load, so a missing file is not retried every frame.
+            lIt = m_MaterialCache.emplace(lKey.GetId(),
+                                          LoadDataAsset(OpaaxApplication::GetAppService<IEngine>().GetResources(),
+                                                        OpaaxApplication::GetAppService<IPaths>(), InMaterial)).first;
+        }
+
+        const Material2D* lMaterial = lIt->second.Get();
+        if (lMaterial == nullptr)
+        {
+            return lLighting;
+        }
+
+        lLighting.bLit      = lMaterial->bLit;
+        lLighting.NormalMap = ResolveTexture(lMaterial->NormalMap);
+
+        const float lStrength = std::max(lMaterial->EmissiveStrength, 0.f);
+        lLighting.Emissive = Vector3F{ ScreenToLinear(lMaterial->EmissiveColor.r) * lStrength,
+                                       ScreenToLinear(lMaterial->EmissiveColor.g) * lStrength,
+                                       ScreenToLinear(lMaterial->EmissiveColor.b) * lStrength };
+        return lLighting;
     }
 
     const EnvironmentComponent* RendererManager::FindEnvironment(World& InWorld)
@@ -454,13 +533,18 @@ namespace Opaax
             return InFilter == EOverlayFilter::All || (InFilter == EOverlayFilter::BehindWorld) == bBehind;
         };
 
+        // Helpers keep their colour whatever the level's lighting.
+        QuadLighting lUnlit;
+        lUnlit.bLit = false;
+
         // Each line is a thin rotated quad, on its own layer (the grid is behind world geometry).
         for (const DebugLine& lLine : m_DebugDraw.GetLines())
         {
             if (!lBelongsHere(lLine.Source) || !lPasses(lLine.Layer)) { continue; }
 
             const DebugQuad lQuad = ToQuad(lLine);
-            InRenderer.DrawQuad(lQuad.Center, lQuad.Size, lLine.Color, lQuad.RotationRad, lLine.Layer);
+            InRenderer.DrawQuad(lQuad.Center, lQuad.Size, lLine.Color, lQuad.RotationRad, lLine.Layer, 0,
+                                QuadMask{}, lUnlit);
         }
 
         // Boxes are one hollow quad each, same layer rule.
@@ -469,7 +553,7 @@ namespace Opaax
             if (!lBelongsHere(lBox.Source) || !lPasses(lBox.Layer)) { continue; }
 
             InRenderer.DrawQuadOutline(lBox.Center, lBox.Size, lBox.Color, lBox.Thickness,
-                                       lBox.RotationRad, lBox.Layer);
+                                       lBox.RotationRad, lBox.Layer, 0, QuadMask{}, lUnlit);
         }
     }
 
@@ -562,7 +646,7 @@ namespace Opaax
                 InRenderer.DrawSprite(lPose.Position, InSprite.Size * lPose.Scale, *lTexture, InSprite.Color,
                                       Maths::DegreesToRadians(lPose.RotationDeg),
                                       InSprite.Layer, InSprite.OrderInLayer,
-                                      lUV.UVMin, lUV.UVMax);
+                                      lUV.UVMin, lUV.UVMax, QuadMask{}, ResolveLighting(InSprite.Material));
             });
     }
 

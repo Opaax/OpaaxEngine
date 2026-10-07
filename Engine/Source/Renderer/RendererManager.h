@@ -9,6 +9,10 @@
 #include "RHI/ICommandBuffer.h"    // ELoadOp
 #include "Renderer/CameraView.h"
 #include "Renderer/DebugDraw.h"
+#include "Renderer/Lighting/Lighting2D.h"
+#include "Renderer/Materials/Material2D.h"
+#include "Renderer/Renderer2D.h"           // QuadLighting
+#include "Resources/DataAsset/DataAssetHandle.h"
 #include "UI/UIAssetProvider.h"
 #include "World/Entity/EntityTypes.h"   // EntityID
 
@@ -123,6 +127,12 @@ namespace Opaax
 
         /** The first EnvironmentComponent of InWorld, or null (then the world is drawn without HDR). */
         static const EnvironmentComponent* FindEnvironment(World& InWorld);
+
+        /** InWorld's lights, where they are drawn this frame. */
+        TDynArray<Light2DInstance> CollectLights(World& InWorld);
+
+        /** How a sprite with InMaterial takes light (cached per material path). */
+        QuadLighting ResolveLighting(const TDataAssetRef<Material2D>& InMaterial);
 
         /** Draws InWorld's quads, sprites and texts. */
         void DrawWorld(World& InWorld, Renderer2D& InRenderer);
@@ -326,6 +336,9 @@ namespace Opaax
         Uint64 m_BlendedThisFrame  = 0;
         bool   m_bLoggedFirstBlend = false;
 
+        /** Logged once: a world with lights and no EnvironmentComponent. */
+        bool   m_bWarnedLightsIgnored = false;
+
         // Debug shapes. Owned here because the renderer consumes them.
         DebugDraw               m_DebugDraw;
 
@@ -335,6 +348,9 @@ namespace Opaax
 
         /** Same cache for sprite sheets. */
         TUnorderedMap<Uint32, ResourceRef<SpriteSheetResource>> m_SheetCache;
+
+        /** Materials by path, kept for the session (a saved material reloads in place). */
+        TUnorderedMap<Uint32, TDataAssetHandle<Material2D>> m_MaterialCache;
 
         /** Sheets already warned about for a missing frame. */
         TUnorderedSet<Uint32> m_WarnedFrameRange;

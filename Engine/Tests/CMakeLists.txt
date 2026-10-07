@@ -112,6 +112,7 @@ set(OPAAX_TEST_SOURCES
     Renderer/DebugDrawTests.cpp
     Renderer/EnvironmentTests.cpp
     Renderer/FontTests.cpp
+    Renderer/Lighting2DTests.cpp
     Renderer/RenderTargetTests.cpp
     Renderer/SortKeyTests.cpp
     Renderer/SpriteSheetTests.cpp

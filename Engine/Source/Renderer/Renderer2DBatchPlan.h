@@ -23,6 +23,7 @@ namespace Opaax
         Uint32 Batch     = 0;   // batch index
         Uint32 Slot      = 0;   // sampler slot in that batch
         Uint32 MaskSlot  = 0;   // mask slot; 0 = no mask
+        Uint32 NormalSlot = 0;  // normal map slot; 0 = no normal map
     };
 
     /**
@@ -40,4 +41,16 @@ namespace Opaax
                                    const TDynArray<Uint32>&  InMaskIds,
                                    const QuadBatchLimits&    InLimits,
                                    TDynArray<QuadPlacement>& OutPlan);
+
+    /**
+     * The same, with a normal map per quad (lit sprites).
+     * @param InNormalIds Same size as InKeys, 0 = no normal map. May be empty.
+     *                    A quad may then need up to three slots: its texture, mask and normal map.
+     */
+    void PlanQuadBatches(const TDynArray<Uint64>&  InKeys,
+                         const TDynArray<Uint32>&  InTextureIds,
+                         const TDynArray<Uint32>&  InMaskIds,
+                         const TDynArray<Uint32>&  InNormalIds,
+                         const QuadBatchLimits&    InLimits,
+                         TDynArray<QuadPlacement>& OutPlan);
 }

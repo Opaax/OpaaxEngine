@@ -14,6 +14,7 @@ namespace Opaax
     class ITexture2D;
     class ICommandBuffer;
     class IRHIDevice;
+    struct LightsBlock2D;
     struct Renderer2DData;
     struct RenderView;
     struct RenderLimits;
@@ -39,6 +40,17 @@ namespace Opaax
 
         /** A zero-size rect means no mask. */
         bool IsActive() const noexcept { return Rect.HalfExtent.x > 0.f && Rect.HalfExtent.y > 0.f; }
+    };
+
+    /**
+     * How a quad takes light. Only HDR passes are lit (a world with an EnvironmentComponent); other
+     * passes draw every quad as is. The default: lit, flat, no glow.
+     */
+    struct QuadLighting
+    {
+        ITexture2D* NormalMap = nullptr;          // borrowed for the batch; tangent space, Y up
+        Vector3F    Emissive  = { 0.f, 0.f, 0.f };   // linear, times the quad's own colour, added after lighting
+        bool        bLit      = true;
     };
 
     /**
@@ -136,7 +148,8 @@ namespace Opaax
                       float           InRotationRad  = 0.f,
                       ERenderLayer    InLayer        = ERenderLayer::Default,
                       Int16           InOrderInLayer = 0,
-                      const QuadMask& InMask         = {});
+                      const QuadMask& InMask         = {},
+                      const QuadLighting& InLighting = {});
 
         /**
          * Draws a textured quad.
@@ -158,7 +171,8 @@ namespace Opaax
                         Int16           InOrderInLayer = 0,
                         const Vector2F& InUVMin        = { 0.f, 0.f },
                         const Vector2F& InUVMax        = { 1.f, 1.f },
-                        const QuadMask& InMask         = {});
+                        const QuadMask& InMask         = {},
+                        const QuadLighting& InLighting = {});
 
         /**
          * Draws a hollow quad: a border of InThickness, empty inside. Untextured.
@@ -177,7 +191,15 @@ namespace Opaax
                              float           InRotationRad  = 0.f,
                              ERenderLayer    InLayer        = ERenderLayer::Debug,
                              Int16           InOrderInLayer = 0,
-                             const QuadMask& InMask         = {});
+                             const QuadMask& InMask         = {},
+                             const QuadLighting& InLighting = {});
+
+        // =============================================================================
+        // Lighting
+        // =============================================================================
+    public:
+        /** The lights of the next passes (only HDR passes are lit). Lit quads see the ambient alone by default. */
+        void SetLighting(const LightsBlock2D& InLights);
 
         // =============================================================================
         // Internal
@@ -205,7 +227,8 @@ namespace Opaax
                           const Vector2F& InUVMin,
                           const Vector2F& InUVMax,
                           const Vector2F& InInnerHalf = { 0.f, 0.f },
-                          const QuadMask& InMask      = {});
+                          const QuadMask& InMask      = {},
+                          const QuadLighting& InLighting = {});
 
         /**
          * InTexture's id for this pass (existing or new).

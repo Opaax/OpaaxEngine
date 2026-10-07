@@ -31,7 +31,7 @@ namespace Opaax
                              .SetRange(1.f, 65536.f)
                              .SetFlags(EPropertyFlags::NeedRestart)
                              .SetTooltip("How many quads fit in ONE draw call.\n"
-                                         "Sizes a GPU buffer reserved at startup (192 bytes a quad), so this "
+                                         "Sizes a GPU buffer reserved at startup (352 bytes a quad), so this "
                                          "is reserved memory against draw calls: too small and the frame "
                                          "splits constantly, too large and a small scene reserves what it "
                                          "never draws.\n"

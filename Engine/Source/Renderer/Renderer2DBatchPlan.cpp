@@ -24,6 +24,16 @@ namespace Opaax
                          const QuadBatchLimits&    InLimits,
                          TDynArray<QuadPlacement>& OutPlan)
     {
+        PlanQuadBatches(InKeys, InTextureIds, InMaskIds, {}, InLimits, OutPlan);
+    }
+
+    void PlanQuadBatches(const TDynArray<Uint64>&  InKeys,
+                         const TDynArray<Uint32>&  InTextureIds,
+                         const TDynArray<Uint32>&  InMaskIds,
+                         const TDynArray<Uint32>&  InNormalIds,
+                         const QuadBatchLimits&    InLimits,
+                         TDynArray<QuadPlacement>& OutPlan)
+    {
         OutPlan.clear();
 
         const Uint32 lCount = static_cast<Uint32>(std::min(InKeys.size(), InTextureIds.size()));
@@ -33,7 +43,7 @@ namespace Opaax
         const Uint32 lMaxSlots = std::max(InLimits.MaxTextureSlots, 2u);
 
         OutPlan.reserve(lCount);
-        for (Uint32 i = 0; i < lCount; ++i) { OutPlan.emplace_back(i, 0u, 0u, 0u); }
+        for (Uint32 i = 0; i < lCount; ++i) { OutPlan.emplace_back(i, 0u, 0u, 0u, 0u); }
 
         std::stable_sort(OutPlan.begin(), OutPlan.end(),
             [&InKeys](const QuadPlacement& InA, const QuadPlacement& InB)
@@ -45,20 +55,27 @@ namespace Opaax
         Uint32 lBatch        = 0;
         Uint32 lQuadsInBatch = 0;
 
-        const bool lHasMasks = !InMaskIds.empty();
+        const bool lHasMasks   = !InMaskIds.empty();
+        const bool lHasNormals = !InNormalIds.empty();
 
         for (QuadPlacement& lPlacement : OutPlan)
         {
-            const Uint32 lTexId  = InTextureIds[lPlacement.QuadIndex];
-            const Uint32 lMaskId = (lHasMasks && lPlacement.QuadIndex < InMaskIds.size())
-                                       ? InMaskIds[lPlacement.QuadIndex] : 0u;
+            const Uint32 lTexId    = InTextureIds[lPlacement.QuadIndex];
+            const Uint32 lMaskId   = (lHasMasks && lPlacement.QuadIndex < InMaskIds.size())
+                                         ? InMaskIds[lPlacement.QuadIndex] : 0u;
+            const Uint32 lNormalId = (lHasNormals && lPlacement.QuadIndex < InNormalIds.size())
+                                         ? InNormalIds[lPlacement.QuadIndex] : 0u;
 
             Uint32 lSlot     = FindSlot(lSlotTexIds, lTexId);
             Uint32 lMaskSlot = (lMaskId != 0) ? FindSlot(lSlotTexIds, lMaskId) : 0u;
 
-            // New slots this quad needs. A mask that is the quad's own texture shares its slot.
+            // New slots this quad needs. A texture used twice by the quad shares its slot.
             Uint32 lNeeded = (lTexId != 0 && lSlot == 0) ? 1u : 0u;
             if (lMaskId != 0 && lMaskSlot == 0 && lMaskId != lTexId) { ++lNeeded; }
+            if (lNormalId != 0 && FindSlot(lSlotTexIds, lNormalId) == 0 && lNormalId != lTexId && lNormalId != lMaskId)
+            {
+                ++lNeeded;
+            }
 
             // Quads first, then samplers: a full batch closes.
             if (lQuadsInBatch >= lMaxQuads
@@ -89,9 +106,23 @@ namespace Opaax
                 }
             }
 
-            lPlacement.Batch    = lBatch;
-            lPlacement.Slot     = lSlot;
-            lPlacement.MaskSlot = lMaskSlot;
+            Uint32 lNormalSlot = 0;
+            if (lNormalId != 0)
+            {
+                // After the texture and the mask: when the ids match, the normal map uses their slot.
+                lNormalSlot = FindSlot(lSlotTexIds, lNormalId);
+
+                if (lNormalSlot == 0)
+                {
+                    lSlotTexIds.emplace_back(lNormalId);
+                    lNormalSlot = static_cast<Uint32>(lSlotTexIds.size());
+                }
+            }
+
+            lPlacement.Batch      = lBatch;
+            lPlacement.Slot       = lSlot;
+            lPlacement.MaskSlot   = lMaskSlot;
+            lPlacement.NormalSlot = lNormalSlot;
             ++lQuadsInBatch;
         }
     }
