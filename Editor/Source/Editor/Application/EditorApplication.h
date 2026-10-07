@@ -60,6 +60,9 @@ namespace Opaax::Editor
     protected:
         /** A game asking to quit stops Play; the editor stays open. */
         void OnQuitGameRequested() override;
+
+        /** Driven from outside: the editor's commands join the engine's. */
+        void OnAutomationStarted(AutomationRunner& InRunner) override;
         //~End OpaaxApplication Interface
     };
 }

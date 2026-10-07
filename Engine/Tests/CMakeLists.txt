@@ -11,6 +11,9 @@ set(OPAAX_TEST_SOURCES
     # Audio
     Audio/AudioTests.cpp
 
+    # Automation
+    Automation/AutomationTests.cpp
+
     # Core
     Core/ColorTests.cpp
     Core/Config/EngineConfigDataTests.cpp

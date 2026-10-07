@@ -10,6 +10,8 @@ namespace Opaax
 {
     // Forward-declared to keep World/ and entt out of this header.
     class ModuleRegistrar;
+    class AutomationRunner;
+    class AutomationSession;
 
     class IEngine;
     class IConfigSystem;
@@ -154,6 +156,12 @@ namespace Opaax
         /** Gameplay asked to quit (QuitGameRequested). Closes the main window; the editor stops Play. */
         virtual void OnQuitGameRequested();
 
+        /**
+         * The app is driven from outside (--exec, --automation): the engine's commands are in
+         * InRunner, child apps add theirs (the editor's).
+         */
+        virtual void OnAutomationStarted(AutomationRunner& /*InRunner*/) {}
+
     public:
         
         // Engine
@@ -234,6 +242,9 @@ namespace Opaax
         bool bHasShutdown       = false;
         
         TUniquePtr<ModuleRegistrar> m_ModuleRegistrar;
+
+        /** Set while the app is driven from outside. */
+        TUniquePtr<AutomationSession> m_Automation;
 
         static AppServiceLocator m_Services;
     };

@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "Automation/AutomationSession.h"
 #include "Platform/CrashHandler.h"
 #include "Platform/IPlatform.h"
 #include "Application/Services/IPaths.h"
@@ -252,6 +253,22 @@ void OpaaxApplication::RunApplication()
     const Uint64 lCaptureAt    = (lCaptureFrame != nullptr) ? std::strtoull(lCaptureFrame, nullptr, 10) : DEFAULT_CAPTURE_FRAME;
     Uint64       lFrameIndex   = 0;
 
+    // --exec <script.json> [--exec-out <answers.json>], --automation <folder>: driven from outside
+    // (AutomationSession). A script that cannot be run fails the run instead of starting it.
+    const char* lScript = FindCommandLineValue(m_Argc, m_Argv, "--exec");
+    const char* lInbox  = FindCommandLineValue(m_Argc, m_Argv, "--automation");
+    m_Automation = AutomationSession::Create(lScript, FindCommandLineValue(m_Argc, m_Argv, "--exec-out"), lInbox);
+    if (m_Automation != nullptr)
+    {
+        m_Automation->Start(Engine());
+        OnAutomationStarted(m_Automation->GetRunner());
+    }
+    else if (lScript != nullptr || lInbox != nullptr)
+    {
+        SetExitCode(1);
+        bIsRunning = false;
+    }
+
     while (bIsRunning)
     {
         Window* lWindow = WindowManager().GetMainWindow();
@@ -288,6 +305,14 @@ void OpaaxApplication::RunApplication()
         }
         
         // ----------------------------------------------------------------
+        // 1.2 Automation: the requests due this frame, before anything ticks.
+        // ----------------------------------------------------------------
+        if (m_Automation != nullptr)
+        {
+            m_Automation->BeginFrame();
+        }
+
+        // ----------------------------------------------------------------
         // 2. Tick (the editor adds its UI around Engine().Loop())
         // ----------------------------------------------------------------
         TickFrame();
@@ -303,9 +328,24 @@ void OpaaxApplication::RunApplication()
         }
 
         // ----------------------------------------------------------------
+        // 2.2 Automation: a screenshot asked for, the end of a script or a quit.
+        // ----------------------------------------------------------------
+        if (m_Automation != nullptr && m_Automation->EndFrame(Engine()))
+        {
+            lWindow->RequestClose();
+        }
+
+        // ----------------------------------------------------------------
         // 3. Present — after TickFrame, so the editor UI is on the backbuffer before the swap.
         // ----------------------------------------------------------------
         Engine().PresentBackbuffer();
+    }
+
+    // Its commands hold the engine: gone before it.
+    if (m_Automation != nullptr)
+    {
+        SetExitCode(std::max(GetExitCode(), m_Automation->GetExitCode()));
+        m_Automation.reset();
     }
 
     // Services, window and GPU context are still alive here, so subsystems can

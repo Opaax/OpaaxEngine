@@ -2,6 +2,7 @@
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IConfigSystem.h"
+#include "Editor/Automation/EditorAutomationCommands.h"
 #include "Application/Services/IEngine.h"
 #include "Core/Log/Logger.h"
 #include "Application/Services/IProjectManager.h"
@@ -971,6 +972,16 @@ namespace Opaax::Editor
     // =============================================================================
     // =============================================================================
     
+    void EditorService::RegisterAutomation(AutomationRunner& InRunner)
+    {
+        // No context: the editor did not start, so there is nothing to drive.
+        if (m_Context == nullptr)
+        {
+            return;
+        }
+        EditorAutomation::Register(InRunner, *m_Context);
+    }
+
     void EditorService::StopPlay()
     {
         if (m_PIE != nullptr && !m_PIE->IsEdit())

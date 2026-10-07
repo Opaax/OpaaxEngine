@@ -121,6 +121,11 @@ namespace Opaax::Editor
         Editor().StopPlay();
     }
 
+    void EditorApplication::OnAutomationStarted(AutomationRunner& InRunner)
+    {
+        Editor().RegisterAutomation(InRunner);
+    }
+
     void EditorApplication::OnEvent(Event& InEvent)
     {
         if (Editor().RouteInput(InEvent))

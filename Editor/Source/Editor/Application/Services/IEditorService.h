@@ -3,7 +3,11 @@
 #include "Application/Services/IAppService.h"
 #include "Core/OpaaxTypes.h"   // TFunction
 
-namespace Opaax { class Event; }
+namespace Opaax
+{
+    class AutomationRunner;
+    class Event;
+}
 
 namespace Opaax::Editor
 {
@@ -57,6 +61,9 @@ namespace Opaax::Editor
 
         /** Stops Play In Editor if it is running or paused (a game asking to quit). */
         virtual void StopPlay() = 0;
+
+        /** The app is driven from outside: adds the editor's commands to InRunner. */
+        virtual void RegisterAutomation(AutomationRunner& InRunner) = 0;
 
         //----- null object ----------------------------------------------------
         static IEditorService& Null();
