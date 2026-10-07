@@ -133,7 +133,8 @@ namespace
             if (lLine.find(lNeedle, lStart) != std::string::npos) { return false; } // already registered
         }
 
-        std::ofstream lAppend(InRootCMake, std::ios::app);
+        // Binary: the file keeps its own line endings on every platform.
+        std::ofstream lAppend(InRootCMake, std::ios::app | std::ios::binary);
         lAppend << "\nadd_subdirectory(" << InName << ") # added by OpaaxCreator\n";
         return true;
     }
