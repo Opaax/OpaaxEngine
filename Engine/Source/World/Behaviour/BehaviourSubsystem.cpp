@@ -4,6 +4,7 @@
 
 #include "Core/Events/EventBus.h"
 #include "Engine/Subsystems/EngineEventBus.h"
+#include "Input/Mapping/InputMappingSubsystem.h"
 #include "Physics/PhysicsEvents.h"
 #include "Resources/ResourceManager.h"
 #include "World/Behaviour/EntityEvents.h"
@@ -133,6 +134,16 @@ namespace Opaax
 
         m_Context->Events.GetEventBus().UnsubscribeAll(this);
         m_Subscriptions.clear();
+
+        // The input mapping belongs to the game, which outlives this world.
+        if (m_Context->Actions != nullptr)
+        {
+            for (const ActionBinding& lBinding : m_ActionBindings)
+            {
+                m_Context->Actions->Unbind(lBinding.Action, lBinding.Trigger, lBinding.Handle);
+            }
+        }
+        m_ActionBindings.clear();
         m_Listeners.clear();
         m_Timers.clear();
         m_Pending.clear();
@@ -405,6 +416,22 @@ namespace Opaax
             }
         }
 
+        for (auto lIt = m_ActionBindings.begin(); lIt != m_ActionBindings.end();)
+        {
+            if (lIt->Entity == InEntity && lIt->BehaviourType == InType)
+            {
+                if (m_Context->Actions != nullptr)
+                {
+                    m_Context->Actions->Unbind(lIt->Action, lIt->Trigger, lIt->Handle);
+                }
+                lIt = m_ActionBindings.erase(lIt);
+            }
+            else
+            {
+                ++lIt;
+            }
+        }
+
         // Cleared, not erased: TickTimers may be iterating.
         for (Timer& lTimer : m_Timers)
         {
@@ -628,6 +655,29 @@ namespace Opaax
             });
 
         m_Subscriptions.push_back(BusSubscription{ InEntity, InBehaviourType, lHandle });
+    }
+
+    bool BehaviourSubsystem::AddActionBinding(const EntityID InEntity, const TypeId InBehaviourType,
+                                              const OpaaxStringID InAction, const EInputTrigger InTrigger,
+                                              const FBehaviourEventThunk InThunk)
+    {
+        if (m_Context->Actions == nullptr || m_bShutdown)
+        {
+            return false;
+        }
+
+        // Resolved when it fires, like every other handler: an ended behaviour is skipped.
+        const DelegateHandle lHandle = m_Context->Actions->Bind(InAction, InTrigger,
+            [this, InEntity, InBehaviourType, InThunk](const InputActionValue& InValue)
+            {
+                if (Behaviour* lBehaviour = Resolve(InEntity, InBehaviourType))
+                {
+                    InThunk(*lBehaviour, &InValue);
+                }
+            });
+
+        m_ActionBindings.push_back(ActionBinding{ InEntity, InBehaviourType, InAction, InTrigger, lHandle });
+        return true;
     }
 
     // =========================================================================

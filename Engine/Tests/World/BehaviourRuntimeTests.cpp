@@ -14,8 +14,10 @@
 #include "Core/Events/EventBus.h"
 #include "Engine/Config/EngineConfigData.h"
 #include "Engine/EngineEvents.h"
+#include "Engine/GameInstance/GameInstanceContext.h"
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/InputManager.h"
+#include "Input/Mapping/InputMappingSubsystem.h"
 #include "Physics/Components/ColliderComponent.h"
 #include "Physics/Components/RigidbodyComponent.h"
 #include "Physics/PhysicsEvents.h"
@@ -360,6 +362,23 @@ namespace RuntimeProbes
         void OnUpdate(float) override { AddImpulse(Vector2F{ 1.f, 0.f }); }
     };
 
+    /** Counts "Jump" starts twice: from a bound handler, and by polling in OnUpdate. */
+    struct Jumper final : Behaviour
+    {
+        Int32 BoundJumps  = 0;
+        Int32 PolledJumps = 0;
+        bool  bHeld       = false;
+
+        void OnStart() override { BindAction<&Jumper::OnJump>("Jump", EInputTrigger::Started); }
+        void OnJump(const InputActionValue&) { ++BoundJumps; }
+
+        void OnUpdate(float) override
+        {
+            if (WasActionStarted("Jump")) { ++PolledJumps; }
+            bHeld = IsActionActive("Jump");
+        }
+    };
+
     struct KeyWatcher final : Behaviour
     {
         bool bDown     = false;
@@ -450,6 +469,7 @@ namespace
         REQUIRE(InRegistry.Register<ContactProbe>(OpaaxStringID("ContactProbe")));
         REQUIRE(InRegistry.Register<Launcher>(OpaaxStringID("Launcher")));
         REQUIRE(InRegistry.Register<Kicker>(OpaaxStringID("Kicker")));
+        REQUIRE(InRegistry.Register<Jumper>(OpaaxStringID("Jumper")));
         REQUIRE(InRegistry.Register<KeyWatcher>(OpaaxStringID("KeyWatcher")));
         REQUIRE(InRegistry.Register<Quitter>(OpaaxStringID("Quitter")));
         REQUIRE(InRegistry.Register<Traveller>(OpaaxStringID("Traveller")));
@@ -457,6 +477,33 @@ namespace
         REQUIRE(InRegistry.Register<Mover>(OpaaxStringID("Mover")));
         REQUIRE(InRegistry.Register<Clock>(OpaaxStringID("Clock")));
     }
+
+    /** The game's input mapping in the tests: "Jump" on Space. */
+    void AddTestActions(InputMappingSubsystem& InMapping)
+    {
+        InputAction lJump;
+        lJump.Name      = OpaaxStringID("Jump");
+        lJump.ValueType = EInputValueType::Bool;
+        REQUIRE(InMapping.RegisterAction(lJump));
+
+        InputKeyBinding lSpace;
+        lSpace.Action = OpaaxStringID("Jump");
+        lSpace.Key    = EKeyCode::Space;
+
+        InputMappingContext lContext;
+        lContext.Name = OpaaxStringID("Test");
+        lContext.Bindings.push_back(lSpace);
+        REQUIRE(InMapping.AddContext(lContext));
+    }
+
+    /** What a case's world has besides behaviours. */
+    struct FixtureOptions
+    {
+        const IPaths* Paths     = nullptr;   // null: IPaths::Null()
+        bool          bPhysics  = false;
+        bool          bActions  = false;     // the game's input mapping (AddTestActions)
+        bool          bStartNow = true;
+    };
 
     struct RuntimeFixture
     {
@@ -466,31 +513,46 @@ namespace
         EngineConfigData  Config;
         InputManager      Input;
         ComponentRegistry Components;
-        WorldManager      Worlds;   // last: its worlds end before the services they use
+
+        // The game's input mapping, when asked for. Declared before Worlds: as in the engine, the
+        // game outlives its worlds.
+        TUniquePtr<GameInstanceContext>   GameContext;
+        TUniquePtr<InputMappingSubsystem> Actions;
+
+        WorldManager Worlds;   // last: its worlds end before the services they use
 
         World*              TheWorld = nullptr;
         BehaviourSubsystem* Runtime  = nullptr;
 
-        explicit RuntimeFixture(const IPaths& InPaths = IPaths::Null(), const bool bInPhysics = false,
-                                const bool bInStartNow = true)
+        explicit RuntimeFixture(const FixtureOptions& InOptions = {})
         {
             Journal().clear();
             RegisterTypes(Components);
 
+            const IPaths& lPaths = (InOptions.Paths != nullptr) ? *InOptions.Paths : IPaths::Null();
+
+            if (InOptions.bActions)
+            {
+                GameContext = MakeUnique<GameInstanceContext>(GameInstanceContext{ Worlds, Resources, lPaths, Events,
+                                                                                   Input, Config });
+                Actions     = MakeUnique<InputMappingSubsystem>(*GameContext);
+                AddTestActions(*Actions);
+            }
+
             TheWorld = Worlds.CreateWorld("Behaviours", EWorldMode::Play);
             REQUIRE(TheWorld != nullptr);
 
-            TheWorld->SetContext(WorldContext{ *TheWorld, Resources, InPaths, Events, Input, Config,
-                                               /*Actions*/ nullptr, /*UI*/ nullptr, Debug, &Components });
+            TheWorld->SetContext(WorldContext{ *TheWorld, Resources, lPaths, Events, Input, Config,
+                                               Actions.get(), /*UI*/ nullptr, Debug, &Components });
 
             WorldSubsystemMgr& lSubsystems = TheWorld->GetSubsystems();
             lSubsystems.RegisterSubsystem<BehaviourSubsystem>(std::ref(*TheWorld->GetContext()));
-            if (bInPhysics)
+            if (InOptions.bPhysics)
             {
                 lSubsystems.RegisterSubsystem<PhysicsSubsystem>(std::ref(*TheWorld->GetContext()));
             }
 
-            if (bInStartNow)
+            if (InOptions.bStartNow)
             {
                 Start();
             }
@@ -516,9 +578,10 @@ namespace
             return Entity(lFound, TheWorld);
         }
 
-        /** One engine frame: the update, then one fixed step. */
+        /** One engine frame: the game's input mapping, the update, then one fixed step. */
         void Frame(const double InDeltaTime = 1.0 / 60.0)
         {
+            if (Actions != nullptr) { Actions->Update(InDeltaTime); }
             Worlds.Update(InDeltaTime);
             Worlds.FixedUpdate(InDeltaTime);
         }
@@ -661,7 +724,7 @@ TEST_CASE("Behaviours: OnStart runs once, before the first update and the first 
 
 TEST_CASE("Behaviours: a behaviour already in the world when it starts is started like a new one")
 {
-    RuntimeFixture lFix(IPaths::Null(), /*bInPhysics*/false, /*bInStartNow*/false);
+    RuntimeFixture lFix({ .bStartNow = false });
     lFix.Make("Early").Add<Probe>();
 
     lFix.Start();
@@ -996,7 +1059,7 @@ TEST_CASE("Behaviours: events from physics reach the behaviours on both entities
 {
     SUBCASE("two solid colliders")
     {
-        RuntimeFixture lFix(IPaths::Null(), /*bInPhysics*/true);
+        RuntimeFixture lFix({ .bPhysics = true });
         Entity lGround = MakeCollider(lFix, "Ground", { 0.f, 0.f }, { 800.f, 100.f }, EColliderMode::Solid, false);
         Entity lBall   = MakeCollider(lFix, "Ball", { 0.f, 300.f }, { 50.f, 50.f }, EColliderMode::Solid, true);
 
@@ -1010,7 +1073,7 @@ TEST_CASE("Behaviours: events from physics reach the behaviours on both entities
 
     SUBCASE("a body passing through a sensor")
     {
-        RuntimeFixture lFix(IPaths::Null(), /*bInPhysics*/true);
+        RuntimeFixture lFix({ .bPhysics = true });
         Entity lSensor = MakeCollider(lFix, "Sensor", { 0.f, 0.f }, { 400.f, 40.f }, EColliderMode::Overlap, false);
         Entity lFaller = MakeCollider(lFix, "Faller", { 0.f, 400.f }, { 40.f, 40.f }, EColliderMode::Solid, true);
 
@@ -1184,7 +1247,7 @@ TEST_CASE("Behaviours: Spawn places a prefab and starts it before returning")
     const TempPaths     lPaths(lDir.Root());
     WriteBulletPrefab(lPaths);
 
-    RuntimeFixture lFix(lPaths);
+    RuntimeFixture lFix({ .Paths = &lPaths });
     Entity lGun = lFix.Make("Gun");
     lGun.Add<Spawner>().Prefab = OpaaxString("Prefabs/Bullet.opaaxprefab");
 
@@ -1217,7 +1280,7 @@ TEST_CASE("Behaviours: Spawn from an OnStart also starts what it spawns before r
     const TempPaths     lPaths(lDir.Root());
     WriteBulletPrefab(lPaths);
 
-    RuntimeFixture lFix(lPaths);
+    RuntimeFixture lFix({ .Paths = &lPaths });
     Entity lMaker = lFix.Make("Maker");
     lMaker.Add<StartSpawner>().Prefab = OpaaxString("Prefabs/Bullet.opaaxprefab");
 
@@ -1233,7 +1296,7 @@ TEST_CASE("Behaviours: Spawn of a missing prefab gives an invalid entity")
     const ScopedTempDir lDir("missing");
     const TempPaths     lPaths(lDir.Root());
 
-    RuntimeFixture lFix(lPaths);
+    RuntimeFixture lFix({ .Paths = &lPaths });
     Entity lGun = lFix.Make("Gun");
     lGun.Add<Spawner>().Prefab = OpaaxString("Prefabs/Nothing.opaaxprefab");
 
@@ -1248,7 +1311,7 @@ TEST_CASE("Behaviours: Spawn of a missing prefab gives an invalid entity")
 // =============================================================================
 TEST_CASE("Behaviours: a behaviour drives its own body, from the frame its entity is created")
 {
-    RuntimeFixture lFix(IPaths::Null(), /*bInPhysics*/true);
+    RuntimeFixture lFix({ .bPhysics = true });
     lFix.TheWorld->GetSubsystems().GetSubsystem<PhysicsSubsystem>()->GetPhysicsWorld()->SetGravity({ 0.f, 0.f });
 
     Entity lBall = MakeCollider(lFix, "Ball", { 0.f, 0.f }, { 50.f, 50.f }, EColliderMode::Solid, /*dynamic*/true);
@@ -1265,7 +1328,7 @@ TEST_CASE("Behaviours: physics calls on an entity without a body do nothing")
 {
     SUBCASE("a world with physics, an entity without a collider")
     {
-        RuntimeFixture lFix(IPaths::Null(), /*bInPhysics*/true);
+        RuntimeFixture lFix({ .bPhysics = true });
         Entity lGhost = lFix.Make("Ghost");
         lGhost.Add<Kicker>();
 
@@ -1330,6 +1393,45 @@ TEST_CASE("Behaviours: SetWorldPosition goes through the parent")
 
     CHECK(lChild.Get<TransformComponent>().Position.x == doctest::Approx(50.f));
     CHECK(EntityHierarchy::WorldTransform(lChild).Position.x == doctest::Approx(150.f));
+}
+
+TEST_CASE("Behaviours: input actions are polled and bound; the binding ends with the behaviour")
+{
+    RuntimeFixture lFix({ .bActions = true });
+    Entity lPlayer = lFix.Make("Player");
+    lPlayer.Add<Jumper>();
+
+    lFix.Frame();   // starts, binds
+    CHECK(lFix.Actions->GetBindingCount() == 1);
+
+    lFix.Input.OnKeyPressed(EKeyCode::Space, /*InRepeat*/false);
+    lFix.Frame();
+    CHECK(lPlayer.Get<Jumper>().BoundJumps == 1);
+    CHECK(lPlayer.Get<Jumper>().PolledJumps == 1);
+    CHECK(lPlayer.Get<Jumper>().bHeld);
+
+    // Still held: active, but no new start.
+    lFix.Input.EndFrame();
+    lFix.Frame();
+    CHECK(lPlayer.Get<Jumper>().BoundJumps == 1);
+    CHECK(lPlayer.Get<Jumper>().PolledJumps == 1);
+    CHECK(lPlayer.Get<Jumper>().bHeld);
+
+    lFix.TheWorld->DestroyEntity(lPlayer);
+    CHECK(lFix.Actions->GetBindingCount() == 0);
+
+    SUBCASE("a world without the game's input mapping reads every action as zero")
+    {
+        RuntimeFixture lBare;
+        Entity lAlone = lBare.Make("Alone");
+        lAlone.Add<Jumper>();
+        lBare.Input.OnKeyPressed(EKeyCode::Space, false);
+        lBare.Frame();
+
+        CHECK(lAlone.Get<Jumper>().PolledJumps == 0);
+        CHECK_FALSE(lAlone.Get<Jumper>().bHeld);
+        CHECK(lAlone.Get<Jumper>().GetAction("Jump").Value.x == 0.f);
+    }
 }
 
 TEST_CASE("Behaviours: input is read from the frame's state")

@@ -115,6 +115,13 @@ namespace Opaax
         /** Subscribes InEntity's InBehaviourType to an engine EventBus event until it ends. */
         void AddBusSubscription(EntityID InEntity, TypeId InBehaviourType, Uint64 InEventKey, FBehaviourEventThunk InThunk);
 
+        /**
+         * Binds InEntity's InBehaviourType to an input action until it ends.
+         * @return False when no game is running (no input mapping)
+         */
+        bool AddActionBinding(EntityID InEntity, TypeId InBehaviourType, OpaaxStringID InAction, EInputTrigger InTrigger,
+                              FBehaviourEventThunk InThunk);
+
         // =============================================================================
         // Timers
         // =============================================================================
@@ -200,6 +207,15 @@ namespace Opaax
             DelegateHandle Handle;
         };
 
+        struct ActionBinding
+        {
+            EntityID       Entity        = ENTITY_NONE;
+            TypeId         BehaviourType = 0;
+            OpaaxStringID  Action;
+            EInputTrigger  Trigger       = EInputTrigger::Started;
+            DelegateHandle Handle;
+        };
+
         struct Timer
         {
             Uint64               Id            = 0;   // 0 once cleared
@@ -265,6 +281,7 @@ namespace Opaax
 
         TUnorderedMap<Uint32, TDynArray<Listener>> m_Listeners;   // keyed by entity
         TDynArray<BusSubscription>                 m_Subscriptions;
+        TDynArray<ActionBinding>                   m_ActionBindings;
         TDynArray<Timer>                           m_Timers;
 
         /** Kept for the world's life, so prefabs spawned often stay loaded. */

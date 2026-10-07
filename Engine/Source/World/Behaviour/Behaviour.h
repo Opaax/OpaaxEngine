@@ -15,6 +15,7 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Engine/Reflection/PropertyJson.h"
 #include "Input/InputCodes.h"
+#include "Input/Mapping/InputTypes.h"
 #include "World/Entity/Entity.h"
 #include "World/World.h"
 
@@ -53,6 +54,7 @@ namespace Opaax
     class BehaviourSubsystem;
     class DebugDraw;
     class InputManager;
+    struct InputActionState;
     struct TransformComponent;
     struct WorldContext;
 
@@ -398,6 +400,41 @@ namespace Opaax
         bool WasKeyReleased(EKeyCode InKey) const;
 
         // =============================================================================
+        // Input actions — the game's named actions (.opaaxinputmap). They read as zero, and
+        //   BindAction does nothing, when no game is running (no input mapping).
+        // =============================================================================
+    public:
+        /** This frame's value: AsBool(), AsAxis1D(), AsAxis2D() (GetAction("Move").AsAxis2D()). */
+        InputActionValue GetAction(OpaaxStringID InAction) const;
+
+        /** True every frame the action is active. */
+        bool IsActionActive(OpaaxStringID InAction) const;
+
+        /** True the frame the action started (a press). */
+        bool WasActionStarted(OpaaxStringID InAction) const;
+
+        /** True the frame the action ended (a release). */
+        bool WasActionCompleted(OpaaxStringID InAction) const;
+
+        /**
+         * Calls Method when InAction fires for InTrigger, until OnDestroy. Handlers run before the
+         * world updates:
+         *   BindAction<&Player::OnJump>("Jump", EInputTrigger::Started);   // void Player::OnJump(const InputActionValue&)
+         */
+        template<auto Method>
+        void BindAction(OpaaxStringID InAction, EInputTrigger InTrigger)
+        {
+            using Traits = BehaviourDetail::TEventMethodTraits<decltype(Method)>;
+            using Class  = typename Traits::Class;
+            static_assert(std::derived_from<Class, Behaviour>, "BindAction: the handler must be a behaviour's member.");
+            static_assert(std::is_same_v<typename Traits::Event, InputActionValue>,
+                          "BindAction: the handler takes a const InputActionValue&.");
+
+            BindActionErased(InAction, InTrigger, TypeIdOf<Class>(),
+                             &BehaviourDetail::CallEventHandler<Class, InputActionValue, Method>);
+        }
+
+        // =============================================================================
         // Time and game
         // =============================================================================
     public:
@@ -439,6 +476,11 @@ namespace Opaax
         void ListenErased(TypeId InEventType, TypeId InBehaviourType, FBehaviourEventThunk InThunk);
         void BroadcastErased(Uint64 InEventKey, const void* InEvent) const;
         void SubscribeErased(Uint64 InEventKey, TypeId InBehaviourType, FBehaviourEventThunk InThunk);
+        void BindActionErased(OpaaxStringID InAction, EInputTrigger InTrigger, TypeId InBehaviourType,
+                              FBehaviourEventThunk InThunk);
+
+        /** This frame's state of InAction, or null (unknown action, or no input mapping). */
+        const InputActionState* FindActionState(OpaaxStringID InAction) const;
         TimerHandle SetTimerErased(float InSeconds, bool bInRepeat, TypeId InBehaviourType,
                                    FBehaviourTimerThunk InThunk, TFunction<void()> InCallback);
         void RemoveBehaviourLater(TypeId InBehaviourType);

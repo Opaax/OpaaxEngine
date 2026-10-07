@@ -5,6 +5,7 @@
 #include "Engine/EngineEvents.h"
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/InputManager.h"
+#include "Input/Mapping/InputMappingSubsystem.h"
 #include "Physics/PhysicsSubsystem.h"
 #include "World/Behaviour/BehaviourSubsystem.h"
 #include "World/Components/TransformComponent.h"
@@ -369,6 +370,48 @@ namespace Opaax
     bool Behaviour::WasKeyReleased(const EKeyCode InKey) const
     {
         return m_Runtime != nullptr && GetInput().WasReleasedThisFrame(InKey);
+    }
+
+    // =========================================================================
+    // Input actions
+    // =========================================================================
+    const InputActionState* Behaviour::FindActionState(const OpaaxStringID InAction) const
+    {
+        const InputMappingSubsystem* lActions = (m_Runtime != nullptr) ? m_Runtime->GetContext().Actions : nullptr;
+        return (lActions != nullptr) ? lActions->FindState(InAction) : nullptr;
+    }
+
+    InputActionValue Behaviour::GetAction(const OpaaxStringID InAction) const
+    {
+        const InputActionState* lState = FindActionState(InAction);
+        return (lState != nullptr) ? lState->Value : InputActionValue{};
+    }
+
+    bool Behaviour::IsActionActive(const OpaaxStringID InAction) const
+    {
+        const InputActionState* lState = FindActionState(InAction);
+        return lState != nullptr && lState->bTriggered;
+    }
+
+    bool Behaviour::WasActionStarted(const OpaaxStringID InAction) const
+    {
+        const InputActionState* lState = FindActionState(InAction);
+        return lState != nullptr && lState->bStarted;
+    }
+
+    bool Behaviour::WasActionCompleted(const OpaaxStringID InAction) const
+    {
+        const InputActionState* lState = FindActionState(InAction);
+        return lState != nullptr && lState->bCompleted;
+    }
+
+    void Behaviour::BindActionErased(const OpaaxStringID InAction, const EInputTrigger InTrigger,
+                                     const TypeId InBehaviourType, const FBehaviourEventThunk InThunk)
+    {
+        if (BehaviourSubsystem* lRuntime = RequireRuntime("BindAction"))
+        {
+            lRuntime->AddActionBinding(m_Entity, InBehaviourType, InAction, InTrigger, InThunk);
+        }
     }
 
     // =========================================================================
