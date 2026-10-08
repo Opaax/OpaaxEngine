@@ -21,7 +21,7 @@
                         "Weight": "Bold",
                         "Width": "Normal"
                     },
-                    "Text": "TestWorld\nOne level per engine feature:\nRendering, Lighting, Physics, Behaviours, Audio,\nHierarchy, Prefabs, Collisions, Levels, Quit, UI,\nCamera, Movement, Scripting, Input\nTests: TestWorld/Tests",
+                    "Text": "TestWorld\nOne level per engine feature:\nRendering, Lighting, Physics, Behaviours, Audio,\nHierarchy, Prefabs, Collisions, Levels, Quit, UI,\nCamera, Movement, Scripting, Input, Animation\nTests: TestWorld/Tests",
                     "bKerning": true,
                     "bVisible": true
                 },

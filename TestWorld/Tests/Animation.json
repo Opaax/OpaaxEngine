@@ -1,0 +1,100 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Animation.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.8
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Library",
+            "path": "AnimProbe/FramesSeen",
+            "greater": 1
+        },
+        "id": "library-default-plays"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Library",
+            "path": "AnimProbe/LastSheet",
+            "equals": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxsheet"
+        },
+        "id": "on-sheet"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Paused",
+            "path": "AnimProbe/FramesSeen",
+            "equals": 1
+        },
+        "id": "paused-holds"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Stopped",
+            "path": "AnimProbe/FramesSeen",
+            "equals": 1
+        },
+        "id": "speed-zero-holds"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Once",
+            "path": "Sprite/Frame",
+            "equals": 3
+        },
+        "id": "once-ends-on-last"
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "Animation.png"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 1.6
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Library",
+            "path": "AnimProbe/bSwitched",
+            "equals": true
+        },
+        "id": "switched"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Library",
+            "path": "AnimProbe/LastSheet",
+            "equals": ""
+        },
+        "id": "clip-switched"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Once",
+            "path": "Sprite/Frame",
+            "equals": 3
+        },
+        "id": "once-stays"
+    }
+]
