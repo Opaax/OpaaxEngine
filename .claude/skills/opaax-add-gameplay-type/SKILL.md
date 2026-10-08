@@ -27,7 +27,7 @@ Engine types go in their module (`Engine/Source/<Module>/`) and register in the 
   load. Behaviours are saved from `OPAAX_PROPERTIES` alone.
 - Behaviours use the behaviour API (`World/Behaviour/Behaviour.h`): `GetTransform`, `SetPosition`,
   `Spawn`, `Destroy`, `Send`/`Listen`, `Broadcast`/`Subscribe`, `SetTimer`, `BindAction`, `PlaySound`,
-  `SetVelocity`/`AddImpulse`. Never the EnTT registry.
+  `SetVelocity`/`AddImpulse`, `RayCast`/`OverlapBox`. Never the EnTT registry.
 - Subsystems: `OPAAX_SUBSYSTEM_TYPE(T)`, a constructor taking `WorldContext&`, `Startup`/`Shutdown`,
   optional `static bool ShouldCreate(const World&)` (Play-only systems check the world's mode).
 - Style: AGENTS.md (prefixes, banners, short plain comments).

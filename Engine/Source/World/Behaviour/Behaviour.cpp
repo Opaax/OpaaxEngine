@@ -350,6 +350,50 @@ namespace Opaax
         return (lPhysics != nullptr) ? lPhysics->GetMass(m_Entity) : 0.f;
     }
 
+    RayHit Behaviour::RayCast(const Vector2F& InOrigin, const Vector2F& InDirection, const float InDistance,
+                              const Uint64 InChannelMask) const
+    {
+        RayHit lResult;
+
+        PhysicsSubsystem* lPhysics = GetSubsystem<PhysicsSubsystem>();
+        if (lPhysics == nullptr)
+        {
+            return lResult;
+        }
+
+        const PhysicsSubsystem::RaycastHit lHit = lPhysics->RayCast(InOrigin, InDirection, InDistance, InChannelMask);
+        if (lHit.bHit)
+        {
+            lResult.Target   = Entity(lHit.Entity, m_World);
+            lResult.Point    = lHit.Point;
+            lResult.Normal   = lHit.Normal;
+            lResult.Fraction = lHit.Fraction;
+        }
+
+        return lResult;
+    }
+
+    void Behaviour::OverlapBox(const Vector2F& InMin, const Vector2F& InMax, TDynArray<Entity>& OutEntities,
+                               const Uint64 InChannelMask) const
+    {
+        OutEntities.clear();
+
+        PhysicsSubsystem* lPhysics = GetSubsystem<PhysicsSubsystem>();
+        if (lPhysics == nullptr)
+        {
+            return;
+        }
+
+        TDynArray<EntityID> lFound;
+        lPhysics->OverlapAABB(InMin, InMax, lFound, InChannelMask);
+
+        OutEntities.reserve(lFound.size());
+        for (const EntityID lId : lFound)
+        {
+            OutEntities.emplace_back(lId, m_World);
+        }
+    }
+
     // =========================================================================
     // Audio
     // =========================================================================

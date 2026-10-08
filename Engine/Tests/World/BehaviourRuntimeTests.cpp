@@ -18,6 +18,7 @@
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/InputManager.h"
 #include "Input/Mapping/InputMappingSubsystem.h"
+#include "Physics/Collision/CollisionChannel.h"
 #include "Physics/Components/ColliderComponent.h"
 #include "Physics/Components/RigidbodyComponent.h"
 #include "Physics/PhysicsEvents.h"
@@ -378,6 +379,21 @@ namespace RuntimeProbes
         void OnUpdate(float) override { AddImpulse(Vector2F{ 1.f, 0.f }); }
     };
 
+    /** Every frame: a ray 200 units down from its entity, and what is within 100 units of it. */
+    struct Seeker final : Behaviour
+    {
+        Uint64            Channels = ~0ull;
+        RayHit            Down;
+        TDynArray<Entity> Around;
+
+        void OnUpdate(float) override
+        {
+            const Vector2F lHere = GetWorldPosition();
+            Down = RayCast(lHere, Vector2F{ 0.f, -1.f }, 200.f, Channels);
+            OverlapBox(lHere - Vector2F{ 100.f, 100.f }, lHere + Vector2F{ 100.f, 100.f }, Around, Channels);
+        }
+    };
+
     /** Counts "Jump" starts twice: from a bound handler, and by polling in OnUpdate. */
     struct Jumper final : Behaviour
     {
@@ -486,6 +502,7 @@ namespace
         REQUIRE(InRegistry.Register<ContactProbe>(OpaaxStringID("ContactProbe")));
         REQUIRE(InRegistry.Register<Launcher>(OpaaxStringID("Launcher")));
         REQUIRE(InRegistry.Register<Kicker>(OpaaxStringID("Kicker")));
+        REQUIRE(InRegistry.Register<Seeker>(OpaaxStringID("Seeker")));
         REQUIRE(InRegistry.Register<Jumper>(OpaaxStringID("Jumper")));
         REQUIRE(InRegistry.Register<KeyWatcher>(OpaaxStringID("KeyWatcher")));
         REQUIRE(InRegistry.Register<Quitter>(OpaaxStringID("Quitter")));
@@ -1378,6 +1395,80 @@ TEST_CASE("Behaviours: physics calls on an entity without a body do nothing")
         lFix.Frames(3);
         CHECK(lGhost.IsValid());
         CHECK(lGhost.Get<Kicker>().GetVelocity().x == 0.f);
+    }
+}
+
+TEST_CASE("Behaviours: RayCast finds the closest collider, not the one it starts in")
+{
+    RuntimeFixture lFix({ .bPhysics = true });
+    lFix.TheWorld->GetSubsystems().GetSubsystem<PhysicsSubsystem>()->GetPhysicsWorld()->SetGravity({ 0.f, 0.f });
+
+    Entity lSeeker = MakeCollider(lFix, "Seeker", { 0.f, 0.f }, { 40.f, 40.f }, EColliderMode::Solid, /*dynamic*/true);
+    Entity lGround = MakeCollider(lFix, "Ground", { 0.f, -100.f }, { 400.f, 20.f }, EColliderMode::Solid, /*dynamic*/false);
+    MakeCollider(lFix, "Deeper", { 0.f, -150.f }, { 400.f, 20.f }, EColliderMode::Solid, /*dynamic*/false);
+    lSeeker.Add<Seeker>();
+
+    lFix.Frames(2);
+
+    const RayHit& lHit = lSeeker.Get<Seeker>().Down;
+    REQUIRE(static_cast<bool>(lHit));
+    CHECK(lHit.Target.GetHandle() == lGround.GetHandle());
+    CHECK(lHit.Point.y == doctest::Approx(-90.f).epsilon(0.001));
+    CHECK(lHit.Normal.y == doctest::Approx(1.f));
+    CHECK(lHit.Fraction == doctest::Approx(90.f / 200.f).epsilon(0.001));
+}
+
+TEST_CASE("Behaviours: OverlapBox lists the entities whose colliders are in the box")
+{
+    RuntimeFixture lFix({ .bPhysics = true });
+    lFix.TheWorld->GetSubsystems().GetSubsystem<PhysicsSubsystem>()->GetPhysicsWorld()->SetGravity({ 0.f, 0.f });
+
+    Entity lSeeker = MakeCollider(lFix, "Seeker", { 0.f, 0.f }, { 40.f, 40.f }, EColliderMode::Solid, /*dynamic*/true);
+    Entity lNear   = MakeCollider(lFix, "Near", { 60.f, 0.f }, { 20.f, 20.f }, EColliderMode::Overlap, /*dynamic*/false);
+    MakeCollider(lFix, "Far", { 500.f, 0.f }, { 20.f, 20.f }, EColliderMode::Solid, /*dynamic*/false);
+    lSeeker.Add<Seeker>();
+
+    lFix.Frames(2);
+
+    const TDynArray<Entity>& lAround = lSeeker.Get<Seeker>().Around;
+    const auto lHas = [&lAround](const Entity InEntity)
+    {
+        return std::any_of(lAround.begin(), lAround.end(),
+                           [InEntity](const Entity InFound) { return InFound.GetHandle() == InEntity.GetHandle(); });
+    };
+
+    CHECK(lAround.size() == 2);
+    CHECK(lHas(lSeeker));
+    CHECK(lHas(lNear));
+}
+
+TEST_CASE("Behaviours: physics queries filter by channel, and find nothing without physics")
+{
+    SUBCASE("a channel no collider is on")
+    {
+        RuntimeFixture lFix({ .bPhysics = true });
+        lFix.TheWorld->GetSubsystems().GetSubsystem<PhysicsSubsystem>()->GetPhysicsWorld()->SetGravity({ 0.f, 0.f });
+
+        Entity lSeeker = MakeCollider(lFix, "Seeker", { 0.f, 0.f }, { 40.f, 40.f }, EColliderMode::Solid, /*dynamic*/true);
+        MakeCollider(lFix, "Ground", { 0.f, -100.f }, { 400.f, 20.f }, EColliderMode::Solid, /*dynamic*/false);
+        lSeeker.Add<Seeker>().Channels = CategoryBit(ECollisionChannel::Projectile);
+
+        lFix.Frames(2);
+
+        CHECK_FALSE(static_cast<bool>(lSeeker.Get<Seeker>().Down));
+        CHECK(lSeeker.Get<Seeker>().Around.empty());
+    }
+
+    SUBCASE("a world without physics")
+    {
+        RuntimeFixture lFix;
+        Entity lSeeker = lFix.Make("Seeker");
+        lSeeker.Add<Seeker>();
+
+        lFix.Frames(2);
+
+        CHECK_FALSE(static_cast<bool>(lSeeker.Get<Seeker>().Down));
+        CHECK(lSeeker.Get<Seeker>().Around.empty());
     }
 }
 

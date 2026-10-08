@@ -82,6 +82,17 @@ namespace Opaax
         bool IsValid() const noexcept { return Id != 0; }
     };
 
+    /** What a RayCast hit. False when it hit nothing. */
+    struct RayHit
+    {
+        Entity   Target;                    // the entity whose collider was hit
+        Vector2F Point    = { 0.f, 0.f };   // where, in world units
+        Vector2F Normal   = { 0.f, 0.f };   // the surface's normal there
+        float    Fraction = 0.f;            // how far along the ray, 0 to 1
+
+        explicit operator bool() const noexcept { return Target.IsValid(); }
+    };
+
     namespace BehaviourDetail
     {
         /** The class and event type of a handler `void (C::*)(const E&)`. */
@@ -387,11 +398,39 @@ namespace Opaax
         /** An instant kick (mass * units / s): a jump, a hit. */
         void AddImpulse(const Vector2F& InImpulse);
 
+        /**
+         * Turns the body counter-clockwise over the next fixed step (mass * units^2 / s^2). How fast
+         * it turns depends on its rotational inertia: for a box, mass * (width^2 + height^2) / 12.
+         */
         void AddTorque(float InTorque);
+
+        /** An instant counter-clockwise turn (mass * units^2 / s): the turn rate changes by impulse / inertia. */
         void AddAngularImpulse(float InImpulse);
 
         /** From the collider's density and area. */
         float GetMass() const;
+
+        // =============================================================================
+        // Physics queries — any collider in the world; nothing is found in a world without physics.
+        //   InChannelMask: the channels to find, CategoryBit(ECollisionChannel::WorldStatic) | ...
+        //   (Physics/Collision/CollisionChannel.h); every channel by default.
+        // =============================================================================
+    public:
+        /**
+         * The closest collider along a ray from InOrigin towards InDirection, up to InDistance world
+         * units. A collider the ray starts inside is not hit, so a ray from the entity's own position
+         * skips its own collider:
+         *   if (const RayHit lGround = RayCast(GetWorldPosition(), { 0.f, -1.f }, 40.f)) { ... }
+         */
+        RayHit RayCast(const Vector2F& InOrigin, const Vector2F& InDirection, float InDistance,
+                       Uint64 InChannelMask = ~0ull) const;
+
+        /**
+         * Every entity whose collider's bounding box overlaps the world box [InMin, InMax] (a round or
+         * rotated collider near a corner can be listed without touching it). OutEntities is cleared first.
+         */
+        void OverlapBox(const Vector2F& InMin, const Vector2F& InMax, TDynArray<Entity>& OutEntities,
+                        Uint64 InChannelMask = ~0ull) const;
 
         // =============================================================================
         // Audio — the world's sounds (they stop when the world ends). Silent without audio.

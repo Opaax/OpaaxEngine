@@ -82,7 +82,7 @@ namespace Opaax
                            Uint64 InChannelMask = ~0ull);
 
         /**
-         * Every entity whose collider overlaps the box [InMin..InMax], filtered by InChannelMask.
+         * Every entity whose collider's bounding box overlaps the box [InMin..InMax], filtered by InChannelMask.
          * OutEntities is cleared first; hits without an entity are dropped.
          */
         void OverlapAABB(Vector2F InMin, Vector2F InMax, TDynArray<EntityID>& OutEntities,
