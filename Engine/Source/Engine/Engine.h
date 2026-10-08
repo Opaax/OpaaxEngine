@@ -3,8 +3,9 @@
 #include <Application/Services/IEngine.h>
 #include <Engine/Subsystems/EngineSubsystem.h>
 #include "Application/Services/IJobSystem.h"
+#include "Core/Maths/MathsStatics.h"
 #include "Renderer/RendererManager.h"
-#include "Engine/FrameInfo.hpp"
+#include "Engine/FrameClock.h"
 #include "Core/Events/EventBus.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Resources/ResourceRef.hpp"
@@ -23,8 +24,6 @@ namespace Opaax
     class IRenderTarget;
     struct FramebufferSpec;
     struct LevelResource;
-
-    inline constexpr double MAX_FRAME_DELTA = 0.25;
 
     // =============================================================================
     // Engine — the concrete IEngine. Owns the engine subsystems and runs the frame.
@@ -72,14 +71,6 @@ namespace Opaax
         // End Native Engine
         // =============================================================================
         
-        // =============================================================================
-        // Delta Time
-    private:
-        double GetDeltaTime();
-        double GetFixedDeltaTime();
-        // End Delta Time
-        // =============================================================================
-
         // =============================================================================
         // Startup
     private:
@@ -165,8 +156,8 @@ namespace Opaax
         IPlatform*  m_Platform  = nullptr;
         IPaths*     m_Paths     = nullptr;
 
-        // End Delta Time
-        FrameInfo m_FrameInfo;
+        // Frame deltas and fixed steps (60 Hz)
+        FrameClock m_Clock{ D60_HZ };
 
         //Handle Subsystem lifetime
         EngineSubsystemMgr m_Subsystems;

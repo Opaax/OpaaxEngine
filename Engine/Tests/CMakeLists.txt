@@ -50,6 +50,7 @@ set(OPAAX_TEST_SOURCES
     # Engine
     Engine/AutoRegistrationTests.cpp
     Engine/EngineEventsTests.cpp
+    Engine/FrameClockTests.cpp
     Engine/GameInstanceTests.cpp
     Engine/ModuleRegistrarTests.cpp
 

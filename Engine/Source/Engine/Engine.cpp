@@ -131,30 +131,6 @@ namespace Opaax
 
     }
 
-    // =============================================================================
-    // Delta Time
-    // =============================================================================
-    
-    double Engine::GetDeltaTime()
-    {
-        const double lTimeNow   = m_Platform->GetTimeSeconds();
-        double lDelta = lTimeNow - m_FrameInfo.m_LastTime;
-        m_FrameInfo.m_LastTime = lTimeNow;
-        
-        if (lDelta > MAX_FRAME_DELTA)
-        {
-            lDelta = MAX_FRAME_DELTA;
-        }
-        
-        return lDelta;
-    }
-
-    double Engine::GetFixedDeltaTime()
-    {
-        constexpr double lFixedDelta = D60_HZ;
-        return lFixedDelta;
-    }
-    
     // =========================================================================
     // Startup
     // =========================================================================
@@ -226,6 +202,9 @@ namespace Opaax
         }
 
         m_WorldManager->SetActiveWorld(lWorld);
+
+        // The time spent opening the level is not simulated: the next frame counts from now.
+        m_Clock.Restart(m_Platform->GetTimeSeconds());
 
         OPAAX_ENGINE_LOG(Info, "World '{}' ({}) opened and activated", lName.CStr(), ToString(InSpec.Mode));
 
@@ -426,30 +405,24 @@ namespace Opaax
         // 2. Time
         // ----------------------------------------------------------------
 
-        m_FrameInfo.m_DeltaTime = GetDeltaTime();
+        const double lDeltaTime = m_Clock.BeginFrame(m_Platform->GetTimeSeconds());
 
         {
             OPAAX_STAT_SCOPE("Update");
-            Update(m_FrameInfo.m_DeltaTime);
+            Update(lDeltaTime);
         }
 
-        m_FrameInfo.m_AccumulatedDeltaTime += m_FrameInfo.m_DeltaTime;
-        m_FrameInfo.m_FixedDeltaTime = GetFixedDeltaTime();
-
-        while (m_FrameInfo.m_AccumulatedDeltaTime >= m_FrameInfo.m_FixedDeltaTime)
+        while (m_Clock.TakeFixedStep())
         {
             // Inside the loop: the scope's Calls is the step count.
             OPAAX_STAT_SCOPE("FixedUpdate");
 
-            FixedUpdate(m_FrameInfo.m_FixedDeltaTime);
-            m_FrameInfo.m_AccumulatedDeltaTime -= m_FrameInfo.m_FixedDeltaTime;
+            FixedUpdate(m_Clock.GetFixedDelta());
         }
-
-        m_FrameInfo.m_AlphaPhysic = m_FrameInfo.m_AccumulatedDeltaTime / m_FrameInfo.m_FixedDeltaTime;
 
         {
             OPAAX_STAT_SCOPE("Render");
-            Render(m_FrameInfo.m_AlphaPhysic);
+            Render(m_Clock.GetFixedAlpha());
         }
     }
     
