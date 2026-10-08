@@ -19,6 +19,7 @@ namespace Opaax::Editor
         case EInputRouteState::ClosedViewport: return "CLOSED — viewport not hovered or focused";
         case EInputRouteState::ClosedEditMode: return "CLOSED — world is in Edit";
         case EInputRouteState::ClosedPaused:   return "CLOSED — play session is paused";
+        case EInputRouteState::ClosedScripted: return "CLOSED — a script drives the input";
         }
 
         return "CLOSED — unknown";
@@ -32,6 +33,13 @@ namespace Opaax::Editor
 
     void InputRoute::Evaluate()
     {
+        // The engine's input is the script's: nothing to feed, nothing to reset.
+        if (m_bScripted)
+        {
+            m_State = EInputRouteState::ClosedScripted;
+            return;
+        }
+
         const EInputRouteState lPrevious = m_State;
 
         // Checked in order, so the reason reported is the first thing wrong.

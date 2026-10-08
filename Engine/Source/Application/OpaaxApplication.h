@@ -162,6 +162,9 @@ namespace Opaax
          */
         virtual void OnAutomationStarted(AutomationRunner& /*InRunner*/) {}
 
+        /** A script drives the app: the window's own input is ignored (AutomationSession::OwnsInput). */
+        bool IsInputScripted() const noexcept;
+
     public:
         
         // Engine

@@ -268,7 +268,7 @@ namespace Opaax::Editor
         //~Begin IEditorService interface
         void RegisterExtensions(const TFunction<void(EditorExtensionRegistrar&)>& InCollect) override;
         void StopPlay() override;
-        void RegisterAutomation(AutomationRunner& InRunner) override;
+        void RegisterAutomation(AutomationRunner& InRunner, bool bInOwnsInput) override;
         void Initialize() override;
         void BeginFrame() override;
         void EndFrame()   override;

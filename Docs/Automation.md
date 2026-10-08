@@ -14,6 +14,10 @@ The two can be combined. For the inbox, write a request under another name first
 `.request.json`, so the app never reads half a file; number the names (`001`, `002`...) to keep the
 order.
 
+A script owns the input: while it runs, the window's own keys, mouse and focus changes are ignored,
+so a pointer resting on the window cannot move the scripted one. An inbox session shares the input
+with whoever uses the window.
+
 ## Requests and answers
 
 ```json
@@ -51,6 +55,8 @@ saved in `.opaaxmap` files.
 | `screenshot` | `path` | Saves the frame as a PNG (in the editor: the whole editor) |
 | `input.key` | `key`, `action`, `frames` | `press`, `release` or `tap` a key (`Space`, `A`, `Mouse_Left`...) as if from the keyboard |
 | `input.mouse` | `x`, `y` | Moves the game's pointer (pixels of the game view) |
+| `ui.list` | `name` | The game UI's widgets: name, type, visible, centre and size in game-view pixels |
+| `ui.click` | `widget`, `frames` | Clicks a widget of the game's UI by name: the pointer moves to its centre, the left button is tapped |
 | `world.info` | | The active world: name, mode, paused, entities, camera |
 | `entity.list` | `name`, `component` | The entities (optionally filtered) with their components |
 | `entity.get` | `entity` | One entity with its components' values |

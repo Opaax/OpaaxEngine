@@ -48,6 +48,13 @@ namespace Opaax
         /** 1 when a request of the script failed (or never ran: the app closed first), else 0. */
         int GetExitCode() const noexcept;
 
+        /**
+         * True while a script drives the app: its input is the only input. The app then ignores the
+         * window's keys, mouse and focus changes, so a pointer resting on the window cannot move the
+         * scripted one. An inbox session (--automation) shares the input with whoever uses the window.
+         */
+        bool OwnsInput() const noexcept { return m_Script != nullptr; }
+
         //~Begin IAutomationHost interface
     public:
         void   RequestScreenshot(const std::string& InPath) override;

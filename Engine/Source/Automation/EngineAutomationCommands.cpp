@@ -8,9 +8,14 @@
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"
 #include "Application/Services/IPaths.h"
+#include "Engine/GameInstance/GameInstance.h"
+#include "Engine/GameInstance/GameInstanceManager.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Input/InputKeyNames.h"
 #include "Input/InputManager.h"
+#include "UI/UICanvas.h"
+#include "UI/UISubsystem.h"
+#include "UI/UIWidget.h"
 #include "World/Behaviour/BehaviourSubsystem.h"
 #include "World/Components/ComponentRegistry.h"
 #include "World/Entity/Entity.h"
@@ -60,6 +65,57 @@ namespace Opaax::EngineAutomation
         {
             if (IsMouseButton(InKey)) { InInput.OnMouseButtonReleased(InKey); }
             else                      { InInput.OnKeyReleased(InKey); }
+        }
+
+        /** The running game's UI canvas, or null with OutError. */
+        UICanvas* GameCanvas(IEngine& InEngine, std::string& OutError)
+        {
+            GameInstance* const lGame = InEngine.GetGameInstances().GetGameInstance();
+            UISubsystem* const  lUI   = (lGame != nullptr) ? lGame->GetSubsystems().GetSubsystem<UISubsystem>() : nullptr;
+            if (lUI == nullptr)
+            {
+                OutError = "no game is running: the UI belongs to the game (play a level first)";
+                return nullptr;
+            }
+            return &lUI->GetCanvas();
+        }
+
+        /** Visible with every parent visible. */
+        bool IsShown(const UIWidget& InWidget)
+        {
+            for (const UIWidget* lNode = &InWidget; lNode != nullptr; lNode = lNode->GetParent())
+            {
+                if (!lNode->bVisible)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        void DescribeTree(const UICanvas& InCanvas, const UIWidget& InWidget, const std::string& InName,
+                          nlohmann::json& OutList)
+        {
+            if (InName.empty() || InName == InWidget.Name.CStr())
+            {
+                const Bounds2D& lBounds   = InWidget.GetBounds();
+                const Vector2F  lCentre   = InCanvas.CanvasToScreen(lBounds.Center);
+                const float     lPerPixel = InCanvas.UnitsPerPixel();
+
+                OutList.push_back(nlohmann::json{
+                    { "name",    Text(InWidget.Name) },
+                    { "type",    InWidget.GetTypeName().CStr() },
+                    { "visible", IsShown(InWidget) },
+                    { "x",       lCentre.x },
+                    { "y",       lCentre.y },
+                    { "width",   lBounds.HalfExtent.x * 2.f / lPerPixel },
+                    { "height",  lBounds.HalfExtent.y * 2.f / lPerPixel } });
+            }
+
+            for (const TUniquePtr<UIWidget>& lChild : InWidget.GetChildren())
+            {
+                DescribeTree(InCanvas, *lChild, InName, OutList);
+            }
         }
 
         World* ActiveWorld(IEngine& InEngine, std::string& OutError)
@@ -254,6 +310,52 @@ namespace Opaax::EngineAutomation
                 {
                     InEngine.GetInput().OnMouseMoved(InParams.at("x").get<float>(), InParams.at("y").get<float>());
                     return AutomationResult::Ok();
+                });
+        }
+
+        // =========================================================================
+        // The game's UI
+        // =========================================================================
+        void RegisterUI(AutomationRunner& InRunner, IEngine& InEngine)
+        {
+            InRunner.Register("ui.list",
+                "The game UI's widgets, depth-first: [{name, type, visible, x, y, width, height}], x and y their "
+                "centre in game-view pixels. Filter: {name}.",
+                [&InEngine](const nlohmann::json& InParams)
+                {
+                    std::string     lError;
+                    UICanvas* const lCanvas = GameCanvas(InEngine, lError);
+                    if (lCanvas == nullptr)
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+                    return AutomationResult::Ok(nlohmann::json{
+                        { "widgets", DescribeWidgets(*lCanvas, InParams.value("name", std::string())) } });
+                });
+
+            InRunner.Register("ui.click",
+                "Clicks the game UI's widget named {widget}: the pointer moves to its centre and the left button "
+                "is tapped (down for {frames}, default 2).",
+                [&InEngine](const nlohmann::json& InParams)
+                {
+                    std::string     lError;
+                    UICanvas* const lCanvas = GameCanvas(InEngine, lError);
+                    Vector2F        lPixel  = { 0.f, 0.f };
+                    if (lCanvas == nullptr
+                        || !FindWidgetCentre(*lCanvas, InParams.value("widget", std::string()), lPixel, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    // Moved and pressed in one frame: the UI routes the move first, so the press lands on it.
+                    InputManager& lInput = InEngine.GetInput();
+                    lInput.OnMouseMoved(lPixel.x, lPixel.y);
+                    Press(lInput, EKeyCode::Mouse_Left);
+
+                    AutomationResult lResult = AutomationResult::Ok(nlohmann::json{ { "x", lPixel.x }, { "y", lPixel.y } });
+                    lResult.WaitFrames = std::max(InParams.value("frames", DEFAULT_TAP_FRAMES), 1u);
+                    lResult.AfterWait  = [&lInput] { Release(lInput, EKeyCode::Mouse_Left); };
+                    return lResult;
                 });
         }
 
@@ -525,9 +627,35 @@ namespace Opaax::EngineAutomation
     {
         RegisterApp(InRunner, InHost);
         RegisterInput(InRunner, InEngine);
+        RegisterUI(InRunner, InEngine);
         RegisterWorld(InRunner, InEngine);
         RegisterLevels(InRunner, InEngine);
         RegisterExpectations(InRunner, InEngine);
+    }
+
+    nlohmann::json DescribeWidgets(const UICanvas& InCanvas, const std::string& InName)
+    {
+        nlohmann::json lList = nlohmann::json::array();
+        DescribeTree(InCanvas, InCanvas.Root(), InName, lList);
+        return lList;
+    }
+
+    bool FindWidgetCentre(UICanvas& InCanvas, const std::string& InName, Vector2F& OutPixel, std::string& OutError)
+    {
+        UIWidget* const lWidget = InName.empty() ? nullptr : InCanvas.Root().FindByName(OpaaxString(InName.c_str()));
+        if (lWidget == nullptr)
+        {
+            OutError = "no widget named '" + InName + "' in the game's UI (ui.list lists them)";
+            return false;
+        }
+        if (!IsShown(*lWidget))
+        {
+            OutError = "'" + InName + "' is hidden";
+            return false;
+        }
+
+        OutPixel = InCanvas.CanvasToScreen(lWidget->GetBounds().Center);
+        return true;
     }
 
     bool CheckExpectation(const nlohmann::json& InActual, const nlohmann::json& InParams, std::string& OutError)

@@ -62,8 +62,11 @@ namespace Opaax::Editor
         /** Stops Play In Editor if it is running or paused (a game asking to quit). */
         virtual void StopPlay() = 0;
 
-        /** The app is driven from outside: adds the editor's commands to InRunner. */
-        virtual void RegisterAutomation(AutomationRunner& InRunner) = 0;
+        /**
+         * The app is driven from outside: adds the editor's commands to InRunner. With bInOwnsInput (a
+         * script), the editor feeds the game no input of its own.
+         */
+        virtual void RegisterAutomation(AutomationRunner& InRunner, bool bInOwnsInput) = 0;
 
         //----- null object ----------------------------------------------------
         static IEditorService& Null();

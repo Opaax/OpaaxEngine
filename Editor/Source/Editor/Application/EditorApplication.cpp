@@ -123,7 +123,7 @@ namespace Opaax::Editor
 
     void EditorApplication::OnAutomationStarted(AutomationRunner& InRunner)
     {
-        Editor().RegisterAutomation(InRunner);
+        Editor().RegisterAutomation(InRunner, IsInputScripted());
     }
 
     void EditorApplication::OnEvent(Event& InEvent)

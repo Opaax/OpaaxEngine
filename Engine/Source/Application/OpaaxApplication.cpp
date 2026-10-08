@@ -481,14 +481,29 @@ void OpaaxApplication::HandleApplicationEvent(EventDispatcher& Dispatcher, Event
 
     Dispatcher.Dispatch<WindowLostFocusEvent>([this](WindowLostFocusEvent&)
     {
-        // Reset now: going through the event bus would be a frame late.
-        Engine().GetInput().ResetState();
+        // Reset now: going through the event bus would be a frame late. A script's keys do not depend
+        // on the window's focus.
+        if (!IsInputScripted())
+        {
+            Engine().GetInput().ResetState();
+        }
         return false;
     });
 }
 
+bool OpaaxApplication::IsInputScripted() const noexcept
+{
+    return m_Automation != nullptr && m_Automation->OwnsInput();
+}
+
 void OpaaxApplication::HandleAllInputEvent(EventDispatcher& Dispatcher, Event& InEvent)
 {
+    // A script's input is the only input.
+    if (IsInputScripted())
+    {
+        return;
+    }
+
     // Fed directly: the event bus flushes inside Loop, which would be too late.
     InputManager& lInput = Engine().GetInput();
 

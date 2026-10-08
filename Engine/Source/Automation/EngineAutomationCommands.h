@@ -5,6 +5,7 @@
 #include <nlohmann/json.hpp>
 
 #include "Automation/AutomationRunner.h"
+#include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
 
 namespace Opaax
@@ -12,6 +13,7 @@ namespace Opaax
     class ComponentRegistry;
     class Entity;
     class IEngine;
+    class UICanvas;
     class World;
 
     /** What the engine's commands ask of the app hosting them. */
@@ -32,9 +34,9 @@ namespace Opaax
 
     // =============================================================================
     // EngineAutomation — the commands every app answers: the app itself (info, quit, screenshot),
-    //   input (keys and mouse, fed to the engine as if pressed), and the active world (its
-    //   entities, their components, editing a component's values). The editor adds its own, and
-    //   replaces the edits with undoable ones.
+    //   input (keys and mouse, fed to the engine as if pressed), the game's UI (its widgets, a click
+    //   on one), and the active world (its entities, their components, editing a component's
+    //   values). The editor adds its own, and replaces the edits with undoable ones.
     // =============================================================================
     namespace EngineAutomation
     {
@@ -67,5 +69,18 @@ namespace Opaax
          * when it does not.
          */
         bool CheckExpectation(const nlohmann::json& InActual, const nlohmann::json& InParams, std::string& OutError);
+
+        /**
+         * InCanvas's widgets, depth-first: [{"name", "type", "visible", "x", "y", "width", "height"}],
+         * x and y their centre, in the pixels of the canvas's target (origin top left). With InName,
+         * only the widgets with that name.
+         */
+        nlohmann::json DescribeWidgets(const UICanvas& InCanvas, const std::string& InName);
+
+        /**
+         * The pixel at the centre of InCanvas's widget named InName, where a click lands on it. False,
+         * with OutError, when there is no such widget or it is hidden.
+         */
+        bool FindWidgetCentre(UICanvas& InCanvas, const std::string& InName, Vector2F& OutPixel, std::string& OutError);
     }
 }

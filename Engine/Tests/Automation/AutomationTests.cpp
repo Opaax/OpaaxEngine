@@ -12,6 +12,9 @@
 #include "Automation/AutomationSession.h"
 #include "Automation/AutomationTransports.h"
 #include "Automation/EngineAutomationCommands.h"
+#include "UI/UICanvas.h"
+#include "UI/UIRect.h"
+#include "UI/Widgets/UIButton.h"
 #include "World/Components/ComponentRegistry.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
@@ -475,6 +478,51 @@ TEST_CASE("Automation expectations: equals, near, greater, less and between, wit
     CHECK(EngineAutomation::CheckExpectation(nullptr, nlohmann::json::object(), lError));
 }
 
+TEST_CASE("Automation UI: widgets are listed in screen pixels, and a click lands on a widget's centre")
+{
+    // A 1920x1080 target showing a 1080-unit canvas: a canvas unit is a pixel.
+    UICanvas lCanvas(1080.f);
+    lCanvas.SetTargetSize(1920, 1080);
+
+    UIWidget* const lPlay = lCanvas.Root().AddChild(MakeUnique<UIButton>());
+    lPlay->Name = OpaaxString("Play");
+    UIRect lRect;
+    lRect.AnchoredPosition = { 100.f, 200.f };   // right of and above the centre
+    lRect.SizeDelta        = { 300.f, 80.f };
+    lPlay->SetRect(lRect);
+
+    UIWidget* const lSecret = lCanvas.Root().AddChild(MakeUnique<UIButton>());
+    lSecret->Name     = OpaaxString("Secret");
+    lSecret->bVisible = false;
+
+    lCanvas.Update();
+
+    const nlohmann::json lListed = EngineAutomation::DescribeWidgets(lCanvas, "Play");
+    REQUIRE(lListed.size() == 1);
+    CHECK(lListed[0].at("type") == "UIButton");
+    CHECK(lListed[0].at("visible") == true);
+    CHECK(lListed[0].at("x").get<float>() == doctest::Approx(1060.f));   // 960 + 100
+    CHECK(lListed[0].at("y").get<float>() == doctest::Approx(340.f));    // 540 - 200: pixels go down
+    CHECK(lListed[0].at("width").get<float>() == doctest::Approx(300.f));
+    CHECK(lListed[0].at("height").get<float>() == doctest::Approx(80.f));
+
+    // Unfiltered: the root, Play and Secret.
+    CHECK(EngineAutomation::DescribeWidgets(lCanvas, "").size() == 3);
+    CHECK(EngineAutomation::DescribeWidgets(lCanvas, "Secret")[0].at("visible") == false);
+
+    Vector2F    lPixel{ 0.f, 0.f };
+    std::string lError;
+    REQUIRE(EngineAutomation::FindWidgetCentre(lCanvas, "Play", lPixel, lError));
+    CHECK(lPixel.x == doctest::Approx(1060.f));
+    CHECK(lPixel.y == doctest::Approx(340.f));
+    CHECK(lCanvas.HitTest(lCanvas.ScreenToCanvas(lPixel)) == lPlay);
+
+    CHECK_FALSE(EngineAutomation::FindWidgetCentre(lCanvas, "Secret", lPixel, lError));
+    CHECK(lError == "'Secret' is hidden");
+    CHECK_FALSE(EngineAutomation::FindWidgetCentre(lCanvas, "Missing", lPixel, lError));
+    CHECK(lError.find("no widget named 'Missing'") != std::string::npos);
+}
+
 TEST_CASE("Automation script: answers are written as they come, then marked done")
 {
     ScopedTempDir lDir("Script");
@@ -544,4 +592,21 @@ TEST_CASE("Automation session: a script the app closed on fails the run; a finis
         CHECK(lSession->GetExitCode() == 0);
         CHECK(ReadJson(lOutput).at("failed") == 0);
     }
+}
+
+TEST_CASE("Automation session: a script owns the input; an inbox shares it with the window")
+{
+    ScopedTempDir lDir("Owner");
+
+    const fs::path lScriptPath = lDir.Path() / "steps.json";
+    WriteFile(lScriptPath, R"([{"command": "frames.wait"}])");
+
+    TUniquePtr<AutomationSession> lScripted =
+        AutomationSession::Create(lScriptPath.string().c_str(), nullptr, nullptr);
+    REQUIRE(lScripted != nullptr);
+    CHECK(lScripted->OwnsInput());
+
+    TUniquePtr<AutomationSession> lInbox = AutomationSession::Create(nullptr, nullptr, lDir.Path().string().c_str());
+    REQUIRE(lInbox != nullptr);
+    CHECK_FALSE(lInbox->OwnsInput());
 }

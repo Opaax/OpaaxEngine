@@ -981,7 +981,7 @@ namespace Opaax::Editor
     // =============================================================================
     // =============================================================================
     
-    void EditorService::RegisterAutomation(AutomationRunner& InRunner)
+    void EditorService::RegisterAutomation(AutomationRunner& InRunner, const bool bInOwnsInput)
     {
         // No context: the editor did not start, so there is nothing to drive.
         if (m_Context == nullptr)
@@ -989,6 +989,11 @@ namespace Opaax::Editor
             return;
         }
         EditorAutomation::Register(InRunner, *m_Context);
+
+        if (m_InputRoute != nullptr)
+        {
+            m_InputRoute->SetScripted(bInOwnsInput);
+        }
     }
 
     void EditorService::StopPlay()
