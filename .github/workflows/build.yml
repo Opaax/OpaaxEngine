@@ -121,6 +121,12 @@ jobs:
         shell: bash
         run: xvfb-run -a -s "-screen 0 1280x720x24" ctest --test-dir build/${{ matrix.preset }} -C ${{ matrix.config }} -L feature --output-on-failure
 
+      # Each failed request of a feature test becomes an annotation, readable without the log.
+      - name: Report feature failures
+        if: runner.os == 'Linux' && failure()
+        shell: bash
+        run: python3 .github/scripts/report_feature_failures.py build/${{ matrix.preset }} TestWorld/Tests
+
       - name: Upload feature results
         if: runner.os == 'Linux' && always()
         uses: actions/upload-artifact@v4
