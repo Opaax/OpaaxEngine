@@ -26,11 +26,15 @@ namespace Opaax
 
         EntityID   Entity = ENTITY_NONE;
         Uint32     Count  = 0;
+
+        /** The cameras at the winning priority: more than one leaves the choice to storage order. */
+        Uint32     Tied   = 0;
     };
 
     // =============================================================================
-    // CameraManager — sets the view of the active Play world from its CameraComponent.
-    //   Edit worlds use the editor's camera instead. With several cameras, the first wins (warning).
+    // CameraManager — sets the view of the active Play world from its CameraComponents: the highest
+    //   Priority wins (among equals, the first found, with a warning). Edit worlds use the editor's
+    //   camera instead.
     // =============================================================================
     class CameraManager final : public EngineSubsystemBase
     {
@@ -54,14 +58,14 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * The view InWorld's cameras give: the first camera wins; no camera gives the default view.
-         * Static and pure (testable with a bare World).
+         * The view InWorld's cameras give: the highest priority wins, the first found among equals; no
+         * camera gives the default view. Static and pure (testable with a bare World).
          */
         static CameraResolution Resolve(World& InWorld);
 
     private:
         /**
-         * Logs the result only when it changes (other world, or other camera count).
+         * Logs the result only when it changes (other world, other camera count, other winner).
          */
         void ReportResolution(World& InWorld, const CameraResolution& InResolution);
 
@@ -82,7 +86,8 @@ namespace Opaax
         WorldManager* m_WorldManager = nullptr; // not owned
 
         // Last reported result. The Guid starts invalid, so every new world reports once.
-        Guid   m_ReportedWorld;
-        Uint32 m_ReportedCount = 0;
+        Guid     m_ReportedWorld;
+        Uint32   m_ReportedCount  = 0;
+        EntityID m_ReportedCamera = ENTITY_NONE;
     };
 }

@@ -28,24 +28,34 @@ namespace Opaax
     }
 
     // =========================================================================
-    // Resolve — the first camera wins; no camera gives the default view.
+    // Resolve — the highest priority wins, the first found among equals; no camera gives the
+    //   default view.
     // =========================================================================
     CameraResolution CameraManager::Resolve(World& InWorld)
     {
         CameraResolution lResolution;
+        Int32            lBestPriority = 0;
 
         InWorld.Each<TransformComponent, CameraComponent>(
-            [&lResolution, &InWorld](EntityID InEntity, TransformComponent&, CameraComponent& InCamera)
+            [&](EntityID InEntity, TransformComponent&, CameraComponent& InCamera)
             {
                 ++lResolution.Count;
 
-                if (lResolution.Count == 1)
+                if (lResolution.Count > 1 && InCamera.Priority == lBestPriority)
+                {
+                    ++lResolution.Tied;
+                    return;
+                }
+
+                if (lResolution.Count == 1 || InCamera.Priority > lBestPriority)
                 {
                     // World transform: a camera parented to the player follows it.
                     const Vector2F lFrom = EntityHierarchy::WorldTransform(Entity{ InEntity, &InWorld }).Position;
 
                     lResolution.View   = CameraView{ lFrom, InCamera.OrthoSize };
                     lResolution.Entity = InEntity;
+                    lResolution.Tied   = 1;
+                    lBestPriority      = InCamera.Priority;
                 }
             });
 
@@ -74,13 +84,15 @@ namespace Opaax
 
     void CameraManager::ReportResolution(World& InWorld, const CameraResolution& InResolution)
     {
-        if (InWorld.GetId() == m_ReportedWorld && InResolution.Count == m_ReportedCount)
+        if (InWorld.GetId() == m_ReportedWorld && InResolution.Count == m_ReportedCount
+            && InResolution.Entity == m_ReportedCamera)
         {
             return;
         }
 
-        m_ReportedWorld = InWorld.GetId();
-        m_ReportedCount = InResolution.Count;
+        m_ReportedWorld  = InWorld.GetId();
+        m_ReportedCount  = InResolution.Count;
+        m_ReportedCamera = InResolution.Entity;
 
         if (InResolution.Count == 0)
         {
@@ -97,11 +109,11 @@ namespace Opaax
                   lMeta != nullptr ? lMeta->Name.CStr() : "<unnamed>",
                   InResolution.View.Position.x, InResolution.View.Position.y, InResolution.View.OrthoSize);
 
-        if (InResolution.Count > 1)
+        if (InResolution.Tied > 1)
         {
-            OPAAX_LOG(LogCameraManager, Warn, "World '{}' holds {} CameraComponents — the first is used. "
-                                              "Priority/blending is not built.",
-                      InWorld.GetName().CStr(), InResolution.Count);
+            OPAAX_LOG(LogCameraManager, Warn, "World '{}': {} cameras share the highest Priority — the first found is "
+                                              "used; raise the one that should frame the world",
+                      InWorld.GetName().CStr(), InResolution.Tied);
         }
     }
 }

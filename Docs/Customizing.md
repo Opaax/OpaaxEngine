@@ -72,6 +72,10 @@ can be `const` members.
 
 ## The renderer
 
+A level is framed by a **Camera** entity: its world position and `OrthoSize` (half the visible
+height, in world units). A camera parented to the player follows it. With several cameras, the
+highest `Priority` frames the level: raise another's (a map view, a cutscene) to switch to it.
+
 A level is lit when it has an **Environment** (any entity): it is then drawn in HDR, lit by its
 **Light2D**s and the ambient light, then bloomed, exposed and tonemapped. Without one, sprites are
 drawn as they are and lights do nothing (the log says so once).
