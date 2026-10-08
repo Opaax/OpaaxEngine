@@ -37,8 +37,8 @@ A change is done when it is tested and seen working, not when it compiles.
    `Sandbox --capture shot.png --capture-frame 30`, then open the PNG. Do not describe a picture you
    have not looked at.
 4. **The editor** is checked by driving it: `SandboxEditor --exec script.json` with the editor's
-   commands (create entities, edit components, undo, play) and a screenshot.
-   See [Docs/Automation.md](Docs/Automation.md).
+   commands (create entities, edit components, undo, play) and a screenshot; a script in
+   `TestWorld/EditorTests` runs in CTest. See [Docs/Automation.md](Docs/Automation.md).
 5. **CI** (`.github/workflows/build.yml`): Windows, Ubuntu and macOS, debug-editor and release.
    Linux also renders on Mesa's software OpenGL (stricter than desktop drivers) and runs the feature
    tests there. A change is finished when every job is green.

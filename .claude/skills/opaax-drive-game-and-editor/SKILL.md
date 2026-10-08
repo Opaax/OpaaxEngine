@@ -51,4 +51,4 @@ another name then renamed), wait for `001.response.json`, repeat; send `app.quit
   `expect.quit` waits for the game to quit by itself (`QuitGame`).
 - Open every screenshot you take before saying what it shows.
 - A level made for a check can go in TestWorld (`TestWorld/Assets/Maps`, `Levels`) with its script in
-  `TestWorld/Tests`: it then runs in CTest and CI.
+  `TestWorld/Tests` (`TestWorld/EditorTests` for an editor script): it then runs in CTest and CI.

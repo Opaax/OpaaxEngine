@@ -3,8 +3,9 @@
 Two layers:
 
 - **Unit tests** (`OpaaxTests`, this folder): doctest, no GPU, no window, run everywhere in seconds.
-- **Feature tests** (TestWorld, `TestWorld/Tests`): the TestWorld game plays a level per engine feature
-  and checks it through automation scripts. They draw, so they need a display.
+- **Feature tests** (TestWorld, `TestWorld/Tests` and `TestWorld/EditorTests`): the TestWorld game
+  plays a level per engine feature and checks it through automation scripts, and the TestWorld editor
+  is driven like an agent would drive it. They draw, so they need a display.
 
 Both run in CTest; the feature tests carry the label `feature`.
 
@@ -90,9 +91,16 @@ the feature on screen, and `TestWorld/Tests/<Feature>.json` plays it and checks 
 
 Every `*.json` in `TestWorld/Tests` becomes a CTest test (`TestWorld.<Feature>`); its answers
 (`<Feature>.out.json`) and screenshot go to `build/<preset>/TestWorldResults/`. A failed check's
-answer says what was expected and what was found.
+answer says what was expected and what was found; on CI, each failed check becomes an annotation of
+the job.
+
+Scripts in `TestWorld/EditorTests` run in `TestWorldEditor` instead (`TestWorldEditor.<Name>`, answers
+in `Editor<Name>.out.json`), in builds that have the editor: they use the editor's commands (create,
+edit, undo, play, stop) and never save.
 
 To check behaviour from inside the game, write a probe: a behaviour that records what happened in its
 fields (`TestWorld/Source/TestWorld/Probes`), placed in the level and read with `expect.value`.
 Use `world.wait` (game time) rather than counting frames: machines and CI run at different speeds.
+A probe that measures physics counts fixed steps (`OnFixedUpdate`) rather than reading the clock: on
+a slow machine one frame runs several steps.
 The commands are listed in [Docs/Automation.md](../../Docs/Automation.md).
