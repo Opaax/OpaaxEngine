@@ -14,7 +14,9 @@
 #include "Core/Events/EventBus.h"
 #include "Engine/Config/EngineConfigData.h"
 #include "Engine/EngineEvents.h"
+#include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceContext.h"
+#include "Engine/GameInstance/IGameInstanceSubsystem.h"
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/InputManager.h"
 #include "Input/Mapping/InputMappingSubsystem.h"
@@ -454,6 +456,33 @@ namespace RuntimeProbes
         void OnUpdate(float) override { SetWorldPosition(Vector2F{ 150.f, 0.f }); }
     };
 
+    /** A game-wide subsystem: it outlives the worlds. */
+    class Tally final : public GameInstanceSubsystemBase
+    {
+    public:
+        OPAAX_SUBSYSTEM_TYPE(Tally)
+
+        bool Startup() override { return true; }
+        void Shutdown() override {}
+
+        Int32 Count = 0;
+    };
+
+    /** Adds one to the game's Tally when it starts. */
+    struct TallyClerk final : Behaviour
+    {
+        bool bFound = false;
+
+        void OnStart() override
+        {
+            if (Tally* lTally = GetGameSubsystem<Tally>())
+            {
+                ++lTally->Count;
+                bFound = true;
+            }
+        }
+    };
+
     /** Records the clock it sees. */
     struct Clock final : Behaviour
     {
@@ -510,6 +539,7 @@ namespace
         REQUIRE(InRegistry.Register<Finder>(OpaaxStringID("Finder")));
         REQUIRE(InRegistry.Register<Mover>(OpaaxStringID("Mover")));
         REQUIRE(InRegistry.Register<Clock>(OpaaxStringID("Clock")));
+        REQUIRE(InRegistry.Register<TallyClerk>(OpaaxStringID("TallyClerk")));
     }
 
     /** The game's input mapping in the tests: "Jump" on Space. */
@@ -536,6 +566,7 @@ namespace
         const IPaths* Paths     = nullptr;   // null: IPaths::Null()
         bool          bPhysics  = false;
         bool          bActions  = false;     // the game's input mapping (AddTestActions)
+        bool          bGame     = false;     // a running game, with a Tally subsystem
         bool          bStartNow = true;
     };
 
@@ -548,10 +579,11 @@ namespace
         InputManager      Input;
         ComponentRegistry Components;
 
-        // The game's input mapping, when asked for. Declared before Worlds: as in the engine, the
-        // game outlives its worlds.
+        // The game's input mapping and the game, when asked for. Declared before Worlds: as in the
+        // engine, the game outlives its worlds.
         TUniquePtr<GameInstanceContext>   GameContext;
         TUniquePtr<InputMappingSubsystem> Actions;
+        TUniquePtr<GameInstance>          Game;
 
         WorldManager Worlds;   // last: its worlds end before the services they use
 
@@ -565,19 +597,31 @@ namespace
 
             const IPaths& lPaths = (InOptions.Paths != nullptr) ? *InOptions.Paths : IPaths::Null();
 
-            if (InOptions.bActions)
+            if (InOptions.bActions || InOptions.bGame)
             {
                 GameContext = MakeUnique<GameInstanceContext>(GameInstanceContext{ Worlds, Resources, lPaths, Events,
                                                                                    Input, Config });
-                Actions     = MakeUnique<InputMappingSubsystem>(*GameContext);
+            }
+
+            if (InOptions.bActions)
+            {
+                Actions = MakeUnique<InputMappingSubsystem>(*GameContext);
                 AddTestActions(*Actions);
+            }
+
+            if (InOptions.bGame)
+            {
+                Game = MakeUnique<GameInstance>(*GameContext);
+                Game->GetSubsystems().RegisterSubsystem<Tally>();
+                Game->GetSubsystems().StartupAll();
             }
 
             TheWorld = Worlds.CreateWorld("Behaviours", EWorldMode::Play);
             REQUIRE(TheWorld != nullptr);
 
             TheWorld->SetContext(WorldContext{ *TheWorld, Resources, lPaths, Events, Input, Config,
-                                               Actions.get(), /*UI*/ nullptr, Debug, &Components });
+                                               Actions.get(), /*UI*/ nullptr, Debug, &Components,
+                                               /*Audio*/ nullptr, Game.get() });
 
             WorldSubsystemMgr& lSubsystems = TheWorld->GetSubsystems();
             lSubsystems.RegisterSubsystem<BehaviourSubsystem>(std::ref(*TheWorld->GetContext()));
@@ -1469,6 +1513,34 @@ TEST_CASE("Behaviours: physics queries filter by channel, and find nothing witho
 
         CHECK_FALSE(static_cast<bool>(lSeeker.Get<Seeker>().Down));
         CHECK(lSeeker.Get<Seeker>().Around.empty());
+    }
+}
+
+TEST_CASE("Behaviours: GetGameSubsystem reaches the running game's subsystems")
+{
+    SUBCASE("a game is running")
+    {
+        RuntimeFixture lFix({ .bGame = true });
+        Entity lFirst  = lFix.Make("First");
+        Entity lSecond = lFix.Make("Second");
+        lFirst.Add<TallyClerk>();
+        lSecond.Add<TallyClerk>();
+
+        lFix.Frame();
+
+        CHECK(lFirst.Get<TallyClerk>().bFound);
+        CHECK(lFix.Game->GetSubsystems().GetSubsystem<Tally>()->Count == 2);
+    }
+
+    SUBCASE("no game: null")
+    {
+        RuntimeFixture lFix;
+        Entity lClerk = lFix.Make("Clerk");
+        lClerk.Add<TallyClerk>();
+
+        lFix.Frame();
+
+        CHECK_FALSE(lClerk.Get<TallyClerk>().bFound);
     }
 }
 

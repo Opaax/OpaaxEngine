@@ -237,21 +237,21 @@ namespace Opaax
             return;
         }
 
-        // Per world, and allowed to be null (Edit worlds have no game).
+        // Play worlds only: an Edit world opened during Play (a prefab document) outlives the game.
+        GameInstance* const    lGame    = (m_GameInstances != nullptr && InWorld.GetMode() == EWorldMode::Play)
+                                              ? m_GameInstances->GetGameInstance()
+                                              : nullptr;
         InputMappingSubsystem* lActions = nullptr;
         UISubsystem*           lUI      = nullptr;
 
-        if (m_GameInstances != nullptr)
+        if (lGame != nullptr)
         {
-            if (GameInstance* lGame = m_GameInstances->GetGameInstance())
-            {
-                lActions = lGame->GetSubsystems().GetSubsystem<InputMappingSubsystem>();
-                lUI      = lGame->GetSubsystems().GetSubsystem<UISubsystem>();
-            }
+            lActions = lGame->GetSubsystems().GetSubsystem<InputMappingSubsystem>();
+            lUI      = lGame->GetSubsystems().GetSubsystem<UISubsystem>();
         }
 
         InWorld.SetContext(WorldContext{InWorld, *m_Resources, *m_Paths, *m_Events, *m_Input, *m_Config,
-                                        lActions, lUI, *m_Debug, &m_Registries->Components(), m_Audio});
+                                        lActions, lUI, *m_Debug, &m_Registries->Components(), m_Audio, lGame});
 
         WorldContext* lContext = InWorld.GetContext();
         OPAAX_ASSERT(lContext != nullptr);

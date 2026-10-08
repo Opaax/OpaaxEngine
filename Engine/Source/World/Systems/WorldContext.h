@@ -4,6 +4,7 @@ namespace Opaax
 {
     class World;
     class AudioManager;
+    class GameInstance;
     class ResourceManager;
     class EngineEventBus;
     class DebugDraw;
@@ -65,5 +66,8 @@ namespace Opaax
 
         /** The sound mixer. Null in a bare test world. */
         AudioManager* Audio = nullptr;
+
+        /** The running game, whose subsystems last across levels. Null when no game is running (Edit worlds). */
+        GameInstance* Game = nullptr;
     };
 }

@@ -14,11 +14,13 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/Reflection/TypeInfo.h"
 #include "Core/String/OpaaxString.hpp"
+#include "Engine/GameInstance/GameInstance.h"
 #include "Engine/Reflection/PropertyJson.h"
 #include "Input/InputCodes.h"
 #include "Input/Mapping/InputTypes.h"
 #include "World/Components/TransformComponent.h"   // GetTransform(): every behaviour moves something
 #include "World/Entity/Entity.h"
+#include "World/Systems/WorldContext.h"
 #include "World/World.h"
 
 // =============================================================================
@@ -57,7 +59,6 @@ namespace Opaax
     class DebugDraw;
     class InputManager;
     struct InputActionState;
-    struct WorldContext;
 
     inline constexpr LogCategory LogBehaviour{"Behaviour"};
 
@@ -527,6 +528,18 @@ namespace Opaax
         T* GetSubsystem() const
         {
             return (m_World != nullptr) ? m_World->GetSubsystems().template GetSubsystem<T>() : nullptr;
+        }
+
+        /**
+         * One of the running game's subsystems, which last across levels (GetGameSubsystem<ScoreKeeper>()),
+         * or null when no game is running.
+         */
+        template<typename T>
+        T* GetGameSubsystem() const
+        {
+            const WorldContext* lContext = (m_World != nullptr) ? m_World->GetContext() : nullptr;
+            GameInstance*       lGame    = (lContext != nullptr) ? lContext->Game : nullptr;
+            return (lGame != nullptr) ? lGame->GetSubsystems().template GetSubsystem<T>() : nullptr;
         }
 
         // =============================================================================

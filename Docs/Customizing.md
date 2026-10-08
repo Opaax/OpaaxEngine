@@ -55,7 +55,12 @@ OPAAX_REGISTER_WORLD_SUBSYSTEM_ORDERED(ScoreSubsystem, Opaax::WorldSubsystemOrde
 Subsystems tick in `WorldSubsystemOrder` order: Input, Gameplay (before physics), Physics,
 PostPhysics, Default, Presentation (camera, animation, HUD), Debug. A behaviour finds one with
 `GetSubsystem<ScoreSubsystem>()`. The `WorldContext` holds the world's services: its events, input
-actions, audio, resources.
+actions, audio, resources, and the running game (`Game`).
+
+A game instance subsystem derives from `Opaax::GameInstanceSubsystemBase`, takes a
+`GameInstanceContext&`, and lives from the start of a game to its end, across level changes (a
+score, a save). A behaviour finds it with `GetGameSubsystem<Save>()`, null while no game runs (in the
+editor outside Play). `TestWorld/Source/TestWorld/Probes/LevelProbes.h` has one.
 
 ### Events, input and sound
 
