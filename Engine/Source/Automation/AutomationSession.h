@@ -14,7 +14,7 @@ namespace Opaax
     // =============================================================================
     // AutomationSession — the app driven from outside, as its command line asks:
     //   --exec <script.json> [--exec-out <answers.json>] runs a script's requests, then closes the
-    //     app; its exit code is 1 when a request failed.
+    //     app; its exit code is 1 when a request failed, or never ran because the app closed first.
     //   --automation <folder> keeps an inbox open for an agent until it sends app.quit.
     //   The app calls BeginFrame before the frame ticks and EndFrame once it is drawn.
     // =============================================================================
@@ -42,7 +42,10 @@ namespace Opaax
          */
         bool EndFrame(IEngine& InEngine);
 
-        /** 1 when a request of the script failed, else 0. */
+        /** The app is closing: what is left unanswered gets an answer (AutomationRunner::Close). */
+        void Close();
+
+        /** 1 when a request of the script failed (or never ran: the app closed first), else 0. */
         int GetExitCode() const noexcept;
 
         //~Begin IAutomationHost interface

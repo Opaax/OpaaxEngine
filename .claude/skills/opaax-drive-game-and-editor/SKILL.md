@@ -23,7 +23,8 @@ Write the requests to a file and run the app with `--exec`:
 ```
 
 `build/debug-editor/bin/Debug/TestWorld.exe --exec script.json` runs it and closes; the answers are in
-`script.out.json` (or `--exec-out <file>`), the exit code is 1 if a request failed. Run it from the
+`script.out.json` (or `--exec-out <file>`), the exit code is 1 if a request failed or never ran (the
+app closed first). Run it from the
 binary's folder or give absolute paths; a relative screenshot path is relative to the working folder.
 
 ## The editor
@@ -45,6 +46,7 @@ another name then renamed), wait for `001.response.json`, repeat; send `app.quit
 - Find names first: `entity.list` (filter with `name` or `component`), then `entity.get` for values.
   Component fields have their saved names (`Transform/Position/x`, `Light2D/Intensity`).
 - Check with `expect.value` / `expect.count` / `expect.entity`: a script of checks is a test.
+  `expect.quit` waits for the game to quit by itself (`QuitGame`).
 - Open every screenshot you take before saying what it shows.
 - A level made for a check can go in TestWorld (`TestWorld/Assets/Maps`, `Levels`) with its script in
   `TestWorld/Tests`: it then runs in CTest and CI.

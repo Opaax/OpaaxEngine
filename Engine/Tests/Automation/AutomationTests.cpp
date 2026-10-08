@@ -9,6 +9,7 @@
 #include <string>
 
 #include "Automation/AutomationRunner.h"
+#include "Automation/AutomationSession.h"
 #include "Automation/AutomationTransports.h"
 #include "Automation/EngineAutomationCommands.h"
 #include "World/Components/ComponentRegistry.h"
@@ -221,6 +222,57 @@ TEST_CASE("Automation: a long job is answered when its wait is over, with its ou
     CHECK_FALSE(lRecorder.Responses[2].bOk);
     CHECK(lRecorder.Responses[2].Error == "the job failed");
     CHECK(lRecorder.Runner.GetFailed() == 1);
+}
+
+TEST_CASE("Automation: closing answers what is left: the waiting request, then every request not run")
+{
+    Recorder lRecorder;
+    lRecorder.Runner.Register("job", "Never ends on its own.", [](const nlohmann::json&)
+    {
+        AutomationResult lResult;
+        lResult.WaitUntil = [] { return false; };
+        lResult.Answer    = [] { return AutomationResult::Ok(); };
+        return lResult;
+    });
+
+    lRecorder.Runner.Enqueue(Request("1", "job"));
+    lRecorder.Runner.Enqueue(Request("2", "echo"));
+    lRecorder.Runner.Enqueue(Request("3", "echo"));
+    lRecorder.Runner.Tick();
+    CHECK(lRecorder.Responses.empty());
+
+    lRecorder.Runner.Close();
+
+    REQUIRE(lRecorder.Responses.size() == 3);
+    CHECK_FALSE(lRecorder.Responses[0].bOk);
+    CHECK(lRecorder.Responses[0].Error == "the app closed before this request finished");
+    CHECK_FALSE(lRecorder.Responses[1].bOk);
+    CHECK(lRecorder.Responses[1].Error == "the app closed before this request ran");
+    CHECK(lRecorder.Responses[2].Id == "3");
+    CHECK(lRecorder.Runner.GetFailed() == 3);
+    CHECK(lRecorder.Runner.IsIdle());
+}
+
+TEST_CASE("Automation: a request waiting for the app to close is answered by its OnClose")
+{
+    Recorder lRecorder;
+    lRecorder.Runner.Register("until-closed", "Waits for the app to close.", [](const nlohmann::json&)
+    {
+        AutomationResult lResult;
+        lResult.WaitUntil = [] { return false; };
+        lResult.Answer    = [] { return AutomationResult::Fail("still open"); };
+        lResult.OnClose   = [] { return AutomationResult::Ok(nlohmann::json{ { "closed", true } }); };
+        return lResult;
+    });
+
+    lRecorder.Runner.Enqueue(Request("1", "until-closed"));
+    lRecorder.Runner.Tick();
+    lRecorder.Runner.Close();
+
+    REQUIRE(lRecorder.Responses.size() == 1);
+    CHECK(lRecorder.Responses[0].bOk);
+    CHECK(lRecorder.Responses[0].Result.at("closed") == true);
+    CHECK(lRecorder.Runner.GetFailed() == 0);
 }
 
 TEST_CASE("Automation: an unknown command and bad params fail, and the queue goes on")
@@ -452,4 +504,44 @@ TEST_CASE("Automation script: answers are written as they come, then marked done
     CHECK(lDone.at("failed") == 1);
     REQUIRE(lDone.at("responses").size() == 3);
     CHECK(lDone.at("responses")[2].at("ok") == false);
+}
+
+TEST_CASE("Automation session: a script the app closed on fails the run; a finished one passes")
+{
+    ScopedTempDir lDir("Session");
+
+    const fs::path lScriptPath = lDir.Path() / "steps.json";
+    const fs::path lOutput     = lDir.Path() / "steps.out.json";
+    WriteFile(lScriptPath, R"([{"command": "frames.wait", "params": {"count": 2}}, {"command": "commands.list"}])");
+
+    SUBCASE("closed before the end")
+    {
+        TUniquePtr<AutomationSession> lSession =
+            AutomationSession::Create(lScriptPath.string().c_str(), lOutput.string().c_str(), nullptr);
+        REQUIRE(lSession != nullptr);
+
+        lSession->BeginFrame();   // the wait holds commands.list
+        lSession->Close();
+
+        CHECK(lSession->GetExitCode() == 1);
+        const nlohmann::json lAnswers = ReadJson(lOutput);
+        CHECK(lAnswers.at("done") == true);
+        CHECK(lAnswers.at("failed") == 1);
+    }
+
+    SUBCASE("run to the end")
+    {
+        TUniquePtr<AutomationSession> lSession =
+            AutomationSession::Create(lScriptPath.string().c_str(), lOutput.string().c_str(), nullptr);
+        REQUIRE(lSession != nullptr);
+
+        for (int lFrame = 0; lFrame < 3; ++lFrame)
+        {
+            lSession->BeginFrame();
+        }
+        lSession->Close();
+
+        CHECK(lSession->GetExitCode() == 0);
+        CHECK(ReadJson(lOutput).at("failed") == 0);
+    }
 }

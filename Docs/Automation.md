@@ -7,7 +7,7 @@ test, or by an AI agent. The commands are the same everywhere; the editor adds i
 
 | Flag | What happens |
 |---|---|
-| `--exec <script.json>` | Runs the script's requests in order, then closes the app. Each answer is written to `<script>.out.json` as it comes (`--exec-out <file>` to choose). The exit code is 1 when a request failed. |
+| `--exec <script.json>` | Runs the script's requests in order, then closes the app. Each answer is written to `<script>.out.json` as it comes (`--exec-out <file>` to choose). The exit code is 1 when a request failed, or never ran because the app closed first. |
 | `--automation <folder>` | Keeps the app open and runs every `<name>.request.json` dropped in the folder (in name order), answering in `<name>.response.json`. `app.quit` closes it. |
 
 The two can be combined. For the inbox, write a request under another name first and rename it to
@@ -59,10 +59,13 @@ saved in `.opaaxmap` files.
 | `expect.value` | `entity`, `path`, check | Fails unless the value at `path` (`Transform/Position/x`) passes the check |
 | `expect.count` | `name`, `component`, check | Fails unless the number of matching entities passes the check |
 | `expect.entity` | `entity`, `exists` | Fails unless an entity with that name or id exists (or, with `exists: false`, none does) |
+| `expect.quit` | `seconds` | Waits for the game to close the app itself (`QuitGame`); fails if it is still open after `seconds` (10) |
 
 A check is any of `equals` (numbers within 1e-4; for an object, the fields given), `near` with a
 `tolerance` (0.01 by default), `greater`, `less`, `between: [min, max]`. A failed expectation fails
-its request, so a script of expectations is a test: its exit code is 1 when one fails.
+its request, so a script of expectations is a test: its exit code is 1 when one fails. When the app
+closes before the script's end, the requests left fail too: a game that quits early cannot pass a
+test it never finished.
 
 The editor adds:
 

@@ -82,9 +82,14 @@ namespace Opaax
         return m_bQuitRequested || bScriptDone;
     }
 
+    void AutomationSession::Close()
+    {
+        m_Runner.Close();
+    }
+
     int AutomationSession::GetExitCode() const noexcept
     {
-        return (m_Script != nullptr && m_Script->GetFailed() > 0) ? 1 : 0;
+        return (m_Script != nullptr && (m_Script->GetFailed() > 0 || !m_Script->IsDone())) ? 1 : 0;
     }
 
     void AutomationSession::RequestScreenshot(const std::string& InPath)

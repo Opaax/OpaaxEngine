@@ -139,7 +139,8 @@ namespace Opaax
         if (m_DeferredAnswer)
         {
             const TFunction<AutomationResult()> lAnswer = Move(m_DeferredAnswer);
-            m_DeferredAnswer = nullptr;
+            m_DeferredAnswer  = nullptr;
+            m_DeferredOnClose = nullptr;
             Respond(MakeResponse(m_Deferred, Guarded(lAnswer)));
         }
 
@@ -159,6 +160,30 @@ namespace Opaax
     bool AutomationRunner::IsIdle() const noexcept
     {
         return m_Queue.empty() && !IsHolding();
+    }
+
+    void AutomationRunner::Close()
+    {
+        if (m_DeferredAnswer)
+        {
+            const TFunction<AutomationResult()> lOnClose = Move(m_DeferredOnClose);
+            m_DeferredAnswer  = nullptr;
+            m_DeferredOnClose = nullptr;
+            Respond(MakeResponse(m_Deferred, lOnClose ? Guarded(lOnClose)
+                                                      : AutomationResult::Fail("the app closed before this request finished")));
+        }
+
+        // The wait ends with the app: what would come after it (a held key's release) has no frame to run in.
+        m_WaitFrames = 0;
+        m_WaitUntil  = nullptr;
+        m_AfterWait  = nullptr;
+
+        while (!m_Queue.empty())
+        {
+            const AutomationRequest lRequest = Move(m_Queue.front());
+            m_Queue.pop();
+            Respond(MakeResponse(lRequest, AutomationResult::Fail("the app closed before this request ran")));
+        }
     }
 
     void AutomationRunner::Run(const AutomationRequest& InRequest)
@@ -183,8 +208,9 @@ namespace Opaax
             // Answered when the wait is over: FinishWait sends it.
             if (lResult.Answer)
             {
-                m_Deferred       = InRequest;
-                m_DeferredAnswer = Move(lResult.Answer);
+                m_Deferred        = InRequest;
+                m_DeferredAnswer  = Move(lResult.Answer);
+                m_DeferredOnClose = Move(lResult.OnClose);
             }
             else
             {

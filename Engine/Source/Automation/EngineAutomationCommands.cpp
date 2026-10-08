@@ -1,6 +1,7 @@
 #include "Automation/EngineAutomationCommands.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <filesystem>
 
@@ -165,6 +166,25 @@ namespace Opaax::EngineAutomation
                 {
                     InHost.RequestQuit();
                     return AutomationResult::Ok();
+                });
+
+            InRunner.Register("expect.quit",
+                "Holds the queue until the game closes the app itself (QuitGame), then answers ok; fails if the "
+                "app is still open after {seconds} (default 10, real time).",
+                [](const nlohmann::json& InParams)
+                {
+                    const double lSeconds  = InParams.value("seconds", 10.0);
+                    const auto   lDeadline = std::chrono::steady_clock::now()
+                        + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(lSeconds));
+
+                    AutomationResult lResult;
+                    lResult.WaitUntil = [lDeadline]() { return std::chrono::steady_clock::now() >= lDeadline; };
+                    lResult.Answer    = [lSeconds]()
+                    {
+                        return AutomationResult::Fail("the app is still open after " + nlohmann::json(lSeconds).dump() + " s");
+                    };
+                    lResult.OnClose   = []() { return AutomationResult::Ok(nlohmann::json{ { "closed", true } }); };
+                    return lResult;
                 });
 
             InRunner.Register("screenshot",

@@ -51,6 +51,9 @@ namespace Opaax
          */
         TFunction<AutomationResult()> Answer;
 
+        /** With Answer: the answer when the app closes before the wait is over (a failure if unset). */
+        TFunction<AutomationResult()> OnClose;
+
         static AutomationResult Ok(nlohmann::json InValue = nlohmann::json::object());
         static AutomationResult Fail(std::string InError);
     };
@@ -102,6 +105,12 @@ namespace Opaax
         /** Nothing queued and nothing held. */
         bool IsIdle() const noexcept;
 
+        /**
+         * The app is closing: the request waiting for its answer gets it (its OnClose, or a failure),
+         * and every request not run yet fails. Called once, after the last frame.
+         */
+        void Close();
+
         Uint64 GetAnswered() const noexcept { return m_Answered; }
         Uint64 GetFailed()   const noexcept { return m_Failed; }
 
@@ -137,9 +146,10 @@ namespace Opaax
         TFunction<bool()> m_WaitUntil;
         TFunction<void()> m_AfterWait;
 
-        /** A request answered once its wait is over: who it was, and how to answer. */
+        /** A request answered once its wait is over: who it was, and how to answer (or on close). */
         AutomationRequest             m_Deferred;
         TFunction<AutomationResult()> m_DeferredAnswer;
+        TFunction<AutomationResult()> m_DeferredOnClose;
 
         TFunction<void(const AutomationResponse&)> m_Sink;
 

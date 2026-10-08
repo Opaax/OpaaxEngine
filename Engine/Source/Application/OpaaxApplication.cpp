@@ -341,9 +341,10 @@ void OpaaxApplication::RunApplication()
         Engine().PresentBackbuffer();
     }
 
-    // Its commands hold the engine: gone before it.
+    // Its commands hold the engine: gone before it. What the app closed on is answered first.
     if (m_Automation != nullptr)
     {
+        m_Automation->Close();
         SetExitCode(std::max(GetExitCode(), m_Automation->GetExitCode()));
         m_Automation.reset();
     }
