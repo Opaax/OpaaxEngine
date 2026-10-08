@@ -4,16 +4,16 @@
 
 void TestWorldEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& InRegistrar)
 {
-    // Register the game's editor extensions here (see SandboxEditorModule for live examples):
+    // The game's editor extensions (see SandboxEditorModule and Docs/Customizing.md):
     //
-    //   InRegistrar.Drawers().Register<MyComponent, MyComponentDrawer>();
-    //   InRegistrar.Panels().Register("My Panel",
-    //       [](Opaax::Editor::EditorContext& InContext) -> Opaax::UniquePtr<Opaax::Editor::IEditorPanel>
-    //       { return Opaax::MakeUnique<MyPanel>(InContext); });
-    //   InRegistrar.ResourceTypes().Register<MyResource>().SetGlyph("[R]").SetActivate(...);
-    //       (the EXTENSIONS live on MyResource itself, via OPAAX_RESOURCE_FORMAT, and are
-    //        registered by the runtime module: InRegistrar.Resources().Register<MyResource>())
-    //   InRegistrar.Menus().Register("Tools/My Tool",
-    //       [](Opaax::Editor::EditorContext& InContext) { /* act on InContext.Worlds, .Selection, ... */ });
+    //   A command, and a menu entry that runs it:
+    //     InRegistrar.Commands().Register<MyCommand>(MY_COMMAND_TAG);
+    //     InRegistrar.TitleBar().Category("Tools").AddCommand("My Tool", MY_COMMAND_TAG);
+    //   A panel (derives from IEditorPanel, built from an EditorContext&):
+    //     InRegistrar.Panels().Register<MyPanel>(Opaax::Editor::PanelDesc{ OPAAX_ID("My Panel") });
+    //   An Inspector drawer, replacing the one made from a component's OPAAX_PROPERTIES:
+    //     InRegistrar.Drawers().Register<MyComponent, MyComponentDrawer>();
+    //   A file type of the game in the Resource Browser (the runtime registers the resource itself):
+    //     InRegistrar.ResourceTypes().Register<MyResource>().SetGlyph(Opaax::OpaaxString("[R]"));
     (void)InRegistrar;
 }

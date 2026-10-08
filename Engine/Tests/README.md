@@ -1,120 +1,98 @@
-# OpaaxTests — How to write a unit test
+# Tests
 
-The engine's automated test layer. Framework: **[doctest](https://github.com/doctest/doctest) 2.4.11**,
-vendored as a single header at `Engine/Vendors/doctest/doctest.h`. Tests are pure-CPU only — no GPU, no
-window, no running game.
+Two layers:
 
----
+- **Unit tests** (`OpaaxTests`, this folder): doctest, no GPU, no window, run everywhere in seconds.
+- **Feature tests** (TestWorld, `TestWorld/Tests`): the TestWorld game plays a level per engine feature
+  and checks it through automation scripts. They draw, so they need a display.
 
-## Running the tests
+Both run in CTest; the feature tests carry the label `feature`.
 
-```bash
-./build.bat test          # builds OpaaxTests (debug-editor / Debug) + runs CTest, tail shown
+## Running
+
+```
+build.bat test                 # Windows: builds OpaaxTests, runs every CTest test
+./build.sh test                # Linux, macOS
+
+build/debug-editor/bin/Debug/OpaaxTests.exe                # unit tests, with doctest's summary
+build/debug-editor/bin/Debug/OpaaxTests.exe -tc="Shadows*" # cases by name
+build/debug-editor/bin/Debug/OpaaxTests.exe -sf="*Physics*"# cases by source file
+
+ctest --test-dir build/debug-editor -C Debug -LE feature   # unit tests only
+ctest --test-dir build/debug-editor -C Debug -L feature    # feature tests only
 ```
 
-Other ways:
+Without Visual Studio the binaries are in `build/<preset>/bin/` (no `Debug/`). CTest needs
+`-C <Config>` with Visual Studio's multi-config generator.
 
-```bash
-# Run the exe directly to see doctest's per-case summary (N cases / M assertions):
-./build/debug-editor/bin/Debug/OpaaxTests.exe
+CI runs the unit tests on Windows, Ubuntu and macOS (debug-editor and release), and the feature tests
+on Ubuntu under a virtual screen (`xvfb-run`, Mesa), keeping their answers and screenshots as an
+artifact.
 
-# Run a subset by case name or source file:
-./build/debug-editor/bin/Debug/OpaaxTests.exe -tc="*Hierarchy*"
-./build/debug-editor/bin/Debug/OpaaxTests.exe -sf="*FontKerning*"
+## Unit tests
 
-# Release config (after a release build):
-./build.bat release
-ctest --test-dir build/release -C Release --output-on-failure
-```
+`OpaaxTests` links the engine library like a game does: every engine symbol is reachable. Header-only
+editor types can be tested too (`Editor/`); editor code with a `.cpp` cannot.
 
-> The Visual Studio generator is multi-config, so CTest needs `-C <Config>` (Debug for `debug-editor`,
-> Release for `release`). `build.bat test` handles this for you.
+### Adding a suite
 
-**CI:** every push runs this whole battery on clean runners (`.github/workflows/build.yml`).
-
----
-
-## How tests reach engine code
-
-`OpaaxTests` links the **`OpaaxEngine` static library exactly like a game executable**, so every engine
-symbol is reachable: header-inline logic compiles directly into the test, out-of-line code comes from
-the library.
-
-If the logic you want to test lives in a **private** member, **do NOT friend the test or make it public.**
-Instead **extract the pure logic into a free function in a header**, have the class delegate to it, and test
-the free function directly.
-
----
-
-## Adding a new suite (3 steps)
-
-**1. Create the file** at `Engine/Tests/<Module>/<Thing>Tests.cpp`, mirroring `Engine/Source/<Module>/`.
+1. `Engine/Tests/<Module>/<Thing>Tests.cpp`, mirroring `Engine/Source/<Module>/`:
 
 ```cpp
-// Suite: <one line — what behaviour this pins>.
+// Suite: <one line: what this pins down>.
 #include <doctest.h>
 
-#include "Path/To/TheThing.h"   // engine headers after doctest
+#include "Module/Thing.h"
 
 using namespace Opaax;
 
-TEST_CASE("TheThing: does the expected thing")
+TEST_CASE("Thing: does what it says")
 {
-    CHECK(1 + 1 == 2);                          // boolean check, keeps going on failure
-    REQUIRE(SomePointer != nullptr);            // hard stop — aborts the case if it fails
-    CHECK(SomeFloat == doctest::Approx(3.14f)); // float comparison (never == on floats)
+    CHECK(Thing::Count() == 2);                    // keeps going on failure
+    REQUIRE(Thing::Find("a") != nullptr);          // stops the case on failure
+    CHECK(Thing::Ratio() == doctest::Approx(0.5f)); // floats: never ==
 }
 ```
 
-**2. Register it** by adding the path to `OPAAX_TEST_SOURCES` in `Engine/Tests/CMakeLists.txt`:
+2. Add the path to `OPAAX_TEST_SOURCES` in `Engine/Tests/CMakeLists.txt` (the list is explicit: a new
+   suite is a deliberate edit).
+3. Run it, and break the code once to see the test fail.
 
-```cmake
-set(OPAAX_TEST_SOURCES
-    Main.cpp
-    SmokeTest.cpp
-    ...
-    <Module>/<Thing>Tests.cpp   # <-- add this line
-)
+### What makes a good unit test
+
+- Name the behaviour, not the function: `"Lights: past the limit, the strongest are kept"`.
+- Test logic, not the GPU: packing, layouts, limits, parsing and decisions are pure functions; the
+  code that touches OpenGL stays thin around them. The shaders themselves are checked as text
+  (`Renderer/EngineShaderTests.cpp` ports each one and checks the constants it repeats from C++);
+  tests can read engine files from `OPAAX_TEST_ENGINE_ASSETS`.
+- Worlds without an engine: `World lWorld("Test"); Entity lEntity = lWorld.CreateEntity("A");`.
+  Behaviours, physics and audio have fixtures that build a world with its subsystems and step it by
+  hand (`World/BehaviourRuntimeTests.cpp`, `Physics/PhysicsMotionTests.cpp`, `Audio/AudioTests.cpp`).
+- Files: write under a temporary folder removed at the end (see `ScopedTempDir` in
+  `Automation/AutomationTests.cpp`).
+- A private member is not made public for a test: move the logic into a free function and test that.
+- `Main.cpp` owns `main()` and keeps the logger quiet; never add cases there.
+
+## Feature tests
+
+`TestWorld` is a game made for testing: `TestWorld/Assets/Levels/<Feature>.opaaxlevel` and its map put
+the feature on screen, and `TestWorld/Tests/<Feature>.json` plays it and checks it:
+
+```json
+[
+    { "command": "level.play", "params": { "path": "Levels/Physics.opaaxlevel" } },
+    { "command": "world.wait", "params": { "seconds": 3.0 } },
+    { "id": "crate-rests", "command": "expect.value",
+      "params": { "entity": "Crate1", "path": "Transform/Position/y", "near": -205, "tolerance": 3 } },
+    { "command": "screenshot", "params": { "path": "Physics.png" } }
+]
 ```
 
-> The list is **explicit on purpose** (no `file(GLOB)`) — a stale CMake cache silently dropping a new test
-> file is worse than one extra line here. Adding a suite is a deliberate edit.
+Every `*.json` in `TestWorld/Tests` becomes a CTest test (`TestWorld.<Feature>`); its answers
+(`<Feature>.out.json`) and screenshot go to `build/<preset>/TestWorldResults/`. A failed check's
+answer says what was expected and what was found.
 
-**3. Run** `./build.bat test` and confirm it's green.
-
----
-
-## Conventions in this codebase
-
-- **No `main()` in your suite.** `Main.cpp` owns it. The Logger is never initialized there, so engine code
-  under test can log without cluttering CTest output. Just write `TEST_CASE`s.
-- **Naming matches the engine:** `l`-prefixed locals, `In`-prefixed params, mirror the surrounding style.
-- Use the **engine aliases** (`TDynArray`, `TUnorderedMap`, ...) not raw `std::`; use **`OPAAX_ID("Name")`** for
-  string IDs.
-- **Floats:** always `doctest::Approx(expected)` (optionally `.epsilon(0.001)`), never `==`.
-- **World tests** build a headless `World` on the stack — `World lWorld; Entity lEntity = lWorld.CreateEntity("x");
-  lEntity.Add<T>();` — no engine init, no scene needed. See `World/WorldEntityTests.cpp`.
-
----
-
-## What does NOT belong here
-
-- **GPU / rendering / window** — no GL or Vulkan context exists in the test process. Renderer *logic* that is
-  pure (sort keys, kerning math, UV packing) is fine; anything that touches a device is not.
-- **Subsystem behaviour that needs a live world/loop** — e.g. `MoverSubsystem` self-heal/rejection needs a
-  physics world; the `PhysicsSubsystem` needs PIE. Unit-test the pure component/data surface here; that
-  integration belongs in a future integration-test target, not `OpaaxTests`.
-- **Asset loading from disk, manifest population** — the manifest + path resolution are global singletons.
-  Extract and test the pure decision (like `ResolveCanonicalAssetId`); leave the global lookups to integration.
-
----
-
-## Layout
-
-```
-Engine/Tests/
-  CMakeLists.txt        # OpaaxTests target + explicit source list
-  Main.cpp              # doctest main() + logger init/silence — don't add cases here
-  SmokeTest.cpp         # proves the harness + engine link
-  <Module>/*Tests.cpp   # one folder per engine module (Core/, World/, Physics/, Renderer/, ...)
-```
+To check behaviour from inside the game, write a probe: a behaviour that records what happened in its
+fields (`TestWorld/Source/TestWorld/Probes`), placed in the level and read with `expect.value`.
+Use `world.wait` (game time) rather than counting frames: machines and CI run at different speeds.
+The commands are listed in [Docs/Automation.md](../../Docs/Automation.md).
