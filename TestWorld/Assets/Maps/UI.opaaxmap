@@ -1,0 +1,85 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "ec489702a9b65ea38030dc0f24c087f0",
+            "name": "Camera",
+            "ownerMap": "UI"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Texture": "/Engine/Textures/T_Checker_128.png",
+                    "Sheet": "",
+                    "Frame": -1,
+                    "Size": {
+                        "x": 1100.0,
+                        "y": 620.0
+                    },
+                    "Color": {
+                        "x": 0.35,
+                        "y": 0.4,
+                        "z": 0.45,
+                        "w": 1.0
+                    },
+                    "Layer": "Background",
+                    "OrderInLayer": 0,
+                    "Material": "",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "2f8586a7f2cc53668feb5fd11a5ab8c4",
+            "name": "Backdrop",
+            "ownerMap": "UI"
+        },
+        {
+            "components": {
+                "UIProbe": {
+                    "Asset": "UI/Probe.opaaxui"
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "5bb6e92471905a85a53615b19702f684",
+            "name": "Hud",
+            "ownerMap": "UI"
+        }
+    ],
+    "mapId": "UI",
+    "version": 4
+}

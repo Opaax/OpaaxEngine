@@ -1,0 +1,127 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/UI.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.2
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "UIProbe/bMounted",
+            "equals": true
+        },
+        "id": "mounted"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "UIProbe/Widgets",
+            "equals": 12
+        },
+        "id": "every-widget"
+    },
+    {
+        "id": "listed",
+        "command": "ui.list",
+        "params": {
+            "name": "ClickButton"
+        }
+    },
+    {
+        "id": "click",
+        "command": "ui.click",
+        "params": {
+            "widget": "ClickButton"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.2
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "UIProbe/Clicks",
+            "equals": 1
+        },
+        "id": "clicked"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "UIProbe/GameClicks",
+            "equals": 0
+        },
+        "id": "ui-kept-the-click"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "UIProbe/CounterText",
+            "equals": "Clicks: 1"
+        },
+        "id": "binding"
+    },
+    {
+        "id": "point-away",
+        "command": "input.mouse",
+        "params": {
+            "x": 40,
+            "y": 680
+        }
+    },
+    {
+        "id": "click-away",
+        "command": "input.key",
+        "params": {
+            "key": "Mouse_Left",
+            "action": "tap"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.2
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "UIProbe/Clicks",
+            "equals": 1
+        },
+        "id": "button-not-clicked"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "UIProbe/GameClicks",
+            "equals": 1
+        },
+        "id": "game-clicked"
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "UI.png"
+        }
+    }
+]

@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/UI.opaaxmap"
+    ],
+    "name": "UI",
+    "persistentMap": "Maps/UI.opaaxmap",
+    "version": 1
+}

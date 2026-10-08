@@ -1,0 +1,11 @@
+{
+    "Mappings": [
+        {
+            "Action": "Input/Click.opaaxaction",
+            "Key": "Mouse_Left",
+            "Modifiers": [],
+            "bConsume": true
+        }
+    ],
+    "Priority": 0
+}

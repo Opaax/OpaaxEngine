@@ -9,6 +9,7 @@
 #include "Probes/LifecycleProbes.h"
 #include "Probes/PhysicsProbes.h"
 #include "Probes/SpawnProbe.h"
+#include "Probes/UIProbes.h"
 
 namespace TestWorld
 {
@@ -34,6 +35,7 @@ namespace TestWorld
     OPAAX_REGISTER_BEHAVIOUR(RayProbe);
     OPAAX_REGISTER_BEHAVIOUR(LedgerProbe);
     OPAAX_REGISTER_BEHAVIOUR(TravelProbe);
+    OPAAX_REGISTER_BEHAVIOUR(UIProbe);
 
     OPAAX_REGISTER_GAME_INSTANCE_SUBSYSTEM(ProbeLedger);
 }
