@@ -1,0 +1,199 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Prefabs.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.5
+        }
+    },
+    {
+        "command": "expect.count",
+        "params": {
+            "component": "PrefabInstance",
+            "equals": 10
+        },
+        "id": "instances-marked"
+    },
+    {
+        "command": "expect.count",
+        "params": {
+            "name": "Crate",
+            "equals": 1
+        },
+        "id": "plain-placement"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Crate",
+            "path": "Quad/Size/x",
+            "equals": 40
+        },
+        "id": "template-value"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "BigCrate",
+            "path": "Quad/Size/x",
+            "equals": 70
+        },
+        "id": "overridden-value"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "BigCrate",
+            "path": "Transform/Position/x",
+            "near": -250,
+            "tolerance": 0.01
+        },
+        "id": "overridden-position"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Turret",
+            "path": "Transform/Position/x",
+            "near": 100,
+            "tolerance": 0.01
+        },
+        "id": "behaviour-override-x"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Turret",
+            "path": "Transform/Position/y",
+            "near": 50,
+            "tolerance": 0.01
+        },
+        "id": "behaviour-override-y"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Barrel",
+            "path": "PoseProbe/WorldX",
+            "near": 135,
+            "tolerance": 0.01
+        },
+        "id": "child-follows-x"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Barrel",
+            "path": "PoseProbe/WorldY",
+            "near": 50,
+            "tolerance": 0.01
+        },
+        "id": "child-follows-y"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Barrel",
+            "path": "PoseProbe/ParentName",
+            "equals": "Turret"
+        },
+        "id": "child-parent"
+    },
+    {
+        "id": "removed-kept-root",
+        "command": "expect.entity",
+        "params": {
+            "entity": "LoneTurret"
+        }
+    },
+    {
+        "command": "expect.count",
+        "params": {
+            "name": "Barrel",
+            "equals": 1
+        },
+        "id": "removed-entity"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "PlacedRedCrate",
+            "path": "Quad/Color/x",
+            "near": 0.9,
+            "tolerance": 0.01
+        },
+        "id": "variant-override"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "PlacedRedCrate",
+            "path": "Transform/Position/x",
+            "near": -150,
+            "tolerance": 0.01
+        },
+        "id": "variant-placed"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "RedCrate",
+            "path": "Quad/Color/x",
+            "near": 0.9,
+            "tolerance": 0.01
+        },
+        "id": "variant-spawned"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "StackBottom",
+            "path": "Transform/Position/y",
+            "near": 25,
+            "tolerance": 0.01
+        },
+        "id": "nested-local"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "StackTop",
+            "path": "PoseProbe/ParentName",
+            "equals": "Stack"
+        },
+        "id": "nested-parent"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "StackTop",
+            "path": "PoseProbe/WorldX",
+            "near": 300,
+            "tolerance": 0.01
+        },
+        "id": "nested-world-x"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "StackTop",
+            "path": "PoseProbe/WorldY",
+            "near": -80,
+            "tolerance": 0.01
+        },
+        "id": "nested-world-y"
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "Prefabs.png"
+        }
+    }
+]

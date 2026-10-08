@@ -1,0 +1,25 @@
+{
+    "entities": [],
+    "version": 3,
+    "prefabInstances": [
+        {
+            "instanceId": "bb3fa7f3c5695470b11c57f8b467d36a",
+            "overrides": {
+                "8b1a221fb827565b8bb32f96fe70968e": {
+                    "name": "RedCrate",
+                    "components": {
+                        "Quad": {
+                            "Color": {
+                                "x": 0.9,
+                                "y": 0.2,
+                                "z": 0.2,
+                                "w": 1.0
+                            }
+                        }
+                    }
+                }
+            },
+            "prefab": "Prefabs/Crate.opaaxprefab"
+        }
+    ]
+}

@@ -1,0 +1,74 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Quad": {
+                    "Size": {
+                        "x": 70.0,
+                        "y": 10.0
+                    },
+                    "Color": {
+                        "x": 0.45,
+                        "y": 0.35,
+                        "z": 0.2,
+                        "w": 1.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "a456b93d3e1952458826c3b4f60fd0af",
+            "name": "Stack",
+            "ownerMap": ""
+        }
+    ],
+    "version": 3,
+    "prefabInstances": [
+        {
+            "instanceId": "28561d6b7d985ba4a1d2766d228e06d6",
+            "overrides": {
+                "8b1a221fb827565b8bb32f96fe70968e": {
+                    "name": "StackTop",
+                    "parent": "a456b93d3e1952458826c3b4f60fd0af",
+                    "components": {
+                        "Transform": {
+                            "Position": {
+                                "x": 0.0,
+                                "y": 70.0
+                            }
+                        },
+                        "PoseProbe": {}
+                    }
+                }
+            },
+            "prefab": "Prefabs/Crate.opaaxprefab"
+        },
+        {
+            "instanceId": "2d25adab23ee5e068b004efa67bbc69c",
+            "overrides": {
+                "8b1a221fb827565b8bb32f96fe70968e": {
+                    "name": "StackBottom",
+                    "parent": "a456b93d3e1952458826c3b4f60fd0af",
+                    "components": {
+                        "Transform": {
+                            "Position": {
+                                "x": 0.0,
+                                "y": 25.0
+                            }
+                        }
+                    }
+                }
+            },
+            "prefab": "Prefabs/Crate.opaaxprefab"
+        }
+    ]
+}
