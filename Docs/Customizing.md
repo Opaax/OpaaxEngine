@@ -160,7 +160,8 @@ void MyGameApp::OnAutomationStarted(Opaax::AutomationRunner& InRunner)
 }
 ```
 
-See [Automation.md](Automation.md) for the protocol.
+See [Automation.md](Automation.md) for the protocol, and [AssetFormats.md](AssetFormats.md) for the
+asset files a tool or an agent can write directly.
 
 ## Rules the engine follows
 
