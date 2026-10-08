@@ -21,6 +21,11 @@ if(MSVC)
     # /DEBUG turns off /OPT:REF and /OPT:ICF by default; they are turned back on.
     add_compile_options("$<$<CONFIG:Release>:/Zi>")
     add_link_options("$<$<CONFIG:Release>:/DEBUG;/OPT:REF;/OPT:ICF>")
+
+    # No incremental links: executables link the engine and game modules whole, and an incremental
+    # link can keep an old list of static initializers, so a type a header registers goes missing
+    # until the next full link.
+    add_link_options("$<$<CONFIG:Debug>:/INCREMENTAL:NO>")
 endif()
 
 # Threads (job system, audio) for every platform.
