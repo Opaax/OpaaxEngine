@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/Movement.opaaxmap"
+    ],
+    "name": "Movement",
+    "persistentMap": "Maps/Movement.opaaxmap",
+    "version": 1
+}

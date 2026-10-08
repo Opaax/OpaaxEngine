@@ -1,0 +1,95 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Movement.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 1.9
+        }
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "Movement.png"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 1.5
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Walker",
+            "path": "WalkerProbe/bRested",
+            "equals": true
+        },
+        "id": "landed"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Walker",
+            "path": "WalkerProbe/RestY",
+            "near": -130,
+            "tolerance": 2
+        },
+        "id": "rests-on-floor"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Walker",
+            "path": "WalkerProbe/PeakSpeed",
+            "near": 420,
+            "tolerance": 1
+        },
+        "id": "max-speed"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Walker",
+            "path": "WalkerProbe/StoppedX",
+            "near": 255,
+            "tolerance": 2
+        },
+        "id": "blocked-by-wall"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Walker",
+            "path": "WalkerProbe/JumpHeight",
+            "near": 190,
+            "tolerance": 8
+        },
+        "id": "jump-height"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Walker",
+            "path": "Mover/ModeName",
+            "equals": "Fly"
+        },
+        "id": "switched-mode"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Walker",
+            "path": "WalkerProbe/FlyRise",
+            "greater": 200
+        },
+        "id": "flies"
+    }
+]
