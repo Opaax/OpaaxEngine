@@ -3,7 +3,8 @@
         {
             "components": {
                 "Camera": {
-                    "OrthoSize": 300.0
+                    "OrthoSize": 300.0,
+                    "Priority": 0
                 },
                 "Transform": {
                     "Position": {
@@ -23,19 +24,23 @@
         },
         {
             "components": {
+                "BubbleProbe": {
+                    "Hits": 0,
+                    "bSend": false,
+                    "bStop": false
+                },
                 "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.30000001192092896,
+                        "y": 0.5,
+                        "z": 0.8999999761581421
+                    },
                     "Size": {
                         "x": 80.0,
                         "y": 12.0
-                    },
-                    "Color": {
-                        "x": 0.3,
-                        "y": 0.5,
-                        "z": 0.9,
-                        "w": 1.0
                     }
                 },
-                "BubbleProbe": {},
                 "Transform": {
                     "Position": {
                         "x": -200.0,
@@ -54,25 +59,31 @@
         },
         {
             "components": {
-                "Quad": {
-                    "Size": {
-                        "x": 14.0,
-                        "y": 14.0
+                "MoveProbe": {
+                    "Delay": 0.20000000298023224,
+                    "To": {
+                        "x": 0.0,
+                        "y": -100.0
                     },
-                    "Color": {
-                        "x": 0.4,
-                        "y": 0.8,
-                        "z": 0.5,
-                        "w": 1.0
-                    }
+                    "bMoved": false,
+                    "bWorldSpace": false
                 },
-                "BubbleProbe": {
-                    "bStop": true
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.6000000238418579,
+                        "y": 0.44999998807907104,
+                        "z": 0.25
+                    },
+                    "Size": {
+                        "x": 120.0,
+                        "y": 30.0
+                    }
                 },
                 "Transform": {
                     "Position": {
-                        "x": 50.0,
-                        "y": 0.0
+                        "x": 200.0,
+                        "y": -100.0
                     },
                     "Rotation": 0.0,
                     "Scale": {
@@ -81,29 +92,34 @@
                     }
                 }
             },
-            "guid": "f8f76b96075e5e13a742d6dbe9791883",
-            "name": "Hand",
-            "ownerMap": "Hierarchy",
-            "parent": "136eb98516295fbd830ca5d3a89fd2b9"
+            "guid": "4e8666aa71895038b2f53e8ce60f5cee",
+            "name": "Cart",
+            "ownerMap": "Hierarchy"
         },
         {
             "components": {
+                "BubbleProbe": {
+                    "Hits": 0,
+                    "bSend": true,
+                    "bStop": false
+                },
+                "PoseProbe": {
+                    "ParentName": "",
+                    "WorldX": 0.0,
+                    "WorldY": 0.0
+                },
                 "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.949999988079071,
+                        "y": 0.8500000238418579,
+                        "z": 0.30000001192092896
+                    },
                     "Size": {
                         "x": 8.0,
                         "y": 8.0
-                    },
-                    "Color": {
-                        "x": 0.95,
-                        "y": 0.85,
-                        "z": 0.3,
-                        "w": 1.0
                     }
                 },
-                "BubbleProbe": {
-                    "bSend": true
-                },
-                "PoseProbe": {},
                 "Transform": {
                     "Position": {
                         "x": 25.0,
@@ -123,25 +139,195 @@
         },
         {
             "components": {
+                "PoseProbe": {
+                    "ParentName": "",
+                    "WorldX": 0.0,
+                    "WorldY": 0.0
+                },
                 "Quad": {
-                    "Size": {
-                        "x": 10.0,
-                        "y": 10.0
-                    },
                     "Color": {
-                        "x": 0.9,
-                        "y": 0.4,
-                        "z": 0.8,
-                        "w": 1.0
+                        "w": 1.0,
+                        "x": 0.8999999761581421,
+                        "y": 0.30000001192092896,
+                        "z": 0.30000001192092896
+                    },
+                    "Size": {
+                        "x": 30.0,
+                        "y": 30.0
                     }
                 },
+                "ReparentProbe": {
+                    "LocalX": 0.0,
+                    "LocalY": 0.0,
+                    "NewParent": "Cart",
+                    "ParentName": "",
+                    "bHasParent": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 300.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "75e299a0994f5e76818973050aa5db01",
+            "name": "Rider",
+            "ownerMap": "Hierarchy"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.5,
+                        "y": 0.5,
+                        "z": 0.550000011920929
+                    },
+                    "Size": {
+                        "x": 60.0,
+                        "y": 20.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -300.0,
+                        "y": -200.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "87051b89b5c65334a67ff629a83124d3",
+            "name": "Base",
+            "ownerMap": "Hierarchy"
+        },
+        {
+            "components": {
+                "EndProbe": {},
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 0.6000000238418579,
+                        "z": 0.6000000238418579
+                    },
+                    "Size": {
+                        "x": 20.0,
+                        "y": 20.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 40.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "a7cb77bc63255ff4b0d0955d4d0393eb",
+            "name": "DoomedB",
+            "ownerMap": "Hierarchy",
+            "parent": "c25bac5ce179599dabd6e4ea722be574"
+        },
+        {
+            "components": {
+                "EndProbe": {},
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 0.6000000238418579,
+                        "z": 0.6000000238418579
+                    },
+                    "Size": {
+                        "x": 20.0,
+                        "y": 20.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -40.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "b1528a2749bf5430ac2c4a370666bfcd",
+            "name": "DoomedA",
+            "ownerMap": "Hierarchy",
+            "parent": "c25bac5ce179599dabd6e4ea722be574"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.8999999761581421,
+                        "y": 0.20000000298023224,
+                        "z": 0.20000000298023224
+                    },
+                    "Size": {
+                        "x": 60.0,
+                        "y": 60.0
+                    }
+                },
+                "SelfDestructProbe": {
+                    "Seconds": 0.30000001192092896
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 300.0,
+                        "y": 200.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "c25bac5ce179599dabd6e4ea722be574",
+            "name": "Doomed",
+            "ownerMap": "Hierarchy"
+        },
+        {
+            "components": {
                 "MoveProbe": {
                     "Delay": 0.0,
                     "To": {
                         "x": 0.0,
                         "y": -200.0
                     },
+                    "bMoved": false,
                     "bWorldSpace": true
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.8999999761581421,
+                        "y": 0.4000000059604645,
+                        "z": 0.800000011920929
+                    },
+                    "Size": {
+                        "x": 10.0,
+                        "y": 10.0
+                    }
                 },
                 "Transform": {
                     "Position": {
@@ -163,120 +349,23 @@
         {
             "components": {
                 "Quad": {
-                    "Size": {
-                        "x": 120.0,
-                        "y": 30.0
-                    },
                     "Color": {
-                        "x": 0.6,
-                        "y": 0.45,
-                        "z": 0.25,
-                        "w": 1.0
-                    }
-                },
-                "MoveProbe": {
-                    "Delay": 0.2,
-                    "To": {
-                        "x": 0.0,
-                        "y": -100.0
-                    }
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 200.0,
-                        "y": -100.0
+                        "w": 1.0,
+                        "x": 0.30000001192092896,
+                        "y": 0.800000011920929,
+                        "z": 0.8999999761581421
                     },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "4e8666aa71895038b2f53e8ce60f5cee",
-            "name": "Cart",
-            "ownerMap": "Hierarchy"
-        },
-        {
-            "components": {
-                "Quad": {
-                    "Size": {
-                        "x": 30.0,
-                        "y": 30.0
-                    },
-                    "Color": {
-                        "x": 0.9,
-                        "y": 0.3,
-                        "z": 0.3,
-                        "w": 1.0
-                    }
-                },
-                "ReparentProbe": {
-                    "NewParent": "Cart"
-                },
-                "PoseProbe": {},
-                "Transform": {
-                    "Position": {
-                        "x": 300.0,
-                        "y": 0.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "75e299a0994f5e76818973050aa5db01",
-            "name": "Rider",
-            "ownerMap": "Hierarchy"
-        },
-        {
-            "components": {
-                "Quad": {
-                    "Size": {
-                        "x": 60.0,
-                        "y": 20.0
-                    },
-                    "Color": {
-                        "x": 0.5,
-                        "y": 0.5,
-                        "z": 0.55,
-                        "w": 1.0
-                    }
-                },
-                "Transform": {
-                    "Position": {
-                        "x": -300.0,
-                        "y": -200.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "87051b89b5c65334a67ff629a83124d3",
-            "name": "Base",
-            "ownerMap": "Hierarchy"
-        },
-        {
-            "components": {
-                "Quad": {
                     "Size": {
                         "x": 20.0,
                         "y": 20.0
-                    },
-                    "Color": {
-                        "x": 0.3,
-                        "y": 0.8,
-                        "z": 0.9,
-                        "w": 1.0
                     }
                 },
                 "ReparentProbe": {
-                    "NewParent": ""
+                    "LocalX": 0.0,
+                    "LocalY": 0.0,
+                    "NewParent": "",
+                    "ParentName": "",
+                    "bHasParent": false
                 },
                 "Transform": {
                     "Position": {
@@ -297,104 +386,6 @@
         },
         {
             "components": {
-                "Quad": {
-                    "Size": {
-                        "x": 60.0,
-                        "y": 60.0
-                    },
-                    "Color": {
-                        "x": 0.9,
-                        "y": 0.2,
-                        "z": 0.2,
-                        "w": 1.0
-                    }
-                },
-                "SelfDestructProbe": {
-                    "Seconds": 0.3
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 300.0,
-                        "y": 200.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "c25bac5ce179599dabd6e4ea722be574",
-            "name": "Doomed",
-            "ownerMap": "Hierarchy"
-        },
-        {
-            "components": {
-                "Quad": {
-                    "Size": {
-                        "x": 20.0,
-                        "y": 20.0
-                    },
-                    "Color": {
-                        "x": 1.0,
-                        "y": 0.6,
-                        "z": 0.6,
-                        "w": 1.0
-                    }
-                },
-                "EndProbe": {},
-                "Transform": {
-                    "Position": {
-                        "x": -40.0,
-                        "y": 0.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "b1528a2749bf5430ac2c4a370666bfcd",
-            "name": "DoomedA",
-            "ownerMap": "Hierarchy",
-            "parent": "c25bac5ce179599dabd6e4ea722be574"
-        },
-        {
-            "components": {
-                "Quad": {
-                    "Size": {
-                        "x": 20.0,
-                        "y": 20.0
-                    },
-                    "Color": {
-                        "x": 1.0,
-                        "y": 0.6,
-                        "z": 0.6,
-                        "w": 1.0
-                    }
-                },
-                "EndProbe": {},
-                "Transform": {
-                    "Position": {
-                        "x": 40.0,
-                        "y": 0.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "a7cb77bc63255ff4b0d0955d4d0393eb",
-            "name": "DoomedB",
-            "ownerMap": "Hierarchy",
-            "parent": "c25bac5ce179599dabd6e4ea722be574"
-        },
-        {
-            "components": {
-                "WitnessProbe": {},
                 "Transform": {
                     "Position": {
                         "x": 0.0,
@@ -405,11 +396,53 @@
                         "x": 1.0,
                         "y": 1.0
                     }
+                },
+                "WitnessProbe": {
+                    "Ended": 0,
+                    "LastLeftY": 0.0,
+                    "LeftBounds": 0,
+                    "WorldEndings": 0
                 }
             },
             "guid": "f6448d2da6015512be7845585fbde11c",
             "name": "Witness",
             "ownerMap": "Hierarchy"
+        },
+        {
+            "components": {
+                "BubbleProbe": {
+                    "Hits": 0,
+                    "bSend": false,
+                    "bStop": true
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.4000000059604645,
+                        "y": 0.800000011920929,
+                        "z": 0.5
+                    },
+                    "Size": {
+                        "x": 14.0,
+                        "y": 14.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 50.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "f8f76b96075e5e13a742d6dbe9791883",
+            "name": "Hand",
+            "ownerMap": "Hierarchy",
+            "parent": "136eb98516295fbd830ca5d3a89fd2b9"
         }
     ],
     "mapId": "Hierarchy",

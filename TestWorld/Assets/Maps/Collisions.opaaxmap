@@ -2,9 +2,6 @@
     "entities": [
         {
             "components": {
-                "Camera": {
-                    "OrthoSize": 300.0
-                },
                 "Transform": {
                     "Position": {
                         "x": 0.0,
@@ -15,644 +12,55 @@
                         "x": 1.0,
                         "y": 1.0
                     }
+                },
+                "WitnessProbe": {
+                    "Ended": 0,
+                    "LastLeftY": 0.0,
+                    "LeftBounds": 0,
+                    "WorldEndings": 0
                 }
             },
-            "guid": "fa4be9a45b8b51e38a9845120635f014",
-            "name": "Camera",
+            "guid": "2a9e4525543b58aa8937bce618dca4be",
+            "name": "Witness",
             "ownerMap": "Collisions"
         },
         {
             "components": {
-                "Quad": {
-                    "Size": {
-                        "x": 1000.0,
-                        "y": 40.0
-                    },
-                    "Color": {
-                        "x": 0.35,
-                        "y": 0.3,
-                        "z": 0.25,
-                        "w": 1.0
-                    }
-                },
-                "Rigidbody": {
-                    "Type": "Static",
-                    "GravityScale": 1.0,
-                    "LinearDamping": 0.0,
-                    "AngularDamping": 0.0,
-                    "bFixedRotation": false
-                },
                 "Collider": {
-                    "Shape": "Box",
-                    "Size": {
-                        "x": 1000.0,
-                        "y": 40.0
-                    },
-                    "Radius": 20.0,
-                    "Offset": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
+                    "Channel": "WorldStatic",
                     "Density": 1.0,
-                    "Friction": 0.6,
-                    "Restitution": 0.0,
+                    "Friction": 0.6000000238418579,
                     "Mode": "Solid",
-                    "Channel": "WorldStatic"
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 0.0,
-                        "y": -250.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "b65c03d38ae15f35b6d7dfa972bf1463",
-            "name": "Ground",
-            "ownerMap": "Collisions"
-        },
-        {
-            "components": {
-                "Quad": {
-                    "Size": {
-                        "x": 40.0,
-                        "y": 40.0
-                    },
-                    "Color": {
-                        "x": 0.6,
-                        "y": 0.45,
-                        "z": 0.25,
-                        "w": 1.0
-                    }
-                },
-                "Rigidbody": {
-                    "Type": "Dynamic",
-                    "GravityScale": 1.0,
-                    "LinearDamping": 0.0,
-                    "AngularDamping": 0.0,
-                    "bFixedRotation": false
-                },
-                "Collider": {
-                    "Shape": "Box",
-                    "Size": {
-                        "x": 40.0,
-                        "y": 40.0
-                    },
-                    "Radius": 20.0,
                     "Offset": {
                         "x": 0.0,
                         "y": 0.0
-                    },
-                    "Density": 1.0,
-                    "Friction": 0.6,
-                    "Restitution": 0.0,
-                    "Mode": "Solid",
-                    "Channel": "WorldDynamic"
-                },
-                "ContactProbe": {},
-                "Transform": {
-                    "Position": {
-                        "x": -400.0,
-                        "y": 0.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "549132770f9758dbab4932ae85214294",
-            "name": "Dropper",
-            "ownerMap": "Collisions"
-        },
-        {
-            "components": {
-                "Sprite": {
-                    "Texture": "Textures/Circle.png",
-                    "Sheet": "",
-                    "Frame": -1,
-                    "Size": {
-                        "x": 40.0,
-                        "y": 40.0
-                    },
-                    "Color": {
-                        "x": 0.3,
-                        "y": 0.7,
-                        "z": 1.0,
-                        "w": 1.0
-                    },
-                    "Layer": "Default",
-                    "OrderInLayer": 0,
-                    "Material": "",
-                    "bVisible": true
-                },
-                "Rigidbody": {
-                    "Type": "Dynamic",
-                    "GravityScale": 1.0,
-                    "LinearDamping": 0.0,
-                    "AngularDamping": 0.0,
-                    "bFixedRotation": false
-                },
-                "Collider": {
-                    "Shape": "Circle",
-                    "Size": {
-                        "x": 40.0,
-                        "y": 40.0
-                    },
-                    "Radius": 20.0,
-                    "Offset": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "Density": 1.0,
-                    "Friction": 0.6,
-                    "Restitution": 0.9,
-                    "Mode": "Solid",
-                    "Channel": "WorldDynamic"
-                },
-                "ContactProbe": {},
-                "Transform": {
-                    "Position": {
-                        "x": -300.0,
-                        "y": 100.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "5ed5b26ccb5553ab966eeed33803a4a4",
-            "name": "Bouncer",
-            "ownerMap": "Collisions"
-        },
-        {
-            "components": {
-                "Quad": {
-                    "Size": {
-                        "x": 120.0,
-                        "y": 60.0
-                    },
-                    "Color": {
-                        "x": 0.3,
-                        "y": 0.9,
-                        "z": 0.4,
-                        "w": 0.35
-                    }
-                },
-                "Rigidbody": {
-                    "Type": "Static",
-                    "GravityScale": 1.0,
-                    "LinearDamping": 0.0,
-                    "AngularDamping": 0.0,
-                    "bFixedRotation": false
-                },
-                "Collider": {
-                    "Shape": "Box",
-                    "Size": {
-                        "x": 120.0,
-                        "y": 60.0
-                    },
-                    "Radius": 30.0,
-                    "Offset": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "Density": 1.0,
-                    "Friction": 0.6,
-                    "Restitution": 0.0,
-                    "Mode": "Overlap",
-                    "Channel": "Trigger"
-                },
-                "ContactProbe": {},
-                "Transform": {
-                    "Position": {
-                        "x": -150.0,
-                        "y": -100.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "c7dd90515d2b5e68b84e6109aa013586",
-            "name": "Zone",
-            "ownerMap": "Collisions"
-        },
-        {
-            "components": {
-                "Quad": {
-                    "Size": {
-                        "x": 30.0,
-                        "y": 30.0
-                    },
-                    "Color": {
-                        "x": 0.9,
-                        "y": 0.8,
-                        "z": 0.3,
-                        "w": 1.0
-                    }
-                },
-                "Rigidbody": {
-                    "Type": "Dynamic",
-                    "GravityScale": 1.0,
-                    "LinearDamping": 0.0,
-                    "AngularDamping": 0.0,
-                    "bFixedRotation": false
-                },
-                "Collider": {
-                    "Shape": "Box",
-                    "Size": {
-                        "x": 30.0,
-                        "y": 30.0
-                    },
-                    "Radius": 15.0,
-                    "Offset": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "Density": 1.0,
-                    "Friction": 0.6,
-                    "Restitution": 0.0,
-                    "Mode": "Solid",
-                    "Channel": "WorldDynamic"
-                },
-                "ContactProbe": {},
-                "Transform": {
-                    "Position": {
-                        "x": -150.0,
-                        "y": 100.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "5f387338517f5795bc777fa0c22e4eab",
-            "name": "Visitor",
-            "ownerMap": "Collisions"
-        },
-        {
-            "components": {
-                "Quad": {
-                    "Size": {
-                        "x": 40.0,
-                        "y": 40.0
-                    },
-                    "Color": {
-                        "x": 0.9,
-                        "y": 0.3,
-                        "z": 0.3,
-                        "w": 1.0
-                    }
-                },
-                "Rigidbody": {
-                    "Type": "Dynamic",
-                    "GravityScale": 1.0,
-                    "LinearDamping": 0.0,
-                    "AngularDamping": 0.0,
-                    "bFixedRotation": false
-                },
-                "Collider": {
-                    "Shape": "Box",
-                    "Size": {
-                        "x": 40.0,
-                        "y": 40.0
-                    },
-                    "Radius": 20.0,
-                    "Offset": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "Density": 1.0,
-                    "Friction": 0.6,
-                    "Restitution": 0.0,
-                    "Mode": "Solid",
-                    "Channel": "WorldDynamic"
-                },
-                "ForceProbe": {
-                    "Acceleration": {
-                        "x": 1500.0,
-                        "y": 0.0
-                    },
-                    "Seconds": 0.2
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 0.0,
-                        "y": -210.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "7f9ef3fd1e815a2bb27512d42c82e0d0",
-            "name": "Pusher",
-            "ownerMap": "Collisions"
-        },
-        {
-            "components": {
-                "Quad": {
-                    "Size": {
-                        "x": 30.0,
-                        "y": 30.0
-                    },
-                    "Color": {
-                        "x": 0.9,
-                        "y": 0.5,
-                        "z": 0.2,
-                        "w": 1.0
-                    }
-                },
-                "Rigidbody": {
-                    "Type": "Dynamic",
-                    "GravityScale": 1.0,
-                    "LinearDamping": 0.0,
-                    "AngularDamping": 0.0,
-                    "bFixedRotation": false
-                },
-                "Collider": {
-                    "Shape": "Box",
-                    "Size": {
-                        "x": 30.0,
-                        "y": 30.0
-                    },
-                    "Radius": 15.0,
-                    "Offset": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "Density": 1.0,
-                    "Friction": 0.6,
-                    "Restitution": 0.0,
-                    "Mode": "Solid",
-                    "Channel": "WorldDynamic"
-                },
-                "ImpulseProbe": {
-                    "Speed": {
-                        "x": 0.0,
-                        "y": 400.0
-                    },
-                    "AngularImpulse": 200000.0
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 150.0,
-                        "y": -215.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "a6654d889bdb5478a5fcb4948c6dbf69",
-            "name": "Kicked",
-            "ownerMap": "Collisions"
-        },
-        {
-            "components": {
-                "Quad": {
-                    "Size": {
-                        "x": 30.0,
-                        "y": 30.0
-                    },
-                    "Color": {
-                        "x": 0.6,
-                        "y": 0.4,
-                        "z": 0.9,
-                        "w": 1.0
-                    }
-                },
-                "Rigidbody": {
-                    "Type": "Dynamic",
-                    "GravityScale": 0.0,
-                    "LinearDamping": 0.0,
-                    "AngularDamping": 0.0,
-                    "bFixedRotation": false
-                },
-                "Collider": {
-                    "Shape": "Box",
-                    "Size": {
-                        "x": 30.0,
-                        "y": 30.0
-                    },
-                    "Radius": 15.0,
-                    "Offset": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "Density": 1.0,
-                    "Friction": 0.6,
-                    "Restitution": 0.0,
-                    "Mode": "Solid",
-                    "Channel": "WorldDynamic"
-                },
-                "SpinProbe": {
-                    "DegreesPerSecond": 360.0,
-                    "SampleAfter": 0.25
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 250.0,
-                        "y": 150.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "71621c26f06d5f8caf6cc0252a1d0b35",
-            "name": "Spinner",
-            "ownerMap": "Collisions"
-        },
-        {
-            "components": {
-                "Quad": {
-                    "Size": {
-                        "x": 30.0,
-                        "y": 30.0
-                    },
-                    "Color": {
-                        "x": 0.8,
-                        "y": 0.4,
-                        "z": 0.9,
-                        "w": 1.0
-                    }
-                },
-                "Rigidbody": {
-                    "Type": "Dynamic",
-                    "GravityScale": 0.0,
-                    "LinearDamping": 0.0,
-                    "AngularDamping": 0.0,
-                    "bFixedRotation": false
-                },
-                "Collider": {
-                    "Shape": "Box",
-                    "Size": {
-                        "x": 30.0,
-                        "y": 30.0
-                    },
-                    "Radius": 15.0,
-                    "Offset": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "Density": 1.0,
-                    "Friction": 0.6,
-                    "Restitution": 0.0,
-                    "Mode": "Solid",
-                    "Channel": "WorldDynamic"
-                },
-                "SpinProbe": {
-                    "Torque": 2000000.0,
-                    "SampleAfter": 0.25
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 350.0,
-                        "y": 150.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "fde31358deba5d78a641d8897c240da0",
-            "name": "Torqued",
-            "ownerMap": "Collisions"
-        },
-        {
-            "components": {
-                "Quad": {
-                    "Size": {
-                        "x": 80.0,
-                        "y": 20.0
-                    },
-                    "Color": {
-                        "x": 0.5,
-                        "y": 0.5,
-                        "z": 0.55,
-                        "w": 1.0
-                    }
-                },
-                "Rigidbody": {
-                    "Type": "Static",
-                    "GravityScale": 1.0,
-                    "LinearDamping": 0.0,
-                    "AngularDamping": 0.0,
-                    "bFixedRotation": false
-                },
-                "Collider": {
-                    "Shape": "Box",
-                    "Size": {
-                        "x": 80.0,
-                        "y": 20.0
-                    },
-                    "Radius": 10.0,
-                    "Offset": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "Density": 1.0,
-                    "Friction": 0.6,
-                    "Restitution": 0.0,
-                    "Mode": "Solid",
-                    "Channel": "WorldStatic"
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 450.0,
-                        "y": 0.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "a69568bea05756e6a07aa1ffa6d1c11a",
-            "name": "Shelf",
-            "ownerMap": "Collisions"
-        },
-        {
-            "components": {
-                "RayProbe": {
-                    "Distance": 1000.0,
-                    "Reach": 60.0
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 450.0,
-                        "y": 30.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "e74d5ac3641e5101ac563e1654be6569",
-            "name": "Eye",
-            "ownerMap": "Collisions"
-        },
-        {
-            "components": {
-                "Quad": {
-                    "Size": {
-                        "x": 60.0,
-                        "y": 10.0
-                    },
-                    "Color": {
-                        "x": 0.5,
-                        "y": 0.5,
-                        "z": 0.55,
-                        "w": 1.0
-                    }
-                },
-                "Rigidbody": {
-                    "Type": "Static",
-                    "GravityScale": 1.0,
-                    "LinearDamping": 0.0,
-                    "AngularDamping": 0.0,
-                    "bFixedRotation": false
-                },
-                "Collider": {
-                    "Shape": "Box",
-                    "Size": {
-                        "x": 60.0,
-                        "y": 10.0
                     },
                     "Radius": 5.0,
-                    "Offset": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "Density": 1.0,
-                    "Friction": 0.6,
                     "Restitution": 0.0,
-                    "Mode": "Solid",
-                    "Channel": "WorldStatic"
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 60.0,
+                        "y": 10.0
+                    }
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.5,
+                        "y": 0.5,
+                        "z": 0.550000011920929
+                    },
+                    "Size": {
+                        "x": 60.0,
+                        "y": 10.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Static",
+                    "bFixedRotation": false
                 },
                 "Transform": {
                     "Position": {
@@ -672,8 +80,208 @@
         },
         {
             "components": {
+                "Collider": {
+                    "Channel": "WorldDynamic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 20.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    }
+                },
+                "ContactProbe": {
+                    "CollisionsBegan": 0,
+                    "CollisionsEnded": 0,
+                    "LastOther": "",
+                    "SensedBegan": 0,
+                    "SensedEnded": 0,
+                    "VisitsBegan": 0,
+                    "VisitsEnded": 0
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.6000000238418579,
+                        "y": 0.44999998807907104,
+                        "z": 0.25
+                    },
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Dynamic",
+                    "bFixedRotation": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -400.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "549132770f9758dbab4932ae85214294",
+            "name": "Dropper",
+            "ownerMap": "Collisions"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldDynamic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 20.0,
+                    "Restitution": 0.8999999761581421,
+                    "Shape": "Circle",
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    }
+                },
+                "ContactProbe": {
+                    "CollisionsBegan": 0,
+                    "CollisionsEnded": 0,
+                    "LastOther": "",
+                    "SensedBegan": 0,
+                    "SensedEnded": 0,
+                    "VisitsBegan": 0,
+                    "VisitsEnded": 0
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Dynamic",
+                    "bFixedRotation": false
+                },
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.30000001192092896,
+                        "y": 0.699999988079071,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    },
+                    "Texture": "Textures/Circle.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -300.0,
+                        "y": 100.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "5ed5b26ccb5553ab966eeed33803a4a4",
+            "name": "Bouncer",
+            "ownerMap": "Collisions"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldDynamic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 15.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 30.0,
+                        "y": 30.0
+                    }
+                },
+                "ContactProbe": {
+                    "CollisionsBegan": 0,
+                    "CollisionsEnded": 0,
+                    "LastOther": "",
+                    "SensedBegan": 0,
+                    "SensedEnded": 0,
+                    "VisitsBegan": 0,
+                    "VisitsEnded": 0
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.8999999761581421,
+                        "y": 0.800000011920929,
+                        "z": 0.30000001192092896
+                    },
+                    "Size": {
+                        "x": 30.0,
+                        "y": 30.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Dynamic",
+                    "bFixedRotation": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -150.0,
+                        "y": 100.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "5f387338517f5795bc777fa0c22e4eab",
+            "name": "Visitor",
+            "ownerMap": "Collisions"
+        },
+        {
+            "components": {
                 "RayProbe": {
                     "Distance": 1000.0,
+                    "HitName": "",
+                    "HitY": 0.0,
+                    "NormalY": 0.0,
+                    "Overlaps": 0,
                     "Reach": 60.0,
                     "bDynamicOnly": true
                 },
@@ -695,50 +303,176 @@
         },
         {
             "components": {
-                "Quad": {
-                    "Size": {
-                        "x": 20.0,
-                        "y": 20.0
-                    },
-                    "Color": {
-                        "x": 1.0,
-                        "y": 1.0,
-                        "z": 1.0,
-                        "w": 1.0
-                    }
-                },
-                "Rigidbody": {
-                    "Type": "Dynamic",
-                    "GravityScale": 1.0,
-                    "LinearDamping": 0.0,
-                    "AngularDamping": 0.0,
-                    "bFixedRotation": false
-                },
                 "Collider": {
-                    "Shape": "Box",
-                    "Size": {
-                        "x": 20.0,
-                        "y": 20.0
-                    },
-                    "Radius": 10.0,
+                    "Channel": "WorldDynamic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
                     "Offset": {
                         "x": 0.0,
                         "y": 0.0
                     },
-                    "Density": 1.0,
-                    "Friction": 0.6,
+                    "Radius": 15.0,
                     "Restitution": 0.0,
-                    "Mode": "Solid",
-                    "Channel": "WorldDynamic"
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 30.0,
+                        "y": 30.0
+                    }
                 },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.6000000238418579,
+                        "y": 0.4000000059604645,
+                        "z": 0.8999999761581421
+                    },
+                    "Size": {
+                        "x": 30.0,
+                        "y": 30.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 0.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Dynamic",
+                    "bFixedRotation": false
+                },
+                "SpinProbe": {
+                    "AngularVelocity": 0.0,
+                    "DegreesPerSecond": 360.0,
+                    "RotationAt": 0.0,
+                    "SampleAfter": 0.25,
+                    "Torque": 0.0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 250.0,
+                        "y": 150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "71621c26f06d5f8caf6cc0252a1d0b35",
+            "name": "Spinner",
+            "ownerMap": "Collisions"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldDynamic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 20.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    }
+                },
+                "ForceProbe": {
+                    "Acceleration": {
+                        "x": 1500.0,
+                        "y": 0.0
+                    },
+                    "Seconds": 0.20000000298023224
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.8999999761581421,
+                        "y": 0.30000001192092896,
+                        "z": 0.30000001192092896
+                    },
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Dynamic",
+                    "bFixedRotation": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": -210.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "7f9ef3fd1e815a2bb27512d42c82e0d0",
+            "name": "Pusher",
+            "ownerMap": "Collisions"
+        },
+        {
+            "components": {
+                "BoundsProbe": {},
+                "Collider": {
+                    "Channel": "WorldDynamic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 10.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 20.0,
+                        "y": 20.0
+                    }
+                },
+                "EndProbe": {},
                 "ImpulseProbe": {
+                    "AngularImpulse": 0.0,
+                    "AngularVelocity": 0.0,
                     "Speed": {
                         "x": 0.0,
                         "y": -3000.0
+                    },
+                    "VelocityX": 0.0,
+                    "VelocityY": 0.0
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Size": {
+                        "x": 20.0,
+                        "y": 20.0
                     }
                 },
-                "BoundsProbe": {},
-                "EndProbe": {},
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Dynamic",
+                    "bFixedRotation": false
+                },
                 "Transform": {
                     "Position": {
                         "x": 520.0,
@@ -757,7 +491,272 @@
         },
         {
             "components": {
-                "WitnessProbe": {},
+                "Collider": {
+                    "Channel": "WorldDynamic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 15.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 30.0,
+                        "y": 30.0
+                    }
+                },
+                "ImpulseProbe": {
+                    "AngularImpulse": 200000.0,
+                    "AngularVelocity": 0.0,
+                    "Speed": {
+                        "x": 0.0,
+                        "y": 400.0
+                    },
+                    "VelocityX": 0.0,
+                    "VelocityY": 0.0
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.8999999761581421,
+                        "y": 0.5,
+                        "z": 0.20000000298023224
+                    },
+                    "Size": {
+                        "x": 30.0,
+                        "y": 30.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Dynamic",
+                    "bFixedRotation": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 150.0,
+                        "y": -215.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "a6654d889bdb5478a5fcb4948c6dbf69",
+            "name": "Kicked",
+            "ownerMap": "Collisions"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldStatic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 10.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 80.0,
+                        "y": 20.0
+                    }
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.5,
+                        "y": 0.5,
+                        "z": 0.550000011920929
+                    },
+                    "Size": {
+                        "x": 80.0,
+                        "y": 20.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Static",
+                    "bFixedRotation": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 450.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "a69568bea05756e6a07aa1ffa6d1c11a",
+            "name": "Shelf",
+            "ownerMap": "Collisions"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldStatic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 20.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 1000.0,
+                        "y": 40.0
+                    }
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3499999940395355,
+                        "y": 0.30000001192092896,
+                        "z": 0.25
+                    },
+                    "Size": {
+                        "x": 1000.0,
+                        "y": 40.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Static",
+                    "bFixedRotation": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": -250.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "b65c03d38ae15f35b6d7dfa972bf1463",
+            "name": "Ground",
+            "ownerMap": "Collisions"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "Trigger",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Overlap",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 30.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 120.0,
+                        "y": 60.0
+                    }
+                },
+                "ContactProbe": {
+                    "CollisionsBegan": 0,
+                    "CollisionsEnded": 0,
+                    "LastOther": "",
+                    "SensedBegan": 0,
+                    "SensedEnded": 0,
+                    "VisitsBegan": 0,
+                    "VisitsEnded": 0
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 0.3499999940395355,
+                        "x": 0.30000001192092896,
+                        "y": 0.8999999761581421,
+                        "z": 0.4000000059604645
+                    },
+                    "Size": {
+                        "x": 120.0,
+                        "y": 60.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Static",
+                    "bFixedRotation": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -150.0,
+                        "y": -100.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "c7dd90515d2b5e68b84e6109aa013586",
+            "name": "Zone",
+            "ownerMap": "Collisions"
+        },
+        {
+            "components": {
+                "RayProbe": {
+                    "Distance": 1000.0,
+                    "HitName": "",
+                    "HitY": 0.0,
+                    "NormalY": 0.0,
+                    "Overlaps": 0,
+                    "Reach": 60.0,
+                    "bDynamicOnly": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 450.0,
+                        "y": 30.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "e74d5ac3641e5101ac563e1654be6569",
+            "name": "Eye",
+            "ownerMap": "Collisions"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
                 "Transform": {
                     "Position": {
                         "x": 0.0,
@@ -770,8 +769,69 @@
                     }
                 }
             },
-            "guid": "2a9e4525543b58aa8937bce618dca4be",
-            "name": "Witness",
+            "guid": "fa4be9a45b8b51e38a9845120635f014",
+            "name": "Camera",
+            "ownerMap": "Collisions"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldDynamic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 15.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 30.0,
+                        "y": 30.0
+                    }
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.800000011920929,
+                        "y": 0.4000000059604645,
+                        "z": 0.8999999761581421
+                    },
+                    "Size": {
+                        "x": 30.0,
+                        "y": 30.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 0.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Dynamic",
+                    "bFixedRotation": false
+                },
+                "SpinProbe": {
+                    "AngularVelocity": 0.0,
+                    "DegreesPerSecond": 0.0,
+                    "RotationAt": 0.0,
+                    "SampleAfter": 0.25,
+                    "Torque": 2000000.0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 350.0,
+                        "y": 150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "fde31358deba5d78a641d8897c240da0",
+            "name": "Torqued",
             "ownerMap": "Collisions"
         }
     ],

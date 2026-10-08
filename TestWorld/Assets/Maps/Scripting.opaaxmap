@@ -3,7 +3,8 @@
         {
             "components": {
                 "Camera": {
-                    "OrthoSize": 300.0
+                    "OrthoSize": 300.0,
+                    "Priority": 0
                 },
                 "Transform": {
                     "Position": {
@@ -23,39 +24,20 @@
         },
         {
             "components": {
-                "ScriptProbe": {},
-                "Transform": {
-                    "Position": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "f7d43419924b541a8d7f588031a83a5f",
-            "name": "Scripter",
-            "ownerMap": "Scripting"
-        },
-        {
-            "components": {
+                "DieProbe": {
+                    "Seconds": 1.0
+                },
                 "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.8999999761581421,
+                        "y": 0.20000000298023224,
+                        "z": 0.20000000298023224
+                    },
                     "Size": {
                         "x": 60.0,
                         "y": 60.0
-                    },
-                    "Color": {
-                        "x": 0.9,
-                        "y": 0.2,
-                        "z": 0.2,
-                        "w": 1.0
                     }
-                },
-                "DieProbe": {
-                    "Seconds": 1.0
                 },
                 "Transform": {
                     "Position": {
@@ -75,7 +57,46 @@
         },
         {
             "components": {
-                "WitnessProbe": {},
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                },
+                "WitnessProbe": {
+                    "Ended": 0,
+                    "LastLeftY": 0.0,
+                    "LeftBounds": 0,
+                    "WorldEndings": 0
+                }
+            },
+            "guid": "f167afd2e905525285d5c13a3f643d9b",
+            "name": "Witness",
+            "ownerMap": "Scripting"
+        },
+        {
+            "components": {
+                "ScriptProbe": {
+                    "HelpersSeen": 0,
+                    "LambdaCalls": 0,
+                    "LinesQueued": 0,
+                    "Name": "",
+                    "QuadWidth": 0.0,
+                    "RemoveQuadAfter": 1.0,
+                    "Rotation": 0.0,
+                    "Time": 0.0,
+                    "bAddedQuad": false,
+                    "bDeltaSeen": false,
+                    "bHadQuad": false,
+                    "bPhysics": false,
+                    "bRemovedQuad": false,
+                    "bSawHelper": false
+                },
                 "Transform": {
                     "Position": {
                         "x": 0.0,
@@ -88,8 +109,8 @@
                     }
                 }
             },
-            "guid": "f167afd2e905525285d5c13a3f643d9b",
-            "name": "Witness",
+            "guid": "f7d43419924b541a8d7f588031a83a5f",
+            "name": "Scripter",
             "ownerMap": "Scripting"
         }
     ],

@@ -2,8 +2,52 @@
     "entities": [
         {
             "components": {
+                "LedgerProbe": {
+                    "Ended": 0,
+                    "LedgersStarted": 0,
+                    "WorldEndings": 0,
+                    "bFound": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "0596de52c09b562a85810b6d543b3286",
+            "name": "Ledger",
+            "ownerMap": "Levels"
+        },
+        {
+            "components": {
+                "EndProbe": {},
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "39153936150f51ef9ab665736be86309",
+            "name": "Ender",
+            "ownerMap": "Levels"
+        },
+        {
+            "components": {
                 "Camera": {
-                    "OrthoSize": 300.0
+                    "OrthoSize": 300.0,
+                    "Priority": 0
                 },
                 "Transform": {
                     "Position": {
@@ -64,10 +108,6 @@
         },
         {
             "components": {
-                "TravelProbe": {
-                    "Target": "Levels/LevelsArrival.opaaxlevel",
-                    "Delay": 1.0
-                },
                 "Transform": {
                     "Position": {
                         "x": 0.0,
@@ -78,48 +118,15 @@
                         "x": 1.0,
                         "y": 1.0
                     }
+                },
+                "TravelProbe": {
+                    "Delay": 1.0,
+                    "Target": "Levels/LevelsArrival.opaaxlevel",
+                    "bQuit": false
                 }
             },
             "guid": "9bd1a8da35285c7689a025700c3ffe28",
             "name": "Traveller",
-            "ownerMap": "Levels"
-        },
-        {
-            "components": {
-                "EndProbe": {},
-                "Transform": {
-                    "Position": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "39153936150f51ef9ab665736be86309",
-            "name": "Ender",
-            "ownerMap": "Levels"
-        },
-        {
-            "components": {
-                "LedgerProbe": {},
-                "Transform": {
-                    "Position": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "0596de52c09b562a85810b6d543b3286",
-            "name": "Ledger",
             "ownerMap": "Levels"
         }
     ],

@@ -2,32 +2,14 @@
     "entities": [
         {
             "components": {
-                "Camera": {
-                    "OrthoSize": 300.0
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "c1c321d78cb9516ebce6a3dd20443c10",
-            "name": "Camera",
-            "ownerMap": "Prefabs"
-        },
-        {
-            "components": {
                 "SpawnProbe": {
-                    "Prefab": "Prefabs/RedCrate.opaaxprefab",
                     "Count": 2,
+                    "DestroyAfter": 0.10000000149011612,
+                    "Prefab": "Prefabs/RedCrate.opaaxprefab",
                     "Spacing": 60.0,
-                    "DestroyAfter": 0.1
+                    "Spawned": 0,
+                    "bCreated": false,
+                    "bDestroyedOne": false
                 },
                 "Transform": {
                     "Position": {
@@ -44,16 +26,36 @@
             "guid": "63abd8e75cef5d0e99392bb9ccd491ae",
             "name": "Spawner",
             "ownerMap": "Prefabs"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "c1c321d78cb9516ebce6a3dd20443c10",
+            "name": "Camera",
+            "ownerMap": "Prefabs"
         }
     ],
     "mapId": "Prefabs",
-    "version": 4,
     "prefabInstances": [
         {
             "instanceId": "154965d7174d5d5db5a6d68353569bbb",
             "overrides": {
                 "53062e2b702d2b5fee66e83264c9ae79": {
-                    "name": "PlacedRedCrate",
                     "components": {
                         "Transform": {
                             "Position": {
@@ -61,7 +63,8 @@
                                 "y": 150.0
                             }
                         }
-                    }
+                    },
+                    "name": "PlacedRedCrate"
                 }
             },
             "prefab": "Prefabs/RedCrate.opaaxprefab"
@@ -69,24 +72,25 @@
         {
             "instanceId": "44a0e2707fe85b92b877ae97bab4055f",
             "overrides": {
+                "8ba05be0c6085f43a55e607593485dc4": null,
                 "da2c15a7274f5fc08e67398884d611a2": {
-                    "name": "LoneTurret",
                     "components": {
+                        "MoveProbe": {
+                            "To": {
+                                "x": -300.0,
+                                "y": -150.0
+                            },
+                            "bMoved": false
+                        },
                         "Transform": {
                             "Position": {
                                 "x": -300.0,
                                 "y": -150.0
                             }
-                        },
-                        "MoveProbe": {
-                            "To": {
-                                "x": -300.0,
-                                "y": -150.0
-                            }
                         }
-                    }
-                },
-                "8ba05be0c6085f43a55e607593485dc4": null
+                    },
+                    "name": "LoneTurret"
+                }
             },
             "prefab": "Prefabs/Turret.opaaxprefab"
         },
@@ -109,18 +113,27 @@
         {
             "instanceId": "96aaca9453065988b8a0a1f042bf82d9",
             "overrides": {
+                "8ba05be0c6085f43a55e607593485dc4": {
+                    "components": {
+                        "PoseProbe": {
+                            "ParentName": "",
+                            "WorldX": 0.0,
+                            "WorldY": 0.0
+                        }
+                    }
+                },
                 "da2c15a7274f5fc08e67398884d611a2": {
                     "components": {
-                        "Transform": {
-                            "Position": {
-                                "x": 0.0,
-                                "y": 150.0
-                            }
-                        },
                         "MoveProbe": {
                             "To": {
                                 "x": 100.0,
                                 "y": 50.0
+                            },
+                            "bMoved": false
+                        },
+                        "Transform": {
+                            "Position": {
+                                "y": 150.0
                             }
                         }
                     }
@@ -131,6 +144,15 @@
         {
             "instanceId": "b86334a35a9d5c1f8407c8acca8b276e",
             "overrides": {
+                "2db44ecf34b6cebf690a78dab92be93a": {
+                    "components": {
+                        "PoseProbe": {
+                            "ParentName": "",
+                            "WorldX": 0.0,
+                            "WorldY": 0.0
+                        }
+                    }
+                },
                 "a456b93d3e1952458826c3b4f60fd0af": {
                     "components": {
                         "Transform": {
@@ -148,24 +170,25 @@
             "instanceId": "c39f97f524325cecb2e6f9c7e12dacc7",
             "overrides": {
                 "8b1a221fb827565b8bb32f96fe70968e": {
-                    "name": "BigCrate",
                     "components": {
-                        "Transform": {
-                            "Position": {
-                                "x": -250.0,
-                                "y": 150.0
-                            }
-                        },
                         "Quad": {
                             "Size": {
                                 "x": 70.0,
                                 "y": 70.0
                             }
+                        },
+                        "Transform": {
+                            "Position": {
+                                "x": -250.0,
+                                "y": 150.0
+                            }
                         }
-                    }
+                    },
+                    "name": "BigCrate"
                 }
             },
             "prefab": "Prefabs/Crate.opaaxprefab"
         }
-    ]
+    ],
+    "version": 4
 }

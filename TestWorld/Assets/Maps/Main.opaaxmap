@@ -2,27 +2,6 @@
     "entities": [
         {
             "components": {
-                "Camera": {
-                    "OrthoSize": 300.0
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "c1c7ced182b151d197282efb856e3da0",
-            "name": "Camera",
-            "ownerMap": "Main"
-        },
-        {
-            "components": {
                 "Text": {
                     "Color": {
                         "w": 1.0,
@@ -60,6 +39,28 @@
             },
             "guid": "4e25cbd3367e5f979b7b715ecf339b03",
             "name": "Readme",
+            "ownerMap": "Main"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "c1c7ced182b151d197282efb856e3da0",
+            "name": "Camera",
             "ownerMap": "Main"
         }
     ],

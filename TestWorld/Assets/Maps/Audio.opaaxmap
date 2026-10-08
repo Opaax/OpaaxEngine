@@ -2,40 +2,16 @@
     "entities": [
         {
             "components": {
-                "Camera": {
-                    "OrthoSize": 300.0
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                },
-                "AudioListener": {
-                    "bActive": true
-                }
-            },
-            "guid": "7bc5ae87e5fa54a7be6afb01b046ab43",
-            "name": "Camera",
-            "ownerMap": "Audio"
-        },
-        {
-            "components": {
                 "AudioSource": {
-                    "Clip": "Audio/Beep.wav",
                     "Bus": "Effects",
-                    "Volume": 0.5,
+                    "Clip": "Audio/Beep.wav",
+                    "MaxDistance": 1500.0,
+                    "MinDistance": 100.0,
                     "Pitch": 1.0,
+                    "Volume": 0.5,
                     "bLoop": true,
                     "bPlayOnStart": true,
-                    "bSpatial": true,
-                    "MinDistance": 100.0,
-                    "MaxDistance": 1500.0
+                    "bSpatial": true
                 },
                 "Transform": {
                     "Position": {
@@ -56,7 +32,8 @@
         {
             "components": {
                 "AudioProbe": {
-                    "Clip": "Audio/Beep.wav"
+                    "Clip": "Audio/Beep.wav",
+                    "bPlayed": false
                 },
                 "Transform": {
                     "Position": {
@@ -76,19 +53,48 @@
         },
         {
             "components": {
-                "AudioSource": {
+                "AudioListener": {
+                    "bActive": true
+                },
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "7bc5ae87e5fa54a7be6afb01b046ab43",
+            "name": "Camera",
+            "ownerMap": "Audio"
+        },
+        {
+            "components": {
+                "AudioControlProbe": {
                     "Clip": "Audio/Beep.wav",
+                    "StoppedSounds": 0,
+                    "bPlayedAt": false,
+                    "bSourcePlaying": false,
+                    "bSourceStopped": false
+                },
+                "AudioSource": {
                     "Bus": "Effects",
-                    "Volume": 0.5,
+                    "Clip": "Audio/Beep.wav",
+                    "MaxDistance": 1500.0,
+                    "MinDistance": 100.0,
                     "Pitch": 1.0,
+                    "Volume": 0.5,
                     "bLoop": true,
                     "bPlayOnStart": false,
-                    "bSpatial": false,
-                    "MinDistance": 100.0,
-                    "MaxDistance": 1500.0
-                },
-                "AudioControlProbe": {
-                    "Clip": "Audio/Beep.wav"
+                    "bSpatial": false
                 },
                 "Transform": {
                     "Position": {

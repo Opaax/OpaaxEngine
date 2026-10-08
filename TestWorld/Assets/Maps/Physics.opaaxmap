@@ -2,116 +2,41 @@
     "entities": [
         {
             "components": {
-                "Camera": {
-                    "OrthoSize": 300.0
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "8f2c839fc3af5366a54fa7cbae84133c",
-            "name": "Camera",
-            "ownerMap": "Physics"
-        },
-        {
-            "components": {
-                "Quad": {
-                    "Size": {
-                        "x": 1000.0,
-                        "y": 40.0
-                    },
-                    "Color": {
-                        "x": 0.35,
-                        "y": 0.3,
-                        "z": 0.25,
-                        "w": 1.0
-                    }
-                },
-                "Rigidbody": {
-                    "Type": "Static",
-                    "GravityScale": 1.0,
-                    "LinearDamping": 0.0,
-                    "AngularDamping": 0.0,
-                    "bFixedRotation": true
-                },
                 "Collider": {
-                    "Shape": "Box",
-                    "Size": {
-                        "x": 1000.0,
-                        "y": 40.0
-                    },
-                    "Radius": 25.0,
+                    "Channel": "WorldDynamic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
                     "Offset": {
                         "x": 0.0,
                         "y": 0.0
                     },
-                    "Density": 1.0,
-                    "Friction": 0.6,
+                    "Radius": 25.0,
                     "Restitution": 0.0,
-                    "Mode": "Solid",
-                    "Channel": "WorldStatic"
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 0.0,
-                        "y": -250.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "832e94ef8e285d7fa9b8aaf6e70b356a",
-            "name": "Ground",
-            "ownerMap": "Physics"
-        },
-        {
-            "components": {
-                "Quad": {
+                    "Shape": "Box",
                     "Size": {
                         "x": 50.0,
                         "y": 50.0
-                    },
+                    }
+                },
+                "Quad": {
                     "Color": {
-                        "x": 0.6,
-                        "y": 0.45,
-                        "z": 0.25,
-                        "w": 1.0
+                        "w": 1.0,
+                        "x": 0.6000000238418579,
+                        "y": 0.44999998807907104,
+                        "z": 0.25
+                    },
+                    "Size": {
+                        "x": 50.0,
+                        "y": 50.0
                     }
                 },
                 "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
                     "Type": "Dynamic",
-                    "GravityScale": 1.0,
-                    "LinearDamping": 0.0,
-                    "AngularDamping": 0.0,
                     "bFixedRotation": false
-                },
-                "Collider": {
-                    "Shape": "Box",
-                    "Size": {
-                        "x": 50.0,
-                        "y": 50.0
-                    },
-                    "Radius": 25.0,
-                    "Offset": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "Density": 1.0,
-                    "Friction": 0.6,
-                    "Restitution": 0.0,
-                    "Mode": "Solid",
-                    "Channel": "WorldDynamic"
                 },
                 "Transform": {
                     "Position": {
@@ -131,95 +56,41 @@
         },
         {
             "components": {
-                "Quad": {
-                    "Size": {
-                        "x": 50.0,
-                        "y": 50.0
-                    },
-                    "Color": {
-                        "x": 0.6,
-                        "y": 0.45,
-                        "z": 0.25,
-                        "w": 1.0
-                    }
-                },
-                "Rigidbody": {
-                    "Type": "Dynamic",
-                    "GravityScale": 1.0,
-                    "LinearDamping": 0.0,
-                    "AngularDamping": 0.0,
-                    "bFixedRotation": false
-                },
                 "Collider": {
-                    "Shape": "Box",
-                    "Size": {
-                        "x": 50.0,
-                        "y": 50.0
-                    },
-                    "Radius": 25.0,
+                    "Channel": "WorldDynamic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
                     "Offset": {
                         "x": 0.0,
                         "y": 0.0
                     },
-                    "Density": 1.0,
-                    "Friction": 0.6,
+                    "Radius": 25.0,
                     "Restitution": 0.0,
-                    "Mode": "Solid",
-                    "Channel": "WorldDynamic"
-                },
-                "Transform": {
-                    "Position": {
-                        "x": -100.0,
-                        "y": -90.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "a38b564a0a7a5ed5a9009a04ab0b5d3f",
-            "name": "Crate2",
-            "ownerMap": "Physics"
-        },
-        {
-            "components": {
-                "Quad": {
-                    "Size": {
-                        "x": 50.0,
-                        "y": 50.0
-                    },
-                    "Color": {
-                        "x": 0.6,
-                        "y": 0.45,
-                        "z": 0.25,
-                        "w": 1.0
-                    }
-                },
-                "Rigidbody": {
-                    "Type": "Dynamic",
-                    "GravityScale": 1.0,
-                    "LinearDamping": 0.0,
-                    "AngularDamping": 0.0,
-                    "bFixedRotation": false
-                },
-                "Collider": {
                     "Shape": "Box",
                     "Size": {
                         "x": 50.0,
                         "y": 50.0
+                    }
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.6000000238418579,
+                        "y": 0.44999998807907104,
+                        "z": 0.25
                     },
-                    "Radius": 25.0,
-                    "Offset": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "Density": 1.0,
-                    "Friction": 0.6,
-                    "Restitution": 0.0,
-                    "Mode": "Solid",
-                    "Channel": "WorldDynamic"
+                    "Size": {
+                        "x": 50.0,
+                        "y": 50.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Dynamic",
+                    "bFixedRotation": false
                 },
                 "Transform": {
                     "Position": {
@@ -239,53 +110,46 @@
         },
         {
             "components": {
-                "Sprite": {
-                    "Texture": "Textures/Circle.png",
-                    "Sheet": "",
-                    "Frame": -1,
-                    "Size": {
-                        "x": 50.0,
-                        "y": 50.0
-                    },
-                    "Color": {
-                        "x": 0.3,
-                        "y": 0.7,
-                        "z": 1.0,
-                        "w": 1.0
-                    },
-                    "Layer": "Default",
-                    "OrderInLayer": 0,
-                    "Material": "",
-                    "bVisible": true
-                },
-                "Rigidbody": {
-                    "Type": "Dynamic",
-                    "GravityScale": 1.0,
-                    "LinearDamping": 0.0,
-                    "AngularDamping": 0.0,
-                    "bFixedRotation": false
-                },
                 "Collider": {
-                    "Shape": "Circle",
-                    "Size": {
-                        "x": 50.0,
-                        "y": 50.0
-                    },
-                    "Radius": 25.0,
+                    "Channel": "WorldStatic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
                     "Offset": {
                         "x": 0.0,
                         "y": 0.0
                     },
-                    "Density": 1.0,
-                    "Friction": 0.6,
-                    "Restitution": 0.5,
-                    "Mode": "Solid",
-                    "Channel": "WorldDynamic"
+                    "Radius": 25.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 1000.0,
+                        "y": 40.0
+                    }
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3499999940395355,
+                        "y": 0.30000001192092896,
+                        "z": 0.25
+                    },
+                    "Size": {
+                        "x": 1000.0,
+                        "y": 40.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Static",
+                    "bFixedRotation": true
                 },
                 "Transform": {
                     "Position": {
-                        "x": 150.0,
-                        "y": 100.0
+                        "x": 0.0,
+                        "y": -250.0
                     },
                     "Rotation": 0.0,
                     "Scale": {
@@ -294,50 +158,53 @@
                     }
                 }
             },
-            "guid": "c8c55e521f2d5cf4887ecd5dc9e2c59e",
-            "name": "Ball",
+            "guid": "832e94ef8e285d7fa9b8aaf6e70b356a",
+            "name": "Ground",
             "ownerMap": "Physics"
         },
         {
             "components": {
-                "Quad": {
-                    "Size": {
-                        "x": 40.0,
-                        "y": 40.0
-                    },
-                    "Color": {
-                        "x": 0.9,
-                        "y": 0.3,
-                        "z": 0.3,
-                        "w": 1.0
-                    }
-                },
-                "Rigidbody": {
-                    "Type": "Dynamic",
-                    "GravityScale": 1.0,
-                    "LinearDamping": 0.0,
-                    "AngularDamping": 0.0,
-                    "bFixedRotation": false
-                },
                 "Collider": {
-                    "Shape": "Box",
-                    "Size": {
-                        "x": 40.0,
-                        "y": 40.0
-                    },
-                    "Radius": 25.0,
+                    "Channel": "WorldDynamic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
                     "Offset": {
                         "x": 0.0,
                         "y": 0.0
                     },
-                    "Density": 1.0,
-                    "Friction": 0.6,
+                    "Radius": 25.0,
                     "Restitution": 0.0,
-                    "Mode": "Solid",
-                    "Channel": "WorldDynamic"
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    }
                 },
                 "LaunchProbe": {
-                    "LaunchSpeed": 600.0
+                    "LaunchSpeed": 600.0,
+                    "Mass": 0.0,
+                    "PeakY": 0.0,
+                    "StartY": 0.0
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.8999999761581421,
+                        "y": 0.30000001192092896,
+                        "z": 0.30000001192092896
+                    },
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Dynamic",
+                    "bFixedRotation": false
                 },
                 "Transform": {
                     "Position": {
@@ -353,6 +220,143 @@
             },
             "guid": "8dd290cddb5154cda40f93359289ee89",
             "name": "Launcher",
+            "ownerMap": "Physics"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "8f2c839fc3af5366a54fa7cbae84133c",
+            "name": "Camera",
+            "ownerMap": "Physics"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldDynamic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 25.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 50.0,
+                        "y": 50.0
+                    }
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.6000000238418579,
+                        "y": 0.44999998807907104,
+                        "z": 0.25
+                    },
+                    "Size": {
+                        "x": 50.0,
+                        "y": 50.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Dynamic",
+                    "bFixedRotation": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -100.0,
+                        "y": -90.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "a38b564a0a7a5ed5a9009a04ab0b5d3f",
+            "name": "Crate2",
+            "ownerMap": "Physics"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldDynamic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 25.0,
+                    "Restitution": 0.5,
+                    "Shape": "Circle",
+                    "Size": {
+                        "x": 50.0,
+                        "y": 50.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Dynamic",
+                    "bFixedRotation": false
+                },
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.30000001192092896,
+                        "y": 0.699999988079071,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 50.0,
+                        "y": 50.0
+                    },
+                    "Texture": "Textures/Circle.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 150.0,
+                        "y": 100.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "c8c55e521f2d5cf4887ecd5dc9e2c59e",
+            "name": "Ball",
             "ownerMap": "Physics"
         }
     ],

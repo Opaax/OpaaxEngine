@@ -2,92 +2,13 @@
     "entities": [
         {
             "components": {
-                "Camera": {
-                    "OrthoSize": 300.0
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "a004f1c388685c73bfb26b03a419cb94",
-            "name": "Camera",
-            "ownerMap": "Behaviours"
-        },
-        {
-            "components": {
-                "LifecycleProbe": {},
-                "Transform": {
-                    "Position": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "da3000af6b695bc0b78a6cec7923bf38",
-            "name": "Lifecycle",
-            "ownerMap": "Behaviours"
-        },
-        {
-            "components": {
-                "TimerProbe": {
-                    "Delay": 0.25,
-                    "Period": 0.1,
-                    "RepeatLimit": 3
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "a73db74eb3c05871a209666ba271e68f",
-            "name": "Timers",
-            "ownerMap": "Behaviours"
-        },
-        {
-            "components": {
                 "EventProbe": {
-                    "Target": "PingReceiver",
-                    "bAnnounce": true
+                    "Announces": 0,
+                    "PingValue": 0,
+                    "Pings": 0,
+                    "Target": "",
+                    "bAnnounce": false
                 },
-                "Transform": {
-                    "Position": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "e5aa515340fd5761b75ad0abcf6f2e43",
-            "name": "PingSender",
-            "ownerMap": "Behaviours"
-        },
-        {
-            "components": {
-                "EventProbe": {},
                 "Transform": {
                     "Position": {
                         "x": 0.0,
@@ -106,11 +27,36 @@
         },
         {
             "components": {
+                "InputProbe": {
+                    "Fires": 0,
+                    "SpacePresses": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "62d2ca6805a65df6ba2ff984fcb7a188",
+            "name": "Input",
+            "ownerMap": "Behaviours"
+        },
+        {
+            "components": {
                 "SpawnProbe": {
-                    "Prefab": "Prefabs/Crate.opaaxprefab",
                     "Count": 3,
+                    "DestroyAfter": 0.20000000298023224,
+                    "Prefab": "Prefabs/Crate.opaaxprefab",
                     "Spacing": 80.0,
-                    "DestroyAfter": 0.2
+                    "Spawned": 0,
+                    "bCreated": false,
+                    "bDestroyedOne": false
                 },
                 "Transform": {
                     "Position": {
@@ -130,20 +76,67 @@
         },
         {
             "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "a004f1c388685c73bfb26b03a419cb94",
+            "name": "Camera",
+            "ownerMap": "Behaviours"
+        },
+        {
+            "components": {
+                "TimerProbe": {
+                    "Delay": 0.25,
+                    "Period": 0.10000000149011612,
+                    "RepeatLimit": 3,
+                    "Ticks": 0,
+                    "bFired": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "a73db74eb3c05871a209666ba271e68f",
+            "name": "Timers",
+            "ownerMap": "Behaviours"
+        },
+        {
+            "components": {
                 "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.8999999761581421,
+                        "y": 0.20000000298023224,
+                        "z": 0.20000000298023224
+                    },
                     "Size": {
                         "x": 60.0,
                         "y": 60.0
-                    },
-                    "Color": {
-                        "x": 0.9,
-                        "y": 0.2,
-                        "z": 0.2,
-                        "w": 1.0
                     }
                 },
                 "SelfDestructProbe": {
-                    "Seconds": 0.3
+                    "Seconds": 0.30000001192092896
                 },
                 "Transform": {
                     "Position": {
@@ -163,7 +156,11 @@
         },
         {
             "components": {
-                "InputProbe": {},
+                "LifecycleProbe": {
+                    "FixedUpdateCount": 0,
+                    "StartCount": 0,
+                    "UpdateCount": 0
+                },
                 "Transform": {
                     "Position": {
                         "x": 0.0,
@@ -176,8 +173,33 @@
                     }
                 }
             },
-            "guid": "62d2ca6805a65df6ba2ff984fcb7a188",
-            "name": "Input",
+            "guid": "da3000af6b695bc0b78a6cec7923bf38",
+            "name": "Lifecycle",
+            "ownerMap": "Behaviours"
+        },
+        {
+            "components": {
+                "EventProbe": {
+                    "Announces": 0,
+                    "PingValue": 0,
+                    "Pings": 0,
+                    "Target": "PingReceiver",
+                    "bAnnounce": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "e5aa515340fd5761b75ad0abcf6f2e43",
+            "name": "PingSender",
             "ownerMap": "Behaviours"
         }
     ],
