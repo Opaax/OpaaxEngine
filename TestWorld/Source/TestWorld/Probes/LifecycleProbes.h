@@ -78,6 +78,12 @@ namespace TestWorld
         bool bWorldEnding = false;
     };
 
+    /** Published by a BoundsProbe when its entity leaves the world bounds. */
+    struct ProbeLeftBounds
+    {
+        float LastY = 0.f;
+    };
+
     // =============================================================================
     // EndProbe — publishes ProbeEnded as it ends, saying whether the whole world is ending.
     // =============================================================================
@@ -88,18 +94,25 @@ namespace TestWorld
     };
 
     // =============================================================================
-    // WitnessProbe — counts the EndProbes that ended, and how many of them because the world was
-    //   ending.
+    // WitnessProbe — keeps what probes report as their entity goes: how many EndProbes ended (and
+    //   how many because the world was ending), and how many BoundsProbes left the world bounds.
     // =============================================================================
     class WitnessProbe : public Opaax::Behaviour
     {
     public:
         Opaax::Int32 Ended        = 0;
         Opaax::Int32 WorldEndings = 0;
+        Opaax::Int32 LeftBounds   = 0;
+        float        LastLeftY    = 0.f;
 
-        OPAAX_PROPERTIES(WitnessProbe, OPAAX_PROP(Ended), OPAAX_PROP(WorldEndings))
+        OPAAX_PROPERTIES(WitnessProbe, OPAAX_PROP(Ended), OPAAX_PROP(WorldEndings), OPAAX_PROP(LeftBounds),
+                         OPAAX_PROP(LastLeftY))
 
-        void OnStart() override { Subscribe<&WitnessProbe::OnEnded>(); }
+        void OnStart() override
+        {
+            Subscribe<&WitnessProbe::OnEnded>();
+            Subscribe<&WitnessProbe::OnLeftBounds>();
+        }
 
         void OnEnded(const ProbeEnded& InEvent)
         {
@@ -108,6 +121,12 @@ namespace TestWorld
             {
                 ++WorldEndings;
             }
+        }
+
+        void OnLeftBounds(const ProbeLeftBounds& InEvent)
+        {
+            ++LeftBounds;
+            LastLeftY = InEvent.LastY;
         }
     };
 }

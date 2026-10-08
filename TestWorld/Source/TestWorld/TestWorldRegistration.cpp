@@ -5,6 +5,7 @@
 #include "Probes/GameplayProbes.h"
 #include "Probes/HierarchyProbes.h"
 #include "Probes/LifecycleProbes.h"
+#include "Probes/PhysicsProbes.h"
 #include "Probes/SpawnProbe.h"
 
 namespace TestWorld
@@ -23,4 +24,10 @@ namespace TestWorld
     OPAAX_REGISTER_BEHAVIOUR(BubbleProbe);
     OPAAX_REGISTER_BEHAVIOUR(ReparentProbe);
     OPAAX_REGISTER_BEHAVIOUR(MoveProbe);
+    OPAAX_REGISTER_BEHAVIOUR(ContactProbe);
+    OPAAX_REGISTER_BEHAVIOUR(BoundsProbe);
+    OPAAX_REGISTER_BEHAVIOUR(ForceProbe);
+    OPAAX_REGISTER_BEHAVIOUR(ImpulseProbe);
+    OPAAX_REGISTER_BEHAVIOUR(SpinProbe);
+    OPAAX_REGISTER_BEHAVIOUR(RayProbe);
 }
