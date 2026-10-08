@@ -18,4 +18,18 @@ if(OPAAX_BUILD_TESTS)
                  WORKING_DIRECTORY "${TESTWORLD_RESULTS}")
         set_tests_properties(TestWorld.${TESTWORLD_FEATURE} PROPERTIES LABELS feature TIMEOUT 120)
     endforeach()
+
+    # The editor driven by a script (EditorTests/*.json), when this build has the editor.
+    if(TARGET TestWorldEditor)
+        file(GLOB TESTWORLD_EDITOR_SCRIPTS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/EditorTests/*.json")
+
+        foreach(TESTWORLD_SCRIPT IN LISTS TESTWORLD_EDITOR_SCRIPTS)
+            get_filename_component(TESTWORLD_FEATURE "${TESTWORLD_SCRIPT}" NAME_WE)
+            add_test(NAME TestWorldEditor.${TESTWORLD_FEATURE}
+                     COMMAND TestWorldEditor --exec "${TESTWORLD_SCRIPT}"
+                                             --exec-out "${TESTWORLD_RESULTS}/Editor${TESTWORLD_FEATURE}.out.json"
+                     WORKING_DIRECTORY "${TESTWORLD_RESULTS}")
+            set_tests_properties(TestWorldEditor.${TESTWORLD_FEATURE} PROPERTIES LABELS feature TIMEOUT 180)
+        endforeach()
+    endif()
 endif()

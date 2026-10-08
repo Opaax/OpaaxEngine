@@ -125,7 +125,7 @@ jobs:
       - name: Report feature failures
         if: runner.os == 'Linux' && failure()
         shell: bash
-        run: python3 .github/scripts/report_feature_failures.py build/${{ matrix.preset }} TestWorld/Tests
+        run: python3 .github/scripts/report_feature_failures.py build/${{ matrix.preset }} TestWorld
 
       - name: Upload feature results
         if: runner.os == 'Linux' && always()
