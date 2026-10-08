@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "Audio/AudioSubsystem.h"
 #include "Core/String/OpaaxStringJson.h"
 #include "Input/Mapping/InputMappingSubsystem.h"
 #include "World/Behaviour/Behaviour.h"
@@ -138,5 +139,67 @@ namespace TestWorld
         OPAAX_PROPERTIES(AudioProbe, OPAAX_PROP(Clip), OPAAX_PROP(bPlayed))
 
         void OnStart() override { bPlayed = PlaySound(Clip, 0.5f).IsValid(); }
+    };
+
+    // =============================================================================
+    // AudioControlProbe — plays Clip at a place in the world and stops it, then plays its entity's
+    //   AudioSource and stops it, checking each step with the world's audio.
+    // =============================================================================
+    class AudioControlProbe : public Opaax::Behaviour
+    {
+    public:
+        Opaax::OpaaxString Clip = "Audio/Beep.wav";
+
+        bool         bPlayedAt      = false;
+        Opaax::Int32 StoppedSounds  = 0;   // playing sounds before StopSound, minus after
+        bool         bSourcePlaying = false;
+        bool         bSourceStopped = false;
+
+        OPAAX_PROPERTIES(AudioControlProbe, OPAAX_PROP(Clip), OPAAX_PROP(bPlayedAt), OPAAX_PROP(StoppedSounds),
+                         OPAAX_PROP(bSourcePlaying), OPAAX_PROP(bSourceStopped))
+
+        void OnStart() override
+        {
+            m_Placed  = PlaySoundAt(Clip, Opaax::Vector2F{ 400.f, 0.f }, 0.5f);
+            bPlayedAt = m_Placed.IsValid();
+
+            SetTimer<&AudioControlProbe::StopPlaced>(0.05f);
+            SetTimer<&AudioControlProbe::StartSource>(0.1f);
+            SetTimer<&AudioControlProbe::StopSource>(0.2f);
+        }
+
+    private:
+        void StopPlaced()
+        {
+            const Opaax::Uint64 lBefore = PlayingCount();
+            StopSound(m_Placed);
+            StoppedSounds = static_cast<Opaax::Int32>(lBefore - PlayingCount());
+        }
+
+        void StartSource()
+        {
+            PlayAudioSource();
+            bSourcePlaying = IsSourcePlaying();
+        }
+
+        void StopSource()
+        {
+            StopAudioSource();
+            bSourceStopped = !IsSourcePlaying();
+        }
+
+        Opaax::Uint64 PlayingCount() const
+        {
+            const Opaax::AudioSubsystem* lAudio = GetSubsystem<Opaax::AudioSubsystem>();
+            return (lAudio != nullptr) ? lAudio->GetPlayingCount() : 0;
+        }
+
+        bool IsSourcePlaying() const
+        {
+            const Opaax::AudioSubsystem* lAudio = GetSubsystem<Opaax::AudioSubsystem>();
+            return lAudio != nullptr && lAudio->IsSourcePlaying(GetEntity().GetHandle());
+        }
+
+        Opaax::SoundHandle m_Placed;
     };
 }

@@ -73,6 +73,38 @@
             "guid": "376c79b1acd954148e8641800f43d89c",
             "name": "Probe",
             "ownerMap": "Audio"
+        },
+        {
+            "components": {
+                "AudioSource": {
+                    "Clip": "Audio/Beep.wav",
+                    "Bus": "Effects",
+                    "Volume": 0.5,
+                    "Pitch": 1.0,
+                    "bLoop": true,
+                    "bPlayOnStart": false,
+                    "bSpatial": false,
+                    "MinDistance": 100.0,
+                    "MaxDistance": 1500.0
+                },
+                "AudioControlProbe": {
+                    "Clip": "Audio/Beep.wav"
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -200.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "c561d82d9c8c59cd97a023b4632cf385",
+            "name": "Controls",
+            "ownerMap": "Audio"
         }
     ],
     "mapId": "Audio",

@@ -26,7 +26,7 @@
         "command": "expect.count",
         "params": {
             "component": "AudioSource",
-            "equals": 1
+            "equals": 2
         }
     },
     {
@@ -35,6 +35,42 @@
         "params": {
             "component": "AudioListener",
             "equals": 1
+        }
+    },
+    {
+        "id": "played-at",
+        "command": "expect.value",
+        "params": {
+            "entity": "Controls",
+            "path": "AudioControlProbe/bPlayedAt",
+            "equals": true
+        }
+    },
+    {
+        "id": "stopped",
+        "command": "expect.value",
+        "params": {
+            "entity": "Controls",
+            "path": "AudioControlProbe/StoppedSounds",
+            "equals": 1
+        }
+    },
+    {
+        "id": "source-played",
+        "command": "expect.value",
+        "params": {
+            "entity": "Controls",
+            "path": "AudioControlProbe/bSourcePlaying",
+            "equals": true
+        }
+    },
+    {
+        "id": "source-stopped",
+        "command": "expect.value",
+        "params": {
+            "entity": "Controls",
+            "path": "AudioControlProbe/bSourceStopped",
+            "equals": true
         }
     }
 ]
