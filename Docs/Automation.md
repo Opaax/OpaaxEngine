@@ -74,6 +74,7 @@ The editor adds:
 | `editor.command` | `tag` | Any editor command without arguments, by tag (`Editor.Command.FocusSelected`) |
 | `level.open`, `map.open` | `path` | Opens a level or a map (relative to the project's assets) |
 | `level.save`, `map.save` | | Saves (a map must already have a file) |
+| `project.export` | `path` | Exports the game into a folder (its release build and content); answered when done, minutes later |
 | `entity.create` | `name`, `map`, `components` | Creates an entity in the focused map, with components `{type: values}` |
 | `entity.destroy` | `entity` | Deletes an entity |
 | `entity.select` | `entities` | Selects entities (an empty list clears the selection) |

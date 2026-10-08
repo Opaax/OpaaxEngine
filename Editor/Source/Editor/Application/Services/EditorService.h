@@ -25,6 +25,7 @@
 #include "Editor/Resources/Types/Mover/EditorMoveModeDocument.h"
 #include "Editor/Resources/Types/DataAsset/EditorDataAssetDocument.h"
 #include "Editor/Resources/Types/Mover/EditorMoverDocument.h"
+#include "Editor/Export/GameExport.h"
 #include "Editor/PIE/PlayInEditor.h"
 #include "Editor/UI/IEditorGui.h"
 #include "Editor/UI/IEditorDialogs.h"
@@ -330,6 +331,7 @@ namespace Opaax::Editor
         TUniquePtr<EditorInputActionDocument>      m_InputActionDocument;
         TUniquePtr<EditorInputMappingContextDocument> m_InputMapDocument;
         TUniquePtr<EditorDataAssetDocument>           m_DataAssetDocument;
+        TUniquePtr<GameExport>                        m_Export;
         
         TUniquePtr<EditorContext>       m_Context;
         

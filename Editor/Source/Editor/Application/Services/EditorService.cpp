@@ -170,6 +170,7 @@ namespace Opaax::Editor
         m_InputActionDocument = MakeUnique<EditorInputActionDocument>();
         m_InputMapDocument    = MakeUnique<EditorInputMappingContextDocument>();
         m_DataAssetDocument   = MakeUnique<EditorDataAssetDocument>();
+        m_Export              = MakeUnique<GameExport>();
     }
 
     void EditorService::ClearEditorSystems()
@@ -182,6 +183,9 @@ namespace Opaax::Editor
         m_Undo.reset();
         m_InputRoute.reset();
         m_PIE.reset();
+
+        // Waits for an export still running.
+        m_Export.reset();
     }
 
     void EditorService::CreateEditorContext(Window* InWindow, IEngine& InEngine)
@@ -223,7 +227,8 @@ namespace Opaax::Editor
             OpaaxApplication::GetAppService<IPlatform>().GetFileSystem(),
             OpaaxApplication::GetAppService<IConfigSystem>(),
             *InWindow,
-            m_EditorPaths
+            m_EditorPaths,
+            *m_Export
         });
 
         // After the context, because it holds one. The reconciler handles prefab instances (entities,
@@ -291,6 +296,8 @@ namespace Opaax::Editor
         lFile.AddSeparator();
         lFile.AddCommand("Open Level...", Tags::EDITOR_COMMAND_OPEN_LEVEL);
         lFile.AddCommand("Save Level", Tags::EDITOR_COMMAND_SAVE_LEVEL).SetEnabled(IsEditing);
+        lFile.AddSeparator();
+        lFile.AddCommand("Export Game...", Tags::EDITOR_COMMAND_EXPORT_GAME);
         lFile.AddSeparator();
         lFile.AddCommand("Exit", Tags::EDITOR_COMMAND_QUIT);
 
@@ -445,6 +452,8 @@ namespace Opaax::Editor
 
         lCommands.Register<UndoCommand>(Tags::EDITOR_COMMAND_UNDO);
         lCommands.Register<RedoCommand>(Tags::EDITOR_COMMAND_REDO);
+
+        lCommands.Register<ExportGameCommand>(Tags::EDITOR_COMMAND_EXPORT_GAME);
     }
 
     void EditorService::RegisterNativeViewportTools()

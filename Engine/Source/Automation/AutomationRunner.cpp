@@ -4,6 +4,33 @@
 
 namespace Opaax
 {
+    namespace
+    {
+        /** Runs a handler; a parameter of the wrong type fails the request, not the app. */
+        AutomationResult Guarded(const TFunction<AutomationResult()>& InCall)
+        {
+            try
+            {
+                return InCall();
+            }
+            catch (const nlohmann::json::exception& lError)
+            {
+                return AutomationResult::Fail(std::string("bad params: ") + lError.what());
+            }
+        }
+
+        AutomationResponse MakeResponse(const AutomationRequest& InRequest, AutomationResult InResult)
+        {
+            AutomationResponse lResponse;
+            lResponse.Id      = InRequest.Id;
+            lResponse.Command = InRequest.Command;
+            lResponse.bOk     = InResult.bOk;
+            lResponse.Result  = InResult.bOk ? Move(InResult.Value) : nlohmann::json::object();
+            lResponse.Error   = Move(InResult.Error);
+            return lResponse;
+        }
+    }
+
     // =========================================================================
     // AutomationResult
     // =========================================================================
@@ -108,6 +135,14 @@ namespace Opaax
 
     void AutomationRunner::FinishWait()
     {
+        // A request answered now that its wait is over.
+        if (m_DeferredAnswer)
+        {
+            const TFunction<AutomationResult()> lAnswer = Move(m_DeferredAnswer);
+            m_DeferredAnswer = nullptr;
+            Respond(MakeResponse(m_Deferred, Guarded(lAnswer)));
+        }
+
         if (m_AfterWait)
         {
             const TFunction<void()> lAfter = Move(m_AfterWait);
@@ -128,60 +163,61 @@ namespace Opaax
 
     void AutomationRunner::Run(const AutomationRequest& InRequest)
     {
-        AutomationResponse lResponse;
-        lResponse.Id      = InRequest.Id;
-        lResponse.Command = InRequest.Command;
-
         const auto lIt = m_Commands.find(InRequest.Command);
         if (lIt == m_Commands.end())
         {
-            lResponse.Error = "unknown command '" + InRequest.Command + "' (commands.list lists them)";
+            Respond(MakeResponse(InRequest, AutomationResult::Fail(
+                "unknown command '" + InRequest.Command + "' (commands.list lists them)")));
+            return;
         }
-        else
+
+        const AutomationHandler& lHandler = lIt->second.Handler;
+        AutomationResult         lResult  = Guarded([&lHandler, &InRequest]() { return lHandler(InRequest.Params); });
+
+        if (lResult.bOk)
         {
-            AutomationResult lResult;
-            try
+            m_WaitFrames = lResult.WaitFrames;
+            m_WaitUntil  = Move(lResult.WaitUntil);
+            m_AfterWait  = Move(lResult.AfterWait);
+
+            // Answered when the wait is over: FinishWait sends it.
+            if (lResult.Answer)
             {
-                lResult = lIt->second.Handler(InRequest.Params);
+                m_Deferred       = InRequest;
+                m_DeferredAnswer = Move(lResult.Answer);
             }
-            catch (const nlohmann::json::exception& lError)
+            else
             {
-                // A parameter of the wrong type: the request is wrong, not the app.
-                lResult = AutomationResult::Fail(std::string("bad params: ") + lError.what());
+                Respond(MakeResponse(InRequest, Move(lResult)));
             }
 
-            lResponse.bOk    = lResult.bOk;
-            lResponse.Result = lResult.bOk ? Move(lResult.Value) : nlohmann::json::object();
-            lResponse.Error  = Move(lResult.Error);
-
-            if (lResult.bOk)
+            // Nothing to wait for: what comes after the wait happens now.
+            if (!IsHolding())
             {
-                m_WaitFrames = lResult.WaitFrames;
-                m_WaitUntil  = Move(lResult.WaitUntil);
-                m_AfterWait  = Move(lResult.AfterWait);
-
-                // Nothing to wait for: what comes after the wait happens now.
-                if (!IsHolding())
-                {
-                    FinishWait();
-                }
+                FinishWait();
             }
+            return;
         }
 
+        Respond(MakeResponse(InRequest, Move(lResult)));
+    }
+
+    void AutomationRunner::Respond(AutomationResponse InResponse)
+    {
         ++m_Answered;
-        if (!lResponse.bOk)
+        if (!InResponse.bOk)
         {
             ++m_Failed;
-            OPAAX_LOG(LogAutomation, Warn, "Request '{}' ({}) failed: {}", lResponse.Id, lResponse.Command, lResponse.Error);
+            OPAAX_LOG(LogAutomation, Warn, "Request '{}' ({}) failed: {}", InResponse.Id, InResponse.Command, InResponse.Error);
         }
         else
         {
-            OPAAX_LOG(LogAutomation, Info, "Request '{}' ({}) done", lResponse.Id, lResponse.Command);
+            OPAAX_LOG(LogAutomation, Info, "Request '{}' ({}) done", InResponse.Id, InResponse.Command);
         }
 
         if (m_Sink)
         {
-            m_Sink(lResponse);
+            m_Sink(InResponse);
         }
     }
 

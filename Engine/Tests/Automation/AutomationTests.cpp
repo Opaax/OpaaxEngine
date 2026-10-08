@@ -179,6 +179,50 @@ TEST_CASE("Automation: a condition holds the queue, after the frames, until it i
     CHECK(lRecorder.Runner.IsIdle());
 }
 
+TEST_CASE("Automation: a long job is answered when its wait is over, with its outcome")
+{
+    Recorder lRecorder;
+    bool     bDone = false;
+
+    lRecorder.Runner.Register("job", "Ends when bDone is set.", [&bDone](const nlohmann::json&)
+    {
+        AutomationResult lResult;
+        lResult.WaitUntil = [&bDone] { return bDone; };
+        lResult.Answer    = [&bDone] { return AutomationResult::Ok(nlohmann::json{ { "done", bDone } }); };
+        return lResult;
+    });
+    lRecorder.Runner.Register("broken-job", "Ends badly a frame later.", [](const nlohmann::json&)
+    {
+        AutomationResult lResult;
+        lResult.WaitFrames = 1;
+        lResult.Answer     = [] { return AutomationResult::Fail("the job failed"); };
+        return lResult;
+    });
+
+    lRecorder.Runner.Enqueue(Request("1", "job"));
+    lRecorder.Runner.Enqueue(Request("2", "echo"));
+
+    lRecorder.Runner.Tick();
+    lRecorder.Runner.Tick();
+    CHECK(lRecorder.Responses.empty());   // not answered yet, and the next request waits
+
+    bDone = true;
+    lRecorder.Runner.Tick();
+    REQUIRE(lRecorder.Responses.size() == 2);
+    CHECK(lRecorder.Responses[0].Id == "1");
+    CHECK(lRecorder.Responses[0].Result.at("done") == true);
+    CHECK(lRecorder.Responses[1].Id == "2");
+
+    lRecorder.Runner.Enqueue(Request("3", "broken-job"));
+    lRecorder.Runner.Tick();
+    CHECK(lRecorder.Responses.size() == 2);
+    lRecorder.Runner.Tick();
+    REQUIRE(lRecorder.Responses.size() == 3);
+    CHECK_FALSE(lRecorder.Responses[2].bOk);
+    CHECK(lRecorder.Responses[2].Error == "the job failed");
+    CHECK(lRecorder.Runner.GetFailed() == 1);
+}
+
 TEST_CASE("Automation: an unknown command and bad params fail, and the queue goes on")
 {
     Recorder lRecorder;

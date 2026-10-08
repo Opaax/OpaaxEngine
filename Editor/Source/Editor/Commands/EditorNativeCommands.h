@@ -84,6 +84,16 @@ namespace Opaax::Editor
     };
 
     /**
+     * Asks for a folder, then exports the edited game into it in the background (ExportOps): the
+     * release build of the game, its content and the engine's, ready to run on another machine.
+     */
+    struct ExportGameCommand
+    {
+        using Params = NoParams;
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /**
      * Minimizes the window (the first caption button).
      */
     struct MinimizeWindowCommand

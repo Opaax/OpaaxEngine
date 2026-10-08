@@ -45,6 +45,12 @@ namespace Opaax
         /** Runs once the wait is over, before the next request (a held key released). */
         TFunction<void()> AfterWait;
 
+        /**
+         * With a wait: the request is answered once the wait is over, with what this returns (the
+         * outcome of a long job), instead of at once.
+         */
+        TFunction<AutomationResult()> Answer;
+
         static AutomationResult Ok(nlohmann::json InValue = nlohmann::json::object());
         static AutomationResult Fail(std::string InError);
     };
@@ -105,6 +111,9 @@ namespace Opaax
     private:
         void Run(const AutomationRequest& InRequest);
 
+        /** Counts, logs and sends a response. */
+        void Respond(AutomationResponse InResponse);
+
         /** A request's wait is not over. */
         bool IsHolding() const noexcept { return m_WaitFrames > 0 || m_WaitUntil != nullptr; }
 
@@ -127,6 +136,10 @@ namespace Opaax
         Uint32            m_WaitFrames = 0;
         TFunction<bool()> m_WaitUntil;
         TFunction<void()> m_AfterWait;
+
+        /** A request answered once its wait is over: who it was, and how to answer. */
+        AutomationRequest             m_Deferred;
+        TFunction<AutomationResult()> m_DeferredAnswer;
 
         TFunction<void(const AutomationResponse&)> m_Sink;
 

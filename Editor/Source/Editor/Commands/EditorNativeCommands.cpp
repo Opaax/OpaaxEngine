@@ -9,6 +9,8 @@
 #include "Editor/Undo/EntityUndoables.h"      // EntityDelete
 #include "World/Serialization/MapSerializer.h"   // CaptureEntities
 #include "Editor/Operation/EntityOps.h"
+#include "Editor/Operation/ExportOperations.h"
+#include "Editor/Export/GameExport.h"
 #include "Editor/Operation/LevelOperations.h"
 #include "Editor/Operation/SheetOperations.h"
 #include "Editor/Operation/ClipOperations.h"
@@ -199,6 +201,24 @@ namespace Opaax::Editor
     // =============================================================================
     // App
     // =============================================================================
+
+    void ExportGameCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        if (InContext.Export.IsRunning())
+        {
+            OPAAX_LOG(LogGameExport, Warn, "An export is already running (to '{}')", InContext.Export.GetDestination());
+            return;
+        }
+
+        FileDialogRequest lRequest;
+        lRequest.Title       = "Export Game To";
+        lRequest.DefaultPath = InContext.Paths.WorkspaceRoot() + OpaaxString("/");
+
+        InContext.Dialogs.PickFolder(lRequest, [&InContext](const OpaaxString& InFolder)
+        {
+            ExportOps::Start(InContext, std::string(InFolder.CStr()));
+        });
+    }
 
     void QuitCommand::Execute(EditorContext& InContext, const Params&)
     {

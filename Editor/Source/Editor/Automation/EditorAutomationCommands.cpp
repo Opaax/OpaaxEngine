@@ -15,6 +15,8 @@
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/Operation/EditorSelection.hpp"
 #include "Editor/Operation/EntityOps.h"
+#include "Editor/Operation/ExportOperations.h"
+#include "Editor/Export/GameExport.h"
 #include "Editor/Undo/ComponentUndoables.h"
 #include "Editor/Undo/EditorUndo.h"
 #include "Engine/Registries/EngineRegistries.h"
@@ -152,6 +154,34 @@ namespace Opaax::Editor::EditorAutomation
         // =========================================================================
         void RegisterFiles(AutomationRunner& InRunner, EditorContext& InContext)
         {
+            InRunner.Register("project.export",
+                "Exports the game into the folder {path}: its release build, content and the engine's, ready to run "
+                "elsewhere. Answered when done (it takes minutes), with the output's log.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    const std::string lPath = InParams.value("path", std::string());
+                    if (lPath.empty() || !ExportOps::Start(InContext, std::filesystem::absolute(lPath).generic_string()))
+                    {
+                        return AutomationResult::Fail("the export did not start (see the log): a folder is needed, and "
+                                                      "one export at a time");
+                    }
+
+                    AutomationResult lResult;
+                    lResult.WaitUntil = [&InContext]() { return !InContext.Export.IsRunning(); };
+                    lResult.Answer    = [&InContext]()
+                    {
+                        const GameExport& lExport = InContext.Export;
+                        if (lExport.GetState() != GameExport::EState::Succeeded)
+                        {
+                            return AutomationResult::Fail("the export failed at '" + lExport.GetFailedStep()
+                                                          + "': see " + lExport.GetLog());
+                        }
+                        return AutomationResult::Ok(nlohmann::json{ { "path", lExport.GetDestination() },
+                                                                    { "log", lExport.GetLog() } });
+                    };
+                    return lResult;
+                });
+
             InRunner.Register("level.open", "Opens the level at {path} (relative to the project's assets).",
                 [&InContext](const nlohmann::json& InParams)
                 {

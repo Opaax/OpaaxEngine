@@ -9,6 +9,9 @@ namespace Opaax::Editor::Tags
     //Miscs
     inline const OpaaxTag EDITOR_COMMAND_QUIT = OpaaxTag("Editor.Command.Quit");
 
+    // Export
+    inline const OpaaxTag EDITOR_COMMAND_EXPORT_GAME = OpaaxTag("Editor.Command.ExportGame");
+
     //Window — the title bar buttons. Close is EDITOR_COMMAND_QUIT (the X and File/Exit are the same).
     inline const OpaaxTag EDITOR_COMMAND_MINIMIZE_WINDOW        = OpaaxTag("Editor.Command.MinimizeWindow");
     inline const OpaaxTag EDITOR_COMMAND_TOGGLE_MAXIMIZE_WINDOW = OpaaxTag("Editor.Command.ToggleMaximizeWindow");
