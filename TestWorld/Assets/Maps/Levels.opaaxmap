@@ -1,0 +1,128 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "435e20876aa954eebc5ecdfb00c3b580",
+            "name": "Camera",
+            "ownerMap": "Levels"
+        },
+        {
+            "components": {
+                "Text": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Face": "",
+                    "Font": "/Engine/Fonts/Roboto.opaaxfont",
+                    "Layer": "Foreground",
+                    "LineHeightScale": 1.0,
+                    "OrderInLayer": 0,
+                    "Size": 40.0,
+                    "Style": {
+                        "Slant": "Normal",
+                        "Subset": "Latin",
+                        "Weight": "Bold",
+                        "Width": "Normal"
+                    },
+                    "Text": "Leaving in 0.2 s",
+                    "bKerning": true,
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -200.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "519f9f0c4dc25229aa9c094213ea3b91",
+            "name": "Banner",
+            "ownerMap": "Levels"
+        },
+        {
+            "components": {
+                "TravelProbe": {
+                    "Target": "Levels/LevelsArrival.opaaxlevel",
+                    "Delay": 0.2
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "9bd1a8da35285c7689a025700c3ffe28",
+            "name": "Traveller",
+            "ownerMap": "Levels"
+        },
+        {
+            "components": {
+                "EndProbe": {},
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "39153936150f51ef9ab665736be86309",
+            "name": "Ender",
+            "ownerMap": "Levels"
+        },
+        {
+            "components": {
+                "LedgerProbe": {},
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "0596de52c09b562a85810b6d543b3286",
+            "name": "Ledger",
+            "ownerMap": "Levels"
+        }
+    ],
+    "mapId": "Levels",
+    "version": 4
+}

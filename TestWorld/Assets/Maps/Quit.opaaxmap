@@ -17,9 +17,9 @@
                     }
                 }
             },
-            "guid": "c1c7ced182b151d197282efb856e3da0",
+            "guid": "0a215c420a2558fd810f5ef13b33f454",
             "name": "Camera",
-            "ownerMap": "Main"
+            "ownerMap": "Quit"
         },
         {
             "components": {
@@ -35,21 +35,21 @@
                     "Layer": "Foreground",
                     "LineHeightScale": 1.0,
                     "OrderInLayer": 0,
-                    "Size": 28.0,
+                    "Size": 40.0,
                     "Style": {
                         "Slant": "Normal",
                         "Subset": "Latin",
                         "Weight": "Bold",
                         "Width": "Normal"
                     },
-                    "Text": "TestWorld\nOne level per engine feature:\nRendering, Lighting, Physics, Behaviours, Audio,\nHierarchy, Prefabs, Collisions, Levels, Quit\nTests: TestWorld/Tests",
+                    "Text": "Quitting in 0.3 s",
                     "bKerning": true,
                     "bVisible": true
                 },
                 "Transform": {
                     "Position": {
-                        "x": -480.0,
-                        "y": 120.0
+                        "x": -200.0,
+                        "y": 0.0
                     },
                     "Rotation": 0.0,
                     "Scale": {
@@ -58,11 +58,33 @@
                     }
                 }
             },
-            "guid": "4e25cbd3367e5f979b7b715ecf339b03",
-            "name": "Readme",
-            "ownerMap": "Main"
+            "guid": "3a0a7e862c415df6bb30ea29335ac43d",
+            "name": "Banner",
+            "ownerMap": "Quit"
+        },
+        {
+            "components": {
+                "TravelProbe": {
+                    "Delay": 0.3,
+                    "bQuit": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "1f0f99743391509585d9a3ec5b496009",
+            "name": "Quitter",
+            "ownerMap": "Quit"
         }
     ],
-    "mapId": "Main",
+    "mapId": "Quit",
     "version": 4
 }

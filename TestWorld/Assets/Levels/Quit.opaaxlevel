@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/Quit.opaaxmap"
+    ],
+    "name": "Quit",
+    "persistentMap": "Maps/Quit.opaaxmap",
+    "version": 1
+}
