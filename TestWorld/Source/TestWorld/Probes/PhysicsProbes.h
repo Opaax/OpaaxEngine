@@ -1,5 +1,8 @@
 #pragma once
 
+#include <algorithm>
+#include <cmath>
+
 #include "Core/String/OpaaxStringJson.h"
 #include "Physics/Collision/CollisionChannel.h"
 #include "Probes/LifecycleProbes.h"
@@ -170,6 +173,62 @@ namespace TestWorld
     private:
         float m_Simulated = 0.f;
         bool  m_bSampled  = false;
+    };
+
+    // =============================================================================
+    // LiftProbe — raises its entity (a kinematic body) at Speed until it is Height above where it
+    //   started, one fixed step at a time: a moving platform, which carries what stands on it.
+    // =============================================================================
+    class LiftProbe : public Opaax::Behaviour
+    {
+    public:
+        float Speed  = 200.f;
+        float Height = 200.f;
+
+        OPAAX_PROPERTIES(LiftProbe, OPAAX_PROP(Speed), OPAAX_PROP(Height))
+
+        void OnFixedUpdate(const float InFixedDeltaTime) override
+        {
+            if (m_Risen >= Height)
+            {
+                return;
+            }
+
+            const float lStep = std::min(Speed * InFixedDeltaTime, Height - m_Risen);
+            m_Risen += lStep;
+            SetPosition(GetPosition() + Opaax::Vector2F{ 0.f, lStep });
+        }
+
+    private:
+        float m_Risen = 0.f;
+    };
+
+    // =============================================================================
+    // SpeedProbe — records its body's speed once SampleAfter seconds of physics have run.
+    // =============================================================================
+    class SpeedProbe : public Opaax::Behaviour
+    {
+    public:
+        float SampleAfter = 1.f;
+
+        float Speed    = 0.f;
+        bool  bSampled = false;
+
+        OPAAX_PROPERTIES(SpeedProbe, OPAAX_PROP(SampleAfter), OPAAX_PROP(Speed), OPAAX_PROP(bSampled))
+
+        void OnFixedUpdate(const float InFixedDeltaTime) override
+        {
+            if (!bSampled && m_Simulated + 0.5f * InFixedDeltaTime >= SampleAfter)
+            {
+                const Opaax::Vector2F lVelocity = GetVelocity();
+                Speed    = std::sqrt(lVelocity.x * lVelocity.x + lVelocity.y * lVelocity.y);
+                bSampled = true;
+            }
+            m_Simulated += InFixedDeltaTime;
+        }
+
+    private:
+        float m_Simulated = 0.f;
     };
 
     // =============================================================================

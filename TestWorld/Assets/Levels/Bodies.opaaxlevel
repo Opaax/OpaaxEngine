@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/Bodies.opaaxmap"
+    ],
+    "name": "Bodies",
+    "persistentMap": "Maps/Bodies.opaaxmap",
+    "version": 1
+}

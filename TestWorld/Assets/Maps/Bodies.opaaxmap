@@ -1,0 +1,435 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldDynamic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 20.0,
+                    "Restitution": 0.0,
+                    "Shape": "Capsule",
+                    "Size": {
+                        "x": 40.0,
+                        "y": 120.0
+                    }
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.30000001192092896,
+                        "y": 0.699999988079071,
+                        "z": 1.0
+                    },
+                    "Size": {
+                        "x": 40.0,
+                        "y": 120.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Dynamic",
+                    "bFixedRotation": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -400.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "05edc248b5f05956bc1d6e4f3d0a8bf5",
+            "name": "Pill",
+            "ownerMap": "Bodies"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldDynamic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 15.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 30.0,
+                        "y": 30.0
+                    }
+                },
+                "ImpulseProbe": {
+                    "AngularImpulse": 200000.0,
+                    "AngularVelocity": 0.0,
+                    "Speed": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "VelocityX": 0.0,
+                    "VelocityY": 0.0
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.6000000238418579,
+                        "y": 0.4000000059604645,
+                        "z": 0.8999999761581421
+                    },
+                    "Size": {
+                        "x": 30.0,
+                        "y": 30.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 0.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Dynamic",
+                    "bFixedRotation": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 150.0,
+                        "y": 150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "179b05502b9f5debbc52f9fd2a4253a6",
+            "name": "Locked",
+            "ownerMap": "Bodies"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "1e47f2cdd7e659b4b34f1c7751e3c87d",
+            "name": "Camera",
+            "ownerMap": "Bodies"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldStatic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 10.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 160.0,
+                        "y": 20.0
+                    }
+                },
+                "LiftProbe": {
+                    "Height": 200.0,
+                    "Speed": 200.0
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.5,
+                        "y": 0.5,
+                        "z": 0.550000011920929
+                    },
+                    "Size": {
+                        "x": 160.0,
+                        "y": 20.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Kinematic",
+                    "bFixedRotation": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -100.0,
+                        "y": -150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "8aa3d2516c8b5c2c9414578fe6775f56",
+            "name": "Lift",
+            "ownerMap": "Bodies"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldDynamic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 15.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 30.0,
+                        "y": 30.0
+                    }
+                },
+                "ImpulseProbe": {
+                    "AngularImpulse": 0.0,
+                    "AngularVelocity": 0.0,
+                    "Speed": {
+                        "x": 300.0,
+                        "y": 0.0
+                    },
+                    "VelocityX": 0.0,
+                    "VelocityY": 0.0
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.30000001192092896,
+                        "y": 0.8999999761581421,
+                        "z": 0.4000000059604645
+                    },
+                    "Size": {
+                        "x": 30.0,
+                        "y": 30.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 0.0,
+                    "LinearDamping": 2.0,
+                    "Type": "Dynamic",
+                    "bFixedRotation": false
+                },
+                "SpeedProbe": {
+                    "SampleAfter": 1.0,
+                    "Speed": 0.0,
+                    "bSampled": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -50.0,
+                        "y": 200.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "b7aa6bc9f153543daab8f0410615d178",
+            "name": "Damped",
+            "ownerMap": "Bodies"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldDynamic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 30.0
+                    },
+                    "Radius": 20.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    }
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.8999999761581421,
+                        "y": 0.5,
+                        "z": 0.20000000298023224
+                    },
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Dynamic",
+                    "bFixedRotation": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -300.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "de82f27b65045846905f7e56a52e5b0a",
+            "name": "Shifted",
+            "ownerMap": "Bodies"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldDynamic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 20.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    }
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.8999999761581421,
+                        "y": 0.30000001192092896,
+                        "z": 0.30000001192092896
+                    },
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Dynamic",
+                    "bFixedRotation": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -100.0,
+                        "y": -120.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "df82b337f64d5202afdd73bf3ba135d8",
+            "name": "Rider",
+            "ownerMap": "Bodies"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldStatic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 20.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 1000.0,
+                        "y": 40.0
+                    }
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3499999940395355,
+                        "y": 0.30000001192092896,
+                        "z": 0.25
+                    },
+                    "Size": {
+                        "x": 1000.0,
+                        "y": 40.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Static",
+                    "bFixedRotation": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": -250.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "e2a895fc11975a158cb259d635ac1358",
+            "name": "Ground",
+            "ownerMap": "Bodies"
+        }
+    ],
+    "mapId": "Bodies",
+    "version": 4
+}
