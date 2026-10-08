@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/Camera.opaaxmap"
+    ],
+    "name": "Camera",
+    "persistentMap": "Maps/Camera.opaaxmap",
+    "version": 1
+}

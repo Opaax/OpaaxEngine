@@ -2,6 +2,7 @@
 // own fields, where the scripts in TestWorld/Tests read it (expect.value). The ProbeLedger keeps a
 // record across levels.
 #include "Engine/Registries/AutoRegistration.h"
+#include "Probes/CameraProbe.h"
 #include "Probes/EventProbe.h"
 #include "Probes/GameplayProbes.h"
 #include "Probes/HierarchyProbes.h"
@@ -36,6 +37,7 @@ namespace TestWorld
     OPAAX_REGISTER_BEHAVIOUR(LedgerProbe);
     OPAAX_REGISTER_BEHAVIOUR(TravelProbe);
     OPAAX_REGISTER_BEHAVIOUR(UIProbe);
+    OPAAX_REGISTER_BEHAVIOUR(CameraProbe);
 
     OPAAX_REGISTER_GAME_INSTANCE_SUBSYSTEM(ProbeLedger);
 }

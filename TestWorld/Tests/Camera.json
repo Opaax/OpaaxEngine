@@ -1,0 +1,88 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Camera.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.3
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Director",
+            "path": "CameraProbe/ViewX",
+            "near": 300,
+            "tolerance": 0.01
+        },
+        "id": "follows-x"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Director",
+            "path": "CameraProbe/ViewY",
+            "near": 50,
+            "tolerance": 0.01
+        },
+        "id": "follows-y"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Director",
+            "path": "CameraProbe/ViewSize",
+            "near": 200,
+            "tolerance": 0.01
+        },
+        "id": "follow-zoom"
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.6
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Director",
+            "path": "CameraProbe/ViewX",
+            "near": -100,
+            "tolerance": 0.01
+        },
+        "id": "switched-x"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Director",
+            "path": "CameraProbe/ViewY",
+            "near": 0,
+            "tolerance": 0.01
+        },
+        "id": "switched-y"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Director",
+            "path": "CameraProbe/ViewSize",
+            "near": 600,
+            "tolerance": 0.01
+        },
+        "id": "switched-zoom"
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "Camera.png"
+        }
+    }
+]

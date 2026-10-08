@@ -1,0 +1,290 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Quad": {
+                    "Size": {
+                        "x": 1400.0,
+                        "y": 20.0
+                    },
+                    "Color": {
+                        "x": 0.35,
+                        "y": 0.3,
+                        "z": 0.25,
+                        "w": 1.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": -200.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "7217ca536932598e96bf58b6b89b9e97",
+            "name": "Ground",
+            "ownerMap": "Camera"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    },
+                    "Color": {
+                        "x": 0.2,
+                        "y": 0.5,
+                        "z": 0.9,
+                        "w": 1.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -450.0,
+                        "y": -150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "f5209289eb22577285308e7c0580e136",
+            "name": "Marker0",
+            "ownerMap": "Camera"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    },
+                    "Color": {
+                        "x": 0.35,
+                        "y": 0.5,
+                        "z": 0.75,
+                        "w": 1.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -225.0,
+                        "y": -150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "b0ab364576095dec837570a7300ff804",
+            "name": "Marker1",
+            "ownerMap": "Camera"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    },
+                    "Color": {
+                        "x": 0.5,
+                        "y": 0.5,
+                        "z": 0.6000000000000001,
+                        "w": 1.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": -150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "c94e5516215556b49190485a1c9b317c",
+            "name": "Marker2",
+            "ownerMap": "Camera"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    },
+                    "Color": {
+                        "x": 0.6499999999999999,
+                        "y": 0.5,
+                        "z": 0.45000000000000007,
+                        "w": 1.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 225.0,
+                        "y": -150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "ff7d638569ef503aa1d717ffcfb1b1dc",
+            "name": "Marker3",
+            "ownerMap": "Camera"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    },
+                    "Color": {
+                        "x": 0.8,
+                        "y": 0.5,
+                        "z": 0.30000000000000004,
+                        "w": 1.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 450.0,
+                        "y": -150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "c41a095fc6705f38903e808b00722bea",
+            "name": "Marker4",
+            "ownerMap": "Camera"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Size": {
+                        "x": 40.0,
+                        "y": 60.0
+                    },
+                    "Color": {
+                        "x": 0.9,
+                        "y": 0.3,
+                        "z": 0.3,
+                        "w": 1.0
+                    }
+                },
+                "MoveProbe": {
+                    "Delay": 0.1,
+                    "To": {
+                        "x": 300.0,
+                        "y": 50.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -300.0,
+                        "y": 50.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "c0061fe2bed95ff79de229b008239623",
+            "name": "Player",
+            "ownerMap": "Camera"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 200.0,
+                    "Priority": 1
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "6aa9a4205e535544b83873b1e13fd70e",
+            "name": "FollowCam",
+            "ownerMap": "Camera",
+            "parent": "c0061fe2bed95ff79de229b008239623"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 600.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -100.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "817d433db76b54a989077bac369778b2",
+            "name": "Overview",
+            "ownerMap": "Camera"
+        },
+        {
+            "components": {
+                "CameraProbe": {
+                    "Raise": "Overview",
+                    "RaiseAfter": 0.6
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "f50c7f5d7c0c5b9db181cde978d6b938",
+            "name": "Director",
+            "ownerMap": "Camera"
+        }
+    ],
+    "mapId": "Camera",
+    "version": 4
+}
