@@ -1,0 +1,88 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Extensions.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.3
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Holder",
+            "path": "TuningProbe/bLoaded",
+            "equals": true
+        },
+        "id": "data-asset-loaded"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Holder",
+            "path": "TuningProbe/Speed",
+            "near": 2.5,
+            "tolerance": 0.01
+        },
+        "id": "data-asset-float"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Holder",
+            "path": "TuningProbe/Lives",
+            "equals": 5
+        },
+        "id": "data-asset-int"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Holder",
+            "path": "TuningProbe/Title",
+            "equals": "Hard"
+        },
+        "id": "data-asset-text"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Holder",
+            "path": "TuningProbe/bCounter",
+            "equals": true
+        },
+        "id": "world-subsystem"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Holder",
+            "path": "TuningProbe/CounterUpdates",
+            "greater": 0
+        },
+        "id": "subsystem-updates"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Holder",
+            "path": "TuningProbe/CounterFixedSteps",
+            "greater": 0
+        },
+        "id": "subsystem-fixed-steps"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Holder",
+            "path": "TuningProbe/CounterTuned",
+            "equals": 1
+        },
+        "id": "subsystem-sees-component"
+    }
+]

@@ -1,10 +1,12 @@
 // The TestWorld game's types. Each probe is a behaviour that records what the engine did in its
 // own fields, where the scripts in TestWorld/Tests read it (expect.value). The ProbeLedger keeps a
-// record across levels.
+// record across levels; the Extensions level uses a component, a data asset and a world subsystem of
+// the game.
 #include "Engine/Registries/AutoRegistration.h"
 #include "Probes/AnimationProbes.h"
 #include "Probes/CameraProbe.h"
 #include "Probes/EventProbe.h"
+#include "Probes/ExtensionProbes.h"
 #include "Probes/GameplayProbes.h"
 #include "Probes/HierarchyProbes.h"
 #include "Probes/LevelProbes.h"
@@ -50,6 +52,12 @@ namespace TestWorld
     OPAAX_REGISTER_BEHAVIOUR(HelperProbe);
     OPAAX_REGISTER_BEHAVIOUR(DieProbe);
     OPAAX_REGISTER_BEHAVIOUR(AnimProbe);
+    OPAAX_REGISTER_BEHAVIOUR(TuningProbe);
 
     OPAAX_REGISTER_GAME_INSTANCE_SUBSYSTEM(ProbeLedger);
+
+    // The game's own types beside the probes: a component, a data asset and a world subsystem.
+    OPAAX_REGISTER_COMPONENT(TunedComponent);
+    OPAAX_REGISTER_DATA_ASSET(ProbeTuning);
+    OPAAX_REGISTER_WORLD_SUBSYSTEM(ProbeCounterSubsystem);
 }
