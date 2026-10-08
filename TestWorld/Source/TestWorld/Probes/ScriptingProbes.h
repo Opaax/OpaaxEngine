@@ -32,14 +32,16 @@ namespace TestWorld
     };
 
     // =============================================================================
-    // ScriptProbe — the behaviour API a script uses most: adds, reads and later removes a component
-    //   on its entity; creates an entity and gives it a HelperProbe (found and counted while it
-    //   lives); a lambda timer; the clock; turns its entity; finds a world subsystem; draws a debug
-    //   circle around itself.
+    // ScriptProbe — the behaviour API a script uses most: adds, reads and RemoveQuadAfter seconds
+    //   later removes a component on its entity; creates an entity and gives it a HelperProbe (found
+    //   and counted while it lives); a lambda timer; the clock; turns its entity; finds a world
+    //   subsystem; draws a debug circle around itself.
     // =============================================================================
     class ScriptProbe : public Opaax::Behaviour
     {
     public:
+        float RemoveQuadAfter = 1.f;
+
         Opaax::OpaaxString Name;
         bool               bHadQuad     = false;   // before Add
         bool               bAddedQuad   = false;
@@ -54,10 +56,11 @@ namespace TestWorld
         float              Rotation     = 0.f;
         Opaax::Int32       LinesQueued  = 0;
 
-        OPAAX_PROPERTIES(ScriptProbe, OPAAX_PROP(Name), OPAAX_PROP(bHadQuad), OPAAX_PROP(bAddedQuad),
-                         OPAAX_PROP(QuadWidth), OPAAX_PROP(bRemovedQuad), OPAAX_PROP(bSawHelper),
-                         OPAAX_PROP(HelpersSeen), OPAAX_PROP(LambdaCalls), OPAAX_PROP(bPhysics), OPAAX_PROP(Time),
-                         OPAAX_PROP(bDeltaSeen), OPAAX_PROP(Rotation), OPAAX_PROP(LinesQueued))
+        OPAAX_PROPERTIES(ScriptProbe, OPAAX_PROP(RemoveQuadAfter), OPAAX_PROP(Name), OPAAX_PROP(bHadQuad),
+                         OPAAX_PROP(bAddedQuad), OPAAX_PROP(QuadWidth), OPAAX_PROP(bRemovedQuad),
+                         OPAAX_PROP(bSawHelper), OPAAX_PROP(HelpersSeen), OPAAX_PROP(LambdaCalls),
+                         OPAAX_PROP(bPhysics), OPAAX_PROP(Time), OPAAX_PROP(bDeltaSeen), OPAAX_PROP(Rotation),
+                         OPAAX_PROP(LinesQueued))
 
         void OnStart() override
         {
@@ -77,7 +80,7 @@ namespace TestWorld
             lHelper.Add<HelperProbe>();
 
             SetTimer(0.15f, [this]() { ++LambdaCalls; });
-            SetTimer(0.4f, [this]()
+            SetTimer(RemoveQuadAfter, [this]()
             {
                 Remove<Opaax::QuadComponent>();
                 bRemovedQuad = !Has<Opaax::QuadComponent>();

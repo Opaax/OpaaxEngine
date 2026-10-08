@@ -86,7 +86,7 @@
         "params": {
             "entity": "Pad",
             "path": "ControlsProbe/BoundFrames",
-            "greater": 3
+            "greater": 0
         },
         "id": "bound-triggered"
     },

@@ -55,7 +55,7 @@
                     }
                 },
                 "DieProbe": {
-                    "Seconds": 0.3
+                    "Seconds": 1.0
                 },
                 "Transform": {
                     "Position": {

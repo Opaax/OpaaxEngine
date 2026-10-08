@@ -45,7 +45,7 @@
     {
         "command": "world.wait",
         "params": {
-            "seconds": 0.6
+            "seconds": 1.5
         }
     },
     {
