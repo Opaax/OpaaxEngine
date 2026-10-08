@@ -1,0 +1,319 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Input.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.1
+        }
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "D",
+            "action": "press"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.2
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pad",
+            "path": "ControlsProbe/MoveX",
+            "near": 1,
+            "tolerance": 0.01
+        },
+        "id": "axis-right"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pad",
+            "path": "ControlsProbe/MoveY",
+            "near": 0,
+            "tolerance": 0.01
+        },
+        "id": "axis-flat"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pad",
+            "path": "ControlsProbe/bMoving",
+            "equals": true
+        },
+        "id": "action-active"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pad",
+            "path": "ControlsProbe/bDownHeld",
+            "equals": true
+        },
+        "id": "key-down"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pad",
+            "path": "ControlsProbe/BoundStarts",
+            "equals": 1
+        },
+        "id": "bound-started"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pad",
+            "path": "ControlsProbe/PolledStarts",
+            "equals": 1
+        },
+        "id": "polled-started"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pad",
+            "path": "ControlsProbe/BoundFrames",
+            "greater": 3
+        },
+        "id": "bound-triggered"
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "D",
+            "action": "release"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.1
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pad",
+            "path": "ControlsProbe/MoveX",
+            "near": 0,
+            "tolerance": 0.01
+        },
+        "id": "axis-released"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pad",
+            "path": "ControlsProbe/bMoving",
+            "equals": false
+        },
+        "id": "action-inactive"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pad",
+            "path": "ControlsProbe/BoundCompletions",
+            "equals": 1
+        },
+        "id": "bound-completed"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pad",
+            "path": "ControlsProbe/PolledCompletions",
+            "equals": 1
+        },
+        "id": "polled-completed"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pad",
+            "path": "ControlsProbe/DReleases",
+            "equals": 1
+        },
+        "id": "key-released"
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "D",
+            "action": "press"
+        }
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "W",
+            "action": "press"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.1
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pad",
+            "path": "ControlsProbe/MoveX",
+            "near": 0.7071,
+            "tolerance": 0.01
+        },
+        "id": "diagonal-x"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pad",
+            "path": "ControlsProbe/MoveY",
+            "near": 0.7071,
+            "tolerance": 0.01
+        },
+        "id": "diagonal-y"
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "D",
+            "action": "release"
+        }
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "W",
+            "action": "release"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.1
+        }
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "A",
+            "action": "press"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.1
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pad",
+            "path": "ControlsProbe/MoveX",
+            "near": -1,
+            "tolerance": 0.01
+        },
+        "id": "negated"
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "A",
+            "action": "release"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.1
+        }
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "S",
+            "action": "press"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.1
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pad",
+            "path": "ControlsProbe/MoveY",
+            "near": -1,
+            "tolerance": 0.01
+        },
+        "id": "swizzled-negated"
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "S",
+            "action": "release"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.1
+        }
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "Space",
+            "action": "press"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.7
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pad",
+            "path": "ControlsProbe/Charges",
+            "equals": 1
+        },
+        "id": "held"
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "Space",
+            "action": "release"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.1
+        }
+    }
+]

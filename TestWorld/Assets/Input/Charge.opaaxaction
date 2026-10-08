@@ -1,0 +1,7 @@
+{
+    "Description": "Held for half a second: a charge (Space).",
+    "HoldSeconds": 0.5,
+    "Modifiers": [],
+    "Name": "Charge",
+    "ValueType": "Bool"
+}

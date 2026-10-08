@@ -1,0 +1,46 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "dc69bb09c9915143b97fafbf93480310",
+            "name": "Camera",
+            "ownerMap": "Input"
+        },
+        {
+            "components": {
+                "ControlsProbe": {},
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "9c1e9c341ba551bcb6fba955b3ad2f86",
+            "name": "Pad",
+            "ownerMap": "Input"
+        }
+    ],
+    "mapId": "Input",
+    "version": 4
+}

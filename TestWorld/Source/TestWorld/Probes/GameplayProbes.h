@@ -42,6 +42,65 @@ namespace TestWorld
     };
 
     // =============================================================================
+    // ControlsProbe — reads the Move action (an Axis2D from WASD, Input/Controls.opaaxinputmap, which
+    //   it adds) every way a behaviour can: its value, polled phases and bound handlers for each
+    //   trigger; the D key raw; and a Hold on the Charge action (Space).
+    // =============================================================================
+    class ControlsProbe : public Opaax::Behaviour
+    {
+    public:
+        // This frame's state.
+        float MoveX     = 0.f;
+        float MoveY     = 0.f;
+        bool  bMoving   = false;   // IsActionActive
+        bool  bDownHeld = false;   // IsKeyDown(D)
+
+        // Counts.
+        Opaax::Int32 BoundStarts       = 0;
+        Opaax::Int32 BoundCompletions  = 0;
+        Opaax::Int32 BoundFrames       = 0;   // Triggered: every frame the action is on
+        Opaax::Int32 PolledStarts      = 0;
+        Opaax::Int32 PolledCompletions = 0;
+        Opaax::Int32 DReleases         = 0;   // WasKeyReleased(D)
+        Opaax::Int32 Charges           = 0;   // Hold
+
+        OPAAX_PROPERTIES(ControlsProbe, OPAAX_PROP(MoveX), OPAAX_PROP(MoveY), OPAAX_PROP(bMoving), OPAAX_PROP(bDownHeld),
+                         OPAAX_PROP(BoundStarts), OPAAX_PROP(BoundCompletions), OPAAX_PROP(BoundFrames),
+                         OPAAX_PROP(PolledStarts), OPAAX_PROP(PolledCompletions), OPAAX_PROP(DReleases),
+                         OPAAX_PROP(Charges))
+
+        void OnStart() override
+        {
+            if (Opaax::InputMappingSubsystem* lActions = GetContext().Actions)
+            {
+                lActions->AddContextAsset(OPAAX_ID("Controls"), Opaax::OpaaxString("Input/Controls.opaaxinputmap"));
+            }
+            BindAction<&ControlsProbe::OnMoveStarted>(OPAAX_ID("Move"), Opaax::EInputTrigger::Started);
+            BindAction<&ControlsProbe::OnMoveCompleted>(OPAAX_ID("Move"), Opaax::EInputTrigger::Completed);
+            BindAction<&ControlsProbe::OnMoveFrame>(OPAAX_ID("Move"), Opaax::EInputTrigger::Triggered);
+            BindAction<&ControlsProbe::OnCharge>(OPAAX_ID("Charge"), Opaax::EInputTrigger::Hold);
+        }
+
+        void OnUpdate(float) override
+        {
+            const Opaax::Vector2F lMove = GetAction(OPAAX_ID("Move")).AsAxis2D();
+            MoveX     = lMove.x;
+            MoveY     = lMove.y;
+            bMoving   = IsActionActive(OPAAX_ID("Move"));
+            bDownHeld = IsKeyDown(Opaax::EKeyCode::D);
+
+            if (WasActionStarted(OPAAX_ID("Move")))   { ++PolledStarts; }
+            if (WasActionCompleted(OPAAX_ID("Move"))) { ++PolledCompletions; }
+            if (WasKeyReleased(Opaax::EKeyCode::D))   { ++DReleases; }
+        }
+
+        void OnMoveStarted(const Opaax::InputActionValue&)   { ++BoundStarts; }
+        void OnMoveCompleted(const Opaax::InputActionValue&) { ++BoundCompletions; }
+        void OnMoveFrame(const Opaax::InputActionValue&)     { ++BoundFrames; }
+        void OnCharge(const Opaax::InputActionValue&)        { ++Charges; }
+    };
+
+    // =============================================================================
     // LaunchProbe — throws its dynamic body up at LaunchSpeed and records how high it went.
     // =============================================================================
     class LaunchProbe : public Opaax::Behaviour
