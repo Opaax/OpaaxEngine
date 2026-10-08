@@ -205,6 +205,34 @@ TEST_CASE("FileIO: WriteAllText creates missing parents under a non-ASCII root")
     CHECK(fs::is_directory(lDir.Native() / "Nested" / "Deep"));
 }
 
+TEST_CASE("FileIO: WriteAllText writes LF line ends on every platform, and reads them back")
+{
+    const ScopedUnicodeDir lDir("fileio_lf");
+    const OpaaxString      lFile = lDir.Utf8File("Map.json");
+    const OpaaxString      lText("{\n    \"a\": 1\n}\n");
+
+    REQUIRE(FileIO::WriteAllText(lFile, lText));
+
+    TDynArray<Uint8> lBytes;
+    REQUIRE(FileIO::ReadAllBytes(lFile, lBytes));
+    const std::string lOnDisk(lBytes.begin(), lBytes.end());
+    CHECK(lOnDisk == "{\n    \"a\": 1\n}\n");
+
+    CHECK(FileIO::ReadAllText(lFile) == lText);
+}
+
+TEST_CASE("FileIO: ReadAllText reads a CRLF file with LF line ends, a lone CR kept")
+{
+    const ScopedUnicodeDir lDir("fileio_crlf");
+
+    {
+        std::ofstream lOut(lDir.Native() / "Saved.json", std::ios::binary);
+        lOut << "{\r\n    \"a\": \"x\ry\"\r\n}\r\n";
+    }
+
+    CHECK(FileIO::ReadAllText(lDir.Utf8File("Saved.json")) == OpaaxString("{\n    \"a\": \"x\ry\"\n}\n"));
+}
+
 TEST_CASE("FileIO: ReadAllBytes reads a non-ASCII path and leaves the output alone on failure")
 {
     const ScopedUnicodeDir lDir("fileio_bytes");

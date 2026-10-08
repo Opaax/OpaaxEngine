@@ -18,7 +18,8 @@ namespace Opaax::FileIO
             return {};
         }
 
-        std::ifstream lFile(Utf8::ToFsPath(InAbsPath));
+        // Binary, then CRLF -> LF by hand: the same result on every platform.
+        std::ifstream lFile(Utf8::ToFsPath(InAbsPath), std::ios::binary);
         if (!lFile.is_open())
         {
             return {};
@@ -26,7 +27,20 @@ namespace Opaax::FileIO
 
         std::stringstream lBuffer;
         lBuffer << lFile.rdbuf();
-        return OpaaxString(lBuffer.str().c_str());
+        std::string lText = lBuffer.str();
+
+        std::string::size_type lWrite = 0;
+        for (std::string::size_type lRead = 0; lRead < lText.size(); ++lRead)
+        {
+            if (lText[lRead] == '\r' && lRead + 1 < lText.size() && lText[lRead + 1] == '\n')
+            {
+                continue;
+            }
+            lText[lWrite++] = lText[lRead];
+        }
+        lText.resize(lWrite);
+
+        return OpaaxString(lText.c_str(), static_cast<Uint32>(lText.size()));
     }
 
     bool ReadAllBytes(const OpaaxString& InAbsPath, TDynArray<Uint8>& OutBytes)
@@ -91,13 +105,14 @@ namespace Opaax::FileIO
             return false;
         }
 
-        std::ofstream lFile(lPath);
+        // Binary: text mode would turn every LF into CRLF on Windows.
+        std::ofstream lFile(lPath, std::ios::binary | std::ios::trunc);
         if (!lFile.is_open())
         {
             return false;
         }
 
-        lFile << InText.CStr();
+        lFile.write(InText.CStr(), static_cast<std::streamsize>(InText.GetLength()));
         return lFile.good();
     }
 
