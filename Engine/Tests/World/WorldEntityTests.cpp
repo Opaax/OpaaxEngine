@@ -1,4 +1,4 @@
-// Suite: entity identity — guid stamping, guid-preserving creation, and the MapId partition.
+// Suite: entity identity — guid stamping, names, guid-preserving creation, and the MapId partition.
 //   1. CreateEntityWithGuid can restore an existing identity (capture -> instantiate keeps guids).
 //   2. EntityMeta::OwnerMap says which map an entity belongs to; invalid means runtime-spawned
 //      (never saved).
@@ -36,6 +36,18 @@ TEST_CASE("World: two entities never share a Guid")
     Entity lB = lWorld.CreateEntity("B");
 
     CHECK(lA.GetGuid() != lB.GetGuid());
+}
+
+TEST_CASE("World: an entity handle reads its name; an invalid one reads empty")
+{
+    World  lWorld("EntityTest");
+    Entity lHero = lWorld.CreateEntity("Hero");
+
+    CHECK(lHero.GetName() == OpaaxString("Hero"));
+    CHECK(Entity{}.GetName().IsEmpty());
+
+    lHero.Destroy();
+    CHECK(lHero.GetName().IsEmpty());
 }
 
 // =============================================================================

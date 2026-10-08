@@ -3,6 +3,7 @@
 #include "Engine/Registries/AutoRegistration.h"
 #include "Probes/EventProbe.h"
 #include "Probes/GameplayProbes.h"
+#include "Probes/HierarchyProbes.h"
 #include "Probes/LifecycleProbes.h"
 #include "Probes/SpawnProbe.h"
 
@@ -11,9 +12,15 @@ namespace TestWorld
     OPAAX_REGISTER_BEHAVIOUR(LifecycleProbe);
     OPAAX_REGISTER_BEHAVIOUR(TimerProbe);
     OPAAX_REGISTER_BEHAVIOUR(SelfDestructProbe);
+    OPAAX_REGISTER_BEHAVIOUR(EndProbe);
+    OPAAX_REGISTER_BEHAVIOUR(WitnessProbe);
     OPAAX_REGISTER_BEHAVIOUR(EventProbe);
     OPAAX_REGISTER_BEHAVIOUR(SpawnProbe);
     OPAAX_REGISTER_BEHAVIOUR(InputProbe);
     OPAAX_REGISTER_BEHAVIOUR(LaunchProbe);
     OPAAX_REGISTER_BEHAVIOUR(AudioProbe);
+    OPAAX_REGISTER_BEHAVIOUR(PoseProbe);
+    OPAAX_REGISTER_BEHAVIOUR(BubbleProbe);
+    OPAAX_REGISTER_BEHAVIOUR(ReparentProbe);
+    OPAAX_REGISTER_BEHAVIOUR(MoveProbe);
 }

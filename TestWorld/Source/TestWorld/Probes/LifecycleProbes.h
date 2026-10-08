@@ -71,4 +71,43 @@ namespace TestWorld
 
         void OnStart() override { DestroyAfter(Seconds); }
     };
+
+    /** Published by an EndProbe as it ends. */
+    struct ProbeEnded
+    {
+        bool bWorldEnding = false;
+    };
+
+    // =============================================================================
+    // EndProbe — publishes ProbeEnded as it ends, saying whether the whole world is ending.
+    // =============================================================================
+    class EndProbe : public Opaax::Behaviour
+    {
+    public:
+        void OnDestroy() override { Broadcast(ProbeEnded{ IsWorldEnding() }); }
+    };
+
+    // =============================================================================
+    // WitnessProbe — counts the EndProbes that ended, and how many of them because the world was
+    //   ending.
+    // =============================================================================
+    class WitnessProbe : public Opaax::Behaviour
+    {
+    public:
+        Opaax::Int32 Ended        = 0;
+        Opaax::Int32 WorldEndings = 0;
+
+        OPAAX_PROPERTIES(WitnessProbe, OPAAX_PROP(Ended), OPAAX_PROP(WorldEndings))
+
+        void OnStart() override { Subscribe<&WitnessProbe::OnEnded>(); }
+
+        void OnEnded(const ProbeEnded& InEvent)
+        {
+            ++Ended;
+            if (InEvent.bWorldEnding)
+            {
+                ++WorldEndings;
+            }
+        }
+    };
 }
