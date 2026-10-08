@@ -758,6 +758,20 @@ namespace Opaax::Editor
                                         InContext.Engine.GetRegistries().Components(), *lLevel);
     }
 
+    void ResaveLevelCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        Level* const lLevel = MapOps::ActiveLevel(InContext);
+        if (lLevel == nullptr || !InContext.LevelDocument.HasLevel())
+        {
+            OPAAX_LOG(LogEditorCommands, Warn, "Resave Level ignored — no level file is open");
+            return;
+        }
+
+        InContext.LevelDocument.SaveAll(*InContext.Worlds.GetActiveWorld(),
+                                        InContext.Engine.GetRegistries().Components(), *lLevel,
+                                        /*bInEvenUnchanged*/ true);
+    }
+
     void AddMapToLevelCommand::Execute(EditorContext& InContext, const Params&)
     {
         if (!MapOps::CanEdit(InContext, "Add Map")) { return; }

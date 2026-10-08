@@ -99,10 +99,12 @@ namespace Opaax::Editor
         // Saving
     public:
         /**
-         * Writes every changed map, then the manifest if it changed. Unchanged files are not touched.
+         * Writes every changed map, then the manifest if it changed. Unchanged files are not touched,
+         * unless bInEvenUnchanged: then every map and the manifest are rewritten in the current format.
          * @return False if anything could not be written
          */
-        bool SaveAll(const World& InWorld, const ComponentRegistry& InRegistry, const Level& InLevel);
+        bool SaveAll(const World& InWorld, const ComponentRegistry& InRegistry, const Level& InLevel,
+                     bool bInEvenUnchanged = false);
 
         /** Writes one map and updates its baseline. @return False if unknown or the write failed. */
         bool SaveMap(MapId InMapId, const World& InWorld, const ComponentRegistry& InRegistry);

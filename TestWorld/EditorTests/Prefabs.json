@@ -1,0 +1,200 @@
+[
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 10
+        }
+    },
+    {
+        "id": "open",
+        "command": "level.open",
+        "params": {
+            "path": "Levels/Hierarchy.opaaxlevel"
+        }
+    },
+    {
+        "id": "place",
+        "command": "prefab.place",
+        "params": {
+            "path": "Prefabs/Turret.opaaxprefab",
+            "position": {
+                "x": -400.0,
+                "y": 200.0
+            }
+        }
+    },
+    {
+        "command": "expect.entity",
+        "params": {
+            "entity": "Turret",
+            "exists": true
+        },
+        "id": "placed"
+    },
+    {
+        "command": "expect.entity",
+        "params": {
+            "entity": "Barrel",
+            "exists": true
+        },
+        "id": "placed-child"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Turret",
+            "path": "Transform/Position/x",
+            "near": -400,
+            "tolerance": 0.01
+        },
+        "id": "placed-at"
+    },
+    {
+        "command": "expect.count",
+        "params": {
+            "component": "PrefabInstance",
+            "equals": 2
+        },
+        "id": "instance-marked"
+    },
+    {
+        "id": "undo-place",
+        "command": "editor.undo"
+    },
+    {
+        "command": "expect.entity",
+        "params": {
+            "entity": "Turret",
+            "exists": false
+        },
+        "id": "place-undone"
+    },
+    {
+        "id": "make-body",
+        "command": "entity.create",
+        "params": {
+            "name": "Body",
+            "components": {
+                "Quad": {
+                    "Size": {
+                        "x": 60.0,
+                        "y": 60.0
+                    },
+                    "Color": {
+                        "x": 0.4,
+                        "y": 0.6,
+                        "z": 0.9,
+                        "w": 1.0
+                    }
+                }
+            }
+        }
+    },
+    {
+        "id": "make-head",
+        "command": "entity.create",
+        "params": {
+            "name": "Head",
+            "components": {
+                "Quad": {
+                    "Size": {
+                        "x": 30.0,
+                        "y": 30.0
+                    },
+                    "Color": {
+                        "x": 0.9,
+                        "y": 0.8,
+                        "z": 0.3,
+                        "w": 1.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 45.0
+                    }
+                }
+            }
+        }
+    },
+    {
+        "id": "parent",
+        "command": "entity.parent",
+        "params": {
+            "entity": "Head",
+            "parent": "Body"
+        }
+    },
+    {
+        "id": "rename",
+        "command": "entity.rename",
+        "params": {
+            "entity": "Body",
+            "name": "Robot"
+        }
+    },
+    {
+        "command": "expect.entity",
+        "params": {
+            "entity": "Body",
+            "exists": false
+        },
+        "id": "renamed"
+    },
+    {
+        "id": "create",
+        "command": "prefab.create",
+        "params": {
+            "entities": [
+                "Robot"
+            ],
+            "path": "Scratch/Robot.opaaxprefab"
+        }
+    },
+    {
+        "command": "expect.count",
+        "params": {
+            "component": "PrefabInstance",
+            "equals": 2
+        },
+        "id": "became-instance"
+    },
+    {
+        "id": "place-made",
+        "command": "prefab.place",
+        "params": {
+            "path": "Scratch/Robot.opaaxprefab",
+            "position": {
+                "x": 300.0,
+                "y": -100.0
+            }
+        }
+    },
+    {
+        "command": "expect.count",
+        "params": {
+            "name": "Robot",
+            "equals": 2
+        },
+        "id": "second-instance"
+    },
+    {
+        "command": "expect.count",
+        "params": {
+            "name": "Head",
+            "equals": 2
+        },
+        "id": "with-its-child"
+    },
+    {
+        "id": "detach",
+        "command": "entity.parent",
+        "params": {
+            "entity": "Leaver"
+        }
+    },
+    {
+        "id": "undo-detach",
+        "command": "editor.undo"
+    }
+]

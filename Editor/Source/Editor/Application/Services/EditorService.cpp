@@ -296,6 +296,7 @@ namespace Opaax::Editor
         lFile.AddSeparator();
         lFile.AddCommand("Open Level...", Tags::EDITOR_COMMAND_OPEN_LEVEL);
         lFile.AddCommand("Save Level", Tags::EDITOR_COMMAND_SAVE_LEVEL).SetEnabled(IsEditing);
+        lFile.AddCommand("Resave Level (All Maps)", Tags::EDITOR_COMMAND_RESAVE_LEVEL).SetEnabled(IsEditing);
         lFile.AddSeparator();
         lFile.AddCommand("Export Game...", Tags::EDITOR_COMMAND_EXPORT_GAME);
         lFile.AddSeparator();
@@ -428,6 +429,7 @@ namespace Opaax::Editor
         lCommands.Register<OpenLevelCommand>(Tags::EDITOR_COMMAND_OPEN_LEVEL);
         lCommands.Register<OpenLevelAtCommand>(Tags::EDITOR_COMMAND_OPEN_LEVEL_AT);
         lCommands.Register<SaveLevelCommand>(Tags::EDITOR_COMMAND_SAVE_LEVEL);
+        lCommands.Register<ResaveLevelCommand>(Tags::EDITOR_COMMAND_RESAVE_LEVEL);
         lCommands.Register<SaveSheetCommand>(Tags::EDITOR_COMMAND_SAVE_SHEET);
         lCommands.Register<SaveClipCommand>(Tags::EDITOR_COMMAND_SAVE_CLIP);
         lCommands.Register<SaveLibraryCommand>(Tags::EDITOR_COMMAND_SAVE_LIBRARY);

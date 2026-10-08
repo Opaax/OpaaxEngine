@@ -134,7 +134,6 @@ namespace Opaax::Editor::EditorAutomation
             lCommand("editor.step",  "Runs one frame of a paused game.",                     Tags::EDITOR_COMMAND_STEP);
             lCommand("editor.undo",  "Undoes the last edit.",                                Tags::EDITOR_COMMAND_UNDO);
             lCommand("editor.redo",  "Redoes the last undone edit.",                         Tags::EDITOR_COMMAND_REDO);
-            lCommand("level.save",   "Saves the open level.",                                Tags::EDITOR_COMMAND_SAVE_LEVEL);
 
             InRunner.Register("editor.command",
                 "Runs an editor command that takes no arguments by its {tag} (\"Editor.Command.FocusSelected\"...).",
@@ -225,6 +224,15 @@ namespace Opaax::Editor::EditorAutomation
                     }
                     InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_MAP_AT, InContext, MapPathParams{ lPath });
                     return WorldState(InContext);
+                });
+
+            InRunner.Register("level.save",
+                "Saves the open level's changed maps. With {all}: every map and the level file, rewritten in "
+                "the current format (after a format change, or for files written by hand).",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    return Dispatch(InContext, InParams.value("all", false) ? Tags::EDITOR_COMMAND_RESAVE_LEVEL
+                                                                             : Tags::EDITOR_COMMAND_SAVE_LEVEL);
                 });
 
             InRunner.Register("map.save", "Saves the focused map (it must have a file already).",
@@ -346,6 +354,52 @@ namespace Opaax::Editor::EditorAutomation
                     return AutomationResult::Ok(Describe(InContext, lEntity));
                 });
 
+            InRunner.Register("entity.parent",
+                "Puts {entity} (and its children) under {parent} (id or name; empty or absent detaches it), "
+                "keeping where it is in the world. Undoable.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    std::string  lError;
+                    const Entity lChild = FindEntity(InContext, InParams, lError);
+                    if (!lChild.IsValid())
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    EntityID lParent = ENTITY_NONE;
+                    if (const std::string lRef = InParams.value("parent", std::string()); !lRef.empty())
+                    {
+                        const Entity lFound = FindEntity(InContext, nlohmann::json{ { "entity", lRef } }, lError);
+                        if (!lFound.IsValid())
+                        {
+                            return AutomationResult::Fail(lError);
+                        }
+                        lParent = lFound.GetHandle();
+                    }
+
+                    if (!EntityOps::Reparent(InContext, EUndoWorld::Active, lChild.GetHandle(), lParent))
+                    {
+                        return AutomationResult::Fail("nothing changed (Play running, already there, or a parent "
+                                                      "inside its own children: see the log)");
+                    }
+                    return AutomationResult::Ok(Describe(InContext, lChild));
+                });
+
+            InRunner.Register("entity.rename", "Renames {entity} to {name}. Undoable.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    std::string  lError;
+                    const Entity lEntity = FindEntity(InContext, InParams, lError);
+                    const std::string lName = InParams.value("name", std::string());
+                    if (!lEntity.IsValid() || lName.empty())
+                    {
+                        return AutomationResult::Fail(lEntity.IsValid() ? "\"name\" is the new name" : lError);
+                    }
+
+                    EntityOps::Rename(InContext, lEntity, OpaaxString(lName.c_str()));
+                    return AutomationResult::Ok(Describe(InContext, lEntity));
+                });
+
             // Replaces the engine's: in the edit world, an edit is an undo step.
             InRunner.Register("component.set",
                 "Changes fields of {entity}'s component {type}: {value} is merged into it (added when missing). "
@@ -361,6 +415,85 @@ namespace Opaax::Editor::EditorAutomation
                     return AutomationResult::Ok(Describe(InContext, lEntity));
                 });
         }
+
+        // =========================================================================
+        // Prefabs
+        // =========================================================================
+        void RegisterPrefabs(AutomationRunner& InRunner, EditorContext& InContext)
+        {
+            InRunner.Register("prefab.create",
+                "Writes {entities} (ids or names, with their children) as a prefab at {path}, then replaces them "
+                "with an instance of it, as Create Prefab does. The file is written at once, outside undo.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString lPath;
+                    std::string lError;
+                    if (!AssetPath(InContext, InParams, lPath, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    InContext.Selection.Clear();
+                    for (const nlohmann::json& lRef : InParams.value("entities", nlohmann::json::array()))
+                    {
+                        const Entity lEntity = FindEntity(InContext, nlohmann::json{ { "entity", lRef } }, lError);
+                        if (!lEntity.IsValid())
+                        {
+                            return AutomationResult::Fail(lError);
+                        }
+                        InContext.Selection.Add(lEntity);
+                    }
+
+                    if (InContext.Selection.Count() == 0)
+                    {
+                        return AutomationResult::Fail("\"entities\" lists what goes in the prefab");
+                    }
+                    if (!EntityOps::CreatePrefabFromSelection(InContext, lPath))
+                    {
+                        return AutomationResult::Fail("the prefab was not created (Play running, or a path outside the "
+                                                      "assets: see the log)");
+                    }
+                    return AutomationResult::Ok(nlohmann::json{ { "path", lPath.CStr() } });
+                });
+
+            InRunner.Register("prefab.place",
+                "Places an instance of the prefab at {path} in the focused map, its first entity at {position} "
+                "({x, y}; default: where the prefab has it). Undoable; returns the placed entities.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString lPath;
+                    std::string lError;
+                    if (!AssetPath(InContext, InParams, lPath, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    Vector2F        lAt     = { 0.f, 0.f };
+                    const Vector2F* lAtPtr  = nullptr;
+                    if (const auto lPosition = InParams.find("position"); lPosition != InParams.end() && lPosition->is_object())
+                    {
+                        lAt    = Vector2F{ lPosition->value("x", 0.f), lPosition->value("y", 0.f) };
+                        lAtPtr = &lAt;
+                    }
+
+                    if (EntityOps::InstantiatePrefab(InContext, lPath, InContext.MapDocument.GetMapId(), lAtPtr) == 0)
+                    {
+                        return AutomationResult::Fail("nothing was placed (Play running, no map, or the prefab did not "
+                                                      "load: see the log)");
+                    }
+
+                    // The placed entities are the selection.
+                    World* const   lWorld  = InContext.Worlds.GetActiveWorld();
+                    nlohmann::json lPlaced = nlohmann::json::array();
+                    for (const EntityID lId : InContext.Selection.Ids())
+                    {
+                        const Entity lEntity{ lId, lWorld };
+                        lPlaced.push_back(nlohmann::json{ { "id", Describe(InContext, lEntity).at("id") },
+                                                          { "name", lEntity.GetName().CStr() } });
+                    }
+                    return AutomationResult::Ok(nlohmann::json{ { "entities", lPlaced } });
+                });
+        }
     }
 
     void Register(AutomationRunner& InRunner, EditorContext& InContext)
@@ -368,5 +501,6 @@ namespace Opaax::Editor::EditorAutomation
         RegisterEditor(InRunner, InContext);
         RegisterFiles(InRunner, InContext);
         RegisterEntities(InRunner, InContext);
+        RegisterPrefabs(InRunner, InContext);
     }
 }

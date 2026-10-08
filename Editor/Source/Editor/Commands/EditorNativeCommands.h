@@ -463,6 +463,17 @@ namespace Opaax::Editor
     };
 
     /**
+     * Rewrites the level file and every map it loads in the current format, changed or not (after a
+     * format change, or for files written by hand or by a tool).
+     */
+    struct ResaveLevelCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /**
      * Writes the open .opaaxsheet. Used by the panel's button and Ctrl+S (when the sheet panel has
      * focus; see EditorService::HandleAuthoringShortcuts).
      */

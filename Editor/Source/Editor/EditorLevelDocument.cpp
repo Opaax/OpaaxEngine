@@ -150,8 +150,9 @@ namespace Opaax::Editor
                 const Uint32 lAt = FirstDifference(lOnDisk, lAsFile);
 
                 OPAAX_LOG(LogEditorLevelDocument, Warn,
-                          "'{}' re-serializes DIFFERENTLY from disk — the next Save will rewrite it "
-                          "(formatting churn, or a component the registry no longer knows).\n"
+                          "'{}' re-serializes DIFFERENTLY from disk — saving it after an edit rewrites the "
+                          "whole file (formatting churn, or a component the registry no longer knows); "
+                          "File > Resave Level rewrites every map now.\n"
                           "  first difference at byte {} of {} (disk) / {} (rewrite)\n"
                           "  disk    ...{}...\n"
                           "  rewrite ...{}...",
@@ -248,7 +249,7 @@ namespace Opaax::Editor
     }
 
     bool EditorLevelDocument::SaveAll(const World& InWorld, const ComponentRegistry& InRegistry,
-                                      const Level& InLevel)
+                                      const Level& InLevel, const bool bInEvenUnchanged)
     {
         // Maps first, then the manifest (never list content that is not written yet).
         Uint64 lWritten = 0;
@@ -257,7 +258,7 @@ namespace Opaax::Editor
 
         for (MapRecord& lRecord : m_Maps)
         {
-            if (CompareText(InWorld, InRegistry, lRecord.Id) == lRecord.Baseline)
+            if (!bInEvenUnchanged && CompareText(InWorld, InRegistry, lRecord.Id) == lRecord.Baseline)
             {
                 ++lSkipped;   // unchanged: do not touch the file
                 continue;
@@ -273,7 +274,7 @@ namespace Opaax::Editor
         {
             const OpaaxString lManifest = LevelFile::Serialize(InLevel.GetData());
 
-            if (lManifest != m_ManifestBaseline)
+            if (bInEvenUnchanged || lManifest != m_ManifestBaseline)
             {
                 if (LevelFile::Save(m_AbsPath, InLevel.GetData()))
                 {

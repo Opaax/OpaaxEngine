@@ -3,6 +3,9 @@ Save/
 Temp/
 imgui.ini
 
+# Assets the editor tests write (prefab.create): made again by every run
+Assets/Scratch/
+
 # Build outputs
 build/
 *.user

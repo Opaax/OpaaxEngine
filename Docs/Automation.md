@@ -82,13 +82,17 @@ The editor adds:
 | `editor.undo`, `editor.redo` | | Undo and redo, as the Edit menu does |
 | `editor.command` | `tag` | Any editor command without arguments, by tag (`Editor.Command.FocusSelected`) |
 | `level.open`, `map.open` | `path` | Opens a level or a map (relative to the project's assets) |
-| `level.save`, `map.save` | | Saves (a map must already have a file) |
+| `level.save`, `map.save` | `all` (level) | Saves (a map must already have a file). `level.save` with `all` rewrites every map of the level in the current format |
 | `project.export` | `path` | Exports the game into a folder (its release build and content); answered when done, minutes later |
 | `entity.create` | `name`, `map`, `components` | Creates an entity in the focused map, with components `{type: values}` |
 | `entity.destroy` | `entity` | Deletes an entity |
+| `entity.parent` | `entity`, `parent` | Puts an entity (and its children) under another, keeping its place in the world; no `parent` detaches it |
+| `entity.rename` | `entity`, `name` | Renames an entity |
 | `entity.select` | `entities` | Selects entities (an empty list clears the selection) |
 | `component.add`, `component.remove` | `entity`, `type` | Adds or removes a component |
 | `component.set` | `entity`, `type`, `value` | As the engine's, recorded for undo in the edit world |
+| `prefab.create` | `entities`, `path` | Writes entities (with their children) as a prefab, then replaces them with an instance of it |
+| `prefab.place` | `path`, `position` | Places an instance of a prefab in the focused map, its first entity at `position` |
 
 Edits made by the editor's commands are the same as a user's: undoable, and saved only when asked.
 
