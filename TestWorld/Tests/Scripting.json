@@ -1,0 +1,202 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Scripting.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.25
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Scripter",
+            "path": "ScriptProbe/Name",
+            "equals": "Scripter"
+        },
+        "id": "entity-name"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Scripter",
+            "path": "ScriptProbe/bHadQuad",
+            "equals": false
+        },
+        "id": "had-no-quad"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Scripter",
+            "path": "ScriptProbe/bAddedQuad",
+            "equals": true
+        },
+        "id": "added-quad"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Scripter",
+            "path": "ScriptProbe/QuadWidth",
+            "equals": 80
+        },
+        "id": "read-quad"
+    },
+    {
+        "command": "expect.count",
+        "params": {
+            "component": "Quad",
+            "equals": 2
+        },
+        "id": "quad-counted"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Scripter",
+            "path": "ScriptProbe/bPhysics",
+            "equals": true
+        },
+        "id": "world-subsystem"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Scripter",
+            "path": "ScriptProbe/bSawHelper",
+            "equals": true
+        },
+        "id": "found-behaviour"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Scripter",
+            "path": "ScriptProbe/HelpersSeen",
+            "equals": 1
+        },
+        "id": "each-behaviour"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Scripter",
+            "path": "ScriptProbe/LambdaCalls",
+            "equals": 1
+        },
+        "id": "lambda-timer"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Scripter",
+            "path": "ScriptProbe/LinesQueued",
+            "greater": 0
+        },
+        "id": "debug-draw"
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "Scripting.png"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.5
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Scripter",
+            "path": "ScriptProbe/bRemovedQuad",
+            "equals": true
+        },
+        "id": "removed-quad"
+    },
+    {
+        "command": "expect.count",
+        "params": {
+            "component": "Quad",
+            "equals": 0
+        },
+        "id": "quads-gone"
+    },
+    {
+        "id": "helper-stays",
+        "command": "expect.entity",
+        "params": {
+            "entity": "Helper"
+        }
+    },
+    {
+        "command": "expect.count",
+        "params": {
+            "component": "HelperProbe",
+            "equals": 0
+        },
+        "id": "behaviour-removed"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Witness",
+            "path": "WitnessProbe/Ended",
+            "equals": 1
+        },
+        "id": "behaviour-ended"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Witness",
+            "path": "WitnessProbe/WorldEndings",
+            "equals": 0
+        },
+        "id": "not-world-end"
+    },
+    {
+        "id": "destroyed",
+        "command": "expect.entity",
+        "params": {
+            "entity": "Doomed",
+            "exists": false
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Scripter",
+            "path": "ScriptProbe/Time",
+            "greater": 0.5
+        },
+        "id": "clock"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Scripter",
+            "path": "ScriptProbe/bDeltaSeen",
+            "equals": true
+        },
+        "id": "delta"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Scripter",
+            "path": "ScriptProbe/Rotation",
+            "greater": 30
+        },
+        "id": "turned"
+    }
+]

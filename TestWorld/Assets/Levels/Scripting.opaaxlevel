@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/Scripting.opaaxmap"
+    ],
+    "name": "Scripting",
+    "persistentMap": "Maps/Scripting.opaaxmap",
+    "version": 1
+}

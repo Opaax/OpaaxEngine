@@ -1,0 +1,98 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "182cea052c7c560e8d3033e2883298da",
+            "name": "Camera",
+            "ownerMap": "Scripting"
+        },
+        {
+            "components": {
+                "ScriptProbe": {},
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "f7d43419924b541a8d7f588031a83a5f",
+            "name": "Scripter",
+            "ownerMap": "Scripting"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Size": {
+                        "x": 60.0,
+                        "y": 60.0
+                    },
+                    "Color": {
+                        "x": 0.9,
+                        "y": 0.2,
+                        "z": 0.2,
+                        "w": 1.0
+                    }
+                },
+                "DieProbe": {
+                    "Seconds": 0.3
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 250.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "691456aa7d1b506eabbc8332f9cf79a1",
+            "name": "Doomed",
+            "ownerMap": "Scripting"
+        },
+        {
+            "components": {
+                "WitnessProbe": {},
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "f167afd2e905525285d5c13a3f643d9b",
+            "name": "Witness",
+            "ownerMap": "Scripting"
+        }
+    ],
+    "mapId": "Scripting",
+    "version": 4
+}

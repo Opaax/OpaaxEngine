@@ -10,6 +10,7 @@
 #include "Probes/LifecycleProbes.h"
 #include "Probes/MovementProbes.h"
 #include "Probes/PhysicsProbes.h"
+#include "Probes/ScriptingProbes.h"
 #include "Probes/SpawnProbe.h"
 #include "Probes/UIProbes.h"
 
@@ -40,6 +41,9 @@ namespace TestWorld
     OPAAX_REGISTER_BEHAVIOUR(UIProbe);
     OPAAX_REGISTER_BEHAVIOUR(CameraProbe);
     OPAAX_REGISTER_BEHAVIOUR(WalkerProbe);
+    OPAAX_REGISTER_BEHAVIOUR(ScriptProbe);
+    OPAAX_REGISTER_BEHAVIOUR(HelperProbe);
+    OPAAX_REGISTER_BEHAVIOUR(DieProbe);
 
     OPAAX_REGISTER_GAME_INSTANCE_SUBSYSTEM(ProbeLedger);
 }
