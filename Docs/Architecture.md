@@ -1,0 +1,156 @@
+# How the engine is built
+
+The parts of the engine, how a frame runs, and the main design decisions with what they give and
+what they cost. Read it before a change that crosses modules; [Customizing.md](Customizing.md) shows
+how to extend each part.
+
+## The parts
+
+| Module | Holds |
+|---|---|
+| `Core` | Types and aliases, strings, logging, reflection (`OPAAX_PROPERTIES`), events, jobs, maths, configs |
+| `Platform` | The window and input devices (GLFW), the file system |
+| `RHI` | The rendering interface and its OpenGL 4.1 backend (`RHI/OpenGL`) |
+| `Renderer` | Sprites, text and debug drawing in batches, cameras, and the HDR path: lights, soft shadows, ambient occlusion, bloom, tonemapping (`Post/ScenePipeline2D`) |
+| `Resources` | The resource manager: one pool per type, shared, reference counted, loaded on demand or in the background |
+| `World` | Worlds (EnTT), entities, components, behaviours, levels and maps, prefabs, their files |
+| `Physics` | Colliders, rigidbodies, contacts and queries over Box2D (`Physics/Box2D`) |
+| `Audio` | Sound sources and the listener over miniaudio |
+| `Input`, `Animation`, `Movement`, `UI` | Actions and mapping contexts, sprite animation, character movers, UI canvases |
+| `Engine`, `Application` | The application, its services, the registries and the frame loop |
+| `Automation` | The request runner, its two transports (a script, an inbox folder) and the engine's commands |
+
+The editor is a separate library (`Editor/`) on top of the engine: panels, commands, documents
+(the files being edited), undo, Play In Editor, its own automation commands and the game export. A
+game is a module of its own types, linked into its runtime and into its editor
+(`opaax_add_game(<Name>)`).
+
+## A frame
+
+1. Finished background jobs report, the frame's queued events are delivered, and a level asked for
+   during the last frame replaces the current one.
+2. The frame clock measures the frame, capped at 0.25 s so a stall never becomes a jump.
+3. **Update:** the engine's own subsystems update (the resource manager collects what is no longer
+   used), and the active world's subsystems run once, in their order: input (100), gameplay (200,
+   the behaviours' `OnUpdate`), physics (300), after physics (400, the movers), the default (500),
+   presentation (600: animation, audio), then debug drawing (700).
+4. **Fixed steps:** as many 1/60 s steps as the time owed, each running the subsystems' fixed
+   update in the same order, so a behaviour's `OnFixedUpdate` comes right before the physics step.
+5. **Render:** each view is drawn, moving bodies placed between their last two steps so motion is
+   smooth at any frame rate.
+
+A paused world (in the editor) skips its part of 3 and 4; a step runs it for one frame.
+
+## Decisions
+
+### Types register themselves
+
+A type is added with one line beside its definition (`OPAAX_REGISTER_COMPONENT(Health)`); the engine
+runs the registrations when it starts, kind by kind (resource formats, data assets, components,
+behaviours, subsystems...).
+
+- **For:** no central list or registrar function to edit, for the engine and a game alike. A type
+  registered from several files is registered once.
+- **Against:** it relies on static initialisation and on linking the libraries whole
+  (`$<LINK_LIBRARY:WHOLE_ARCHIVE>` in `opaax_add_game` and the engine's target): a library linked
+  another way loses its types without an error. A component is saved under its C++ name unless it
+  uses the `NAMED` variant, so renaming the type renames it in the files.
+
+### An entity-component world behind handles
+
+Each `World` owns an EnTT registry. Gameplay code reaches it through `Entity`, `World` and
+`Behaviour`, never the registry.
+
+- **For:** compact storage and fast iteration where it matters (rendering, physics sync); components
+  are plain structs, saved and inspected by reflection; the vendor stays replaceable and tests build
+  worlds without a window.
+- **Against:** every EnTT feature a game needs goes through a wrapper first.
+
+### Behaviours are C++ classes
+
+Gameplay code is a `Behaviour` subclass with hooks (`OnStart`, `OnUpdate`, `OnFixedUpdate`,
+`OnDestroy`), events, timers, spawning and physics calls, stored like a component.
+
+- **For:** the speed, the debugger and the whole engine API, with no binding layer to keep in step;
+  the lifecycle has firm rules (started before any update or event, `OnDestroy` exactly once, with
+  the entity whole). Fields are reflected, so they are saved and edited like a component's.
+- **Against:** no hot reload: changed gameplay code means a build and an editor restart. Each
+  behaviour is a virtual call per frame: right for thousands of entities; logic over many more
+  belongs in a world subsystem that iterates components.
+
+### Levels made of maps
+
+A level lists maps; one is persistent, the others are mounted on top. Map files are JSON with
+entities sorted by id and line endings fixed, so they diff and merge well.
+
+- **For:** several people (or agents) can work on different maps of one level, and a map can be
+  listed by several levels; files written by hand or by a tool are accepted, then rewritten in the
+  engine's form by Resave Level.
+- **Against:** more files than a single scene, and every entity belongs to one map, chosen when it
+  is created (the focused one in the editor).
+
+### Shared, reference-counted resources
+
+Resources are loaded once and shared by everything that uses them (an edit world and its Play
+clone, several worlds at once). One no longer used is released during the next frame's update, so
+a pointer taken this frame stays valid until then.
+
+- **For:** Play In Editor loads nothing again; loads can run in the background; a resource can be
+  reloaded in place, and every holder sees the new data.
+- **Against:** a cached copy can outlive its file, so whatever writes a file reloads it (the editor
+  does it for every document it saves). Resources are keyed by their path string, so one file must
+  always be named in the engine's form (`IPaths`).
+
+### OpenGL 4.1 everywhere, behind an RHI
+
+One backend runs on Windows, Linux and macOS. Shaders are written once (GLSL 4.50 with explicit
+bindings) and ported to 4.10 when loaded.
+
+- **For:** the same picture on every platform, and on Mesa's software renderer, which CI renders
+  with; the HDR path brings what the renderer lacked: 2D lights with normal maps and emissive
+  materials, soft shadows, ambient occlusion, bloom, exposure and tonemapping.
+- **Against:** no compute shaders, 16 samplers per stage, fixed budgets (32 lights and 16 shadowed
+  lights per view); macOS stops at 4.1 and has deprecated OpenGL, so a Metal or Vulkan backend
+  would be the next step, behind the same RHI.
+
+### An editor of commands
+
+The editor is ImGui panels over an `EditorContext`. Actions are commands dispatched by tag, and
+operations over the context (`EntityOps`, `MapOps`...): menus, shortcuts, panels, game editor modules
+and automation call the same ones, and edits go through the undo stack. Play In Editor clones the
+edit world and throws the clone away on Stop.
+
+- **For:** an agent's edit is a user's edit (undoable, same checks); Stop needs no undo; a game adds
+  panels, commands and inspectors through `EditorExtensionRegistrar` without touching the editor.
+- **Against:** an immediate-mode UI redraws every frame and has little layout or styling of its own.
+  File pickers and questions are the OS's own dialogs, which block: automation keeps them closed and
+  refuses what would need them, and the commands an agent uses take paths instead.
+
+### Automation by JSON requests
+
+A game or the editor runs requests from a script (`--exec`) or from files dropped in a folder
+(`--automation`), and answers each one. Checks (`expect.*`) make a script a test.
+
+- **For:** any tool that writes files can drive it, with no socket or library; the same commands
+  work in a game and in the editor; the CI feature tests are plain scripts.
+- **Against:** the inbox is polled once a frame, and the app only answers: it does not push events.
+
+### Vendors only behind their wrappers
+
+EnTT, GLFW, Box2D, miniaudio, OpenGL and stb are each used only inside the code that wraps them,
+and the folders follow the modules above.
+
+- **For:** replacing a library touches only the code that wraps it; the rest reads as the engine's
+  own API, which ended the old code being spread everywhere (what is left of it is in `Archive/`).
+- **Against:** a wrapper to extend before a game can use a new vendor feature.
+
+### Tests at three levels
+
+Unit tests (doctest, `Engine/Tests`) for logic kept free of the GPU and the window; TestWorld, a
+game whose levels exercise every feature, checked by scripts; and CI building every preset on
+Windows, Linux and macOS, with the feature tests on Linux.
+
+- **For:** a change is checked the way a game uses it, the editor included; every platform builds
+  every preset and runs the unit tests.
+- **Against:** feature tests need a display (a virtual one on CI) and run in game time, so a check
+  after a timed event needs margin on a slow machine.

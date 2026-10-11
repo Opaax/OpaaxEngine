@@ -1,7 +1,8 @@
 # Working on OpaaxEngine
 
 Rules and commands for anyone changing this repository, AI agents included. The user docs are in
-[Docs/](Docs/); this file is about changing the engine and the editor safely.
+[Docs/](Docs/); this file is about changing the engine and the editor safely. How the parts fit,
+and why they are built that way: [Docs/Architecture.md](Docs/Architecture.md).
 
 ## Build and test
 
