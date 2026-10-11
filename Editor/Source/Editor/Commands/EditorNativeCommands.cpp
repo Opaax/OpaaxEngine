@@ -38,6 +38,7 @@
 #include "Editor/Resources/Types/Mover/EditorMoveModeDocument.h"
 #include "Editor/Resources/Types/Mover/EditorMoverDocument.h"
 #include "Editor/Operation/MapOperations.h"
+#include "Editor/Operation/NewLevelPlan.hpp"
 #include "Editor/PIE/PlayInEditor.h"
 #include "Editor/Panels/EditorPanels.h"
 #include "Editor/Panels/PrefabPanel.h"
@@ -299,10 +300,20 @@ namespace Opaax::Editor
         InContext.Dialogs.SaveFile(
             MakeFileRequest("New Map", InContext.Paths.AssetToAbsolute(OpaaxString("Maps/NewMap.opaaxmap")),
                             "*.opaaxmap", "Opaax Map"),
-            [&InContext, lLevel](const OpaaxString& InPicked)
+            [&InContext](const OpaaxString& InPicked)
             {
-                CreateMapAt(InContext, *lLevel, InPicked);
+                NewMapAtCommand{}.Execute(InContext, MapPathParams{InPicked});
             });
+    }
+
+    void NewMapAtCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        if (!MapOps::CanEdit(InContext, "New Map")) { return; }
+
+        Level* const lLevel = MapOps::ActiveLevel(InContext);
+        if (lLevel == nullptr) { return; }
+
+        CreateMapAt(InContext, *lLevel, InParams.AbsPath);
     }
 
     void OpenMapCommand::Execute(EditorContext& InContext, const Params&)
@@ -574,6 +585,80 @@ namespace Opaax::Editor
             {
                 OpenLevelAtCommand{}.Execute(InContext, LevelPathParams{InPicked});
             });
+    }
+
+    void NewLevelCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        if (!MapOps::CanEdit(InContext, "New Level")) { return; }
+
+        InContext.Dialogs.SaveFile(
+            MakeFileRequest("New Level", InContext.Paths.AssetToAbsolute(OpaaxString("Levels/NewLevel.opaaxlevel")),
+                            "*.opaaxlevel", "Opaax Level"),
+            [&InContext](const OpaaxString& InPicked)
+            {
+                NewLevelAtCommand{}.Execute(InContext, NewLevelParams{InPicked});
+            });
+    }
+
+    void NewLevelAtCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        if (!MapOps::CanEdit(InContext, "New Level")) { return; }
+
+        const OpaaxString lLevelRel = InContext.Paths.AbsoluteToAsset(InParams.LevelAbsPath);
+        const OpaaxString lMapAbs   = InParams.MapAbsPath.IsEmpty()
+                                          ? InContext.Paths.AssetToAbsolute(NewLevelPlan::DefaultMap(lLevelRel))
+                                          : InParams.MapAbsPath;
+        const OpaaxString lMapRel   = InContext.Paths.AbsoluteToAsset(lMapAbs);
+
+        if (lLevelRel.IsEmpty() || lMapRel.IsEmpty())
+        {
+            OPAAX_LOG(LogEditorCommands, Warn,
+                      "'{}' or its map '{}' is outside the project's Assets — a level and its maps are assets of "
+                      "this project", InParams.LevelAbsPath.CStr(), lMapAbs.CStr());
+            return;
+        }
+
+        if (!NewLevelPlan::HasExtension(lLevelRel, LevelFile::LEVEL_EXTENSION)
+            || !NewLevelPlan::HasExtension(lMapRel, MapFile::MAP_EXTENSION))
+        {
+            OPAAX_LOG(LogEditorCommands, Warn, "New Level needs a '{}' file and a '{}' map: got '{}' and '{}'",
+                      LevelFile::LEVEL_EXTENSION, MapFile::MAP_EXTENSION, lLevelRel.CStr(), lMapRel.CStr());
+            return;
+        }
+
+        // New means new: an existing file is refused (Open Level and Add Map are for those).
+        for (const OpaaxString* lPath : { &InParams.LevelAbsPath, &lMapAbs })
+        {
+            if (InContext.FileSystem.IsPathExist(*lPath))
+            {
+                OPAAX_LOG(LogEditorCommands, Warn, "'{}' already exists — New Level does not overwrite it",
+                          InContext.Paths.AbsoluteToAsset(*lPath).CStr());
+                return;
+            }
+        }
+
+        ReplacingWorld(InContext, InParams.bDiscardEdits, [&InContext, InParams, lLevelRel, lMapAbs, lMapRel]
+        {
+            // An empty map with its own id, then the level that names it: an ordinary level from the start.
+            MapData lMap;
+            lMap.Id = MapFile::StemId(lMapAbs);
+
+            const LevelData lLevel = NewLevelPlan::Make(lLevelRel, lMapRel);
+            if (!MapFile::Save(lMapAbs, lMap) || !LevelFile::Save(InParams.LevelAbsPath, lLevel))
+            {
+                return; // the file's writer logged why
+            }
+
+            if (InContext.Engine.OpenLevel(WorldSpec{lLevelRel, EWorldMode::Edit}) == nullptr)
+            {
+                OPAAX_LOG(LogEditorCommands, Error, "Could not open the new level '{}'", lLevelRel.CStr());
+                return;
+            }
+
+            LevelOps::AdoptOpen(InContext, InParams.LevelAbsPath);
+            OPAAX_LOG(LogEditorCommands, Info, "Created level '{}' with its map '{}'",
+                      lLevelRel.CStr(), lMapRel.CStr());
+        });
     }
 
     void OpenLevelAtCommand::Execute(EditorContext& InContext, const Params& InParams)

@@ -23,13 +23,19 @@ if(OPAAX_BUILD_TESTS)
     if(TARGET TestWorldEditor)
         file(GLOB TESTWORLD_EDITOR_SCRIPTS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/EditorTests/*.json")
 
+        # The files the editor tests write (Assets/Scratch) are removed first: each run makes them anew.
+        add_test(NAME TestWorldEditor.ClearScratch
+                 COMMAND "${CMAKE_COMMAND}" -E rm -rf "${CMAKE_CURRENT_SOURCE_DIR}/Assets/Scratch")
+        set_tests_properties(TestWorldEditor.ClearScratch PROPERTIES LABELS feature FIXTURES_SETUP TestWorldScratch)
+
         foreach(TESTWORLD_SCRIPT IN LISTS TESTWORLD_EDITOR_SCRIPTS)
             get_filename_component(TESTWORLD_FEATURE "${TESTWORLD_SCRIPT}" NAME_WE)
             add_test(NAME TestWorldEditor.${TESTWORLD_FEATURE}
                      COMMAND TestWorldEditor --exec "${TESTWORLD_SCRIPT}"
                                              --exec-out "${TESTWORLD_RESULTS}/Editor${TESTWORLD_FEATURE}.out.json"
                      WORKING_DIRECTORY "${TESTWORLD_RESULTS}")
-            set_tests_properties(TestWorldEditor.${TESTWORLD_FEATURE} PROPERTIES LABELS feature TIMEOUT 180)
+            set_tests_properties(TestWorldEditor.${TESTWORLD_FEATURE} PROPERTIES LABELS feature TIMEOUT 180
+                                 FIXTURES_REQUIRED TestWorldScratch)
         endforeach()
     endif()
 endif()

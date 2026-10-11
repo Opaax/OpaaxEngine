@@ -17,6 +17,7 @@
 #include "Editor/Operation/EditorSelection.hpp"
 #include "Editor/Operation/EntityOps.h"
 #include "Editor/Operation/ExportOperations.h"
+#include "Editor/Operation/NewLevelPlan.hpp"
 #include "Editor/Export/GameExport.h"
 #include "Editor/Undo/ComponentUndoables.h"
 #include "Editor/Undo/EditorUndo.h"
@@ -62,6 +63,14 @@ namespace Opaax::Editor::EditorAutomation
             return WorldState(InContext);
         }
 
+        /** InPath made absolute: kept when absolute, else under the project's assets. */
+        OpaaxString ToAbsolute(EditorContext& InContext, const std::string& InPath)
+        {
+            const std::filesystem::path lAsPath(InPath);
+            return lAsPath.is_absolute() ? OpaaxString(lAsPath.generic_string().c_str())
+                                         : InContext.Paths.AssetToAbsolute(OpaaxString(InPath.c_str()));
+        }
+
         /** An absolute path from InParams["path"]: kept when absolute, else under the project's assets. */
         bool AssetPath(EditorContext& InContext, const nlohmann::json& InParams, OpaaxString& OutPath, std::string& OutError)
         {
@@ -72,9 +81,45 @@ namespace Opaax::Editor::EditorAutomation
                 return false;
             }
 
-            const std::filesystem::path lAsPath(lPath);
-            OutPath = lAsPath.is_absolute() ? OpaaxString(lAsPath.generic_string().c_str())
-                                            : InContext.Paths.AssetToAbsolute(OpaaxString(lPath.c_str()));
+            OutPath = ToAbsolute(InContext, lPath);
+            return true;
+        }
+
+        /**
+         * A file a New command may write: in the project's assets, with InExtension, not there yet. False
+         * (with OutError, naming InKey) otherwise.
+         */
+        bool NewFilePath(EditorContext& InContext, const OpaaxString& InPath, const char* InKey, const char* InExtension,
+                         std::string& OutError)
+        {
+            const OpaaxString lAssetRel = InContext.Paths.AbsoluteToAsset(InPath);
+            if (lAssetRel.IsEmpty())
+            {
+                OutError = "\"" + std::string(InKey) + "\" is outside the project's assets: '" + InPath.CStr() + "'";
+                return false;
+            }
+            if (!NewLevelPlan::HasExtension(lAssetRel, InExtension))
+            {
+                OutError = "\"" + std::string(InKey) + "\" names a " + InExtension + " file: '" + lAssetRel.CStr() + "'";
+                return false;
+            }
+            if (InContext.FileSystem.IsPathExist(InPath))
+            {
+                OutError = "'" + std::string(lAssetRel.CStr()) + "' already exists: open it, or name another \"" + InKey + "\"";
+                return false;
+            }
+            return true;
+        }
+
+        /** Fails a request that only makes sense while editing. */
+        bool IsEditing(EditorContext& InContext, std::string& OutError)
+        {
+            const World* const lWorld = InContext.Worlds.GetActiveWorld();
+            if (lWorld == nullptr || lWorld->GetMode() != EWorldMode::Edit)
+            {
+                OutError = "the game is playing: stop it first (editor.stop)";
+                return false;
+            }
             return true;
         }
 
@@ -321,6 +366,69 @@ namespace Opaax::Editor::EditorAutomation
                     return WorldState(InContext);
                 },
                 UNSAVED_CHANGES);
+
+            InCommands.Register("level.new",
+                "Creates a level at {path} with one new, empty map ({map}; default: Maps/<the level's name>.opaaxmap) "
+                "and opens it for editing. Refuses files that exist; refused when the open level has unsaved changes, "
+                "unless {discard} is true.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString lLevel;
+                    std::string lError;
+                    if (!AssetPath(InContext, InParams, lLevel, lError) || !IsEditing(InContext, lError)
+                        || !NewFilePath(InContext, lLevel, "path", LevelFile::LEVEL_EXTENSION, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    const std::string lMapParam = InParams.value("map", std::string());
+                    const OpaaxString lMap      = lMapParam.empty()
+                        ? InContext.Paths.AssetToAbsolute(NewLevelPlan::DefaultMap(InContext.Paths.AbsoluteToAsset(lLevel)))
+                        : ToAbsolute(InContext, lMapParam);
+                    if (!NewFilePath(InContext, lMap, "map", MapFile::MAP_EXTENSION, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_NEW_LEVEL_AT, InContext,
+                                                            NewLevelParams{ lLevel, lMap, InParams.value("discard", false) });
+                    if (!(InContext.LevelDocument.AbsPath() == lLevel))
+                    {
+                        return AutomationResult::Fail("the level was not created (see the log)");
+                    }
+
+                    AutomationResult lResult = WorldState(InContext);
+                    lResult.Value["level"]   = InContext.Paths.AbsoluteToAsset(lLevel).CStr();
+                    lResult.Value["map"]     = InContext.Paths.AbsoluteToAsset(lMap).CStr();
+                    return lResult;
+                },
+                UNSAVED_CHANGES);
+
+            InCommands.Register("map.new",
+                "Creates an empty map at {path}, adds it to the open level (whose file is saved at once) and focuses "
+                "it: entities created next go there. Refuses a file that exists.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString lPath;
+                    std::string lError;
+                    if (!AssetPath(InContext, InParams, lPath, lError) || !IsEditing(InContext, lError)
+                        || !NewFilePath(InContext, lPath, "path", MapFile::MAP_EXTENSION, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+                    if (!InContext.LevelDocument.HasLevel())
+                    {
+                        return AutomationResult::Fail("no level file is open to add the map to: open or create one "
+                                                      "first (level.open, level.new)");
+                    }
+
+                    InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_NEW_MAP_AT, InContext, MapPathParams{ lPath });
+                    if (!(InContext.MapDocument.GetMapId() == MapFile::StemId(lPath)))
+                    {
+                        return AutomationResult::Fail("the map was not created (see the log)");
+                    }
+                    return AutomationResult::Ok(nlohmann::json{ { "map", InContext.Paths.AbsoluteToAsset(lPath).CStr() } });
+                });
 
             InCommands.Register("level.save",
                 "Saves the open level's changed maps. With {all}: every map and the level file, rewritten in "

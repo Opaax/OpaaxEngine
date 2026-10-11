@@ -1,0 +1,135 @@
+[
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 10
+        }
+    },
+    {
+        "id": "new",
+        "command": "level.new",
+        "params": {
+            "path": "Scratch/Fresh.opaaxlevel",
+            "map": "Scratch/Fresh.opaaxmap"
+        }
+    },
+    {
+        "command": "expect.count",
+        "params": {
+            "equals": 0
+        },
+        "id": "starts-empty"
+    },
+    {
+        "id": "hero",
+        "command": "entity.create",
+        "params": {
+            "name": "Hero",
+            "components": {
+                "Quad": {
+                    "Size": {
+                        "x": 50.0,
+                        "y": 50.0
+                    },
+                    "Color": {
+                        "x": 0.3,
+                        "y": 0.8,
+                        "z": 0.4,
+                        "w": 1.0
+                    }
+                }
+            }
+        }
+    },
+    {
+        "id": "second-map",
+        "command": "map.new",
+        "params": {
+            "path": "Scratch/FreshProps.opaaxmap"
+        }
+    },
+    {
+        "id": "prop",
+        "command": "entity.create",
+        "params": {
+            "name": "Prop",
+            "components": {
+                "Quad": {
+                    "Size": {
+                        "x": 30.0,
+                        "y": 30.0
+                    },
+                    "Color": {
+                        "x": 0.8,
+                        "y": 0.5,
+                        "z": 0.2,
+                        "w": 1.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 120.0,
+                        "y": 0.0
+                    }
+                }
+            }
+        }
+    },
+    {
+        "id": "save",
+        "command": "level.save"
+    },
+    {
+        "id": "play",
+        "command": "editor.play"
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.2
+        }
+    },
+    {
+        "command": "expect.entity",
+        "params": {
+            "entity": "Hero",
+            "exists": true
+        },
+        "id": "plays"
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "NewLevel.png"
+        }
+    },
+    {
+        "id": "stop",
+        "command": "editor.stop"
+    },
+    {
+        "id": "level-exists",
+        "command": "level.new",
+        "params": {
+            "path": "Scratch/Fresh.opaaxlevel"
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "not-a-level",
+        "command": "level.new",
+        "params": {
+            "path": "Scratch/Fresh.txt"
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "map-exists",
+        "command": "map.new",
+        "params": {
+            "path": "Scratch/FreshProps.opaaxmap"
+        },
+        "expectFailure": true
+    }
+]

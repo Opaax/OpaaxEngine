@@ -39,6 +39,18 @@ namespace Opaax::Editor
         bool bDiscardEdits = false;
     };
 
+    /** A new level's .opaaxlevel and the .opaaxmap it starts with, both absolute. */
+    struct NewLevelParams
+    {
+        OpaaxString LevelAbsPath;
+
+        /** Empty: Maps/<the level's name>.opaaxmap. */
+        OpaaxString MapAbsPath;
+
+        /** Unsaved changes of the open level are lost without asking (a script has nobody to ask). */
+        bool bDiscardEdits = false;
+    };
+
     /** An absolute path to a .opaaxprefab. */
     struct PrefabPathParams
     {
@@ -292,15 +304,23 @@ namespace Opaax::Editor
     // Map
     // =============================================================================
 
-    /**
-     * Creates an empty .opaaxmap, adds it to the open level, and focuses it. The file is written
-     * immediately, with its own map id. Refuses an existing path (use Open Map or Add Map).
-     */
+    /** Asks where, then runs NewMapAtCommand. */
     struct NewMapCommand
     {
         using Params = NoParams;
 
         void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /**
+     * Creates an empty .opaaxmap at Params::AbsPath, adds it to the open level, and focuses it. The file
+     * is written immediately, with its own map id. Refuses an existing path (use Open Map or Add Map).
+     */
+    struct NewMapAtCommand
+    {
+        using Params = MapPathParams;
+
+        void Execute(EditorContext& InContext, const Params& InParams);
     };
 
     /** Asks for a .opaaxmap, then runs OpenMapAtCommand. */
@@ -442,6 +462,26 @@ namespace Opaax::Editor
     // =============================================================================
     // Level
     // =============================================================================
+
+    /** Asks where, then runs NewLevelAtCommand with the level's default map. */
+    struct NewLevelCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /**
+     * Creates a level of one empty map and opens it for editing, after asking before unsaved changes
+     * are lost. Both files are written at once; an existing file is refused (Open Level and Add Map are
+     * for those).
+     */
+    struct NewLevelAtCommand
+    {
+        using Params = NewLevelParams;
+
+        void Execute(EditorContext& InContext, const Params& InParams);
+    };
 
     /** Asks for a .opaaxlevel, then runs OpenLevelAtCommand. */
     struct OpenLevelCommand

@@ -49,6 +49,7 @@ namespace Opaax::Editor::Tags
 
     //Level
     inline const OpaaxTag EDITOR_COMMAND_NEW_LEVEL      = OpaaxTag("Editor.Command.NewLevel");
+    inline const OpaaxTag EDITOR_COMMAND_NEW_LEVEL_AT   = OpaaxTag("Editor.Command.NewLevelAt");
     inline const OpaaxTag EDITOR_COMMAND_OPEN_LEVEL     = OpaaxTag("Editor.Command.OpenLevel");
     inline const OpaaxTag EDITOR_COMMAND_OPEN_LEVEL_AT  = OpaaxTag("Editor.Command.OpenLevelAt");
     inline const OpaaxTag EDITOR_COMMAND_SAVE_LEVEL     = OpaaxTag("Editor.Command.SaveLevel");
@@ -57,6 +58,7 @@ namespace Opaax::Editor::Tags
 
     //Map
     inline const OpaaxTag EDITOR_COMMAND_NEW_MAP     = OpaaxTag("Editor.Command.NewMap");
+    inline const OpaaxTag EDITOR_COMMAND_NEW_MAP_AT  = OpaaxTag("Editor.Command.NewMapAt");
     inline const OpaaxTag EDITOR_COMMAND_OPEN_MAP    = OpaaxTag("Editor.Command.OpenMap");
     inline const OpaaxTag EDITOR_COMMAND_OPEN_MAP_AT = OpaaxTag("Editor.Command.OpenMapAt");
     inline const OpaaxTag EDITOR_COMMAND_SAVE_MAP    = OpaaxTag("Editor.Command.SaveMap");

@@ -96,7 +96,8 @@ the job.
 
 Scripts in `TestWorld/EditorTests` run in `TestWorldEditor` instead (`TestWorldEditor.<Name>`, answers
 in `Editor<Name>.out.json`), in builds that have the editor: they use the editor's commands (create,
-edit, undo, play, stop) and never save.
+edit, undo, play, stop). They save only into `TestWorld/Assets/Scratch`, which CTest empties before
+them.
 
 To check behaviour from inside the game, write a probe: a behaviour that records what happened in its
 fields (`TestWorld/Source/TestWorld/Probes`), placed in the level and read with `expect.value`.

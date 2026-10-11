@@ -294,6 +294,7 @@ namespace Opaax::Editor
         lFile.AddSeparator();
         lFile.AddCommand("New UI...", Tags::EDITOR_COMMAND_NEW_UI);
         lFile.AddSeparator();
+        lFile.AddCommand("New Level...", Tags::EDITOR_COMMAND_NEW_LEVEL).SetEnabled(IsEditing);
         lFile.AddCommand("Open Level...", Tags::EDITOR_COMMAND_OPEN_LEVEL);
         lFile.AddCommand("Save Level", Tags::EDITOR_COMMAND_SAVE_LEVEL).SetEnabled(IsEditing);
         lFile.AddCommand("Resave Level (All Maps)", Tags::EDITOR_COMMAND_RESAVE_LEVEL).SetEnabled(IsEditing);
@@ -412,6 +413,7 @@ namespace Opaax::Editor
         lCommands.Register<GizmoScaleCommand>(Tags::EDITOR_COMMAND_GIZMO_SCALE);
 
         lCommands.Register<NewMapCommand>(Tags::EDITOR_COMMAND_NEW_MAP);
+        lCommands.Register<NewMapAtCommand>(Tags::EDITOR_COMMAND_NEW_MAP_AT);
         lCommands.Register<OpenMapCommand>(Tags::EDITOR_COMMAND_OPEN_MAP);
         lCommands.Register<OpenMapAtCommand>(Tags::EDITOR_COMMAND_OPEN_MAP_AT);
         lCommands.Register<InstantiatePrefabAtCommand>(Tags::EDITOR_COMMAND_INSTANTIATE_PREFAB_AT);
@@ -426,6 +428,8 @@ namespace Opaax::Editor
         lCommands.Register<SaveMapCommand>(Tags::EDITOR_COMMAND_SAVE_MAP);
         lCommands.Register<SaveMapAsCommand>(Tags::EDITOR_COMMAND_SAVE_MAP_AS);
 
+        lCommands.Register<NewLevelCommand>(Tags::EDITOR_COMMAND_NEW_LEVEL);
+        lCommands.Register<NewLevelAtCommand>(Tags::EDITOR_COMMAND_NEW_LEVEL_AT);
         lCommands.Register<OpenLevelCommand>(Tags::EDITOR_COMMAND_OPEN_LEVEL);
         lCommands.Register<OpenLevelAtCommand>(Tags::EDITOR_COMMAND_OPEN_LEVEL_AT);
         lCommands.Register<SaveLevelCommand>(Tags::EDITOR_COMMAND_SAVE_LEVEL);
