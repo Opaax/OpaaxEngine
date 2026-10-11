@@ -1,6 +1,7 @@
 #include "Automation/AutomationRunner.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace Opaax
 {
@@ -19,9 +20,69 @@ namespace Opaax
             }
         }
 
+        /** MatchesExpected below a path: InPath names where InActual is ("" for the whole answer). */
+        bool MatchesAt(const nlohmann::json& InExpected, const nlohmann::json& InActual, const std::string& InPath,
+                       std::string& OutWhy)
+        {
+            const auto lWhere = [&InPath]() { return InPath.empty() ? std::string("the answer") : InPath; };
+
+            if (InExpected.is_object())
+            {
+                if (!InActual.is_object())
+                {
+                    OutWhy = lWhere() + " is " + InActual.dump() + ", expected an object";
+                    return false;
+                }
+                for (const auto& [lKey, lValue] : InExpected.items())
+                {
+                    const std::string lPath = InPath.empty() ? lKey : InPath + "/" + lKey;
+                    const auto        lIt   = InActual.find(lKey);
+                    if (lIt == InActual.end())
+                    {
+                        OutWhy = lPath + " is missing";
+                        return false;
+                    }
+                    if (!MatchesAt(lValue, *lIt, lPath, OutWhy))
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            if (InExpected.is_array())
+            {
+                if (!InActual.is_array() || InActual.size() != InExpected.size())
+                {
+                    OutWhy = lWhere() + " is " + InActual.dump() + ", expected " + std::to_string(InExpected.size())
+                           + " item(s)";
+                    return false;
+                }
+                for (Uint64 lIndex = 0; lIndex < InExpected.size(); ++lIndex)
+                {
+                    const std::string lPath = InPath.empty() ? std::to_string(lIndex) : InPath + "/" + std::to_string(lIndex);
+                    if (!MatchesAt(InExpected[lIndex], InActual[lIndex], lPath, OutWhy))
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            const bool bSame = (InExpected.is_number() && InActual.is_number())
+                                   ? std::abs(InExpected.get<double>() - InActual.get<double>()) <= 1e-4
+                                   : InExpected == InActual;
+            if (!bSame)
+            {
+                OutWhy = lWhere() + " is " + InActual.dump() + ", expected " + InExpected.dump();
+            }
+            return bSame;
+        }
+
         /**
          * The answer to a request, from what its command returned. A request that expects a failure
          * passes with what the command refused ({"refused": why}), and fails when it did not refuse.
+         * One with an "expect" fails when the answer does not hold what it names.
          */
         AutomationResponse MakeResponse(const AutomationRequest& InRequest, AutomationResult InResult)
         {
@@ -40,6 +101,13 @@ namespace Opaax
                 {
                     lResponse.Error = "expected to fail, but it succeeded";
                 }
+                return lResponse;
+            }
+
+            std::string lWhy;
+            if (InResult.bOk && !InRequest.Expect.is_null() && !MatchesExpected(InRequest.Expect, InResult.Value, lWhy))
+            {
+                lResponse.Error = "the answer differs: " + lWhy;
                 return lResponse;
             }
 
@@ -276,6 +344,14 @@ namespace Opaax
     }
 
     // =========================================================================
+    // Answers
+    // =========================================================================
+    bool MatchesExpected(const nlohmann::json& InExpected, const nlohmann::json& InActual, std::string& OutWhy)
+    {
+        return MatchesAt(InExpected, InActual, std::string(), OutWhy);
+    }
+
+    // =========================================================================
     // Parsing
     // =========================================================================
     bool ParseAutomationRequest(const nlohmann::json& InJson, AutomationRequest& OutRequest, std::string& OutError)
@@ -321,6 +397,17 @@ namespace Opaax
                 return false;
             }
             OutRequest.bExpectFailure = lExpectFailure->get<bool>();
+        }
+
+        const auto lExpect = InJson.find("expect");
+        if (lExpect != InJson.end())
+        {
+            if (OutRequest.bExpectFailure)
+            {
+                OutError = "\"expect\" checks an answer and \"expectFailure\" a refusal: a request has one or the other";
+                return false;
+            }
+            OutRequest.Expect = *lExpect;
         }
 
         return true;

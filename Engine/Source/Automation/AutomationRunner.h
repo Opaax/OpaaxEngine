@@ -20,6 +20,9 @@ namespace Opaax
 
         /** The command should refuse: the request passes when it fails, and fails when it does not. */
         bool bExpectFailure = false;
+
+        /** What the answer should hold (null: anything). See MatchesExpected. */
+        nlohmann::json Expect;
     };
 
     /** A request's answer. */
@@ -161,8 +164,15 @@ namespace Opaax
     };
 
     /**
-     * A request from its JSON, {"id", "command", "params", "expectFailure"}. False (with OutError)
-     * when malformed.
+     * Whether InActual holds what InExpected names: an object's keys (others are ignored), an array
+     * item by item (same length), numbers within 1e-4, anything else equal. OutWhy says where they
+     * differ ("maps/1/focused is false, expected true").
+     */
+    bool MatchesExpected(const nlohmann::json& InExpected, const nlohmann::json& InActual, std::string& OutWhy);
+
+    /**
+     * A request from its JSON, {"id", "command", "params", "expectFailure", "expect"}. False (with
+     * OutError) when malformed.
      */
     bool ParseAutomationRequest(const nlohmann::json& InJson, AutomationRequest& OutRequest, std::string& OutError);
 

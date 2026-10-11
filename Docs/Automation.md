@@ -36,6 +36,11 @@ To check that a command refuses something, add `"expectFailure": true`: the requ
 command fails (its answer is `{"refused": "why"}`) and fails when the command succeeds. An unknown
 command, or a request the app closed before running, still fails.
 
+To check an answer, add `"expect"` with what it should hold:
+`{ "command": "world.info", "expect": { "mode": "Play" } }`. Objects match by the keys given (others
+are ignored), arrays item by item, numbers within 1e-4; the request fails, saying where the answer
+differs, when it does not hold them.
+
 ## Frames
 
 Requests run at the start of a frame, one after another, until one holds the queue:

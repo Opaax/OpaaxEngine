@@ -348,6 +348,52 @@ TEST_CASE("Automation: a request expecting a failure still fails when the app cl
     CHECK(lRecorder.Responses[1].Error == "the app closed before this request ran");
 }
 
+TEST_CASE("Automation: an answer matches what is expected by the keys named, item by item, numbers closely")
+{
+    const nlohmann::json lAnswer = nlohmann::json::parse(
+        R"({"level": "Levels/A.opaaxlevel", "unsaved": true, "count": 2.00001,
+            "maps": [{"id": "A", "focused": false}, {"id": "B", "focused": true}]})");
+    std::string lWhy;
+
+    CHECK(MatchesExpected(nlohmann::json::parse(R"({"unsaved": true})"), lAnswer, lWhy));
+    CHECK(MatchesExpected(nlohmann::json::parse(R"({"count": 2})"), lAnswer, lWhy));
+    CHECK(MatchesExpected(nlohmann::json::parse(R"({"maps": [{"id": "A"}, {"focused": true}]})"), lAnswer, lWhy));
+
+    CHECK_FALSE(MatchesExpected(nlohmann::json::parse(R"({"maps": [{}, {"focused": false}]})"), lAnswer, lWhy));
+    CHECK(lWhy == "maps/1/focused is true, expected false");
+    CHECK_FALSE(MatchesExpected(nlohmann::json::parse(R"({"maps": [{}]})"), lAnswer, lWhy));
+    CHECK(lWhy.find("expected 1 item(s)") != std::string::npos);
+    CHECK_FALSE(MatchesExpected(nlohmann::json::parse(R"({"world": "A"})"), lAnswer, lWhy));
+    CHECK(lWhy == "world is missing");
+    CHECK_FALSE(MatchesExpected(nlohmann::json::parse(R"("text")"), lAnswer, lWhy));
+    CHECK(lWhy.find("the answer is") == 0);
+}
+
+TEST_CASE("Automation: a request with an expected answer fails when its answer differs")
+{
+    Recorder          lRecorder;
+    AutomationRequest lRight = Request("right", "echo", { { "n", 1 }, { "name", "x" } });
+    AutomationRequest lWrong = Request("wrong", "echo", { { "n", 2 } });
+    lRight.Expect = { { "n", 1 } };
+    lWrong.Expect = { { "n", 1 } };
+
+    lRecorder.Runner.Enqueue(lRight);
+    lRecorder.Runner.Enqueue(lWrong);
+    lRecorder.Runner.Tick();
+
+    REQUIRE(lRecorder.Responses.size() == 2);
+    CHECK(lRecorder.Responses[0].bOk);
+    CHECK(lRecorder.Responses[0].Result.at("name") == "x");   // the whole answer is kept
+    CHECK_FALSE(lRecorder.Responses[1].bOk);
+    CHECK(lRecorder.Responses[1].Error == "the answer differs: n is 2, expected 1");
+
+    TDynArray<AutomationRequest> lRequests;
+    std::string                  lError;
+    REQUIRE(ParseAutomationScript(R"([{"command": "a", "expect": {"n": 1}}])", lRequests, lError));
+    CHECK(lRequests[0].Expect.at("n") == 1);
+    CHECK_FALSE(ParseAutomationScript(R"([{"command": "a", "expect": {}, "expectFailure": true}])", lRequests, lError));
+}
+
 TEST_CASE("Automation: commands.list describes every command, sorted, with its help")
 {
     Recorder lRecorder;
