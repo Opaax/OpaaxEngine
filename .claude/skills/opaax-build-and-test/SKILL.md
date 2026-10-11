@@ -37,6 +37,10 @@ description: Build OpaaxEngine and run its unit tests and TestWorld feature test
   `build/debug-editor/TestWorldResults/`.
 - A failure: open `<Feature>.out.json` and find the response with `"ok": false`; its `error` says what
   was expected and what was found. Look at `<Feature>.png`.
+- Editor tests (`TestWorldEditor.<Name>`) run `TestWorld/EditorTests/<Name>.json` in the editor; their
+  answers are `Editor<Name>.out.json`. They may save only into `TestWorld/Assets/Scratch`, which the
+  `TestWorldEditor.ClearScratch` fixture empties first. A request with `"expectFailure": true` checks a
+  refusal.
 - They need a display (a window opens). CI runs them on Linux under `xvfb-run` with Mesa.
 
 ## Before committing
