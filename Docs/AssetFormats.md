@@ -87,6 +87,12 @@ Inspector shows; `entity.get` (Docs/Automation.md) prints an entity with every f
 Enums are saved by name (`"Type": "Dynamic"`), colours as `{ "x", "y", "z", "w" }` (red, green, blue,
 alpha from 0 to 1).
 
+What is in front: a `Sprite` or a `Text` is drawn by its `Layer` (`Background`, `Default`, `Foreground`,
+`Debug`, `UI`, back to front), then its `OrderInLayer` (lower is behind). A `Quad` has no order of its
+own: it is drawn in `Default` at order 0. For a plain colour that must sit behind or in front of
+something, use a `Sprite` of the engine's white square (`"Texture": "/Engine/Textures/T_Square_32_White.png"`)
+with a `Color`. Engine content is named from `/Engine/` (`/Engine/Fonts/Roboto.opaaxfont`).
+
 ### Placed prefabs
 
 A map places prefabs in `prefabInstances`. Each placement names the prefab, has its own `instanceId`
@@ -166,15 +172,17 @@ A tree of widgets, designed at `ReferenceHeight` (the canvas scales to the scree
 
 Every widget has `Type`, `Name`, `Rect`, `Opacity`, `bVisible`, `bHitTestable` and `Children`. A
 `Rect` anchors the widget in its parent (`AnchorMin`/`AnchorMax`, fractions; equal = a point, apart =
-stretch), places its `Pivot` at `AnchoredPosition` (canvas units, Y up) and gives its `SizeDelta`.
+stretch), places its `Pivot` at `AnchoredPosition` (canvas units, Y up) and gives its `SizeDelta`. A
+mounted canvas's root sits in the screen, so a HUD's root stretches over it (anchors 0 to 1, `SizeDelta`
+0), as the root of a new canvas does (`ui.new`); its widgets then anchor to the screen's corners.
 
 | Type | Its fields |
 |---|---|
 | `UIPanel` | none: a container |
 | `UIImage` | `Texture` or `Sheet` + `Frame`, `Color`, `Border` (nine-slice), `Fill`, `FillAmount`, `FillBinding` |
-| `UIText` | `Text`, `Binding`, `Font`, `Size`, `Color`, `HAlign`, `VAlign`, `bWrap`, `LineHeightScale`, `bKerning` |
+| `UIText` | `Text`, `Binding`, `Font` (a `.ttf`), `Size`, `Color`, `HAlign` (`Left`, `Center`, `Right`), `VAlign` (`Top`, `Middle`, `Bottom`), `bWrap`, `LineHeightScale`, `bKerning` |
 | `UIButton` | `Normal`, `Hovered`, `Pressed`, `Disabled` colours, `bEnabled`, `Texture` or `Sheet` + `Frame` |
-| `UIStack` | `Axis`, `Spacing`, `Padding`, `ChildAlign`, `bFitContent`: lays its children out in a row or a column |
+| `UIStack` | `Axis` (`Vertical`, `Horizontal`), `Spacing`, `Padding`, `ChildAlign` (`Start`, `Center`, `End`, `Stretch`), `bFitContent`: lays its children out in a row or a column |
 | `UIMask` | `Texture` (a shape; empty = the rect), `bShowMaskGraphic`: clips its children |
 | `UISafeArea` | `Insets`: keeps its children inside the screen's safe part |
 
