@@ -508,8 +508,19 @@ namespace Opaax::Editor
             MakeFileRequest("Save As Variant", lSuggested, "*.opaaxprefab", "Opaax Prefab"),
             [&InContext](const OpaaxString& InPicked)
             {
-                InContext.PrefabDocument.SaveAsVariant(InContext, InPicked);
+                SavePrefabAsVariantAtCommand{}.Execute(InContext, PrefabPathParams{InPicked});
             });
+    }
+
+    void SavePrefabAsVariantAtCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        if (!InContext.PrefabDocument.IsOpen())
+        {
+            OPAAX_LOG(LogEditorCommands, Warn, "Save As Variant ignored — no prefab is open");
+            return;
+        }
+
+        InContext.PrefabDocument.SaveAsVariant(InContext, InParams.AbsPath);   // logs what it wrote, or why not
     }
 
     void UndoPrefabCommand::Execute(EditorContext& InContext, const Params&)
@@ -844,34 +855,46 @@ namespace Opaax::Editor
                             "*.opaaxui", "Opaax UI Canvas"),
             [&InContext](const OpaaxString& InPicked)
             {
-                // New means new (as NewMapCommand): an existing canvas is not overwritten.
-                if (InContext.FileSystem.IsPathExist(InPicked))
-                {
-                    OPAAX_LOG(LogEditorCommands, Warn,
-                              "'{}' already exists — open it from the Resource Browser instead of overwriting it",
-                              InPicked.CStr());
-                    return;
-                }
-
-                // Authored at the project's reference height, so the panel shows what the game draws.
-                UICanvasFile::UICanvasDoc lDoc;
-                lDoc.ReferenceHeight = OpaaxApplication::GetAppService<IProjectManager>().UIReferenceHeight();
-                lDoc.Root            = MakeUnique<UIPanel>();
-                lDoc.Root->Name      = "Root";
-
-                if (!UICanvasFile::Save(InPicked, lDoc))
-                {
-                    return;   // UICanvasFile logged why
-                }
-
-                const UIWidgetRegistry& lRegistry =
-                    OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets();
-
-                if (InContext.UICanvasDocument.Open(InPicked, lRegistry))
-                {
-                    InContext.Panels.SetVisible(UICanvasPanel::PanelID(), true);
-                }
+                NewUIAtCommand{}.Execute(InContext, UICanvasPathParams{InPicked});
             });
+    }
+
+    void NewUIAtCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        if (InContext.Paths.AbsoluteToAsset(InParams.AbsPath).IsEmpty())
+        {
+            OPAAX_LOG(LogEditorCommands, Warn,
+                      "'{}' is outside the project's Assets — a game can only load assets of this project",
+                      InParams.AbsPath.CStr());
+            return;
+        }
+
+        // New means new (as NewMapCommand): an existing canvas is not overwritten.
+        if (InContext.FileSystem.IsPathExist(InParams.AbsPath))
+        {
+            OPAAX_LOG(LogEditorCommands, Warn,
+                      "'{}' already exists — open it from the Resource Browser instead of overwriting it",
+                      InParams.AbsPath.CStr());
+            return;
+        }
+
+        // Authored at the project's reference height, so the panel shows what the game draws.
+        UICanvasFile::UICanvasDoc lDoc;
+        lDoc.ReferenceHeight = OpaaxApplication::GetAppService<IProjectManager>().UIReferenceHeight();
+        lDoc.Root            = MakeUnique<UIPanel>();
+        lDoc.Root->Name      = "Root";
+
+        if (!UICanvasFile::Save(InParams.AbsPath, lDoc))
+        {
+            return;   // UICanvasFile logged why
+        }
+
+        const UIWidgetRegistry& lRegistry = OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets();
+
+        if (InContext.UICanvasDocument.Open(InParams.AbsPath, lRegistry))
+        {
+            InContext.Panels.SetVisible(UICanvasPanel::PanelID(), true);
+        }
     }
 
     void SaveUICommand::Execute(EditorContext& InContext, const Params&)
@@ -924,15 +947,24 @@ namespace Opaax::Editor
     {
         if (!MapOps::CanEdit(InContext, "Add Map")) { return; }
 
-        Level* const lLevel = MapOps::ActiveLevel(InContext);
-        if (lLevel == nullptr) { return; }
+        if (MapOps::ActiveLevel(InContext) == nullptr) { return; }
 
         InContext.Dialogs.OpenFile(
             MakeFileRequest("Add Map to Level", InContext.Paths.AssetToAbsolute(OpaaxString("Maps/")),
                             "*.opaaxmap", "Opaax Map"),
-            [&InContext, lLevel](const OpaaxString& InPicked)
+            [&InContext](const OpaaxString& InPicked)
             {
-                AddMapAt(InContext, *lLevel, InPicked);
+                AddMapToLevelAtCommand{}.Execute(InContext, MapPathParams{InPicked});
             });
+    }
+
+    void AddMapToLevelAtCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        if (!MapOps::CanEdit(InContext, "Add Map")) { return; }
+
+        Level* const lLevel = MapOps::ActiveLevel(InContext);
+        if (lLevel == nullptr) { return; }
+
+        AddMapAt(InContext, *lLevel, InParams.AbsPath);
     }
 }

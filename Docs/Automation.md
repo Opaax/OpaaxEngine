@@ -94,7 +94,9 @@ The editor adds:
 | `level.new` | `path`, `map`, `discard` | Creates a level with one new, empty map (`map`; default `Maps/<level name>.opaaxmap`) and opens it; refuses files that exist |
 | `map.new` | `path` | Creates an empty map, adds it to the open level and focuses it: entities created next go there |
 | `level.info` | | The open level's file, its maps (`id`, `path`, `persistent`, `focused`, `unsaved`) and whether anything is unsaved |
-| `level.save`, `map.save` | `all` (level) | Saves (a map must already have a file). `level.save` with `all` rewrites every map of the level in the current format |
+| `level.save` | `all` | Saves the level's changed maps; with `all`, rewrites every map of the level and its file in the current format |
+| `map.save` | `path` | Saves the focused map; with `path`, writes it to that new file instead, which the level names from then on (the old file stays as last saved) |
+| `map.add` | `path` | Adds an existing map to the open level: its entities load. Answers the map's `id` |
 | `project.export` | `path` | Exports the game into a folder (its release build and content); answered when done, minutes later |
 | `entity.create` | `name`, `map`, `components` | Creates an entity in the focused map, with components `{type: values}` |
 | `entity.destroy` | `entity` | Deletes an entity |
@@ -105,14 +107,17 @@ The editor adds:
 | `component.set` | `entity`, `type`, `value` | As the engine's, recorded for undo in the edit world |
 | `prefab.create` | `entities`, `path` | Writes entities (with their children) as a prefab, then replaces them with an instance of it |
 | `prefab.place` | `path`, `position` | Places an instance of a prefab in the focused map, its first entity at `position` |
+| `prefab.variant` | `prefab`, `path`, `entity`, `components` | Writes a variant of a prefab: it inherits everything, except `components` changed on its `entity` |
+| `ui.new` | `path` | Creates an empty UI canvas (a root panel at the project's reference height); its widgets are written in the file |
 
 Edits made by the editor's commands are the same as a user's: undoable, and saved only when asked.
 
 A script never meets a dialog: while a request runs, the editor's questions and file pickers stay
 closed, and a request that met one did nothing and fails, saying what was asked. Opening a level
 over unsaved changes is refused that way: save them first (`level.save`), or pass `"discard": true`
-to `level.open`, `level.play` or `map.open` to lose them. For a command that asks for a file, use the
-automation command that takes the path (`level.open`, `map.open`, `project.export`...).
+to `level.open`, `level.play` or `map.open` to lose them. Every editor action that asks for a file has
+an automation command that takes the path instead (`level.new`, `map.save`, `map.add`, `ui.new`,
+`prefab.variant`, `project.export`...).
 
 ## Example: does Space jump?
 

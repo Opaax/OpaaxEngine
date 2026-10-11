@@ -422,6 +422,7 @@ namespace Opaax::Editor
         lCommands.Register<OpenPrefabAtCommand>(Tags::EDITOR_COMMAND_OPEN_PREFAB_AT);
         lCommands.Register<SavePrefabCommand>(Tags::EDITOR_COMMAND_SAVE_PREFAB);
         lCommands.Register<SavePrefabAsVariantCommand>(Tags::EDITOR_COMMAND_SAVE_PREFAB_AS_VARIANT);
+        lCommands.Register<SavePrefabAsVariantAtCommand>(Tags::EDITOR_COMMAND_SAVE_PREFAB_AS_VARIANT_AT);
         lCommands.Register<UndoPrefabCommand>(Tags::EDITOR_COMMAND_UNDO_PREFAB);
         lCommands.Register<RedoPrefabCommand>(Tags::EDITOR_COMMAND_REDO_PREFAB);
         lCommands.Register<DeletePrefabSelectionCommand>(Tags::EDITOR_COMMAND_DELETE_PREFAB_SELECTION);
@@ -447,9 +448,11 @@ namespace Opaax::Editor
 
         // A document type gets its own New, like maps and levels.
         lCommands.Register<NewUICommand>(Tags::EDITOR_COMMAND_NEW_UI);
+        lCommands.Register<NewUIAtCommand>(Tags::EDITOR_COMMAND_NEW_UI_AT);
         lCommands.Register<SaveUICommand>(Tags::EDITOR_COMMAND_SAVE_UI);
         lCommands.Register<DeleteUIWidgetCommand>(Tags::EDITOR_COMMAND_DELETE_UI_WIDGET);
         lCommands.Register<AddMapToLevelCommand>(Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL);
+        lCommands.Register<AddMapToLevelAtCommand>(Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL_AT);
 
         lCommands.Register<TransformSelectedCommand>(Tags::EDITOR_COMMAND_TRANSFORM_SELECTED);
 

@@ -20,13 +20,18 @@
 #include "Editor/Operation/MapOperations.h"
 #include "Editor/Operation/NewLevelPlan.hpp"
 #include "Editor/Export/GameExport.h"
+#include "Editor/Prefab/EditorPrefabDocument.h"
 #include "Editor/Undo/ComponentUndoables.h"
 #include "Editor/Undo/EditorUndo.h"
 #include "Editor/UI/GuardedEditorDialogs.hpp"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Platform/IFileSystem.h"
+#include "UI/UICanvasFile.h"
 #include "World/Entity/Entity.h"
 #include "World/Level.h"
+#include "World/Prefab/PrefabFile.h"
+#include "World/Serialization/MapData.h"
+#include "World/Serialization/MapFile.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
 
@@ -487,15 +492,104 @@ namespace Opaax::Editor::EditorAutomation
                                                                              : Tags::EDITOR_COMMAND_SAVE_LEVEL);
                 });
 
-            InCommands.Register("map.save", "Saves the focused map (it must have a file already).",
-                [&InContext](const nlohmann::json&)
+            InCommands.Register("map.save",
+                "Saves the focused map. With {path}: writes it to that new file instead, which the level names from "
+                "then on (its file is saved at once); the old file stays as it was last saved.",
+                [&InContext](const nlohmann::json& InParams)
                 {
-                    // Without a file it would ask where, and nobody would answer.
+                    // Without a focused map Save would ask where, and nobody would answer.
                     if (!InContext.MapDocument.HasMap())
                     {
-                        return AutomationResult::Fail("the focused map has no file yet: save it once from the editor");
+                        return AutomationResult::Fail("no map is focused: open a level or a map first (level.open, "
+                                                      "map.open)");
                     }
-                    return Dispatch(InContext, Tags::EDITOR_COMMAND_SAVE_MAP);
+                    if (!InParams.contains("path"))
+                    {
+                        return Dispatch(InContext, Tags::EDITOR_COMMAND_SAVE_MAP);
+                    }
+
+                    OpaaxString lPath;
+                    std::string lError;
+                    if (!AssetPath(InContext, InParams, lPath, lError) || !IsEditing(InContext, lError)
+                        || !NewFilePath(InContext, lPath, "path", MapFile::MAP_EXTENSION, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_SAVE_MAP_AS_AT, InContext,
+                                                            MapPathParams{ lPath });
+                    if (!(InContext.MapDocument.AbsPath() == lPath))
+                    {
+                        return AutomationResult::Fail("the map was not written there (see the log)");
+                    }
+                    return AutomationResult::Ok(nlohmann::json{ { "map", InContext.Paths.AbsoluteToAsset(lPath).CStr() } });
+                });
+
+            InCommands.Register("map.add",
+                "Adds the existing map {path} to the open level (whose file is saved at once): its entities load. "
+                "Answers its {map} and map {id}; map.open focuses it.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString lPath;
+                    std::string lError;
+                    if (!AssetPath(InContext, InParams, lPath, lError) || !IsEditing(InContext, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+                    if (!InContext.LevelDocument.HasLevel())
+                    {
+                        return AutomationResult::Fail("no level file is open to add the map to: open or create one "
+                                                      "first (level.open, level.new)");
+                    }
+                    if (!InContext.FileSystem.IsPathExist(lPath))
+                    {
+                        return AutomationResult::Fail("no file at '" + std::string(lPath.CStr())
+                                                      + "': map.new creates a map");
+                    }
+
+                    const std::string  lAssetRel = InContext.Paths.AbsoluteToAsset(lPath).CStr();
+                    const Level* const lLevel    = MapOps::ActiveLevel(InContext);
+                    if (lAssetRel.empty())
+                    {
+                        return AutomationResult::Fail("a level only names maps of the project's assets");
+                    }
+                    if (lLevel == nullptr)
+                    {
+                        return AutomationResult::Fail("no level is open (see the log)");
+                    }
+
+                    // Each reason a level refuses the map, said before trying.
+                    for (const OpaaxString& lListed : lLevel->GetData().Maps)
+                    {
+                        if (lListed == OpaaxString(lAssetRel.c_str()))
+                        {
+                            return AutomationResult::Fail("'" + lAssetRel + "' is in the level already");
+                        }
+                    }
+                    MapData lData;
+                    if (!MapFile::Load(lPath, lData))
+                    {
+                        return AutomationResult::Fail("'" + lAssetRel + "' is not a map that can be read (see the log)");
+                    }
+                    for (const Level::MountedMap& lMounted : lLevel->GetMountedMaps())
+                    {
+                        if (lMounted.Id == lData.Id)
+                        {
+                            return AutomationResult::Fail("'" + lAssetRel + "' is map '" + lData.Id.CStr()
+                                                          + "', which the level has already (in '"
+                                                          + lMounted.AssetRelPath.CStr() + "'): a level holds each map once");
+                        }
+                    }
+
+                    const Uint64 lBefore = lLevel->GetData().MapCount();
+                    InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL_AT, InContext,
+                                                            MapPathParams{ lPath });
+                    if (lLevel->GetData().MapCount() == lBefore)
+                    {
+                        return AutomationResult::Fail("the map was not added (see the log)");
+                    }
+                    return AutomationResult::Ok(nlohmann::json{ { "map", lAssetRel },
+                                                                { "id", lLevel->GetMountedMaps().back().Id.CStr() } });
                 });
         }
 
@@ -745,6 +839,98 @@ namespace Opaax::Editor::EditorAutomation
                     }
                     return AutomationResult::Ok(nlohmann::json{ { "entities", lPlaced } });
                 });
+
+            InCommands.Register("prefab.variant",
+                "Writes a variant of the prefab {prefab} at {path}: it inherits everything from it, except "
+                "{components} ({type: values}) changed on its {entity} (name or id). Opens it in the Prefab panel; "
+                "refuses a file that exists.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    const std::string lBaseParam = InParams.value("prefab", std::string());
+                    if (lBaseParam.empty())
+                    {
+                        return AutomationResult::Fail("\"prefab\" names the prefab the variant is made from");
+                    }
+
+                    const OpaaxString lBase = ToAbsolute(InContext, lBaseParam);
+                    OpaaxString       lPath;
+                    std::string       lError;
+                    if (!AssetPath(InContext, InParams, lPath, lError)
+                        || !NewFilePath(InContext, lPath, "path", PrefabFile::PREFAB_EXTENSION, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+                    if (!InContext.FileSystem.IsPathExist(lBase))
+                    {
+                        return AutomationResult::Fail("no prefab at '" + std::string(lBase.CStr()) + "'");
+                    }
+
+                    EditorPrefabDocument& lDocument = InContext.PrefabDocument;
+                    InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_PREFAB_AT, InContext,
+                                                            PrefabPathParams{ lBase });
+                    if (!(lDocument.AbsPath() == lBase) || lDocument.GetWorld() == nullptr)
+                    {
+                        return AutomationResult::Fail("the prefab did not open (see the log)");
+                    }
+
+                    // The changes are made in the prefab's own world: saved as a variant, they are its overrides.
+                    const auto lComponents = InParams.find("components");
+                    if (lComponents != InParams.end() && lComponents->is_object() && !lComponents->empty())
+                    {
+                        const Entity lEntity = EngineAutomation::FindEntity(*lDocument.GetWorld(), InParams, lError);
+                        if (!lEntity.IsValid())
+                        {
+                            return AutomationResult::Fail("\"entity\" names the prefab's entity to change: " + lError);
+                        }
+
+                        const ComponentRegistry& lTypes = InContext.Engine.GetRegistries().Components();
+                        for (const auto& [lType, lValue] : lComponents->items())
+                        {
+                            const nlohmann::json lPatch{ { "type", lType }, { "value", lValue } };
+                            if (!EngineAutomation::PatchComponent(lEntity, lTypes, lPatch, lError))
+                            {
+                                return AutomationResult::Fail(lError);
+                            }
+                        }
+                    }
+
+                    InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_SAVE_PREFAB_AS_VARIANT_AT, InContext,
+                                                            PrefabPathParams{ lPath });
+                    if (!(lDocument.AbsPath() == lPath))
+                    {
+                        return AutomationResult::Fail("the variant was not written (see the log)");
+                    }
+                    return AutomationResult::Ok(nlohmann::json{ { "path", InContext.Paths.AbsoluteToAsset(lPath).CStr() } });
+                });
+        }
+
+        // =========================================================================
+        // UI canvases
+        // =========================================================================
+        void RegisterUI(Commands& InCommands, EditorContext& InContext)
+        {
+            InCommands.Register("ui.new",
+                "Creates an empty UI canvas at {path} (.opaaxui: a root panel at the project's reference height) "
+                "and opens it in the UI panel. Its widgets are written in the file (Docs/AssetFormats.md). Refuses "
+                "a file that exists.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString lPath;
+                    std::string lError;
+                    if (!AssetPath(InContext, InParams, lPath, lError)
+                        || !NewFilePath(InContext, lPath, "path", UICanvasFile::UI_EXTENSION, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_NEW_UI_AT, InContext,
+                                                            UICanvasPathParams{ lPath });
+                    if (!InContext.FileSystem.IsPathExist(lPath))
+                    {
+                        return AutomationResult::Fail("the canvas was not written (see the log)");
+                    }
+                    return AutomationResult::Ok(nlohmann::json{ { "path", InContext.Paths.AbsoluteToAsset(lPath).CStr() } });
+                });
         }
     }
 
@@ -755,5 +941,6 @@ namespace Opaax::Editor::EditorAutomation
         RegisterFiles(lCommands, InContext);
         RegisterEntities(lCommands, InContext);
         RegisterPrefabs(lCommands, InContext);
+        RegisterUI(lCommands, InContext);
     }
 }

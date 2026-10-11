@@ -31,8 +31,9 @@ binary's folder or give absolute paths; a relative screenshot path is relative t
 
 Same flag on `SandboxEditor` / `TestWorldEditor`, plus the editor's commands: `entity.create`
 (with `components`), `entity.select`, `entity.parent`, `entity.rename`, `component.set` (undoable),
-`component.add`/`remove`, `prefab.create`/`place`, `editor.undo`/`redo`, `editor.play`/`stop`,
-`level.new`, `map.new`, `level.open`, `level.play`, `level.save`, `map.save`, `project.export`. A game
+`component.add`/`remove`, `prefab.create`/`place`/`variant`, `editor.undo`/`redo`, `editor.play`/`stop`,
+`level.new`, `map.new`, `map.add`, `level.open`, `level.play`, `level.save`, `map.save` (with `path`: Save
+As), `ui.new`, `project.export`. A game
 starts from `level.new` (a level and its first map), entities, then `level.save`. A screenshot shows the
 whole editor window. Nothing is saved unless asked, so a script can edit freely; the editor closes at
 the end of the script.

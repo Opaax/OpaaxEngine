@@ -117,7 +117,8 @@ the editor (`prefab.place`) rather than by hand when their entities must be refe
 
 The same entities as a map, without `ownerMap`, version 3. A prefab can place other prefabs
 (`prefabInstances`, as in a map): a nested prefab. A file with no entities and one placement is a
-variant of that prefab, its overrides being what the variant changes.
+variant of that prefab, its overrides being what the variant changes. The editor writes one with
+`prefab.variant`.
 
 ```json
 {

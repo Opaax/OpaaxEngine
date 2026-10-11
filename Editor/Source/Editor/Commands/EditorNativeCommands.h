@@ -57,6 +57,12 @@ namespace Opaax::Editor
         OpaaxString AbsPath;
     };
 
+    /** An absolute path to a .opaaxui. */
+    struct UICanvasPathParams
+    {
+        OpaaxString AbsPath;
+    };
+
     /** Which panel a panel command acts on (the id from its PanelDesc). */
     struct PanelIdParams
     {
@@ -431,14 +437,25 @@ namespace Opaax::Editor
     };
 
     /**
-     * Asks where, then writes a variant of the open prefab there and opens it. The dialog defaults to
-     * "<Base>Variant" next to the base.
+     * Asks where, then runs SavePrefabAsVariantAtCommand. The dialog defaults to "<Base>Variant" next to the
+     * base.
      */
     struct SavePrefabAsVariantCommand
     {
         using Params = NoParams;
 
         void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /**
+     * Writes Params::AbsPath as a variant of the open prefab (its unsaved edits become the variant's
+     * overrides; the base file is left as it is), then opens the variant.
+     */
+    struct SavePrefabAsVariantAtCommand
+    {
+        using Params = PrefabPathParams;
+
+        void Execute(EditorContext& InContext, const Params& InParams);
     };
 
     /**
@@ -569,14 +586,23 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params&);
     };
 
-    /**
-     * Creates an empty .opaaxui and opens it.
-     */
+    /** Asks where, then runs NewUIAtCommand. */
     struct NewUICommand
     {
         using Params = NoParams;
 
         void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /**
+     * Creates an empty .opaaxui at Params::AbsPath (a root panel, the project's reference height) and opens
+     * it in the UI panel. Refuses an existing file.
+     */
+    struct NewUIAtCommand
+    {
+        using Params = UICanvasPathParams;
+
+        void Execute(EditorContext& InContext, const Params& InParams);
     };
 
     /** Writes the open .opaaxui and reloads it. */
@@ -636,13 +662,24 @@ namespace Opaax::Editor
     };
 
     /**
-     * Add Map to Level: asks for a map file. (Removing a map and choosing the persistent one are on the
-     * Hierarchy's map headers.)
+     * Add Map to Level: asks for a map file, then runs AddMapToLevelAtCommand. (Removing a map and choosing
+     * the persistent one are on the Hierarchy's map headers.)
      */
     struct AddMapToLevelCommand
     {
         using Params = NoParams;
 
         void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /**
+     * Adds the existing map at Params::AbsPath to the open level: its entities load, and the level file is
+     * saved at once. The focus stays where it was.
+     */
+    struct AddMapToLevelAtCommand
+    {
+        using Params = MapPathParams;
+
+        void Execute(EditorContext& InContext, const Params& InParams);
     };
 }
