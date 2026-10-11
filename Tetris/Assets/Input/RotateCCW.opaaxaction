@@ -1,0 +1,6 @@
+{
+    "Name": "RotateCCW",
+    "ValueType": "Bool",
+    "Description": "Turns the piece counter-clockwise",
+    "Modifiers": []
+}

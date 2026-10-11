@@ -1,0 +1,83 @@
+{
+    "Priority": 0,
+    "Mappings": [
+        {
+            "Action": "Input/Left.opaaxaction",
+            "Key": "Left",
+            "Modifiers": [],
+            "bConsume": true
+        },
+        {
+            "Action": "Input/Left.opaaxaction",
+            "Key": "A",
+            "Modifiers": [],
+            "bConsume": true
+        },
+        {
+            "Action": "Input/Right.opaaxaction",
+            "Key": "Right",
+            "Modifiers": [],
+            "bConsume": true
+        },
+        {
+            "Action": "Input/Right.opaaxaction",
+            "Key": "D",
+            "Modifiers": [],
+            "bConsume": true
+        },
+        {
+            "Action": "Input/SoftDrop.opaaxaction",
+            "Key": "Down",
+            "Modifiers": [],
+            "bConsume": true
+        },
+        {
+            "Action": "Input/SoftDrop.opaaxaction",
+            "Key": "S",
+            "Modifiers": [],
+            "bConsume": true
+        },
+        {
+            "Action": "Input/HardDrop.opaaxaction",
+            "Key": "Space",
+            "Modifiers": [],
+            "bConsume": true
+        },
+        {
+            "Action": "Input/RotateCW.opaaxaction",
+            "Key": "Up",
+            "Modifiers": [],
+            "bConsume": true
+        },
+        {
+            "Action": "Input/RotateCW.opaaxaction",
+            "Key": "X",
+            "Modifiers": [],
+            "bConsume": true
+        },
+        {
+            "Action": "Input/RotateCCW.opaaxaction",
+            "Key": "Z",
+            "Modifiers": [],
+            "bConsume": true
+        },
+        {
+            "Action": "Input/Pause.opaaxaction",
+            "Key": "P",
+            "Modifiers": [],
+            "bConsume": true
+        },
+        {
+            "Action": "Input/Pause.opaaxaction",
+            "Key": "Escape",
+            "Modifiers": [],
+            "bConsume": true
+        },
+        {
+            "Action": "Input/Restart.opaaxaction",
+            "Key": "Enter",
+            "Modifiers": [],
+            "bConsume": true
+        }
+    ]
+}

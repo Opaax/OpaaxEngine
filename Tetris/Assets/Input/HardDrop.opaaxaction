@@ -1,0 +1,6 @@
+{
+    "Name": "HardDrop",
+    "ValueType": "Bool",
+    "Description": "Drops the piece to the bottom at once",
+    "Modifiers": []
+}

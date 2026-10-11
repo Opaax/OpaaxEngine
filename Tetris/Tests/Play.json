@@ -1,0 +1,448 @@
+[
+ {
+  "command": "level.play",
+  "params": {
+   "path": "Levels/Main.opaaxlevel"
+  }
+ },
+ {
+  "command": "component.set",
+  "params": {
+   "entity": "Board",
+   "type": "TetrisBoard",
+   "value": {
+    "Seed": 3,
+    "GarbageRows": 1,
+    "GarbageGap": 5
+   }
+  }
+ },
+ {
+  "command": "input.key",
+  "params": {
+   "key": "Enter",
+   "action": "tap"
+  }
+ },
+ {
+  "command": "frames.wait",
+  "params": {
+   "count": 3
+  }
+ },
+ {
+  "command": "expect.value",
+  "params": {
+   "entity": "Board",
+   "path": "TetrisBoard/Piece",
+   "equals": "I"
+  },
+  "id": "seeded-first-piece"
+ },
+ {
+  "command": "expect.value",
+  "params": {
+   "entity": "Board",
+   "path": "TetrisBoard/Next",
+   "equals": "Z"
+  },
+  "id": "seeded-next-piece"
+ },
+ {
+  "command": "expect.value",
+  "params": {
+   "entity": "Board",
+   "path": "TetrisBoard/Blocks",
+   "equals": 9
+  },
+  "id": "grey-row"
+ },
+ {
+  "command": "expect.value",
+  "params": {
+   "entity": "Board",
+   "path": "TetrisBoard/PieceLeft",
+   "equals": 3
+  },
+  "id": "appears-centred"
+ },
+ {
+  "command": "expect.value",
+  "params": {
+   "entity": "Board",
+   "path": "TetrisBoard/PieceBottom",
+   "equals": 19
+  },
+  "id": "appears-at-the-top"
+ },
+ {
+  "command": "input.key",
+  "params": {
+   "key": "Left",
+   "action": "tap"
+  }
+ },
+ {
+  "command": "frames.wait",
+  "params": {
+   "count": 2
+  }
+ },
+ {
+  "command": "expect.value",
+  "params": {
+   "entity": "Board",
+   "path": "TetrisBoard/PieceLeft",
+   "equals": 2
+  },
+  "id": "moves-left"
+ },
+ {
+  "command": "input.key",
+  "params": {
+   "key": "Right",
+   "action": "tap"
+  }
+ },
+ {
+  "command": "frames.wait",
+  "params": {
+   "count": 2
+  }
+ },
+ {
+  "command": "expect.value",
+  "params": {
+   "entity": "Board",
+   "path": "TetrisBoard/PieceLeft",
+   "equals": 3
+  },
+  "id": "moves-right"
+ },
+ {
+  "command": "input.key",
+  "params": {
+   "key": "Up",
+   "action": "tap"
+  }
+ },
+ {
+  "command": "frames.wait",
+  "params": {
+   "count": 2
+  }
+ },
+ {
+  "command": "expect.value",
+  "params": {
+   "entity": "Board",
+   "path": "TetrisBoard/PieceLeft",
+   "equals": 5
+  },
+  "id": "turns"
+ },
+ {
+  "command": "input.key",
+  "params": {
+   "key": "Space",
+   "action": "tap"
+  }
+ },
+ {
+  "command": "frames.wait",
+  "params": {
+   "count": 3
+  }
+ },
+ {
+  "command": "expect.value",
+  "params": {
+   "entity": "Board",
+   "path": "TetrisBoard/Locked",
+   "equals": 1
+  },
+  "id": "dropped-locks"
+ },
+ {
+  "command": "expect.value",
+  "params": {
+   "entity": "Board",
+   "path": "TetrisBoard/Lines",
+   "equals": 1
+  },
+  "id": "row-cleared"
+ },
+ {
+  "command": "expect.value",
+  "params": {
+   "entity": "Board",
+   "path": "TetrisBoard/Score",
+   "equals": 134
+  },
+  "id": "scored"
+ },
+ {
+  "command": "expect.value",
+  "params": {
+   "entity": "Board",
+   "path": "TetrisBoard/Blocks",
+   "equals": 3
+  },
+  "id": "rows-fall-down"
+ },
+ {
+  "command": "expect.value",
+  "params": {
+   "entity": "Board",
+   "path": "TetrisBoard/Piece",
+   "equals": "Z"
+  },
+  "id": "next-piece-comes"
+ },
+ {
+  "command": "screenshot",
+  "params": {
+   "path": "tetris_line.png"
+  }
+ },
+ {
+  "command": "input.key",
+  "params": {
+   "key": "P",
+   "action": "tap"
+  }
+ },
+ {
+  "command": "frames.wait",
+  "params": {
+   "count": 2
+  }
+ },
+ {
+  "command": "expect.value",
+  "params": {
+   "entity": "Board",
+   "path": "TetrisBoard/bPaused",
+   "equals": true
+  },
+  "id": "pauses"
+ },
+ {
+  "command": "world.wait",
+  "params": {
+   "seconds": 1.5
+  }
+ },
+ {
+  "command": "expect.value",
+  "params": {
+   "entity": "Board",
+   "path": "TetrisBoard/PieceBottom",
+   "equals": 19
+  },
+  "id": "paused-holds"
+ },
+ {
+  "command": "ui.list",
+  "params": {
+   "name": "Paused"
+  },
+  "id": "paused-shown",
+  "expect": {
+   "widgets": [
+    {
+     "visible": true
+    }
+   ]
+  }
+ },
+ {
+  "command": "input.key",
+  "params": {
+   "key": "P",
+   "action": "tap"
+  }
+ },
+ {
+  "command": "frames.wait",
+  "params": {
+   "count": 2
+  }
+ },
+ {
+  "command": "expect.value",
+  "params": {
+   "entity": "Board",
+   "path": "TetrisBoard/bPaused",
+   "equals": false
+  },
+  "id": "resumes"
+ },
+ {
+  "command": "world.wait",
+  "params": {
+   "seconds": 1.2
+  }
+ },
+ {
+  "command": "expect.value",
+  "params": {
+   "entity": "Board",
+   "path": "TetrisBoard/PieceBottom",
+   "equals": 18
+  },
+  "id": "gravity"
+ },
+ {
+  "command": "component.set",
+  "params": {
+   "entity": "Board",
+   "type": "TetrisBoard",
+   "value": {
+    "GarbageRows": 19,
+    "GarbageGap": 0
+   }
+  }
+ },
+ {
+  "command": "input.key",
+  "params": {
+   "key": "Enter",
+   "action": "tap"
+  }
+ },
+ {
+  "command": "frames.wait",
+  "params": {
+   "count": 3
+  }
+ },
+ {
+  "command": "expect.value",
+  "params": {
+   "entity": "Board",
+   "path": "TetrisBoard/bGameOver",
+   "equals": false
+  },
+  "id": "new-game"
+ },
+ {
+  "command": "input.key",
+  "params": {
+   "key": "Space",
+   "action": "tap"
+  }
+ },
+ {
+  "command": "frames.wait",
+  "params": {
+   "count": 3
+  }
+ },
+ {
+  "command": "expect.value",
+  "params": {
+   "entity": "Board",
+   "path": "TetrisBoard/bGameOver",
+   "equals": true
+  },
+  "id": "game-over"
+ },
+ {
+  "command": "ui.list",
+  "params": {
+   "name": "GameOver"
+  },
+  "id": "game-over-shown",
+  "expect": {
+   "widgets": [
+    {
+     "visible": true
+    }
+   ]
+  }
+ },
+ {
+  "command": "screenshot",
+  "params": {
+   "path": "tetris_over.png"
+  }
+ },
+ {
+  "command": "input.key",
+  "params": {
+   "key": "Space",
+   "action": "tap"
+  }
+ },
+ {
+  "command": "frames.wait",
+  "params": {
+   "count": 3
+  }
+ },
+ {
+  "command": "expect.value",
+  "params": {
+   "entity": "Board",
+   "path": "TetrisBoard/Locked",
+   "equals": 1
+  },
+  "id": "over-means-over"
+ },
+ {
+  "command": "component.set",
+  "params": {
+   "entity": "Board",
+   "type": "TetrisBoard",
+   "value": {
+    "GarbageRows": 0
+   }
+  }
+ },
+ {
+  "command": "input.key",
+  "params": {
+   "key": "Enter",
+   "action": "tap"
+  }
+ },
+ {
+  "command": "frames.wait",
+  "params": {
+   "count": 3
+  }
+ },
+ {
+  "command": "expect.value",
+  "params": {
+   "entity": "Board",
+   "path": "TetrisBoard/bGameOver",
+   "equals": false
+  },
+  "id": "starts-again"
+ },
+ {
+  "command": "expect.value",
+  "params": {
+   "entity": "Board",
+   "path": "TetrisBoard/Blocks",
+   "equals": 0
+  },
+  "id": "empty-board"
+ },
+ {
+  "command": "ui.list",
+  "params": {
+   "name": "GameOver"
+  },
+  "id": "game-over-hidden",
+  "expect": {
+   "widgets": [
+    {
+     "visible": false
+    }
+   ]
+  }
+ }
+]

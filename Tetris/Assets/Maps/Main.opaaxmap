@@ -1,0 +1,342 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.05000000074505806,
+                        "y": 0.05000000074505806,
+                        "z": 0.07999999821186066
+                    },
+                    "Frame": -1,
+                    "Layer": "Background",
+                    "Material": "",
+                    "OrderInLayer": 1,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 150.0,
+                        "y": 120.0
+                    },
+                    "Texture": "/Engine/Textures/T_Square_32_White.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 270.0,
+                        "y": 180.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "02b632559a37cb247ab2102009053a86",
+            "name": "NextBox",
+            "ownerMap": "Main"
+        },
+        {
+            "components": {
+                "Text": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.6000000238418579,
+                        "y": 0.6200000047683716,
+                        "z": 0.699999988079071
+                    },
+                    "Face": "",
+                    "Font": "/Engine/Fonts/Roboto.opaaxfont",
+                    "Layer": "Foreground",
+                    "LineHeightScale": 1.0,
+                    "OrderInLayer": 0,
+                    "Size": 18.0,
+                    "Style": {
+                        "Slant": "Normal",
+                        "Subset": "Latin",
+                        "Weight": "Regular",
+                        "Width": "Normal"
+                    },
+                    "Text": "Left / Right  move\nUp / X  turn\nZ  turn back\nDown  faster\nSpace  drop\nP  pause\nEnter  new game",
+                    "bKerning": true,
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 205.0,
+                        "y": 60.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "3617f5ef12e5aa908b57f58aff0379c4",
+            "name": "Help",
+            "ownerMap": "Main"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.05000000074505806,
+                        "y": 0.05000000074505806,
+                        "z": 0.07999999821186066
+                    },
+                    "Frame": -1,
+                    "Layer": "Background",
+                    "Material": "",
+                    "OrderInLayer": 1,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 300.0,
+                        "y": 600.0
+                    },
+                    "Texture": "/Engine/Textures/T_Square_32_White.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "398c44a1802662c8b1eb17fa90a779f6",
+            "name": "Well",
+            "ownerMap": "Main"
+        },
+        {
+            "components": {
+                "TetrisBoard": {
+                    "BlockPrefab": "Prefabs/Block.opaaxprefab",
+                    "Blocks": 0,
+                    "CellSize": 30.0,
+                    "ClearSound": "Audio/Clear.wav",
+                    "GameOverSound": "Audio/GameOver.wav",
+                    "GarbageGap": 0,
+                    "GarbageRows": 0,
+                    "Hud": "UI/Hud.opaaxui",
+                    "Level": 1,
+                    "Lines": 0,
+                    "LockSound": "Audio/Lock.wav",
+                    "Locked": 0,
+                    "Next": "",
+                    "NextPosition": {
+                        "x": 270.0,
+                        "y": 180.0
+                    },
+                    "Piece": "",
+                    "Score": 0,
+                    "Seed": 0,
+                    "StartLevel": 1,
+                    "bGameOver": false,
+                    "bPaused": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "4604157cbe3e53511295b58dfabe3036",
+            "name": "Board",
+            "ownerMap": "Main"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3199999928474426,
+                        "y": 0.3400000035762787,
+                        "z": 0.41999998688697815
+                    },
+                    "Frame": -1,
+                    "Layer": "Background",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 162.0,
+                        "y": 132.0
+                    },
+                    "Texture": "/Engine/Textures/T_Square_32_White.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 270.0,
+                        "y": 180.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "6928cfa5a6c3a0125dd1c7a9eb56b9ce",
+            "name": "NextBorder",
+            "ownerMap": "Main"
+        },
+        {
+            "components": {
+                "Text": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.8999999761581421,
+                        "y": 0.8999999761581421,
+                        "z": 0.949999988079071
+                    },
+                    "Face": "",
+                    "Font": "/Engine/Fonts/Roboto.opaaxfont",
+                    "Layer": "Foreground",
+                    "LineHeightScale": 1.0,
+                    "OrderInLayer": 0,
+                    "Size": 22.0,
+                    "Style": {
+                        "Slant": "Normal",
+                        "Subset": "Latin",
+                        "Weight": "Regular",
+                        "Width": "Normal"
+                    },
+                    "Text": "NEXT",
+                    "bKerning": true,
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 242.0,
+                        "y": 282.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "ab03fdb912744b887322cbff329278cf",
+            "name": "NextLabel",
+            "ownerMap": "Main"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 360.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "c0000000000000000000000000000001",
+            "name": "Camera",
+            "ownerMap": "Main"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3199999928474426,
+                        "y": 0.3400000035762787,
+                        "z": 0.41999998688697815
+                    },
+                    "Frame": -1,
+                    "Layer": "Background",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 312.0,
+                        "y": 612.0
+                    },
+                    "Texture": "/Engine/Textures/T_Square_32_White.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "c0cd3f6a1aa6923effcec7c74ed44389",
+            "name": "WellBorder",
+            "ownerMap": "Main"
+        },
+        {
+            "components": {
+                "Text": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.9700000286102295,
+                        "y": 0.8500000238418579,
+                        "z": 0.10000000149011612
+                    },
+                    "Face": "",
+                    "Font": "/Engine/Fonts/Roboto.opaaxfont",
+                    "Layer": "Foreground",
+                    "LineHeightScale": 1.0,
+                    "OrderInLayer": 0,
+                    "Size": 56.0,
+                    "Style": {
+                        "Slant": "Normal",
+                        "Subset": "Latin",
+                        "Weight": "Regular",
+                        "Width": "Normal"
+                    },
+                    "Text": "TETRIS",
+                    "bKerning": true,
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -560.0,
+                        "y": 290.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "c4a9c0f8a473972771a22bd3f56a7bd1",
+            "name": "Title",
+            "ownerMap": "Main"
+        }
+    ],
+    "mapId": "Main",
+    "version": 4
+}

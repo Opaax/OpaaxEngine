@@ -1,0 +1,42 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 28.0,
+                        "y": 28.0
+                    },
+                    "Texture": "/Engine/Textures/T_Square_32_White.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "4093568eb8e6f23ad467228bd225b050",
+            "name": "Block",
+            "ownerMap": ""
+        }
+    ],
+    "version": 3
+}

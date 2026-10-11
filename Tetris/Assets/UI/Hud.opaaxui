@@ -1,0 +1,238 @@
+{
+    "Version": 1,
+    "ReferenceHeight": 1080.0,
+    "Root": {
+        "Type": "UIPanel",
+        "Name": "Hud",
+        "bHitTestable": false,
+        "Rect": {
+            "AnchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "AnchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "Pivot": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "AnchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "SizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            }
+        },
+        "Children": [
+            {
+                "Type": "UIText",
+                "Name": "Score",
+                "Text": "SCORE  {}",
+                "Binding": "Board.Score",
+                "Font": "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf",
+                "Size": 40.0,
+                "Color": {
+                    "x": 0.92,
+                    "y": 0.92,
+                    "z": 0.96,
+                    "w": 1.0
+                },
+                "HAlign": "Right",
+                "VAlign": "Middle",
+                "bWrap": false,
+                "bVisible": true,
+                "bHitTestable": false,
+                "Rect": {
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "Pivot": {
+                        "x": 1.0,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": -250.0,
+                        "y": 200.0
+                    },
+                    "SizeDelta": {
+                        "x": 420.0,
+                        "y": 60.0
+                    }
+                }
+            },
+            {
+                "Type": "UIText",
+                "Name": "Lines",
+                "Text": "LINES  {}",
+                "Binding": "Board.Lines",
+                "Font": "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf",
+                "Size": 40.0,
+                "Color": {
+                    "x": 0.92,
+                    "y": 0.92,
+                    "z": 0.96,
+                    "w": 1.0
+                },
+                "HAlign": "Right",
+                "VAlign": "Middle",
+                "bWrap": false,
+                "bVisible": true,
+                "bHitTestable": false,
+                "Rect": {
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "Pivot": {
+                        "x": 1.0,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": -250.0,
+                        "y": 140.0
+                    },
+                    "SizeDelta": {
+                        "x": 420.0,
+                        "y": 60.0
+                    }
+                }
+            },
+            {
+                "Type": "UIText",
+                "Name": "Level",
+                "Text": "LEVEL  {}",
+                "Binding": "Board.Level",
+                "Font": "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf",
+                "Size": 40.0,
+                "Color": {
+                    "x": 0.92,
+                    "y": 0.92,
+                    "z": 0.96,
+                    "w": 1.0
+                },
+                "HAlign": "Right",
+                "VAlign": "Middle",
+                "bWrap": false,
+                "bVisible": true,
+                "bHitTestable": false,
+                "Rect": {
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "Pivot": {
+                        "x": 1.0,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": -250.0,
+                        "y": 80.0
+                    },
+                    "SizeDelta": {
+                        "x": 420.0,
+                        "y": 60.0
+                    }
+                }
+            },
+            {
+                "Type": "UIText",
+                "Name": "GameOver",
+                "Text": "GAME OVER\nPress Enter",
+                "Binding": "",
+                "Font": "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf",
+                "Size": 64.0,
+                "Color": {
+                    "x": 1.0,
+                    "y": 0.35,
+                    "z": 0.35,
+                    "w": 1.0
+                },
+                "HAlign": "Center",
+                "VAlign": "Middle",
+                "bWrap": false,
+                "bVisible": false,
+                "bHitTestable": false,
+                "Rect": {
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "SizeDelta": {
+                        "x": 700.0,
+                        "y": 220.0
+                    }
+                }
+            },
+            {
+                "Type": "UIText",
+                "Name": "Paused",
+                "Text": "PAUSED",
+                "Binding": "",
+                "Font": "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf",
+                "Size": 64.0,
+                "Color": {
+                    "x": 0.95,
+                    "y": 0.95,
+                    "z": 1.0,
+                    "w": 1.0
+                },
+                "HAlign": "Center",
+                "VAlign": "Middle",
+                "bWrap": false,
+                "bVisible": false,
+                "bHitTestable": false,
+                "Rect": {
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "SizeDelta": {
+                        "x": 500.0,
+                        "y": 120.0
+                    }
+                }
+            }
+        ]
+    }
+}

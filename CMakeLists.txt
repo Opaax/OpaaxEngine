@@ -51,3 +51,5 @@ else()
 endif()
 
 add_subdirectory(TestWorld) # added by OpaaxCreator
+
+add_subdirectory(Tetris) # added by OpaaxCreator

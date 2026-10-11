@@ -1,0 +1,6 @@
+{
+    "Name": "Pause",
+    "ValueType": "Bool",
+    "Description": "Pauses or resumes the game",
+    "Modifiers": []
+}

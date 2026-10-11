@@ -1,0 +1,6 @@
+{
+    "Name": "Restart",
+    "ValueType": "Bool",
+    "Description": "Starts a new game",
+    "Modifiers": []
+}

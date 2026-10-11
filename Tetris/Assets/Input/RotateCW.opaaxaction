@@ -1,0 +1,6 @@
+{
+    "Name": "RotateCW",
+    "ValueType": "Bool",
+    "Description": "Turns the piece clockwise",
+    "Modifiers": []
+}

@@ -1,0 +1,6 @@
+{
+    "Name": "Left",
+    "ValueType": "Bool",
+    "Description": "Moves the piece one column left (repeats while held)",
+    "Modifiers": []
+}
