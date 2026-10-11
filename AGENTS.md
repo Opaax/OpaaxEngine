@@ -115,3 +115,7 @@ Match the code around you. In short:
   editor, not only the viewport.
 - Physics bodies of entities spawned this frame are built on first use; behaviours start at the next
   drain point, so an event sent in `OnStart` to a not-yet-started entity starts it first.
+- Windows: a build tree under `%TEMP%` misses header changes (MSBuild does not track files there,
+  warning MSB8029), and stale objects then crash at run time. Keep checkouts and builds out of it.
+- A `git worktree` has no submodules: run `git submodule update --init --recursive` in it before the
+  first build (the configure step says so).

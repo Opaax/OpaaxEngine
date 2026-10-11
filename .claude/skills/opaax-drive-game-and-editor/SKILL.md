@@ -43,6 +43,22 @@ fails, saying what was asked. Save first (`level.save`), or pass `"discard": tru
 `level.play` or `map.open`. `level.info` tells the open level, its maps, the focused one and what is
 unsaved.
 
+## A whole game
+
+The order that works for a game made without help (a Tetris was made this way):
+
+1. `MakeOpaax <Game>`, then `build`: the project with its runtime and its editor.
+2. Code in `<Game>/Source/<Game>/`: the rules as plain classes, and a behaviour that drives them (input
+   actions, prefabs it spawns, sounds, the HUD's bindings). Make its randomness seedable from a field,
+   and keep what a test must read in fields (`expect.value` reads `<Behaviour>/<Field>`).
+3. Content from the editor (`level.open`, `entity.create` with components, `prefab.create`, `ui.new`,
+   `level.save`); input actions, key maps and the HUD's widgets are written as files
+   (Docs/AssetFormats.md).
+4. A test script in `<Game>/Tests/`: play the level, set the seed with `component.set`, start a new
+   game from the game's own input, press keys, check fields, `ui.list` for what the HUD shows, and open
+   the screenshots.
+5. `project.export`, then the same script on the exported game.
+
 ## A live session
 
 `--automation <folder>` keeps the app open: write `001.request.json` (one request, written under
