@@ -125,11 +125,15 @@ namespace Opaax::Editor::EditorAutomation
 
         /**
          * Opens the level at InPath, losing unsaved changes when InParams["discard"] is true. False (with
-         * OutError) when it did not open: refused, or a file that is not a level.
+         * OutError) when it did not open: refused, Play running, or a file that is not a level.
          */
         bool OpenLevel(EditorContext& InContext, const OpaaxString& InPath, const nlohmann::json& InParams,
                        std::string& OutError)
         {
+            if (!IsEditing(InContext, OutError))
+            {
+                return false;
+            }
             if (!InContext.FileSystem.IsPathExist(InPath))
             {
                 OutError = "no file at '" + std::string(InPath.CStr()) + "'";

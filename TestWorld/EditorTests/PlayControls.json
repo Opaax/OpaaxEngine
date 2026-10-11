@@ -91,6 +91,14 @@
         "id": "resumed"
     },
     {
+        "id": "open-while-playing",
+        "command": "level.open",
+        "params": {
+            "path": "Levels/Physics.opaaxlevel"
+        },
+        "expectFailure": true
+    },
+    {
         "id": "stop",
         "command": "editor.stop"
     },
