@@ -2,6 +2,30 @@
     "entities": [
         {
             "components": {
+                "PointerProbe": {
+                    "LeftPresses": 0,
+                    "X": 0.0,
+                    "Y": 0.0,
+                    "bLeftDown": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "8f96dbb8bd095efe993576ec70dfecd9",
+            "name": "Pointer",
+            "ownerMap": "Input"
+        },
+        {
+            "components": {
                 "ControlsProbe": {
                     "BoundCompletions": 0,
                     "BoundFrames": 0,

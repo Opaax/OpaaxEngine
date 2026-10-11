@@ -315,5 +315,91 @@
         "params": {
             "seconds": 0.1
         }
+    },
+    {
+        "command": "input.mouse",
+        "params": {
+            "x": 200,
+            "y": 150
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.1
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pointer",
+            "path": "PointerProbe/X",
+            "near": 200,
+            "tolerance": 0.01
+        },
+        "id": "pointer-x"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pointer",
+            "path": "PointerProbe/Y",
+            "near": 150,
+            "tolerance": 0.01
+        },
+        "id": "pointer-y"
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "Mouse_Left",
+            "action": "press"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.1
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pointer",
+            "path": "PointerProbe/bLeftDown",
+            "equals": true
+        },
+        "id": "button-down"
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "Mouse_Left",
+            "action": "release"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.1
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pointer",
+            "path": "PointerProbe/bLeftDown",
+            "equals": false
+        },
+        "id": "button-up"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pointer",
+            "path": "PointerProbe/LeftPresses",
+            "equals": 1
+        },
+        "id": "button-pressed-once"
     }
 ]

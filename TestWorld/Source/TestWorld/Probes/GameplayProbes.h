@@ -4,6 +4,7 @@
 
 #include "Audio/AudioSubsystem.h"
 #include "Core/String/OpaaxStringJson.h"
+#include "Input/InputManager.h"
 #include "Input/Mapping/InputMappingSubsystem.h"
 #include "World/Behaviour/Behaviour.h"
 #include "World/Systems/WorldContext.h"
@@ -99,6 +100,31 @@ namespace TestWorld
         void OnMoveCompleted(const Opaax::InputActionValue&) { ++BoundCompletions; }
         void OnMoveFrame(const Opaax::InputActionValue&)     { ++BoundFrames; }
         void OnCharge(const Opaax::InputActionValue&)        { ++Charges; }
+    };
+
+    // =============================================================================
+    // PointerProbe — the pointer as the game reads it: its position in window pixels (GetInput), and
+    //   the left button as a key.
+    // =============================================================================
+    class PointerProbe : public Opaax::Behaviour
+    {
+    public:
+        float        X           = 0.f;
+        float        Y           = 0.f;
+        bool         bLeftDown   = false;
+        Opaax::Int32 LeftPresses = 0;
+
+        OPAAX_PROPERTIES(PointerProbe, OPAAX_PROP(X), OPAAX_PROP(Y), OPAAX_PROP(bLeftDown), OPAAX_PROP(LeftPresses))
+
+        void OnUpdate(float) override
+        {
+            const Opaax::Vector2F lPointer = GetInput().GetMousePosition();
+            X         = lPointer.x;
+            Y         = lPointer.y;
+            bLeftDown = IsKeyDown(Opaax::EKeyCode::Mouse_Left);
+
+            if (WasKeyPressed(Opaax::EKeyCode::Mouse_Left)) { ++LeftPresses; }
+        }
     };
 
     // =============================================================================
