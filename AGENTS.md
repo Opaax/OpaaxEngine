@@ -23,6 +23,8 @@ and why they are built that way: [Docs/Architecture.md](Docs/Architecture.md).
   screenshots go to `build/debug-editor/TestWorldResults/`. They open a window: they need a display.
 - A new source file is picked up at configure time: run the full `build` once after adding one.
   Test files are listed by hand in `Engine/Tests/CMakeLists.txt`.
+- Working files (scripts, logs, screenshots, a trial checkout) go in `Scratch/`, which git ignores:
+  not in the system's temp folder, and not under `.claude/` (every write there asks for approval).
 
 ## Verify every change
 
