@@ -91,6 +91,9 @@ with a Collider and a Rigidbody set to Static under it: the ground. Press **Play
 turns, falls on the ground and jumps with Space. **Stop** (F8) gives the level back as it was. Save
 with Ctrl+S.
 
+An agent does the same without the mouse: `MyGameEditor --exec` with the editor's commands (see
+[An agent makes a level](Automation.md#example-an-agent-makes-a-level)).
+
 ## 4. Light it
 
 Add an entity with an **Environment**: the level is now drawn in HDR. Lower its Ambient Intensity, add

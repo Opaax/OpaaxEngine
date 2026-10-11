@@ -125,3 +125,35 @@ automation command that takes the path (`level.open`, `map.open`, `project.expor
 `Sandbox --exec jump.json` runs it and closes with exit code 0 when the player rose, 1 otherwise;
 `jump.out.json` holds every answer and `jump.png` what the screen showed. The TestWorld project
 runs scripts like this one for every engine feature (see `TestWorld/Tests`).
+
+## Example: an agent makes a level
+
+The editor builds a level the way a user would: a new level, entities with their components, saved,
+then played to check it.
+
+```json
+[
+    { "command": "level.new", "params": { "path": "Levels/Arena.opaaxlevel" } },
+    { "command": "entity.create", "params": { "name": "Camera", "components": { "Camera": { "OrthoSize": 300 } } } },
+    { "command": "entity.create", "params": { "name": "Ground", "components": {
+        "Transform": { "Position": { "x": 0, "y": -200 } },
+        "Quad": { "Size": { "x": 800, "y": 40 } },
+        "Collider": { "Size": { "x": 800, "y": 40 } },
+        "Rigidbody": { "Type": "Static" } } } },
+    { "command": "entity.create", "params": { "name": "Crate", "components": {
+        "Quad": { "Size": { "x": 40, "y": 40 }, "Color": { "x": 0.9, "y": 0.6, "z": 0.2, "w": 1 } },
+        "Collider": { "Size": { "x": 40, "y": 40 } },
+        "Rigidbody": { "Type": "Dynamic" } } } },
+    { "command": "level.save" },
+    { "command": "editor.play" },
+    { "command": "world.wait", "params": { "seconds": 2 } },
+    { "command": "expect.value", "params": { "entity": "Crate", "path": "Transform/Position/y", "near": -160, "tolerance": 2 } },
+    { "command": "editor.stop" }
+]
+```
+
+`MyGameEditor --exec arena.json` writes `Levels/Arena.opaaxlevel` and `Maps/Arena.opaaxmap`, and
+passes when the crate rests on the ground. The game's own behaviours are components like any other
+(`"Spinner": { "DegreesPerSecond": 90 }`): write them in C++, build, then place them. Make it the
+project's startup level (`startupLevel` in `<Game>.opaaxproj`), and `project.export` makes the build
+to ship.
