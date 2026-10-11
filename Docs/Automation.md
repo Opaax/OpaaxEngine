@@ -93,6 +93,7 @@ The editor adds:
 | `level.open`, `map.open` | `path`, `discard` | Opens a level or a map (relative to the project's assets) |
 | `level.new` | `path`, `map`, `discard` | Creates a level with one new, empty map (`map`; default `Maps/<level name>.opaaxmap`) and opens it; refuses files that exist |
 | `map.new` | `path` | Creates an empty map, adds it to the open level and focuses it: entities created next go there |
+| `level.info` | | The open level's file, its maps (`id`, `path`, `persistent`, `focused`, `unsaved`) and whether anything is unsaved |
 | `level.save`, `map.save` | `all` (level) | Saves (a map must already have a file). `level.save` with `all` rewrites every map of the level in the current format |
 | `project.export` | `path` | Exports the game into a folder (its release build and content); answered when done, minutes later |
 | `entity.create` | `name`, `map`, `components` | Creates an entity in the focused map, with components `{type: values}` |

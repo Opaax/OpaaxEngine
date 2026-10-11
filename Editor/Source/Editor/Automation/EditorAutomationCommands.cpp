@@ -17,6 +17,7 @@
 #include "Editor/Operation/EditorSelection.hpp"
 #include "Editor/Operation/EntityOps.h"
 #include "Editor/Operation/ExportOperations.h"
+#include "Editor/Operation/MapOperations.h"
 #include "Editor/Operation/NewLevelPlan.hpp"
 #include "Editor/Export/GameExport.h"
 #include "Editor/Undo/ComponentUndoables.h"
@@ -25,6 +26,7 @@
 #include "Engine/Registries/EngineRegistries.h"
 #include "Platform/IFileSystem.h"
 #include "World/Entity/Entity.h"
+#include "World/Level.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
 
@@ -433,6 +435,47 @@ namespace Opaax::Editor::EditorAutomation
                         return AutomationResult::Fail("the map was not created (see the log)");
                     }
                     return AutomationResult::Ok(nlohmann::json{ { "map", InContext.Paths.AbsoluteToAsset(lPath).CStr() } });
+                });
+
+            InCommands.Register("level.info",
+                "The open level: its file ({level}; null for a map opened on its own), its maps ({id, path, "
+                "persistent, focused, unsaved}) and whether anything is {unsaved}. Entities created next go to the "
+                "focused map.",
+                [&InContext](const nlohmann::json&)
+                {
+                    std::string lError;
+                    if (!IsEditing(InContext, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    World* const lWorld = InContext.Worlds.GetActiveWorld();
+                    Level* const lLevel = MapOps::ActiveLevel(InContext);
+                    if (lLevel == nullptr)
+                    {
+                        return AutomationResult::Fail("no level is open: open or create one (level.open, level.new)");
+                    }
+
+                    const ComponentRegistry& lTypes      = InContext.Engine.GetRegistries().Components();
+                    const MapId              lPersistent = lLevel->GetPersistentMapId();
+
+                    nlohmann::json lMaps = nlohmann::json::array();
+                    for (const Level::MountedMap& lMap : lLevel->GetMountedMaps())
+                    {
+                        lMaps.push_back(nlohmann::json{
+                            { "id", lMap.Id.CStr() },
+                            { "path", lMap.AssetRelPath.CStr() },
+                            { "persistent", lMap.Id == lPersistent },
+                            { "focused", lMap.Id == InContext.MapDocument.GetMapId() },
+                            { "unsaved", InContext.LevelDocument.IsMapDirty(lMap.Id, *lWorld, lTypes) } });
+                    }
+
+                    const OpaaxString& lFile = InContext.LevelDocument.AbsPath();
+                    return AutomationResult::Ok(nlohmann::json{
+                        { "level", lFile.IsEmpty() ? nlohmann::json()
+                                                   : nlohmann::json(InContext.Paths.AbsoluteToAsset(lFile).CStr()) },
+                        { "maps", lMaps },
+                        { "unsaved", InContext.LevelDocument.IsDirty(*lWorld, lTypes, *lLevel) } });
                 });
 
             InCommands.Register("level.save",

@@ -39,7 +39,8 @@ the end of the script.
 
 No dialog ever opens for a script: a request that would ask (a file picker, "lose unsaved changes?")
 fails, saying what was asked. Save first (`level.save`), or pass `"discard": true` to `level.open`,
-`level.play` or `map.open`.
+`level.play` or `map.open`. `level.info` tells the open level, its maps, the focused one and what is
+unsaved.
 
 ## A live session
 
@@ -55,7 +56,8 @@ another name then renamed), wait for `001.response.json`, repeat; send `app.quit
   guessing).
 - Check with `expect.value` / `expect.count` / `expect.entity`: a script of checks is a test.
   `expect.quit` waits for the game to quit by itself (`QuitGame`). `"expectFailure": true` on a
-  request checks a refusal: it passes when the command fails.
+  request checks a refusal: it passes when the command fails. `"expect": {...}` checks any answer
+  (`{"command": "world.info", "expect": {"mode": "Play"}}`).
 - Open every screenshot you take before saying what it shows.
 - A level made for a check can go in TestWorld (`TestWorld/Assets/Maps`, `Levels`) with its script in
   `TestWorld/Tests` (`TestWorld/EditorTests` for an editor script): it then runs in CTest and CI.

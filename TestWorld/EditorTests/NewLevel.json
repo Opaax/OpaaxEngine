@@ -76,8 +76,47 @@
         }
     },
     {
+        "id": "info-unsaved",
+        "command": "level.info",
+        "expect": {
+            "level": "Scratch/Fresh.opaaxlevel",
+            "unsaved": true,
+            "maps": [
+                {
+                    "id": "Fresh",
+                    "path": "Scratch/Fresh.opaaxmap",
+                    "persistent": true,
+                    "focused": false,
+                    "unsaved": true
+                },
+                {
+                    "id": "FreshProps",
+                    "path": "Scratch/FreshProps.opaaxmap",
+                    "persistent": false,
+                    "focused": true,
+                    "unsaved": true
+                }
+            ]
+        }
+    },
+    {
         "id": "save",
         "command": "level.save"
+    },
+    {
+        "id": "info-saved",
+        "command": "level.info",
+        "expect": {
+            "unsaved": false,
+            "maps": [
+                {
+                    "unsaved": false
+                },
+                {
+                    "unsaved": false
+                }
+            ]
+        }
     },
     {
         "id": "reopen",
@@ -154,6 +193,11 @@
             "exists": true
         },
         "id": "plays"
+    },
+    {
+        "id": "info-while-playing",
+        "command": "level.info",
+        "expectFailure": true
     },
     {
         "id": "screenshot",
