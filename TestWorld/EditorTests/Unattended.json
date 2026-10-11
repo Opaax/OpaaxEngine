@@ -10,6 +10,10 @@
         "command": "level.open",
         "params": {
             "path": "Levels/Hierarchy.opaaxlevel"
+        },
+        "expect": {
+            "world": "Hierarchy",
+            "mode": "Edit"
         }
     },
     {
@@ -64,6 +68,9 @@
         "params": {
             "path": "Levels/Physics.opaaxlevel",
             "discard": true
+        },
+        "expect": {
+            "world": "Physics"
         }
     },
     {

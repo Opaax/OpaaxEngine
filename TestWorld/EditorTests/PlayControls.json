@@ -10,11 +10,18 @@
         "command": "level.open",
         "params": {
             "path": "Levels/Behaviours.opaaxlevel"
+        },
+        "expect": {
+            "world": "Behaviours"
         }
     },
     {
         "id": "play",
-        "command": "editor.play"
+        "command": "editor.play",
+        "expect": {
+            "mode": "Play",
+            "paused": false
+        }
     },
     {
         "command": "world.wait",
@@ -24,7 +31,10 @@
     },
     {
         "id": "pause",
-        "command": "editor.pause"
+        "command": "editor.pause",
+        "expect": {
+            "paused": true
+        }
     },
     {
         "id": "reset",
@@ -54,7 +64,10 @@
     },
     {
         "id": "step",
-        "command": "editor.step"
+        "command": "editor.step",
+        "expect": {
+            "paused": true
+        }
     },
     {
         "command": "frames.wait",
@@ -73,7 +86,10 @@
     },
     {
         "id": "resume",
-        "command": "editor.pause"
+        "command": "editor.pause",
+        "expect": {
+            "paused": false
+        }
     },
     {
         "command": "world.wait",
@@ -100,7 +116,10 @@
     },
     {
         "id": "stop",
-        "command": "editor.stop"
+        "command": "editor.stop",
+        "expect": {
+            "mode": "Edit"
+        }
     },
     {
         "command": "expect.value",

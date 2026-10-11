@@ -10,6 +10,10 @@
         "command": "level.open",
         "params": {
             "path": "Levels/Hierarchy.opaaxlevel"
+        },
+        "expect": {
+            "world": "Hierarchy",
+            "mode": "Edit"
         }
     },
     {
@@ -132,7 +136,11 @@
     },
     {
         "id": "play",
-        "command": "editor.play"
+        "command": "editor.play",
+        "expect": {
+            "mode": "Play",
+            "paused": false
+        }
     },
     {
         "command": "world.wait",
@@ -168,7 +176,10 @@
     },
     {
         "id": "stop",
-        "command": "editor.stop"
+        "command": "editor.stop",
+        "expect": {
+            "mode": "Edit"
+        }
     },
     {
         "command": "expect.entity",
