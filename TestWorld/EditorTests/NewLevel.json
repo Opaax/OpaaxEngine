@@ -112,6 +112,32 @@
         "id": "prop-where-placed"
     },
     {
+        "id": "late",
+        "command": "entity.create",
+        "params": {
+            "name": "Late"
+        }
+    },
+    {
+        "id": "save-map",
+        "command": "map.save"
+    },
+    {
+        "id": "reopen-unasked",
+        "command": "level.open",
+        "params": {
+            "path": "Scratch/Fresh.opaaxlevel"
+        }
+    },
+    {
+        "command": "expect.entity",
+        "params": {
+            "entity": "Late",
+            "exists": true
+        },
+        "id": "map-saved"
+    },
+    {
         "id": "play",
         "command": "editor.play"
     },
