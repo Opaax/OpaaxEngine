@@ -29,7 +29,6 @@
 #include "Engine/Registries/EngineRegistries.h"
 #include "UI/UICanvasFile.h"
 #include "UI/UIWidgetRegistry.h"
-#include "UI/Widgets/UIPanel.h"
 #include "Editor/EditorSpriteSheetDocument.h"
 #include "Editor/Resources/Types/Animation/EditorAnimationClipDocument.h"
 #include "Editor/Resources/Types/Animation/EditorAnimationLibraryDocument.h"
@@ -879,10 +878,8 @@ namespace Opaax::Editor
         }
 
         // Authored at the project's reference height, so the panel shows what the game draws.
-        UICanvasFile::UICanvasDoc lDoc;
-        lDoc.ReferenceHeight = OpaaxApplication::GetAppService<IProjectManager>().UIReferenceHeight();
-        lDoc.Root            = MakeUnique<UIPanel>();
-        lDoc.Root->Name      = "Root";
+        const UICanvasFile::UICanvasDoc lDoc =
+            UICanvasFile::MakeEmpty(OpaaxApplication::GetAppService<IProjectManager>().UIReferenceHeight());
 
         if (!UICanvasFile::Save(InParams.AbsPath, lDoc))
         {

@@ -33,6 +33,12 @@ namespace Opaax
         };
 
         /**
+         * A new canvas designed at InReferenceHeight: an empty root panel that fills the screen it is mounted
+         * on, so its children anchor to the screen's edges and corners.
+         */
+        UICanvasDoc MakeEmpty(float InReferenceHeight);
+
+        /**
          * InDoc as text: dump(4), sorted keys, no trailing newline.
          */
         OpaaxString Serialize(const UICanvasDoc& InDoc);
