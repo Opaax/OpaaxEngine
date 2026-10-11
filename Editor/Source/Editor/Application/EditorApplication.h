@@ -31,7 +31,8 @@ namespace Opaax::Editor
     
     public:
         /**
-         * TODO: source it from a CLI arg (InArgv) or a workspace scan for a single *.opaaxproj.
+         * The project this editor edits (its folder in the workspace). A game's editor app returns its
+         * name, as the project template does; empty falls back to the executable's name, with a warning.
          */
         virtual OpaaxString GetEditedProjectName() const { return OpaaxString(); }
         
