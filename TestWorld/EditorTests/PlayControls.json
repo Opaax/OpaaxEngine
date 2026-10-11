@@ -1,0 +1,106 @@
+[
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 10
+        }
+    },
+    {
+        "id": "open",
+        "command": "level.open",
+        "params": {
+            "path": "Levels/Behaviours.opaaxlevel"
+        }
+    },
+    {
+        "id": "play",
+        "command": "editor.play"
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.3
+        }
+    },
+    {
+        "id": "pause",
+        "command": "editor.pause"
+    },
+    {
+        "id": "reset",
+        "command": "component.set",
+        "params": {
+            "entity": "Lifecycle",
+            "type": "LifecycleProbe",
+            "value": {
+                "UpdateCount": 0
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Lifecycle",
+            "path": "LifecycleProbe/UpdateCount",
+            "equals": 0
+        },
+        "id": "paused-holds"
+    },
+    {
+        "id": "step",
+        "command": "editor.step"
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Lifecycle",
+            "path": "LifecycleProbe/UpdateCount",
+            "equals": 1
+        },
+        "id": "step-runs-one-frame"
+    },
+    {
+        "id": "resume",
+        "command": "editor.pause"
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.2
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Lifecycle",
+            "path": "LifecycleProbe/UpdateCount",
+            "greater": 1
+        },
+        "id": "resumed"
+    },
+    {
+        "id": "stop",
+        "command": "editor.stop"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Lifecycle",
+            "path": "LifecycleProbe/UpdateCount",
+            "equals": 0
+        },
+        "id": "edit-world-untouched"
+    }
+]
