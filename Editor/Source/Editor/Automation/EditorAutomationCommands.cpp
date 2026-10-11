@@ -191,7 +191,8 @@ namespace Opaax::Editor::EditorAutomation
         }
 
         /** What a request does instead of a dialog it met, when its command has nothing better to say. */
-        constexpr const char* ANSWER_ELSEWHERE = "use a command that takes the path or the answer (commands.list)";
+        constexpr const char* ANSWER_ELSEWHERE = "use a command that takes the path or the answer (commands.list), "
+                                                 "or write the file yourself (Docs/AssetFormats.md)";
 
         /** What a request that would lose unsaved changes does instead of asking. */
         constexpr const char* UNSAVED_CHANGES = "save them first (level.save), or pass \"discard\": true to lose them";
