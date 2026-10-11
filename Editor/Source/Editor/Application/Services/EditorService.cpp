@@ -771,14 +771,12 @@ namespace Opaax::Editor
 
     void EditorService::ClearWorldManager()
     {
+        // None bound when the editor did not start: nothing to undo.
         if (m_WorldMgr != nullptr)
         {
             UnbindFromWorldManagerDelegates();
             
             m_WorldMgr = nullptr;
-        }else
-        {
-            //TODO logs.
         }
     }
 
@@ -1065,17 +1063,16 @@ namespace Opaax::Editor
         // EngineConfigData alone.
         lWindow->SetDecorated(false);
 
-        // No gui: the editor makes no sense without UI.
+        // No gui: the editor makes no sense without UI. The gui logged why.
         if (!InitGUI(lWindow))
         {
-            //TODO Log
             return;
         }
         
         // Many systems need the world: stop here.
         if (!SetWorldManagerFromEngine(lEngine))
         {
-            //TODO Logs
+            OPAAX_LOG(LogEditorService, Error, "The engine has no world manager — editor not created.");
             return;
         }
         
