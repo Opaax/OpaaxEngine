@@ -1,6 +1,9 @@
 @echo off
 setlocal enabledelayedexpansion
 
+REM Runs in its own folder, the repository, whatever folder it is started from.
+pushd "%~dp0"
+
 REM =============================================================================
 REM Opaax Engine — Build Script
 REM
@@ -268,6 +271,7 @@ set "BUILD_RC=1"
 goto end
 
 :end
+popd
 REM Skip the interactive pause for CI / agent / redirected-stdin runs.
 if not defined OPAAX_NO_PAUSE if not defined CI pause
 REM Carry the real result past endlocal (expanded before endlocal runs).
