@@ -562,14 +562,53 @@ namespace Opaax::Editor
                             "*.opaaxmap", "Opaax Map"),
             [&InContext](const OpaaxString& InPicked)
             {
-                if (InContext.LevelDocument.SaveMapAs(InContext.MapDocument.GetMapId(), InPicked,
-                                                      *InContext.Worlds.GetActiveWorld(),
-                                                      InContext.Engine.GetRegistries().Components()))
-                {
-                    // The cursor follows the file just written; the record already moved with it.
-                    InContext.MapDocument.Focus(InPicked);
-                }
+                SaveMapAsAtCommand{}.Execute(InContext, MapPathParams{InPicked});
             });
+    }
+
+    void SaveMapAsAtCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        if (!MapOps::CanEdit(InContext, "Save Map As")) { return; }
+
+        const OpaaxString lAssetRel = InContext.Paths.AbsoluteToAsset(InParams.AbsPath);
+        if (lAssetRel.IsEmpty())
+        {
+            OPAAX_LOG(LogEditorCommands, Warn,
+                      "'{}' is outside the project's Assets — a level can only name assets of this project",
+                      InParams.AbsPath.CStr());
+            return;
+        }
+
+        Level* const lLevel = MapOps::ActiveLevel(InContext);
+        if (lLevel == nullptr) { return; }
+
+        const MapId lMap = InContext.MapDocument.GetMapId();
+
+        OpaaxString lPrevious;
+        for (const Level::MountedMap& lMounted : lLevel->GetMountedMaps())
+        {
+            if (lMounted.Id == lMap) { lPrevious = lMounted.AssetRelPath; break; }
+        }
+
+        // The level first: it refuses a file another of its maps uses. Left on the old file, the level would
+        // reopen without anything saved from now on.
+        if (!lLevel->MoveMap(lMap, lAssetRel))
+        {
+            return; // Level logged why
+        }
+
+        if (!InContext.LevelDocument.SaveMapAs(lMap, InParams.AbsPath, *InContext.Worlds.GetActiveWorld(),
+                                               InContext.Engine.GetRegistries().Components()))
+        {
+            lLevel->MoveMap(lMap, lPrevious);   // nothing written: the level keeps its file
+            return;
+        }
+
+        // The level file names the new map file at once, as for any change of the level's maps.
+        InContext.LevelDocument.SaveManifest(*lLevel);
+
+        // The cursor follows the file just written; the record already moved with it.
+        InContext.MapDocument.Focus(InParams.AbsPath);
     }
 
     // =============================================================================

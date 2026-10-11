@@ -146,6 +146,12 @@ namespace Opaax
         /** @return False if InMapId is not a map of this level */
         bool SetPersistentMap(MapId InMapId);
 
+        /**
+         * The mounted map InMapId is now stored at InAssetRelPath (Save Map As): its mount record and its
+         * manifest entry name that file. Nothing is reloaded. Refuses a path the level already lists.
+         */
+        bool MoveMap(MapId InMapId, const OpaaxString& InAssetRelPath);
+
         // End Authoring
         // =========================================================================
 

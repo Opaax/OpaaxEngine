@@ -352,12 +352,23 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params&);
     };
 
-    /** Asks where, writes the focused map there, and moves the cursor to the new file. */
+    /** Asks where, then runs SaveMapAsAtCommand. */
     struct SaveMapAsCommand
     {
         using Params = NoParams;
 
         void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /**
+     * Writes the focused map to Params::AbsPath. The level names that file from then on (its file is saved
+     * at once), the old file stays as it was last saved, and the focus follows the map.
+     */
+    struct SaveMapAsAtCommand
+    {
+        using Params = MapPathParams;
+
+        void Execute(EditorContext& InContext, const Params& InParams);
     };
 
     // =============================================================================

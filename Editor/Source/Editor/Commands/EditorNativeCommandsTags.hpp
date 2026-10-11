@@ -57,12 +57,13 @@ namespace Opaax::Editor::Tags
     inline const OpaaxTag EDITOR_COMMAND_ADD_MAP_TO_LEVEL = OpaaxTag("Editor.Command.AddMapToLevel");
 
     //Map
-    inline const OpaaxTag EDITOR_COMMAND_NEW_MAP     = OpaaxTag("Editor.Command.NewMap");
-    inline const OpaaxTag EDITOR_COMMAND_NEW_MAP_AT  = OpaaxTag("Editor.Command.NewMapAt");
-    inline const OpaaxTag EDITOR_COMMAND_OPEN_MAP    = OpaaxTag("Editor.Command.OpenMap");
-    inline const OpaaxTag EDITOR_COMMAND_OPEN_MAP_AT = OpaaxTag("Editor.Command.OpenMapAt");
-    inline const OpaaxTag EDITOR_COMMAND_SAVE_MAP    = OpaaxTag("Editor.Command.SaveMap");
-    inline const OpaaxTag EDITOR_COMMAND_SAVE_MAP_AS = OpaaxTag("Editor.Command.SaveMapAs");
+    inline const OpaaxTag EDITOR_COMMAND_NEW_MAP        = OpaaxTag("Editor.Command.NewMap");
+    inline const OpaaxTag EDITOR_COMMAND_NEW_MAP_AT     = OpaaxTag("Editor.Command.NewMapAt");
+    inline const OpaaxTag EDITOR_COMMAND_OPEN_MAP       = OpaaxTag("Editor.Command.OpenMap");
+    inline const OpaaxTag EDITOR_COMMAND_OPEN_MAP_AT    = OpaaxTag("Editor.Command.OpenMapAt");
+    inline const OpaaxTag EDITOR_COMMAND_SAVE_MAP       = OpaaxTag("Editor.Command.SaveMap");
+    inline const OpaaxTag EDITOR_COMMAND_SAVE_MAP_AS    = OpaaxTag("Editor.Command.SaveMapAs");
+    inline const OpaaxTag EDITOR_COMMAND_SAVE_MAP_AS_AT = OpaaxTag("Editor.Command.SaveMapAsAt");
 
     //Prefab
     inline const OpaaxTag EDITOR_COMMAND_INSTANTIATE_PREFAB_AT =

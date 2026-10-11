@@ -471,6 +471,77 @@ TEST_CASE("Level: AddMap and RemoveMap change the world AND the manifest")
     }
 }
 
+TEST_CASE("Level: MoveMap makes the manifest and the mount name the map's new file")
+{
+    // Save Map As: the map's entities stay where they are, only the file that stores them changes.
+    Fixture lFix("movemap");
+    lFix.Dir.Write("Maps/Base.opaaxmap",  MapText("77777777777777777777777777777777", "InBase", "Base"));
+    lFix.Dir.Write("Maps/Extra.opaaxmap", MapText("88888888888888888888888888888888", "InExtra", "Extra"));
+
+    LevelData lData;
+    lData.Name = OpaaxString("Moving");
+    lData.Maps.push_back(OpaaxString("Maps/Base.opaaxmap"));
+    lData.Maps.push_back(OpaaxString("Maps/Extra.opaaxmap"));
+    lData.PersistentMapIndex = 1;
+    lFix.TheLevel.SetData(lData);
+    REQUIRE(lFix.TheLevel.MountAll().IsValid());
+
+    const auto lMountedPath = [&lFix](const char* InMapId)
+    {
+        for (const Level::MountedMap& lMounted : lFix.TheLevel.GetMountedMaps())
+        {
+            if (lMounted.Id == MapId(InMapId)) { return lMounted.AssetRelPath; }
+        }
+        return OpaaxString();
+    };
+
+    SUBCASE("the entry keeps its place, so the same map stays persistent")
+    {
+        CHECK(lFix.TheLevel.MoveMap(MapId("Extra"), OpaaxString("Maps/Copy.opaaxmap")));
+
+        CHECK(lFix.TheLevel.GetData().Maps[1] == OpaaxString("Maps/Copy.opaaxmap"));
+        CHECK(lFix.TheLevel.GetData().PersistentMap() == OpaaxString("Maps/Copy.opaaxmap"));
+        CHECK(lFix.TheLevel.GetPersistentMapId() == MapId("Extra"));
+        CHECK(lMountedPath("Extra") == OpaaxString("Maps/Copy.opaaxmap"));
+
+        // Nothing was unmounted or loaded again.
+        CHECK(lFix.TheWorld.GetEntityCount() == 2);
+    }
+
+    SUBCASE("a path the level lists already is refused, and nothing changes")
+    {
+        CHECK_FALSE(lFix.TheLevel.MoveMap(MapId("Extra"), OpaaxString("Maps/Base.opaaxmap")));
+
+        CHECK(lFix.TheLevel.GetData().Maps[1] == OpaaxString("Maps/Extra.opaaxmap"));
+        CHECK(lMountedPath("Extra") == OpaaxString("Maps/Extra.opaaxmap"));
+    }
+
+    SUBCASE("a map that is not mounted is refused")
+    {
+        CHECK_FALSE(lFix.TheLevel.MoveMap(MapId("Nowhere"), OpaaxString("Maps/Copy.opaaxmap")));
+        CHECK(lFix.TheLevel.GetData().MapCount() == 2);
+    }
+
+    SUBCASE("moving a map to its own file changes nothing")
+    {
+        CHECK(lFix.TheLevel.MoveMap(MapId("Base"), OpaaxString("Maps/Base.opaaxmap")));
+        CHECK(lFix.TheLevel.GetData().Maps[0] == OpaaxString("Maps/Base.opaaxmap"));
+    }
+}
+
+TEST_CASE("Level: MoveMap of a map mounted on its own moves only its mount")
+{
+    // A map opened without a level: there is no manifest entry to update.
+    Fixture lFix("movestandalone");
+    lFix.Dir.Write("Maps/Solo.opaaxmap", MapText("99999999999999999999999999999999", "InSolo", "Solo"));
+    REQUIRE(lFix.TheLevel.Mount(OpaaxString("Maps/Solo.opaaxmap")));
+
+    CHECK(lFix.TheLevel.MoveMap(MapId("Solo"), OpaaxString("Maps/SoloCopy.opaaxmap")));
+
+    CHECK(lFix.TheLevel.GetData().IsEmpty());
+    CHECK(lFix.TheLevel.GetMountedMaps().front().AssetRelPath == OpaaxString("Maps/SoloCopy.opaaxmap"));
+}
+
 TEST_CASE("Level: adopting another level's mounts does NOT mount anything")
 {
     // The PIE clone rule. A clone's entities arrive in the unfiltered snapshot, so the

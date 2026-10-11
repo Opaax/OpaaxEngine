@@ -427,6 +427,7 @@ namespace Opaax::Editor
         lCommands.Register<DeletePrefabSelectionCommand>(Tags::EDITOR_COMMAND_DELETE_PREFAB_SELECTION);
         lCommands.Register<SaveMapCommand>(Tags::EDITOR_COMMAND_SAVE_MAP);
         lCommands.Register<SaveMapAsCommand>(Tags::EDITOR_COMMAND_SAVE_MAP_AS);
+        lCommands.Register<SaveMapAsAtCommand>(Tags::EDITOR_COMMAND_SAVE_MAP_AS_AT);
 
         lCommands.Register<NewLevelCommand>(Tags::EDITOR_COMMAND_NEW_LEVEL);
         lCommands.Register<NewLevelAtCommand>(Tags::EDITOR_COMMAND_NEW_LEVEL_AT);
