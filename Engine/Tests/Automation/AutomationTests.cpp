@@ -300,6 +300,54 @@ TEST_CASE("Automation: an unknown command and bad params fail, and the queue goe
     CHECK(lRecorder.Runner.GetFailed() == 2);
 }
 
+TEST_CASE("Automation: a request expecting a failure passes on a refusal and fails when the command succeeds")
+{
+    Recorder lRecorder;
+    lRecorder.Runner.Register("refuse", "Always refuses.", [](const nlohmann::json&)
+    {
+        return AutomationResult::Fail("not here");
+    });
+
+    AutomationRequest lRefused  = Request("1", "refuse");
+    AutomationRequest lAccepted = Request("2", "echo");
+    AutomationRequest lUnknown  = Request("3", "no.such.command");
+    lRefused.bExpectFailure  = true;
+    lAccepted.bExpectFailure = true;
+    lUnknown.bExpectFailure  = true;
+
+    lRecorder.Runner.Enqueue(lRefused);
+    lRecorder.Runner.Enqueue(lAccepted);
+    lRecorder.Runner.Enqueue(lUnknown);
+    lRecorder.Runner.Tick();
+
+    REQUIRE(lRecorder.Responses.size() == 3);
+    CHECK(lRecorder.Responses[0].bOk);
+    CHECK(lRecorder.Responses[0].Result.at("refused") == "not here");
+    CHECK_FALSE(lRecorder.Responses[1].bOk);
+    CHECK(lRecorder.Responses[1].Error.find("expected to fail") != std::string::npos);
+
+    // A command that does not exist is a mistake in the script, not a refusal.
+    CHECK_FALSE(lRecorder.Responses[2].bOk);
+    CHECK(lRecorder.Responses[2].Error.find("unknown command") != std::string::npos);
+    CHECK(lRecorder.Runner.GetFailed() == 2);
+}
+
+TEST_CASE("Automation: a request expecting a failure still fails when the app closes before it runs")
+{
+    Recorder          lRecorder;
+    AutomationRequest lLater = Request("later", "echo");
+    lLater.bExpectFailure = true;
+
+    lRecorder.Runner.Enqueue(Request("wait", "frames.wait", { { "count", 5 } }));
+    lRecorder.Runner.Enqueue(lLater);
+    lRecorder.Runner.Tick();
+    lRecorder.Runner.Close();
+
+    REQUIRE(lRecorder.Responses.size() == 2);
+    CHECK_FALSE(lRecorder.Responses[1].bOk);
+    CHECK(lRecorder.Responses[1].Error == "the app closed before this request ran");
+}
+
 TEST_CASE("Automation: commands.list describes every command, sorted, with its help")
 {
     Recorder lRecorder;
@@ -315,7 +363,8 @@ TEST_CASE("Automation: commands.list describes every command, sorted, with its h
     CHECK(lList[1].at("help") == "Returns its params.");
 }
 
-TEST_CASE("Automation: a script is an array or {requests}; ids default to positions; errors name the request")
+TEST_CASE("Automation: a script is an array or {requests}; ids default to positions; errors name the request; "
+          "expectFailure is a bool")
 {
     TDynArray<AutomationRequest> lRequests;
     std::string                  lError;
@@ -337,6 +386,12 @@ TEST_CASE("Automation: a script is an array or {requests}; ids default to positi
     CHECK_FALSE(ParseAutomationScript(R"([{"command": "a", "params": [1, 2]}])", lRequests, lError));
     CHECK_FALSE(ParseAutomationScript("not json", lRequests, lError));
     CHECK_FALSE(ParseAutomationScript(R"({"other": []})", lRequests, lError));
+
+    REQUIRE(ParseAutomationScript(R"([{"command": "a", "expectFailure": true}, {"command": "b"}])", lRequests, lError));
+    CHECK(lRequests[0].bExpectFailure);
+    CHECK_FALSE(lRequests[1].bExpectFailure);
+    CHECK_FALSE(ParseAutomationScript(R"([{"command": "a", "expectFailure": "yes"}])", lRequests, lError));
+    CHECK(lError.find("expectFailure") != std::string::npos);
 }
 
 TEST_CASE("Automation inbox: request files run in name order and are answered beside them")

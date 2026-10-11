@@ -19,14 +19,43 @@ namespace Opaax
             }
         }
 
+        /**
+         * The answer to a request, from what its command returned. A request that expects a failure
+         * passes with what the command refused ({"refused": why}), and fails when it did not refuse.
+         */
         AutomationResponse MakeResponse(const AutomationRequest& InRequest, AutomationResult InResult)
         {
             AutomationResponse lResponse;
             lResponse.Id      = InRequest.Id;
             lResponse.Command = InRequest.Command;
-            lResponse.bOk     = InResult.bOk;
-            lResponse.Result  = InResult.bOk ? Move(InResult.Value) : nlohmann::json::object();
-            lResponse.Error   = Move(InResult.Error);
+
+            if (InRequest.bExpectFailure)
+            {
+                lResponse.bOk = !InResult.bOk;
+                if (lResponse.bOk)
+                {
+                    lResponse.Result = nlohmann::json{ { "refused", Move(InResult.Error) } };
+                }
+                else
+                {
+                    lResponse.Error = "expected to fail, but it succeeded";
+                }
+                return lResponse;
+            }
+
+            lResponse.bOk    = InResult.bOk;
+            lResponse.Result = InResult.bOk ? Move(InResult.Value) : nlohmann::json::object();
+            lResponse.Error  = Move(InResult.Error);
+            return lResponse;
+        }
+
+        /** A request whose command never answered (unknown, or the app closed): a failure, expected or not. */
+        AutomationResponse MakeFailure(const AutomationRequest& InRequest, std::string InError)
+        {
+            AutomationResponse lResponse;
+            lResponse.Id      = InRequest.Id;
+            lResponse.Command = InRequest.Command;
+            lResponse.Error   = Move(InError);
             return lResponse;
         }
     }
@@ -169,8 +198,8 @@ namespace Opaax
             const TFunction<AutomationResult()> lOnClose = Move(m_DeferredOnClose);
             m_DeferredAnswer  = nullptr;
             m_DeferredOnClose = nullptr;
-            Respond(MakeResponse(m_Deferred, lOnClose ? Guarded(lOnClose)
-                                                      : AutomationResult::Fail("the app closed before this request finished")));
+            Respond(lOnClose ? MakeResponse(m_Deferred, Guarded(lOnClose))
+                             : MakeFailure(m_Deferred, "the app closed before this request finished"));
         }
 
         // The wait ends with the app: what would come after it (a held key's release) has no frame to run in.
@@ -182,7 +211,7 @@ namespace Opaax
         {
             const AutomationRequest lRequest = Move(m_Queue.front());
             m_Queue.pop();
-            Respond(MakeResponse(lRequest, AutomationResult::Fail("the app closed before this request ran")));
+            Respond(MakeFailure(lRequest, "the app closed before this request ran"));
         }
     }
 
@@ -191,8 +220,7 @@ namespace Opaax
         const auto lIt = m_Commands.find(InRequest.Command);
         if (lIt == m_Commands.end())
         {
-            Respond(MakeResponse(InRequest, AutomationResult::Fail(
-                "unknown command '" + InRequest.Command + "' (commands.list lists them)")));
+            Respond(MakeFailure(InRequest, "unknown command '" + InRequest.Command + "' (commands.list lists them)"));
             return;
         }
 
@@ -282,6 +310,17 @@ namespace Opaax
                 return false;
             }
             OutRequest.Params = *lParams;
+        }
+
+        const auto lExpectFailure = InJson.find("expectFailure");
+        if (lExpectFailure != InJson.end())
+        {
+            if (!lExpectFailure->is_boolean())
+            {
+                OutError = "\"expectFailure\" is true or false";
+                return false;
+            }
+            OutRequest.bExpectFailure = lExpectFailure->get<bool>();
         }
 
         return true;

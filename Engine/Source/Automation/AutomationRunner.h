@@ -17,6 +17,9 @@ namespace Opaax
         std::string    Id;
         std::string    Command;
         nlohmann::json Params = nlohmann::json::object();
+
+        /** The command should refuse: the request passes when it fails, and fails when it does not. */
+        bool bExpectFailure = false;
     };
 
     /** A request's answer. */
@@ -157,7 +160,10 @@ namespace Opaax
         Uint64 m_Failed   = 0;
     };
 
-    /** A request from its JSON, {"id", "command", "params"}. False (with OutError) when malformed. */
+    /**
+     * A request from its JSON, {"id", "command", "params", "expectFailure"}. False (with OutError)
+     * when malformed.
+     */
     bool ParseAutomationRequest(const nlohmann::json& InJson, AutomationRequest& OutRequest, std::string& OutError);
 
     /**

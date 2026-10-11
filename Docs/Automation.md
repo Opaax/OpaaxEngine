@@ -32,6 +32,10 @@ with whoever uses the window.
 A script is an array of requests, or `{"requests": [...]}`. A request without an id gets its
 position. In the inbox, the file's name is the id.
 
+To check that a command refuses something, add `"expectFailure": true`: the request passes when the
+command fails (its answer is `{"refused": "why"}`) and fails when the command succeeds. An unknown
+command, or a request the app closed before running, still fails.
+
 ## Frames
 
 Requests run at the start of a frame, one after another, until one holds the queue:
