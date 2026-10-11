@@ -82,10 +82,10 @@ The editor adds:
 | Command | Params | Does |
 |---|---|---|
 | `editor.play`, `editor.stop`, `editor.pause`, `editor.step` | | Play In Editor |
-| `level.play` | `path` | Opens a level, then plays it in the editor |
+| `level.play` | `path`, `discard` | Opens a level, then plays it in the editor |
 | `editor.undo`, `editor.redo` | | Undo and redo, as the Edit menu does |
 | `editor.command` | `tag` | Any editor command without arguments, by tag (`Editor.Command.FocusSelected`) |
-| `level.open`, `map.open` | `path` | Opens a level or a map (relative to the project's assets) |
+| `level.open`, `map.open` | `path`, `discard` | Opens a level or a map (relative to the project's assets) |
 | `level.save`, `map.save` | `all` (level) | Saves (a map must already have a file). `level.save` with `all` rewrites every map of the level in the current format |
 | `project.export` | `path` | Exports the game into a folder (its release build and content); answered when done, minutes later |
 | `entity.create` | `name`, `map`, `components` | Creates an entity in the focused map, with components `{type: values}` |
@@ -99,6 +99,12 @@ The editor adds:
 | `prefab.place` | `path`, `position` | Places an instance of a prefab in the focused map, its first entity at `position` |
 
 Edits made by the editor's commands are the same as a user's: undoable, and saved only when asked.
+
+A script never meets a dialog: while a request runs, the editor's questions and file pickers stay
+closed, and a request that met one did nothing and fails, saying what was asked. Opening a level
+over unsaved changes is refused that way: save them first (`level.save`), or pass `"discard": true`
+to `level.open`, `level.play` or `map.open` to lose them. For a command that asks for a file, use the
+automation command that takes the path (`level.open`, `map.open`, `project.export`...).
 
 ## Example: does Space jump?
 

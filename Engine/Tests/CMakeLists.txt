@@ -144,6 +144,7 @@ set(OPAAX_TEST_SOURCES
     Editor/EditorGizmoTests.cpp
     Editor/EditorRectGeometryTests.cpp
     Editor/GameExportPlanTests.cpp
+    Editor/GuardedEditorDialogsTests.cpp
     Editor/LogFilterTests.cpp
     Editor/ResourceDragPayloadTests.cpp
     Editor/UIPreviewAspectTests.cpp

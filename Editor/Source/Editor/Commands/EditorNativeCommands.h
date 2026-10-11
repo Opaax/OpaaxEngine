@@ -25,12 +25,18 @@ namespace Opaax::Editor
     struct MapPathParams
     {
         OpaaxString AbsPath;
+
+        /** Unsaved changes of the open level are lost without asking (a script has nobody to ask). */
+        bool bDiscardEdits = false;
     };
 
     /** An absolute path to a .opaaxlevel. */
     struct LevelPathParams
     {
         OpaaxString AbsPath;
+
+        /** Unsaved changes of the open level are lost without asking (a script has nobody to ask). */
+        bool bDiscardEdits = false;
     };
 
     /** An absolute path to a .opaaxprefab. */
@@ -308,7 +314,8 @@ namespace Opaax::Editor
     /**
      * Edits the map at Params::AbsPath (File > Open Map and a Resource Browser double-click).
      * If the map is already in the world, nothing loads: the document is retargeted and the selection
-     * kept. A map from no open level gets its own world with an empty Level.
+     * kept. A map from no open level gets its own world with an empty Level, after asking before
+     * unsaved changes are lost.
      */
     struct OpenMapAtCommand
     {
@@ -445,7 +452,8 @@ namespace Opaax::Editor
     };
 
     /**
-     * Opens a .opaaxlevel into a new world (browser double-click and File > Open Level).
+     * Opens a .opaaxlevel into a new world (browser double-click and File > Open Level), after asking
+     * before unsaved changes are lost.
      */
     struct OpenLevelAtCommand
     {

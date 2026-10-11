@@ -56,6 +56,7 @@
 #include "World/World.h"
 #include "World/WorldManager.h"
 #include "World/Components/ComponentRegistry.h"
+#include "World/Serialization/LevelFile.h"
 #include "World/Serialization/MapData.h"
 #include "World/Serialization/MapFile.h"
 
@@ -70,9 +71,23 @@ namespace
     using namespace Opaax::Editor;
 
     /**
+     * Runs InAction, which replaces the world: at once when bInDiscardEdits, else once nothing unsaved is
+     * at risk or the user agreed to lose it.
+     */
+    void ReplacingWorld(EditorContext& InContext, const bool bInDiscardEdits, TFunction<void()> InAction)
+    {
+        if (bInDiscardEdits)
+        {
+            InAction();
+            return;
+        }
+        LevelOps::ConfirmDiscardingEdits(InContext, Move(InAction));
+    }
+
+    /**
      * A map that belongs to no open level: a new world with an empty Level holding only this map.
      */
-    void OpenStandaloneMap(EditorContext& InContext, const OpaaxString& InAbsPath)
+    void OpenStandaloneMap(EditorContext& InContext, const OpaaxString& InAbsPath, const bool bInDiscardEdits)
     {
         const OpaaxString lAssetRel = InContext.Paths.AbsoluteToAsset(InAbsPath);
         if (lAssetRel.IsEmpty())
@@ -83,7 +98,7 @@ namespace
             return;
         }
 
-        LevelOps::ConfirmDiscardingEdits(InContext, [&InContext, lAssetRel]
+        ReplacingWorld(InContext, bInDiscardEdits, [&InContext, lAssetRel]
         {
             World* const lWorld = InContext.Engine.OpenLevel(WorldSpec{OpaaxString(), EWorldMode::Edit});
             if (lWorld == nullptr || lWorld->GetLevel() == nullptr)
@@ -326,7 +341,7 @@ namespace Opaax::Editor
             return;
         }
 
-        OpenStandaloneMap(InContext, InParams.AbsPath);
+        OpenStandaloneMap(InContext, InParams.AbsPath, InParams.bDiscardEdits);
     }
 
     // =========================================================================
@@ -574,7 +589,16 @@ namespace Opaax::Editor
             return;
         }
 
-        LevelOps::ConfirmDiscardingEdits(InContext, [&InContext, lAssetRel, InParams]
+        // Read before the world is replaced: a file that is not a level changes nothing.
+        LevelData lData;
+        if (!InContext.FileSystem.IsPathExist(InParams.AbsPath) || !LevelFile::Load(InParams.AbsPath, lData))
+        {
+            OPAAX_LOG(LogEditorCommands, Warn, "'{}' is not a level (missing or unreadable) — nothing changed",
+                      lAssetRel.CStr());
+            return;
+        }
+
+        ReplacingWorld(InContext, InParams.bDiscardEdits, [&InContext, lAssetRel, InParams]
         {
             if (InContext.Engine.OpenLevel(WorldSpec{lAssetRel, EWorldMode::Edit}) == nullptr)
             {

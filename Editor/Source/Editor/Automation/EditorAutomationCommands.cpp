@@ -11,6 +11,7 @@
 #include "Editor/Commands/EditorNativeCommands.h"
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
 #include "Editor/EditorContext.h"
+#include "Editor/EditorLevelDocument.h"
 #include "Editor/EditorMapDocument.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/Operation/EditorSelection.hpp"
@@ -19,7 +20,9 @@
 #include "Editor/Export/GameExport.h"
 #include "Editor/Undo/ComponentUndoables.h"
 #include "Editor/Undo/EditorUndo.h"
+#include "Editor/UI/GuardedEditorDialogs.hpp"
 #include "Engine/Registries/EngineRegistries.h"
+#include "Platform/IFileSystem.h"
 #include "World/Entity/Entity.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
@@ -75,6 +78,29 @@ namespace Opaax::Editor::EditorAutomation
             return true;
         }
 
+        /**
+         * Opens the level at InPath, losing unsaved changes when InParams["discard"] is true. False (with
+         * OutError) when it did not open: refused, or a file that is not a level.
+         */
+        bool OpenLevel(EditorContext& InContext, const OpaaxString& InPath, const nlohmann::json& InParams,
+                       std::string& OutError)
+        {
+            if (!InContext.FileSystem.IsPathExist(InPath))
+            {
+                OutError = "no file at '" + std::string(InPath.CStr()) + "'";
+                return false;
+            }
+
+            InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_LEVEL_AT, InContext,
+                                                    LevelPathParams{ InPath, InParams.value("discard", false) });
+            if (!(InContext.LevelDocument.AbsPath() == InPath))
+            {
+                OutError = "the level did not open (see the log)";
+                return false;
+            }
+            return true;
+        }
+
         /** InParams["entity"] in the active world. */
         Entity FindEntity(EditorContext& InContext, const nlohmann::json& InParams, std::string& OutError)
         {
@@ -115,14 +141,78 @@ namespace Opaax::Editor::EditorAutomation
             return EngineAutomation::DescribeEntity(InEntity, InContext.Engine.GetRegistries().Components(), true);
         }
 
+        /** What a request does instead of a dialog it met, when its command has nothing better to say. */
+        constexpr const char* ANSWER_ELSEWHERE = "use a command that takes the path or the answer (commands.list)";
+
+        /** What a request that would lose unsaved changes does instead of asking. */
+        constexpr const char* UNSAVED_CHANGES = "save them first (level.save), or pass \"discard\": true to lose them";
+
+        /** Keeps the dialogs closed for its lifetime, and forgets what an earlier request left unanswered. */
+        class UnattendedScope
+        {
+        public:
+            explicit UnattendedScope(GuardedEditorDialogs& InDialogs) : m_Dialogs(InDialogs)
+            {
+                m_Dialogs.TakeUnanswered();
+                m_Dialogs.SetUnattended(true);
+            }
+
+            ~UnattendedScope() { m_Dialogs.SetUnattended(false); }
+
+            UnattendedScope(const UnattendedScope&)            = delete;
+            UnattendedScope& operator=(const UnattendedScope&) = delete;
+
+        private:
+            GuardedEditorDialogs& m_Dialogs;
+        };
+
+        /**
+         * Registers the editor's commands. Each runs with the dialogs closed: nobody is there to answer
+         * them, and an OS dialog would hold the editor. A request that met one did nothing: it fails with
+         * what was asked and what to do instead.
+         */
+        class Commands
+        {
+        public:
+            Commands(AutomationRunner& InRunner, GuardedEditorDialogs& InDialogs) : m_Runner(InRunner), m_Dialogs(InDialogs) {}
+
+            /** @param InInstead What to do rather than meet a dialog, for this command */
+            void Register(const char* InName, const char* InHelp, AutomationHandler InHandler,
+                          const char* InInstead = ANSWER_ELSEWHERE)
+            {
+                m_Runner.Register(InName, InHelp,
+                    [&lDialogs = m_Dialogs, lHandler = Move(InHandler), InInstead](const nlohmann::json& InParams)
+                    {
+                        AutomationResult lResult;
+                        {
+                            UnattendedScope lScope(lDialogs);
+                            lResult = lHandler(InParams);
+                        }
+
+                        const TDynArray<OpaaxString> lAsked = lDialogs.TakeUnanswered();
+                        if (lAsked.empty())
+                        {
+                            return lResult;
+                        }
+                        return AutomationResult::Fail("the editor asked \"" + std::string(lAsked.front().CStr())
+                                                      + "\", which a script cannot answer, so nothing was done: "
+                                                      + InInstead);
+                    });
+            }
+
+        private:
+            AutomationRunner&     m_Runner;
+            GuardedEditorDialogs& m_Dialogs;
+        };
+
         // =========================================================================
         // Play In Editor, undo and plain commands
         // =========================================================================
-        void RegisterEditor(AutomationRunner& InRunner, EditorContext& InContext)
+        void RegisterEditor(Commands& InCommands, EditorContext& InContext)
         {
-            const auto lCommand = [&InRunner, &InContext](const char* InName, const char* InHelp, const OpaaxTag& InTag)
+            const auto lCommand = [&InCommands, &InContext](const char* InName, const char* InHelp, const OpaaxTag& InTag)
             {
-                InRunner.Register(InName, InHelp, [&InContext, InTag](const nlohmann::json&)
+                InCommands.Register(InName, InHelp, [&InContext, InTag](const nlohmann::json&)
                 {
                     return Dispatch(InContext, InTag);
                 });
@@ -135,7 +225,7 @@ namespace Opaax::Editor::EditorAutomation
             lCommand("editor.undo",  "Undoes the last edit.",                                Tags::EDITOR_COMMAND_UNDO);
             lCommand("editor.redo",  "Redoes the last undone edit.",                         Tags::EDITOR_COMMAND_REDO);
 
-            InRunner.Register("editor.command",
+            InCommands.Register("editor.command",
                 "Runs an editor command that takes no arguments by its {tag} (\"Editor.Command.FocusSelected\"...).",
                 [&InContext](const nlohmann::json& InParams)
                 {
@@ -151,9 +241,9 @@ namespace Opaax::Editor::EditorAutomation
         // =========================================================================
         // Levels and maps
         // =========================================================================
-        void RegisterFiles(AutomationRunner& InRunner, EditorContext& InContext)
+        void RegisterFiles(Commands& InCommands, EditorContext& InContext)
         {
-            InRunner.Register("project.export",
+            InCommands.Register("project.export",
                 "Exports the game into the folder {path}: its release build, content and the engine's, ready to run "
                 "elsewhere. Answered when done (it takes minutes), with the output's log.",
                 [&InContext](const nlohmann::json& InParams)
@@ -181,39 +271,43 @@ namespace Opaax::Editor::EditorAutomation
                     return lResult;
                 });
 
-            InRunner.Register("level.open", "Opens the level at {path} (relative to the project's assets).",
+            InCommands.Register("level.open",
+                "Opens the level at {path} (relative to the project's assets). Refused when the open level has "
+                "unsaved changes, unless {discard} is true.",
                 [&InContext](const nlohmann::json& InParams)
                 {
                     OpaaxString lPath;
                     std::string lError;
-                    if (!AssetPath(InContext, InParams, lPath, lError))
+                    if (!AssetPath(InContext, InParams, lPath, lError) || !OpenLevel(InContext, lPath, InParams, lError))
                     {
                         return AutomationResult::Fail(lError);
                     }
-                    InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_LEVEL_AT, InContext, LevelPathParams{ lPath });
                     return WorldState(InContext);
-                });
+                },
+                UNSAVED_CHANGES);
 
             // Replaces the engine's: the editor plays a level by opening it, then Play In Editor.
-            InRunner.Register("level.play",
+            InCommands.Register("level.play",
                 "Opens the level at {path} (relative to the project's assets) and plays it in the editor; the next "
-                "request runs once it plays.",
+                "request runs once it plays. Refused when the open level has unsaved changes, unless {discard} is true.",
                 [&InContext](const nlohmann::json& InParams)
                 {
                     OpaaxString lPath;
                     std::string lError;
-                    if (!AssetPath(InContext, InParams, lPath, lError))
+                    if (!AssetPath(InContext, InParams, lPath, lError) || !OpenLevel(InContext, lPath, InParams, lError))
                     {
                         return AutomationResult::Fail(lError);
                     }
-                    InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_LEVEL_AT, InContext, LevelPathParams{ lPath });
 
                     AutomationResult lResult = Dispatch(InContext, Tags::EDITOR_COMMAND_PLAY);
                     lResult.WaitFrames       = lResult.bOk ? 2u : 0u;
                     return lResult;
-                });
+                },
+                UNSAVED_CHANGES);
 
-            InRunner.Register("map.open", "Opens the map at {path} (relative to the project's assets).",
+            InCommands.Register("map.open",
+                "Opens the map at {path} (relative to the project's assets). A map of no open level replaces the "
+                "level: refused when it has unsaved changes, unless {discard} is true.",
                 [&InContext](const nlohmann::json& InParams)
                 {
                     OpaaxString lPath;
@@ -222,11 +316,13 @@ namespace Opaax::Editor::EditorAutomation
                     {
                         return AutomationResult::Fail(lError);
                     }
-                    InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_MAP_AT, InContext, MapPathParams{ lPath });
+                    InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_MAP_AT, InContext,
+                                                            MapPathParams{ lPath, InParams.value("discard", false) });
                     return WorldState(InContext);
-                });
+                },
+                UNSAVED_CHANGES);
 
-            InRunner.Register("level.save",
+            InCommands.Register("level.save",
                 "Saves the open level's changed maps. With {all}: every map and the level file, rewritten in "
                 "the current format (after a format change, or for files written by hand).",
                 [&InContext](const nlohmann::json& InParams)
@@ -235,7 +331,7 @@ namespace Opaax::Editor::EditorAutomation
                                                                              : Tags::EDITOR_COMMAND_SAVE_LEVEL);
                 });
 
-            InRunner.Register("map.save", "Saves the focused map (it must have a file already).",
+            InCommands.Register("map.save", "Saves the focused map (it must have a file already).",
                 [&InContext](const nlohmann::json&)
                 {
                     // Without a file it would ask where, and nobody would answer.
@@ -250,9 +346,9 @@ namespace Opaax::Editor::EditorAutomation
         // =========================================================================
         // Entities and components
         // =========================================================================
-        void RegisterEntities(AutomationRunner& InRunner, EditorContext& InContext)
+        void RegisterEntities(Commands& InCommands, EditorContext& InContext)
         {
-            InRunner.Register("entity.create",
+            InCommands.Register("entity.create",
                 "Creates an entity in the edit world: {name}, {map} (default: the focused one), {components}: "
                 "{type: values}. Undoable; returns the entity.",
                 [&InContext](const nlohmann::json& InParams)
@@ -283,7 +379,7 @@ namespace Opaax::Editor::EditorAutomation
                     return AutomationResult::Ok(Describe(InContext, lEntity));
                 });
 
-            InRunner.Register("entity.destroy", "Destroys {entity} (id or name), as Delete would. Undoable.",
+            InCommands.Register("entity.destroy", "Destroys {entity} (id or name), as Delete would. Undoable.",
                 [&InContext](const nlohmann::json& InParams)
                 {
                     std::string  lError;
@@ -298,7 +394,7 @@ namespace Opaax::Editor::EditorAutomation
                     return AutomationResult::Ok();
                 });
 
-            InRunner.Register("entity.select", "Selects {entities} (ids or names); an empty list clears the selection.",
+            InCommands.Register("entity.select", "Selects {entities} (ids or names); an empty list clears the selection.",
                 [&InContext](const nlohmann::json& InParams)
                 {
                     InContext.Selection.Clear();
@@ -318,7 +414,7 @@ namespace Opaax::Editor::EditorAutomation
                     return AutomationResult::Ok(nlohmann::json{ { "selected", lSelected } });
                 });
 
-            InRunner.Register("component.add", "Adds the component {type} to {entity}, with its defaults. Undoable.",
+            InCommands.Register("component.add", "Adds the component {type} to {entity}, with its defaults. Undoable.",
                 [&InContext](const nlohmann::json& InParams)
                 {
                     std::string  lError;
@@ -336,7 +432,7 @@ namespace Opaax::Editor::EditorAutomation
                     return AutomationResult::Ok(Describe(InContext, lEntity));
                 });
 
-            InRunner.Register("component.remove", "Removes the component {type} from {entity}. Undoable.",
+            InCommands.Register("component.remove", "Removes the component {type} from {entity}. Undoable.",
                 [&InContext](const nlohmann::json& InParams)
                 {
                     std::string  lError;
@@ -354,7 +450,7 @@ namespace Opaax::Editor::EditorAutomation
                     return AutomationResult::Ok(Describe(InContext, lEntity));
                 });
 
-            InRunner.Register("entity.parent",
+            InCommands.Register("entity.parent",
                 "Puts {entity} (and its children) under {parent} (id or name; empty or absent detaches it), "
                 "keeping where it is in the world. Undoable.",
                 [&InContext](const nlohmann::json& InParams)
@@ -385,7 +481,7 @@ namespace Opaax::Editor::EditorAutomation
                     return AutomationResult::Ok(Describe(InContext, lChild));
                 });
 
-            InRunner.Register("entity.rename", "Renames {entity} to {name}. Undoable.",
+            InCommands.Register("entity.rename", "Renames {entity} to {name}. Undoable.",
                 [&InContext](const nlohmann::json& InParams)
                 {
                     std::string  lError;
@@ -401,7 +497,7 @@ namespace Opaax::Editor::EditorAutomation
                 });
 
             // Replaces the engine's: in the edit world, an edit is an undo step.
-            InRunner.Register("component.set",
+            InCommands.Register("component.set",
                 "Changes fields of {entity}'s component {type}: {value} is merged into it (added when missing). "
                 "Undoable in the edit world.",
                 [&InContext](const nlohmann::json& InParams)
@@ -419,9 +515,9 @@ namespace Opaax::Editor::EditorAutomation
         // =========================================================================
         // Prefabs
         // =========================================================================
-        void RegisterPrefabs(AutomationRunner& InRunner, EditorContext& InContext)
+        void RegisterPrefabs(Commands& InCommands, EditorContext& InContext)
         {
-            InRunner.Register("prefab.create",
+            InCommands.Register("prefab.create",
                 "Writes {entities} (ids or names, with their children) as a prefab at {path}, then replaces them "
                 "with an instance of it, as Create Prefab does. The file is written at once, outside undo.",
                 [&InContext](const nlohmann::json& InParams)
@@ -456,7 +552,7 @@ namespace Opaax::Editor::EditorAutomation
                     return AutomationResult::Ok(nlohmann::json{ { "path", lPath.CStr() } });
                 });
 
-            InRunner.Register("prefab.place",
+            InCommands.Register("prefab.place",
                 "Places an instance of the prefab at {path} in the focused map, its first entity at {position} "
                 "({x, y}; default: where the prefab has it). Undoable; returns the placed entities.",
                 [&InContext](const nlohmann::json& InParams)
@@ -496,11 +592,12 @@ namespace Opaax::Editor::EditorAutomation
         }
     }
 
-    void Register(AutomationRunner& InRunner, EditorContext& InContext)
+    void Register(AutomationRunner& InRunner, EditorContext& InContext, GuardedEditorDialogs& InDialogs)
     {
-        RegisterEditor(InRunner, InContext);
-        RegisterFiles(InRunner, InContext);
-        RegisterEntities(InRunner, InContext);
-        RegisterPrefabs(InRunner, InContext);
+        Commands lCommands(InRunner, InDialogs);
+        RegisterEditor(lCommands, InContext);
+        RegisterFiles(lCommands, InContext);
+        RegisterEntities(lCommands, InContext);
+        RegisterPrefabs(lCommands, InContext);
     }
 }

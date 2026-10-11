@@ -117,7 +117,7 @@ namespace Opaax::Editor
     // references it). The dialog backend is picked separately (OS dialogs, not ImGui).
     EditorService::EditorService()
         : m_Gui(MakeUnique<ImGuiEditorGui>())
-        , m_Dialogs(MakeUnique<TinyFdEditorDialogs>())
+        , m_Dialogs(MakeUnique<GuardedEditorDialogs>(MakeUnique<TinyFdEditorDialogs>()))
     {
     }
 
@@ -990,7 +990,7 @@ namespace Opaax::Editor
         {
             return;
         }
-        EditorAutomation::Register(InRunner, *m_Context);
+        EditorAutomation::Register(InRunner, *m_Context, *m_Dialogs);
 
         if (m_InputRoute != nullptr)
         {

@@ -8,6 +8,7 @@ namespace Opaax
 namespace Opaax::Editor
 {
     struct EditorContext;
+    class GuardedEditorDialogs;
 
     // =============================================================================
     // EditorAutomation — the editor's commands for an agent driving it, on top of the engine's:
@@ -17,6 +18,10 @@ namespace Opaax::Editor
     // =============================================================================
     namespace EditorAutomation
     {
-        void Register(AutomationRunner& InRunner, EditorContext& InContext);
+        /**
+         * Adds the editor's commands to InRunner. While one runs, InDialogs stay closed: a request that
+         * met a dialog fails, saying what was asked.
+         */
+        void Register(AutomationRunner& InRunner, EditorContext& InContext, GuardedEditorDialogs& InDialogs);
     }
 }
