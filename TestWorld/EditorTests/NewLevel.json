@@ -80,6 +80,38 @@
         "command": "level.save"
     },
     {
+        "id": "reopen",
+        "command": "level.open",
+        "params": {
+            "path": "Scratch/Fresh.opaaxlevel"
+        }
+    },
+    {
+        "command": "expect.entity",
+        "params": {
+            "entity": "Hero",
+            "exists": true
+        },
+        "id": "hero-saved"
+    },
+    {
+        "command": "expect.entity",
+        "params": {
+            "entity": "Prop",
+            "exists": true
+        },
+        "id": "prop-saved"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Prop",
+            "path": "Transform/Position/x",
+            "equals": 120
+        },
+        "id": "prop-where-placed"
+    },
+    {
         "id": "play",
         "command": "editor.play"
     },

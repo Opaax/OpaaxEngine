@@ -13,6 +13,9 @@
 #include "World/Serialization/MapSerializer.h"
 #include "World/Prefab/PrefabFold.h"
 #include "World/Prefab/ResourcePrefabResolver.h"
+#include "World/Serialization/LevelResource.hpp"
+#include "World/Serialization/MapResource.hpp"
+#include "Resources/ResourceManager.h"
 
 namespace
 {
@@ -39,6 +42,21 @@ namespace
 
         const Uint32 lStart = InAt > BEFORE ? InAt - BEFORE : 0;
         return InText.SubString(lStart, BEFORE + AFTER);
+    }
+
+    /**
+     * After a write: a copy of the file still loaded (a world, or the level that lists the map, holds it)
+     * is read again, so opening it next shows what was saved rather than what was first loaded.
+     */
+    template<CResource T>
+    void ReloadIfLoaded(ResourceManager* InResources, const IPaths* InPaths, const OpaaxString& InAbsPath)
+    {
+        if (InResources == nullptr || InPaths == nullptr) { return; }
+
+        // Loads name the file in the engine's form: the same form finds the loaded copy.
+        const OpaaxString lAssetRel = InPaths->AbsoluteToAsset(InAbsPath);
+        const OpaaxString lKey      = lAssetRel.IsEmpty() ? InAbsPath : InPaths->AssetToAbsolute(lAssetRel);
+        InResources->Reload<T>(lKey.CStr());
     }
 }
 
@@ -203,6 +221,7 @@ namespace Opaax::Editor
         lRecord->Baseline = lText;
         lRecord->bDirty   = false;
 
+        ReloadIfLoaded<MapResource>(m_Resources, m_Paths, lRecord->AbsPath);
         return true;
     }
 
@@ -224,6 +243,8 @@ namespace Opaax::Editor
 
         m_ManifestBaseline = lText;
         m_bManifestDirty   = false;
+
+        ReloadIfLoaded<LevelResource>(m_Resources, m_Paths, m_AbsPath);
     }
 
     bool EditorLevelDocument::SaveMapAs(MapId InMapId, const OpaaxString& InAbsPath,
@@ -280,6 +301,7 @@ namespace Opaax::Editor
                 {
                     m_ManifestBaseline = lManifest;
                     lManifestWritten   = true;
+                    ReloadIfLoaded<LevelResource>(m_Resources, m_Paths, m_AbsPath);
                 }
                 else
                 {
