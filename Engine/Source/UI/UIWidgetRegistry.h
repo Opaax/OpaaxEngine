@@ -15,7 +15,7 @@ namespace Opaax
     //   Widgets serialize themselves (SaveFields/LoadFields). An unknown type is a skipped node
     //   (one warning per name), not a failed file.
     // =============================================================================
-    class OPAAX_API UIWidgetRegistry
+    class UIWidgetRegistry
     {
         // =============================================================================
         // Registration

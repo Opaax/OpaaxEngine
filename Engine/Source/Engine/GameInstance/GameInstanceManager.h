@@ -23,7 +23,7 @@ namespace Opaax
     //   Registered before WorldManager: sessions update before worlds, and worlds are
     //   destroyed before the session. The host decides when a game starts and ends.
     // =============================================================================
-    class OPAAX_API GameInstanceManager final : public EngineSubsystemBase
+    class GameInstanceManager final : public EngineSubsystemBase
     {
         // =========================================================================
         // Base Implementation

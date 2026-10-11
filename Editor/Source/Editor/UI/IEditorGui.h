@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Engine/Subsystems/Input/InputCodes.h"   // EKeyCode
+#include "Input/InputCodes.h"   // EKeyCode
 #include "Core/String/OpaaxString.hpp"
 #include "Core/Maths/MathTypes.h"               // Vector2F
 #include "Editor/TitleBar/EditorTitleBar.h"     // owned by value (needs the complete type)
@@ -62,7 +62,6 @@ namespace Opaax::Editor
     //   ImGuiEditorGui is the one implementation. Panel contents are not here (panels call the
     //   backend directly); this covers the window chrome around them.
     //   Shortcuts use EKeyCode.
-    //   No OPAAX_API: OpaaxEditorLib is a static lib linked into the editor exe.
     // =============================================================================
     class IEditorGui
     {

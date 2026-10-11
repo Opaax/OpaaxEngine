@@ -40,6 +40,7 @@ namespace Opaax
         class EditorExtensionRegistrar; // the sealed extension routes
         class EditorPaths;              // IPaths subclass: the editor directories
         class EditorPanels;             // live panels and visibility
+        class GameExport;               // exporting the game, in the background
         class ResourcePreview;          // which resource a double-click asked to preview
 
         // =============================================================================
@@ -156,6 +157,9 @@ namespace Opaax
 
             // The editor's per-project space (<ProjectRoot>/Editor/Assets). May be null (no edited project).
             const EditorPaths* EditorPathsOrNull;
+
+            // Exporting the edited game into a folder that runs elsewhere (File > Export Game, automation).
+            GameExport& Export;
         };
     }
 }

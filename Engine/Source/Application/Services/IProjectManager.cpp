@@ -1,5 +1,5 @@
-#include "IProjectManager.h"
-#include "IPaths.h"
+#include "Application/Services/IProjectManager.h"
+#include "Application/Services/IPaths.h"
 
 #include "Core/IO/FileIO.h"
 
@@ -93,7 +93,7 @@ namespace Opaax
     }
 
     // =========================================================================
-    // Type tag + null object (defined here so they are shared across the DLL/exe boundary).
+    // Type tag + null object (defined here so there is one of each).
     // =========================================================================
     ServiceTypeID IProjectManager::StaticTypeID() noexcept
     {

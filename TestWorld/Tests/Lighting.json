@@ -1,0 +1,56 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Lighting.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.5
+        }
+    },
+    {
+        "id": "lights",
+        "command": "expect.count",
+        "params": {
+            "component": "Light2D",
+            "equals": 3
+        }
+    },
+    {
+        "id": "casters",
+        "command": "expect.count",
+        "params": {
+            "component": "ShadowCaster2D",
+            "equals": 3
+        }
+    },
+    {
+        "id": "bloom",
+        "command": "expect.value",
+        "params": {
+            "entity": "Environment",
+            "path": "Environment/bBloom",
+            "equals": true
+        }
+    },
+    {
+        "id": "material",
+        "command": "expect.value",
+        "params": {
+            "entity": "BumpyPanel",
+            "path": "Sprite/Material",
+            "equals": "Materials/Bumpy.opaaxdata"
+        }
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "Lighting.png"
+        }
+    }
+]

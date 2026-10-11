@@ -14,6 +14,7 @@ namespace Opaax
     class ITexture2D;
     class ICommandBuffer;
     class IRHIDevice;
+    struct LightsBlock2D;
     struct Renderer2DData;
     struct RenderView;
     struct RenderLimits;
@@ -25,7 +26,7 @@ namespace Opaax
      * Half-extent of an outlined quad's hole, in local 0..1 space. {0,0} is a solid quad.
      * Bad input (zero size, negative or too thick border) gives solid.
      */
-    OPAAX_API Vector2F MakeOutlineInnerHalf(const Vector2F& InSize, float InThickness) noexcept;
+    Vector2F MakeOutlineInnerHalf(const Vector2F& InSize, float InThickness) noexcept;
 
     /**
      * Masks a quad: a rect in the quad's space and a texture sampled across it.
@@ -39,6 +40,20 @@ namespace Opaax
 
         /** A zero-size rect means no mask. */
         bool IsActive() const noexcept { return Rect.HalfExtent.x > 0.f && Rect.HalfExtent.y > 0.f; }
+    };
+
+    /**
+     * How a quad takes light. Only HDR passes are lit (a world with an EnvironmentComponent); other
+     * passes draw every quad as is. The default: lit, flat, no glow.
+     */
+    struct QuadLighting
+    {
+        ITexture2D* NormalMap = nullptr;          // borrowed for the batch; tangent space, Y up
+        Vector3F    Emissive  = { 0.f, 0.f, 0.f };   // linear, times the quad's own colour, added after lighting
+        bool        bLit      = true;
+
+        /** Off for a shadow caster that must not be darkened by its own silhouette (shadows, occlusion). */
+        bool        bReceiveShadows = true;
     };
 
     /**
@@ -64,7 +79,7 @@ namespace Opaax
      *
      * Init()/Shutdown() create/release the GPU resources; never call them mid-frame.
      */
-    class OPAAX_API Renderer2D
+    class Renderer2D
     {
         // =============================================================================
         // CTORS - DTORS
@@ -136,7 +151,8 @@ namespace Opaax
                       float           InRotationRad  = 0.f,
                       ERenderLayer    InLayer        = ERenderLayer::Default,
                       Int16           InOrderInLayer = 0,
-                      const QuadMask& InMask         = {});
+                      const QuadMask& InMask         = {},
+                      const QuadLighting& InLighting = {});
 
         /**
          * Draws a textured quad.
@@ -158,7 +174,8 @@ namespace Opaax
                         Int16           InOrderInLayer = 0,
                         const Vector2F& InUVMin        = { 0.f, 0.f },
                         const Vector2F& InUVMax        = { 1.f, 1.f },
-                        const QuadMask& InMask         = {});
+                        const QuadMask& InMask         = {},
+                        const QuadLighting& InLighting = {});
 
         /**
          * Draws a hollow quad: a border of InThickness, empty inside. Untextured.
@@ -177,7 +194,21 @@ namespace Opaax
                              float           InRotationRad  = 0.f,
                              ERenderLayer    InLayer        = ERenderLayer::Debug,
                              Int16           InOrderInLayer = 0,
-                             const QuadMask& InMask         = {});
+                             const QuadMask& InMask         = {},
+                             const QuadLighting& InLighting = {});
+
+        // =============================================================================
+        // Lighting
+        // =============================================================================
+    public:
+        /** The lights of the next passes (only HDR passes are lit). Lit quads see the ambient alone by default. */
+        void SetLighting(const LightsBlock2D& InLights);
+
+        /**
+         * The lighting maps of the next passes (each may be null). While either is set, they take
+         * the last two sampler slots (Sprite.glsl reads them there) and batches keep two fewer.
+         */
+        void SetLightingMaps(ITexture2D* InShadowMap, ITexture2D* InAmbientOcclusion) noexcept;
 
         // =============================================================================
         // Internal
@@ -205,7 +236,8 @@ namespace Opaax
                           const Vector2F& InUVMin,
                           const Vector2F& InUVMax,
                           const Vector2F& InInnerHalf = { 0.f, 0.f },
-                          const QuadMask& InMask      = {});
+                          const QuadMask& InMask      = {},
+                          const QuadLighting& InLighting = {});
 
         /**
          * InTexture's id for this pass (existing or new).

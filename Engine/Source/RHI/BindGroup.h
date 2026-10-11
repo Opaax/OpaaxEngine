@@ -28,7 +28,7 @@ namespace Opaax
      * SetTexture, then bind it before drawing. Textures may change between draws.
      * Created by IRHIDevice::CreateBindGroup.
      */
-    class OPAAX_API IBindGroup
+    class IBindGroup
     {
         // =============================================================================
         // DTOR

@@ -10,7 +10,7 @@ namespace Opaax
      * OpenGL IPipeline: stores the shader and blend state, applied when bound.
      * The vertex layout comes from the VAO, so PipelineDesc::VertexLayout is unused.
      */
-    class OPAAX_API OpenGLPipeline final : public IPipeline
+    class OpenGLPipeline final : public IPipeline
     {
         // =============================================================================
         // CTOR - DTOR

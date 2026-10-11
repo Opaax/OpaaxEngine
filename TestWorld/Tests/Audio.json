@@ -1,0 +1,76 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Audio.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.5
+        }
+    },
+    {
+        "id": "played",
+        "command": "expect.value",
+        "params": {
+            "entity": "Probe",
+            "path": "AudioProbe/bPlayed",
+            "equals": true
+        }
+    },
+    {
+        "id": "source",
+        "command": "expect.count",
+        "params": {
+            "component": "AudioSource",
+            "equals": 2
+        }
+    },
+    {
+        "id": "listener",
+        "command": "expect.count",
+        "params": {
+            "component": "AudioListener",
+            "equals": 1
+        }
+    },
+    {
+        "id": "played-at",
+        "command": "expect.value",
+        "params": {
+            "entity": "Controls",
+            "path": "AudioControlProbe/bPlayedAt",
+            "equals": true
+        }
+    },
+    {
+        "id": "stopped",
+        "command": "expect.value",
+        "params": {
+            "entity": "Controls",
+            "path": "AudioControlProbe/StoppedSounds",
+            "equals": 1
+        }
+    },
+    {
+        "id": "source-played",
+        "command": "expect.value",
+        "params": {
+            "entity": "Controls",
+            "path": "AudioControlProbe/bSourcePlaying",
+            "equals": true
+        }
+    },
+    {
+        "id": "source-stopped",
+        "command": "expect.value",
+        "params": {
+            "entity": "Controls",
+            "path": "AudioControlProbe/bSourceStopped",
+            "equals": true
+        }
+    }
+]

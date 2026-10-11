@@ -5,8 +5,8 @@
 #include "Editor/ImguiLibrary/ImguiWidgets.h"
 #include "Editor/UI/IEditorUIBackend.h"
 
-#include "Engine/Subsystems/Resources/Types/Font/FontFaceResource.h"
-#include "Engine/Subsystems/Resources/Types/Texture/TextureResource.h"
+#include "Renderer/Text/FontFaceResource.h"
+#include "Renderer/Textures/TextureResource.h"
 
 #include <imgui.h>
 

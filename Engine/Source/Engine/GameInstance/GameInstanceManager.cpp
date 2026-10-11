@@ -8,7 +8,7 @@
 #include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceSubsystemRegistry.h"
 #include "Engine/Registries/EngineRegistries.h"
-#include "Engine/Subsystems/Input/InputManager.h"
+#include "Input/InputManager.h"
 #include "World/WorldManager.h"
 
 namespace Opaax

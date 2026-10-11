@@ -3,17 +3,19 @@
 #include <Application/Services/IEngine.h>
 #include <Engine/Subsystems/EngineSubsystem.h>
 #include "Application/Services/IJobSystem.h"
-#include "Subsystems/Renderer/RendererManager.h"
-#include "FrameInfo.hpp"
+#include "Core/Maths/MathsStatics.h"
+#include "Renderer/RendererManager.h"
+#include "Engine/FrameClock.h"
 #include "Core/Events/EventBus.h"
 #include "Engine/Registries/EngineRegistries.h"
-#include "Engine/Subsystems/Resources/ResourceRef.hpp"
+#include "Resources/ResourceRef.hpp"
 
 namespace Opaax
 {
     class IPlatform;
     class IPaths;
     class ResourceManager;
+    class AudioManager;
     class EngineEventBus;
     class WorldManager;
     class GameInstanceManager;
@@ -23,13 +25,11 @@ namespace Opaax
     struct FramebufferSpec;
     struct LevelResource;
 
-    inline constexpr double MAX_FRAME_DELTA = 0.25;
-
     // =============================================================================
     // Engine — the concrete IEngine. Owns the engine subsystems and runs the frame.
     // Provided last to the service locator, so it shuts down first (before the window).
     // =============================================================================
-    class OPAAX_API Engine final : public IEngine
+    class Engine final : public IEngine
     {
         // =============================================================================
         // CTORS - DTORS
@@ -55,27 +55,14 @@ namespace Opaax
         /** @return True if not started yet and the world is not null */
         bool CanFinishStartup();
     
-        void RegisterNativeComponents();
-
-        /** Registers the resource types the engine loads, and their extensions. */
-        void RegisterNativeResourceFormats();
+        /**
+         * Registers every self-registered type (OPAAX_REGISTER_* macros) of the engine and the game
+         * modules: components, behaviours, subsystems, resource formats, widgets, mover modes.
+         */
+        void RegisterTypes();
 
         /** Registers the default engine subsystems. */
         void RegisterNativeSubsystems();
-
-        /**
-         * Registers the engine's world subsystems (each world filters them with ShouldCreate).
-         */
-        void RegisterNativeWorldSubsystems();
-        void RegisterNativeMoverModes();
-
-        /**
-         * Registers the engine's game-instance subsystems (created by StartGame, in order).
-         */
-        void RegisterNativeGameInstanceSubsystems();
-
-        /** Registers the widget types a .opaaxui can use. */
-        void RegisterNativeUIWidgets();
         
         /** Caches frequently used subsystems. */
         void CacheSubsystems();
@@ -84,14 +71,6 @@ namespace Opaax
         // End Native Engine
         // =============================================================================
         
-        // =============================================================================
-        // Delta Time
-    private:
-        double GetDeltaTime();
-        double GetFixedDeltaTime();
-        // End Delta Time
-        // =============================================================================
-
         // =============================================================================
         // Startup
     private:
@@ -152,6 +131,7 @@ namespace Opaax
                                                      bool bInDrawUI = false) override;
         void                        SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget = nullptr,
                                                    const CameraView* InView = nullptr) override;
+        bool                        CaptureFrame(const OpaaxString& InPngPath) override;
         TUniquePtr<IFramebuffer>    CreateFramebuffer(const FramebufferSpec& InSpec) override;
         TUniquePtr<ITexture2D>      CreateTexture(const void* InPixels, Uint32 InWidth,
                                                   Uint32 InHeight, Int32 InChannels) override;
@@ -164,6 +144,7 @@ namespace Opaax
         GameInstanceManager& GetGameInstances() override;
         DebugDraw&          GetDebugDraw()      override;
         InputManager&       GetInput()          override;
+        AudioManager&       GetAudio()          override;
         //~End IEngine interface
 
         // =============================================================================
@@ -175,8 +156,8 @@ namespace Opaax
         IPlatform*  m_Platform  = nullptr;
         IPaths*     m_Paths     = nullptr;
 
-        // End Delta Time
-        FrameInfo m_FrameInfo;
+        // Frame deltas and fixed steps (60 Hz)
+        FrameClock m_Clock{ D60_HZ };
 
         //Handle Subsystem lifetime
         EngineSubsystemMgr m_Subsystems;
@@ -190,6 +171,7 @@ namespace Opaax
         RendererManager*    m_RendererManager = nullptr;
         WorldManager*       m_WorldManager = nullptr;
         InputManager*       m_InputManager = nullptr;
+        AudioManager*       m_AudioManager = nullptr;
         GameInstanceManager* m_GameInstances = nullptr;
 
         //Internal

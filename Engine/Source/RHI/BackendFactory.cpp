@@ -62,9 +62,14 @@ namespace Opaax
     {
         switch (InBackend)
         {
-            // OpenGL: keep GLFW's defaults (a GL context).
             case EBackend::OpenGL:
             default:
+                // OpenGL 4.1 core everywhere: the most macOS offers, so every platform runs the same
+                // code (shaders are ported by GLSLPort). Forward compatible, as macOS requires.
+                glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+                glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+                glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+                glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
                 break;
         }
     }

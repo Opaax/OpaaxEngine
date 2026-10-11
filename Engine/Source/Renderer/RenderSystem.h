@@ -15,6 +15,7 @@ namespace Opaax
     class IRenderTarget;
     class ITexture2D;
     class Renderer2D;
+    class ScenePipeline2D;
     struct FramebufferSpec;
     struct RenderSystemDesc;
     struct RenderView;
@@ -26,7 +27,7 @@ namespace Opaax
     //   A pass renders into an IRenderTarget (backbuffer or offscreen framebuffer). Only the
     //   backbuffer is presented. Takes host state as plain data (RenderSystemDesc, RenderView).
     // =============================================================================
-    class OPAAX_API RenderSystem
+    class RenderSystem
     {
         // =============================================================================
         // CTORS - DTORS
@@ -79,7 +80,8 @@ namespace Opaax
          * Opens a pass into InTarget: binds it, clears it (or keeps it, e.g. for UI on top),
          * then starts the batcher with InView. Draws until EndPass go into this pass.
          */
-        void BeginPass(IRenderTarget& InTarget, const RenderView& InView, ELoadOp InLoadOp = ELoadOp::Clear);
+        void BeginPass(IRenderTarget& InTarget, const RenderView& InView, ELoadOp InLoadOp = ELoadOp::Clear,
+                       const Vector4F* InClearColor = nullptr);
         /** Flushes the batch and closes the pass. */
         void EndPass();
         
@@ -118,6 +120,15 @@ namespace Opaax
     public:
         Renderer2D& GetRenderer2D() const noexcept { return *m_Renderer2D; }
 
+        /** The HDR path of world views (scene target, tonemap). */
+        ScenePipeline2D& GetScenePipeline() const noexcept { return *m_ScenePipeline; }
+
+        /** The clear colour of passes that clear. */
+        const Vector4F& GetClearColor() const noexcept { return m_ClearColor; }
+
+        /** The device's command buffer, for passes that are not batches (post-process). */
+        ICommandBuffer* GetCommandBuffer() const;
+
         /**
          * @return The window surface target
          */
@@ -128,6 +139,13 @@ namespace Opaax
          * @return Negative without a device, or before the first result
          */
         double GetGpuFrameTimeMs() const;
+
+        /**
+         * The frame drawn so far into the backbuffer (call before Present).
+         * @param OutRGBA RGBA, rows from top to bottom
+         * @return False without a device, or when it cannot be read
+         */
+        bool CaptureBackbuffer(TDynArray<Uint8>& OutRGBA, Uint32& OutWidth, Uint32& OutHeight) const;
 
         /** Clear colour of passes that clear. Applied from the next frame. */
         void SetClearColor(const Vector4F& InColor) noexcept { m_ClearColor = InColor; }
@@ -140,6 +158,7 @@ namespace Opaax
     private:
         TUniquePtr<IRHIDevice>    m_Device;
         TUniquePtr<Renderer2D>    m_Renderer2D;
+        TUniquePtr<ScenePipeline2D> m_ScenePipeline;
         TUniquePtr<IRenderTarget> m_Backbuffer;   // window surface
         Vector4F                 m_ClearColor{0.f, 0.f, 0.f, 1.f};
     };

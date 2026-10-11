@@ -10,7 +10,7 @@ namespace Opaax
     // =============================================================================
     // GuidRegistry — per-World lookup from Guid to EntityID. Unknown guids give ENTITY_NONE.
     // =============================================================================
-    class OPAAX_API WorldGuidRegistry
+    class WorldGuidRegistry
     {
         // =========================================================================
         // Functions

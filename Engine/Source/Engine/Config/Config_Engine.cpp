@@ -1,9 +1,9 @@
-#include "Config_Engine.h"
+#include "Engine/Config/Config_Engine.h"
 
 namespace Opaax
 {
     // =========================================================================
-    // Config type tag (defined here so it is shared across the DLL/exe boundary).
+    // Config type tag (defined here so there is exactly one).
     // =========================================================================
     ConfigTypeID Config_Engine::StaticTypeID() noexcept
     {

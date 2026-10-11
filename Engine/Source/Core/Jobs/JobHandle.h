@@ -25,7 +25,7 @@ namespace Opaax
      * Copyable handle to a submitted job. Carries no result (use the lambda captures).
      * A null handle counts as complete.
      */
-    class OPAAX_API JobHandle
+    class JobHandle
     {
         // =============================================================================
         // CTORs

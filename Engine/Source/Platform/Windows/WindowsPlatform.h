@@ -2,18 +2,16 @@
 
 #include "Core/EngineAPI.h"
 #include "Platform/IPlatform.h"
-#include "Platform/IFileSystem.h"
+#include "Platform/StdFileSystem.h"
 
 #ifdef OPAAX_PLATFORM_WINDOWS
-
-#include "Platform/Windows/WindowsFileSystem.h"
 
 namespace Opaax
 {
     // =============================================================================
     // WindowsPlatform — IPlatform using Win32.
     // =============================================================================
-    class OPAAX_API WindowsPlatform final : public IPlatform
+    class WindowsPlatform final : public IPlatform
     {
         // =============================================================================
         // Override
@@ -31,8 +29,7 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        // Concrete type, by value; exposed as const IFileSystem&.
-        WindowsFileSystem m_FileSystem;
+        StdFileSystem m_FileSystem;
     };
 }
 

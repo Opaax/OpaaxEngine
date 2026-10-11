@@ -20,16 +20,16 @@ namespace Opaax
      *   - a rect smaller than its borders shrinks them proportionally (UVs keep the border);
      *   - a texture without size gives one quad.
      */
-    OPAAX_API void BuildSlicedQuads(const Bounds2D& InRect, const UIMargin& InBorderPixels,
+    void BuildSlicedQuads(const Bounds2D& InRect, const UIMargin& InBorderPixels,
                                     const Vector2F& InTextureSize, TDynArray<UIQuad>& OutQuads);
 
     /**
      * Cuts every quad to InClip, with its UVs; quads fully outside are dropped (used by UIImage fill).
      */
-    OPAAX_API void ClipQuadsTo(TDynArray<UIQuad>& InOutQuads, const Bounds2D& InClip);
+    void ClipQuadsTo(TDynArray<UIQuad>& InOutQuads, const Bounds2D& InClip);
 
     /**
      * Maps the quads' 0..1 UVs into InUVMin..InUVMax (a sheet frame). Run after the slice, before the clip.
      */
-    OPAAX_API void MapQuadUVsInto(TDynArray<UIQuad>& InOutQuads, const Vector2F& InUVMin, const Vector2F& InUVMax) noexcept;
+    void MapQuadUVsInto(TDynArray<UIQuad>& InOutQuads, const Vector2F& InUVMin, const Vector2F& InUVMax) noexcept;
 }

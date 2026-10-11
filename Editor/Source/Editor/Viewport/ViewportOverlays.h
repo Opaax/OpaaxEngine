@@ -12,9 +12,9 @@ namespace Opaax
 }
 
 // =============================================================================
-// ViewportOverlays — editor visuals drawn over a world: the selection outline and the icon for
-//   entities that draw nothing. Queued into DebugDraw tagged with their world, so other worlds'
-//   passes skip them. Shared by the level viewport and the prefab panel.
+// ViewportOverlays — editor visuals drawn over a world: the selection outline, the icon for
+//   entities that draw nothing and the reach of selected lights. Queued into DebugDraw tagged with
+//   their world, so other worlds' passes skip them. Shared by the level viewport and the prefab panel.
 // =============================================================================
 namespace Opaax::Editor::ViewportOverlays
 {
@@ -33,4 +33,11 @@ namespace Opaax::Editor::ViewportOverlays
      * The caller decides whether the world should be decorated. @return How many were drawn.
      */
     Uint64 EnqueueEntityIcons(DebugDraw& InDraw, World& InWorld, float InAnchorHalfExtent);
+
+    /**
+     * Where each light of InIds reaches (Light2DGizmo), in the light's own colour, dimmed when it
+     * is off. @return How many were drawn.
+     */
+    Uint64 EnqueueLightGizmos(DebugDraw& InDraw, World& InWorld, const TDynArray<EntityID>& InIds,
+                              float InAnchorHalfExtent);
 }

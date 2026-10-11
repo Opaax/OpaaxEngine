@@ -1,0 +1,59 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "10dddc368b40500ab689abc7b36d10ce",
+            "name": "Camera",
+            "ownerMap": "Extensions"
+        },
+        {
+            "components": {
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                },
+                "TunedComponent": {
+                    "Tuning": "Data/Tuning.opaaxdata"
+                },
+                "TuningProbe": {
+                    "CounterFixedSteps": 0,
+                    "CounterTuned": 0,
+                    "CounterUpdates": 0,
+                    "Lives": 0,
+                    "Speed": 0.0,
+                    "Title": "",
+                    "bCounter": false,
+                    "bLoaded": false
+                }
+            },
+            "guid": "137bda301e5f5ef1b26ef47cab4a160d",
+            "name": "Holder",
+            "ownerMap": "Extensions"
+        }
+    ],
+    "mapId": "Extensions",
+    "version": 4
+}

@@ -4,7 +4,7 @@
 #include "Core/OpaaxTypes.h"                    // TFunction, TDynArray, Uint64
 #include "World/Entity/Entity.h"                // Entity::TryGet
 #include "UI/UIWidget.h"                        // the third subject
-#include "Engine/Modules/ModuleRegistrar.h"     // DeriveTypeLeafName (a section's label)
+#include "Engine/Registries/ModuleRegistrar.h"     // DeriveTypeLeafName (a section's label)
 #include "Editor/Properties/PropertyDrawers.h"  // the built-in widgets
 
 #include "Editor/UI/IEditorWidgets.h"

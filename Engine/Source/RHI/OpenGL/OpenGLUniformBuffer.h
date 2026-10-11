@@ -5,9 +5,9 @@
 namespace Opaax
 {
     /**
-     * OpenGL uniform buffer (DSA). Bound to its binding point at construction.
+     * OpenGL uniform buffer. Bound to its binding point at construction.
      */
-    class OPAAX_API OpenGLUniformBuffer final : public IUniformBuffer
+    class OpenGLUniformBuffer final : public IUniformBuffer
     {
         // =============================================================================
         // CTOR - DTOR

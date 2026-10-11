@@ -7,8 +7,8 @@
 #include "Editor/EditorContext.h"
 #include "Editor/Resources/EditorResourceEvents.h"
 
-#include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/ResourceTypeID.hpp"
+#include "Resources/ResourceManager.h"
+#include "Resources/ResourceTypeID.hpp"
 
 namespace Opaax::Editor
 {

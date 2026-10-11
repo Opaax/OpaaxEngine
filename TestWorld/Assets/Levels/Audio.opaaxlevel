@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/Audio.opaaxmap"
+    ],
+    "name": "Audio",
+    "persistentMap": "Maps/Audio.opaaxmap",
+    "version": 1
+}

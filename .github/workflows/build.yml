@@ -1,7 +1,7 @@
 name: build
 
-# Every push on every branch builds — a branch never goes unbuilt until its PR. A PR's
-# checks are its head commit's push run, so there is no separate pull_request trigger.
+# Every push on every branch builds and tests on Windows, Linux and macOS.
+# A PR's checks are its head commit's push run.
 on:
   push:
     branches: ['**']
@@ -17,34 +17,120 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
     strategy:
       fail-fast: false
-      # Mirrors build.bat's preset -> config map. The VS 2022 generator is
-      # MULTI-CONFIG, so CMAKE_BUILD_TYPE in the preset is ignored and the
-      # compiled config MUST come from --config / -C (else everything builds Debug).
-      # Vulkan is disabled explicitly (not left to the runner image): CI proves the
-      # OpenGL-only build, the one a machine without the SDK gets.
       matrix:
         include:
-          - preset: debug-editor
+          - os: windows-latest
+            preset: debug-editor
             config: Debug
-          - preset: debug
-            config: Debug
-          - preset: release
+          - os: windows-latest
+            preset: release
             config: Release
-    name: ${{ matrix.preset }}
+          - os: ubuntu-24.04
+            preset: debug-editor
+            config: Debug
+            jobs: 4
+          - os: ubuntu-24.04
+            preset: release
+            config: Release
+            jobs: 4
+          - os: macos-15
+            preset: debug-editor
+            config: Debug
+            jobs: 3
+          - os: macos-15
+            preset: release
+            config: Release
+            jobs: 3
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }} / ${{ matrix.preset }}
     steps:
       - name: Checkout (recursive submodules)
         uses: actions/checkout@v5
         with:
           submodules: recursive
 
+      - name: Linux packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev \
+            libwayland-dev libwayland-bin wayland-protocols libxkbcommon-dev \
+            libgl1-mesa-dev
+
       - name: Configure
-        run: cmake --preset ${{ matrix.preset }} -DCMAKE_DISABLE_FIND_PACKAGE_Vulkan=ON
+        shell: bash
+        run: cmake --preset ${{ matrix.preset }} 2>&1 | tee configure.log; exit ${PIPESTATUS[0]}
 
+      # Multi-config generators ignore CMAKE_BUILD_TYPE: the config comes from --config / -C.
+      # MSVC already compiles each project's files in parallel (/MP), so projects build one at a
+      # time there. Elsewhere the job count is bounded (an unbounded make -j runs out of memory)
+      # and -k keeps going so one run reports as many errors as possible.
       - name: Build
-        run: cmake --build build/${{ matrix.preset }} --config ${{ matrix.config }}
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cmake --build build/${{ matrix.preset }} --config ${{ matrix.config }} 2>&1 | tee build.log
+          else
+            cmake --build build/${{ matrix.preset }} --config ${{ matrix.config }} --parallel ${{ matrix.jobs }} -- -k 2>&1 | tee build.log
+          fi
+          exit ${PIPESTATUS[0]}
 
-      - name: Test (CTest)
-        run: ctest --test-dir build/${{ matrix.preset }} -C ${{ matrix.config }} --output-on-failure
+      - name: Report errors
+        if: failure()
+        shell: bash
+        run: |
+          python3 .github/scripts/report_errors.py configure.log || python .github/scripts/report_errors.py configure.log
+          python3 .github/scripts/report_errors.py build.log || python .github/scripts/report_errors.py build.log
+
+      # Unit tests. The TestWorld feature tests draw, so they run below, where there is a screen.
+      - name: Test
+        shell: bash
+        run: |
+          echo "::add-matcher::.github/problem-matchers/doctest.json"
+          ctest --test-dir build/${{ matrix.preset }} -C ${{ matrix.config }} --output-on-failure -LE feature
+
+      # The game draws on a virtual screen with Mesa's software OpenGL, stricter than desktop
+      # drivers: a crash, or an error logged while starting and drawing (a shader that does not
+      # compile), fails the job. The frame is kept as an artifact.
+      - name: Render check
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri
+          if [ "${{ matrix.preset }}" = "release" ]; then LOG=build/release/bin/Sandbox_Data/Save/Log/OpaaxEngine.log; else LOG=Sandbox/Save/Log/OpaaxEngine.log; fi
+          rm -f "$LOG"
+          xvfb-run -a -s "-screen 0 1280x720x24" build/${{ matrix.preset }}/bin/Sandbox --capture "$PWD/capture.png" --capture-frame 30
+          test -s capture.png
+          if grep -E "\] \[(error|critical)\]" "$LOG"; then echo "::error::Errors were logged while rendering"; exit 1; fi
+
+      - name: Upload capture
+        if: runner.os == 'Linux' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capture-${{ matrix.preset }}
+          path: capture.png
+          if-no-files-found: ignore
+
+      # TestWorld: each feature's level played and checked by its script (TestWorld/Tests), on the
+      # same virtual screen. The answers and screenshots are kept as an artifact.
+      - name: Feature tests
+        if: runner.os == 'Linux'
+        shell: bash
+        run: xvfb-run -a -s "-screen 0 1280x720x24" ctest --test-dir build/${{ matrix.preset }} -C ${{ matrix.config }} -L feature --output-on-failure
+
+      # Each failed request of a feature test becomes an annotation, readable without the log.
+      - name: Report feature failures
+        if: runner.os == 'Linux' && failure()
+        shell: bash
+        run: python3 .github/scripts/report_feature_failures.py build/${{ matrix.preset }} TestWorld
+
+      - name: Upload feature results
+        if: runner.os == 'Linux' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testworld-${{ matrix.preset }}
+          path: build/${{ matrix.preset }}/TestWorldResults
+          if-no-files-found: ignore

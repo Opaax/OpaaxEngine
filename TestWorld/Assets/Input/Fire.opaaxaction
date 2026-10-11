@@ -1,0 +1,7 @@
+{
+    "Description": "Fires (the InputProbe counts it).",
+    "HoldSeconds": 0.5,
+    "Modifiers": [],
+    "Name": "Fire",
+    "ValueType": "Bool"
+}

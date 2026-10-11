@@ -12,6 +12,5 @@ public:
     
 protected:
     void OnInitializeApplication() override;
-    void RegisterModules(Opaax::ModuleRegistrar& InRegistrar) override;
     void PostEngineStartup() override;
 };

@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/Input.opaaxmap"
+    ],
+    "name": "Input",
+    "persistentMap": "Maps/Input.opaaxmap",
+    "version": 1
+}

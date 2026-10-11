@@ -3,8 +3,8 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
-#include "Engine/Subsystems/Resources/Types/Mover/MoveModeData.h"
-#include "Engine/Subsystems/Resources/Types/Mover/MoverData.h"
+#include "Movement/Assets/MoveModeData.h"
+#include "Movement/Assets/MoverData.h"
 
 namespace Opaax::Editor
 {

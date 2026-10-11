@@ -4,7 +4,7 @@
 
 namespace Opaax
 {
-    class OPAAX_API OpenGLVertexArray final : public IVertexArray
+    class OpenGLVertexArray final : public IVertexArray
     {
         // =============================================================================
         // CTOR - DTOR

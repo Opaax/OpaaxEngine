@@ -1,0 +1,74 @@
+{
+    "Mappings": [
+        {
+            "Action": "Input/Move.opaaxaction",
+            "Key": "D",
+            "Modifiers": [],
+            "bConsume": true
+        },
+        {
+            "Action": "Input/Move.opaaxaction",
+            "Key": "A",
+            "Modifiers": [
+                {
+                    "DeadZoneLower": 0.25,
+                    "DeadZoneUpper": 1.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    },
+                    "Type": "Negate"
+                }
+            ],
+            "bConsume": true
+        },
+        {
+            "Action": "Input/Move.opaaxaction",
+            "Key": "W",
+            "Modifiers": [
+                {
+                    "DeadZoneLower": 0.25,
+                    "DeadZoneUpper": 1.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    },
+                    "Type": "Swizzle"
+                }
+            ],
+            "bConsume": true
+        },
+        {
+            "Action": "Input/Move.opaaxaction",
+            "Key": "S",
+            "Modifiers": [
+                {
+                    "DeadZoneLower": 0.25,
+                    "DeadZoneUpper": 1.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    },
+                    "Type": "Swizzle"
+                },
+                {
+                    "DeadZoneLower": 0.25,
+                    "DeadZoneUpper": 1.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    },
+                    "Type": "Negate"
+                }
+            ],
+            "bConsume": true
+        },
+        {
+            "Action": "Input/Charge.opaaxaction",
+            "Key": "Space",
+            "Modifiers": [],
+            "bConsume": true
+        }
+    ],
+    "Priority": 0
+}

@@ -11,7 +11,7 @@ namespace Opaax
      * Where the renderer draws: the backbuffer (DefaultRenderTarget) or an offscreen
      * framebuffer (OffscreenRenderTarget, e.g. the editor viewport).
      */
-    class OPAAX_API IRenderTarget
+    class IRenderTarget
     {
         // =============================================================================
         // CTOR
@@ -49,7 +49,7 @@ namespace Opaax
     /**
      * Draws to the window backbuffer. Bind/Unbind do nothing.
      */
-    class OPAAX_API DefaultRenderTarget final : public IRenderTarget
+    class DefaultRenderTarget final : public IRenderTarget
     {
         // =============================================================================
         // CTOR
@@ -95,7 +95,7 @@ namespace Opaax
      * Draws into an offscreen framebuffer (e.g. the editor viewport samples it as a texture).
      * Does not own the framebuffer: do not let it outlive it.
      */
-    class OPAAX_API OffscreenRenderTarget final : public IRenderTarget
+    class OffscreenRenderTarget final : public IRenderTarget
     {
         // =============================================================================
         // CTOR

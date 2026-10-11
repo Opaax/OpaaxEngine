@@ -1,16 +1,18 @@
 #include "Systems/HudSubsystem.h"
 
+#include "Engine/Registries/AutoRegistration.h"
+
 #include <algorithm>
 
 #include <glm/geometric.hpp>   // glm::length
 
 #include "Core/Log/Logger.h"
-#include "Engine/Input/InputMappingSubsystem.h"
-#include "Engine/Input/InputTypes.h"
-#include "Engine/UI/UISubsystem.h"
+#include "Input/Mapping/InputMappingSubsystem.h"
+#include "Input/Mapping/InputTypes.h"
+#include "UI/UISubsystem.h"
 #include "UI/UIBinding.h"
 #include "UI/UICanvas.h"
-#include "World/Components/MoverComponent.h"
+#include "Movement/MoverComponent.h"
 #include "World/Systems/WorldContext.h"
 #include "World/World.h"
 
@@ -112,4 +114,7 @@ namespace Sandbox
 
         ++m_Model.Jumps;
     }
+
+    // The HUD: a jump counter and a speed bar under the GameInstance's canvas.
+    OPAAX_REGISTER_WORLD_SUBSYSTEM_ORDERED(HudSubsystem, Opaax::WorldSubsystemOrder::Presentation);
 }

@@ -1,0 +1,240 @@
+{
+    "entities": [
+        {
+            "components": {
+                "AnimProbe": {
+                    "FramesSeen": 0,
+                    "LastFrame": -1,
+                    "LastSheet": "",
+                    "LastTexture": "",
+                    "SwitchAfter": 1.0,
+                    "SwitchTo": "",
+                    "bSwitched": false
+                },
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": 0,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxsheet",
+                    "Size": {
+                        "x": 100.0,
+                        "y": 100.0
+                    },
+                    "Texture": "",
+                    "bVisible": true
+                },
+                "SpriteAnimator": {
+                    "Clip": "",
+                    "ClipAsset": "Anims/Cycle.opaaxclip",
+                    "Library": "",
+                    "Speed": 0.0,
+                    "bPlaying": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 100.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "0ac1dc447ab550ba9118f0edfb8970c5",
+            "name": "Stopped",
+            "ownerMap": "Animation"
+        },
+        {
+            "components": {
+                "AnimProbe": {
+                    "FramesSeen": 0,
+                    "LastFrame": -1,
+                    "LastSheet": "",
+                    "LastTexture": "",
+                    "SwitchAfter": 2.0,
+                    "SwitchTo": "Blink",
+                    "bSwitched": false
+                },
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": 0,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxsheet",
+                    "Size": {
+                        "x": 100.0,
+                        "y": 100.0
+                    },
+                    "Texture": "",
+                    "bVisible": true
+                },
+                "SpriteAnimator": {
+                    "Clip": "",
+                    "ClipAsset": "",
+                    "Library": "Anims/Library.opaaxanim",
+                    "Speed": 1.0,
+                    "bPlaying": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -300.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "3d4d2f1afc5d5c95bab696d86d961f35",
+            "name": "Library",
+            "ownerMap": "Animation"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "5f5bb057d8da5fd9afc8d51488d2a262",
+            "name": "Camera",
+            "ownerMap": "Animation"
+        },
+        {
+            "components": {
+                "AnimProbe": {
+                    "FramesSeen": 0,
+                    "LastFrame": -1,
+                    "LastSheet": "",
+                    "LastTexture": "",
+                    "SwitchAfter": 1.0,
+                    "SwitchTo": "",
+                    "bSwitched": false
+                },
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": 0,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxsheet",
+                    "Size": {
+                        "x": 100.0,
+                        "y": 100.0
+                    },
+                    "Texture": "",
+                    "bVisible": true
+                },
+                "SpriteAnimator": {
+                    "Clip": "",
+                    "ClipAsset": "Anims/Once.opaaxclip",
+                    "Library": "",
+                    "Speed": 1.0,
+                    "bPlaying": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 300.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "c55bf6288d89526b8a4fe34ab440ae90",
+            "name": "Once",
+            "ownerMap": "Animation"
+        },
+        {
+            "components": {
+                "AnimProbe": {
+                    "FramesSeen": 0,
+                    "LastFrame": -1,
+                    "LastSheet": "",
+                    "LastTexture": "",
+                    "SwitchAfter": 1.0,
+                    "SwitchTo": "",
+                    "bSwitched": false
+                },
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": 0,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxsheet",
+                    "Size": {
+                        "x": 100.0,
+                        "y": 100.0
+                    },
+                    "Texture": "",
+                    "bVisible": true
+                },
+                "SpriteAnimator": {
+                    "Clip": "",
+                    "ClipAsset": "Anims/Cycle.opaaxclip",
+                    "Library": "",
+                    "Speed": 1.0,
+                    "bPlaying": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -100.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "fdb6bda1c1c258218e12946ba8a9c437",
+            "name": "Paused",
+            "ownerMap": "Animation"
+        }
+    ],
+    "mapId": "Animation",
+    "version": 4
+}

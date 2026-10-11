@@ -1,0 +1,13 @@
+{
+    "Type": "Material2D",
+    "Data": {
+        "bLit": true,
+        "EmissiveColor": {
+            "x": 0.2,
+            "y": 1.0,
+            "z": 0.6,
+            "w": 1.0
+        },
+        "EmissiveStrength": 4.0
+    }
+}

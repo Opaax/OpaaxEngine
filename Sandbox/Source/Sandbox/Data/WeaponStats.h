@@ -4,6 +4,7 @@
 
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxProperty.h"
+#include "Engine/Registries/AutoRegistration.h"
 
 namespace Sandbox
 {
@@ -24,4 +25,6 @@ namespace Sandbox
                          OPAAX_PROP(ShotsPerSec).SetRange(0.1f, 60.f).SetDragStep(0.1f),
                          OPAAX_PROP(Spread).SetRange(0.f, 90.f).SetTooltip("Degrees, either side."))
     };
+
+    OPAAX_REGISTER_DATA_ASSET(WeaponStats);
 }

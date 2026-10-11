@@ -25,6 +25,6 @@ namespace Opaax
         /**
          * Every hard reference of InData's entities, without duplicates. Empty paths are skipped.
          */
-        OPAAX_API TDynArray<HardReference> Collect(const MapData& InData, const ComponentRegistry& InRegistry);
+        TDynArray<HardReference> Collect(const MapData& InData, const ComponentRegistry& InRegistry);
     }
 }

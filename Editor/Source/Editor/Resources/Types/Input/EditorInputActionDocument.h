@@ -2,7 +2,7 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/String/OpaaxString.hpp"
-#include "Engine/Subsystems/Resources/Types/Input/InputActionData.h"
+#include "Input/Assets/InputActionData.h"
 
 namespace Opaax::Editor
 {

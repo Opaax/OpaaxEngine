@@ -1,6 +1,9 @@
 @echo off
 setlocal enabledelayedexpansion
 
+REM Runs in its own folder, the repository, whatever folder it is started from.
+pushd "%~dp0"
+
 REM =============================================================================
 REM Opaax Engine — Build Script
 REM
@@ -19,6 +22,9 @@ REM   build.bat test              -> build OpaaxTests (debug-editor) + run CTest
 REM   build.bat bench             -> build OpaaxTests (RELEASE) + run the perf suite
 REM                                  (doctest suite "perf", skipped everywhere else). Soft gate.
 REM   build.bat clean             -> delete all build directories
+REM   build.bat export <Game> <Dir>
+REM                               -> the game's release build, its content and the engine's,
+REM                                  installed into <Dir>: a folder that runs on another machine
 REM
 REM EXIT CODE / OUTPUT CONTRACT (read this — it is load-bearing):
 REM   * The script ALWAYS ends with exactly one marker line:
@@ -51,6 +57,7 @@ REM --- dispatch non-preset modes ----------------------------------------------
 if "%PRESET%"=="test"  goto runtests
 if "%PRESET%"=="fast"  goto fastbuild
 if "%PRESET%"=="bench" goto benchmark
+if "%PRESET%"=="export" goto exportgame
 
 REM --- run: same build path, then launch the preset's app ----------------------
 if not "%PRESET%"=="run" goto validate
@@ -77,6 +84,7 @@ echo   fast [target]     Incremental single-target build (debug-editor, no recon
 echo   test              Build OpaaxTests (debug-editor) + run CTest
 echo   bench             Build OpaaxTests (release) + run the perf suite (soft gate)
 echo   clean             Delete all build directories
+echo   export Game Dir   Export a game (release build + content) into a folder
 goto fail
 
 :valid
@@ -164,6 +172,37 @@ if errorlevel 1 (
 )
 goto ok
 
+REM --- export: a game's release build and content, installed into a folder ------
+REM The same steps as the editor's Export Game (File menu); see CMake/OpaaxGame.cmake.
+:exportgame
+set "GAME=%~2"
+set "DEST=%~3"
+if "%GAME%"=="" goto exportusage
+if "%DEST%"=="" goto exportusage
+echo.
+echo [Opaax] Exporting %GAME% into "%DEST%"...
+cmake --preset release
+if errorlevel 1 (
+    echo [ERROR] CMake configure failed.
+    goto fail
+)
+cmake --build build/release --config Release --target %GAME%
+if errorlevel 1 (
+    echo [ERROR] Build failed.
+    goto fail
+)
+cmake --install build/release --config Release --component %GAME% --prefix "%DEST%"
+if errorlevel 1 (
+    echo [ERROR] Install failed.
+    goto fail
+)
+echo [Opaax] Exported %GAME% into "%DEST%"
+goto ok
+
+:exportusage
+echo Usage: build.bat export ^<Game^> ^<Destination folder^>
+goto fail
+
 REM --- bench: perf suite in RELEASE (representative numbers) -------------------
 REM The perf cases are a doctest suite "perf" marked skip(), so they DON'T run in `test`/CI.
 REM Here we build OpaaxTests release and run ONLY that suite with --no-skip. doctest returns
@@ -232,6 +271,7 @@ set "BUILD_RC=1"
 goto end
 
 :end
+popd
 REM Skip the interactive pause for CI / agent / redirected-stdin runs.
 if not defined OPAAX_NO_PAUSE if not defined CI pause
 REM Carry the real result past endlocal (expanded before endlocal runs).

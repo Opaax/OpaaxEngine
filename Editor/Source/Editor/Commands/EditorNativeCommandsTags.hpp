@@ -9,6 +9,9 @@ namespace Opaax::Editor::Tags
     //Miscs
     inline const OpaaxTag EDITOR_COMMAND_QUIT = OpaaxTag("Editor.Command.Quit");
 
+    // Export
+    inline const OpaaxTag EDITOR_COMMAND_EXPORT_GAME = OpaaxTag("Editor.Command.ExportGame");
+
     //Window — the title bar buttons. Close is EDITOR_COMMAND_QUIT (the X and File/Exit are the same).
     inline const OpaaxTag EDITOR_COMMAND_MINIMIZE_WINDOW        = OpaaxTag("Editor.Command.MinimizeWindow");
     inline const OpaaxTag EDITOR_COMMAND_TOGGLE_MAXIMIZE_WINDOW = OpaaxTag("Editor.Command.ToggleMaximizeWindow");
@@ -46,17 +49,22 @@ namespace Opaax::Editor::Tags
 
     //Level
     inline const OpaaxTag EDITOR_COMMAND_NEW_LEVEL      = OpaaxTag("Editor.Command.NewLevel");
+    inline const OpaaxTag EDITOR_COMMAND_NEW_LEVEL_AT   = OpaaxTag("Editor.Command.NewLevelAt");
     inline const OpaaxTag EDITOR_COMMAND_OPEN_LEVEL     = OpaaxTag("Editor.Command.OpenLevel");
     inline const OpaaxTag EDITOR_COMMAND_OPEN_LEVEL_AT  = OpaaxTag("Editor.Command.OpenLevelAt");
     inline const OpaaxTag EDITOR_COMMAND_SAVE_LEVEL     = OpaaxTag("Editor.Command.SaveLevel");
-    inline const OpaaxTag EDITOR_COMMAND_ADD_MAP_TO_LEVEL = OpaaxTag("Editor.Command.AddMapToLevel");
+    inline const OpaaxTag EDITOR_COMMAND_RESAVE_LEVEL   = OpaaxTag("Editor.Command.ResaveLevel");
+    inline const OpaaxTag EDITOR_COMMAND_ADD_MAP_TO_LEVEL    = OpaaxTag("Editor.Command.AddMapToLevel");
+    inline const OpaaxTag EDITOR_COMMAND_ADD_MAP_TO_LEVEL_AT = OpaaxTag("Editor.Command.AddMapToLevelAt");
 
     //Map
-    inline const OpaaxTag EDITOR_COMMAND_NEW_MAP     = OpaaxTag("Editor.Command.NewMap");
-    inline const OpaaxTag EDITOR_COMMAND_OPEN_MAP    = OpaaxTag("Editor.Command.OpenMap");
-    inline const OpaaxTag EDITOR_COMMAND_OPEN_MAP_AT = OpaaxTag("Editor.Command.OpenMapAt");
-    inline const OpaaxTag EDITOR_COMMAND_SAVE_MAP    = OpaaxTag("Editor.Command.SaveMap");
-    inline const OpaaxTag EDITOR_COMMAND_SAVE_MAP_AS = OpaaxTag("Editor.Command.SaveMapAs");
+    inline const OpaaxTag EDITOR_COMMAND_NEW_MAP        = OpaaxTag("Editor.Command.NewMap");
+    inline const OpaaxTag EDITOR_COMMAND_NEW_MAP_AT     = OpaaxTag("Editor.Command.NewMapAt");
+    inline const OpaaxTag EDITOR_COMMAND_OPEN_MAP       = OpaaxTag("Editor.Command.OpenMap");
+    inline const OpaaxTag EDITOR_COMMAND_OPEN_MAP_AT    = OpaaxTag("Editor.Command.OpenMapAt");
+    inline const OpaaxTag EDITOR_COMMAND_SAVE_MAP       = OpaaxTag("Editor.Command.SaveMap");
+    inline const OpaaxTag EDITOR_COMMAND_SAVE_MAP_AS    = OpaaxTag("Editor.Command.SaveMapAs");
+    inline const OpaaxTag EDITOR_COMMAND_SAVE_MAP_AS_AT = OpaaxTag("Editor.Command.SaveMapAsAt");
 
     //Prefab
     inline const OpaaxTag EDITOR_COMMAND_INSTANTIATE_PREFAB_AT =
@@ -71,6 +79,8 @@ namespace Opaax::Editor::Tags
         OpaaxTag("Editor.Command.SavePrefab");
     inline const OpaaxTag EDITOR_COMMAND_SAVE_PREFAB_AS_VARIANT =
         OpaaxTag("Editor.Command.SavePrefabAsVariant");
+    inline const OpaaxTag EDITOR_COMMAND_SAVE_PREFAB_AS_VARIANT_AT =
+        OpaaxTag("Editor.Command.SavePrefabAsVariantAt");
     inline const OpaaxTag EDITOR_COMMAND_UNDO_PREFAB =
         OpaaxTag("Editor.Command.UndoPrefab");
     inline const OpaaxTag EDITOR_COMMAND_REDO_PREFAB =
@@ -88,6 +98,7 @@ namespace Opaax::Editor::Tags
 
     //UI
     inline const OpaaxTag EDITOR_COMMAND_NEW_UI           = OpaaxTag("Editor.Command.NewUI");
+    inline const OpaaxTag EDITOR_COMMAND_NEW_UI_AT        = OpaaxTag("Editor.Command.NewUIAt");
     inline const OpaaxTag EDITOR_COMMAND_SAVE_UI          = OpaaxTag("Editor.Command.SaveUI");
     inline const OpaaxTag EDITOR_COMMAND_DELETE_UI_WIDGET = OpaaxTag("Editor.Command.DeleteUIWidget");
 

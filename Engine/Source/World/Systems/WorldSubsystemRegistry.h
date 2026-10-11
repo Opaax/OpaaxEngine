@@ -20,7 +20,7 @@ namespace Opaax
     // =============================================================================
     // IWorldSubsystemEntry — type-erased entry for one registered world subsystem type.
     // =============================================================================
-    class OPAAX_API IWorldSubsystemEntry
+    class IWorldSubsystemEntry
     {
     public:
         virtual ~IWorldSubsystemEntry() = default;
@@ -41,8 +41,8 @@ namespace Opaax
     };
 
     // =============================================================================
-    // TWorldSubsystemEntry<T> — concrete entry for T. Header-only (no OPAAX_API), so game
-    //   modules can register their own types.
+    // TWorldSubsystemEntry<T> — concrete entry for T. Header-only, so game modules can
+    //   register their own types.
     // =============================================================================
     template<typename T>
     requires std::is_base_of_v<IWorldSubsystem, T>
@@ -83,7 +83,7 @@ namespace Opaax
     //   Each new world creates the ones whose ShouldCreate accepts it.
     //   Sealed at the first CreateWorld.
     // =============================================================================
-    class OPAAX_API WorldSubsystemRegistry
+    class WorldSubsystemRegistry
     {
         // =========================================================================
         // CTORS - DTORS
@@ -95,7 +95,7 @@ namespace Opaax
         // =========================================================================
         // Copy - Move Delete
         // =========================================================================
-        // Required by OPAAX_API: the implicit copy would not compile (C2280).
+        // Owns its entries: not copyable.
         WorldSubsystemRegistry(const WorldSubsystemRegistry&)            = delete;
         WorldSubsystemRegistry& operator=(const WorldSubsystemRegistry&) = delete;
         WorldSubsystemRegistry(WorldSubsystemRegistry&&)                 = delete;
@@ -115,7 +115,7 @@ namespace Opaax
         requires std::is_base_of_v<IWorldSubsystem, T>
         bool Register(OpaaxStringID InName)
         {
-            // Built here (T is known) but stored by an out-of-line function in the DLL.
+            // Built here (T is known), stored by an out-of-line function.
             return AddEntry(MakeUnique<TWorldSubsystemEntry<T>>(InName), InName);
         }
 

@@ -1,0 +1,184 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldStatic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 20.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 900.0,
+                        "y": 40.0
+                    }
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3499999940395355,
+                        "y": 0.30000001192092896,
+                        "z": 0.25
+                    },
+                    "Size": {
+                        "x": 900.0,
+                        "y": 40.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Static",
+                    "bFixedRotation": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": -200.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "2f5368ec1b09524fbc2ac019d9e27a9e",
+            "name": "Floor",
+            "ownerMap": "Movement"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "34e259af40625b80a6bf544f13a1d9c1",
+            "name": "Camera",
+            "ownerMap": "Movement"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldStatic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 20.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 40.0,
+                        "y": 400.0
+                    }
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.5,
+                        "y": 0.5,
+                        "z": 0.550000011920929
+                    },
+                    "Size": {
+                        "x": 40.0,
+                        "y": 400.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Static",
+                    "bFixedRotation": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 300.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "a18a185f787a5111956f4a5f0e8205e2",
+            "name": "Wall",
+            "ownerMap": "Movement"
+        },
+        {
+            "components": {
+                "Mover": {
+                    "Channel": "Pawn",
+                    "Height": 100.0,
+                    "ModeName": "",
+                    "Mover": "Movers/Walker.opaaxmover",
+                    "Radius": 25.0
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.30000001192092896,
+                        "y": 0.699999988079071,
+                        "z": 1.0
+                    },
+                    "Size": {
+                        "x": 50.0,
+                        "y": 100.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -200.0,
+                        "y": -100.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                },
+                "WalkerProbe": {
+                    "FlyAt": 2.799999952316284,
+                    "FlyRise": 0.0,
+                    "JumpAt": 2.0,
+                    "JumpHeight": 0.0,
+                    "PeakSpeed": 0.0,
+                    "RestY": 0.0,
+                    "StoppedX": 0.0,
+                    "WalkAt": 0.5,
+                    "bRested": false
+                }
+            },
+            "guid": "dc0944e65b71598cb024a4d794ec582d",
+            "name": "Walker",
+            "ownerMap": "Movement"
+        }
+    ],
+    "mapId": "Movement",
+    "version": 4
+}

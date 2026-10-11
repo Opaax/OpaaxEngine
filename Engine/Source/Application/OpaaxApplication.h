@@ -10,6 +10,8 @@ namespace Opaax
 {
     // Forward-declared to keep World/ and entt out of this header.
     class ModuleRegistrar;
+    class AutomationRunner;
+    class AutomationSession;
 
     class IEngine;
     class IConfigSystem;
@@ -24,7 +26,7 @@ namespace Opaax
     // OpaaxApplication — base application host. Owns the AppServiceLocator and boots
     // the app-level services (Platform, Paths, ...) in dependency order.
     // =============================================================================
-    class OPAAX_API OpaaxApplication
+    class OpaaxApplication
     {
         // =============================================================================
         // CTORS - DTORS
@@ -149,6 +151,21 @@ namespace Opaax
         virtual void PostEngineStartup(){}
         
         void EngineTeardown();
+
+    protected:
+        /** Gameplay asked to quit (QuitGameRequested). Closes the main window; the editor stops Play. */
+        virtual void OnQuitGameRequested();
+
+        /**
+         * The app is driven from outside (--exec, --automation): the engine's commands are in
+         * InRunner, child apps add theirs (the editor's).
+         */
+        virtual void OnAutomationStarted(AutomationRunner& /*InRunner*/) {}
+
+        /** A script drives the app: the window's own input is ignored (AutomationSession::OwnsInput). */
+        bool IsInputScripted() const noexcept;
+
+    public:
         
         // Engine
         // =============================================================================
@@ -208,12 +225,19 @@ namespace Opaax
         IWindowManager&     WindowManager();
         IEngine&            Engine();
 
+        /** The process exit code main() returns. 0 unless something set it. */
+        int  GetExitCode() const noexcept { return m_ExitCode; }
+
+        /** Sets the process exit code (e.g. a failed automated test run). */
+        void SetExitCode(int InExitCode) noexcept { m_ExitCode = InExitCode; }
+
         // =============================================================================
         // Members
         // =============================================================================
     private:
-        int    m_Argc = 0;
-        char** m_Argv = nullptr;
+        int    m_Argc     = 0;
+        char** m_Argv     = nullptr;
+        int    m_ExitCode = 0;
         
         bool bHasBootstrap      = false;
         bool bHasInitialized    = false;
@@ -221,6 +245,9 @@ namespace Opaax
         bool bHasShutdown       = false;
         
         TUniquePtr<ModuleRegistrar> m_ModuleRegistrar;
+
+        /** Set while the app is driven from outside. */
+        TUniquePtr<AutomationSession> m_Automation;
 
         static AppServiceLocator m_Services;
     };

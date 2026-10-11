@@ -9,14 +9,14 @@ namespace Opaax
     /**
      * OpenGL ICommandBuffer. Every call runs immediately (no record/submit).
      */
-    class OPAAX_API OpenGLCommandBuffer final : public ICommandBuffer
+    class OpenGLCommandBuffer final : public ICommandBuffer
     {
         // =============================================================================
         // CTOR - DTOR
         // =============================================================================
     public:
-        OpenGLCommandBuffer()           = default;
-        ~OpenGLCommandBuffer() override = default;
+        OpenGLCommandBuffer() = default;
+        ~OpenGLCommandBuffer() override;
 
         // =============================================================================
         // Override
@@ -33,6 +33,7 @@ namespace Opaax
         void BindVertexArray(IVertexArray& InVertexArray) override;
 
         void DrawIndexed(Uint32 InIndexCount) override;
+        void DrawFullscreen() override;
         //~End ICommandBuffer interface
 
         // =============================================================================
@@ -40,5 +41,8 @@ namespace Opaax
         // =============================================================================
     private:
         IRenderTarget* m_CurrentTarget = nullptr;   // set between BeginRenderPass and EndRenderPass
+
+        /** A core profile draws nothing without a vertex array: an empty one, for DrawFullscreen. */
+        Uint32 m_EmptyVertexArray = 0;
     };
 }

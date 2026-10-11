@@ -7,7 +7,7 @@
 //         CMakeLists.txt                <Name>Module (static) + <Name>.exe + <Name>Editor.exe
 //         Assets/                       project content (layout derived by convention — IPaths)
 //         Configs/                      Engine.config / Renderer.config
-//         Source/<Name>/                the game module (IRuntimeModule) — linked by BOTH exes
+//         Source/<Name>/                the game module (types register themselves) — linked by BOTH exes
 //         Source/<Name>Runtime/         runtime host (<Name>App : OpaaxApplication)
 //         Editor/Source/<Name>Editor/   editor host (<Name>EditorApp : EditorApplication
 //                                       + <Name>EditorModule : IEditorModule)
@@ -133,7 +133,8 @@ namespace
             if (lLine.find(lNeedle, lStart) != std::string::npos) { return false; } // already registered
         }
 
-        std::ofstream lAppend(InRootCMake, std::ios::app);
+        // Binary: the file keeps its own line endings on every platform.
+        std::ofstream lAppend(InRootCMake, std::ios::app | std::ios::binary);
         lAppend << "\nadd_subdirectory(" << InName << ") # added by OpaaxCreator\n";
         return true;
     }
@@ -243,9 +244,9 @@ int main(int argc, char* argv[])
     std::cout << (lAdded
         ? "[Opaax] Registered in CMakeLists.txt: add_subdirectory(" + lName + ")\n"
         : "[Opaax] CMakeLists.txt already registers this project — left as is.\n");
-    std::cout << "\nNext steps:\n"
-              << "  build.bat                ->  " << lName << "Editor.exe  (Debug + Editor)\n"
-              << "  build.bat release        ->  " << lName << ".exe        (runtime only)\n"
+    std::cout << "\nNext steps (build.bat on Windows, ./build.sh on Linux and macOS):\n"
+              << "  build                    ->  " << lName << "Editor  (Debug + Editor)\n"
+              << "  build release            ->  " << lName << "        (runtime only)\n"
               << "  Game code    : " << lName << "/Source/" << lName << "/\n"
               << "  Editor code  : " << lName << "/Editor/Source/" << lName << "Editor/" << std::endl;
     return 0;

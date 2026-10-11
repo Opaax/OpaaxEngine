@@ -32,7 +32,7 @@ namespace Opaax
     //
     //   Input bubbles (UIEvents.h). The base lets events through.
     // =============================================================================
-    class OPAAX_API UIWidget
+    class UIWidget
     {
         friend class UICanvas;
 

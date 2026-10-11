@@ -2,12 +2,13 @@
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IConfigSystem.h"
+#include "Editor/Automation/EditorAutomationCommands.h"
 #include "Application/Services/IEngine.h"
 #include "Core/Log/Logger.h"
 #include "Application/Services/IProjectManager.h"
 #include "Platform/IFileSystem.h"
 #include "Platform/IPlatform.h"
-#include "Application/Services/Window/IWindowManager.h"
+#include "Application/Services/IWindowManager.h"
 #include "Core/Events/Event.h"
 #include "Editor//Application/Services/EditorPaths.h"
 #include "Editor/Commands/EditorNativeCommands.h"
@@ -31,7 +32,7 @@
 #include "Editor/Panels/AnimationLibraryPanel.h"
 #include "Editor/Panels/MoveModePanel.h"
 #include "Editor/Panels/DataAssetPanel.h"
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetResource.h"
+#include "Resources/DataAsset/DataAssetResource.h"
 #include "Editor/Panels/InputActionPanel.h"
 #include "Editor/Panels/InputMappingContextPanel.h"
 #include "Editor/Panels/MoverPanel.h"
@@ -47,7 +48,7 @@
 #include "UI/Widgets/UISafeArea.h"
 #include "UI/Widgets/UIStack.h"
 #include "UI/Widgets/UIText.h"
-#include "Engine/Subsystems/Resources/Types/UI/UICanvasResource.h"
+#include "UI/UICanvasResource.h"
 #include "Editor/Panels/PrefabPanel.h"
 #include "Renderer/RenderTarget.hpp"
 #include "Editor/Panels/SpriteSheetPanel.h"
@@ -59,22 +60,22 @@
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Renderer/Config/Config_Renderer.h"
-#include "Engine/Subsystems/Input/InputEvents.h"
+#include "Input/InputEvents.h"
 #include "World/Serialization/LevelResource.hpp"
 #include "World/Serialization/MapResource.hpp"
 #include "World/Prefab/PrefabResource.hpp"
 #include "Editor/Operation/ResourceOperations.h"
-#include "Engine/Subsystems/Resources/ResourceTypeID.hpp"
-#include "Engine/Subsystems/Resources/Types/Texture/TextureResource.h"
-#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetResource.h"
-#include "Engine/Subsystems/Resources/Types/Animation/AnimationClipResource.h"
-#include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryResource.h"
-#include "Engine/Subsystems/Resources/Types/Mover/MoveModeResource.h"
-#include "Engine/Subsystems/Resources/Types/Mover/MoverResource.h"
-#include "Engine/Subsystems/Resources/Types/Input/InputActionResource.h"
-#include "Engine/Subsystems/Resources/Types/Input/InputMappingContextResource.h"
-#include "Engine/Subsystems/Resources/Types/Font/FontFaceResource.h"
-#include "Engine/Subsystems/Resources/Types/Font/FontFamilyResource.h"
+#include "Resources/ResourceTypeID.hpp"
+#include "Renderer/Textures/TextureResource.h"
+#include "Renderer/Textures/SpriteSheetResource.h"
+#include "Animation/AnimationClipResource.h"
+#include "Animation/AnimationLibraryResource.h"
+#include "Movement/Assets/MoveModeResource.h"
+#include "Movement/Assets/MoverResource.h"
+#include "Input/Assets/InputActionResource.h"
+#include "Input/Assets/InputMappingContextResource.h"
+#include "Renderer/Text/FontFaceResource.h"
+#include "Renderer/Text/FontFamilyResource.h"
 #include "Editor/Resources/ResourcePreviewDrawers.h"   // what a preview draws (no ImGui here)
 #include "Editor/Properties/NativeComponentDrawers.h"
 #include "Editor/Properties/WidgetPropertyVisitor.h"
@@ -82,15 +83,15 @@
 #include "World/World.h"
 #include "World/WorldManager.h"
 #include "World/Entity/Entity.h"
-#include "World/Components/CameraComponent.h"      // engine components
-#include "World/Components/ColliderComponent.h"    // drawn by default
-#include "World/Components/QuadComponent.h"
-#include "World/Components/MoverComponent.h"
+#include "Renderer/Camera/CameraComponent.h"      // engine components
+#include "Physics/Components/ColliderComponent.h"    // drawn by default
+#include "Renderer/Components/QuadComponent.h"
+#include "Movement/MoverComponent.h"
 #include "World/Components/PrefabInstanceComponent.h"
-#include "World/Components/RigidbodyComponent.h"
-#include "World/Components/SpriteAnimatorComponent.h"
-#include "World/Components/TextComponent.h"
-#include "World/Components/SpriteComponent.h"
+#include "Physics/Components/RigidbodyComponent.h"
+#include "Animation/SpriteAnimatorComponent.h"
+#include "Renderer/Components/TextComponent.h"
+#include "Renderer/Components/SpriteComponent.h"
 #include "World/Components/TransformComponent.h"
 
 using namespace Opaax;
@@ -116,7 +117,7 @@ namespace Opaax::Editor
     // references it). The dialog backend is picked separately (OS dialogs, not ImGui).
     EditorService::EditorService()
         : m_Gui(MakeUnique<ImGuiEditorGui>())
-        , m_Dialogs(MakeUnique<TinyFdEditorDialogs>())
+        , m_Dialogs(MakeUnique<GuardedEditorDialogs>(MakeUnique<TinyFdEditorDialogs>()))
     {
     }
 
@@ -169,6 +170,7 @@ namespace Opaax::Editor
         m_InputActionDocument = MakeUnique<EditorInputActionDocument>();
         m_InputMapDocument    = MakeUnique<EditorInputMappingContextDocument>();
         m_DataAssetDocument   = MakeUnique<EditorDataAssetDocument>();
+        m_Export              = MakeUnique<GameExport>();
     }
 
     void EditorService::ClearEditorSystems()
@@ -181,6 +183,9 @@ namespace Opaax::Editor
         m_Undo.reset();
         m_InputRoute.reset();
         m_PIE.reset();
+
+        // Waits for an export still running.
+        m_Export.reset();
     }
 
     void EditorService::CreateEditorContext(Window* InWindow, IEngine& InEngine)
@@ -222,7 +227,8 @@ namespace Opaax::Editor
             OpaaxApplication::GetAppService<IPlatform>().GetFileSystem(),
             OpaaxApplication::GetAppService<IConfigSystem>(),
             *InWindow,
-            m_EditorPaths
+            m_EditorPaths,
+            *m_Export
         });
 
         // After the context, because it holds one. The reconciler handles prefab instances (entities,
@@ -288,8 +294,12 @@ namespace Opaax::Editor
         lFile.AddSeparator();
         lFile.AddCommand("New UI...", Tags::EDITOR_COMMAND_NEW_UI);
         lFile.AddSeparator();
+        lFile.AddCommand("New Level...", Tags::EDITOR_COMMAND_NEW_LEVEL).SetEnabled(IsEditing);
         lFile.AddCommand("Open Level...", Tags::EDITOR_COMMAND_OPEN_LEVEL);
         lFile.AddCommand("Save Level", Tags::EDITOR_COMMAND_SAVE_LEVEL).SetEnabled(IsEditing);
+        lFile.AddCommand("Resave Level (All Maps)", Tags::EDITOR_COMMAND_RESAVE_LEVEL).SetEnabled(IsEditing);
+        lFile.AddSeparator();
+        lFile.AddCommand("Export Game...", Tags::EDITOR_COMMAND_EXPORT_GAME);
         lFile.AddSeparator();
         lFile.AddCommand("Exit", Tags::EDITOR_COMMAND_QUIT);
 
@@ -403,6 +413,7 @@ namespace Opaax::Editor
         lCommands.Register<GizmoScaleCommand>(Tags::EDITOR_COMMAND_GIZMO_SCALE);
 
         lCommands.Register<NewMapCommand>(Tags::EDITOR_COMMAND_NEW_MAP);
+        lCommands.Register<NewMapAtCommand>(Tags::EDITOR_COMMAND_NEW_MAP_AT);
         lCommands.Register<OpenMapCommand>(Tags::EDITOR_COMMAND_OPEN_MAP);
         lCommands.Register<OpenMapAtCommand>(Tags::EDITOR_COMMAND_OPEN_MAP_AT);
         lCommands.Register<InstantiatePrefabAtCommand>(Tags::EDITOR_COMMAND_INSTANTIATE_PREFAB_AT);
@@ -411,15 +422,20 @@ namespace Opaax::Editor
         lCommands.Register<OpenPrefabAtCommand>(Tags::EDITOR_COMMAND_OPEN_PREFAB_AT);
         lCommands.Register<SavePrefabCommand>(Tags::EDITOR_COMMAND_SAVE_PREFAB);
         lCommands.Register<SavePrefabAsVariantCommand>(Tags::EDITOR_COMMAND_SAVE_PREFAB_AS_VARIANT);
+        lCommands.Register<SavePrefabAsVariantAtCommand>(Tags::EDITOR_COMMAND_SAVE_PREFAB_AS_VARIANT_AT);
         lCommands.Register<UndoPrefabCommand>(Tags::EDITOR_COMMAND_UNDO_PREFAB);
         lCommands.Register<RedoPrefabCommand>(Tags::EDITOR_COMMAND_REDO_PREFAB);
         lCommands.Register<DeletePrefabSelectionCommand>(Tags::EDITOR_COMMAND_DELETE_PREFAB_SELECTION);
         lCommands.Register<SaveMapCommand>(Tags::EDITOR_COMMAND_SAVE_MAP);
         lCommands.Register<SaveMapAsCommand>(Tags::EDITOR_COMMAND_SAVE_MAP_AS);
+        lCommands.Register<SaveMapAsAtCommand>(Tags::EDITOR_COMMAND_SAVE_MAP_AS_AT);
 
+        lCommands.Register<NewLevelCommand>(Tags::EDITOR_COMMAND_NEW_LEVEL);
+        lCommands.Register<NewLevelAtCommand>(Tags::EDITOR_COMMAND_NEW_LEVEL_AT);
         lCommands.Register<OpenLevelCommand>(Tags::EDITOR_COMMAND_OPEN_LEVEL);
         lCommands.Register<OpenLevelAtCommand>(Tags::EDITOR_COMMAND_OPEN_LEVEL_AT);
         lCommands.Register<SaveLevelCommand>(Tags::EDITOR_COMMAND_SAVE_LEVEL);
+        lCommands.Register<ResaveLevelCommand>(Tags::EDITOR_COMMAND_RESAVE_LEVEL);
         lCommands.Register<SaveSheetCommand>(Tags::EDITOR_COMMAND_SAVE_SHEET);
         lCommands.Register<SaveClipCommand>(Tags::EDITOR_COMMAND_SAVE_CLIP);
         lCommands.Register<SaveLibraryCommand>(Tags::EDITOR_COMMAND_SAVE_LIBRARY);
@@ -432,9 +448,11 @@ namespace Opaax::Editor
 
         // A document type gets its own New, like maps and levels.
         lCommands.Register<NewUICommand>(Tags::EDITOR_COMMAND_NEW_UI);
+        lCommands.Register<NewUIAtCommand>(Tags::EDITOR_COMMAND_NEW_UI_AT);
         lCommands.Register<SaveUICommand>(Tags::EDITOR_COMMAND_SAVE_UI);
         lCommands.Register<DeleteUIWidgetCommand>(Tags::EDITOR_COMMAND_DELETE_UI_WIDGET);
         lCommands.Register<AddMapToLevelCommand>(Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL);
+        lCommands.Register<AddMapToLevelAtCommand>(Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL_AT);
 
         lCommands.Register<TransformSelectedCommand>(Tags::EDITOR_COMMAND_TRANSFORM_SELECTED);
 
@@ -444,6 +462,8 @@ namespace Opaax::Editor
 
         lCommands.Register<UndoCommand>(Tags::EDITOR_COMMAND_UNDO);
         lCommands.Register<RedoCommand>(Tags::EDITOR_COMMAND_REDO);
+
+        lCommands.Register<ExportGameCommand>(Tags::EDITOR_COMMAND_EXPORT_GAME);
     }
 
     void EditorService::RegisterNativeViewportTools()
@@ -755,14 +775,12 @@ namespace Opaax::Editor
 
     void EditorService::ClearWorldManager()
     {
+        // None bound when the editor did not start: nothing to undo.
         if (m_WorldMgr != nullptr)
         {
             UnbindFromWorldManagerDelegates();
             
             m_WorldMgr = nullptr;
-        }else
-        {
-            //TODO logs.
         }
     }
 
@@ -971,6 +989,29 @@ namespace Opaax::Editor
     // =============================================================================
     // =============================================================================
     
+    void EditorService::RegisterAutomation(AutomationRunner& InRunner, const bool bInOwnsInput)
+    {
+        // No context: the editor did not start, so there is nothing to drive.
+        if (m_Context == nullptr)
+        {
+            return;
+        }
+        EditorAutomation::Register(InRunner, *m_Context, *m_Dialogs);
+
+        if (m_InputRoute != nullptr)
+        {
+            m_InputRoute->SetScripted(bInOwnsInput);
+        }
+    }
+
+    void EditorService::StopPlay()
+    {
+        if (m_PIE != nullptr && !m_PIE->IsEdit())
+        {
+            m_PIE->Stop();
+        }
+    }
+
     void EditorService::RegisterExtensions(const TFunction<void(EditorExtensionRegistrar&)>& InCollect)
     {
         RegisterNativePanels();
@@ -1026,17 +1067,16 @@ namespace Opaax::Editor
         // EngineConfigData alone.
         lWindow->SetDecorated(false);
 
-        // No gui: the editor makes no sense without UI.
+        // No gui: the editor makes no sense without UI. The gui logged why.
         if (!InitGUI(lWindow))
         {
-            //TODO Log
             return;
         }
         
         // Many systems need the world: stop here.
         if (!SetWorldManagerFromEngine(lEngine))
         {
-            //TODO Logs
+            OPAAX_LOG(LogEditorService, Error, "The engine has no world manager — editor not created.");
             return;
         }
         

@@ -9,6 +9,8 @@
 #include "Editor/Undo/EntityUndoables.h"      // EntityDelete
 #include "World/Serialization/MapSerializer.h"   // CaptureEntities
 #include "Editor/Operation/EntityOps.h"
+#include "Editor/Operation/ExportOperations.h"
+#include "Editor/Export/GameExport.h"
 #include "Editor/Operation/LevelOperations.h"
 #include "Editor/Operation/SheetOperations.h"
 #include "Editor/Operation/ClipOperations.h"
@@ -27,7 +29,6 @@
 #include "Engine/Registries/EngineRegistries.h"
 #include "UI/UICanvasFile.h"
 #include "UI/UIWidgetRegistry.h"
-#include "UI/Widgets/UIPanel.h"
 #include "Editor/EditorSpriteSheetDocument.h"
 #include "Editor/Resources/Types/Animation/EditorAnimationClipDocument.h"
 #include "Editor/Resources/Types/Animation/EditorAnimationLibraryDocument.h"
@@ -36,6 +37,7 @@
 #include "Editor/Resources/Types/Mover/EditorMoveModeDocument.h"
 #include "Editor/Resources/Types/Mover/EditorMoverDocument.h"
 #include "Editor/Operation/MapOperations.h"
+#include "Editor/Operation/NewLevelPlan.hpp"
 #include "Editor/PIE/PlayInEditor.h"
 #include "Editor/Panels/EditorPanels.h"
 #include "Editor/Panels/PrefabPanel.h"
@@ -46,7 +48,7 @@
 #include "Core/Log/Logger.h"
 #include "Application/Services/IPaths.h"
 #include "Platform/IFileSystem.h"
-#include "Window/Window.h"
+#include "Platform/Window/Window.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "World/Entity/Entity.h"   // EntityOps::Create returns one
 #include "World/Entity/EntityHierarchy.h"   // Delete takes the subtree
@@ -54,6 +56,7 @@
 #include "World/World.h"
 #include "World/WorldManager.h"
 #include "World/Components/ComponentRegistry.h"
+#include "World/Serialization/LevelFile.h"
 #include "World/Serialization/MapData.h"
 #include "World/Serialization/MapFile.h"
 
@@ -68,9 +71,23 @@ namespace
     using namespace Opaax::Editor;
 
     /**
+     * Runs InAction, which replaces the world: at once when bInDiscardEdits, else once nothing unsaved is
+     * at risk or the user agreed to lose it.
+     */
+    void ReplacingWorld(EditorContext& InContext, const bool bInDiscardEdits, TFunction<void()> InAction)
+    {
+        if (bInDiscardEdits)
+        {
+            InAction();
+            return;
+        }
+        LevelOps::ConfirmDiscardingEdits(InContext, Move(InAction));
+    }
+
+    /**
      * A map that belongs to no open level: a new world with an empty Level holding only this map.
      */
-    void OpenStandaloneMap(EditorContext& InContext, const OpaaxString& InAbsPath)
+    void OpenStandaloneMap(EditorContext& InContext, const OpaaxString& InAbsPath, const bool bInDiscardEdits)
     {
         const OpaaxString lAssetRel = InContext.Paths.AbsoluteToAsset(InAbsPath);
         if (lAssetRel.IsEmpty())
@@ -81,7 +98,7 @@ namespace
             return;
         }
 
-        LevelOps::ConfirmDiscardingEdits(InContext, [&InContext, lAssetRel]
+        ReplacingWorld(InContext, bInDiscardEdits, [&InContext, lAssetRel]
         {
             World* const lWorld = InContext.Engine.OpenLevel(WorldSpec{OpaaxString(), EWorldMode::Edit});
             if (lWorld == nullptr || lWorld->GetLevel() == nullptr)
@@ -200,6 +217,24 @@ namespace Opaax::Editor
     // App
     // =============================================================================
 
+    void ExportGameCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        if (InContext.Export.IsRunning())
+        {
+            OPAAX_LOG(LogGameExport, Warn, "An export is already running (to '{}')", InContext.Export.GetDestination());
+            return;
+        }
+
+        FileDialogRequest lRequest;
+        lRequest.Title       = "Export Game To";
+        lRequest.DefaultPath = InContext.Paths.WorkspaceRoot() + OpaaxString("/");
+
+        InContext.Dialogs.PickFolder(lRequest, [&InContext](const OpaaxString& InFolder)
+        {
+            ExportOps::Start(InContext, std::string(InFolder.CStr()));
+        });
+    }
+
     void QuitCommand::Execute(EditorContext& InContext, const Params&)
     {
         OPAAX_LOG(LogEditorCommands, Info, "Exit requested");
@@ -264,10 +299,20 @@ namespace Opaax::Editor
         InContext.Dialogs.SaveFile(
             MakeFileRequest("New Map", InContext.Paths.AssetToAbsolute(OpaaxString("Maps/NewMap.opaaxmap")),
                             "*.opaaxmap", "Opaax Map"),
-            [&InContext, lLevel](const OpaaxString& InPicked)
+            [&InContext](const OpaaxString& InPicked)
             {
-                CreateMapAt(InContext, *lLevel, InPicked);
+                NewMapAtCommand{}.Execute(InContext, MapPathParams{InPicked});
             });
+    }
+
+    void NewMapAtCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        if (!MapOps::CanEdit(InContext, "New Map")) { return; }
+
+        Level* const lLevel = MapOps::ActiveLevel(InContext);
+        if (lLevel == nullptr) { return; }
+
+        CreateMapAt(InContext, *lLevel, InParams.AbsPath);
     }
 
     void OpenMapCommand::Execute(EditorContext& InContext, const Params&)
@@ -306,7 +351,7 @@ namespace Opaax::Editor
             return;
         }
 
-        OpenStandaloneMap(InContext, InParams.AbsPath);
+        OpenStandaloneMap(InContext, InParams.AbsPath, InParams.bDiscardEdits);
     }
 
     // =========================================================================
@@ -462,8 +507,19 @@ namespace Opaax::Editor
             MakeFileRequest("Save As Variant", lSuggested, "*.opaaxprefab", "Opaax Prefab"),
             [&InContext](const OpaaxString& InPicked)
             {
-                InContext.PrefabDocument.SaveAsVariant(InContext, InPicked);
+                SavePrefabAsVariantAtCommand{}.Execute(InContext, PrefabPathParams{InPicked});
             });
+    }
+
+    void SavePrefabAsVariantAtCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        if (!InContext.PrefabDocument.IsOpen())
+        {
+            OPAAX_LOG(LogEditorCommands, Warn, "Save As Variant ignored — no prefab is open");
+            return;
+        }
+
+        InContext.PrefabDocument.SaveAsVariant(InContext, InParams.AbsPath);   // logs what it wrote, or why not
     }
 
     void UndoPrefabCommand::Execute(EditorContext& InContext, const Params&)
@@ -516,14 +572,53 @@ namespace Opaax::Editor
                             "*.opaaxmap", "Opaax Map"),
             [&InContext](const OpaaxString& InPicked)
             {
-                if (InContext.LevelDocument.SaveMapAs(InContext.MapDocument.GetMapId(), InPicked,
-                                                      *InContext.Worlds.GetActiveWorld(),
-                                                      InContext.Engine.GetRegistries().Components()))
-                {
-                    // The cursor follows the file just written; the record already moved with it.
-                    InContext.MapDocument.Focus(InPicked);
-                }
+                SaveMapAsAtCommand{}.Execute(InContext, MapPathParams{InPicked});
             });
+    }
+
+    void SaveMapAsAtCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        if (!MapOps::CanEdit(InContext, "Save Map As")) { return; }
+
+        const OpaaxString lAssetRel = InContext.Paths.AbsoluteToAsset(InParams.AbsPath);
+        if (lAssetRel.IsEmpty())
+        {
+            OPAAX_LOG(LogEditorCommands, Warn,
+                      "'{}' is outside the project's Assets — a level can only name assets of this project",
+                      InParams.AbsPath.CStr());
+            return;
+        }
+
+        Level* const lLevel = MapOps::ActiveLevel(InContext);
+        if (lLevel == nullptr) { return; }
+
+        const MapId lMap = InContext.MapDocument.GetMapId();
+
+        OpaaxString lPrevious;
+        for (const Level::MountedMap& lMounted : lLevel->GetMountedMaps())
+        {
+            if (lMounted.Id == lMap) { lPrevious = lMounted.AssetRelPath; break; }
+        }
+
+        // The level first: it refuses a file another of its maps uses. Left on the old file, the level would
+        // reopen without anything saved from now on.
+        if (!lLevel->MoveMap(lMap, lAssetRel))
+        {
+            return; // Level logged why
+        }
+
+        if (!InContext.LevelDocument.SaveMapAs(lMap, InParams.AbsPath, *InContext.Worlds.GetActiveWorld(),
+                                               InContext.Engine.GetRegistries().Components()))
+        {
+            lLevel->MoveMap(lMap, lPrevious);   // nothing written: the level keeps its file
+            return;
+        }
+
+        // The level file names the new map file at once, as for any change of the level's maps.
+        InContext.LevelDocument.SaveManifest(*lLevel);
+
+        // The cursor follows the file just written; the record already moved with it.
+        InContext.MapDocument.Focus(InParams.AbsPath);
     }
 
     // =============================================================================
@@ -541,6 +636,80 @@ namespace Opaax::Editor
             });
     }
 
+    void NewLevelCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        if (!MapOps::CanEdit(InContext, "New Level")) { return; }
+
+        InContext.Dialogs.SaveFile(
+            MakeFileRequest("New Level", InContext.Paths.AssetToAbsolute(OpaaxString("Levels/NewLevel.opaaxlevel")),
+                            "*.opaaxlevel", "Opaax Level"),
+            [&InContext](const OpaaxString& InPicked)
+            {
+                NewLevelAtCommand{}.Execute(InContext, NewLevelParams{InPicked});
+            });
+    }
+
+    void NewLevelAtCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        if (!MapOps::CanEdit(InContext, "New Level")) { return; }
+
+        const OpaaxString lLevelRel = InContext.Paths.AbsoluteToAsset(InParams.LevelAbsPath);
+        const OpaaxString lMapAbs   = InParams.MapAbsPath.IsEmpty()
+                                          ? InContext.Paths.AssetToAbsolute(NewLevelPlan::DefaultMap(lLevelRel))
+                                          : InParams.MapAbsPath;
+        const OpaaxString lMapRel   = InContext.Paths.AbsoluteToAsset(lMapAbs);
+
+        if (lLevelRel.IsEmpty() || lMapRel.IsEmpty())
+        {
+            OPAAX_LOG(LogEditorCommands, Warn,
+                      "'{}' or its map '{}' is outside the project's Assets — a level and its maps are assets of "
+                      "this project", InParams.LevelAbsPath.CStr(), lMapAbs.CStr());
+            return;
+        }
+
+        if (!NewLevelPlan::HasExtension(lLevelRel, LevelFile::LEVEL_EXTENSION)
+            || !NewLevelPlan::HasExtension(lMapRel, MapFile::MAP_EXTENSION))
+        {
+            OPAAX_LOG(LogEditorCommands, Warn, "New Level needs a '{}' file and a '{}' map: got '{}' and '{}'",
+                      LevelFile::LEVEL_EXTENSION, MapFile::MAP_EXTENSION, lLevelRel.CStr(), lMapRel.CStr());
+            return;
+        }
+
+        // New means new: an existing file is refused (Open Level and Add Map are for those).
+        for (const OpaaxString* lPath : { &InParams.LevelAbsPath, &lMapAbs })
+        {
+            if (InContext.FileSystem.IsPathExist(*lPath))
+            {
+                OPAAX_LOG(LogEditorCommands, Warn, "'{}' already exists — New Level does not overwrite it",
+                          InContext.Paths.AbsoluteToAsset(*lPath).CStr());
+                return;
+            }
+        }
+
+        ReplacingWorld(InContext, InParams.bDiscardEdits, [&InContext, InParams, lLevelRel, lMapAbs, lMapRel]
+        {
+            // An empty map with its own id, then the level that names it: an ordinary level from the start.
+            MapData lMap;
+            lMap.Id = MapFile::StemId(lMapAbs);
+
+            const LevelData lLevel = NewLevelPlan::Make(lLevelRel, lMapRel);
+            if (!MapFile::Save(lMapAbs, lMap) || !LevelFile::Save(InParams.LevelAbsPath, lLevel))
+            {
+                return; // the file's writer logged why
+            }
+
+            if (InContext.Engine.OpenLevel(WorldSpec{lLevelRel, EWorldMode::Edit}) == nullptr)
+            {
+                OPAAX_LOG(LogEditorCommands, Error, "Could not open the new level '{}'", lLevelRel.CStr());
+                return;
+            }
+
+            LevelOps::AdoptOpen(InContext, InParams.LevelAbsPath);
+            OPAAX_LOG(LogEditorCommands, Info, "Created level '{}' with its map '{}'",
+                      lLevelRel.CStr(), lMapRel.CStr());
+        });
+    }
+
     void OpenLevelAtCommand::Execute(EditorContext& InContext, const Params& InParams)
     {
         if (!MapOps::CanEdit(InContext, "Open Level")) { return; }
@@ -554,7 +723,16 @@ namespace Opaax::Editor
             return;
         }
 
-        LevelOps::ConfirmDiscardingEdits(InContext, [&InContext, lAssetRel, InParams]
+        // Read before the world is replaced: a file that is not a level changes nothing.
+        LevelData lData;
+        if (!InContext.FileSystem.IsPathExist(InParams.AbsPath) || !LevelFile::Load(InParams.AbsPath, lData))
+        {
+            OPAAX_LOG(LogEditorCommands, Warn, "'{}' is not a level (missing or unreadable) — nothing changed",
+                      lAssetRel.CStr());
+            return;
+        }
+
+        ReplacingWorld(InContext, InParams.bDiscardEdits, [&InContext, lAssetRel, InParams]
         {
             if (InContext.Engine.OpenLevel(WorldSpec{lAssetRel, EWorldMode::Edit}) == nullptr)
             {
@@ -676,34 +854,44 @@ namespace Opaax::Editor
                             "*.opaaxui", "Opaax UI Canvas"),
             [&InContext](const OpaaxString& InPicked)
             {
-                // New means new (as NewMapCommand): an existing canvas is not overwritten.
-                if (InContext.FileSystem.IsPathExist(InPicked))
-                {
-                    OPAAX_LOG(LogEditorCommands, Warn,
-                              "'{}' already exists — open it from the Resource Browser instead of overwriting it",
-                              InPicked.CStr());
-                    return;
-                }
-
-                // Authored at the project's reference height, so the panel shows what the game draws.
-                UICanvasFile::UICanvasDoc lDoc;
-                lDoc.ReferenceHeight = OpaaxApplication::GetAppService<IProjectManager>().UIReferenceHeight();
-                lDoc.Root            = MakeUnique<UIPanel>();
-                lDoc.Root->Name      = "Root";
-
-                if (!UICanvasFile::Save(InPicked, lDoc))
-                {
-                    return;   // UICanvasFile logged why
-                }
-
-                const UIWidgetRegistry& lRegistry =
-                    OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets();
-
-                if (InContext.UICanvasDocument.Open(InPicked, lRegistry))
-                {
-                    InContext.Panels.SetVisible(UICanvasPanel::PanelID(), true);
-                }
+                NewUIAtCommand{}.Execute(InContext, UICanvasPathParams{InPicked});
             });
+    }
+
+    void NewUIAtCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        if (InContext.Paths.AbsoluteToAsset(InParams.AbsPath).IsEmpty())
+        {
+            OPAAX_LOG(LogEditorCommands, Warn,
+                      "'{}' is outside the project's Assets — a game can only load assets of this project",
+                      InParams.AbsPath.CStr());
+            return;
+        }
+
+        // New means new (as NewMapCommand): an existing canvas is not overwritten.
+        if (InContext.FileSystem.IsPathExist(InParams.AbsPath))
+        {
+            OPAAX_LOG(LogEditorCommands, Warn,
+                      "'{}' already exists — open it from the Resource Browser instead of overwriting it",
+                      InParams.AbsPath.CStr());
+            return;
+        }
+
+        // Authored at the project's reference height, so the panel shows what the game draws.
+        const UICanvasFile::UICanvasDoc lDoc =
+            UICanvasFile::MakeEmpty(OpaaxApplication::GetAppService<IProjectManager>().UIReferenceHeight());
+
+        if (!UICanvasFile::Save(InParams.AbsPath, lDoc))
+        {
+            return;   // UICanvasFile logged why
+        }
+
+        const UIWidgetRegistry& lRegistry = OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets();
+
+        if (InContext.UICanvasDocument.Open(InParams.AbsPath, lRegistry))
+        {
+            InContext.Panels.SetVisible(UICanvasPanel::PanelID(), true);
+        }
     }
 
     void SaveUICommand::Execute(EditorContext& InContext, const Params&)
@@ -738,19 +926,42 @@ namespace Opaax::Editor
                                         InContext.Engine.GetRegistries().Components(), *lLevel);
     }
 
+    void ResaveLevelCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        Level* const lLevel = MapOps::ActiveLevel(InContext);
+        if (lLevel == nullptr || !InContext.LevelDocument.HasLevel())
+        {
+            OPAAX_LOG(LogEditorCommands, Warn, "Resave Level ignored — no level file is open");
+            return;
+        }
+
+        InContext.LevelDocument.SaveAll(*InContext.Worlds.GetActiveWorld(),
+                                        InContext.Engine.GetRegistries().Components(), *lLevel,
+                                        /*bInEvenUnchanged*/ true);
+    }
+
     void AddMapToLevelCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        if (!MapOps::CanEdit(InContext, "Add Map")) { return; }
+
+        if (MapOps::ActiveLevel(InContext) == nullptr) { return; }
+
+        InContext.Dialogs.OpenFile(
+            MakeFileRequest("Add Map to Level", InContext.Paths.AssetToAbsolute(OpaaxString("Maps/")),
+                            "*.opaaxmap", "Opaax Map"),
+            [&InContext](const OpaaxString& InPicked)
+            {
+                AddMapToLevelAtCommand{}.Execute(InContext, MapPathParams{InPicked});
+            });
+    }
+
+    void AddMapToLevelAtCommand::Execute(EditorContext& InContext, const Params& InParams)
     {
         if (!MapOps::CanEdit(InContext, "Add Map")) { return; }
 
         Level* const lLevel = MapOps::ActiveLevel(InContext);
         if (lLevel == nullptr) { return; }
 
-        InContext.Dialogs.OpenFile(
-            MakeFileRequest("Add Map to Level", InContext.Paths.AssetToAbsolute(OpaaxString("Maps/")),
-                            "*.opaaxmap", "Opaax Map"),
-            [&InContext, lLevel](const OpaaxString& InPicked)
-            {
-                AddMapAt(InContext, *lLevel, InPicked);
-            });
+        AddMapAt(InContext, *lLevel, InParams.AbsPath);
     }
 }

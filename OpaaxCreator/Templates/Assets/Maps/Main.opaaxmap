@@ -3,7 +3,8 @@
         {
             "components": {
                 "Camera": {
-                    "OrthoSize": 300.0
+                    "OrthoSize": 300.0,
+                    "Priority": 0
                 },
                 "Transform": {
                     "Position": {

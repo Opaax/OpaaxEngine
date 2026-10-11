@@ -1,0 +1,8 @@
+{
+    "Type": "ProbeTuning",
+    "Data": {
+        "Speed": 2.5,
+        "Lives": 5,
+        "Title": "Hard"
+    }
+}

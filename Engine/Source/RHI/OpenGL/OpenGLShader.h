@@ -11,10 +11,9 @@
 namespace Opaax
 {
     /**
-     * OpenGL IShader. Uses SPIR-V (GL_ARB_gl_spirv) when available, else compiles the GLSL source.
-     * The name-based uniform setters do nothing on a SPIR-V program (no default-block uniforms).
+     * OpenGL IShader, compiled from GLSL source.
      */
-    class OPAAX_API OpenGLShader final : public IShader
+    class OpenGLShader final : public IShader
     {
         // =============================================================================
         // CTOR - DTOR
@@ -40,8 +39,7 @@ namespace Opaax
         // =============================================================================
     private:
         Int32 GetUniformLocation(const char* InName);
-        void  CreateFromSpirv(const TDynArray<Uint32>& InVertexSpirv, const TDynArray<Uint32>& InFragmentSpirv);
-        void  CompileAndLink(const char* InVertexSrc, const char* InFragmentSrc);  // GLSL fallback
+        void  CompileAndLink(const ShaderDesc& InDesc);
         
         // =============================================================================
         // Override
@@ -68,6 +66,9 @@ namespace Opaax
         // =============================================================================
     private:
         Uint32 m_RendererID = 0;
+
+        /** For the logs. */
+        OpaaxString m_DebugName;
 
         // Uniform lookup by name (per draw call, not per vertex).
         TUnorderedMap<OpaaxString, Int32, OpaaxHash> m_UniformLocationCache;

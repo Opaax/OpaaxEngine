@@ -177,11 +177,11 @@ namespace Opaax
     void CrashHandler::Configure(const CrashHandlerSettings& InSettings)
     {
         m_Settings    = InSettings;
-        m_DumpDirWide = Utf8::ToWide(InSettings.DumpDir);
-        m_LogFileWide = Utf8::ToWide(InSettings.LogFile);
+        m_DumpDirNative = Utf8::ToWide(InSettings.DumpDir);
+        m_LogFileNative = Utf8::ToWide(InSettings.LogFile);
 
         std::error_code lError;
-        std::filesystem::create_directories(std::filesystem::path(m_DumpDirWide), lError);
+        std::filesystem::create_directories(std::filesystem::path(m_DumpDirNative), lError);
 
         if (!m_bSymbolsReady)
         {
@@ -231,14 +231,14 @@ namespace Opaax
         m_bInstalled = false;
     }
 
-    OpaaxString CrashHandler::WriteReport(void* InExceptionPointers)
+    OpaaxString CrashHandler::WriteReport(void* InCrashContext)
     {
-        EXCEPTION_POINTERS* lPointers = static_cast<EXCEPTION_POINTERS*>(InExceptionPointers);
+        EXCEPTION_POINTERS* lPointers = static_cast<EXCEPTION_POINTERS*>(InCrashContext);
 
         wchar_t lStamp[32];
         FormatStamp(lStamp);
 
-        const std::wstring lDumpPath = m_DumpDirWide + L"/" + lStamp + L".dmp";
+        const std::wstring lDumpPath = m_DumpDirNative + L"/" + lStamp + L".dmp";
 
         // 1. The dump (survives a corrupted heap).
         bool lbDumped = false;
@@ -298,16 +298,16 @@ namespace Opaax
 
         // 3. The log next to the dump (the next launch overwrites the original).
         Logger::Get().Flush();
-        if (!m_LogFileWide.empty())
+        if (!m_LogFileNative.empty())
         {
-            const std::wstring lLogCopy = m_DumpDirWide + L"/" + lStamp + L".log";
-            CopyFileW(m_LogFileWide.c_str(), lLogCopy.c_str(), FALSE);
+            const std::wstring lLogCopy = m_DumpDirNative + L"/" + lStamp + L".log";
+            CopyFileW(m_LogFileNative.c_str(), lLogCopy.c_str(), FALSE);
         }
 
         return lDumpPathUtf8;
     }
 
-    long CrashHandler::HandleCrash(void* InExceptionPointers)
+    long CrashHandler::HandleCrash(void* InCrashContext)
     {
         // A crash inside the report (or a second crashing thread) must not recurse.
         if (m_bHandling.test_and_set())
@@ -315,7 +315,7 @@ namespace Opaax
             return EXCEPTION_EXECUTE_HANDLER;
         }
 
-        const OpaaxString lDumpPath = WriteReport(InExceptionPointers);
+        const OpaaxString lDumpPath = WriteReport(InCrashContext);
 
         if (m_Settings.bShowDialog)
         {

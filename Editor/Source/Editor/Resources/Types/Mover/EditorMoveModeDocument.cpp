@@ -1,7 +1,7 @@
 #include "Editor/Resources/Types/Mover/EditorMoveModeDocument.h"
 
 #include "Core/String/OpaaxPathString.h"
-#include "Engine/Subsystems/Resources/Types/Mover/MoveModeFile.h"
+#include "Movement/Assets/MoveModeFile.h"
 
 namespace Opaax::Editor
 {

@@ -1,0 +1,104 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Bodies.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 2.0
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pill",
+            "path": "Transform/Position/y",
+            "near": -170,
+            "tolerance": 2
+        },
+        "id": "capsule-stands"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pill",
+            "path": "Transform/Rotation",
+            "near": 0,
+            "tolerance": 0.5
+        },
+        "id": "capsule-upright"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Shifted",
+            "path": "Transform/Position/y",
+            "near": -240,
+            "tolerance": 2
+        },
+        "id": "collider-offset"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Lift",
+            "path": "Transform/Position/y",
+            "near": 50,
+            "tolerance": 0.5
+        },
+        "id": "lift-rose"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Rider",
+            "path": "Transform/Position/y",
+            "near": 80,
+            "tolerance": 3
+        },
+        "id": "kinematic-carries"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Locked",
+            "path": "ImpulseProbe/AngularVelocity",
+            "near": 0,
+            "tolerance": 0.01
+        },
+        "id": "fixed-rotation"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Damped",
+            "path": "ImpulseProbe/VelocityX",
+            "near": 300,
+            "tolerance": 1
+        },
+        "id": "kicked"
+    },
+    {
+        "id": "damped",
+        "command": "expect.value",
+        "params": {
+            "entity": "Damped",
+            "path": "SpeedProbe/Speed",
+            "between": [
+                30,
+                60
+            ]
+        }
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "Bodies.png"
+        }
+    }
+]

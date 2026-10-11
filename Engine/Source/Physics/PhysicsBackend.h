@@ -23,7 +23,7 @@ namespace Opaax
     /**
      * Name for logs and the value written in the config.
      */
-    OPAAX_API const char* ToString(EPhysicsBackend InBackend) noexcept;
+    const char* ToString(EPhysicsBackend InBackend) noexcept;
 }
 
 OPAAX_ENUM_VALUES(Opaax::EPhysicsBackend, Box2D)

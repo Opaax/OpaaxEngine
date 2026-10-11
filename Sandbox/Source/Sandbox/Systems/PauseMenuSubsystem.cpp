@@ -1,14 +1,16 @@
 #include "Systems/PauseMenuSubsystem.h"
 
+#include "Engine/Registries/AutoRegistration.h"
+
 #include <algorithm>   // std::min / std::max
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"          // RequestOpenLevel
 #include "Core/Log/Logger.h"
-#include "Engine/Input/InputMappingSubsystem.h"
-#include "Engine/Input/InputTypes.h"
-#include "Engine/Subsystems/Input/InputCodes.h"
-#include "Engine/UI/UISubsystem.h"
+#include "Input/Mapping/InputMappingSubsystem.h"
+#include "Input/Mapping/InputTypes.h"
+#include "Input/InputCodes.h"
+#include "UI/UISubsystem.h"
 #include "UI/UICanvas.h"
 #include "UI/Widgets/UIButton.h"
 #include "UI/Widgets/UIText.h"
@@ -262,4 +264,7 @@ namespace Sandbox
 
         Open();
     }
+
+    // The pause menu: a HUD button (GameAndUI) and a dimmed modal (UIOnly).
+    OPAAX_REGISTER_WORLD_SUBSYSTEM_ORDERED(PauseMenuSubsystem, Opaax::WorldSubsystemOrder::Presentation);
 }

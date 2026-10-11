@@ -1,6 +1,6 @@
 #pragma once
-#include "EngineAPI.h"
-#include "OpaaxTypes.h"
+#include "Core/EngineAPI.h"
+#include "Core/OpaaxTypes.h"
 
 namespace Opaax::OpaaxGlobal
 {

@@ -45,23 +45,23 @@ namespace Opaax
         /**
          * An interned id as text. An invalid id gives "" (not "None").
          */
-        OPAAX_API const char* IdToText(OpaaxStringID InId);
+        const char* IdToText(OpaaxStringID InId);
 
         /**
          * Empty text gives an invalid id (for a MapId: runtime-spawned).
          */
-        OPAAX_API OpaaxStringID IdFromText(const OpaaxString& InText);
+        OpaaxStringID IdFromText(const OpaaxString& InText);
 
         /**
          * Reads a string field. Never throws.
          * @return Empty if the key is absent or not a string
          */
-        OPAAX_API OpaaxString ReadString(const nlohmann::json& InJson, const char* InKey);
+        OpaaxString ReadString(const nlohmann::json& InJson, const char* InKey);
 
         /**
          * dump() into an OpaaxString, keeping the length (no strlen).
          */
-        OPAAX_API OpaaxString DumpToString(const nlohmann::json& InJson, int InIndent);
+        OpaaxString DumpToString(const nlohmann::json& InJson, int InIndent);
 
         // =====================================================================
         // Placements (shared by map and prefab files)
@@ -75,14 +75,14 @@ namespace Opaax
          * The records as a JSON array, sorted by InstanceId; overrides keyed by template guid text.
          * The caller's order is untouched.
          */
-        OPAAX_API nlohmann::json InstancesToJson(const TDynArray<PrefabInstanceRecord>& InInstances);
+        nlohmann::json InstancesToJson(const TDynArray<PrefabInstanceRecord>& InInstances);
 
         /**
          * Reads the prefabInstances array under InRoot, if any, appending to OutInstances.
          * Never throws; a record without a path or with a bad id is skipped.
          * @return Number of skipped records
          */
-        OPAAX_API Uint64 InstancesFromJson(const nlohmann::json& InRoot, TDynArray<PrefabInstanceRecord>& OutInstances);
+        Uint64 InstancesFromJson(const nlohmann::json& InRoot, TDynArray<PrefabInstanceRecord>& OutInstances);
 
         // =====================================================================
         // The walk
@@ -93,7 +93,7 @@ namespace Opaax
          * bad guid is skipped. Does not log (the caller knows the document name).
          * @return Number of skipped entities
          */
-        OPAAX_API Uint64 EntitiesFromJson(const nlohmann::json& InEntities, TDynArray<EntityData>& OutEntities);
+        Uint64 EntitiesFromJson(const nlohmann::json& InEntities, TDynArray<EntityData>& OutEntities);
 
         /**
          * The JSON array of InEntities, sorted by guid (stable in git, and needed by the dirty check).

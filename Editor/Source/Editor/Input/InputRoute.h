@@ -22,7 +22,8 @@ namespace Opaax::Editor
         ClosedNoWorld,      // nothing to play
         ClosedViewport,     // the viewport is neither hovered nor focused
         ClosedEditMode,     // the active world is Edit (editor tools own it)
-        ClosedPaused        // the game is paused; it must not store input
+        ClosedPaused,       // the game is paused; it must not store input
+        ClosedScripted      // a script drives the input (--exec)
     };
 
     const char* ToString(EInputRouteState InState) noexcept;
@@ -74,6 +75,12 @@ namespace Opaax::Editor
          */
         void SetPointerLocalPx(const Vector2F& InLocalPx) noexcept { m_PointerLocalPx = InLocalPx; }
 
+        /**
+         * A script drives the input: the route stays closed, and neither feeds the pointer nor resets
+         * the engine's input (the script's).
+         */
+        void SetScripted(bool bInScripted) noexcept { m_bScripted = bInScripted; }
+
         // =============================================================================
         // Get
         // =============================================================================
@@ -100,6 +107,8 @@ namespace Opaax::Editor
         // Pushed by ViewportPanel. False until it has drawn once.
         bool m_bViewportHovered = false;
         bool m_bViewportFocused = false;
+
+        bool m_bScripted = false;
 
         // The pointer inside the viewport image, pushed by ViewportPanel. Fed to the engine while Open.
         Vector2F m_PointerLocalPx = { 0.f, 0.f };

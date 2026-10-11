@@ -1,0 +1,94 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Levels.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.05
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Ledger",
+            "path": "LedgerProbe/bFound",
+            "equals": true
+        },
+        "id": "game-subsystem"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Ledger",
+            "path": "LedgerProbe/LedgersStarted",
+            "equals": 1
+        },
+        "id": "first-level"
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 5.0
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.1
+        }
+    },
+    {
+        "id": "arrived",
+        "command": "expect.entity",
+        "params": {
+            "entity": "Arrival"
+        }
+    },
+    {
+        "id": "left",
+        "command": "expect.entity",
+        "params": {
+            "entity": "Traveller",
+            "exists": false
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Arrival",
+            "path": "LedgerProbe/LedgersStarted",
+            "equals": 2
+        },
+        "id": "ledger-kept"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Arrival",
+            "path": "LedgerProbe/Ended",
+            "equals": 1
+        },
+        "id": "old-level-ended"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Arrival",
+            "path": "LedgerProbe/WorldEndings",
+            "equals": 1
+        },
+        "id": "world-ending"
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "Levels.png"
+        }
+    }
+]

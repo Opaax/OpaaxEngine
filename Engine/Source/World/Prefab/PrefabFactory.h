@@ -17,7 +17,7 @@ namespace Opaax
     // PrefabFactory — converts between prefabs and instances. Pure functions, no World.
     //   The result of BuildInstance goes to MapFactory::Instantiate.
     // =============================================================================
-    class OPAAX_API PrefabFactory
+    class PrefabFactory
     {
     public:
         /**

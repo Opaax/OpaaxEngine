@@ -1,0 +1,83 @@
+{
+    "entities": [
+        {
+            "components": {
+                "PointerProbe": {
+                    "LeftPresses": 0,
+                    "X": 0.0,
+                    "Y": 0.0,
+                    "bLeftDown": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "8f96dbb8bd095efe993576ec70dfecd9",
+            "name": "Pointer",
+            "ownerMap": "Input"
+        },
+        {
+            "components": {
+                "ControlsProbe": {
+                    "BoundCompletions": 0,
+                    "BoundFrames": 0,
+                    "BoundStarts": 0,
+                    "Charges": 0,
+                    "DReleases": 0,
+                    "MoveX": 0.0,
+                    "MoveY": 0.0,
+                    "PolledCompletions": 0,
+                    "PolledStarts": 0,
+                    "bDownHeld": false,
+                    "bMoving": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "9c1e9c341ba551bcb6fba955b3ad2f86",
+            "name": "Pad",
+            "ownerMap": "Input"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "dc69bb09c9915143b97fafbf93480310",
+            "name": "Camera",
+            "ownerMap": "Input"
+        }
+    ],
+    "mapId": "Input",
+    "version": 4
+}

@@ -11,11 +11,12 @@ namespace Opaax::FileIO
     // =============================================================================
 
     /**
-     * Reads a whole file as text.
+     * Reads a whole file as text, with LF line ends on every platform (a file saved with CRLF reads
+     * the same).
      * @param InAbsPath Absolute UTF-8 path
      * @return The contents, or an empty string if the file is missing or unreadable
      */
-    OPAAX_API OpaaxString ReadAllText(const OpaaxString& InAbsPath);
+    OpaaxString ReadAllText(const OpaaxString& InAbsPath);
 
     /**
      * Reads a whole file as raw bytes.
@@ -23,13 +24,21 @@ namespace Opaax::FileIO
      * @param OutBytes Receives the contents. Untouched on failure.
      * @return False if the file is missing or unreadable
      */
-    OPAAX_API bool ReadAllBytes(const OpaaxString& InAbsPath, TDynArray<Uint8>& OutBytes);
+    bool ReadAllBytes(const OpaaxString& InAbsPath, TDynArray<Uint8>& OutBytes);
 
     /**
-     * Writes text to InAbsPath, replacing any content. Creates missing parent directories.
+     * Writes text to InAbsPath as given, replacing any content: LF line ends stay LF on every platform,
+     * so a file saved on Windows and on Linux is the same. Creates missing parent directories.
      * @param InAbsPath Absolute UTF-8 path
      * @param InText Content to write
      * @return False if the file could not be written
      */
-    OPAAX_API bool WriteAllText(const OpaaxString& InAbsPath, const OpaaxString& InText);
+    bool WriteAllText(const OpaaxString& InAbsPath, const OpaaxString& InText);
+
+    /**
+     * Writes raw bytes to InAbsPath, replacing any content. Creates missing parent directories.
+     * @param InAbsPath Absolute UTF-8 path
+     * @return False if the file could not be written
+     */
+    bool WriteAllBytes(const OpaaxString& InAbsPath, const Uint8* InData, Uint64 InSize);
 }

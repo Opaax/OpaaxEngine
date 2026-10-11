@@ -3,11 +3,11 @@
 #include "Core/EngineAPI.h"
 
 #include "Engine/GameInstance/GameInstanceSubsystemRegistry.h"
-#include "Engine/Subsystems/Resources/ResourceFormatRegistry.h"
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetTypeRegistry.h"
+#include "Resources/ResourceFormatRegistry.h"
+#include "Resources/DataAsset/DataAssetTypeRegistry.h"
 #include "UI/UIWidgetRegistry.h"
 #include "World/Components/ComponentRegistry.h"
-#include "World/Systems/Movement/MoverModeRegistry.h"
+#include "Movement/Modes/MoverModeRegistry.h"
 #include "World/Systems/WorldSubsystemRegistry.h"
 
 namespace Opaax
@@ -17,7 +17,7 @@ namespace Opaax
     //   resource formats, ...). Owned by Engine. Only ModuleRegistrar writes to it,
     //   and only before it is sealed.
     // =============================================================================
-    class OPAAX_API EngineRegistries
+    class EngineRegistries
     {
         // =========================================================================
         // CTORS - DTORS
@@ -29,7 +29,7 @@ namespace Opaax
         // =========================================================================
         // Copy - Move Delete
         // =========================================================================
-        // Required by OPAAX_API: the registries are not copyable.
+        // The registries are not copyable.
         EngineRegistries(const EngineRegistries&)            = delete;
         EngineRegistries& operator=(const EngineRegistries&) = delete;
         EngineRegistries(EngineRegistries&&)                 = delete;

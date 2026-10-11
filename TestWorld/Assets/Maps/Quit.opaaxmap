@@ -1,0 +1,92 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "0a215c420a2558fd810f5ef13b33f454",
+            "name": "Camera",
+            "ownerMap": "Quit"
+        },
+        {
+            "components": {
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                },
+                "TravelProbe": {
+                    "Delay": 1.0,
+                    "Target": "",
+                    "bQuit": true
+                }
+            },
+            "guid": "1f0f99743391509585d9a3ec5b496009",
+            "name": "Quitter",
+            "ownerMap": "Quit"
+        },
+        {
+            "components": {
+                "Text": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Face": "",
+                    "Font": "/Engine/Fonts/Roboto.opaaxfont",
+                    "Layer": "Foreground",
+                    "LineHeightScale": 1.0,
+                    "OrderInLayer": 0,
+                    "Size": 40.0,
+                    "Style": {
+                        "Slant": "Normal",
+                        "Subset": "Latin",
+                        "Weight": "Bold",
+                        "Width": "Normal"
+                    },
+                    "Text": "Quitting in 1 s",
+                    "bKerning": true,
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -200.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "3a0a7e862c415df6bb30ea29335ac43d",
+            "name": "Banner",
+            "ownerMap": "Quit"
+        }
+    ],
+    "mapId": "Quit",
+    "version": 4
+}

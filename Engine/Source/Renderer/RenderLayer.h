@@ -18,7 +18,7 @@ namespace Opaax
     enum class ERenderLayer : Uint8
     {
         #define OPAAX_RENDER_LAYER(Name) Name,
-        #include "RenderLayerList.h"
+        #include "Renderer/RenderLayerList.h"
         #undef OPAAX_RENDER_LAYER
         Count
     };
@@ -31,7 +31,7 @@ namespace Opaax
         switch (InLayer)
         {
             #define OPAAX_RENDER_LAYER(Name) case ERenderLayer::Name: return #Name;
-            #include "RenderLayerList.h"
+            #include "Renderer/RenderLayerList.h"
             #undef OPAAX_RENDER_LAYER
 
             default: return "Unknown";
@@ -48,7 +48,7 @@ namespace Opaax
         static constexpr ERenderLayer Values[] =
         {
             #define OPAAX_RENDER_LAYER(Name) ERenderLayer::Name,
-            #include "RenderLayerList.h"
+            #include "Renderer/RenderLayerList.h"
             #undef OPAAX_RENDER_LAYER
         };
     };
@@ -57,7 +57,7 @@ namespace Opaax
     inline const OpaaxStringID g_RenderLayerIDs[] =
     {
         #define OPAAX_RENDER_LAYER(Name) OPAAX_ID(#Name),
-        #include "RenderLayerList.h"
+        #include "Renderer/RenderLayerList.h"
         #undef OPAAX_RENDER_LAYER
     };
 

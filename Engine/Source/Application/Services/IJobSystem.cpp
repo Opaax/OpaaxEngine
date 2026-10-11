@@ -1,4 +1,4 @@
-#include "IJobSystem.h"
+#include "Application/Services/IJobSystem.h"
 #include "Core/Log/Logger.h"
 #include "Application/OpaaxApplication.h"
 
@@ -39,7 +39,7 @@ namespace Opaax
     }
 
     // =========================================================================
-    // Type tag + null object (defined here so they are shared across the DLL/exe boundary).
+    // Type tag + null object (defined here so there is one of each).
     // =========================================================================
     ServiceTypeID IJobSystem::StaticTypeID() noexcept
     {

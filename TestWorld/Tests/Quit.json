@@ -1,0 +1,23 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Quit.opaaxlevel"
+        }
+    },
+    {
+        "id": "playing",
+        "command": "expect.entity",
+        "params": {
+            "entity": "Quitter"
+        }
+    },
+    {
+        "id": "quits",
+        "command": "expect.quit",
+        "params": {
+            "seconds": 10
+        }
+    }
+]

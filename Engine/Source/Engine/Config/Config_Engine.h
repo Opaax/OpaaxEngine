@@ -11,7 +11,7 @@ namespace Opaax
     // Config_Engine — the engine config (window, render, physics, ...),
     // loaded from <ProjectRoot>/Configs/Engine.config.
     // =============================================================================
-    class OPAAX_API Config_Engine final : public TConfig<EngineConfigData>
+    class Config_Engine final : public TConfig<EngineConfigData>
     {
     public:
         OPAAX_CONFIG_TYPE(Engine)

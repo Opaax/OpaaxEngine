@@ -8,11 +8,11 @@ namespace Opaax
     // IGameInstanceSubsystem — a subsystem that lives for one game (StartGame -> EndGame),
     //   across level changes.
     // =============================================================================
-    class OPAAX_API IGameInstanceSubsystem : public ISubsystem
+    class IGameInstanceSubsystem : public ISubsystem
     {
     };
 
-    class OPAAX_API GameInstanceSubsystemBase : public IGameInstanceSubsystem
+    class GameInstanceSubsystemBase : public IGameInstanceSubsystem
     {
         // =============================================================================
         // CTORS - DTORS
@@ -33,7 +33,7 @@ namespace Opaax
     // =============================================================================
     // GameInstanceSubsystemMgr — owns and ticks the game-instance subsystems.
     // =============================================================================
-    class OPAAX_API GameInstanceSubsystemMgr : public ISubsystemManager<IGameInstanceSubsystem>
+    class GameInstanceSubsystemMgr : public ISubsystemManager<IGameInstanceSubsystem>
     {
         // =============================================================================
         // CTORS - DTORS

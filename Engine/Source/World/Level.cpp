@@ -3,9 +3,9 @@
 #include <cstddef>   // std::ptrdiff_t
 
 #include "Application/Services/IPaths.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"   // before the resources (completes LoadContext)
-#include "Engine/Subsystems/Resources/ResourceFormatRegistry.h"
-#include "Engine/Subsystems/Resources/ResourceHold.hpp"           // completes IResourceHold
+#include "Resources/ResourceManager.h"   // before the resources (completes LoadContext)
+#include "Resources/ResourceFormatRegistry.h"
+#include "Resources/ResourceHold.hpp"           // completes IResourceHold
 #include "World/Components/ComponentRegistry.h"
 #include "World/Entity/EntityMeta.h"
 #include "World/Serialization/HardReferences.h"
@@ -385,6 +385,49 @@ namespace Opaax
         OPAAX_LOG(LogLevel, Warn, "SetPersistentMap '{}' ignored — that map is not mounted",
                   InMapId.IsValid() ? InMapId.CStr() : "(none)");
         return false;
+    }
+
+    bool Level::MoveMap(MapId InMapId, const OpaaxString& InAssetRelPath)
+    {
+        MountedMap* lMoved = nullptr;
+        for (MountedMap& lMounted : m_Mounted)
+        {
+            if (lMounted.Id == InMapId) { lMoved = &lMounted; break; }
+        }
+
+        if (lMoved == nullptr)
+        {
+            OPAAX_LOG(LogLevel, Warn, "MoveMap '{}' ignored — that map is not mounted",
+                      InMapId.IsValid() ? InMapId.CStr() : "(none)");
+            return false;
+        }
+
+        if (lMoved->AssetRelPath == InAssetRelPath)
+        {
+            return true;
+        }
+
+        // One file per map: a path the level lists already (mounted or missing) would load twice.
+        if (IsMountedPath(InAssetRelPath) || FindInManifest(InAssetRelPath) < m_Data.MapCount())
+        {
+            OPAAX_LOG(LogLevel, Warn, "'{}' is already one of level '{}'s maps — map '{}' cannot move there",
+                      InAssetRelPath.CStr(), m_Data.Name.CStr(), InMapId);
+            return false;
+        }
+
+        // The entry keeps its place, so the persistent index still names it. A map mounted on its own has
+        // no entry.
+        const Uint64 lIndex = FindInManifest(lMoved->AssetRelPath);
+        if (lIndex < m_Data.MapCount())
+        {
+            m_Data.Maps[lIndex] = InAssetRelPath;
+        }
+
+        OPAAX_LOG(LogLevel, Info, "Level '{}': map '{}' is now stored in '{}'",
+                  m_Data.Name.CStr(), InMapId, InAssetRelPath.CStr());
+
+        lMoved->AssetRelPath = InAssetRelPath;
+        return true;
     }
 
     // =============================================================================

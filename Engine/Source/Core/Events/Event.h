@@ -13,7 +13,7 @@ namespace Opaax
      * Base window/input event. Stack-allocated, never stored.
      * A handler returning true marks it handled.
      */
-    class OPAAX_API Event
+    class Event
     {
         friend class EventDispatcher;
 

@@ -13,7 +13,7 @@
 #include "Renderer/RenderTarget.hpp"        // OffscreenRenderTarget
 #include "RHI/Framebuffer.h"                // IFramebuffer + FramebufferSpec
 
-#include "World/Components/CameraComponent.h"
+#include "Renderer/Camera/CameraComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityHierarchy.h"

@@ -21,7 +21,7 @@ namespace Opaax
         inline constexpr Uint32 MAX_DEPTH = 256;
 
         /** The parent, or an invalid Entity for a root. */
-        OPAAX_API Entity GetParent(Entity InEntity);
+        Entity GetParent(Entity InEntity);
 
         /**
          * Puts InChild under InParent; an invalid InParent detaches it. Keeps the world pose.
@@ -29,25 +29,25 @@ namespace Opaax
          * @return False (with a warning) for an invalid child, a parent in another world, self,
          *   or a cycle. Nothing changes then.
          */
-        OPAAX_API bool SetParent(Entity InChild, Entity InParent, bool bInKeepWorld = true);
+        bool SetParent(Entity InChild, Entity InParent, bool bInKeepWorld = true);
 
         /** True if InAncestor is on InEntity's parent chain (InEntity excluded). */
-        OPAAX_API bool IsDescendantOf(Entity InEntity, Entity InAncestor);
+        bool IsDescendantOf(Entity InEntity, Entity InAncestor);
 
         /**
          * InRoots and all their descendants, each once, parents first.
          */
-        OPAAX_API void CollectSubtree(World& InWorld, const TDynArray<EntityID>& InRoots,
+        void CollectSubtree(World& InWorld, const TDynArray<EntityID>& InRoots,
                                       TDynArray<EntityID>& OutIds);
 
         /**
          * InIds without the entities that have an ancestor in InIds (so a moved child is not moved twice).
          */
-        OPAAX_API void TopmostOf(World& InWorld, const TDynArray<EntityID>& InIds,
+        void TopmostOf(World& InWorld, const TDynArray<EntityID>& InIds,
                                  TDynArray<EntityID>& OutIds);
 
         /** The world pose (the chain composed root to leaf). */
-        OPAAX_API TransformComponent WorldTransform(Entity InEntity);
+        TransformComponent WorldTransform(Entity InEntity);
 
         /**
          * The chain composed root to leaf, with InLocalOf(Entity) giving each local.
@@ -78,7 +78,7 @@ namespace Opaax
         }
 
         /** Sets the local so the entity ends up at InWorld. */
-        OPAAX_API void SetWorldTransform(Entity InEntity, const TransformComponent& InWorld);
+        void SetWorldTransform(Entity InEntity, const TransformComponent& InWorld);
 
         /**
          * Every direct child of InParent (scans the registry).

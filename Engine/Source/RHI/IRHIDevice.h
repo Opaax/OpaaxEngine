@@ -20,7 +20,7 @@ namespace Opaax
     // IRHIDevice — the graphics device (created by RHIDevice::Create). Creates GPU resources
     //   and runs the frame, including Present.
     // =============================================================================
-    class OPAAX_API IRHIDevice
+    class IRHIDevice
     {
         // =============================================================================
         // DTOR
@@ -81,5 +81,12 @@ namespace Opaax
          *   first result or without timer support
          */
         virtual double          GetLastGpuFrameTimeMs() const                                   = 0;
+
+        /**
+         * Reads the backbuffer (the frame drawn so far, before Present).
+         * @param OutRGBA Receives InWidth * InHeight RGBA pixels, rows from top to bottom, opaque
+         * @return False when it cannot be read
+         */
+        virtual bool            ReadBackbufferPixels(Uint32 InWidth, Uint32 InHeight, TDynArray<Uint8>& OutRGBA) = 0;
     };
 }

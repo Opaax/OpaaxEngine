@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/Collisions.opaaxmap"
+    ],
+    "name": "Collisions",
+    "persistentMap": "Maps/Collisions.opaaxmap",
+    "version": 1
+}

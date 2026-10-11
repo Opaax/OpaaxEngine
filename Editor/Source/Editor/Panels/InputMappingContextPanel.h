@@ -4,7 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Editor/Panels/IEditorPanel.h"
 
-#include "Engine/Subsystems/Resources/Types/Input/InputMappingContextData.h"
+#include "Input/Assets/InputMappingContextData.h"
 
 namespace Opaax
 {

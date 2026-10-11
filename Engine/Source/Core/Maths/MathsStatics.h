@@ -112,23 +112,23 @@ namespace Opaax
     
     // =============================================================================
     // SQRT
-    constexpr float DSQRT_2         = 1.4142135623730950488016887242097;
-    constexpr float DSQRT_3         = 1.7320508075688772935274463415059;
-    constexpr float DINV_SQRT_2     = 0.70710678118654752440084436210485;
-    constexpr float DINV_SQRT_3     = 0.57735026918962576450914878050196;
-    constexpr float DHALF_SQRT_2    = 0.70710678118654752440084436210485;
-    constexpr float DHALF_SQRT_3    = 0.86602540378443864676372317075294;
+    constexpr double DSQRT_2         = 1.4142135623730950488016887242097;
+    constexpr double DSQRT_3         = 1.7320508075688772935274463415059;
+    constexpr double DINV_SQRT_2     = 0.70710678118654752440084436210485;
+    constexpr double DINV_SQRT_3     = 0.57735026918962576450914878050196;
+    constexpr double DHALF_SQRT_2    = 0.70710678118654752440084436210485;
+    constexpr double DHALF_SQRT_3    = 0.86602540378443864676372317075294;
     // End SQRT
     // =============================================================================
     
     // =============================================================================
     // Frame
-    constexpr float D30_HZ  = 1. / 30.;
-    constexpr float D60_HZ  = 1. / 60.;
-    constexpr float D90_HZ  = 1. / 90.;
-    constexpr float D120_HZ = 1. / 120.;
-    constexpr float D144_HZ = 1. / 144.;
-    constexpr float D160_HZ = 1. / 160.;
+    constexpr double D30_HZ  = 1. / 30.;
+    constexpr double D60_HZ  = 1. / 60.;
+    constexpr double D90_HZ  = 1. / 90.;
+    constexpr double D120_HZ = 1. / 120.;
+    constexpr double D144_HZ = 1. / 144.;
+    constexpr double D160_HZ = 1. / 160.;
     // End Frame
     // =============================================================================
     

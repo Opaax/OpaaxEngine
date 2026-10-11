@@ -14,6 +14,8 @@ namespace Opaax::Editor
             void EndFrame()          override {}
             bool RouteInput(Event&)  override { return false; }   // consumes nothing
             void RegisterExtensions(const TFunction<void(EditorExtensionRegistrar&)>&) override {}
+            void StopPlay()          override {}
+            void RegisterAutomation(AutomationRunner&, bool) override {}
         };
     }
 

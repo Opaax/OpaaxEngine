@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/Levels.opaaxmap"
+    ],
+    "name": "Levels",
+    "persistentMap": "Maps/Levels.opaaxmap",
+    "version": 1
+}

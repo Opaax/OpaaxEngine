@@ -1,8 +1,8 @@
 #include "Editor/Resources/Types/DataAsset/EditorDataAssetDocument.h"
 
 #include "Core/String/OpaaxPathString.h"
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetFile.h"
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetTypeRegistry.h"
+#include "Resources/DataAsset/DataAssetFile.h"
+#include "Resources/DataAsset/DataAssetTypeRegistry.h"
 
 namespace Opaax::Editor
 {

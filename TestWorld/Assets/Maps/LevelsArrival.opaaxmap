@@ -1,0 +1,93 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Text": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Face": "",
+                    "Font": "/Engine/Fonts/Roboto.opaaxfont",
+                    "Layer": "Foreground",
+                    "LineHeightScale": 1.0,
+                    "OrderInLayer": 0,
+                    "Size": 40.0,
+                    "Style": {
+                        "Slant": "Normal",
+                        "Subset": "Latin",
+                        "Weight": "Bold",
+                        "Width": "Normal"
+                    },
+                    "Text": "Arrived",
+                    "bKerning": true,
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -200.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "7b48ee7dc6075306936be96ea7888248",
+            "name": "Banner",
+            "ownerMap": "LevelsArrival"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "7e869a67331e5bc592ad4a00e04277b6",
+            "name": "Camera",
+            "ownerMap": "LevelsArrival"
+        },
+        {
+            "components": {
+                "LedgerProbe": {
+                    "Ended": 0,
+                    "LedgersStarted": 0,
+                    "WorldEndings": 0,
+                    "bFound": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "da3e3ca1c0e65fe5bb2b239e8ef7b5fa",
+            "name": "Arrival",
+            "ownerMap": "LevelsArrival"
+        }
+    ],
+    "mapId": "LevelsArrival",
+    "version": 4
+}

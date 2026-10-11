@@ -1,5 +1,5 @@
-#include "IConfigSystem.h"
-#include "IPaths.h"
+#include "Application/Services/IConfigSystem.h"
+#include "Application/Services/IPaths.h"
 
 #include "Core/String/OpaaxUtf8.h"
 
@@ -29,7 +29,7 @@ namespace Opaax
     }
 
     // =========================================================================
-    // Type tag + null object (defined here so they are shared across the DLL/exe boundary).
+    // Type tag + null object (defined here so there is one of each).
     // =========================================================================
     ServiceTypeID IConfigSystem::StaticTypeID() noexcept
     {

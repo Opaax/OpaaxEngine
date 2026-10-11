@@ -6,8 +6,8 @@
 #include "Core/Reflection/OpaaxEnum.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
-#include "Engine/Subsystems/Resources/ResourcePath.h"
-#include "Engine/Subsystems/Resources/ResourcePathJson.h"
+#include "Resources/ResourcePath.h"
+#include "Resources/ResourcePathJson.h"
 #include "UI/UIMargin.h"
 #include "UI/UIWidget.h"
 
@@ -43,7 +43,7 @@ namespace Opaax
     //   One quad, or nine with a Border (9-slice). FillAmount crops from the min edge (health bar)
     //   and works with 9-slice too.
     // =============================================================================
-    class OPAAX_API UIImage final : public UIWidget
+    class UIImage final : public UIWidget
     {
         // =============================================================================
         // Authored state

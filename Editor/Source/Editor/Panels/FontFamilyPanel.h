@@ -4,8 +4,8 @@
 #include "Core/OpaaxTypes.h"
 #include "Editor/Panels/IEditorPanel.h"
 
-#include "Engine/Subsystems/Resources/ResourceRef.hpp"
-#include "Engine/Subsystems/Resources/Types/Font/FontFamilyData.h"
+#include "Resources/ResourceRef.hpp"
+#include "Renderer/Text/FontFamilyData.h"
 
 namespace Opaax
 {

@@ -32,7 +32,7 @@ namespace Opaax
     // LogHistory — the last N log lines, for the editor's Log panel. Capacity 0 = off.
     //   Not thread-safe; the Logger guards it.
     // =============================================================================
-    class OPAAX_API LogHistory final
+    class LogHistory final
     {
         // =============================================================================
         // Ctor - Dtor

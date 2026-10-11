@@ -1,6 +1,6 @@
 
 
-#include "EditorApplication.h"
+#include "Editor/Application/EditorApplication.h"
 
 #include "Editor/Application/Services/EditorService.h"
 #include "Editor/Application/Services/EditorPaths.h"
@@ -116,6 +116,16 @@ namespace Opaax::Editor
         }
     }
     
+    void EditorApplication::OnQuitGameRequested()
+    {
+        Editor().StopPlay();
+    }
+
+    void EditorApplication::OnAutomationStarted(AutomationRunner& InRunner)
+    {
+        Editor().RegisterAutomation(InRunner, IsInputScripted());
+    }
+
     void EditorApplication::OnEvent(Event& InEvent)
     {
         if (Editor().RouteInput(InEvent))

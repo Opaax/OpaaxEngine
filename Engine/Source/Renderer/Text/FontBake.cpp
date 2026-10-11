@@ -170,8 +170,9 @@ namespace Opaax::FontBake
                 return false;
             }
 
+            // Growing is the normal path for large sizes: only reaching the cap is a problem.
             lAtlasSize *= 2u;
-            OPAAX_LOG(LogFontBake, Warn, "{} glyph(s) overflowed the atlas, retrying at {}x{}",
+            OPAAX_LOG(LogFontBake, Trace, "{} glyph(s) did not fit: growing the atlas to {}x{}",
                       lCodepoints.size(), lAtlasSize, lAtlasSize);
         }
 

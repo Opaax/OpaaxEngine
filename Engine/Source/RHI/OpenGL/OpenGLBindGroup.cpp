@@ -1,4 +1,4 @@
-#include "OpenGLBindGroup.h"
+#include "RHI/OpenGL/OpenGLBindGroup.h"
 
 #include "RHI/Texture.h"
 #include "RHI/UniformBuffer.h"

@@ -10,7 +10,6 @@ namespace Opaax::Editor
     //   The result arrives through a callback, not a return value. The native implementation blocks
     //   and calls it before returning; an in-editor (multi-frame) implementation would call it later,
     //   and would then have to handle the world having changed in between.
-    //   No OPAAX_API: OpaaxEditorLib is a static lib linked into the editor exe.
     // =============================================================================
 
     enum class EDialogAnswer : Uint8
@@ -77,6 +76,9 @@ namespace Opaax::Editor
 
         /** Picks a destination. Whether overwriting is warned about is up to the backend. */
         virtual void SaveFile(const FileDialogRequest& InRequest, FPathChosen InOnChosen) = 0;
+
+        /** Picks a folder (the request's filters are not used). */
+        virtual void PickFolder(const FileDialogRequest& InRequest, FPathChosen InOnChosen) = 0;
 
         /** A yes/no question. */
         virtual void Confirm(const OpaaxString& InTitle, const OpaaxString& InMessage,

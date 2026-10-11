@@ -17,7 +17,7 @@ namespace Opaax
     enum class ECollisionChannel : Uint8
     {
         #define OPAAX_COLLISION_CHANNEL(Name) Name,
-        #include "CollisionChannelList.h"
+        #include "Physics/Collision/CollisionChannelList.h"
         #undef OPAAX_COLLISION_CHANNEL
         Count
     };
@@ -34,7 +34,7 @@ namespace Opaax
         switch (InChannel)
         {
             #define OPAAX_COLLISION_CHANNEL(Name) case ECollisionChannel::Name: return #Name;
-            #include "CollisionChannelList.h"
+            #include "Physics/Collision/CollisionChannelList.h"
             #undef OPAAX_COLLISION_CHANNEL
             default: return "Unknown";
         }
@@ -50,7 +50,7 @@ namespace Opaax
         static constexpr ECollisionChannel Values[] =
         {
             #define OPAAX_COLLISION_CHANNEL(Name) ECollisionChannel::Name,
-            #include "CollisionChannelList.h"
+            #include "Physics/Collision/CollisionChannelList.h"
             #undef OPAAX_COLLISION_CHANNEL
         };
     };
@@ -59,7 +59,7 @@ namespace Opaax
     inline const OpaaxStringID g_CollisionChannelIDs[] =
     {
         #define OPAAX_COLLISION_CHANNEL(Name) OPAAX_ID(#Name),
-        #include "CollisionChannelList.h"
+        #include "Physics/Collision/CollisionChannelList.h"
         #undef OPAAX_COLLISION_CHANNEL
     };
 

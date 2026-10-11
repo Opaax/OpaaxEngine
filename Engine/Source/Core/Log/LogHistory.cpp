@@ -1,4 +1,4 @@
-#include "LogHistory.h"
+#include "Core/Log/LogHistory.h"
 
 #include "Core/Log/Logger.h"
 

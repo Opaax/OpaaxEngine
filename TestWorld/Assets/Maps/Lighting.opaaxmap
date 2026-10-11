@@ -1,0 +1,398 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Light2D": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.5,
+                        "y": 0.699999988079071,
+                        "z": 1.0
+                    },
+                    "ConeAngle": 55.0,
+                    "ConeSoftness": 0.4000000059604645,
+                    "Elevation": 45.0,
+                    "Falloff": 1.2000000476837158,
+                    "Height": 100.0,
+                    "Intensity": 4.0,
+                    "Radius": 750.0,
+                    "ShadowSoftness": 1.2000000476837158,
+                    "ShadowStrength": 1.0,
+                    "Type": "Spot",
+                    "bCastShadows": true,
+                    "bEnabled": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 480.0,
+                        "y": 260.0
+                    },
+                    "Rotation": 215.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "0523a9df7b1556d085a119cdc0098785",
+            "name": "Spot",
+            "ownerMap": "Lighting"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Foreground",
+                    "Material": "Materials/Bumpy.opaaxdata",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 180.0,
+                        "y": 180.0
+                    },
+                    "Texture": "/Engine/Textures/T_Square_256_White.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 330.0,
+                        "y": 120.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "6421869398dd5b7488b57089d9ffbf69",
+            "name": "BumpyPanel",
+            "ownerMap": "Lighting"
+        },
+        {
+            "components": {
+                "Environment": {
+                    "AORadius": 48.0,
+                    "AOStrength": 0.699999988079071,
+                    "AmbientColor": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "AmbientIntensity": 0.20000000298023224,
+                    "BloomIntensity": 0.800000011920929,
+                    "BloomSoftness": 0.5,
+                    "BloomThreshold": 1.0,
+                    "Exposure": 0.0,
+                    "Tonemapper": "ACES",
+                    "bAmbientOcclusion": true,
+                    "bBloom": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "8840cd99fd5a59b9b77c5723da25f988",
+            "name": "Environment",
+            "ownerMap": "Lighting"
+        },
+        {
+            "components": {
+                "Light2D": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.6000000238418579,
+                        "y": 0.6499999761581421,
+                        "z": 1.0
+                    },
+                    "ConeAngle": 60.0,
+                    "ConeSoftness": 0.30000001192092896,
+                    "Elevation": 40.0,
+                    "Falloff": 2.0,
+                    "Height": 100.0,
+                    "Intensity": 0.30000001192092896,
+                    "Radius": 400.0,
+                    "ShadowSoftness": 0.5,
+                    "ShadowStrength": 1.0,
+                    "Type": "Global",
+                    "bCastShadows": false,
+                    "bEnabled": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": -60.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "95fc8f656d15565b96dba771fae111d1",
+            "name": "Moon",
+            "ownerMap": "Lighting"
+        },
+        {
+            "components": {
+                "ShadowCaster2D": {
+                    "bEnabled": true,
+                    "bSelfShadows": false
+                },
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.44999998807907104,
+                        "y": 0.5,
+                        "z": 0.4000000059604645
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 90.0,
+                        "y": 90.0
+                    },
+                    "Texture": "Textures/Circle.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -330.0,
+                        "y": -150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "9a0c3ee939d55baf8f2641c9f757e6ac",
+            "name": "Boulder",
+            "ownerMap": "Lighting"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.550000011920929,
+                        "y": 0.550000011920929,
+                        "z": 0.550000011920929
+                    },
+                    "Frame": -1,
+                    "Layer": "Background",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 1200.0,
+                        "y": 700.0
+                    },
+                    "Texture": "/Engine/Textures/T_Square_256_White.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "c2e43b06a084506893f49a34305125a0",
+            "name": "Backdrop",
+            "ownerMap": "Lighting"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.550000011920929,
+                        "y": 0.4000000059604645,
+                        "z": 0.25
+                    },
+                    "Size": {
+                        "x": 70.0,
+                        "y": 70.0
+                    }
+                },
+                "ShadowCaster2D": {
+                    "bEnabled": true,
+                    "bSelfShadows": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -200.0,
+                        "y": 60.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "c56aefbb51a35677919313388a81b163",
+            "name": "Crate",
+            "ownerMap": "Lighting"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.5,
+                        "y": 0.5,
+                        "z": 0.550000011920929
+                    },
+                    "Size": {
+                        "x": 30.0,
+                        "y": 160.0
+                    }
+                },
+                "ShadowCaster2D": {
+                    "bEnabled": true,
+                    "bSelfShadows": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 60.0,
+                        "y": -60.0
+                    },
+                    "Rotation": 15.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "d216c2cbedf35a788b1c9db137bcdd47",
+            "name": "Pillar",
+            "ownerMap": "Lighting"
+        },
+        {
+            "components": {
+                "Light2D": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 0.8500000238418579,
+                        "z": 0.6000000238418579
+                    },
+                    "ConeAngle": 60.0,
+                    "ConeSoftness": 0.30000001192092896,
+                    "Elevation": 45.0,
+                    "Falloff": 1.5,
+                    "Height": 80.0,
+                    "Intensity": 5.0,
+                    "Radius": 520.0,
+                    "ShadowSoftness": 0.6000000238418579,
+                    "ShadowStrength": 1.0,
+                    "Type": "Point",
+                    "bCastShadows": true,
+                    "bEnabled": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -90.0,
+                        "y": -20.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "dd7c6c1215c25a529245462a73ad23df",
+            "name": "Lamp",
+            "ownerMap": "Lighting"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Foreground",
+                    "Material": "Materials/Glow.opaaxdata",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 140.0,
+                        "y": 24.0
+                    },
+                    "Texture": "/Engine/Textures/T_Square_256_White.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 330.0,
+                        "y": -160.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "e7c1b65e6db7536198b6849abf609249",
+            "name": "GlowPanel",
+            "ownerMap": "Lighting"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "eb08d7c4ce2b5d64b2851a8c59423576",
+            "name": "Camera",
+            "ownerMap": "Lighting"
+        }
+    ],
+    "mapId": "Lighting",
+    "version": 4
+}

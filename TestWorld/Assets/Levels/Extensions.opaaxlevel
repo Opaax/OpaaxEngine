@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/Extensions.opaaxmap"
+    ],
+    "name": "Extensions",
+    "persistentMap": "Maps/Extensions.opaaxmap",
+    "version": 1
+}

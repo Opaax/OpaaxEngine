@@ -6,8 +6,8 @@
 #include "Core/Reflection/OpaaxEnum.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
-#include "Engine/Subsystems/Resources/ResourcePath.h"
-#include "Engine/Subsystems/Resources/ResourcePathJson.h"
+#include "Resources/ResourcePath.h"
+#include "Resources/ResourcePathJson.h"
 #include "Renderer/Text/TextDrawParams.h"
 #include "UI/UIWidget.h"
 
@@ -41,7 +41,7 @@ namespace Opaax
     //   With a Binding, Text is the format: "Jumps: {}" with "Hud.Jumps" shows the value in the
     //   braces; without braces the value replaces the text. Unbound, the text shows as written.
     // =============================================================================
-    class OPAAX_API UIText final : public UIWidget
+    class UIText final : public UIWidget
     {
         // =============================================================================
         // Authored state

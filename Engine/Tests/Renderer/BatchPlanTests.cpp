@@ -238,3 +238,58 @@ TEST_CASE("PlanQuadBatches: an EMPTY mask list plans exactly like the pre-mask c
         CHECK(lZeroes[lIndex].MaskSlot   == 0u);
     }
 }
+
+// =============================================================================
+// A lit quad with a normal map needs it bound too: up to three slots per quad.
+// =============================================================================
+
+TEST_CASE("PlanQuadBatches: a quad's normal map gets its own slot, and 0 means none")
+{
+    const TDynArray<Uint64> lKeys = Keys({ ERenderLayer::Default, ERenderLayer::Default });
+    const TDynArray<Uint32> lTex    { 7u, 7u };
+    const TDynArray<Uint32> lNormal { 0u, 8u };
+
+    TDynArray<QuadPlacement> lPlan;
+    Opaax::PlanQuadBatches(lKeys, lTex, {}, lNormal, QuadBatchLimits{}, lPlan);
+
+    REQUIRE(lPlan.size() == 2u);
+    CHECK(lPlan[0].Batch == lPlan[1].Batch);
+    CHECK(lPlan[0].NormalSlot == 0u);
+    CHECK(lPlan[1].NormalSlot != 0u);
+    CHECK(lPlan[1].NormalSlot != lPlan[1].Slot);
+}
+
+TEST_CASE("PlanQuadBatches: quads sharing a normal map share its slot")
+{
+    const TDynArray<Uint64> lKeys = Keys({ ERenderLayer::Default, ERenderLayer::Default, ERenderLayer::Default });
+    const TDynArray<Uint32> lTex    { 1u, 2u, 3u };
+    const TDynArray<Uint32> lNormal { 9u, 9u, 9u };
+
+    TDynArray<QuadPlacement> lPlan;
+    Opaax::PlanQuadBatches(lKeys, lTex, {}, lNormal, QuadBatchLimits{}, lPlan);
+
+    REQUIRE(lPlan.size() == 3u);
+    CHECK(lPlan[0].NormalSlot == lPlan[1].NormalSlot);
+    CHECK(lPlan[1].NormalSlot == lPlan[2].NormalSlot);
+}
+
+TEST_CASE("PlanQuadBatches: texture, mask and normal map together cut the batch sooner")
+{
+    // Four slots: white + three. The first quad takes all three, so the second cannot fit.
+    QuadBatchLimits lLimits;
+    lLimits.MaxTextureSlots = 4u;
+
+    const TDynArray<Uint64> lKeys = Keys({ ERenderLayer::Default, ERenderLayer::Default });
+    const TDynArray<Uint32> lTex    { 1u, 2u };
+    const TDynArray<Uint32> lMask   { 10u, 0u };
+    const TDynArray<Uint32> lNormal { 20u, 0u };
+
+    TDynArray<QuadPlacement> lPlan;
+    Opaax::PlanQuadBatches(lKeys, lTex, lMask, lNormal, lLimits, lPlan);
+
+    REQUIRE(lPlan.size() == 2u);
+    CHECK(lPlan[0].Batch != lPlan[1].Batch);
+    CHECK(lPlan[0].MaskSlot != 0u);
+    CHECK(lPlan[0].NormalSlot != 0u);
+    CHECK(lPlan[0].NormalSlot != lPlan[0].MaskSlot);
+}

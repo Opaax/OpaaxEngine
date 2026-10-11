@@ -72,6 +72,9 @@ EditorTemp/
 !/.claude/skills/**
 # Stays local on purpose: CLAUDE.local.md (personal/machine), data/ (large PDFs), task/ (disposable working state), Old/ (archive).
 
+# Working files of agents and tools (scripts, logs, screenshots, trial checkouts): local only.
+/Scratch/
+
 
 #OpaaxLog
 OpaaxEngine.log

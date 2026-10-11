@@ -7,7 +7,7 @@
 
 #include "Application/Services/IEngine.h"
 #include "Engine/Registries/EngineRegistries.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"
+#include "Resources/ResourceManager.h"
 
 #include <imgui.h>
 

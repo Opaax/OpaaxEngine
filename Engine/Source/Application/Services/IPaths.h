@@ -1,6 +1,6 @@
 #pragma once
 
-#include "IAppService.h"
+#include "Application/Services/IAppService.h"
 #include "Core/String/OpaaxString.hpp"
 
 namespace Opaax
@@ -20,17 +20,22 @@ namespace Opaax
         OpaaxString ConfigsDir;      // <ProjectRoot>/Configs   
         OpaaxString SourceDir;       // <ProjectRoot>/Source 
         OpaaxString SaveDir;         // <ProjectRoot>/Save 
-        OpaaxString TempDir;         // <ProjectRoot>/Temp 
+        OpaaxString TempDir;         // <ProjectRoot>/Temp
     };
+
+    /** A ship build's project folder, next to the executable, is <ExeName> followed by this. */
+    inline constexpr const char* SHIPPED_PROJECT_DIR_SUFFIX = "_Data";
 
     /**
      * Resolves every engine and project directory. No OS calls.
      * @param InExePath Absolute path to the running executable
      * @param InWorkspaceDir Source workspace in dev builds; empty in release (uses the exe directory)
-     * @param InProjectArg Value of --project (relative to the workspace), or empty for
-     *   <WorkspaceRoot>/<ExeName>/<ExeName>.opaaxproj
+     * @param InProjectArg Value of --project (relative to the workspace), or empty for the default:
+     *   dev build:  <WorkspaceRoot>/<ExeName>/<ExeName>.opaaxproj (the project's source folder)
+     *   ship build: <WorkspaceRoot>/<ExeName>_Data/<ExeName>.opaaxproj. Not <ExeName>/: an
+     *   executable has no extension on Linux and macOS, so a folder named like it cannot sit next to it.
      */
-    OPAAX_API ProjectLayout ResolveProjectLayout(const OpaaxString& InExePath,
+    ProjectLayout ResolveProjectLayout(const OpaaxString& InExePath,
                                                  const OpaaxString& InWorkspaceDir,
                                                  const OpaaxString& InProjectArg);
 
@@ -47,7 +52,7 @@ namespace Opaax
     //         Assets/  Configs/  Source/  Save/  Temp/
     //         <Name>.opaaxproj
     // =============================================================================
-    class OPAAX_API IPaths : public IAppService
+    class IPaths : public IAppService
     {
         // =============================================================================
         // Base Implementation
@@ -98,7 +103,7 @@ namespace Opaax
     // Paths — resolves the layout from the executable path, --project and the workspace.
     //   EditorPaths derives from it to point at the edited project.
     // =============================================================================
-    class OPAAX_API Paths : public IPaths
+    class Paths : public IPaths
     {
         // =============================================================================
         // CTOR

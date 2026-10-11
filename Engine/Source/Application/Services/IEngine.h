@@ -1,11 +1,12 @@
 #pragma once
 
-#include "IAppService.h"
+#include "Application/Services/IAppService.h"
 #include "Core/OpaaxTypes.h"
 #include "World/WorldSpec.h"
 
 namespace Opaax
 {
+    class AudioManager;
     class EngineEventBus;
     class ResourceManager;
     class WorldManager;
@@ -25,7 +26,7 @@ namespace Opaax
     // IEngine — the engine as an application service. Owns the engine subsystems
     // and ticks them each frame. The application drives its lifecycle.
     // =============================================================================
-    class OPAAX_API IEngine : public IAppService
+    class IEngine : public IAppService
     {
     public:
         OPAAX_SERVICE_TYPE(IEngine)
@@ -86,6 +87,13 @@ namespace Opaax
          * Swaps the window backbuffer. Called once per frame, after rendering.
          */
         virtual void PresentBackbuffer()                = 0;
+
+        /**
+         * Saves the frame drawn so far (world, UI, editor) as a PNG. Call before PresentBackbuffer.
+         * @param InPngPath Absolute path; its folders are created
+         * @return False without a render device, or when the file cannot be written (logged)
+         */
+        virtual bool CaptureFrame(const OpaaxString& InPngPath) = 0;
 
         /**
          * Draws the active world into InTarget for this frame only. Submit again every frame.
@@ -177,6 +185,11 @@ namespace Opaax
          * Keyboard and mouse state, fed by the application. Read-only for everyone else.
          */
         virtual InputManager& GetInput() = 0;
+
+        /**
+         * The sound mixer and audio device. Headless (silent) when there is no device.
+         */
+        virtual AudioManager& GetAudio() = 0;
 
         // End Foundation subsystems
         // =============================================================================

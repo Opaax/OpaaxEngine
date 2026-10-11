@@ -19,7 +19,7 @@
 
 #include "Application/Services/IEngine.h"
 #include "Core/Maths/Bounds2D.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"   // before PrefabResource (completes LoadContext)
+#include "Resources/ResourceManager.h"   // before PrefabResource (completes LoadContext)
 #include "RHI/Framebuffer.h"
 #include "Renderer/CameraView.h"
 #include "Renderer/RenderTarget.hpp"        // OffscreenRenderTarget
@@ -85,6 +85,8 @@ namespace Opaax::Editor
         const float lAnchor = ViewportOverlays::AnchorHalfExtent(lWorld->GetCameraView(), ViewportPx());
 
         ViewportOverlays::EnqueueSelectionOutline(
+            m_Context.Engine.GetDebugDraw(), *lWorld, m_Context.PrefabDocument.Selection().Ids(), lAnchor);
+        ViewportOverlays::EnqueueLightGizmos(
             m_Context.Engine.GetDebugDraw(), *lWorld, m_Context.PrefabDocument.Selection().Ids(), lAnchor);
         ViewportOverlays::EnqueueEntityIcons(m_Context.Engine.GetDebugDraw(), *lWorld, lAnchor);
 

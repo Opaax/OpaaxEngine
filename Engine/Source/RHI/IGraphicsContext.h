@@ -13,7 +13,7 @@ namespace Opaax
      * The graphics context of a window: make current, load function pointers, vsync, present.
      * Created by IGraphicsContext::Create (BackendFactory.cpp). OpenGL only for now.
      */
-    class OPAAX_API IGraphicsContext
+    class IGraphicsContext
     {
         // =============================================================================
         // CTOR - DTOR

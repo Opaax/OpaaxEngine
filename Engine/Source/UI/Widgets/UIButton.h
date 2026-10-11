@@ -5,8 +5,8 @@
 #include "Core/Events/Delegate.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxStringID.hpp"
-#include "Engine/Subsystems/Resources/ResourcePath.h"
-#include "Engine/Subsystems/Resources/ResourcePathJson.h"
+#include "Resources/ResourcePath.h"
+#include "Resources/ResourcePathJson.h"
 #include "UI/UIWidget.h"
 
 namespace Opaax
@@ -24,7 +24,7 @@ namespace Opaax
     //   Four state colours tint its art (texture or sheet frame). Add a UIText child for a label.
     //   It handles its pointer events, so clicks do not reach the game.
     // =============================================================================
-    class OPAAX_API UIButton final : public UIWidget
+    class UIButton final : public UIWidget
     {
         // =============================================================================
         // Authored state

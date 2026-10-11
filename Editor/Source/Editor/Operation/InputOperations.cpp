@@ -7,11 +7,11 @@
 #include "Editor/Undo/EditorUndo.h"
 #include "Editor/Undo/InputUndoables.h"
 
-#include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/Types/Input/InputActionFile.h"
-#include "Engine/Subsystems/Resources/Types/Input/InputActionResource.h"
-#include "Engine/Subsystems/Resources/Types/Input/InputMappingContextFile.h"
-#include "Engine/Subsystems/Resources/Types/Input/InputMappingContextResource.h"
+#include "Resources/ResourceManager.h"
+#include "Input/Assets/InputActionFile.h"
+#include "Input/Assets/InputActionResource.h"
+#include "Input/Assets/InputMappingContextFile.h"
+#include "Input/Assets/InputMappingContextResource.h"
 
 namespace Opaax::Editor
 {

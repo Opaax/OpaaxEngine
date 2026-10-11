@@ -18,6 +18,7 @@ namespace Opaax::Editor
         //~Begin IEditorDialogs interface
         void OpenFile(const FileDialogRequest& InRequest, FPathChosen InOnChosen) override;
         void SaveFile(const FileDialogRequest& InRequest, FPathChosen InOnChosen) override;
+        void PickFolder(const FileDialogRequest& InRequest, FPathChosen InOnChosen) override;
         void Confirm(const OpaaxString& InTitle, const OpaaxString& InMessage,
                      FAnswered InOnAnswered) override;
         //~End IEditorDialogs interface

@@ -23,21 +23,21 @@ namespace Opaax
          * @return False if the entity is invalid, has no transform, or has no bounds.
          *   OutBounds is untouched then.
          */
-        OPAAX_API bool TryGetBounds(Entity InEntity, Bounds2D& OutBounds, float InAnchorHalfExtent = 0.f);
+        bool TryGetBounds(Entity InEntity, Bounds2D& OutBounds, float InAnchorHalfExtent = 0.f);
 
         /** The box covering all of InIds. False if none had bounds. */
-        OPAAX_API bool TryGetBounds(World& InWorld, const TDynArray<EntityID>& InIds, Bounds2D& OutBounds,
+        bool TryGetBounds(World& InWorld, const TDynArray<EntityID>& InIds, Bounds2D& OutBounds,
                                     float InAnchorHalfExtent = 0.f);
 
         /**
          * The topmost entity at InWorldPoint (in draw order), or an invalid Entity.
          */
-        OPAAX_API Entity PickAt(World& InWorld, const Vector2F& InWorldPoint, float InAnchorHalfExtent = 0.f);
+        Entity PickAt(World& InWorld, const Vector2F& InWorldPoint, float InAnchorHalfExtent = 0.f);
 
         /**
          * Every entity overlapping InRegion (marquee). Appends to OutIds.
          */
-        OPAAX_API void QueryOverlapping(World& InWorld, const Bounds2D& InRegion, TDynArray<EntityID>& OutIds,
+        void QueryOverlapping(World& InWorld, const Bounds2D& InRegion, TDynArray<EntityID>& OutIds,
                                         float InAnchorHalfExtent = 0.f);
     }
 }

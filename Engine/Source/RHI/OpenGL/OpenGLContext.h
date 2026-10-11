@@ -15,7 +15,7 @@ namespace Opaax
     /**
      * IGraphicsContext for OpenGL on a GLFW window: make current, glad loading, vsync, swap.
      */
-    class OPAAX_API OpenGLContext final : public IGraphicsContext
+    class OpenGLContext final : public IGraphicsContext
     {
         // =============================================================================
         // CTOR - DTOR

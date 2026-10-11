@@ -5,12 +5,12 @@
 
 #include <cstdio>   // snprintf
 
-#include "ImguiHelper.h"
+#include "Editor/Imgui/ImguiHelper.h"
 #include "Application/Services/IConfigSystem.h"
 #include "Core/Log/Logger.h"
-#include "Configs/Config_EditorImgui.h"
+#include "Editor/Imgui/Configs/Config_EditorImgui.h"
 #include "Core/EngineAPI.h"   // OPAAX_ASSERT
-#include "Window/Window.h"
+#include "Platform/Window/Window.h"
 #include "Editor/EditorContext.h"
 #include "Editor/Application/EditorApplication.h"
 #include "Editor/Panels/EditorPanels.h"

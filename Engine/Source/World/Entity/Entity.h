@@ -83,6 +83,15 @@ namespace Opaax
             return Guid{};
         }
 
+        /** The entity's name; empty for an invalid entity. */
+        const OpaaxString& GetName() const
+        {
+            static const OpaaxString EMPTY{};
+
+            const EntityMeta* lMeta = IsValid() ? m_World->GetRegistry().try_get<EntityMeta>(m_Handle) : nullptr;
+            return (lMeta != nullptr) ? lMeta->Name : EMPTY;
+        }
+
         bool IsValid() const noexcept { return m_World != nullptr && m_World->IsValid(m_Handle); }
         explicit operator bool() const noexcept { return IsValid(); }
 

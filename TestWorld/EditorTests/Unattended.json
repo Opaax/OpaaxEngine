@@ -1,0 +1,100 @@
+[
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 10
+        }
+    },
+    {
+        "id": "open",
+        "command": "level.open",
+        "params": {
+            "path": "Levels/Hierarchy.opaaxlevel"
+        },
+        "expect": {
+            "world": "Hierarchy",
+            "mode": "Edit"
+        }
+    },
+    {
+        "id": "draft",
+        "command": "entity.create",
+        "params": {
+            "name": "Draft"
+        }
+    },
+    {
+        "id": "open-refused",
+        "command": "level.open",
+        "params": {
+            "path": "Levels/Physics.opaaxlevel"
+        },
+        "expectFailure": true
+    },
+    {
+        "command": "expect.entity",
+        "params": {
+            "entity": "Draft",
+            "exists": true
+        },
+        "id": "changes-kept"
+    },
+    {
+        "id": "play-refused",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Physics.opaaxlevel"
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "still-editing",
+        "command": "entity.create",
+        "params": {
+            "name": "Draft2"
+        }
+    },
+    {
+        "id": "picker-refused",
+        "command": "editor.command",
+        "params": {
+            "tag": "Editor.Command.NewMap"
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "open-discarding",
+        "command": "level.open",
+        "params": {
+            "path": "Levels/Physics.opaaxlevel",
+            "discard": true
+        },
+        "expect": {
+            "world": "Physics"
+        }
+    },
+    {
+        "command": "expect.entity",
+        "params": {
+            "entity": "Draft",
+            "exists": false
+        },
+        "id": "changes-discarded"
+    },
+    {
+        "command": "expect.entity",
+        "params": {
+            "entity": "Crate1",
+            "exists": true
+        },
+        "id": "other-level-open"
+    },
+    {
+        "id": "missing-refused",
+        "command": "level.open",
+        "params": {
+            "path": "Levels/NoSuchLevel.opaaxlevel"
+        },
+        "expectFailure": true
+    }
+]

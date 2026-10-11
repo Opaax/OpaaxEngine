@@ -2,8 +2,8 @@
 
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
-#include "Engine/Subsystems/Resources/Types/Input/InputActionData.h"
-#include "Engine/Subsystems/Resources/Types/Input/InputMappingContextData.h"
+#include "Input/Assets/InputActionData.h"
+#include "Input/Assets/InputMappingContextData.h"
 
 namespace Opaax::Editor
 {

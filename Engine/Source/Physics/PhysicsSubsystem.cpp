@@ -1,0 +1,750 @@
+#include "Physics/PhysicsSubsystem.h"
+
+#include <cmath>
+
+#include "Core/Events/EventBus.h"
+#include "Core/Maths/Maths.h"   // DegreesToRadians
+#include "Core/Profiling/Profiler.h"
+#include "Engine/Config/EngineConfigData.h"
+#include "Engine/Subsystems/EngineEventBus.h"
+#include "Physics/Collision/CollisionChannel.h"
+#include "Physics/PhysicsAPI.h"
+#include "Physics/PhysicsEvents.h"
+#include "Physics/Components/ColliderComponent.h"
+#include "Physics/Components/RigidbodyComponent.h"
+#include "World/Components/TransformComponent.h"
+#include "World/Components/TransformInterpolationComponent.h"
+#include "World/Entity/EntityHierarchy.h"   // bodies are in world space
+#include "World/Systems/WorldContext.h"
+#include "World/World.h"
+
+namespace Opaax
+{
+    namespace
+    {
+        /**
+         * Entity bits -> body user data, plus one: 0 means "unresolved" for the physics backend.
+         */
+        Uint64 ToUserData(EntityID InEntity) noexcept
+        {
+            return static_cast<Uint64>(static_cast<Uint32>(InEntity)) + 1ull;
+        }
+
+        Uint32 EntityBits(EntityID InEntity) noexcept { return static_cast<Uint32>(InEntity); }
+
+        /** Inverse of ToUserData. 0 gives ENTITY_NONE. */
+        EntityID FromUserData(Uint64 InUserData) noexcept
+        {
+            return InUserData == 0
+                       ? ENTITY_NONE
+                       : static_cast<EntityID>(static_cast<Uint32>(InUserData - 1ull));
+        }
+
+        /** A Transform further than this from the last synced pose was moved by gameplay. */
+        constexpr float TELEPORT_POSITION_TOLERANCE = 1e-3f;
+        constexpr float TELEPORT_ROTATION_TOLERANCE = 1e-3f;   // degrees
+
+        /** The backend turns a body at most 45 degrees per step: a bigger turn is a jump, not a sweep. */
+        constexpr float KINEMATIC_MAX_SWEEP_DEGREES = 40.f;
+    }
+
+    // =========================================================================
+    // Base implementation
+    // =========================================================================
+    bool PhysicsSubsystem::ShouldCreate(const World& InWorld)
+    {
+        return InWorld.GetMode() == EWorldMode::Play;
+    }
+
+    // =========================================================================
+    // Lifecycle
+    // =========================================================================
+    bool PhysicsSubsystem::Startup()
+    {
+        const PhysicsSettings& lSettings = m_Context->Config.Physics;
+
+        PhysicsWorldDesc lDesc;
+        lDesc.Gravity             = lSettings.Gravity;
+        lDesc.LengthUnitsPerMeter = lSettings.LengthUnitsPerMeter;
+        lDesc.SubStepCount        = lSettings.SubStepCount;
+
+        m_SubStepCount = lSettings.SubStepCount;
+
+        m_bWorldBoundsEnabled = lSettings.WorldBounds.bEnabled;
+        m_WorldBoundsMin      = lSettings.WorldBounds.Min;
+        m_WorldBoundsMax      = lSettings.WorldBounds.Max;
+        m_WorldBoundsResponse = lSettings.WorldBounds.Response;
+
+        m_World = PhysicsAPI::Create(lSettings.Backend, lDesc);
+
+        if (m_World == nullptr)
+        {
+            OPAAX_LOG(LogPhysics, Error, "No physics world — the '{}' backend refused to build one.",
+                      ToString(lSettings.Backend));
+            return false;
+        }
+
+        // No entities yet: the first FixedUpdate creates the bodies.
+        if (m_bWorldBoundsEnabled)
+        {
+            OPAAX_LOG(LogPhysics, Trace, "World bounds ON: [{},{}]..[{},{}], response {}",
+                      m_WorldBoundsMin.x, m_WorldBoundsMin.y, m_WorldBoundsMax.x, m_WorldBoundsMax.y,
+                      ToString(m_WorldBoundsResponse));
+        }
+
+        return true;
+    }
+
+    void PhysicsSubsystem::Shutdown()
+    {
+        // The bodies are destroyed with the world; forget their handles.
+        m_Bodies.clear();
+        m_World.reset();
+    }
+
+    // =========================================================================
+    // Tick
+    // =========================================================================
+    void PhysicsSubsystem::FixedUpdate(const double InFixedDeltaTime)
+    {
+        if (m_World == nullptr)
+        {
+            return;
+        }
+
+        OPAAX_STAT_SCOPE("Physics");
+
+        World& lWorld = m_Context->OwningWorld;
+
+        // Remove dead bodies first, so they emit no contacts.
+        ReconcileDeadBodies(lWorld);
+        ReconcileLiveBodies(lWorld);
+        PushTransformsToBodies(lWorld, static_cast<float>(InFixedDeltaTime));
+
+        m_World->Step(static_cast<float>(InFixedDeltaTime), m_SubStepCount);
+
+        SyncDynamicTransforms(lWorld);
+        DispatchPhysicsEvents(lWorld);
+
+        // Last, so this step's contacts and overlaps are delivered before anything is removed.
+        EnforceWorldBounds(lWorld);
+    }
+
+    // =========================================================================
+    // Body reconciliation
+    // =========================================================================
+    void PhysicsSubsystem::ReconcileDeadBodies(World& InWorld)
+    {
+        m_DeadBodyVictims.clear();
+
+        for (const auto& [lBits, lRecord] : m_Bodies)
+        {
+            if (!InWorld.IsValid(static_cast<EntityID>(lBits)))
+            {
+                m_DeadBodyVictims.push_back(lBits);
+            }
+        }
+
+        // Collected during the walk, destroyed after.
+        for (const Uint32 lBits : m_DeadBodyVictims)
+        {
+            RemoveBodyForEntity(static_cast<EntityID>(lBits));
+        }
+    }
+
+    void PhysicsSubsystem::ReconcileLiveBodies(World& InWorld)
+    {
+        InWorld.Each<ColliderComponent, TransformComponent>(
+            [this, &InWorld](EntityID InEntity, ColliderComponent& InCollider, TransformComponent& InTransform)
+            {
+                const auto* lRigidbody = InWorld.GetRegistry().try_get<RigidbodyComponent>(InEntity);
+                const EBodyType lWanted = ResolveBodyType(lRigidbody);
+
+                const auto lFound = m_Bodies.find(EntityBits(InEntity));
+                if (lFound != m_Bodies.end())
+                {
+                    // Already built with the right type. A different type means a Rigidbody was added or
+                    // removed: rebuild.
+                    if (lFound->second.BuiltType == lWanted)
+                    {
+                        return;
+                    }
+
+                    RemoveBodyForEntity(InEntity);
+                }
+
+                BuildBodyForEntity(InWorld, InEntity, InCollider, InTransform);
+            });
+    }
+
+    void PhysicsSubsystem::BuildBodyForEntity(World& InWorld, const EntityID InEntity,
+                                              const ColliderComponent& InCollider,
+                                              const TransformComponent& /*InLocal*/)
+    {
+        const auto* lRigidbody = InWorld.GetRegistry().try_get<RigidbodyComponent>(InEntity);
+
+        // Box2D works in world space; the component is local.
+        const TransformComponent lWorldXf = EntityHierarchy::WorldTransform(Entity{ InEntity, &InWorld });
+
+        BodyDesc lBody;
+        lBody.Type     = ResolveBodyType(lRigidbody);
+        lBody.Position = lWorldXf.Position;
+        lBody.Rotation = Maths::DegreesToRadians(lWorldXf.Rotation);
+        lBody.UserData = ToUserData(InEntity);
+
+        if (lRigidbody != nullptr)
+        {
+            lBody.GravityScale   = lRigidbody->GravityScale;
+            lBody.bFixedRotation = lRigidbody->bFixedRotation;
+            lBody.LinearDamping  = lRigidbody->LinearDamping;
+            lBody.AngularDamping = lRigidbody->AngularDamping;
+        }
+
+        const BodyHandle lHandle = m_World->CreateBody(lBody);
+        if (!lHandle.IsValid())
+        {
+            OPAAX_LOG(LogPhysics, Warn, "Body creation failed for entity {}", EntityBits(InEntity));
+            return;
+        }
+
+        m_World->AddShape(lHandle, MakeShapeDesc(InCollider));
+
+        BodyRecord lRecord;
+        lRecord.Handle           = lHandle;
+        lRecord.BuiltType        = lBody.Type;
+        lRecord.bSyncToTransform = lBody.Type == EBodyType::Dynamic;
+        lRecord.SyncedPosition   = lWorldXf.Position;
+        lRecord.SyncedRotation   = lWorldXf.Rotation;
+
+        m_Bodies.emplace(EntityBits(InEntity), lRecord);
+    }
+
+    void PhysicsSubsystem::RemoveBodyForEntity(const EntityID InEntity)
+    {
+        const auto lFound = m_Bodies.find(EntityBits(InEntity));
+        if (lFound == m_Bodies.end())
+        {
+            return;
+        }
+
+        m_World->DestroyBody(lFound->second.Handle);
+        m_Bodies.erase(lFound);
+
+        // Remove this body's live overlaps, or they would stay forever.
+        m_StaleOverlaps.clear();
+        for (const auto& [lKey, lPair] : m_LiveOverlaps)
+        {
+            if (FromUserData(lPair.EntityA) == InEntity || FromUserData(lPair.EntityB) == InEntity)
+            {
+                m_StaleOverlaps.push_back(lKey);
+            }
+        }
+
+        for (const Uint64 lKey : m_StaleOverlaps)
+        {
+            m_LiveOverlaps.erase(lKey);
+        }
+    }
+
+    // =========================================================================
+    // Transform sync
+    // =========================================================================
+    void PhysicsSubsystem::PushTransformsToBodies(World& InWorld, const float InDeltaTime)
+    {
+        for (auto& [lBits, lRecord] : m_Bodies)
+        {
+            if (lRecord.BuiltType == EBodyType::Static)
+            {
+                continue;
+            }
+
+            const Entity             lLive{ static_cast<EntityID>(lBits), &InWorld };
+            const TransformComponent lWorldXf = EntityHierarchy::WorldTransform(lLive);
+            const float              lRadians = Maths::DegreesToRadians(lWorldXf.Rotation);
+
+            if (lRecord.BuiltType == EBodyType::Kinematic)
+            {
+                Vector2F lBodyPosition;
+                float    lBodyRadians = 0.f;
+                m_World->GetBodyTransform(lRecord.Handle, lBodyPosition, lBodyRadians);
+
+                // A move one step cannot sweep (the backend caps speeds) is a jump: placed at once.
+                const Vector2F lMove    = lWorldXf.Position - lBodyPosition;
+                const float    lMaxMove = m_World->GetMaxLinearSpeed() * InDeltaTime;
+                const float    lTurn    = std::abs(std::remainder(lWorldXf.Rotation - Maths::RadiansToDegrees(lBodyRadians), 360.f));
+                if (lMove.x * lMove.x + lMove.y * lMove.y > lMaxMove * lMaxMove || lTurn > KINEMATIC_MAX_SWEEP_DEGREES)
+                {
+                    m_World->SetBodyTransform(lRecord.Handle, lWorldXf.Position, lRadians);
+                }
+
+                // Every step, so a kinematic body at rest has no velocity left over.
+                m_World->SetBodyTargetTransform(lRecord.Handle, lWorldXf.Position, lRadians, InDeltaTime);
+                continue;
+            }
+
+            const bool bMoved = !Maths::IsNearlyEqual(lWorldXf.Position.x, lRecord.SyncedPosition.x, TELEPORT_POSITION_TOLERANCE)
+                             || !Maths::IsNearlyEqual(lWorldXf.Position.y, lRecord.SyncedPosition.y, TELEPORT_POSITION_TOLERANCE)
+                             || !Maths::IsNearlyEqual(lWorldXf.Rotation, lRecord.SyncedRotation, TELEPORT_ROTATION_TOLERANCE);
+            if (bMoved)
+            {
+                // Gameplay moved it since the last step: a teleport, velocity kept.
+                m_World->SetBodyTransform(lRecord.Handle, lWorldXf.Position, lRadians);
+                lRecord.SyncedPosition = lWorldXf.Position;
+                lRecord.SyncedRotation = lWorldXf.Rotation;
+            }
+        }
+    }
+
+    void PhysicsSubsystem::SyncDynamicTransforms(World& InWorld)
+    {
+        for (auto& [lBits, lRecord] : m_Bodies)
+        {
+            // Static and kinematic bodies are driven, not read back.
+            if (!lRecord.bSyncToTransform)
+            {
+                continue;
+            }
+
+            const auto lEntity = static_cast<EntityID>(lBits);
+            auto*      lTransform = InWorld.GetRegistry().try_get<TransformComponent>(lEntity);
+            if (lTransform == nullptr)
+            {
+                continue;
+            }
+
+            Vector2F lPosition;
+            float    lRotation = 0.f;
+            m_World->GetBodyTransform(lRecord.Handle, lPosition, lRotation);
+
+            // Record the current pose as the previous one, for render interpolation.
+            auto& lPrevious = InWorld.GetRegistry().get_or_emplace<TransformInterpolationComponent>(lEntity);
+            lPrevious.Position     = lTransform->Position;
+            lPrevious.Rotation     = lTransform->Rotation;
+            lPrevious.bHasPrevious = true;
+
+            // The body gives a world pose; store the matching local.
+            const Entity       lLive{ lEntity, &InWorld };
+            TransformComponent lWorldXf = EntityHierarchy::WorldTransform(lLive);
+            lWorldXf.Position = lPosition;
+            lWorldXf.Rotation = Maths::RadiansToDegrees(lRotation);
+            EntityHierarchy::SetWorldTransform(lLive, lWorldXf);
+
+            lRecord.SyncedPosition = lWorldXf.Position;
+            lRecord.SyncedRotation = lWorldXf.Rotation;
+        }
+    }
+
+    // =========================================================================
+    // Body motion
+    // =========================================================================
+    BodyHandle PhysicsSubsystem::FindDynamicBody(const EntityID InEntity) const
+    {
+        const auto lFound = m_Bodies.find(EntityBits(InEntity));
+        if (m_World == nullptr || lFound == m_Bodies.end() || lFound->second.BuiltType != EBodyType::Dynamic)
+        {
+            return BodyHandle{};
+        }
+
+        return lFound->second.Handle;
+    }
+
+    BodyHandle PhysicsSubsystem::FindOrBuildDynamicBody(const EntityID InEntity)
+    {
+        World& lWorld = m_Context->OwningWorld;
+        if (m_World == nullptr || !lWorld.IsValid(InEntity))
+        {
+            return BodyHandle{};
+        }
+
+        const auto* lRigidbody = lWorld.GetRegistry().try_get<RigidbodyComponent>(InEntity);
+        if (ResolveBodyType(lRigidbody) != EBodyType::Dynamic)
+        {
+            return BodyHandle{};
+        }
+
+        // Built already, possibly as another type (its Rigidbody changed): that one is rebuilt by
+        // the next step, never here, since this may run from an event handler during the step.
+        if (m_Bodies.find(EntityBits(InEntity)) != m_Bodies.end())
+        {
+            return FindDynamicBody(InEntity);
+        }
+
+        const auto* lCollider  = lWorld.GetRegistry().try_get<ColliderComponent>(InEntity);
+        const auto* lTransform = lWorld.GetRegistry().try_get<TransformComponent>(InEntity);
+        if (lCollider == nullptr || lTransform == nullptr)
+        {
+            return BodyHandle{};
+        }
+
+        // Spawned since the last step: built now, as the next step's reconcile would.
+        BuildBodyForEntity(lWorld, InEntity, *lCollider, *lTransform);
+        return FindDynamicBody(InEntity);
+    }
+
+    bool PhysicsSubsystem::HasDynamicBody(const EntityID InEntity)
+    {
+        return FindOrBuildDynamicBody(InEntity).IsValid();
+    }
+
+    Vector2F PhysicsSubsystem::GetLinearVelocity(const EntityID InEntity)
+    {
+        const BodyHandle lBody = FindOrBuildDynamicBody(InEntity);
+        return lBody.IsValid() ? m_World->GetLinearVelocity(lBody) : Vector2F{ 0.f, 0.f };
+    }
+
+    bool PhysicsSubsystem::SetLinearVelocity(const EntityID InEntity, const Vector2F InVelocity)
+    {
+        const BodyHandle lBody = FindOrBuildDynamicBody(InEntity);
+        if (!lBody.IsValid())
+        {
+            return false;
+        }
+
+        m_World->SetLinearVelocity(lBody, InVelocity);
+        return true;
+    }
+
+    float PhysicsSubsystem::GetAngularVelocity(const EntityID InEntity)
+    {
+        const BodyHandle lBody = FindOrBuildDynamicBody(InEntity);
+        return lBody.IsValid() ? Maths::RadiansToDegrees(m_World->GetAngularVelocity(lBody)) : 0.f;
+    }
+
+    bool PhysicsSubsystem::SetAngularVelocity(const EntityID InEntity, const float InDegreesPerSecond)
+    {
+        const BodyHandle lBody = FindOrBuildDynamicBody(InEntity);
+        if (!lBody.IsValid())
+        {
+            return false;
+        }
+
+        m_World->SetAngularVelocity(lBody, Maths::DegreesToRadians(InDegreesPerSecond));
+        return true;
+    }
+
+    bool PhysicsSubsystem::ApplyForce(const EntityID InEntity, const Vector2F InForce)
+    {
+        const BodyHandle lBody = FindOrBuildDynamicBody(InEntity);
+        if (!lBody.IsValid())
+        {
+            return false;
+        }
+
+        m_World->ApplyForce(lBody, InForce);
+        return true;
+    }
+
+    bool PhysicsSubsystem::ApplyImpulse(const EntityID InEntity, const Vector2F InImpulse)
+    {
+        const BodyHandle lBody = FindOrBuildDynamicBody(InEntity);
+        if (!lBody.IsValid())
+        {
+            return false;
+        }
+
+        m_World->ApplyLinearImpulse(lBody, InImpulse);
+        return true;
+    }
+
+    bool PhysicsSubsystem::ApplyTorque(const EntityID InEntity, const float InTorque)
+    {
+        const BodyHandle lBody = FindOrBuildDynamicBody(InEntity);
+        if (!lBody.IsValid())
+        {
+            return false;
+        }
+
+        m_World->ApplyTorque(lBody, InTorque);
+        return true;
+    }
+
+    bool PhysicsSubsystem::ApplyAngularImpulse(const EntityID InEntity, const float InImpulse)
+    {
+        const BodyHandle lBody = FindOrBuildDynamicBody(InEntity);
+        if (!lBody.IsValid())
+        {
+            return false;
+        }
+
+        m_World->ApplyAngularImpulse(lBody, InImpulse);
+        return true;
+    }
+
+    float PhysicsSubsystem::GetMass(const EntityID InEntity)
+    {
+        const BodyHandle lBody = FindOrBuildDynamicBody(InEntity);
+        return lBody.IsValid() ? m_World->GetMass(lBody) : 0.f;
+    }
+
+    // =========================================================================
+    // Events
+    // =========================================================================
+    Uint64 PhysicsSubsystem::PairKey(const Uint64 InEntityBitsA, const Uint64 InEntityBitsB) noexcept
+    {
+        const Uint64 lLow  = InEntityBitsA < InEntityBitsB ? InEntityBitsA : InEntityBitsB;
+        const Uint64 lHigh = InEntityBitsA < InEntityBitsB ? InEntityBitsB : InEntityBitsA;
+        return (lLow << 32) | (lHigh & 0xFFFFFFFFull);
+    }
+
+    void PhysicsSubsystem::DispatchPhysicsEvents(World& InWorld)
+    {
+        EventBus& lBus = m_Context->Events.GetEventBus();
+
+        m_World->GetSensorEvents(m_SensorBegan, m_SensorEnded);
+        m_World->GetContactEvents(m_ContactBegan, m_ContactEnded);
+
+        // ---- overlap: Began --------------------------------------------------------------------
+        for (const PhysicsContactPair& lPair : m_SensorBegan)
+        {
+            const EntityID lSensor  = FromUserData(lPair.EntityA);
+            const EntityID lVisitor = FromUserData(lPair.EntityB);
+
+            if (lSensor == ENTITY_NONE || lVisitor == ENTITY_NONE)
+            {
+                continue;
+            }
+
+            m_LiveOverlaps[PairKey(lPair.EntityA, lPair.EntityB)] = lPair;
+
+            lBus.Publish(PhysicsOverlapBegan{ lSensor, lVisitor, &InWorld });
+        }
+
+        // ---- overlap: Ended, before Stayed ----------------------------------------------------
+        for (const PhysicsContactPair& lPair : m_SensorEnded)
+        {
+            m_LiveOverlaps.erase(PairKey(lPair.EntityA, lPair.EntityB));
+
+            const EntityID lSensor  = FromUserData(lPair.EntityA);
+            const EntityID lVisitor = FromUserData(lPair.EntityB);
+
+            if (lSensor == ENTITY_NONE || lVisitor == ENTITY_NONE)
+            {
+                continue;
+            }
+
+            lBus.Publish(PhysicsOverlapEnded{ lSensor, lVisitor, &InWorld });
+        }
+
+        // ---- overlap: Stayed -------------------------------------------------------------------
+        // A handler may have destroyed an entity: check again.
+        m_StaleOverlaps.clear();
+
+        for (const auto& [lKey, lPair] : m_LiveOverlaps)
+        {
+            const EntityID lSensor  = FromUserData(lPair.EntityA);
+            const EntityID lVisitor = FromUserData(lPair.EntityB);
+
+            if (!InWorld.IsValid(lSensor) || !InWorld.IsValid(lVisitor))
+            {
+                m_StaleOverlaps.push_back(lKey);
+                continue;
+            }
+
+            lBus.Publish(PhysicsOverlapStayed{ lSensor, lVisitor, &InWorld });
+        }
+
+        for (const Uint64 lKey : m_StaleOverlaps)
+        {
+            m_LiveOverlaps.erase(lKey);
+        }
+
+        // ---- solid contacts: begin/end only ----------------------------------------------------
+        for (const PhysicsContactPair& lPair : m_ContactBegan)
+        {
+            const EntityID lA = FromUserData(lPair.EntityA);
+            const EntityID lB = FromUserData(lPair.EntityB);
+
+            if (lA == ENTITY_NONE || lB == ENTITY_NONE)
+            {
+                continue;
+            }
+
+            lBus.Publish(PhysicsCollisionBegan{ lA, lB, &InWorld });
+        }
+
+        for (const PhysicsContactPair& lPair : m_ContactEnded)
+        {
+            const EntityID lA = FromUserData(lPair.EntityA);
+            const EntityID lB = FromUserData(lPair.EntityB);
+
+            if (lA == ENTITY_NONE || lB == ENTITY_NONE)
+            {
+                continue;
+            }
+
+            lBus.Publish(PhysicsCollisionEnded{ lA, lB, &InWorld });
+        }
+    }
+
+    // =========================================================================
+    // Queries
+    // =========================================================================
+    PhysicsSubsystem::RaycastHit PhysicsSubsystem::RayCast(const Vector2F InOrigin, const Vector2F InDirection,
+                                                           const float InDistance, const Uint64 InChannelMask)
+    {
+        RaycastHit lResult;
+
+        // Not playing: nothing to hit. Not an error.
+        if (m_World == nullptr)
+        {
+            return lResult;
+        }
+
+        const PhysicsRayHit lHit = m_World->RayCastClosest(InOrigin, InDirection, InDistance, InChannelMask);
+        if (!lHit.bHit)
+        {
+            return lResult;
+        }
+
+        const EntityID lEntity = FromUserData(lHit.UserData);
+
+        // A hit without an entity is reported as a miss.
+        if (lEntity == ENTITY_NONE)
+        {
+            return lResult;
+        }
+
+        lResult.bHit     = true;
+        lResult.Entity   = lEntity;
+        lResult.Point    = lHit.Point;
+        lResult.Normal   = lHit.Normal;
+        lResult.Fraction = lHit.Fraction;
+        return lResult;
+    }
+
+    void PhysicsSubsystem::OverlapAABB(const Vector2F InMin, const Vector2F InMax,
+                                       TDynArray<EntityID>& OutEntities, const Uint64 InChannelMask)
+    {
+        OutEntities.clear();
+
+        if (m_World == nullptr)
+        {
+            return;
+        }
+
+        m_World->OverlapAABB(InMin, InMax, InChannelMask, m_QueryScratch);
+
+        for (const Uint64 lUserData : m_QueryScratch)
+        {
+            const EntityID lEntity = FromUserData(lUserData);
+            if (lEntity != ENTITY_NONE)
+            {
+                OutEntities.push_back(lEntity);
+            }
+        }
+    }
+
+    // =========================================================================
+    // World bounds
+    // =========================================================================
+    void PhysicsSubsystem::EnforceWorldBounds(World& InWorld)
+    {
+        if (!m_bWorldBoundsEnabled)
+        {
+            return;
+        }
+
+        EventBus& lBus = m_Context->Events.GetEventBus();
+
+        m_BoundsExits.clear();
+        m_BoundsVictims.clear();
+
+        for (const auto& [lBits, lRecord] : m_Bodies)
+        {
+            // Only moving bodies can leave (static colliders outside are level geometry).
+            if (!lRecord.bSyncToTransform)
+            {
+                continue;
+            }
+
+            Vector2F lPosition;
+            float    lRotation = 0.f;
+            m_World->GetBodyTransform(lRecord.Handle, lPosition, lRotation);
+
+            const bool bInside = lPosition.x >= m_WorldBoundsMin.x && lPosition.x <= m_WorldBoundsMax.x
+                              && lPosition.y >= m_WorldBoundsMin.y && lPosition.y <= m_WorldBoundsMax.y;
+
+            if (bInside)
+            {
+                // Back inside: can report again.
+                m_OutOfBounds.erase(lBits);
+                continue;
+            }
+
+            // Already reported.
+            if (m_OutOfBounds.find(lBits) != m_OutOfBounds.end())
+            {
+                continue;
+            }
+
+            m_OutOfBounds.insert(lBits);
+            m_BoundsExits.push_back(BoundsExit{ lBits, lPosition });
+        }
+
+        // Published after the walk (a handler may build bodies) and before removal (handlers see a
+        // live entity).
+        for (const BoundsExit& lExit : m_BoundsExits)
+        {
+            lBus.Publish(PhysicsExitedWorldBounds{ static_cast<EntityID>(lExit.Bits), lExit.Position, &InWorld });
+
+            if (m_WorldBoundsResponse == EWorldBoundsResponse::EventAndDestroy)
+            {
+                m_BoundsVictims.push_back(lExit.Bits);
+            }
+        }
+
+        // Collected during the walk, destroyed after.
+        for (const Uint32 lBits : m_BoundsVictims)
+        {
+            const auto lEntity = static_cast<EntityID>(lBits);
+
+            // A handler may already have destroyed it.
+            if (InWorld.IsValid(lEntity))
+            {
+                InWorld.DestroyEntity(lEntity);
+            }
+
+            RemoveBodyForEntity(lEntity);
+            m_OutOfBounds.erase(lBits);
+        }
+    }
+
+    // =========================================================================
+    // Translation
+    // =========================================================================
+    EBodyType PhysicsSubsystem::ResolveBodyType(const RigidbodyComponent* InRigidbody) noexcept
+    {
+        // No rigidbody means static.
+        return InRigidbody != nullptr ? InRigidbody->Type : EBodyType::Static;
+    }
+
+    ShapeDesc PhysicsSubsystem::MakeShapeDesc(const ColliderComponent& InCollider)
+    {
+        ShapeDesc lShape;
+        lShape.Geometry.Type   = InCollider.Shape;
+        lShape.Geometry.Offset = InCollider.Offset;
+
+        // Components store full size; the backend takes half extents.
+        lShape.Geometry.HalfExtents = InCollider.Size * 0.5f;
+        lShape.Geometry.Radius      = InCollider.Radius;
+
+        if (InCollider.Shape == EColliderShape::Capsule)
+        {
+            // The caps sit a radius in from each end, so the total height is Size.y.
+            const float lHalfSpan = Maths::Max(0.f, InCollider.Size.y * 0.5f - InCollider.Radius);
+            lShape.Geometry.Center1 = { 0.f, -lHalfSpan };
+            lShape.Geometry.Center2 = { 0.f,  lHalfSpan };
+        }
+
+        lShape.bIsSensor   = InCollider.Mode == EColliderMode::Overlap;
+        lShape.Density     = InCollider.Density;
+        lShape.Friction    = InCollider.Friction;
+        lShape.Restitution = InCollider.Restitution;
+
+        // The channel is the category bit; it collides with everything for now.
+        lShape.CategoryBits = CategoryBit(InCollider.Channel);
+        lShape.MaskBits     = AllChannelsMask();
+
+        return lShape;
+    }
+}

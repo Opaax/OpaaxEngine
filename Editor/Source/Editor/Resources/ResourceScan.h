@@ -48,7 +48,7 @@ namespace Opaax::Editor
         bool           bExists     = false; // false: the directory does not exist (normal)
     };
 
-    // NormalizeExtension lives in the engine (Engine/Subsystems/Resources/ResourceFormat.h), so the
+    // NormalizeExtension lives in the engine (Resources/ResourceFormat.h), so the
     // scanner and the resource registry use the same function.
 
     /**

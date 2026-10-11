@@ -1,8 +1,11 @@
-﻿#pragma once
+#pragma once
 
 #include "Application/OpaaxApplication.h"
 
-#ifdef OPAAX_PLATFORM_WINDOWS
+// =============================================================================
+// The program entry point. A host executable includes this header once and names its
+// application class with OPAAX_IMPLEMENT_APP.
+// =============================================================================
 
 extern Opaax::OpaaxApplication* CreateApplication(int InArgc, char** InArgv);
 
@@ -13,18 +16,14 @@ int main(int argc, char** argv)
     lApp->InitializeApplication();
     lApp->RunApplication();
     lApp->ShutdownApplication();
-    return 0;
+    return lApp->GetExitCode();
 }
-#else
-#error Opaax Game Engine only supports Windows!
-#endif
-
 
 // =============================================================================
-// Helper macro to declare the application factory.
+// Declares the application factory.
 // =============================================================================
 #define OPAAX_IMPLEMENT_APP(AppClass)                                       \
-Opaax::OpaaxApplication* CreateApplication(int InArgc, char** InArgv)          \
+Opaax::OpaaxApplication* CreateApplication(int InArgc, char** InArgv)       \
 {                                                                           \
     return new AppClass(InArgc, InArgv);                                    \
 }

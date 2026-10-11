@@ -1,0 +1,210 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Hierarchy.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.6
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Finger",
+            "path": "PoseProbe/WorldX",
+            "near": -200,
+            "tolerance": 0.01
+        },
+        "id": "chain-x"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Finger",
+            "path": "PoseProbe/WorldY",
+            "near": 150,
+            "tolerance": 0.01
+        },
+        "id": "chain-y"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Finger",
+            "path": "PoseProbe/ParentName",
+            "equals": "Hand"
+        },
+        "id": "parent-name"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Finger",
+            "path": "BubbleProbe/Hits",
+            "equals": 1
+        },
+        "id": "bubble-target"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Hand",
+            "path": "BubbleProbe/Hits",
+            "equals": 1
+        },
+        "id": "bubble-parent"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Arm",
+            "path": "BubbleProbe/Hits",
+            "equals": 0
+        },
+        "id": "bubble-stopped"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Snapper",
+            "path": "Transform/Position/x",
+            "near": -100,
+            "tolerance": 0.01
+        },
+        "id": "snap-local-x"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Snapper",
+            "path": "Transform/Position/y",
+            "near": -100,
+            "tolerance": 0.01
+        },
+        "id": "snap-local-y"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Rider",
+            "path": "ReparentProbe/ParentName",
+            "equals": "Cart"
+        },
+        "id": "attached"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Rider",
+            "path": "ReparentProbe/LocalX",
+            "near": 100,
+            "tolerance": 0.01
+        },
+        "id": "attached-local-x"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Rider",
+            "path": "ReparentProbe/LocalY",
+            "near": 100,
+            "tolerance": 0.01
+        },
+        "id": "attached-local-y"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Rider",
+            "path": "PoseProbe/WorldX",
+            "near": 100,
+            "tolerance": 0.01
+        },
+        "id": "rides-x"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Rider",
+            "path": "PoseProbe/WorldY",
+            "near": 0,
+            "tolerance": 0.01
+        },
+        "id": "rides-y"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Leaver",
+            "path": "ReparentProbe/bHasParent",
+            "equals": false
+        },
+        "id": "detached"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Leaver",
+            "path": "Transform/Position/x",
+            "near": -250,
+            "tolerance": 0.01
+        },
+        "id": "detached-x"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Leaver",
+            "path": "Transform/Position/y",
+            "near": -200,
+            "tolerance": 0.01
+        },
+        "id": "detached-y"
+    },
+    {
+        "id": "parent-destroyed",
+        "command": "expect.entity",
+        "params": {
+            "entity": "Doomed",
+            "exists": false
+        }
+    },
+    {
+        "id": "children-destroyed",
+        "command": "expect.entity",
+        "params": {
+            "entity": "DoomedA",
+            "exists": false
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Witness",
+            "path": "WitnessProbe/Ended",
+            "equals": 2
+        },
+        "id": "children-ended"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Witness",
+            "path": "WitnessProbe/WorldEndings",
+            "equals": 0
+        },
+        "id": "not-world-end"
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "Hierarchy.png"
+        }
+    }
+]

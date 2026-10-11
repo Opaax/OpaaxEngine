@@ -13,7 +13,7 @@ namespace Opaax
 	// No payload: a subscriber already holds &GetData() and re-reads the fields it uses.
 	DECLARE_MULTICAST_DELEGATE(FOnConfigChanged)
 
-	class OPAAX_API IConfig
+	class IConfig
 	{
 		// =============================================================================
 		// Ctor - dtor
@@ -91,8 +91,8 @@ namespace Opaax
 	};
 }
 
-// Add to each concrete config. Define StaticTypeID() in the .cpp so the ID is
-// shared across the DLL/exe boundary.
+// Add to each concrete config. Define StaticTypeID() in the .cpp so there is
+// exactly one ID per config.
 #define OPAAX_CONFIG_TYPE(ClassName)                                        \
 	static ::Opaax::ConfigTypeID StaticTypeID() noexcept;                   \
 	::Opaax::ConfigTypeID GetConfigTypeID() const noexcept override         \

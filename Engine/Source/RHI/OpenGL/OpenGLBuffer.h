@@ -7,7 +7,7 @@ namespace Opaax
     /**
      * OpenGL vertex buffer.
      */
-    class OPAAX_API OpenGLVertexBuffer final : public IVertexBuffer
+    class OpenGLVertexBuffer final : public IVertexBuffer
     {
         // =============================================================================
         // CTOR - DTOR
@@ -65,7 +65,7 @@ namespace Opaax
     /**
      * OpenGL index buffer.
      */
-    class OPAAX_API OpenGLIndexBuffer final : public IIndexBuffer
+    class OpenGLIndexBuffer final : public IIndexBuffer
     {
         // =============================================================================
         // CTOR - DTOR

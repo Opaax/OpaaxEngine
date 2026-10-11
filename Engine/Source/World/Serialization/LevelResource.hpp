@@ -2,7 +2,7 @@
 
 #include <optional>
 
-#include "Engine/Subsystems/Resources/ResourceFormat.h"
+#include "Resources/ResourceFormat.h"
 #include "World/Serialization/LevelFile.h"
 
 namespace Opaax

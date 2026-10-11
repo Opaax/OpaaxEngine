@@ -13,7 +13,7 @@ namespace Opaax
     // PhysicsAPI — creates the IPhysicsWorld for an EPhysicsBackend
     //   (implemented in PhysicsBackendFactory.cpp, the only file that includes a backend).
     // =============================================================================
-    class OPAAX_API PhysicsAPI
+    class PhysicsAPI
     {
         // =============================================================================
         // Creation
@@ -34,7 +34,7 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        /** Defined in the DLL, so every module sees the same value. */
+        /** Defined in the .cpp, so there is one value for the whole program. */
         static EPhysicsBackend s_Backend;
     };
 }

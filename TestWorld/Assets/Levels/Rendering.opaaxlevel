@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/Rendering.opaaxmap"
+    ],
+    "name": "Rendering",
+    "persistentMap": "Maps/Rendering.opaaxmap",
+    "version": 1
+}

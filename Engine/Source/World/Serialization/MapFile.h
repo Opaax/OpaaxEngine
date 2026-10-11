@@ -22,20 +22,20 @@ namespace Opaax
          * ".../Maps/Decor.opaaxmap" -> MapId("Decor").
          * @return An invalid id if the path has no stem
          */
-        OPAAX_API MapId StemId(const OpaaxString& InAbsPath);
+        MapId StemId(const OpaaxString& InAbsPath);
 
         /**
          * Writes InData to InAbsPath, replacing any content. Creates missing directories.
          * @param InAbsPath Absolute UTF-8 path
          * @return False if the file could not be written
          */
-        OPAAX_API bool Save(const OpaaxString& InAbsPath, const MapData& InData);
+        bool Save(const OpaaxString& InAbsPath, const MapData& InData);
 
         /**
          * Writes already-serialized text (avoids serializing twice).
          * @param InEntityCount For the log only
          */
-        OPAAX_API bool SaveText(const OpaaxString& InAbsPath, const OpaaxString& InText,
+        bool SaveText(const OpaaxString& InAbsPath, const OpaaxString& InText,
                                 Uint64 InEntityCount);
 
         /**
@@ -43,6 +43,6 @@ namespace Opaax
          * @param InAbsPath Absolute UTF-8 path
          * @return False if the file is missing, unreadable, malformed, or a newer format version
          */
-        OPAAX_API bool Load(const OpaaxString& InAbsPath, MapData& OutData);
+        bool Load(const OpaaxString& InAbsPath, MapData& OutData);
     }
 }

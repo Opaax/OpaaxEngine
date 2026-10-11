@@ -1,4 +1,4 @@
-#include "Renderer2D.h"
+#include "Renderer/Renderer2D.h"
 
 #include "RHI/IRHIDevice.h"
 #include "RHI/Buffer.h"
@@ -8,6 +8,7 @@
 #include "RHI/Pipeline.h"
 #include "RHI/BindGroup.h"
 #include "RHI/ICommandBuffer.h"
+#include "Renderer/Lighting/Lighting2D.h"
 #include "Renderer/Renderer2DBatchPlan.h"
 #include "Renderer/Renderer2DSortKey.h"
 #include "Renderer/RenderView.h"
@@ -25,7 +26,9 @@ namespace Opaax
     // Batch constants. The per-batch limits come from RenderLimits (config).
     // =============================================================================
     static constexpr Uint32 SHADER_TEXTURE_SLOTS = 16;      // length of u_Textures[] in Sprite.glsl
-    static constexpr Uint32 MAX_BATCH_QUADS      = 65536;   // upper bound (~12 MB of vertices)
+    static constexpr Uint32 SHADOW_MAP_SLOT      = SHADER_TEXTURE_SLOTS - 1;   // SHADOW_SLOT in Sprite.glsl
+    static constexpr Uint32 AO_MAP_SLOT          = SHADER_TEXTURE_SLOTS - 2;   // AO_SLOT in Sprite.glsl
+    static constexpr Uint32 MAX_BATCH_QUADS      = 65536;   // upper bound (~23 MB of vertices)
 
     // =============================================================================
     // Vertex layout
@@ -45,6 +48,23 @@ namespace Opaax
         // or -1 for no mask.
         Vector2F MaskUV;
         float    MaskIndex;
+
+        // Lighting (HDR passes): the normal map's slot or -1, the emissive colour and how the quad
+        // takes light (w: 0 unlit, 1 lit, 2 lit and never shadowed), and the quad's rotation
+        // (cos, sin) to turn its normals into the world.
+        float    NormalIndex;
+        Vector4F Emissive;
+        Vector2F RotationCS;
+    };
+
+    // The MaxQuadsPerBatch tooltip quotes this size (four vertices a quad).
+    static_assert(sizeof(QuadVertex) == 88, "QuadVertex changed: update the MaxQuadsPerBatch tooltip");
+
+    /** The camera block of Sprite.glsl (std140). */
+    struct CameraBlock
+    {
+        glm::mat4 ViewProjection = glm::mat4(1.f);
+        glm::vec4 PassParams     = glm::vec4(0.f);   // x: 1 for a linear-colour (HDR) pass, y: 1 for occlusion
     };
 
     // =============================================================================
@@ -56,7 +76,8 @@ namespace Opaax
         IVertexBuffer*            QuadVBO      = nullptr;  // owned by the VAO
         TUniquePtr<IShader>        QuadShader;
         TUniquePtr<ITexture2D>     WhiteTexture;
-        TUniquePtr<IUniformBuffer> CameraUBO;  // binding 1: u_ViewProjection (std140)
+        TUniquePtr<IUniformBuffer> CameraUBO;  // binding 1: CameraBlock (std140)
+        TUniquePtr<IUniformBuffer> LightsUBO;  // binding 3: LightsBlock2D (std140)
         TUniquePtr<IPipeline>      QuadPipeline;     // shader + layout + alpha blend
         TUniquePtr<IBindGroup>     QuadBindGroup;    // camera UBO + 16 samplers
         ICommandBuffer*           Cmd          = nullptr;  // set in Begin, not owned
@@ -69,12 +90,17 @@ namespace Opaax
         TDynArray<Uint64>      PassKeys;
         TDynArray<Uint32>      PassTexIds;
         TDynArray<Uint32>      PassMaskIds;   // 0 = no mask
+        TDynArray<Uint32>      PassNormalIds; // 0 = no normal map
         TDynArray<ITexture2D*> PassTextures;   // texture id -> texture; 0 = white
 
         // Reused every pass.
         TDynArray<QuadPlacement> Plan;
         TDynArray<QuadVertex>    UploadBuffer;   // one batch of vertices
         TDynArray<ITexture2D*>   SlotTextures;   // this batch's textures
+
+        // The lighting maps of lit passes, in the last two slots. Not owned.
+        ITexture2D* ShadowMap           = nullptr;
+        ITexture2D* AmbientOcclusionMap = nullptr;
 
         glm::mat4 ViewProjection = glm::mat4(1.f);
 
@@ -112,6 +138,9 @@ namespace Opaax
                 { EShaderDataType::Float2 },  // InnerHalf
                 { EShaderDataType::Float2 },  // MaskUV
                 { EShaderDataType::Float  },  // MaskIndex
+                { EShaderDataType::Float  },  // NormalIndex
+                { EShaderDataType::Float4 },  // Emissive (w: lit)
+                { EShaderDataType::Float2 },  // RotationCS
             };
         }
 
@@ -191,7 +220,11 @@ namespace Opaax
         m_Data->SlotTextures.assign(SHADER_TEXTURE_SLOTS, m_Data->WhiteTexture.get());
 
         m_Data->QuadShader   = InDevice.CreateShader(InShader);
-        m_Data->CameraUBO    = InDevice.CreateUniformBuffer(static_cast<Uint32>(sizeof(glm::mat4)), 1);
+        m_Data->CameraUBO    = InDevice.CreateUniformBuffer(static_cast<Uint32>(sizeof(CameraBlock)), 1);
+
+        // No light yet: lit quads see a white ambient, i.e. they are drawn as is.
+        m_Data->LightsUBO = InDevice.CreateUniformBuffer(static_cast<Uint32>(sizeof(LightsBlock2D)), 3);
+        SetLighting(LightsBlock2D{});
         m_Data->QuadPipeline = InDevice.CreatePipeline(MakeSpritePipelineDesc(m_Data->QuadShader.get()));
 
         // Bind all 16 samplers; unused ones get the white texture.
@@ -209,6 +242,21 @@ namespace Opaax
         m_Data->QuadShader.reset();
         m_Data->WhiteTexture.reset();
         m_Data->CameraUBO.reset();
+        m_Data->LightsUBO.reset();
+    }
+
+    void Renderer2D::SetLighting(const LightsBlock2D& InLights)
+    {
+        if (m_Data->LightsUBO != nullptr)
+        {
+            m_Data->LightsUBO->SetData(&InLights, static_cast<Uint32>(sizeof(LightsBlock2D)));
+        }
+    }
+
+    void Renderer2D::SetLightingMaps(ITexture2D* InShadowMap, ITexture2D* InAmbientOcclusion) noexcept
+    {
+        m_Data->ShadowMap           = InShadowMap;
+        m_Data->AmbientOcclusionMap = InAmbientOcclusion;
     }
 
     // =============================================================================
@@ -221,10 +269,14 @@ namespace Opaax
         m_Data->Cmd            = &InCmd;
         m_Data->ViewProjection = InView.ViewProjection;
 
-        // Bind the sprite pipeline; upload the view-projection to the camera UBO.
+        // Bind the sprite pipeline; upload the camera block.
         m_Data->Cmd->BindPipeline(*m_Data->QuadPipeline);
-        m_Data->CameraUBO->SetData(glm::value_ptr(m_Data->ViewProjection),
-                                   static_cast<Uint32>(sizeof(glm::mat4)));
+
+        CameraBlock lCamera;
+        lCamera.ViewProjection = m_Data->ViewProjection;
+        lCamera.PassParams.x   = InView.bLinearColor ? 1.f : 0.f;
+        lCamera.PassParams.y   = InView.bOcclusion ? 1.f : 0.f;
+        m_Data->CameraUBO->SetData(&lCamera, static_cast<Uint32>(sizeof(CameraBlock)));
         StartPass();
     }
 
@@ -240,6 +292,7 @@ namespace Opaax
         m_Data->PassKeys.clear();
         m_Data->PassTexIds.clear();
         m_Data->PassMaskIds.clear();
+        m_Data->PassNormalIds.clear();
 
         // Id 0 is the white texture (untextured quads use it, no slot needed).
         m_Data->PassTextures.clear();
@@ -264,7 +317,15 @@ namespace Opaax
     {
         if (m_Data->PassKeys.empty()) { return; }
 
-        PlanQuadBatches(m_Data->PassKeys, m_Data->PassTexIds, m_Data->PassMaskIds, m_Data->Limits, m_Data->Plan);
+        // The lighting maps keep the last two slots for themselves.
+        QuadBatchLimits lLimits = m_Data->Limits;
+        if (m_Data->ShadowMap != nullptr || m_Data->AmbientOcclusionMap != nullptr)
+        {
+            lLimits.MaxTextureSlots = std::min(lLimits.MaxTextureSlots, AO_MAP_SLOT);
+        }
+
+        PlanQuadBatches(m_Data->PassKeys, m_Data->PassTexIds, m_Data->PassMaskIds, m_Data->PassNormalIds,
+                        lLimits, m_Data->Plan);
 
         // Every batch starts from white (a slot from the previous pass may be stale).
         m_Data->SlotTextures.assign(SHADER_TEXTURE_SLOTS, m_Data->WhiteTexture.get());
@@ -288,16 +349,19 @@ namespace Opaax
             // Slots belong to the batch, so they are written here.
             const QuadVertex* lSrc = &m_Data->PassVertices[lPlacement.QuadIndex * 4u];
             QuadVertex*       lDst = &m_Data->UploadBuffer[lQuadCount * 4u];
-            const Uint32 lMaskId = m_Data->PassMaskIds[lPlacement.QuadIndex];
+            const Uint32 lMaskId   = m_Data->PassMaskIds[lPlacement.QuadIndex];
+            const Uint32 lNormalId = m_Data->PassNormalIds[lPlacement.QuadIndex];
 
-            // -1: no mask; otherwise the slot of the mask texture.
-            const float lMaskIndex = (lMaskId != 0) ? static_cast<float>(lPlacement.MaskSlot) : -1.f;
+            // -1: none; otherwise the slot of the mask or normal map texture.
+            const float lMaskIndex   = (lMaskId != 0) ? static_cast<float>(lPlacement.MaskSlot) : -1.f;
+            const float lNormalIndex = (lNormalId != 0) ? static_cast<float>(lPlacement.NormalSlot) : -1.f;
 
             for (Uint32 i = 0; i < 4u; ++i)
             {
-                lDst[i]           = lSrc[i];
-                lDst[i].TexIndex  = static_cast<float>(lPlacement.Slot);
-                lDst[i].MaskIndex = lMaskIndex;
+                lDst[i]             = lSrc[i];
+                lDst[i].TexIndex    = static_cast<float>(lPlacement.Slot);
+                lDst[i].MaskIndex   = lMaskIndex;
+                lDst[i].NormalIndex = lNormalIndex;
             }
 
             m_Data->SlotTextures[lPlacement.Slot] = m_Data->PassTextures[m_Data->PassTexIds[lPlacement.QuadIndex]];
@@ -307,6 +371,12 @@ namespace Opaax
             {
                 m_Data->SlotTextures[lPlacement.MaskSlot] = m_Data->PassTextures[lMaskId];
                 lSlotCount = std::max(lSlotCount, lPlacement.MaskSlot + 1u);
+            }
+
+            if (lNormalId != 0)
+            {
+                m_Data->SlotTextures[lPlacement.NormalSlot] = m_Data->PassTextures[lNormalId];
+                lSlotCount = std::max(lSlotCount, lPlacement.NormalSlot + 1u);
             }
             ++lQuadCount;
         }
@@ -339,6 +409,16 @@ namespace Opaax
         const Uint32 lDataSize = InQuadCount * 4u * static_cast<Uint32>(sizeof(QuadVertex));
         m_Data->QuadVBO->SetData(m_Data->UploadBuffer.data(), lDataSize);
 
+        if (m_Data->ShadowMap != nullptr)
+        {
+            m_Data->SlotTextures[SHADOW_MAP_SLOT] = m_Data->ShadowMap;
+        }
+
+        if (m_Data->AmbientOcclusionMap != nullptr)
+        {
+            m_Data->SlotTextures[AO_MAP_SLOT] = m_Data->AmbientOcclusionMap;
+        }
+
         // Unused units point at the white texture.
         for (Uint32 i = 0; i < SHADER_TEXTURE_SLOTS; ++i)
         {
@@ -369,11 +449,12 @@ namespace Opaax
                               float           InRotationRad,
                               ERenderLayer    InLayer,
                               Int16           InOrderInLayer,
-                              const QuadMask& InMask)
+                              const QuadMask& InMask,
+                              const QuadLighting& InLighting)
     {
         // A coloured quad samples the white texture (id 0), so the tint is kept as is.
         SubmitQuad(InPosition, InSize, InColor, InRotationRad, InLayer, InOrderInLayer,
-                   0u, { 0.f, 0.f }, { 1.f, 1.f }, { 0.f, 0.f }, InMask);
+                   0u, { 0.f, 0.f }, { 1.f, 1.f }, { 0.f, 0.f }, InMask, InLighting);
     }
 
     void Renderer2D::DrawSprite(const Vector2F& InPosition,
@@ -385,10 +466,11 @@ namespace Opaax
                                 Int16           InOrderInLayer,
                                 const Vector2F& InUVMin,
                                 const Vector2F& InUVMax,
-                                const QuadMask& InMask)
+                                const QuadMask& InMask,
+                                const QuadLighting& InLighting)
     {
         SubmitQuad(InPosition, InSize, InTint, InRotationRad, InLayer, InOrderInLayer,
-                   GetTextureId(InTexture), InUVMin, InUVMax, { 0.f, 0.f }, InMask);
+                   GetTextureId(InTexture), InUVMin, InUVMax, { 0.f, 0.f }, InMask, InLighting);
     }
 
     Uint32 Renderer2D::GetTextureId(ITexture2D& InTexture)
@@ -432,12 +514,13 @@ namespace Opaax
                                      const float     InRotationRad,
                                      const ERenderLayer InLayer,
                                      const Int16     InOrderInLayer,
-                                     const QuadMask& InMask)
+                                     const QuadMask& InMask,
+                                     const QuadLighting& InLighting)
     {
         // Untextured on purpose: the shader uses the UVs as local position to find the border,
         // which only works when they span 0..1.
         SubmitQuad(InPosition, InSize, InColor, InRotationRad, InLayer, InOrderInLayer,
-                   0u, { 0.f, 0.f }, { 1.f, 1.f }, MakeOutlineInnerHalf(InSize, InThickness), InMask);
+                   0u, { 0.f, 0.f }, { 1.f, 1.f }, MakeOutlineInnerHalf(InSize, InThickness), InMask, InLighting);
     }
 
     void Renderer2D::SubmitQuad(const Vector2F& InPosition,
@@ -450,10 +533,19 @@ namespace Opaax
                                 const Vector2F& InUVMin,
                                 const Vector2F& InUVMax,
                                 const Vector2F& InInnerHalf,
-                                const QuadMask& InMask)
+                                const QuadMask& InMask,
+                                const QuadLighting& InLighting)
     {
         const float lHalfW = InSize.x * 0.5f;
         const float lHalfH = InSize.y * 0.5f;
+
+        // Normals turn with the quad.
+        const Vector2F lRotationCS = (InRotationRad == 0.f)
+                                         ? Vector2F{ 1.f, 0.f }
+                                         : Vector2F{ Maths::Cos(InRotationRad), Maths::Sin(InRotationRad) };
+        // w: 0 unlit, 1 lit, 2 lit but never shadowed.
+        const float    lLitCode = InLighting.bLit ? (InLighting.bReceiveShadows ? 1.f : 2.f) : 0.f;
+        const Vector4F lEmissive{ InLighting.Emissive.x, InLighting.Emissive.y, InLighting.Emissive.z, lLitCode };
 
         Vector2F lBL, lBR, lTR, lTL;
         if (InRotationRad == 0.f)
@@ -485,7 +577,8 @@ namespace Opaax
                                     (InCorner.y - lMaskMin.y) / lMaskSize.y };
 
             m_Data->PassVertices.emplace_back(
-                QuadVertex{ { InCorner.x, InCorner.y, 0.f }, InColor, InUV, 0.f, InInnerHalf, lMaskUV, -1.f });
+                QuadVertex{ { InCorner.x, InCorner.y, 0.f }, InColor, InUV, 0.f, InInnerHalf, lMaskUV, -1.f,
+                            -1.f, lEmissive, lRotationCS });
         };
 
         lPush(lBL, { InUVMin.x, InUVMin.y });
@@ -501,6 +594,8 @@ namespace Opaax
         // (all rect-only masks share it).
         m_Data->PassMaskIds.emplace_back(
             lMasked ? GetTextureId(InMask.Texture != nullptr ? *InMask.Texture : *m_Data->WhiteTexture) : 0u);
+
+        m_Data->PassNormalIds.emplace_back(InLighting.NormalMap != nullptr ? GetTextureId(*InLighting.NormalMap) : 0u);
 
         ++m_Data->Stats.Quads;
     }

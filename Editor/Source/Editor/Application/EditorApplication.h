@@ -31,7 +31,8 @@ namespace Opaax::Editor
     
     public:
         /**
-         * TODO: source it from a CLI arg (InArgv) or a workspace scan for a single *.opaaxproj.
+         * The project this editor edits (its folder in the workspace). A game's editor app returns its
+         * name, as the project template does; empty falls back to the executable's name, with a warning.
          */
         virtual OpaaxString GetEditedProjectName() const { return OpaaxString(); }
         
@@ -56,6 +57,13 @@ namespace Opaax::Editor
     public:
         void PostEngineStartup() override;
         void OnEvent(Event& InEvent) override;
+
+    protected:
+        /** A game asking to quit stops Play; the editor stays open. */
+        void OnQuitGameRequested() override;
+
+        /** Driven from outside: the editor's commands join the engine's. */
+        void OnAutomationStarted(AutomationRunner& InRunner) override;
         //~End OpaaxApplication Interface
     };
 }

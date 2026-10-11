@@ -1,7 +1,10 @@
-#include "OpaaxApplication.h"
+#include "Application/OpaaxApplication.h"
 
+#include <algorithm>
+#include <cstdlib>
 #include <cstring>
 
+#include "Automation/AutomationSession.h"
 #include "Platform/CrashHandler.h"
 #include "Platform/IPlatform.h"
 #include "Application/Services/IPaths.h"
@@ -11,27 +14,26 @@
 #include "Application/Services/IJobSystem.h"
 
 #include "Engine/Config/Config_Engine.h"
+#include "Engine/EngineEvents.h"
 #include "Engine/Engine.h"
-#include "Engine/Modules/ModuleRegistrar.h"
+#include "Engine/Registries/ModuleRegistrar.h"
 #include "World/WorldManager.h"
-#include "Engine/Subsystems/EventBus/EngineEventBus.h"
-#include "Engine/Subsystems/Input/InputEvents.h"
-#include "Engine/Subsystems/Input/InputManager.h"
+#include "Engine/Subsystems/EngineEventBus.h"
+#include "Input/InputEvents.h"
+#include "Input/InputManager.h"
 
-#include "Services/IConfigSystem.h"
-#include "Services/IEngine.h"
-#include "Window/WindowManager.h"
+#include "Application/Services/IConfigSystem.h"
+#include "Application/Services/IEngine.h"
+#include "Platform/Window/WindowManager.h"
 
-#include "Window/WindowEvents.h"
+#include "Platform/Window/WindowEvents.h"
 
 #include "Core/Events/Event.h"
 #include "Core/Events/EventBus.h"
 #include "Core/Events/EventTypes.hpp"
-#include "Services/Window/IWindowManager.h"
+#include "Application/Services/IWindowManager.h"
 
-#ifdef OPAAX_PLATFORM_WINDOWS
-#include "Platform/Windows/WindowsPlatform.h"
-#endif
+#include "Platform/NativePlatform.h"
 
 using namespace Opaax;
 
@@ -45,6 +47,19 @@ namespace
         }
         return false;
     }
+
+    /** The argument after InFlag, or null. */
+    const char* FindCommandLineValue(const int InArgc, char** InArgv, const char* InFlag)
+    {
+        for (int i = 1; i + 1 < InArgc; ++i)
+        {
+            if (InArgv[i] != nullptr && std::strcmp(InArgv[i], InFlag) == 0) { return InArgv[i + 1]; }
+        }
+        return nullptr;
+    }
+
+    /** Frames drawn before a --capture is taken, when --capture-frame does not say. */
+    constexpr Uint64 DEFAULT_CAPTURE_FRAME = 60;
 }
 
 AppServiceLocator OpaaxApplication::m_Services = AppServiceLocator();
@@ -114,10 +129,7 @@ void OpaaxApplication::Bootstrap()
 
 IPlatform& OpaaxApplication::BootPlatform()
 {
-#ifdef OPAAX_PLATFORM_WINDOWS
-    //Windows
-    return m_Services.Provide<IPlatform, WindowsPlatform>();
-#endif
+    return m_Services.Provide<IPlatform, NativePlatform>();
 }
 
 IPaths& OpaaxApplication::BootPaths()
@@ -233,7 +245,30 @@ void OpaaxApplication::RunApplication()
         CrashHandler::TriggerTestCrash();
     }
 #endif
-    
+
+    // --capture <file.png> [--capture-frame N]: saves frame N (default 60) as a PNG, then quits.
+    // What an automated check or an agent uses to see the game.
+    const char*  lCapturePath  = FindCommandLineValue(m_Argc, m_Argv, "--capture");
+    const char*  lCaptureFrame = FindCommandLineValue(m_Argc, m_Argv, "--capture-frame");
+    const Uint64 lCaptureAt    = (lCaptureFrame != nullptr) ? std::strtoull(lCaptureFrame, nullptr, 10) : DEFAULT_CAPTURE_FRAME;
+    Uint64       lFrameIndex   = 0;
+
+    // --exec <script.json> [--exec-out <answers.json>], --automation <folder>: driven from outside
+    // (AutomationSession). A script that cannot be run fails the run instead of starting it.
+    const char* lScript = FindCommandLineValue(m_Argc, m_Argv, "--exec");
+    const char* lInbox  = FindCommandLineValue(m_Argc, m_Argv, "--automation");
+    m_Automation = AutomationSession::Create(lScript, FindCommandLineValue(m_Argc, m_Argv, "--exec-out"), lInbox);
+    if (m_Automation != nullptr)
+    {
+        m_Automation->Start(Engine());
+        OnAutomationStarted(m_Automation->GetRunner());
+    }
+    else if (lScript != nullptr || lInbox != nullptr)
+    {
+        SetExitCode(1);
+        bIsRunning = false;
+    }
+
     while (bIsRunning)
     {
         Window* lWindow = WindowManager().GetMainWindow();
@@ -270,14 +305,48 @@ void OpaaxApplication::RunApplication()
         }
         
         // ----------------------------------------------------------------
+        // 1.2 Automation: the requests due this frame, before anything ticks.
+        // ----------------------------------------------------------------
+        if (m_Automation != nullptr)
+        {
+            m_Automation->BeginFrame();
+        }
+
+        // ----------------------------------------------------------------
         // 2. Tick (the editor adds its UI around Engine().Loop())
         // ----------------------------------------------------------------
         TickFrame();
 
         // ----------------------------------------------------------------
+        // 2.1 Capture, before the swap (the backbuffer holds the frame).
+        // ----------------------------------------------------------------
+        ++lFrameIndex;
+        if (lCapturePath != nullptr && lFrameIndex == std::max<Uint64>(lCaptureAt, 1))
+        {
+            Engine().CaptureFrame(OpaaxString(lCapturePath));
+            lWindow->RequestClose();
+        }
+
+        // ----------------------------------------------------------------
+        // 2.2 Automation: a screenshot asked for, the end of a script or a quit.
+        // ----------------------------------------------------------------
+        if (m_Automation != nullptr && m_Automation->EndFrame(Engine()))
+        {
+            lWindow->RequestClose();
+        }
+
+        // ----------------------------------------------------------------
         // 3. Present — after TickFrame, so the editor UI is on the backbuffer before the swap.
         // ----------------------------------------------------------------
         Engine().PresentBackbuffer();
+    }
+
+    // Its commands hold the engine: gone before it. What the app closed on is answered first.
+    if (m_Automation != nullptr)
+    {
+        m_Automation->Close();
+        SetExitCode(std::max(GetExitCode(), m_Automation->GetExitCode()));
+        m_Automation.reset();
     }
 
     // Services, window and GPU context are still alive here, so subsystems can
@@ -336,6 +405,10 @@ void OpaaxApplication::EngineStartup()
     // 1. Start every subsystem. No world exists yet, so the registries stay open.
     Engine().Startup();
 
+    // Gameplay may ask to quit; the host decides what quitting means.
+    Engine().GetEngineEventBus().GetEventBus().Subscribe<QuitGameRequested>(
+        [this](const QuitGameRequested&) { OnQuitGameRequested(); });
+
     // 2. Content types: engine first, then the game modules.
     PopulateEngineRegistries();
     RegisterModules(*m_ModuleRegistrar);
@@ -371,6 +444,16 @@ WorldSpec OpaaxApplication::GetStartupWorldSpec() const
     return lSpec;
 }
 
+void OpaaxApplication::OnQuitGameRequested()
+{
+    OPAAX_APP_LOG(Info, "Quit requested by the game");
+
+    if (Window* lWindow = WindowManager().GetMainWindow())
+    {
+        lWindow->RequestClose();
+    }
+}
+
 void OpaaxApplication::EngineTeardown()
 {
     // End the game (and its Play worlds) before the engine. No-op if no game was started.
@@ -398,14 +481,29 @@ void OpaaxApplication::HandleApplicationEvent(EventDispatcher& Dispatcher, Event
 
     Dispatcher.Dispatch<WindowLostFocusEvent>([this](WindowLostFocusEvent&)
     {
-        // Reset now: going through the event bus would be a frame late.
-        Engine().GetInput().ResetState();
+        // Reset now: going through the event bus would be a frame late. A script's keys do not depend
+        // on the window's focus.
+        if (!IsInputScripted())
+        {
+            Engine().GetInput().ResetState();
+        }
         return false;
     });
 }
 
+bool OpaaxApplication::IsInputScripted() const noexcept
+{
+    return m_Automation != nullptr && m_Automation->OwnsInput();
+}
+
 void OpaaxApplication::HandleAllInputEvent(EventDispatcher& Dispatcher, Event& InEvent)
 {
+    // A script's input is the only input.
+    if (IsInputScripted())
+    {
+        return;
+    }
+
     // Fed directly: the event bus flushes inside Loop, which would be too late.
     InputManager& lInput = Engine().GetInput();
 

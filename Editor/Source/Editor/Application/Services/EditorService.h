@@ -25,9 +25,10 @@
 #include "Editor/Resources/Types/Mover/EditorMoveModeDocument.h"
 #include "Editor/Resources/Types/DataAsset/EditorDataAssetDocument.h"
 #include "Editor/Resources/Types/Mover/EditorMoverDocument.h"
+#include "Editor/Export/GameExport.h"
 #include "Editor/PIE/PlayInEditor.h"
 #include "Editor/UI/IEditorGui.h"
-#include "Editor/UI/IEditorDialogs.h"
+#include "Editor/UI/GuardedEditorDialogs.hpp"
 #include "Editor/Panels/EditorPanels.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Core/OpaaxTypes.h"   // TUniquePtr
@@ -266,6 +267,8 @@ namespace Opaax::Editor
     public:
         //~Begin IEditorService interface
         void RegisterExtensions(const TFunction<void(EditorExtensionRegistrar&)>& InCollect) override;
+        void StopPlay() override;
+        void RegisterAutomation(AutomationRunner& InRunner, bool bInOwnsInput) override;
         void Initialize() override;
         void BeginFrame() override;
         void EndFrame()   override;
@@ -286,8 +289,9 @@ namespace Opaax::Editor
         // Built in the ctor and kept until the end of OnShutdown (the context references it).
         TUniquePtr<IEditorGui>          m_Gui;
 
-        // The dialog backend. Owns no OS resource, so it needs no Clear step.
-        TUniquePtr<IEditorDialogs>      m_Dialogs;
+        // The dialog backend, kept closed while an automation request runs. Owns no OS resource, so it
+        // needs no Clear step.
+        TUniquePtr<GuardedEditorDialogs> m_Dialogs;
 
         EditorExtensionRegistrar        m_Extensions;
 
@@ -328,6 +332,7 @@ namespace Opaax::Editor
         TUniquePtr<EditorInputActionDocument>      m_InputActionDocument;
         TUniquePtr<EditorInputMappingContextDocument> m_InputMapDocument;
         TUniquePtr<EditorDataAssetDocument>           m_DataAssetDocument;
+        TUniquePtr<GameExport>                        m_Export;
         
         TUniquePtr<EditorContext>       m_Context;
         

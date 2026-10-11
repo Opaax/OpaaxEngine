@@ -63,6 +63,16 @@ namespace Opaax::Editor
         }
     }
 
+    void TinyFdEditorDialogs::PickFolder(const FileDialogRequest& InRequest, FPathChosen InOnChosen)
+    {
+        const char* const lPicked = tinyfd_selectFolderDialog(InRequest.Title.CStr(), InRequest.DefaultPath.CStr());
+
+        if (lPicked != nullptr && InOnChosen)
+        {
+            InOnChosen(OpaaxString(lPicked));
+        }
+    }
+
     void TinyFdEditorDialogs::Confirm(const OpaaxString& InTitle, const OpaaxString& InMessage,
                                       FAnswered InOnAnswered)
     {

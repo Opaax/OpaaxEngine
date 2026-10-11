@@ -1,4 +1,4 @@
-#include "OpenGLVertexArray.h"
+#include "RHI/OpenGL/OpenGLVertexArray.h"
 #include "Core/Log/Logger.h"
 
 #include <glad/glad.h>
@@ -8,7 +8,7 @@ namespace Opaax
 
     OpenGLVertexArray::OpenGLVertexArray()
     {
-        glCreateVertexArrays(1, &m_RendererID);
+        glGenVertexArrays(1, &m_RendererID);
     }
 
     OpenGLVertexArray::~OpenGLVertexArray()

@@ -3,7 +3,7 @@
 // its default.
 #include <doctest.h>
 
-#include "Engine/Subsystems/Resources/Types/UI/UICanvasResource.h"
+#include "UI/UICanvasResource.h"
 #include "UI/UICanvasFile.h"
 #include "UI/UIWidgetRegistry.h"
 #include "UI/Widgets/UIButton.h"
@@ -140,6 +140,31 @@ TEST_CASE("UICanvasFile: every widget type round-trips its own fields and the tr
     CHECK(UICanvasFile::Serialize(lBack) == lText1);
 }
 
+TEST_CASE("UICanvasFile: a new canvas's root fills the screen it is mounted on")
+{
+    // A HUD anchors its widgets to the screen's corners: they are the root's corners.
+    const UICanvasFile::UICanvasDoc lDoc = UICanvasFile::MakeEmpty(720.f);
+    REQUIRE(lDoc.Root != nullptr);
+    CHECK(lDoc.ReferenceHeight == 720.f);
+    CHECK(lDoc.Root->GetChildren().empty());
+
+    const Bounds2D lScreen = Bounds2D::FromMinMax({ 0.f, 0.f }, { 1280.f, 720.f });
+    const Bounds2D lRoot   = ResolveRect(lDoc.Root->Rect, lScreen);
+    CHECK(lRoot.Min().x == doctest::Approx(0.f));
+    CHECK(lRoot.Min().y == doctest::Approx(0.f));
+    CHECK(lRoot.Max().x == doctest::Approx(1280.f));
+    CHECK(lRoot.Max().y == doctest::Approx(720.f));
+
+    // The empty screen around the widgets lets clicks through to the game.
+    CHECK_FALSE(lDoc.Root->bHitTestable);
+
+    // What the file keeps is what was made.
+    UICanvasFile::UICanvasDoc lRead;
+    REQUIRE(UICanvasFile::Deserialize(UICanvasFile::Serialize(lDoc), MakeRegistry(), lRead));
+    CHECK(lRead.Root->Rect.AnchorMax.x == doctest::Approx(1.f));
+    CHECK(lRead.Root->Rect.SizeDelta.x == doctest::Approx(0.f));
+}
+
 TEST_CASE("UICanvasFile: an unknown type costs that NODE, not the file")
 {
     const UIWidgetRegistry lRegistry = MakeRegistry();
@@ -178,7 +203,7 @@ TEST_CASE("UICanvasFile: a missing key takes the constructed default — a field
     UICanvasFile::UICanvasDoc lDoc;
     REQUIRE(UICanvasFile::Deserialize(lText, lRegistry, lDoc));
 
-    const UIText  lFresh;
+    const UIText  lFresh{};
     const auto*   lRead = dynamic_cast<const UIText*>(lDoc.Root->GetChildren()[0].get());
     REQUIRE(lRead != nullptr);
 

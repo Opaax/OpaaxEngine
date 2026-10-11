@@ -1,0 +1,244 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Collisions.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 1.5
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Dropper",
+            "path": "ContactProbe/CollisionsBegan",
+            "greater": 0
+        },
+        "id": "landed"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Dropper",
+            "path": "ContactProbe/LastOther",
+            "equals": "Ground"
+        },
+        "id": "landed-on"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Bouncer",
+            "path": "ContactProbe/CollisionsEnded",
+            "greater": 0
+        },
+        "id": "bounced"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Zone",
+            "path": "ContactProbe/SensedBegan",
+            "equals": 1
+        },
+        "id": "sensor-entered"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Zone",
+            "path": "ContactProbe/SensedEnded",
+            "equals": 1
+        },
+        "id": "sensor-left"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Zone",
+            "path": "ContactProbe/LastOther",
+            "equals": "Visitor"
+        },
+        "id": "sensor-saw"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Visitor",
+            "path": "ContactProbe/VisitsBegan",
+            "equals": 1
+        },
+        "id": "visit-began"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Visitor",
+            "path": "ContactProbe/VisitsEnded",
+            "equals": 1
+        },
+        "id": "visit-ended"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Pusher",
+            "path": "Transform/Position/x",
+            "greater": 20
+        },
+        "id": "pushed"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Kicked",
+            "path": "ImpulseProbe/VelocityY",
+            "near": 400,
+            "tolerance": 1
+        },
+        "id": "impulse"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Kicked",
+            "path": "ImpulseProbe/AngularVelocity",
+            "near": 84.88,
+            "tolerance": 0.5
+        },
+        "id": "angular-impulse"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Spinner",
+            "path": "SpinProbe/AngularVelocity",
+            "near": 360,
+            "tolerance": 1
+        },
+        "id": "spin-speed"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Spinner",
+            "path": "SpinProbe/RotationAt",
+            "near": 90,
+            "tolerance": 1
+        },
+        "id": "spin-turned"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Torqued",
+            "path": "SpinProbe/AngularVelocity",
+            "near": 212.2,
+            "tolerance": 2
+        },
+        "id": "torque"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Eye",
+            "path": "RayProbe/HitName",
+            "equals": "Shelf"
+        },
+        "id": "ray-hit"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Eye",
+            "path": "RayProbe/HitY",
+            "near": 10,
+            "tolerance": 0.5
+        },
+        "id": "ray-point"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Eye",
+            "path": "RayProbe/NormalY",
+            "near": 1,
+            "tolerance": 0.01
+        },
+        "id": "ray-normal"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Eye",
+            "path": "RayProbe/Overlaps",
+            "equals": 1
+        },
+        "id": "box-query"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "DynamicEye",
+            "path": "RayProbe/HitName",
+            "equals": "Dropper"
+        },
+        "id": "ray-channel"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "DynamicEye",
+            "path": "RayProbe/Overlaps",
+            "equals": 0
+        },
+        "id": "box-channel"
+    },
+    {
+        "id": "bounds-destroyed",
+        "command": "expect.entity",
+        "params": {
+            "entity": "Faller",
+            "exists": false
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Witness",
+            "path": "WitnessProbe/LeftBounds",
+            "equals": 1
+        },
+        "id": "bounds-event"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Witness",
+            "path": "WitnessProbe/Ended",
+            "equals": 1
+        },
+        "id": "bounds-ended"
+    },
+    {
+        "id": "bounds-where",
+        "command": "expect.value",
+        "params": {
+            "entity": "Witness",
+            "path": "WitnessProbe/LastLeftY",
+            "less": -1000
+        }
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "Collisions.png"
+        }
+    }
+]

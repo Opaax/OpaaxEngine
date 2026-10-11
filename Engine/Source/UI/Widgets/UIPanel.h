@@ -9,7 +9,7 @@ namespace Opaax
      * A container: a rect for children, draws nothing. The canvas root is one.
      * Not hit-testable by default (an empty rect must not take clicks).
      */
-    class OPAAX_API UIPanel final : public UIWidget
+    class UIPanel final : public UIWidget
     {
     public:
         UIPanel() { bHitTestable = false; }

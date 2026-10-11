@@ -1,0 +1,14 @@
+# Runtime-generated project state (paths derived by convention from the .opaaxproj — IPaths)
+Save/
+Temp/
+imgui.ini
+
+# Assets the editor tests write (prefab.create, level.new): emptied before every run
+Assets/Scratch/
+
+# Build outputs
+build/
+*.user
+.vs/
+.vscode/
+.idea/

@@ -1,11 +1,4 @@
-#include "Engine.h"
-
-#include "World/Components/CameraComponent.h"
-#include "World/Components/ColliderComponent.h"
-#include "World/Components/QuadComponent.h"
-#include "World/Components/RigidbodyComponent.h"
-#include "World/Components/SpriteComponent.h"
-#include "World/Components/TransformComponent.h"
+#include "Engine/Engine.h"
 
 #include <chrono>
 
@@ -13,70 +6,33 @@
 #include "Core/Log/Logger.h"
 #include "Application/Services/IJobSystem.h"
 #include "Application/Services/IPaths.h"
+#include "Audio/AudioManager.h"
 #include "Core/Profiling/Profiler.h"
 #include "Platform/IPlatform.h"
 
-//Subsystems
+#include "Core/Image/PngWriter.h"
+#include "Core/Maths/MathsStatics.h"
 #include "Engine/EngineEvents.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
-#include "Engine/Input/InputMappingSubsystem.h"
-#include "Engine/UI/UISubsystem.h"
-#include "Engine/Subsystems/Resources/Types/UI/UICanvasResource.h"
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetResource.h"
-#include "UI/Widgets/UIButton.h"
-#include "UI/Widgets/UIImage.h"
-#include "UI/Widgets/UIMask.h"
-#include "UI/Widgets/UIPanel.h"
-#include "UI/Widgets/UISafeArea.h"
-#include "UI/Widgets/UIStack.h"
-#include "UI/Widgets/UIText.h"
-#include "Engine/Subsystems/Resources/Types/Input/InputActionResource.h"
-#include "Engine/Subsystems/Resources/Types/Input/InputMappingContextResource.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Core/Maths/MathsStatics.h"
-#include "Subsystems/Camera/CameraManager.h"
-#include "Subsystems/EventBus/EngineEventBus.h"
-#include "Subsystems/Input/InputManager.h"
-#include "Subsystems/Renderer/RendererManager.h"
-#include "World/WorldManager.h"
-#include "World/WorldEvents.h"
-#include "World/Level.h"
-#include "World/Serialization/LevelResource.hpp"
-#include "World/Serialization/MapResource.hpp"
-
+#include "Engine/Registries/AutoRegistration.h"
+#include "Engine/Subsystems/EngineEventBus.h"
+#include "Input/InputManager.h"
+#include "Renderer/Camera/CameraManager.h"
+#include "Renderer/RendererManager.h"
+#include "Resources/ResourceManager.h"
 #include "RHI/Framebuffer.h"
 #include "RHI/Texture.h"
-#include "Engine/Subsystems/Resources/Types/Texture/TextureResource.h"
-#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetResource.h"
-#include "Engine/Subsystems/Resources/Types/Animation/AnimationClipResource.h"
-#include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryResource.h"
-#include "Engine/Subsystems/Resources/Types/Mover/MoveModeResource.h"
-#include "Engine/Subsystems/Resources/Types/Mover/MoverResource.h"
-#include "Engine/Subsystems/Resources/Types/Font/FontFaceResource.h"
-#include "Engine/Subsystems/Resources/Types/Font/FontFamilyResource.h"
-#include "World/Components/TextComponent.h"
-#include "World/Components/SpriteAnimatorComponent.h"
-#include "World/Components/MoverComponent.h"
-#include "World/Components/PrefabInstanceComponent.h"
-#include "World/Prefab/PrefabResource.hpp"
-#include "World/Systems/ColliderDebugSubsystem.h"
-#include "World/Systems/Movement/FlyMoveMode.h"
-#include "World/Systems/Movement/GroundMoveMode.h"
-#include "World/Systems/MoverSubsystem.h"
-#include "World/Systems/PhysicsSubsystem.h"
-#include "World/Systems/SpriteAnimationSubsystem.h"
+#include "World/Level.h"
+#include "World/Serialization/LevelResource.hpp"
+#include "World/WorldEvents.h"
+#include "World/WorldManager.h"
 
 namespace Opaax
 {
     Engine::Engine()
     {
-        RegisterNativeComponents();
-        RegisterNativeResourceFormats();
+        RegisterTypes();
         RegisterNativeSubsystems();
-        RegisterNativeWorldSubsystems();
-        RegisterNativeMoverModes();
-        RegisterNativeGameInstanceSubsystems();
-        RegisterNativeUIWidgets();
     }
 
     Engine::~Engine()
@@ -107,102 +63,18 @@ namespace Opaax
         return lReturnState;
     }
 
-    void Engine::RegisterNativeComponents()
+    void Engine::RegisterTypes()
     {
-        // Essential: every entity has one (CreateEntity adds it); it cannot be removed.
-        m_Registries.Components().Register<TransformComponent>("Transform", /*bEssential*/true);
-        m_Registries.Components().Register<QuadComponent>("Quad");
-        m_Registries.Components().AddAlias("Dummy", "Quad");   // its old name, still read from older maps
-        m_Registries.Components().Register<SpriteComponent>("Sprite");
-        m_Registries.Components().Register<CameraComponent>("Camera");
-        m_Registries.Components().Register<SpriteAnimatorComponent>("SpriteAnimator");
-        m_Registries.Components().Register<TextComponent>("Text");
+        // Every type the program registered with an OPAAX_REGISTER_* macro: the engine's and the
+        // game modules'. Runs before any world exists, so the registries are still open.
+        ModuleRegistrar lRegistrar;
+        lRegistrar.BindEngineRegistries(m_Registries);
 
-        // The collider puts an entity in the physics world; the rigidbody (optional) sets the body type.
-        m_Registries.Components().Register<ColliderComponent>("Collider");
-        m_Registries.Components().Register<RigidbodyComponent>("Rigidbody");
-        m_Registries.Components().Register<MoverComponent>("Mover");
+        const Uint64 lCount = RunAutoRegistrations(lRegistrar);
 
-        // Which prefab an entity comes from. Saved in the map like any component.
-        m_Registries.Components().Register<PrefabInstanceComponent>("PrefabInstance");
-    }
-    
-    void Engine::RegisterNativeResourceFormats()
-    {
-        m_Registries.Resources().Register<LevelResource>(OPAAX_ID("Level"));
-        m_Registries.Resources().Register<MapResource>(OPAAX_ID("Map"));
-        m_Registries.Resources().Register<TextureResource>(OPAAX_ID("Texture"));
-        m_Registries.Resources().Register<SpriteSheetResource>(OPAAX_ID("SpriteSheet"));
-        m_Registries.Resources().Register<AnimationClipResource>(OPAAX_ID("AnimationClip"));
-        m_Registries.Resources().Register<AnimationLibraryResource>(OPAAX_ID("AnimationLibrary"));
-        m_Registries.Resources().Register<FontFaceResource>(OPAAX_ID("FontFace"));
-        m_Registries.Resources().Register<FontFamilyResource>(OPAAX_ID("FontFamily"));
-
-        // A MoveMode is one tuning (like an animation clip); a Mover names several (like a library).
-        m_Registries.Resources().Register<MoveModeResource>(OPAAX_ID("MoveMode"));
-        m_Registries.Resources().Register<MoverResource>(OPAAX_ID("Mover"));
-
-        // Gameplay binds to actions; a mapping context says which keys trigger them.
-        m_Registries.Resources().Register<InputActionResource>(OPAAX_ID("InputAction"));
-        m_Registries.Resources().Register<InputMappingContextResource>(OPAAX_ID("InputMappingContext"));
-
-        // A prefab is loaded once, however many instances a level places.
-        m_Registries.Resources().Register<PrefabResource>(OPAAX_ID("Prefab"));
-
-        // An authored widget tree (.opaaxui). Each instance builds its own widgets from it.
-        m_Registries.Resources().Register<UICanvasResource>(OPAAX_ID("UICanvas"));
-
-        // Any game struct registered with DataAssets(): one extension, the type is inside the file.
-        m_Registries.Resources().Register<DataAssetResource>(OPAAX_ID("DataAsset"));
-    }
-
-    void Engine::RegisterNativeUIWidgets()
-    {
-        // Widget types a .opaaxui can use. Game modules add their own; unknown types are skipped.
-        m_Registries.UIWidgets().Register<UIPanel>(OPAAX_ID("UIPanel"));
-        m_Registries.UIWidgets().Register<UIImage>(OPAAX_ID("UIImage"));
-        m_Registries.UIWidgets().Register<UIText>(OPAAX_ID("UIText"));
-        m_Registries.UIWidgets().Register<UIButton>(OPAAX_ID("UIButton"));
-
-        // Masks its children: white shows, black hides.
-        m_Registries.UIWidgets().Register<UIMask>(OPAAX_ID("UIMask"));
-
-        // Keeps its children inside the screen's safe area.
-        m_Registries.UIWidgets().Register<UISafeArea>(OPAAX_ID("UISafeArea"));
-
-        // Lays its children out along an axis.
-        m_Registries.UIWidgets().Register<UIStack>(OPAAX_ID("UIStack"));
-    }
-
-    void Engine::RegisterNativeWorldSubsystems()
-    {
-        // Play worlds only (its ShouldCreate decides).
-        m_Registries.WorldSubsystems().Register<SpriteAnimationSubsystem>(OPAAX_ID("SpriteAnimation"));
-
-        // Play worlds only: it moves transforms.
-        m_Registries.WorldSubsystems().Register<PhysicsSubsystem>(OPAAX_ID("Physics"));
-
-        // After Physics (subsystems tick in registration order): the mover must see this step's poses.
-        m_Registries.WorldSubsystems().Register<MoverSubsystem>(OPAAX_ID("Mover"));
-
-        // No ShouldCreate: colliders must be visible while editing. The debug channel toggles it.
-        m_Registries.WorldSubsystems().Register<ColliderDebugSubsystem>(OPAAX_ID("ColliderDebug"));
-    }
-
-    void Engine::RegisterNativeMoverModes()
-    {
-        // These names are saved in .opaaxmovemode files: renaming one breaks existing assets.
-        m_Registries.MoverModes().Register<GroundMoveMode>(OPAAX_ID("GroundMove"));
-        m_Registries.MoverModes().Register<FlyMoveMode>(OPAAX_ID("FlyMove"));
-    }
-
-    void Engine::RegisterNativeGameInstanceSubsystems()
-    {
-        // The UI canvas first: it routes raw input and consumes what the UI used,
-        // before input mapping evaluates this frame.
-        m_Registries.GameInstanceSubsystems().Register<UISubsystem>(OPAAX_ID("UI"));
-
-        m_Registries.GameInstanceSubsystems().Register<InputMappingSubsystem>(OPAAX_ID("InputMapping"));
+        OPAAX_ENGINE_LOG(Trace, "Registered {} type(s): {} component(s), {} world subsystem(s), {} resource format(s)",
+                         lCount, m_Registries.Components().Count(), m_Registries.WorldSubsystems().Count(),
+                         m_Registries.Resources().Count());
     }
 
     void Engine::RegisterNativeSubsystems()
@@ -210,6 +82,9 @@ namespace Opaax
         m_Subsystems.RegisterSubsystem<EngineEventBus>();
         m_Subsystems.RegisterSubsystem<ResourceManager>();
         m_Subsystems.RegisterSubsystem<InputManager>();
+
+        // Before the worlds: they stop their sounds when they end, so audio shuts down after them.
+        m_Subsystems.RegisterSubsystem<AudioManager>();
 
         // Before WorldManager: updates run in registration order (session before worlds)
         // and teardown in reverse (worlds destroyed before the session).
@@ -228,6 +103,7 @@ namespace Opaax
         m_EngineEventBus  = m_Subsystems.GetSubsystem<EngineEventBus>();
         m_WorldManager    = m_Subsystems.GetSubsystem<WorldManager>();
         m_InputManager    = m_Subsystems.GetSubsystem<InputManager>();
+        m_AudioManager    = m_Subsystems.GetSubsystem<AudioManager>();
         m_GameInstances   = m_Subsystems.GetSubsystem<GameInstanceManager>();
     }
     
@@ -255,30 +131,6 @@ namespace Opaax
 
     }
 
-    // =============================================================================
-    // Delta Time
-    // =============================================================================
-    
-    double Engine::GetDeltaTime()
-    {
-        const double lTimeNow   = m_Platform->GetTimeSeconds();
-        double lDelta = lTimeNow - m_FrameInfo.m_LastTime;
-        m_FrameInfo.m_LastTime = lTimeNow;
-        
-        if (lDelta > MAX_FRAME_DELTA)
-        {
-            lDelta = MAX_FRAME_DELTA;
-        }
-        
-        return lDelta;
-    }
-
-    double Engine::GetFixedDeltaTime()
-    {
-        constexpr double lFixedDelta = D60_HZ;
-        return lFixedDelta;
-    }
-    
     // =========================================================================
     // Startup
     // =========================================================================
@@ -350,6 +202,9 @@ namespace Opaax
         }
 
         m_WorldManager->SetActiveWorld(lWorld);
+
+        // The time spent opening the level is not simulated: the next frame counts from now.
+        m_Clock.Restart(m_Platform->GetTimeSeconds());
 
         OPAAX_ENGINE_LOG(Info, "World '{}' ({}) opened and activated", lName.CStr(), ToString(InSpec.Mode));
 
@@ -550,30 +405,24 @@ namespace Opaax
         // 2. Time
         // ----------------------------------------------------------------
 
-        m_FrameInfo.m_DeltaTime = GetDeltaTime();
+        const double lDeltaTime = m_Clock.BeginFrame(m_Platform->GetTimeSeconds());
 
         {
             OPAAX_STAT_SCOPE("Update");
-            Update(m_FrameInfo.m_DeltaTime);
+            Update(lDeltaTime);
         }
 
-        m_FrameInfo.m_AccumulatedDeltaTime += m_FrameInfo.m_DeltaTime;
-        m_FrameInfo.m_FixedDeltaTime = GetFixedDeltaTime();
-
-        while (m_FrameInfo.m_AccumulatedDeltaTime >= m_FrameInfo.m_FixedDeltaTime)
+        while (m_Clock.TakeFixedStep())
         {
             // Inside the loop: the scope's Calls is the step count.
             OPAAX_STAT_SCOPE("FixedUpdate");
 
-            FixedUpdate(m_FrameInfo.m_FixedDeltaTime);
-            m_FrameInfo.m_AccumulatedDeltaTime -= m_FrameInfo.m_FixedDeltaTime;
+            FixedUpdate(m_Clock.GetFixedDelta());
         }
-
-        m_FrameInfo.m_AlphaPhysic = m_FrameInfo.m_AccumulatedDeltaTime / m_FrameInfo.m_FixedDeltaTime;
 
         {
             OPAAX_STAT_SCOPE("Render");
-            Render(m_FrameInfo.m_AlphaPhysic);
+            Render(m_Clock.GetFixedAlpha());
         }
     }
     
@@ -647,6 +496,28 @@ namespace Opaax
         }
     }
     
+    bool Engine::CaptureFrame(const OpaaxString& InPngPath)
+    {
+        TDynArray<Uint8> lPixels;
+        Uint32           lWidth  = 0;
+        Uint32           lHeight = 0;
+
+        if (m_RendererManager == nullptr || !m_RendererManager->CaptureBackbuffer(lPixels, lWidth, lHeight))
+        {
+            OPAAX_ENGINE_LOG(Error, "CaptureFrame: no frame to read (no render device)");
+            return false;
+        }
+
+        if (!PngWriter::Write(InPngPath, lWidth, lHeight, 4, lPixels.data()))
+        {
+            OPAAX_ENGINE_LOG(Error, "CaptureFrame: '{}' could not be written", InPngPath.CStr());
+            return false;
+        }
+
+        OPAAX_ENGINE_LOG(Info, "Frame captured to '{}' ({}x{})", InPngPath.CStr(), lWidth, lHeight);
+        return true;
+    }
+
     void Engine::SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView, bool bInDrawOverlays,
                                   World* InSource, bool bInDrawUI)
     {
@@ -780,6 +651,24 @@ namespace Opaax
         return *m_InputManager;
     }
     
+    AudioManager& Engine::GetAudio()
+    {
+        // Look in the manager first (see GetResources).
+        if (m_AudioManager == nullptr)
+        {
+            m_AudioManager = m_Subsystems.GetSubsystem<AudioManager>();
+        }
+
+        if (m_AudioManager == nullptr && !m_bStarted)
+        {
+            Startup();
+            m_AudioManager = m_Subsystems.GetSubsystem<AudioManager>();
+        }
+
+        OPAAX_ASSERT(m_AudioManager != nullptr);
+        return *m_AudioManager;
+    }
+
     DebugDraw& Engine::GetDebugDraw()
     {
         // Look in the manager first (see GetResources).

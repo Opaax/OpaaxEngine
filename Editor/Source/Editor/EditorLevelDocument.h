@@ -24,6 +24,7 @@ namespace Opaax::Editor
     //   mounted map.
     //   Save Level writes the manifest and every changed map. Entity edits wait for Save Level;
     //   structural changes (New/Add/Remove Map, Set as Persistent) write the manifest immediately.
+    //   A file written while still loaded is reloaded, so the next open reads what was saved.
     //   All map baselines live here (EditorMapDocument is only a cursor). Dirty state is derived by
     //   comparing text. Records are reconciled when maps are mounted/unmounted, never rebuilt
     //   (rebuilding would adopt other maps' unsaved edits as clean).
@@ -99,10 +100,12 @@ namespace Opaax::Editor
         // Saving
     public:
         /**
-         * Writes every changed map, then the manifest if it changed. Unchanged files are not touched.
+         * Writes every changed map, then the manifest if it changed. Unchanged files are not touched,
+         * unless bInEvenUnchanged: then every map and the manifest are rewritten in the current format.
          * @return False if anything could not be written
          */
-        bool SaveAll(const World& InWorld, const ComponentRegistry& InRegistry, const Level& InLevel);
+        bool SaveAll(const World& InWorld, const ComponentRegistry& InRegistry, const Level& InLevel,
+                     bool bInEvenUnchanged = false);
 
         /** Writes one map and updates its baseline. @return False if unknown or the write failed. */
         bool SaveMap(MapId InMapId, const World& InWorld, const ComponentRegistry& InRegistry);

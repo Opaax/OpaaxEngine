@@ -1,9 +1,11 @@
-#include "IEngine.h"
+#include "Application/Services/IEngine.h"
+
+#include "Audio/AudioManager.h"
 
 #include "Engine/GameInstance/GameInstanceManager.h"
-#include "Engine/Subsystems/EventBus/EngineEventBus.h"
-#include "Engine/Subsystems/Input/InputManager.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"
+#include "Engine/Subsystems/EngineEventBus.h"
+#include "Input/InputManager.h"
+#include "Resources/ResourceManager.h"
 #include "Renderer/DebugDraw.h"
 #include "RHI/Framebuffer.h"
 #include "RHI/Texture.h"
@@ -34,6 +36,7 @@ namespace Opaax
 
             void Loop()                   override {}
             void PresentBackbuffer()      override {}
+            bool CaptureFrame(const OpaaxString&) override { return false; }
             void SubmitRenderView(IRenderTarget&, const CameraView&, bool, World*, bool) override {}
             void SubmitUICanvas(UICanvas&, IRenderTarget*, const CameraView*) override {}
 
@@ -89,11 +92,18 @@ namespace Opaax
                 static DebugDraw s_NullDebugDraw;
                 return s_NullDebugDraw;
             }
+
+            // Never started: every sound is refused.
+            AudioManager& GetAudio() override
+            {
+                static AudioManager s_NullAudio{ AudioManager::Desc{} };
+                return s_NullAudio;
+            }
         };
     }
 
     // =========================================================================
-    // Type tag + null object (defined here so they are shared across the DLL/exe boundary).
+    // Type tag + null object (defined here so there is one of each).
     // =========================================================================
     ServiceTypeID IEngine::StaticTypeID() noexcept
     {

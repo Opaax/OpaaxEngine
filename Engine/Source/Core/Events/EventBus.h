@@ -5,35 +5,20 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Events/DelegateHandle.h"
+#include "Core/Reflection/TypeInfo.h"
 
 namespace Opaax
 {
     // =============================================================================
-    // Type key — compile-time, module-stable
+    // Type key — compile-time, the same in every translation unit and every run
     // =============================================================================
 
     namespace Detail
     {
-        /** Compile-time FNV-1a over a null-terminated string. */
-        constexpr Uint64 Fnv1aHash(const char* InStr) noexcept
-        {
-            Uint64 lHash = 14695981039346656037ull;
-            while (*InStr != '\0')
-            {
-                lHash = (lHash ^ static_cast<Uint64>(*InStr)) * 1099511628211ull;
-                ++InStr;
-            }
-            return lHash;
-        }
-
-        /**
-         * Stable per-type id, from a hash of the function signature.
-         * Same in every module (DLL-safe).
-         */
         template<typename T>
         constexpr Uint64 EventTypeKey() noexcept
         {
-            return Fnv1aHash(__FUNCSIG__);
+            return TypeIdOf<T>();
         }
     }
 
@@ -46,7 +31,7 @@ namespace Opaax
      * Publish dispatches now; Enqueue dispatches at the next Flush (preferred).
      * Unsubscribe before the subscriber is destroyed. Not thread-safe.
      */
-    class OPAAX_API EventBus
+    class EventBus
     {
         // =============================================================================
         // CTORs - DTOR
@@ -95,6 +80,15 @@ namespace Opaax
                 });
         }
 
+        /**
+         * Subscribes a handler that receives the payload untyped, for code that only knows the event
+         * by its key (Detail::EventTypeKey<T>()). @return Handle for Unsubscribe.
+         */
+        DelegateHandle SubscribeErased(Uint64 InTypeKey, void* InOwner, TFunction<void(const void*)> InHandler)
+        {
+            return SubscribeImpl(InTypeKey, InOwner, Move(InHandler));
+        }
+
         /** Remove one subscription by handle. @return true if removed. */
         bool Unsubscribe(DelegateHandle InHandle);
 
@@ -113,6 +107,12 @@ namespace Opaax
                 "EventBus payloads must be trivially-copyable POD structs");
 
             PublishImpl(Detail::EventTypeKey<TEvent>(), &InEvent);
+        }
+
+        /** Dispatches now, by key. InPayload must point to an event of the type InTypeKey names. */
+        void PublishErased(Uint64 InTypeKey, const void* InPayload)
+        {
+            PublishImpl(InTypeKey, InPayload);
         }
 
         /**

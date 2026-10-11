@@ -82,7 +82,7 @@ namespace Opaax
     /**
      * Line -> thin rotated quad. A zero-length line gives Size.x == 0 and rotation 0 (never NaN).
      */
-    OPAAX_API DebugQuad ToQuad(const DebugLine& InLine) noexcept;
+    DebugQuad ToQuad(const DebugLine& InLine) noexcept;
 
     // =============================================================================
     // Outline geometry (pure functions)
@@ -91,14 +91,14 @@ namespace Opaax
      * A circle as InSegments points, each InRadius from InCenter. OutPoints is cleared first.
      * The last point connects back to the first.
      */
-    OPAAX_API void BuildCircleOutline(Vector2F InCenter, float InRadius, Uint32 InSegments,
+    void BuildCircleOutline(Vector2F InCenter, float InRadius, Uint32 InSegments,
                                       TDynArray<Vector2F>& OutPoints);
 
     /**
      * A capsule as a closed polygon: a half-turn of InSegmentsPerCap points around each end,
      * joined by the flanks. OutPoints is cleared first. Equal centres give a circle.
      */
-    OPAAX_API void BuildCapsuleOutline(Vector2F InCenter1, Vector2F InCenter2, float InRadius,
+    void BuildCapsuleOutline(Vector2F InCenter1, Vector2F InCenter2, float InRadius,
                                        Uint32 InSegmentsPerCap, TDynArray<Vector2F>& OutPoints);
 
     /**
@@ -109,7 +109,7 @@ namespace Opaax
      * Every shape has a channel (disabled channels are dropped on submit) and a world
      * (null = the active world; a pass only draws its own world's shapes).
      */
-    class OPAAX_API DebugDraw
+    class DebugDraw
     {
         // =============================================================================
         // Draw calls

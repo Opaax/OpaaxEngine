@@ -6,9 +6,9 @@
 #include "Editor/Undo/DataAssetUndoables.h"
 #include "Editor/Undo/EditorUndo.h"
 
-#include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetFile.h"
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetResource.h"
+#include "Resources/ResourceManager.h"
+#include "Resources/DataAsset/DataAssetFile.h"
+#include "Resources/DataAsset/DataAssetResource.h"
 
 namespace Opaax::Editor
 {

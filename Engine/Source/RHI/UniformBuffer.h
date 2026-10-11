@@ -12,7 +12,7 @@ namespace Opaax
      * Uniform buffer at a fixed binding point (layout(std140, binding = N) uniform Block).
      * Created by IRHIDevice::CreateUniformBuffer; written with SetData.
      */
-    class OPAAX_API IUniformBuffer
+    class IUniformBuffer
     {
         // =============================================================================
         // CTOR - DTOR

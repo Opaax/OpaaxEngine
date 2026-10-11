@@ -9,7 +9,7 @@ namespace Opaax
     // OpenGLRHIDevice — IRHIDevice for OpenGL. Owns the frame's command buffer; Present swaps
     //   the surface.
     // =============================================================================
-    class OPAAX_API OpenGLRHIDevice final : public IRHIDevice
+    class OpenGLRHIDevice final : public IRHIDevice
     {
         // =============================================================================
         // CTORS - DTORS
@@ -56,6 +56,7 @@ namespace Opaax
         void            Resize(Uint32 InWidth, Uint32 InHeight)                         override;
         void            WaitIdle()                                                      override;
         double          GetLastGpuFrameTimeMs() const                                   override { return m_LastGpuMs; }
+        bool            ReadBackbufferPixels(Uint32 InWidth, Uint32 InHeight, TDynArray<Uint8>& OutRGBA) override;
         //~End IRHIDevice interface
 
         // =============================================================================

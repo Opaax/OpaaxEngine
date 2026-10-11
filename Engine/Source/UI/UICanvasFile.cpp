@@ -5,6 +5,7 @@
 #include "Core/IO/FileIO.h"
 #include "UI/UIWidget.h"
 #include "UI/UIWidgetRegistry.h"
+#include "UI/Widgets/UIPanel.h"
 
 namespace Opaax
 {
@@ -147,6 +148,21 @@ namespace Opaax
 
         OutDoc = Move(lDoc);
         return true;
+    }
+
+    UICanvasFile::UICanvasDoc UICanvasFile::MakeEmpty(const float InReferenceHeight)
+    {
+        UICanvasDoc lDoc;
+        lDoc.ReferenceHeight = InReferenceHeight;
+        lDoc.Root            = MakeUnique<UIPanel>();
+        lDoc.Root->Name      = "Root";
+
+        // Stretched over its parent: mounted, the root is the whole screen.
+        lDoc.Root->Rect.AnchorMin = { 0.f, 0.f };
+        lDoc.Root->Rect.AnchorMax = { 1.f, 1.f };
+        lDoc.Root->Rect.SizeDelta = { 0.f, 0.f };
+
+        return lDoc;
     }
 
     bool UICanvasFile::Save(const OpaaxString& InAbsPath, const UICanvasDoc& InDoc)
