@@ -5,8 +5,8 @@
 namespace Opaax
 {
     // =============================================================================
-    // StdFileSystem — IFileSystem on std::filesystem, for every platform. Paths go through
-    //   Utf8::ToFsPath / FromFsPath, so UTF-8 names work on Windows too.
+    // StdFileSystem — IFileSystem on the core FileSystem, for every platform. UTF-8 names work
+    //   on Windows too.
     // =============================================================================
     class StdFileSystem final : public IFileSystem
     {

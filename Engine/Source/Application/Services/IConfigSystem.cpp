@@ -1,18 +1,13 @@
 #include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IPaths.h"
 
-#include "Core/String/OpaaxUtf8.h"
-
-#include <filesystem>
-
 #include "Core/Log/Logger.h"
+#include "Core/String/OpaaxPathString.h"
 
 namespace Opaax
 {
     namespace
     {
-        namespace fs = std::filesystem;
-
         // =====================================================================
         // NullConfigSystem — in-memory configs (defaults), never touches disk.
         // =====================================================================
@@ -88,7 +83,7 @@ namespace Opaax
         }
         
         // The directory may contain non-ASCII characters.
-        return Utf8::FromFsPath(Utf8::ToFsPath(m_ConfigsDir) / InFileName);
+        return PathString::Join(m_ConfigsDir, InFileName);
     }
 
     void ConfigSystem::OnConfigRegistered(IConfig& InConfig)

@@ -252,3 +252,15 @@ TEST_CASE("OpaaxStringView: converts to std::string_view for the vendor boundary
     const std::string_view lEmpty = OpaaxStringView();
     CHECK(lEmpty.empty());
 }
+
+TEST_CASE("OpaaxStringView: Trim, TrimStart and TrimEnd drop spaces, tabs and line breaks")
+{
+    CHECK(OpaaxStringView("  \t name \r\n").Trim() == "name");
+    CHECK(OpaaxStringView("  name ").TrimStart() == "name ");
+    CHECK(OpaaxStringView("  name ").TrimEnd() == "  name");
+    CHECK(OpaaxStringView(" \t\n").Trim().IsEmpty());
+    CHECK(OpaaxStringView("").Trim().IsEmpty());
+    CHECK(OpaaxStringView("a b").Trim() == "a b");   // inside spaces stay
+
+    static_assert(OpaaxStringView(" x ").Trim() == "x");
+}

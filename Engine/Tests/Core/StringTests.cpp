@@ -281,3 +281,86 @@ TEST_CASE("OpaaxString: FromUInt composes with operator+ the way call sites use 
     const OpaaxString lName = OpaaxString("SpawnedQuad_") + OpaaxString::FromUInt(7);
     CHECK(lName == "SpawnedQuad_7");
 }
+
+// =============================================================================
+// Building and searching
+// =============================================================================
+TEST_CASE("OpaaxString: Append and + take a string, a view, a literal or a character, on either side")
+{
+    OpaaxString lText("ab");
+    lText.Append(OpaaxStringView("cdef").SubString(0, 2));
+    lText.Append('e');
+    lText += 'f';
+    lText += OpaaxStringView("gh");
+    CHECK(lText == "abcdefgh");
+
+    const OpaaxString lName("Ann");
+    CHECK("'" + lName + "'" == "'Ann'");
+    CHECK(OpaaxStringView("Hello ") + lName == "Hello Ann");
+    CHECK(lName + '!' == "Ann!");
+    CHECK(lName + OpaaxStringView("ie") == "Annie");
+
+    // Past the inline buffer, a character at a time.
+    OpaaxString lLong;
+    for (Int32 lIndex = 0; lIndex < 40; ++lIndex) { lLong += 'x'; }
+    CHECK(lLong.GetLength() == 40u);
+    CHECK(lLong.IsUsingHeap());
+}
+
+TEST_CASE("OpaaxString: the view searches, Back, PopBack and range-for")
+{
+    const OpaaxString lPath("Maps/Arena.opaaxmap");
+
+    CHECK(lPath.View() == "Maps/Arena.opaaxmap");
+    CHECK(lPath.StartsWith("Maps/"));
+    CHECK(lPath.EndsWith(".opaaxmap"));
+    CHECK(lPath.Contains("Arena"));
+    CHECK_FALSE(lPath.Contains("arena"));
+    CHECK(lPath.Find('/') == 4);
+    CHECK(lPath.Find('a', 6) == 9);
+    CHECK(lPath.FindLast('a') == 17);
+    CHECK(lPath.FindLast("a") == 17);
+    CHECK(lPath.FindFirstOf("./") == 4);
+    CHECK(lPath.FindLastOf("./") == 10);
+
+    OpaaxString lText("abc");
+    CHECK(lText.Back() == 'c');
+    lText.PopBack();
+    CHECK(lText == "ab");
+    lText.PopBack();
+    lText.PopBack();
+    lText.PopBack();   // empty: nothing happens
+    CHECK(lText.IsEmpty());
+    CHECK(lText.Back() == '\0');
+
+    Uint32 lDots = 0;
+    for (const char lChar : lPath) { if (lChar == '.') { ++lDots; } }
+    CHECK(lDots == 1u);
+}
+
+TEST_CASE("OpaaxString: Replace makes a copy, ReplaceCharInline changes in place")
+{
+    const OpaaxString lText("a.b.c");
+    CHECK(lText.Replace(".", "::") == "a::b::c");
+    CHECK(lText.Replace("x", "y") == "a.b.c");
+    CHECK(lText.Replace("", "y") == "a.b.c");
+    CHECK(lText.Replace("a.b.c", "") == "");
+    CHECK(OpaaxString("aaa").Replace("aa", "b") == "ba");   // left to right, no overlap
+    CHECK(lText == "a.b.c");                                // the original is untouched
+
+    OpaaxString lLines("one\ntwo\nthree");
+    lLines.ReplaceCharInline('\n', ' ');
+    CHECK(lLines == "one two three");
+}
+
+TEST_CASE("OpaaxString: operator< is byte order, so strings sort")
+{
+    CHECK(OpaaxString("a") < OpaaxString("b"));
+    CHECK(OpaaxString("B") < OpaaxString("a"));
+    CHECK(OpaaxString("ab") < OpaaxString("abc"));
+    CHECK_FALSE(OpaaxString("abc") < OpaaxString("abc"));
+    CHECK(OpaaxString("") < OpaaxString("a"));
+
+    // A byte above 127 sorts after ASCII, as unsigned.
+    CHECK(OpaaxString("z") < OpaaxString("\xC3\xA9"));
+}

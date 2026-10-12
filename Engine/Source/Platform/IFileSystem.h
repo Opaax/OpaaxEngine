@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
+#include "Core/IO/FileSystem.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 
@@ -20,15 +21,8 @@ namespace Opaax
         // Types
         // =============================================================================
     public:
-        /**
-         * One directory entry. AbsPath uses forward slashes.
-         */
-        struct Entry
-        {
-            OpaaxString Name;                  // "Textures" / "Wave01.wave"
-            OpaaxString AbsPath;
-            bool        bIsDirectory = false;
-        };
+        /** One directory entry (Name, AbsPath with forward slashes, bIsDirectory). */
+        using Entry = FileSystem::Entry;
 
         // =============================================================================
         // Platform primitives

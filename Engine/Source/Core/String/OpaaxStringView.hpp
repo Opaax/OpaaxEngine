@@ -5,6 +5,7 @@
 #include <string_view>
 
 #include "Core/OpaaxTypes.h"
+#include "Core/String/Char.h"
 
 namespace Opaax
 {
@@ -86,6 +87,24 @@ namespace Opaax
         {
             m_Length -= (InCount > m_Length) ? m_Length : InCount;
         }
+
+        /** Without the spaces, tabs and line breaks at its start (Char::IsSpace). */
+        constexpr OpaaxStringView TrimStart() const noexcept
+        {
+            Uint32 lFirst = 0;
+            while (lFirst < m_Length && Char::IsSpace(m_Data[lFirst])) { ++lFirst; }
+            return SubString(lFirst);
+        }
+
+        /** Without the spaces, tabs and line breaks at its end. */
+        constexpr OpaaxStringView TrimEnd() const noexcept
+        {
+            Uint32 lEnd = m_Length;
+            while (lEnd > 0 && Char::IsSpace(m_Data[lEnd - 1])) { --lEnd; }
+            return SubString(0, lEnd);
+        }
+
+        constexpr OpaaxStringView Trim() const noexcept { return TrimStart().TrimEnd(); }
 
         /**
          * @return Index of the first match at or after InStartPos, or -1.

@@ -315,6 +315,47 @@ namespace Opaax
 
         void Append(const OpaaxString& Other) { Append(Other.CStr(), Other.Length); }
 
+        void Append(const OpaaxStringView InView) { Append(InView.Data(), InView.GetLength()); }
+
+        void Append(const char InChar) { Append(&InChar, 1); }
+
+        /** Removes the last character; nothing when empty. */
+        void PopBack() noexcept
+        {
+            if (Length == 0) { return; }
+
+            --Length;
+            Data()[Length] = OpaaxString_InvalidCharacter;
+        }
+
+        /** A copy with every InFrom replaced by InTo, left to right. An empty InFrom changes nothing. */
+        OpaaxString Replace(const OpaaxStringView InFrom, const OpaaxStringView InTo) const
+        {
+            if (InFrom.IsEmpty()) { return *this; }
+
+            const OpaaxStringView lSelf(CStr(), Length);
+            OpaaxString           lResult;
+            Uint32                lAt = 0;
+            for (Int32 lFound = lSelf.Find(InFrom); lFound >= 0; lFound = lSelf.Find(InFrom, lAt))
+            {
+                lResult.Append(lSelf.SubString(lAt, static_cast<Uint32>(lFound) - lAt));
+                lResult.Append(InTo);
+                lAt = static_cast<Uint32>(lFound) + InFrom.GetLength();
+            }
+            lResult.Append(lSelf.SubString(lAt));
+            return lResult;
+        }
+
+        /** Replaces every InFrom character with InTo, in place. */
+        void ReplaceCharInline(const char InFrom, const char InTo) noexcept
+        {
+            char* lData = Data();
+            for (Uint32 i = 0; i < Length; ++i)
+            {
+                if (lData[i] == InFrom) { lData[i] = InTo; }
+            }
+        }
+
         /**
          * Reserves capacity without changing the length.
          */
@@ -341,6 +382,17 @@ namespace Opaax
             const char* lResult = CString::Find(CStr() + StartPos, Str);
             return lResult ? static_cast<Int32>(lResult - CStr()) : -1;
         }
+
+        // The searches of OpaaxStringView, on the whole string: an index, or -1.
+        Int32 Find(const char InChar, const Uint32 InStartPos = 0) const noexcept { return View().Find(InChar, InStartPos); }
+        Int32 FindLast(const OpaaxStringView InNeedle) const noexcept { return View().FindLast(InNeedle); }
+        Int32 FindLast(const char InChar) const noexcept { return View().FindLast(InChar); }
+        Int32 FindFirstOf(const OpaaxStringView InChars, const Uint32 InStartPos = 0) const noexcept { return View().FindFirstOf(InChars, InStartPos); }
+        Int32 FindLastOf(const OpaaxStringView InChars) const noexcept { return View().FindLastOf(InChars); }
+
+        bool Contains(const OpaaxStringView InNeedle) const noexcept { return View().Contains(InNeedle); }
+        bool StartsWith(const OpaaxStringView InPrefix) const noexcept { return View().StartsWith(InPrefix); }
+        bool EndsWith(const OpaaxStringView InSuffix) const noexcept { return View().EndsWith(InSuffix); }
 
         static constexpr char ToUpperChar(char Char) noexcept
         {
@@ -380,9 +432,21 @@ namespace Opaax
         const char* CStr() const noexcept   { return bUsingHeap ? HeapData : SSOBuffer; }
         char*       Data() noexcept         { return bUsingHeap ? HeapData : SSOBuffer; }
 
+        /** The bytes as a view; it borrows them, so it must not outlive this string. */
+        OpaaxStringView View() const noexcept { return OpaaxStringView(CStr(), Length); }
+
         Uint32  GetLength()     const noexcept { return Length; }
         bool    IsUsingHeap()   const noexcept { return bUsingHeap; }
         bool    IsEmpty()       const noexcept { return Length == 0; }
+
+        /** The last character, or '\0' when empty. */
+        char Back() const noexcept { return Length > 0 ? CStr()[Length - 1] : OpaaxString_InvalidCharacter; }
+
+        // For range-for over the characters.
+        const char* begin() const noexcept { return CStr(); }
+        const char* end()   const noexcept { return CStr() + Length; }
+        char*       begin() noexcept       { return Data(); }
+        char*       end()   noexcept       { return Data() + Length; }
 
         bool IsValidIndex(Uint32 Index) const
         {
@@ -427,10 +491,30 @@ namespace Opaax
             return *this;
         }
 
+        OpaaxString& operator+=(const OpaaxStringView Other)
+        {
+            Append(Other);
+            return *this;
+        }
+
+        OpaaxString& operator+=(const char InChar)
+        {
+            Append(InChar);
+            return *this;
+        }
+
         bool operator==(const OpaaxString& Other)   const noexcept { return CString::Equals(CStr(), Other.CStr()); }
         bool operator==(const char* Str)            const noexcept { return CString::Equals(CStr(), Str); }
         bool operator!=(const OpaaxString& Other)   const noexcept { return !(*this == Other); }
         bool operator!=(const char* Str)            const noexcept { return !(*this == Str); }
+
+        /** Byte order, like a dictionary for ASCII: "B" < "a" < "ab" < "b". */
+        bool operator<(const OpaaxString& Other) const noexcept
+        {
+            const Uint32 lCommon  = Length < Other.Length ? Length : Other.Length;
+            const Int32  lCompare = lCommon > 0 ? Memory::Compare(CStr(), Other.CStr(), lCommon) : 0;
+            return lCompare != 0 ? lCompare < 0 : Length < Other.Length;
+        }
 
         OpaaxString operator+(const char* RHS) const
         {
@@ -442,6 +526,34 @@ namespace Opaax
         OpaaxString operator+(const OpaaxString& RHS) const
         {
             OpaaxString lR(*this);
+            lR += RHS;
+            return lR;
+        }
+
+        OpaaxString operator+(const OpaaxStringView RHS) const
+        {
+            OpaaxString lR(*this);
+            lR += RHS;
+            return lR;
+        }
+
+        OpaaxString operator+(const char RHS) const
+        {
+            OpaaxString lR(*this);
+            lR += RHS;
+            return lR;
+        }
+
+        friend OpaaxString operator+(const char* LHS, const OpaaxString& RHS)
+        {
+            OpaaxString lR(LHS);
+            lR += RHS;
+            return lR;
+        }
+
+        friend OpaaxString operator+(const OpaaxStringView LHS, const OpaaxString& RHS)
+        {
+            OpaaxString lR(LHS);
             lR += RHS;
             return lR;
         }

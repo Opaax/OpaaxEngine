@@ -1,4 +1,4 @@
-// Suite: PathString::Stem, Extension and FileName.
+// Suite: PathString: Stem, Extension and FileName (views), and the paths built by the platform's rules.
 #include <doctest.h>
 
 #include "Core/String/OpaaxPathString.h"
@@ -129,4 +129,43 @@ TEST_CASE("PathString::FileName: the result VIEWS the path it was given")
 
     CHECK(lName == "Decor.opaaxmap");
     CHECK(lName.Data() == lPath.CStr() + 13);   // points INTO the argument's own bytes
+}
+
+// =============================================================================
+// Paths built by the platform's rules
+// =============================================================================
+TEST_CASE("PathString: Join, Parent and Normalize build paths with forward slashes")
+{
+    CHECK(PathString::Join("Maps", "Decor.opaaxmap") == "Maps/Decor.opaaxmap");
+    CHECK(PathString::Join("Maps/", "Decor.opaaxmap") == "Maps/Decor.opaaxmap");
+    CHECK(PathString::Join("", "Decor.opaaxmap") == "Decor.opaaxmap");
+
+    CHECK(PathString::Parent("Assets/Maps/Decor.opaaxmap") == "Assets/Maps");
+    CHECK(PathString::Parent("Decor.opaaxmap").IsEmpty());
+
+    CHECK(PathString::Normalize("a/./b/../c") == "a/c");
+    CHECK(PathString::Normalize("a//b") == "a/b");
+}
+
+TEST_CASE("PathString: Generic and IsAbsolute follow the platform")
+{
+#if defined(OPAAX_PLATFORM_WINDOWS)
+    CHECK(PathString::Generic("C:\\Game\\Maps") == "C:/Game/Maps");
+    CHECK(PathString::IsAbsolute("C:/Game"));
+    CHECK_FALSE(PathString::IsAbsolute("/Game"));   // on the current drive
+#else
+    CHECK(PathString::Generic("/Game/Maps") == "/Game/Maps");
+    CHECK(PathString::IsAbsolute("/Game"));
+#endif
+    CHECK_FALSE(PathString::IsAbsolute("Game/Maps"));
+}
+
+TEST_CASE("PathString: RelativeTo and ReplaceExtension")
+{
+    CHECK(PathString::RelativeTo("a/b/c.txt", "a") == "b/c.txt");
+    CHECK(PathString::RelativeTo("a", "a/b") == "..");
+    CHECK(PathString::RelativeTo("a/b", "a/b") == ".");
+
+    CHECK(PathString::ReplaceExtension("Tests/UI.json", ".out.json") == "Tests/UI.out.json");
+    CHECK(PathString::ReplaceExtension("Tests/UI", ".json") == "Tests/UI.json");
 }
