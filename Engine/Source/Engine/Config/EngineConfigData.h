@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 
 #include "Audio/AudioBackend.h"
+#include "Audio/AudioBank.h"
 #include "Audio/AudioBusSettings.h"
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
@@ -148,7 +149,11 @@ namespace Opaax
         /** Sounds playing at once; one more replaces the least important (with a warning). */
         Uint32 MaxVoices = 64;
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(AudioSettings, bEnabled, Backend, MasterVolume, Buses, MaxVoices)
+        /** An audio bank held for the whole game (menus, the player, UI). */
+        TDataAssetRef<AudioBank> GlobalBank;
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(AudioSettings, bEnabled, Backend, MasterVolume, Buses, MaxVoices,
+                                                    GlobalBank)
 
         OPAAX_PROPERTIES(AudioSettings,
                          OPAAX_PROP(bEnabled).SetFlags(EPropertyFlags::NeedRestart)
@@ -157,7 +162,9 @@ namespace Opaax
                          OPAAX_PROP(MasterVolume).SetRange(0.f, 1.f),
                          OPAAX_PROP(Buses).SetTooltip("The buses under the master. A volume applies at once; "
                                                       "a bus added, removed or moved at the next start."),
-                         OPAAX_PROP(MaxVoices).SetRange(1.f, 512.f).SetFlags(EPropertyFlags::NeedRestart))
+                         OPAAX_PROP(MaxVoices).SetRange(1.f, 512.f).SetFlags(EPropertyFlags::NeedRestart),
+                         OPAAX_PROP(GlobalBank).SetFlags(EPropertyFlags::NeedRestart)
+                                               .SetTooltip("An audio bank held for the whole game: menus, the player, UI."))
     };
 
     struct EngineConfigData

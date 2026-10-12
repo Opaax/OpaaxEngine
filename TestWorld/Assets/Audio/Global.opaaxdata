@@ -1,0 +1,8 @@
+{
+    "Type": "AudioBank",
+    "Data": {
+        "Clips": [
+            "Audio/Beep.wav"
+        ]
+    }
+}

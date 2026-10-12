@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "Audio/AudioGlobalBank.h"
 #include "Audio/AudioManager.h"
 #include "Audio/AudioSubsystem.h"
 #include "Core/String/OpaaxStringJson.h"
@@ -275,6 +276,25 @@ namespace TestWorld
             }
 
             Distinct = static_cast<Opaax::Int32>(std::count(lHeard.begin(), lHeard.end(), true));
+        }
+    };
+
+    // =============================================================================
+    // BankProbe — how many sounds the game's global audio bank holds (Audio.GlobalBank).
+    // =============================================================================
+    class BankProbe : public Opaax::Behaviour
+    {
+    public:
+        Opaax::Int32 GlobalSounds = 0;
+
+        OPAAX_PROPERTIES(BankProbe, OPAAX_PROP(GlobalSounds))
+
+        void OnStart() override
+        {
+            if (const Opaax::AudioGlobalBank* lGlobal = GetGameSubsystem<Opaax::AudioGlobalBank>())
+            {
+                GlobalSounds = static_cast<Opaax::Int32>(lGlobal->GetHold().GetClipCount());
+            }
         }
     };
 }

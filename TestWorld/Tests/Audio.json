@@ -99,5 +99,22 @@
             "path": "StepsProbe/Distinct",
             "equals": 5
         }
+    },
+    {
+        "id": "level-bank",
+        "command": "expect.count",
+        "params": {
+            "component": "AudioBanks",
+            "equals": 1
+        }
+    },
+    {
+        "id": "global-bank",
+        "command": "expect.value",
+        "params": {
+            "entity": "Banks",
+            "path": "BankProbe/GlobalSounds",
+            "equals": 1
+        }
     }
 ]

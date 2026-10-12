@@ -34,7 +34,12 @@
 #include "World/World.h"
 #include "World/WorldManager.h"
 
+#include "AudioTestHelpers.h"
+
 using namespace Opaax;
+using AudioTest::ManualJobs;
+using AudioTest::MakeWav;
+using AudioTest::TempPaths;
 
 namespace
 {
@@ -65,64 +70,6 @@ namespace
         }
         return lPicks;
     }
-
-    /** A mono 16-bit WAV: a sine at InHz, InSeconds long, peaking at 0.5. */
-    TDynArray<Uint8> MakeWav(const float InSeconds, const float InHz = 440.f)
-    {
-        constexpr Uint32 RATE = 44100;
-        const Uint32 lFrames  = static_cast<Uint32>(RATE * InSeconds);
-
-        TDynArray<Uint8> lOut;
-        const auto lPut32  = [&lOut](const Uint32 InValue) { for (int i = 0; i < 4; ++i) { lOut.push_back(static_cast<Uint8>(InValue >> (8 * i))); } };
-        const auto lPut16  = [&lOut](const Uint16 InValue) { lOut.push_back(static_cast<Uint8>(InValue & 0xFF)); lOut.push_back(static_cast<Uint8>(InValue >> 8)); };
-        const auto lPutTag = [&lOut](const char* InTag) { lOut.insert(lOut.end(), InTag, InTag + 4); };
-
-        lPutTag("RIFF"); lPut32(36 + lFrames * 2); lPutTag("WAVE");
-        lPutTag("fmt "); lPut32(16); lPut16(1); lPut16(1); lPut32(RATE); lPut32(RATE * 2); lPut16(2); lPut16(16);
-        lPutTag("data"); lPut32(lFrames * 2);
-        for (Uint32 lFrame = 0; lFrame < lFrames; ++lFrame)
-        {
-            lPut16(static_cast<Uint16>(static_cast<Int16>(0.5 * 32767.0 * std::sin(2.0 * 3.14159265358979 * InHz * lFrame / RATE))));
-        }
-        return lOut;
-    }
-
-    /** Runs nothing until asked: a load stays "loading" for as long as a test wants. */
-    class ManualJobs final : public IJobSystem
-    {
-    public:
-        JobHandle Submit(TFunction<void()> InWork) override { return Submit(Move(InWork), {}); }
-
-        JobHandle Submit(TFunction<void()> InWork, TFunction<void()> InOnComplete) override
-        {
-            m_Jobs.push_back({ Move(InWork), Move(InOnComplete) });
-            return JobHandle{};
-        }
-
-        void ParallelFor(const Uint32 InCount, const TFunction<void(Uint32)>& InBody, Uint32) override
-        {
-            for (Uint32 lIndex = 0; lIndex < InCount; ++lIndex) { InBody(lIndex); }
-        }
-
-        void   Wait(const JobHandle&) override {}
-        void   DrainCompletions() override {}
-        Uint32 GetWorkerCount() const noexcept override { return 0; }
-
-        /** Runs every queued job and its completion. */
-        void RunAll()
-        {
-            TDynArray<std::pair<TFunction<void()>, TFunction<void()>>> lJobs = Move(m_Jobs);
-            m_Jobs.clear();
-            for (auto& [lWork, lDone] : lJobs)
-            {
-                if (lWork) { lWork(); }
-                if (lDone) { lDone(); }
-            }
-        }
-
-    private:
-        TDynArray<std::pair<TFunction<void()>, TFunction<void()>>> m_Jobs;
-    };
 
     AudioManager::Desc Headless()
     {
@@ -319,7 +266,7 @@ TEST_CASE("AudioManager: a sound whose clip is loading plays once it is loaded; 
 {
     const fs::path lFile = fs::temp_directory_path() / "OpaaxAudioPending.wav";
     {
-        const TDynArray<Uint8> lWav = MakeWav(0.5f);
+        const TDynArray<Uint8> lWav = MakeWav(44100, 0.5f);
         std::ofstream(lFile, std::ios::binary).write(reinterpret_cast<const char*>(lWav.data()), static_cast<std::streamsize>(lWav.size()));
     }
 
@@ -384,41 +331,6 @@ TEST_CASE("AudioManager: a sound whose clip is loading plays once it is loaded; 
 // =============================================================================
 namespace
 {
-    class TempPaths final : public IPaths
-    {
-    public:
-        explicit TempPaths(const fs::path& InRoot) : m_Root(InRoot) {}
-
-        OpaaxString AssetToAbsolute(const OpaaxString& InAssetRel) const override
-        {
-            return OpaaxString((m_Root / InAssetRel.CStr()).generic_string().c_str());
-        }
-
-        OpaaxString AbsoluteToAsset(const OpaaxString& InAbsPath) const override
-        {
-            return OpaaxString(fs::path(InAbsPath.CStr()).lexically_relative(m_Root).generic_string().c_str());
-        }
-
-        void        LogPaths()      const override {}
-        OpaaxString WorkspaceRoot() const override { return Root(); }
-        OpaaxString EngineRoot()    const override { return Root(); }
-        OpaaxString ProjectRoot()   const override { return Root(); }
-        OpaaxString ProjectFile()   const override { return Root(); }
-        OpaaxString AssetsDir()     const override { return Root(); }
-        OpaaxString ConfigsDir()    const override { return Root(); }
-        OpaaxString SourceDir()     const override { return Root(); }
-        OpaaxString SaveDir()       const override { return Root(); }
-        OpaaxString TempDir()       const override { return Root(); }
-
-        OpaaxString EngineToAbsolute(const OpaaxString& InRel)  const override { return AssetToAbsolute(InRel); }
-        OpaaxString ProjectToAbsolute(const OpaaxString& InRel) const override { return AssetToAbsolute(InRel); }
-
-    private:
-        OpaaxString Root() const { return OpaaxString(m_Root.generic_string().c_str()); }
-
-        fs::path m_Root;
-    };
-
     /** Audio/Step0..2.wav, Audio/Steps.opaaxdata (RandomNoRepeat over them) and Audio/Empty.opaaxdata. */
     struct DefWorldFixture
     {
@@ -445,7 +357,7 @@ namespace
             AudioClipDef lSteps = MakeDef(EAudioSelection::RandomNoRepeat, 3);
             for (Uint32 lIndex = 0; lIndex < 3; ++lIndex)
             {
-                const TDynArray<Uint8> lWav = MakeWav(0.2f, 300.f + 100.f * lIndex);
+                const TDynArray<Uint8> lWav = MakeWav(44100, 0.2f, 300.f + 100.f * lIndex);
                 std::ofstream(Root / "Audio" / ("Step" + std::to_string(lIndex) + ".wav"), std::ios::binary)
                     .write(reinterpret_cast<const char*>(lWav.data()), static_cast<std::streamsize>(lWav.size()));
             }

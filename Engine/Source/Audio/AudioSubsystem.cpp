@@ -4,11 +4,14 @@
 
 #include "Application/Services/IPaths.h"
 #include "Audio/AudioClipResource.h"
+#include "Audio/AudioGlobalBank.h"
 #include "Audio/AudioManager.h"
+#include "Audio/Components/AudioBanksComponent.h"
 #include "Audio/Components/AudioListenerComponent.h"
 #include "Audio/Components/AudioSourceComponent.h"
 #include "Core/Events/EventBus.h"
 #include "Core/String/OpaaxPathString.h"
+#include "Engine/GameInstance/GameInstance.h"
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Resources/DataAsset/DataAssetFile.h"
 #include "Resources/ResourceManager.h"
@@ -91,6 +94,8 @@ namespace Opaax
             return;
         }
 
+        HoldBanks();
+
         World& lWorld = m_Context->OwningWorld;
         UpdateListener(lWorld, *lAudio);
         UpdateSources(lWorld, *lAudio);
@@ -135,6 +140,7 @@ namespace Opaax
         m_SeenSources.clear();
         m_Clips.clear();
         m_Defs.clear();
+        m_Banks.clear();
     }
 
     // =========================================================================
@@ -264,6 +270,9 @@ namespace Opaax
             return SoundHandle{};
         }
 
+        // A sound played before the first Update (a behaviour's OnStart) finds the level's banks.
+        HoldBanks();
+
         if (!IsClipDefPath(InPath))
         {
             if (OutSpatial != nullptr) { *OutSpatial = InParams.bSpatial; }
@@ -308,7 +317,13 @@ namespace Opaax
             return lFound->second;
         }
 
-        // Loaded already (a bank, another world): plays at once. Else it loads without stopping the game.
+        // A bank's (maybe still loading), or loaded already (another world): it plays as soon as it can.
+        // Else it loads without stopping the game.
+        if (const ResourceRef<AudioClipResource>* lBanked = FindBankClip(InPath))
+        {
+            return m_Clips.emplace(InPath, *lBanked).first->second;
+        }
+
         const OpaaxString lAbsolute = m_Context->Paths.AssetToAbsolute(InPath);
         ResourceRef<AudioClipResource> lClip = m_Context->Resources.Find<AudioClipResource>(lAbsolute.CStr());
         if (!lClip.IsValid())
@@ -334,9 +349,50 @@ namespace Opaax
         return lFound->second.Get();
     }
 
+    void AudioSubsystem::HoldBanks()
+    {
+        TDynArray<std::pair<Uint32, const AudioBanksComponent*>> lNew;
+        m_Context->OwningWorld.Each<AudioBanksComponent>([this, &lNew](const EntityID InEntity, const AudioBanksComponent& InBanks)
+        {
+            if (!m_Banks.contains(EntityKey(InEntity)))
+            {
+                lNew.emplace_back(EntityKey(InEntity), &InBanks);
+            }
+        });
+
+        // Held after the view: holding loads files.
+        for (const auto& [lKey, lComponent] : lNew)
+        {
+            AudioBankHold& lHold = m_Banks[lKey];
+            for (const TDataAssetRef<AudioBank>& lBank : lComponent->Banks)
+            {
+                if (!lBank.IsEmpty())
+                {
+                    lHold.Hold(lBank.Path, m_Context->Resources, m_Context->Paths);
+                }
+            }
+        }
+    }
+
+    const ResourceRef<AudioClipResource>* AudioSubsystem::FindBankClip(const OpaaxString& InPath) const
+    {
+        for (const auto& [lEntity, lHold] : m_Banks)
+        {
+            if (const ResourceRef<AudioClipResource>* lClip = lHold.FindClip(InPath))
+            {
+                return lClip;
+            }
+        }
+
+        GameInstance* lGame = m_Context->Game;
+        const AudioGlobalBank* lGlobal = lGame != nullptr ? lGame->GetSubsystems().GetSubsystem<AudioGlobalBank>() : nullptr;
+        return lGlobal != nullptr ? lGlobal->GetHold().FindClip(InPath) : nullptr;
+    }
+
     void AudioSubsystem::OnEntityDestroying(const EntityID InEntity)
     {
         m_SeenSources.erase(EntityKey(InEntity));
+        m_Banks.erase(EntityKey(InEntity));
 
         const auto lFound = m_SourceSounds.find(EntityKey(InEntity));
         if (lFound == m_SourceSounds.end())

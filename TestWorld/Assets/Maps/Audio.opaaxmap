@@ -112,6 +112,32 @@
         },
         {
             "components": {
+                "AudioBanks": {
+                    "Banks": [
+                        "Audio/Level.opaaxdata"
+                    ]
+                },
+                "BankProbe": {
+                    "GlobalSounds": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "768eb1408253527aabd8af693082eac4",
+            "name": "Banks",
+            "ownerMap": "Audio"
+        },
+        {
+            "components": {
                 "AudioListener": {
                     "bActive": true
                 },

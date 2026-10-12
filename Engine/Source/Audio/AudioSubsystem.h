@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Audio/AudioBankHold.h"
 #include "Audio/AudioClipDef.h"
 #include "Audio/AudioTypes.h"
 #include "Core/Events/DelegateHandle.h"
@@ -25,8 +26,9 @@ namespace Opaax
     //   entity is destroyed, pauses the world's sounds while the world is paused, and stops them when
     //   it ends (a level change cuts them).
     //
-    //   A clip is expected loaded (an audio bank): one that is not is logged, loaded in the
-    //   background, and plays once loaded; the world then keeps it until it ends.
+    //   Holds the banks of its AudioBanks components while their entities live. A clip is expected
+    //   loaded (a bank, or the global bank): one that is not is logged, loaded in the background,
+    //   and plays once loaded; the world then keeps it until it ends.
     // =============================================================================
     class AudioSubsystem final : public WorldSubsystemBase
     {
@@ -109,6 +111,12 @@ namespace Opaax
         /** The clip definition at InPath, kept for the world's life. Null when it does not load (logged). */
         const AudioClipDef* ResolveDef(const OpaaxString& InPath);
 
+        /** Holds the banks of AudioBanks components not seen yet. */
+        void HoldBanks();
+
+        /** A clip held by one of the world's banks or the global bank, or null. */
+        const ResourceRef<AudioClipResource>* FindBankClip(const OpaaxString& InPath) const;
+
         void OnEntityDestroying(EntityID InEntity);
 
         /** Pauses or resumes every sound of the world with it. */
@@ -124,6 +132,9 @@ namespace Opaax
 
         TUnorderedMap<OpaaxString, ResourceRef<AudioClipResource>> m_Clips;
         TUnorderedMap<OpaaxString, TDataAssetHandle<AudioClipDef>> m_Defs;
+
+        /** The banks of each AudioBanks component, keyed by entity. */
+        TUnorderedMap<Uint32, AudioBankHold> m_Banks;
 
         /** The sound of each entity's source, keyed by entity. */
         TUnorderedMap<Uint32, SourceSound> m_SourceSounds;

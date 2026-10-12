@@ -36,39 +36,17 @@
 #include "World/WorldEvents.h"
 #include "World/WorldManager.h"
 
+#include "AudioTestHelpers.h"
+
 using namespace Opaax;
+using AudioTest::MakeWav;
+using AudioTest::TempPaths;
 
 namespace
 {
     namespace fs = std::filesystem;
 
     constexpr Uint32 MIX_RATE = 48000;
-
-    /** A mono 16-bit PCM WAV file: a sine at InHz, InSeconds long, peaking at InAmplitude. */
-    TDynArray<Uint8> MakeWav(const Uint32 InSampleRate, const float InSeconds, const float InHz = 440.f,
-                             const float InAmplitude = 0.5f)
-    {
-        const Uint32 lFrames    = static_cast<Uint32>(static_cast<float>(InSampleRate) * InSeconds);
-        const Uint32 lDataBytes = lFrames * 2;
-
-        TDynArray<Uint8> lOut;
-        const auto lPut32  = [&lOut](const Uint32 InValue) { for (int i = 0; i < 4; ++i) { lOut.push_back(static_cast<Uint8>(InValue >> (8 * i))); } };
-        const auto lPut16  = [&lOut](const Uint16 InValue) { lOut.push_back(static_cast<Uint8>(InValue & 0xFF)); lOut.push_back(static_cast<Uint8>(InValue >> 8)); };
-        const auto lPutTag = [&lOut](const char* InTag) { lOut.insert(lOut.end(), InTag, InTag + 4); };
-
-        lPutTag("RIFF"); lPut32(36 + lDataBytes); lPutTag("WAVE");
-        lPutTag("fmt "); lPut32(16); lPut16(1); lPut16(1); lPut32(InSampleRate); lPut32(InSampleRate * 2); lPut16(2); lPut16(16);
-        lPutTag("data"); lPut32(lDataBytes);
-
-        for (Uint32 lFrame = 0; lFrame < lFrames; ++lFrame)
-        {
-            const double lPhase  = 2.0 * 3.14159265358979 * InHz * lFrame / InSampleRate;
-            const auto   lSample = static_cast<Int16>(InAmplitude * 32767.0 * std::sin(lPhase));
-            lPut16(static_cast<Uint16>(lSample));
-        }
-
-        return lOut;
-    }
 
     AudioClipResource MakeClip(const float InSeconds, const float InAmplitude = 0.5f,
                                const AudioClipResource::EResidency InResidency = AudioClipResource::EResidency::Auto)
@@ -117,42 +95,6 @@ namespace
     {
         RenderPeaks(InAudio, 256.f / MIX_RATE);
     }
-
-    // Every asset under one temp root, so AssetToAbsolute is a concatenation.
-    class TempPaths final : public IPaths
-    {
-    public:
-        explicit TempPaths(const fs::path& InRoot) : m_Root(InRoot) {}
-
-        OpaaxString AssetToAbsolute(const OpaaxString& InAssetRel) const override
-        {
-            return OpaaxString((m_Root / InAssetRel.CStr()).generic_string().c_str());
-        }
-
-        OpaaxString AbsoluteToAsset(const OpaaxString& InAbsPath) const override
-        {
-            return OpaaxString(fs::path(InAbsPath.CStr()).lexically_relative(m_Root).generic_string().c_str());
-        }
-
-        void        LogPaths()      const override {}
-        OpaaxString WorkspaceRoot() const override { return Root(); }
-        OpaaxString EngineRoot()    const override { return Root(); }
-        OpaaxString ProjectRoot()   const override { return Root(); }
-        OpaaxString ProjectFile()   const override { return Root(); }
-        OpaaxString AssetsDir()     const override { return Root(); }
-        OpaaxString ConfigsDir()    const override { return Root(); }
-        OpaaxString SourceDir()     const override { return Root(); }
-        OpaaxString SaveDir()       const override { return Root(); }
-        OpaaxString TempDir()       const override { return Root(); }
-
-        OpaaxString EngineToAbsolute(const OpaaxString& InRel)  const override { return AssetToAbsolute(InRel); }
-        OpaaxString ProjectToAbsolute(const OpaaxString& InRel) const override { return AssetToAbsolute(InRel); }
-
-    private:
-        OpaaxString Root() const { return OpaaxString(m_Root.generic_string().c_str()); }
-
-        fs::path m_Root;
-    };
 
     /** A temp folder with Audio/Beep.wav (0.25 s) and Audio/NotASound.wav, removed afterwards. */
     class AudioAssets
