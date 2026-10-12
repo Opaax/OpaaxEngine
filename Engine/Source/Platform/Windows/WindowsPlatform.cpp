@@ -3,9 +3,8 @@
 #ifdef OPAAX_PLATFORM_WINDOWS
 
 #include "Core/String/OpaaxUtf8.h"
+#include "Core/Time/Clock.h"
 
-#include "Core/OpaaxTypes.h"
-#include <chrono>
 #include <string>
 
 #ifndef WIN32_LEAN_AND_MEAN
@@ -23,8 +22,7 @@ namespace Opaax
 
     double WindowsPlatform::GetTimeSeconds() const
     {
-        using namespace std::chrono;
-        return duration<double>(steady_clock::now().time_since_epoch()).count();
+        return Clock::NowSeconds();
     }
 
     OpaaxString WindowsPlatform::GetExecutablePath() const

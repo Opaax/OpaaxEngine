@@ -6,7 +6,6 @@
 
 #include "Core/Algo/Algo.h"
 #include "Core/String/CString.h"
-#include <ctime>
 
 using namespace Opaax;
 using namespace Opaax::Editor;
@@ -56,17 +55,10 @@ namespace
         return static_cast<size_t>(ToLevelFilter(InLevel));
     }
 
-    /** HH:MM:SS local time. */
-    void FormatTime(const std::chrono::system_clock::time_point InTime, char (&OutText)[16])
+    /** HH:MM:SS. */
+    void FormatTime(const DateTime& InTime, char (&OutText)[16])
     {
-        const std::time_t lTime = std::chrono::system_clock::to_time_t(InTime);
-        std::tm           lLocal{};
-#if defined(_WIN32)
-        localtime_s(&lLocal, &lTime);
-#else
-        localtime_r(&lTime, &lLocal);
-#endif
-        std::strftime(OutText, sizeof(OutText), "%H:%M:%S", &lLocal);
+        CString::Format(OutText, "{:02}:{:02}:{:02}", InTime.Hour, InTime.Minute, InTime.Second);
     }
 }
 

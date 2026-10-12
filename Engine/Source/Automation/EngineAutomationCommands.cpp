@@ -1,7 +1,7 @@
 #include "Automation/EngineAutomationCommands.h"
 
 #include "Core/Algo/Algo.h"
-#include <chrono>
+#include "Core/Time/Clock.h"
 #include "Core/Maths/Maths.h"
 #include <filesystem>
 
@@ -230,11 +230,10 @@ namespace Opaax::EngineAutomation
                 [](const nlohmann::json& InParams)
                 {
                     const double lSeconds  = InParams.value("seconds", 10.0);
-                    const auto   lDeadline = std::chrono::steady_clock::now()
-                        + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(lSeconds));
+                    const double lDeadline = Clock::NowSeconds() + lSeconds;
 
                     AutomationResult lResult;
-                    lResult.WaitUntil = [lDeadline]() { return std::chrono::steady_clock::now() >= lDeadline; };
+                    lResult.WaitUntil = [lDeadline]() { return Clock::NowSeconds() >= lDeadline; };
                     lResult.Answer    = [lSeconds]()
                     {
                         return AutomationResult::Fail("the app is still open after " + nlohmann::json(lSeconds).dump() + " s");

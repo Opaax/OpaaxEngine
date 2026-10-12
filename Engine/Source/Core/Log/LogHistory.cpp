@@ -18,7 +18,7 @@ namespace Opaax
             m_Entries.pop_front();
         }
 
-        m_Entries.push_back({ ++m_LastSequence, std::chrono::system_clock::now(), InLevel, InCategory,
+        m_Entries.push_back({ ++m_LastSequence, DateTime::Now(), InLevel, InCategory,
                               OpaaxString(InMessage) });
     }
 

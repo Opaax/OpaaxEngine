@@ -5,7 +5,7 @@
 #pragma once
 
 #include "Core/Algo/Algo.h"
-#include <chrono>
+#include "Core/Time/Clock.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/IO/Console.h"
 
@@ -24,8 +24,6 @@ namespace Opaax::Perf
     template<typename TFn>
     Result Measure(Uint64 InOps, int InEpochs, TFn&& InFn)
     {
-        using Clock = std::chrono::steady_clock;
-
         InFn(); // warmup — not timed
 
         TDynArray<double> lNsPerOp;
@@ -33,11 +31,11 @@ namespace Opaax::Perf
 
         for (int lEpoch = 0; lEpoch < InEpochs; ++lEpoch)
         {
-            const auto lStart = Clock::now();
+            const Uint64 lStart = Clock::NowNanoseconds();
             InFn();
-            const auto lEnd = Clock::now();
+            const Uint64 lEnd = Clock::NowNanoseconds();
 
-            const double lNs = std::chrono::duration<double, std::nano>(lEnd - lStart).count();
+            const double lNs = static_cast<double>(lEnd - lStart);
             lNsPerOp.push_back(lNs / static_cast<double>(InOps));
         }
 

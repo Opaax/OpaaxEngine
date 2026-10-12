@@ -4,8 +4,8 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
+#include "Core/Time/DateTime.h"
 
-#include <chrono>
 #include <string_view>
 
 namespace Opaax
@@ -16,15 +16,15 @@ namespace Opaax
     struct LogEntry
     {
         /** Starts at 1, +1 per line. A reader resumes from the last one it saw. */
-        Uint64                                Sequence = 0;
-        std::chrono::system_clock::time_point Time;
-        ELogLevel                             Level{};
+        Uint64        Sequence = 0;
+        DateTime      Time;       // local time
+        ELogLevel     Level{};
 
         /** Interned: the category name lives in the module that declared it. */
-        OpaaxStringID                         Category;
+        OpaaxStringID Category;
 
         /** Without the "[Category] " prefix. */
-        OpaaxString                           Message;
+        OpaaxString   Message;
     };
 
     // =============================================================================

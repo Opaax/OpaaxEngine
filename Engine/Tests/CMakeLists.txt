@@ -40,6 +40,7 @@ set(OPAAX_TEST_SOURCES
     Core/StringViewTests.cpp
     Core/TagContainerTests.cpp
     Core/TagTests.cpp
+    Core/TimeTests.cpp
     Core/TypesTests.cpp
     Core/TypeTraitsTests.cpp
 

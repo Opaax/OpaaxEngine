@@ -1,6 +1,6 @@
 #include "Core/GUID/Guid.h"
 
-#include <random>
+#include "Core/Maths/Random.h"
 
 namespace
 {
@@ -59,12 +59,9 @@ namespace Opaax
     // =========================================================================
     Guid Guid::New() noexcept
     {
-        static thread_local std::mt19937_64 sEngine{ std::random_device{}() };
-        std::uniform_int_distribution<Uint64> lDist;
-
         Guid lGuid;
-        lGuid.High = lDist(sEngine);
-        lGuid.Low  = lDist(sEngine);
+        lGuid.High = Random::NextUint64();
+        lGuid.Low  = Random::NextUint64();
 
         if ((lGuid.High | lGuid.Low) == 0)
         {

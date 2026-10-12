@@ -1,9 +1,8 @@
 #include "Resources/ResourceTypeID.hpp"
 
-#include <cstdlib>
-
 #include "Core/EngineAPI.h"
 #include "Core/Hash/OpaaxHash.h"
+#include "Platform/Process.h"
 
 namespace Opaax
 {
@@ -50,7 +49,7 @@ namespace Opaax
                 // Two type signatures with the same hash would share a pool: fatal in every build.
                 OPAAX_LOG(LogResourceType, Critical, "ResourceTypeID hash collision (hash {}): '{}' vs '{}' — aborting", InHash, lExisting.Name, InName);
                 OPAAX_DEBUGBREAK();
-                std::abort();
+                Process::Abort();
             }
             return lIt->second;
         }
