@@ -13,13 +13,17 @@
 
 #include "Application/Services/IJobSystem.h"
 #include "Application/Services/IPaths.h"
+#include "Audio/AudioBank.h"
 #include "Audio/AudioClipDef.h"
 #include "Audio/AudioClipResource.h"
 #include "Audio/AudioManager.h"
 #include "Audio/AudioRandom.h"
 #include "Audio/AudioSubsystem.h"
+#include "Audio/Components/AudioBanksComponent.h"
+#include "Audio/Components/AudioListenerComponent.h"
 #include "Audio/Components/AudioSourceComponent.h"
 #include "Engine/Config/EngineConfigData.h"
+#include "Engine/Reflection/PropertyVisitor.h"
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/InputManager.h"
 #include "Renderer/DebugDraw.h"
@@ -257,6 +261,71 @@ TEST_CASE("AudioClipDef: the data asset round-trips; a file missing fields keeps
     CHECK(lOld->Value.Clips.empty());
 
     CHECK(DataAssetTypeName<AudioClipDef>() == OPAAX_ID("AudioClipDef"));
+}
+
+namespace
+{
+    /** Counts the fields no editor widget exists for, and the lists, opening every group and list. */
+    class DrawableCheck final : public IPropertyVisitor
+    {
+    public:
+        TDynArray<std::string> Unsupported;
+        Uint32                 Lists = 0;
+
+        void Visit(const char*, bool&, const PropertyMeta&) override          {}
+        void Visit(const char*, Int16&, const PropertyMeta&) override         {}
+        void Visit(const char*, Int32&, const PropertyMeta&) override         {}
+        void Visit(const char*, Uint32&, const PropertyMeta&) override        {}
+        void Visit(const char*, float&, const PropertyMeta&) override         {}
+        void Visit(const char*, Vector2F&, const PropertyMeta&) override      {}
+        void Visit(const char*, Vector3F&, const PropertyMeta&) override      {}
+        void Visit(const char*, Vector4F&, const PropertyMeta&) override      {}
+        void Visit(const char*, LinearColor&, const PropertyMeta&) override   {}
+        void Visit(const char*, OpaaxString&, const PropertyMeta&) override   {}
+        void Visit(const char*, OpaaxStringID&, const PropertyMeta&) override {}
+        void VisitEnum(const char*, const char* const*, Uint32, Uint32&, const PropertyMeta&) override {}
+        void VisitResourcePath(const char*, OpaaxString&, Uint32, const PropertyMeta&) override {}
+        void VisitDataAssetRef(const char*, OpaaxString&, OpaaxStringID, const PropertyMeta&) override {}
+        bool BeginGroup(const char*, const PropertyMeta&) override { return true; }
+        void EndGroup() override {}
+
+        void VisitUnsupported(const char* InName, std::string_view) override { Unsupported.emplace_back(InName); }
+
+        void VisitList(const char* InName, IPropertyList& InList, const PropertyMeta& InMeta) override
+        {
+            ++Lists;
+            InList.Add();   // an element to visit, so its fields are checked too
+            IPropertyVisitor::VisitList(InName, InList, InMeta);
+        }
+    };
+
+    template<typename T>
+    DrawableCheck CheckDrawable()
+    {
+        T             lValue;
+        DrawableCheck lCheck;
+        VisitProperties(lValue, lCheck);
+        return lCheck;
+    }
+}
+
+TEST_CASE("Audio types: every field has an editor widget, lists and their elements included")
+{
+    const DrawableCheck lDef = CheckDrawable<AudioClipDef>();
+    CHECK(lDef.Unsupported.empty());
+    CHECK(lDef.Lists == 1);
+
+    const DrawableCheck lBank = CheckDrawable<AudioBank>();
+    CHECK(lBank.Unsupported.empty());
+    CHECK(lBank.Lists == 2);
+
+    CHECK(CheckDrawable<AudioSourceComponent>().Unsupported.empty());
+    CHECK(CheckDrawable<AudioListenerComponent>().Unsupported.empty());
+    CHECK(CheckDrawable<AudioBanksComponent>().Unsupported.empty());
+
+    const DrawableCheck lSettings = CheckDrawable<AudioSettings>();
+    CHECK(lSettings.Unsupported.empty());
+    CHECK(lSettings.Lists == 1);   // the buses
 }
 
 // =============================================================================
