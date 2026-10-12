@@ -156,6 +156,7 @@ set(OPAAX_TEST_SOURCES
 
     # Micro-benchmarks: doctest suite "perf", skipped by default. Run them in Release with
     # OpaaxTests --test-suite=perf --no-skip.
+    Perf/AudioPerf.cpp
     Perf/EcsPerf.cpp
     Perf/MapCapturePerf.cpp
 )
