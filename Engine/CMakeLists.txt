@@ -68,10 +68,12 @@ opaax_require_vendor("nlohmann/include/nlohmann/json.hpp" "Restore Engine/Vendor
 add_library(nlohmann_json INTERFACE)
 target_include_directories(nlohmann_json SYSTEM INTERFACE Vendors/nlohmann/include)
 
-# miniaudio. The implementation is compiled in exactly one engine .cpp.
+# miniaudio. The implementation is compiled in exactly one engine .cpp. Only its device and
+# decoders are used (the engine mixes itself), so its engine, node graph and resource manager are off.
 opaax_require_vendor("miniaudio/miniaudio.h" "Restore Engine/Vendors/miniaudio.")
 add_library(miniaudio INTERFACE)
 target_include_directories(miniaudio SYSTEM INTERFACE Vendors/miniaudio)
+target_compile_definitions(miniaudio INTERFACE MA_NO_ENGINE MA_NO_NODE_GRAPH MA_NO_RESOURCE_MANAGER MA_NO_GENERATION)
 
 # ==================================
 # Box2D — 2D physics

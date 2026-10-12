@@ -4,11 +4,16 @@
 
 #include "Application/Services/IPaths.h"
 #include "Audio/AudioClipResource.h"
+#include "Audio/AudioGlobalBank.h"
 #include "Audio/AudioManager.h"
+#include "Audio/Components/AudioBanksComponent.h"
 #include "Audio/Components/AudioListenerComponent.h"
 #include "Audio/Components/AudioSourceComponent.h"
 #include "Core/Events/EventBus.h"
+#include "Core/String/OpaaxPathString.h"
+#include "Engine/GameInstance/GameInstance.h"
 #include "Engine/Subsystems/EngineEventBus.h"
+#include "Resources/DataAsset/DataAssetFile.h"
 #include "Resources/ResourceManager.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
@@ -26,6 +31,7 @@ namespace Opaax
             return static_cast<Uint32>(InEntity);
         }
 
+        /** A sound file's settings from a source that plays one. */
         PlaySoundParams ParamsOf(const AudioSourceComponent& InSource, const Vector2F InPosition)
         {
             PlaySoundParams lParams;
@@ -37,12 +43,19 @@ namespace Opaax
             lParams.Position    = InPosition;
             lParams.MinDistance = InSource.MinDistance;
             lParams.MaxDistance = InSource.MaxDistance;
+            lParams.Attenuation = InSource.Attenuation;
             return lParams;
         }
 
         Vector2F WorldPositionOf(World& InWorld, const EntityID InEntity)
         {
             return EntityHierarchy::WorldTransform(Entity(InEntity, &InWorld)).Position;
+        }
+
+        /** A clip definition is a data asset; anything else is a sound file. */
+        bool IsClipDefPath(const OpaaxString& InPath)
+        {
+            return PathString::Extension(OpaaxStringView(InPath.CStr(), InPath.GetLength())) == OpaaxStringView(DataAssetFile::DATA_ASSET_EXTENSION);
         }
     }
 
@@ -81,6 +94,8 @@ namespace Opaax
             return;
         }
 
+        HoldBanks();
+
         World& lWorld = m_Context->OwningWorld;
         UpdateListener(lWorld, *lAudio);
         UpdateSources(lWorld, *lAudio);
@@ -92,7 +107,7 @@ namespace Opaax
 
         for (auto lIt = m_SourceSounds.begin(); lIt != m_SourceSounds.end();)
         {
-            lIt = lAudio->IsPlaying(lIt->second) ? std::next(lIt) : m_SourceSounds.erase(lIt);
+            lIt = lAudio->IsPlaying(lIt->second.Sound) ? std::next(lIt) : m_SourceSounds.erase(lIt);
         }
     }
 
@@ -114,9 +129,9 @@ namespace Opaax
                 lAudio->Stop(lSound);
             }
 
-            for (const auto& [lEntity, lSound] : m_SourceSounds)
+            for (const auto& [lEntity, lSource] : m_SourceSounds)
             {
-                lAudio->Stop(lSound);
+                lAudio->Stop(lSource.Sound);
             }
         }
 
@@ -124,26 +139,16 @@ namespace Opaax
         m_SourceSounds.clear();
         m_SeenSources.clear();
         m_Clips.clear();
+        m_Defs.clear();
+        m_Banks.clear();
     }
 
     // =========================================================================
     // Sounds
     // =========================================================================
-    SoundHandle AudioSubsystem::PlaySound(const OpaaxString& InClipPath, const PlaySoundParams& InParams)
+    SoundHandle AudioSubsystem::PlaySound(const OpaaxString& InPath, const PlaySoundParams& InParams)
     {
-        AudioManager* lAudio = GetAudio();
-        if (lAudio == nullptr)
-        {
-            return SoundHandle{};
-        }
-
-        const AudioClipResource* lClip = ResolveClip(InClipPath);
-        if (lClip == nullptr)
-        {
-            return SoundHandle{};
-        }
-
-        const SoundHandle lSound = lAudio->Play(*lClip, InParams);
+        const SoundHandle lSound = Start(InPath, InParams);
         if (lSound.IsValid())
         {
             m_OneShots.push_back(lSound);
@@ -153,21 +158,14 @@ namespace Opaax
 
     bool AudioSubsystem::PlaySource(const EntityID InEntity)
     {
-        AudioManager* lAudio = GetAudio();
-        World&        lWorld = m_Context->OwningWorld;
-        if (lAudio == nullptr || !lWorld.IsValid(InEntity))
+        World& lWorld = m_Context->OwningWorld;
+        if (GetAudio() == nullptr || !lWorld.IsValid(InEntity))
         {
             return false;
         }
 
         const AudioSourceComponent* lSource = lWorld.GetRegistry().try_get<AudioSourceComponent>(InEntity);
-        if (lSource == nullptr || lSource->Clip.IsEmpty())
-        {
-            return false;
-        }
-
-        const AudioClipResource* lClip = ResolveClip(lSource->Clip.Path);
-        if (lClip == nullptr)
+        if (lSource == nullptr || (lSource->Sound.IsEmpty() && lSource->Clip.IsEmpty()))
         {
             return false;
         }
@@ -178,13 +176,31 @@ namespace Opaax
         // Played by hand: it does not also auto-play later.
         m_SeenSources.insert(EntityKey(InEntity));
 
-        const SoundHandle lSound = lAudio->Play(*lClip, ParamsOf(*lSource, WorldPositionOf(lWorld, InEntity)));
+        const Vector2F lPosition = WorldPositionOf(lWorld, InEntity);
+        bool           bSpatial  = false;
+        SoundHandle    lSound;
+
+        if (!lSource->Sound.IsEmpty())
+        {
+            // The definition decides; the source scales its volume and pitch and places it.
+            PlaySoundParams lParams;
+            lParams.Volume   = lSource->Volume;
+            lParams.Pitch    = lSource->Pitch;
+            lParams.Position = lPosition;
+            lSound = Start(lSource->Sound.Path, lParams, &bSpatial);
+        }
+        else
+        {
+            bSpatial = lSource->bSpatial;
+            lSound   = Start(lSource->Clip.Path, ParamsOf(*lSource, lPosition));
+        }
+
         if (!lSound.IsValid())
         {
             return false;
         }
 
-        m_SourceSounds[EntityKey(InEntity)] = lSound;
+        m_SourceSounds[EntityKey(InEntity)] = SourceSound{ lSound, bSpatial };
         return true;
     }
 
@@ -198,7 +214,7 @@ namespace Opaax
 
         if (AudioManager* lAudio = GetAudio())
         {
-            lAudio->Stop(lFound->second);
+            lAudio->Stop(lFound->second.Sound);
         }
         m_SourceSounds.erase(lFound);
     }
@@ -207,14 +223,14 @@ namespace Opaax
     {
         const auto lFound = m_SourceSounds.find(EntityKey(InEntity));
         const AudioManager* lAudio = GetAudio();
-        return lFound != m_SourceSounds.end() && lAudio != nullptr && lAudio->IsPlaying(lFound->second);
+        return lFound != m_SourceSounds.end() && lAudio != nullptr && lAudio->IsPlaying(lFound->second.Sound);
     }
 
-    void AudioSubsystem::Stop(const SoundHandle InSound)
+    void AudioSubsystem::Stop(const SoundHandle InSound, const float InFadeOutSeconds)
     {
         if (AudioManager* lAudio = GetAudio())
         {
-            lAudio->Stop(InSound);
+            lAudio->Stop(InSound, InFadeOutSeconds);
         }
     }
 
@@ -231,9 +247,9 @@ namespace Opaax
         {
             if (lAudio->IsPlaying(lSound)) { ++lCount; }
         }
-        for (const auto& [lEntity, lSound] : m_SourceSounds)
+        for (const auto& [lEntity, lSource] : m_SourceSounds)
         {
-            if (lAudio->IsPlaying(lSound)) { ++lCount; }
+            if (lAudio->IsPlaying(lSource.Sound)) { ++lCount; }
         }
         return lCount;
     }
@@ -246,29 +262,154 @@ namespace Opaax
     // =========================================================================
     // Internal
     // =========================================================================
-    const AudioClipResource* AudioSubsystem::ResolveClip(const OpaaxString& InPath)
+    SoundHandle AudioSubsystem::Start(const OpaaxString& InPath, const PlaySoundParams& InParams, bool* OutSpatial)
     {
+        AudioManager* lAudio = GetAudio();
+        if (lAudio == nullptr || InPath.IsEmpty())
+        {
+            return SoundHandle{};
+        }
+
+        // A sound played before the first Update (a behaviour's OnStart) finds the level's banks.
+        HoldBanks();
+
+        if (!IsClipDefPath(InPath))
+        {
+            if (OutSpatial != nullptr) { *OutSpatial = InParams.bSpatial; }
+            return lAudio->Play(ResolveClip(InPath), InParams);
+        }
+
+        const AudioClipDef* lDef = ResolveDef(InPath);
+        if (lDef == nullptr)
+        {
+            return SoundHandle{};
+        }
+
+        PlaySoundParams lParams;
+        const Int32 lIndex = lAudio->SelectClip(*lDef, OpaaxStringID(InPath), lParams);
+        if (lIndex < 0)
+        {
+            OPAAX_LOG(LogAudio, Warn, "Audio clip definition '{}' has no clips: nothing plays", InPath.CStr());
+            return SoundHandle{};
+        }
+
+        lParams.Volume        *= InParams.Volume;
+        lParams.Pitch         *= InParams.Pitch;
+        lParams.FadeInSeconds  = InParams.FadeInSeconds;
+        lParams.Position       = InParams.Position;
+        lParams.bSpatial       = lParams.bSpatial || InParams.bSpatial;
+
+        if (OutSpatial != nullptr) { *OutSpatial = lParams.bSpatial; }
+        return lAudio->Play(ResolveClip(lDef->Clips[lIndex].Clip.Path), lParams);
+    }
+
+    const ResourceRef<AudioClipResource>& AudioSubsystem::ResolveClip(const OpaaxString& InPath)
+    {
+        static const ResourceRef<AudioClipResource> s_None;
         if (InPath.IsEmpty())
         {
-            return nullptr;
+            return s_None;
         }
 
         auto lFound = m_Clips.find(InPath);
-        if (lFound == m_Clips.end())
+        if (lFound != m_Clips.end())
         {
-            const OpaaxString lAbsolute = m_Context->Paths.AssetToAbsolute(InPath);
-            lFound = m_Clips.emplace(InPath, m_Context->Resources.Load<AudioClipResource>(lAbsolute.CStr())).first;
+            return lFound->second;
         }
 
-        // A clip that failed to load is its silent placeholder.
-        const AudioClipResource* lClip = lFound->second.Get();
-        return (lClip != nullptr && !lClip->IsSilent()) ? lClip : nullptr;
+        // A bank's (maybe still loading), or loaded already (another world): it plays as soon as it can.
+        // Else it loads without stopping the game.
+        if (const ResourceRef<AudioClipResource>* lBanked = FindBankClip(InPath))
+        {
+            return m_Clips.emplace(InPath, *lBanked).first->second;
+        }
+
+        const OpaaxString lAbsolute = m_Context->Paths.AssetToAbsolute(InPath);
+        ResourceRef<AudioClipResource> lClip = m_Context->Resources.Find<AudioClipResource>(lAbsolute.CStr());
+        if (!lClip.IsValid())
+        {
+            OPAAX_LOG(LogAudio, Warn, "Audio clip '{}' was not loaded when played: it plays once loaded. List it in "
+                      "an audio bank to have it ready", InPath.CStr());
+            lClip = m_Context->Resources.LoadAsync<AudioClipResource>(lAbsolute.CStr());
+        }
+
+        return m_Clips.emplace(InPath, Move(lClip)).first->second;
+    }
+
+    const AudioClipDef* AudioSubsystem::ResolveDef(const OpaaxString& InPath)
+    {
+        auto lFound = m_Defs.find(InPath);
+        if (lFound == m_Defs.end())
+        {
+            TDataAssetRef<AudioClipDef> lRef;
+            lRef.Path = InPath;
+            lFound = m_Defs.emplace(InPath, LoadDataAsset(m_Context->Resources, m_Context->Paths, lRef)).first;
+        }
+
+        return lFound->second.Get();
+    }
+
+    void AudioSubsystem::HoldBanks()
+    {
+        TDynArray<std::pair<Uint32, const AudioBanksComponent*>> lNew;
+        m_Context->OwningWorld.Each<AudioBanksComponent>([this, &lNew](const EntityID InEntity, const AudioBanksComponent& InBanks)
+        {
+            if (!m_Banks.contains(EntityKey(InEntity)))
+            {
+                lNew.emplace_back(EntityKey(InEntity), &InBanks);
+            }
+        });
+
+        // Held after the view: holding loads files.
+        for (const auto& [lKey, lComponent] : lNew)
+        {
+            AudioBankHold& lHold = m_Banks[lKey];
+            for (const TDataAssetRef<AudioBank>& lBank : lComponent->Banks)
+            {
+                if (!lBank.IsEmpty())
+                {
+                    lHold.Hold(lBank.Path, m_Context->Resources, m_Context->Paths);
+                }
+            }
+        }
+    }
+
+    const ResourceRef<AudioClipResource>* AudioSubsystem::FindBankClip(const OpaaxString& InPath) const
+    {
+        for (const auto& [lEntity, lHold] : m_Banks)
+        {
+            if (const ResourceRef<AudioClipResource>* lClip = lHold.FindClip(InPath))
+            {
+                return lClip;
+            }
+        }
+
+        GameInstance* lGame = m_Context->Game;
+        const AudioGlobalBank* lGlobal = lGame != nullptr ? lGame->GetSubsystems().GetSubsystem<AudioGlobalBank>() : nullptr;
+        return lGlobal != nullptr ? lGlobal->GetHold().FindClip(InPath) : nullptr;
     }
 
     void AudioSubsystem::OnEntityDestroying(const EntityID InEntity)
     {
-        StopSource(InEntity);
         m_SeenSources.erase(EntityKey(InEntity));
+        m_Banks.erase(EntityKey(InEntity));
+
+        const auto lFound = m_SourceSounds.find(EntityKey(InEntity));
+        if (lFound == m_SourceSounds.end())
+        {
+            return;
+        }
+
+        // A source that outlives its entity plays on as one of the world's sounds.
+        const AudioSourceComponent* lSource = m_Context->OwningWorld.GetRegistry().try_get<AudioSourceComponent>(InEntity);
+        if (lSource != nullptr && !lSource->bStopOnDestroy)
+        {
+            m_OneShots.push_back(lFound->second.Sound);
+            m_SourceSounds.erase(lFound);
+            return;
+        }
+
+        StopSource(InEntity);
     }
 
     void AudioSubsystem::OnWorldPauseChanged(const WorldPauseChanged& InEvent)
@@ -284,9 +425,9 @@ namespace Opaax
             lAudio->SetPaused(lSound, InEvent.bPaused);
         }
 
-        for (const auto& [lEntity, lSound] : m_SourceSounds)
+        for (const auto& [lEntity, lSource] : m_SourceSounds)
         {
-            lAudio->SetPaused(lSound, InEvent.bPaused);
+            lAudio->SetPaused(lSource.Sound, InEvent.bPaused);
         }
     }
 
@@ -305,7 +446,10 @@ namespace Opaax
             }
         });
 
-        InAudio.SetListenerPosition(lPosition);
+        if (lPosition != InAudio.GetListenerPosition())
+        {
+            InAudio.SetListenerPosition(lPosition);
+        }
     }
 
     void AudioSubsystem::UpdateSources(World& InWorld, AudioManager& InAudio)
@@ -324,11 +468,11 @@ namespace Opaax
                 return;
             }
 
-            // A spatial source follows its entity.
+            // A spatial source follows its entity (the AudioManager sends only a move).
             const auto lSound = m_SourceSounds.find(lKey);
-            if (lSound != m_SourceSounds.end() && InSource.bSpatial)
+            if (lSound != m_SourceSounds.end() && lSound->second.bSpatial)
             {
-                InAudio.SetPosition(lSound->second, WorldPositionOf(InWorld, InEntity));
+                InAudio.SetPosition(lSound->second.Sound, WorldPositionOf(InWorld, InEntity));
             }
         });
 

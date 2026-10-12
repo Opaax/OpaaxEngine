@@ -71,6 +71,9 @@ namespace Opaax
     public:
         ResourceHandle<T> GetHandle() const noexcept { return m_Handle; }
         bool              IsValid()   const noexcept { return m_Manager != nullptr && m_Handle.IsValid(); }
+
+        /** The manager holding it (to ask its load state), or null for an empty ref. */
+        ResourceManager*  GetManager() const noexcept { return m_Manager; }
         explicit operator bool()      const noexcept { return IsValid(); }
         
         // End Get - Set

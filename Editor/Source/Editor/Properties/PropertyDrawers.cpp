@@ -3,6 +3,7 @@
 #include <cstring>   // memcpy
 #include <string>
 
+#include "Editor/Properties/WidgetPropertyVisitor.h"
 #include "Resources/DataAsset/DataAssetResource.h"
 
 #include <glm/gtc/type_ptr.hpp>   // value_ptr
@@ -209,5 +210,63 @@ namespace Opaax::Editor
         }
 
         InWidgets.EndCombo();
+    }
+
+    void DrawPropertyListField(IEditorWidgets& InWidgets, const char* InLabel, IPropertyList& InList,
+                               const PropertyMeta& InMeta)
+    {
+        InWidgets.PushId(InLabel);
+
+        const bool bOpen = InWidgets.BeginTreeNode(InLabel);
+        InWidgets.SameLine();
+        InWidgets.TextDisabled(("(" + std::to_string(InList.Count()) + ")").c_str());
+        DrawPropertyNote(InWidgets, InMeta);
+
+        if (bOpen)
+        {
+            // Applied after the loop: the elements are drawn from the list being changed.
+            Int64 lRemove = -1;
+            Int64 lMoveUp = -1;
+
+            // The elements keep the list's range and step; its note is shown once, beside its name.
+            PropertyMeta lElementMeta = InMeta;
+            lElementMeta.Tooltip = nullptr;
+            lElementMeta.Flags   = EPropertyFlags::None;
+
+            WidgetPropertyVisitor lVisitor(InWidgets);
+            for (Uint32 lIndex = 0; lIndex < InList.Count(); ++lIndex)
+            {
+                InWidgets.PushId(lIndex);
+
+                if (InWidgets.SmallButton("x"))
+                {
+                    lRemove = lIndex;
+                }
+                InWidgets.SameLine();
+
+                InWidgets.BeginDisabled(lIndex == 0);
+                if (InWidgets.SmallButton("^"))
+                {
+                    lMoveUp = lIndex;
+                }
+                InWidgets.EndDisabled();
+                InWidgets.SameLine();
+
+                InList.VisitElement(lIndex, PropertyListLabel(lIndex).Text, lVisitor, lElementMeta);
+                InWidgets.PopId();
+            }
+
+            if (InWidgets.SmallButton("+ Add"))
+            {
+                InList.Add();
+            }
+
+            if (lRemove >= 0)      { InList.RemoveAt(static_cast<Uint32>(lRemove)); }
+            else if (lMoveUp > 0)  { InList.Swap(static_cast<Uint32>(lMoveUp - 1), static_cast<Uint32>(lMoveUp)); }
+
+            InWidgets.EndTreeNode();
+        }
+
+        InWidgets.PopId();
     }
 }

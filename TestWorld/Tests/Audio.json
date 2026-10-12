@@ -26,7 +26,7 @@
         "command": "expect.count",
         "params": {
             "component": "AudioSource",
-            "equals": 2
+            "equals": 3
         }
     },
     {
@@ -71,6 +71,50 @@
             "entity": "Controls",
             "path": "AudioControlProbe/bSourceStopped",
             "equals": true
+        }
+    },
+    {
+        "id": "steps-played",
+        "command": "expect.value",
+        "params": {
+            "entity": "Steps",
+            "path": "StepsProbe/bPlayed",
+            "equals": true
+        }
+    },
+    {
+        "id": "steps-no-repeat",
+        "command": "expect.value",
+        "params": {
+            "entity": "Steps",
+            "path": "StepsProbe/bNeverTwice",
+            "equals": true
+        }
+    },
+    {
+        "id": "steps-all-heard",
+        "command": "expect.value",
+        "params": {
+            "entity": "Steps",
+            "path": "StepsProbe/Distinct",
+            "equals": 5
+        }
+    },
+    {
+        "id": "level-bank",
+        "command": "expect.count",
+        "params": {
+            "component": "AudioBanks",
+            "equals": 1
+        }
+    },
+    {
+        "id": "global-bank",
+        "command": "expect.value",
+        "params": {
+            "entity": "Banks",
+            "path": "BankProbe/GlobalSounds",
+            "equals": 1
         }
     }
 ]

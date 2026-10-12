@@ -9,6 +9,9 @@ set(OPAAX_TEST_SOURCES
     SmokeTest.cpp
 
     # Audio
+    Audio/AudioBankTests.cpp
+    Audio/AudioClipDefTests.cpp
+    Audio/AudioMixerTests.cpp
     Audio/AudioTests.cpp
 
     # Automation
@@ -153,6 +156,7 @@ set(OPAAX_TEST_SOURCES
 
     # Micro-benchmarks: doctest suite "perf", skipped by default. Run them in Release with
     # OpaaxTests --test-suite=perf --no-skip.
+    Perf/AudioPerf.cpp
     Perf/EcsPerf.cpp
     Perf/MapCapturePerf.cpp
 )
