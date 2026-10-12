@@ -4,6 +4,7 @@
 
 #include "Core/IO/FileIO.h"
 #include "Core/String/OpaaxPathString.h"
+#include "Core/String/OpaaxStringJson.h"
 
 namespace Opaax
 {
@@ -43,7 +44,7 @@ namespace Opaax
         const auto lNameIt = lJson.find(KEY_NAME);
         if (lNameIt != lJson.end() && lNameIt->is_string())
         {
-            lParsed.Name = OpaaxString(lNameIt->get<std::string>().c_str());
+            lParsed.Name = lNameIt->get<OpaaxString>();
         }
 
         // Stem only as a fallback: a level with a name keeps it when moved.
@@ -60,10 +61,10 @@ namespace Opaax
                 // Skip a non-string entry instead of failing the whole level.
                 if (!lEntry.is_string()) { continue; }
 
-                const std::string lPath = lEntry.get<std::string>();
-                if (lPath.empty()) { continue; }
+                OpaaxString lPath = lEntry.get<OpaaxString>();
+                if (lPath.IsEmpty()) { continue; }
 
-                lParsed.Maps.emplace_back(lPath.c_str());
+                lParsed.Maps.push_back(Move(lPath));
             }
         }
 
@@ -71,7 +72,7 @@ namespace Opaax
         const auto lPersistIt = lJson.find(KEY_PERSISTENT_MAP);
         if (lPersistIt != lJson.end() && lPersistIt->is_string())
         {
-            const OpaaxString lWanted(lPersistIt->get<std::string>().c_str());
+            const OpaaxString lWanted = lPersistIt->get<OpaaxString>();
 
             for (Uint64 lIndex = 0; lIndex < lParsed.MapCount(); ++lIndex)
             {
@@ -100,7 +101,7 @@ namespace Opaax
         nlohmann::json lJson;
 
         lJson[KEY_VERSION] = LEVEL_FORMAT_VERSION;
-        lJson[KEY_NAME]    = std::string(InData.Name.CStr());
+        lJson[KEY_NAME]    = InData.Name;
 
         nlohmann::json lMaps = nlohmann::json::array();
         for (const OpaaxString& lMap : InData.Maps)
@@ -112,7 +113,7 @@ namespace Opaax
         // Always written, so reordering the list keeps the persistent map.
         if (!InData.IsEmpty())
         {
-            lJson[KEY_PERSISTENT_MAP] = std::string(InData.PersistentMap().CStr());
+            lJson[KEY_PERSISTENT_MAP] = InData.PersistentMap();
         }
 
         return OpaaxString(lJson.dump(4).c_str());

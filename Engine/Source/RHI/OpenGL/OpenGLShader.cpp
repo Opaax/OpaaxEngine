@@ -1,7 +1,6 @@
 #include "RHI/OpenGL/OpenGLShader.h"
 
 #include "Core/Maths/Maths.h"
-#include <string>
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -20,10 +19,10 @@ namespace Opaax
         }
 
         /** The compiled stage, or 0 (logged). */
-        GLuint CompileStage(const GLenum InStage, const std::string& InSource, const char* InShaderName)
+        GLuint CompileStage(const GLenum InStage, const OpaaxString& InSource, const char* InShaderName)
         {
             const GLuint lShader = glCreateShader(InStage);
-            const char*  lSource = InSource.c_str();
+            const char*  lSource = InSource.CStr();
             glShaderSource(lShader, 1, &lSource, nullptr);
             glCompileShader(lShader);
 
@@ -33,11 +32,11 @@ namespace Opaax
             {
                 GLint lLength = 0;
                 glGetShaderiv(lShader, GL_INFO_LOG_LENGTH, &lLength);
-                std::string lLog(static_cast<size_t>(Maths::Max(lLength, 1)), '\0');
+                TDynArray<char> lLog(static_cast<size_t>(Maths::Max(lLength, 1)), '\0');
                 glGetShaderInfoLog(lShader, Maths::Max(lLength, 1), nullptr, lLog.data());
 
                 OPAAX_ENGINE_LOG(Error, "OpenGLShader '{}': the {} stage does not compile:\n{}",
-                                 InShaderName, StageName(InStage), lLog.c_str());
+                                 InShaderName, StageName(InStage), lLog.data());
                 glDeleteShader(lShader);
                 return 0;
             }
@@ -82,8 +81,8 @@ namespace Opaax
         // Written for GLSL 4.50 with explicit bindings; run as 4.10 core, which macOS offers too.
         TDynArray<GLSLPort::ResourceBinding> lBindings;
         TDynArray<GLSLPort::ResourceBinding> lFragmentBindings;
-        const std::string lVertexSrc   = GLSLPort::To410(InDesc.VertexSrc.CStr(), lBindings);
-        const std::string lFragmentSrc = GLSLPort::To410(InDesc.FragmentSrc.CStr(), lFragmentBindings);
+        const OpaaxString lVertexSrc   = GLSLPort::To410(InDesc.VertexSrc, lBindings);
+        const OpaaxString lFragmentSrc = GLSLPort::To410(InDesc.FragmentSrc, lFragmentBindings);
         lBindings.insert(lBindings.end(), lFragmentBindings.begin(), lFragmentBindings.end());
 
         const GLuint lVertexShader   = CompileStage(GL_VERTEX_SHADER, lVertexSrc, lName);
@@ -111,10 +110,10 @@ namespace Opaax
         {
             GLint lLength = 0;
             glGetProgramiv(m_RendererID, GL_INFO_LOG_LENGTH, &lLength);
-            std::string lLog(static_cast<size_t>(Maths::Max(lLength, 1)), '\0');
+            TDynArray<char> lLog(static_cast<size_t>(Maths::Max(lLength, 1)), '\0');
             glGetProgramInfoLog(m_RendererID, Maths::Max(lLength, 1), nullptr, lLog.data());
 
-            OPAAX_ENGINE_LOG(Error, "OpenGLShader '{}': the program does not link:\n{}", lName, lLog.c_str());
+            OPAAX_ENGINE_LOG(Error, "OpenGLShader '{}': the program does not link:\n{}", lName, lLog.data());
             glDeleteProgram(m_RendererID);
             m_RendererID = 0;
             OPAAX_CORE_ASSERT(false)
@@ -127,7 +126,7 @@ namespace Opaax
         {
             if (lBinding.bBlock)
             {
-                const GLuint lIndex = glGetUniformBlockIndex(m_RendererID, lBinding.Name.c_str());
+                const GLuint lIndex = glGetUniformBlockIndex(m_RendererID, lBinding.Name.CStr());
                 if (lIndex != GL_INVALID_INDEX)
                 {
                     glUniformBlockBinding(m_RendererID, lIndex, static_cast<GLuint>(lBinding.Binding));
@@ -135,7 +134,7 @@ namespace Opaax
                 continue;
             }
 
-            const GLint lLocation = glGetUniformLocation(m_RendererID, lBinding.Name.c_str());
+            const GLint lLocation = glGetUniformLocation(m_RendererID, lBinding.Name.CStr());
             if (lLocation != -1)
             {
                 TDynArray<GLint> lUnits(static_cast<size_t>(lBinding.ArraySize));

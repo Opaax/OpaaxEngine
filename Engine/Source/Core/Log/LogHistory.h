@@ -6,8 +6,6 @@
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/Time/DateTime.h"
 
-#include <string_view>
-
 namespace Opaax
 {
     enum class ELogLevel : Uint8;
@@ -44,7 +42,7 @@ namespace Opaax
         // =============================================================================
     public:
         /** Drops the oldest line when full. Does nothing when capacity is 0. */
-        void Push(ELogLevel InLevel, OpaaxStringID InCategory, std::string_view InMessage);
+        void Push(ELogLevel InLevel, OpaaxStringID InCategory, OpaaxStringView InMessage);
 
         /**
          * Appends every line newer than InAfterSequence to OutEntries, oldest first.

@@ -1,6 +1,7 @@
 #include "Resources/DataAsset/DataAssetFile.h"
 
 #include "Core/IO/FileIO.h"
+#include "Core/String/OpaaxStringJson.h"
 
 namespace Opaax
 {
@@ -47,7 +48,7 @@ namespace Opaax
         const auto lType = lJson.find("Type");
         const auto lData = lJson.find("Data");
 
-        if (lType == lJson.end() || !lType->is_string() || lType->get_ref<const std::string&>().empty()
+        if (lType == lJson.end() || !lType->is_string() || lType->get<OpaaxString>().IsEmpty()
             || lData == lJson.end() || !lData->is_object())
         {
             OPAAX_LOG(LogDataAssetFile, Error, "Data asset '{}' needs a \"Type\" name and a \"Data\" object",
@@ -55,7 +56,7 @@ namespace Opaax
             return false;
         }
 
-        OutContents.Type = OpaaxStringID(OpaaxString(lType->get_ref<const std::string&>().c_str()));
+        OutContents.Type = OpaaxStringID(lType->get<OpaaxString>());
         OutContents.Data = *lData;
         return true;
     }

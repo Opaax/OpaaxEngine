@@ -1,6 +1,7 @@
 #include "World/Prefab/PrefabOverrides.h"
 
 #include "Core/Algo/Algo.h"
+#include "Core/String/OpaaxStringJson.h"
 
 namespace Opaax
 {
@@ -168,18 +169,17 @@ namespace Opaax
         if (const auto lNameIt = InPatch.find(KEY_NAME);
             lNameIt != InPatch.end() && lNameIt->is_string())
         {
-            const std::string lName = lNameIt->get<std::string>();
-            InOutEntity.Name = OpaaxString(lName.c_str(), static_cast<Uint32>(lName.size()));
+            InOutEntity.Name = lNameIt->get<OpaaxString>();
         }
 
         // A parent override is the derived guid, or "" for detached. Unparseable means detached.
         if (const auto lParentIt = InPatch.find(KEY_PARENT);
             lParentIt != InPatch.end() && lParentIt->is_string())
         {
-            const std::string lText = lParentIt->get<std::string>();
+            const OpaaxString lText = lParentIt->get<OpaaxString>();
 
             Guid lParsed;
-            InOutEntity.Parent = Guid::FromString(OpaaxString(lText.c_str(), static_cast<Uint32>(lText.size())), lParsed)
+            InOutEntity.Parent = Guid::FromString(lText, lParsed)
                                      ? lParsed
                                      : Guid{};
         }

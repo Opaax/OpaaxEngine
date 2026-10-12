@@ -9,7 +9,7 @@ namespace Opaax
     {
     }
 
-    void LogHistory::Push(const ELogLevel InLevel, const OpaaxStringID InCategory, const std::string_view InMessage)
+    void LogHistory::Push(const ELogLevel InLevel, const OpaaxStringID InCategory, const OpaaxStringView InMessage)
     {
         if (m_Capacity == 0) { return; }
 

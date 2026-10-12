@@ -2,6 +2,7 @@
 #include "Application/Services/IPaths.h"
 
 #include "Core/IO/FileIO.h"
+#include "Core/String/OpaaxStringJson.h"
 
 #include <nlohmann/json.hpp>
 
@@ -51,7 +52,7 @@ namespace Opaax
         {
             if (lRoot.contains(InKey) && lRoot[InKey].is_string())
             {
-                return OpaaxString(lRoot[InKey].get<std::string>().c_str());
+                return lRoot[InKey].get<OpaaxString>();
             }
             return OpaaxString();
         };

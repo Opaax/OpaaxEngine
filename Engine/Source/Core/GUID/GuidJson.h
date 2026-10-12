@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 
 #include "Core/GUID/Guid.h"
+#include "Core/String/OpaaxStringJson.h"
 
 namespace Opaax
 {
@@ -17,12 +18,11 @@ namespace Opaax
     inline void from_json(const nlohmann::json& InJson, Guid& InValue)
     {
         // Throws type_error on a non-string (caught by MapFactory::Instantiate).
-        std::string lText;
-        InJson.get_to(lText);
+        const OpaaxString lText = InJson.get<OpaaxString>();
 
         // A malformed string gives an invalid Guid instead of throwing.
         Guid lParsed;
-        InValue = Guid::FromString(OpaaxString(lText.c_str(), static_cast<Uint32>(lText.size())), lParsed)
+        InValue = Guid::FromString(lText, lParsed)
                       ? lParsed
                       : Guid{};
     }

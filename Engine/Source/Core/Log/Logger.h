@@ -85,9 +85,9 @@ namespace Opaax
         {
             fmt::memory_buffer lLine;
             fmt::format_to(fmt::appender(lLine), "[{}] ", InCategory.Name);
-            const size_t lMessageStart = lLine.size();
+            const Uint32 lMessageStart = static_cast<Uint32>(lLine.size());
             fmt::format_to(fmt::appender(lLine), InFormat, Forward<TArgs>(InArgs)...);
-            WriteLine(InLevel, InCategory, std::string_view(lLine.data(), lLine.size()), lMessageStart);
+            WriteLine(InLevel, InCategory, OpaaxStringView(lLine.data(), static_cast<Uint32>(lLine.size())), lMessageStart);
         }
 
         /**
@@ -107,7 +107,7 @@ namespace Opaax
 
     private:
         /** InLine is "[Category] message"; the message starts at InMessageStart. */
-        void WriteLine(ELogLevel InLevel, const LogCategory& InCategory, std::string_view InLine, size_t InMessageStart);
+        void WriteLine(ELogLevel InLevel, const LogCategory& InCategory, OpaaxStringView InLine, Uint32 InMessageStart);
 
         // =============================================================================
         // Members
@@ -117,7 +117,7 @@ namespace Opaax
         {
             spdlog::log_clock::time_point Time;
             spdlog::level::level_enum     Level;
-            std::string                   Text;
+            OpaaxString                   Text;
         };
 
         // Guards the sinks and the pending lines.

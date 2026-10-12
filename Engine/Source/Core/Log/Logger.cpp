@@ -23,6 +23,12 @@ namespace Opaax
             }
             return spdlog::level::info;
         }
+
+        /** InText as spdlog takes it, without a copy. */
+        spdlog::string_view_t ToSpdText(const OpaaxStringView InText)
+        {
+            return spdlog::string_view_t(InText.Data(), InText.GetLength());
+        }
     }
 
     Logger& Logger::Get()
@@ -50,7 +56,7 @@ namespace Opaax
         try
         {
             lSinks.push_back(MakeShared<spdlog::sinks::basic_file_sink_mt>(
-                std::string(InLogFile.Data(), InLogFile.GetLength()), true));
+                spdlog::filename_t(InLogFile.Data(), InLogFile.GetLength()), true));
         }
         catch (const spdlog::spdlog_ex& lError)
         {
@@ -87,14 +93,15 @@ namespace Opaax
 
             for (const PendingLine& lLine : m_Pending)
             {
-                lSink->log(spdlog::details::log_msg(lLine.Time, spdlog::source_loc{}, LOGGER_NAME, lLine.Level, lLine.Text));
+                lSink->log(spdlog::details::log_msg(lLine.Time, spdlog::source_loc{}, LOGGER_NAME, lLine.Level,
+                                                    ToSpdText(lLine.Text)));
             }
 
             if (m_DroppedPending > 0)
             {
-                const std::string lNote = fmt::format("[{}] {} line(s) logged before the sinks existed were dropped",
-                                                      LogOpaaxApplication.Name, m_DroppedPending);
-                lSink->log(spdlog::details::log_msg(spdlog::source_loc{}, LOGGER_NAME, spdlog::level::warn, lNote));
+                const OpaaxString lNote = OpaaxString::Format("[{}] {} line(s) logged before the sinks existed were dropped",
+                                                              LogOpaaxApplication.Name, m_DroppedPending);
+                lSink->log(spdlog::details::log_msg(spdlog::source_loc{}, LOGGER_NAME, spdlog::level::warn, ToSpdText(lNote)));
             }
 
             lSink->flush();
@@ -148,22 +155,22 @@ namespace Opaax
         return static_cast<Uint32>(m_Pending.size());
     }
 
-    void Logger::WriteLine(const ELogLevel InLevel, const LogCategory& InCategory, const std::string_view InLine,
-                           const size_t InMessageStart)
+    void Logger::WriteLine(const ELogLevel InLevel, const LogCategory& InCategory, const OpaaxStringView InLine,
+                           const Uint32 InMessageStart)
     {
         TLockGuard<Mutex> lLock(m_Mutex);
 
         // Recorded in the history even before Init.
         if (m_History.IsEnabled())
         {
-            m_History.Push(InLevel, OpaaxStringID(InCategory.Name), InLine.substr(InMessageStart));
+            m_History.Push(InLevel, OpaaxStringID(InCategory.Name), InLine.SubString(InMessageStart));
         }
 
         const spdlog::level::level_enum lLevel = ToSpdLevel(InLevel);
 
         if (!m_Logger->sinks().empty())
         {
-            m_Logger->log(lLevel, InLine);
+            m_Logger->log(lLevel, ToSpdText(InLine));
             return;
         }
 
@@ -174,6 +181,6 @@ namespace Opaax
             return;
         }
 
-        m_Pending.push_back({ spdlog::log_clock::now(), lLevel, std::string(InLine) });
+        m_Pending.push_back({ spdlog::log_clock::now(), lLevel, InLine.ToString() });
     }
 }

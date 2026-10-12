@@ -1,10 +1,9 @@
 #pragma once
 
-#include <string>
-
 #include <nlohmann/json.hpp>
 
 #include "Core/Reflection/OpaaxEnum.h"
+#include "Core/String/OpaaxStringJson.h"
 
 namespace Opaax
 {
@@ -21,7 +20,7 @@ namespace Opaax
     template<CEnumWithValues T>
     void from_json(const nlohmann::json& InJson, T& InValue)
     {
-        const std::string lText = InJson.get<std::string>();
+        const OpaaxString lText = InJson.get<OpaaxString>();
 
         for (const T lCandidate : TEnumValues<T>::Values)
         {
@@ -33,7 +32,8 @@ namespace Opaax
         }
 
         // Throws on an unknown label; TConfig::Load catches it and keeps the defaults.
+        const OpaaxString lMessage = "unknown enumerator '" + lText + "' for this enum";
         throw nlohmann::json::type_error::create(
-            302, "unknown enumerator '" + lText + "' for this enum", &InJson);
+            302, nlohmann::json::string_t(lMessage.CStr(), lMessage.GetLength()), &InJson);
     }
 }

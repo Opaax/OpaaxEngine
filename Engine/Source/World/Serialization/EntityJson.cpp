@@ -1,5 +1,7 @@
 #include "World/Serialization/EntityJson.h"
 
+#include "Core/String/OpaaxStringJson.h"
+
 namespace Opaax
 {
     const char* EntityJson::IdToText(OpaaxStringID InId)
@@ -20,16 +22,12 @@ namespace Opaax
             return OpaaxString();
         }
 
-        const std::string lText = lIt->get<std::string>();
-
-        return OpaaxString(lText.c_str(), static_cast<Uint32>(lText.size()));
+        return lIt->get<OpaaxString>();
     }
 
     OpaaxString EntityJson::DumpToString(const nlohmann::json& InJson, int InIndent)
     {
-        const std::string lText = InJson.dump(InIndent);
-
-        return OpaaxString(lText.c_str(), static_cast<Uint32>(lText.size()));
+        return ToJsonText(InJson, InIndent);
     }
 
     Uint64 EntityJson::EntitiesFromJson(const nlohmann::json& InEntities, TDynArray<EntityData>& OutEntities)

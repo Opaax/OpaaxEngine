@@ -1,8 +1,7 @@
 #pragma once
 
-#include <string>
-
 #include "Core/OpaaxTypes.h"
+#include "Core/String/OpaaxString.hpp"
 
 namespace Opaax
 {
@@ -18,7 +17,7 @@ namespace Opaax
         /** One `binding = N` taken out of a uniform declaration. */
         struct ResourceBinding
         {
-            std::string Name;            // the uniform block's name, or the sampler's
+            OpaaxString Name;            // the uniform block's name, or the sampler's
             Int32       Binding   = 0;   // the unit (sampler) or binding point (block)
             Int32       ArraySize = 1;   // a sampler array covers Binding .. Binding + ArraySize - 1
             bool        bBlock    = false;
@@ -28,6 +27,6 @@ namespace Opaax
          * InSource as GLSL 4.10 core.
          * @param OutBindings Cleared, then filled with the bindings taken out, in source order
          */
-        std::string To410(const std::string& InSource, TDynArray<ResourceBinding>& OutBindings);
+        OpaaxString To410(const OpaaxString& InSource, TDynArray<ResourceBinding>& OutBindings);
     }
 }

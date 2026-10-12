@@ -1,6 +1,5 @@
 #pragma once
 
-#include <string>
 #include "Core/Templates/TypeTraits.h"
 
 #include <nlohmann/json.hpp>
@@ -129,7 +128,7 @@ namespace Opaax
                 {
                     OpaaxString lElementPath = InPath;
                     lElementPath += "[";
-                    lElementPath += std::to_string(lIndex).c_str();
+                    lElementPath += OpaaxString::FromUInt(lIndex);
                     lElementPath += "]";
                     ReadValue(InJson[lIndex], lList[lIndex], lElementPath, OutBadFields);
                 }
