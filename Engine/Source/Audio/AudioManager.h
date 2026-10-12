@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Audio/AudioBackend.h"
 #include "Audio/AudioTypes.h"
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
@@ -7,16 +8,22 @@
 
 namespace Opaax
 {
+    class IAudioDevice;
     struct AudioClipResource;
     struct AudioSettings;
 
     // =============================================================================
-    // AudioManager — mixes every sound and owns the audio device (miniaudio's engine; nothing
-    //   outside Audio/ sees miniaudio). An engine subsystem: a sound is not tied to a world unless
+    // AudioManager — the game's door to audio: plays, stops and fades sounds through handles, and
+    //   sets the buses and the listener. An engine subsystem: a sound is not tied to a world unless
     //   the world stops it (AudioSubsystem does when it ends).
     //
-    //   Without an audio device (a server, CI, Audio.bEnabled off) it runs headless: sounds play
-    //   silently and advance with Update, so they still end on time.
+    //   The game thread never touches the mix: each call is a command to the audio thread, which
+    //   mixes (AudioMixer) ahead into a ring buffer the backend's device plays. Handles are reserved
+    //   here, so they are usable at once; IsPlaying reads this side's view of the voices, which
+    //   changes at once on Play and Stop, and one frame late when a sound ends by itself.
+    //
+    //   Without an audio device (a server, CI, Audio.bEnabled off) it runs headless: no thread, the
+    //   game thread mixes as time passes (Update), so sounds still end on time.
     // =============================================================================
     class AudioManager final : public EngineSubsystemBase
     {
@@ -29,10 +36,11 @@ namespace Opaax
         /** How a manager built outside the engine (tests, tools) mixes. */
         struct Desc
         {
-            bool   bHeadless  = true;
-            Uint32 SampleRate = 48000;
-            Uint32 Channels   = 2;
-            Uint32 MaxVoices  = 64;
+            bool          bHeadless   = true;
+            EAudioBackend Backend     = EAudioBackend::Miniaudio;
+            Uint32        SampleRate  = 48000;
+            Uint32        MaxVoices   = 64;
+            Uint32        BlockFrames = 256;
         };
 
         // =============================================================================
@@ -45,6 +53,9 @@ namespace Opaax
         /** A manager with its own settings (tests, tools). */
         explicit AudioManager(const Desc& InDesc);
 
+        /** A manager that plays to InDevice instead of the backend's (tests: a device that records). */
+        AudioManager(const Desc& InDesc, TUniquePtr<IAudioDevice> InDevice);
+
         ~AudioManager() override;
 
         // =============================================================================
@@ -54,7 +65,7 @@ namespace Opaax
         //~Begin ISubsystem interface
         bool Startup() override;
 
-        /** Releases finished sounds; a headless mix advances by InDeltaTime. */
+        /** Frees the voices that ended; a headless mix advances by InDeltaTime. */
         void Update(double InDeltaTime) override;
 
         void Shutdown() override;
@@ -65,19 +76,29 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Starts InClip. The clip's bytes are shared with the sound, so the clip may be unloaded
-         * while it plays.
-         * @return Invalid when the clip is silent, the voice limit is reached, or audio is not started
+         * Starts InClip. The clip's data is shared with the sound, so the clip may be unloaded while
+         * it plays. When every voice is busy, the one least worth keeping is replaced: one already
+         * stopping, else the lowest priority, then the quietest.
+         * @return Invalid when the clip is silent, audio is not started, or every voice plays
+         *   something of a higher priority
          */
         SoundHandle Play(const AudioClipResource& InClip, const PlaySoundParams& InParams = {});
 
-        void Stop(SoundHandle InSound);
-        void StopAll();
+        /**
+         * Stops a sound, fading it out over InFadeOutSeconds. It no longer counts as playing.
+         * 0 still fades over a few milliseconds, so it never clicks.
+         */
+        void Stop(SoundHandle InSound, float InFadeOutSeconds = 0.f);
+        void StopAll(float InFadeOutSeconds = 0.f);
 
         /** True from Play until the sound ends or is stopped. */
         bool IsPlaying(SoundHandle InSound) const;
 
         void SetVolume(SoundHandle InSound, float InVolume);
+
+        /** Moves the sound's fade to InVolume over InSeconds (on top of its volume). */
+        void FadeTo(SoundHandle InSound, float InVolume, float InSeconds);
+
         void SetPitch(SoundHandle InSound, float InPitch);
 
         /** For a spatial sound: where it is in the world. */
@@ -111,7 +132,7 @@ namespace Opaax
         /** No audio device: sounds advance with Update and are not heard. */
         bool IsHeadless() const noexcept;
 
-        /** Sounds currently held (playing or paused). */
+        /** Sounds playing or paused (not the ones fading out after a stop). */
         Uint64 GetVoiceCount() const noexcept;
 
         /**
@@ -123,6 +144,9 @@ namespace Opaax
 
         Uint32 GetSampleRate() const noexcept;
         Uint32 GetChannels() const noexcept;
+
+        /** Times the device found nothing mixed to play (heard as a gap). */
+        Uint32 GetUnderrunCount() const noexcept;
 
         // =============================================================================
         // Internal

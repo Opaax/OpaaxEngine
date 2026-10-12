@@ -2,6 +2,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "Audio/AudioBackend.h"
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/MathTypes.h"
@@ -134,6 +135,9 @@ namespace Opaax
         /** Off: no audio device is opened; sounds play silently (a server, a headless run). */
         bool bEnabled = true;
 
+        /** The library that opens the device and decodes sound files. */
+        EAudioBackend Backend = EAudioBackend::Miniaudio;
+
         /** Linear volumes. Each bus is under the master. */
         float MasterVolume   = 1.f;
         float MusicVolume    = 1.f;
@@ -144,12 +148,13 @@ namespace Opaax
         /** Sounds playing at once; one more is refused (with a warning). */
         Uint32 MaxVoices = 64;
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(AudioSettings, bEnabled, MasterVolume, MusicVolume,
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(AudioSettings, bEnabled, Backend, MasterVolume, MusicVolume,
                                                     EffectsVolume, AmbienceVolume, UIVolume, MaxVoices)
 
         OPAAX_PROPERTIES(AudioSettings,
                          OPAAX_PROP(bEnabled).SetFlags(EPropertyFlags::NeedRestart)
                                              .SetTooltip("Off: no audio device; sounds play silently."),
+                         OPAAX_PROP(Backend).SetFlags(EPropertyFlags::NeedRestart),
                          OPAAX_PROP(MasterVolume).SetRange(0.f, 1.f),
                          OPAAX_PROP(MusicVolume).SetRange(0.f, 1.f),
                          OPAAX_PROP(EffectsVolume).SetRange(0.f, 1.f),

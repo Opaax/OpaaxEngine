@@ -88,6 +88,12 @@ namespace Opaax
         float     Pitch  = 1.f;   // 2 = an octave up, and twice as fast
         bool      bLoop  = false;
 
+        /** Seconds to rise from silence; 0 starts at full volume. */
+        float     FadeInSeconds = 0.f;
+
+        /** When every voice is busy, the lowest priority is replaced first (0 lowest, 255 highest). */
+        Uint8     Priority = 128;
+
         /** Positioned in the world and heard from the listener (panned, quieter with distance). */
         bool      bSpatial    = false;
         Vector2F  Position    = { 0.f, 0.f };

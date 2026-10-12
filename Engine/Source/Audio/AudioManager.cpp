@@ -1,14 +1,19 @@
 #include "Audio/AudioManager.h"
 
-// The miniaudio implementation is compiled here, once.
-#define MINIAUDIO_IMPLEMENTATION
-#include <miniaudio.h>
-
 #include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <cstring>
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IConfigSystem.h"
+#include "Audio/AudioAPI.h"
 #include "Audio/AudioClipResource.h"
+#include "Audio/Mixer/AudioMixer.h"
+#include "Audio/Mixer/AudioRingBuffer.h"
+#include "Audio/Mixer/AudioSpatial.h"
+#include "Audio/Mixer/AudioStreamReader.h"
+#include "Audio/Mixer/SpscQueue.h"
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/Config/EngineConfigData.h"
 
@@ -16,100 +21,389 @@ namespace Opaax
 {
     namespace
     {
-        /** Frames mixed per call when a headless mix advances. */
-        constexpr Uint64 HEADLESS_CHUNK_FRAMES = 1024;
+        /** Commands waiting for the audio thread at most: far more than a frame ever sends. */
+        constexpr Uint32 COMMAND_CAPACITY = 4096;
 
-        /** A spatial sound's max distance is kept above its min distance by at least this. */
-        constexpr float MIN_DISTANCE_SPAN = 1.f;
+        /** The audio thread keeps at least this many blocks mixed ahead of the device. */
+        constexpr Uint32 MIN_BLOCKS_AHEAD = 4;
+
+        /** The most ever mixed ahead (frames): the ring buffer's size. */
+        constexpr Uint32 RING_CAPACITY_FRAMES = 16384;
+
+        /** The audio thread wakes at least this often, should a device wake-up be missed. */
+        constexpr auto MIX_THREAD_WAIT = std::chrono::milliseconds(2);
+
+        constexpr Uint32 INVALID_SLOT = ~0u;
+
+        /** The mixer's buses: the master, then one per EAudioBus, in its order. */
+        constexpr Uint16 MASTER_BUS = 0;
+
+        Uint16 BusIndexOf(const EAudioBus InBus) noexcept
+        {
+            return static_cast<Uint16>(static_cast<Uint8>(InBus) + 1);
+        }
+
+        Uint32 SecondsToFrames(const float InSeconds, const Uint32 InSampleRate) noexcept
+        {
+            return InSeconds > 0.f ? static_cast<Uint32>(std::lround(static_cast<double>(InSeconds) * InSampleRate)) : 0u;
+        }
     }
 
     // =========================================================================
-    // Impl — every miniaudio object, behind the header.
+    // Impl — the mixer, the audio thread, and the game thread's view of the voices.
     // =========================================================================
     struct AudioManager::Impl
     {
-        /** One playing sound. Allocated alone: miniaudio keeps pointers to the decoder and sound. */
-        struct Voice
+        /** The game thread's view of one mixer voice. */
+        struct Slot
         {
-            Uint64     Id = 0;
-            ma_decoder Decoder{};
-            ma_sound   Sound{};
-            bool       bLoop         = false;
-            bool       bDecoderReady = false;
-            bool       bSoundReady   = false;
+            Uint32 Generation = 0;
+            bool   bActive    = false;   // the mixer holds it, until it reports the voice ended
+            bool   bStopping  = false;   // stopped by the game: fading out, no longer playing
 
-            /** Read by the decoder while the sound plays. */
-            TSharedPtr<const TDynArray<Uint8>> Bytes;
+            Uint8             Priority    = 128;
+            Uint64            StartOrder  = 0;
+            float             Volume      = 1.f;
+            float             Fade        = 1.f;
+            Uint16            Bus         = 0;
+            bool              bSpatial    = false;
+            Vector2F          Position    = { 0.f, 0.f };
+            float             MinDistance = 0.f;
+            float             MaxDistance = 0.f;
+            EAudioAttenuation Attenuation = EAudioAttenuation::Linear;
+
+            /** What the voice reads, kept alive until it ended. */
+            TSharedPtr<const AudioClipData> Data;
+            TUniquePtr<AudioStreamReader>   Stream;
+        };
+
+        /** The sources of a voice replaced in the mixer, kept until it reports it ended. */
+        struct Retired
+        {
+            SoundHandle                     Handle;
+            TSharedPtr<const AudioClipData> Data;
+            TUniquePtr<AudioStreamReader>   Stream;
         };
 
         Desc Settings;
 
         /** The engine's manager reads its settings from the engine config. */
-        bool bFromConfig = false;
-
-        ma_engine      Engine{};
-        ma_sound_group Buses[AUDIO_BUS_COUNT]{};
-        bool           bEngineReady = false;
-        bool           bBusReady[AUDIO_BUS_COUNT]{};
-        bool           bHeadless    = true;
-
-        TDynArray<TUniquePtr<Voice>> Voices;
-        Uint64 NextId            = 1;
-        bool   bWarnedVoiceLimit = false;
-
-        float    MasterVolume = 1.f;
-        float    BusVolumes[AUDIO_BUS_COUNT] = { 1.f, 1.f, 1.f, 1.f };
-        Vector2F ListenerPosition = { 0.f, 0.f };
-
-        /** Headless: the fraction of a frame carried to the next Update, and the mix buffer. */
-        double           PendingFrames = 0.0;
-        TDynArray<float> Scratch;
-
+        bool           bFromConfig  = false;
         Config_Engine* EngineConfig = nullptr;
 
-        Voice* Find(const SoundHandle InSound) const
+        bool bStarted  = false;
+        bool bHeadless = true;
+
+        // ---- The mix ---------------------------------------------------------------------------
+        TUniquePtr<TSpscQueue<AudioCommand>> Commands;   // game thread -> audio thread
+        TUniquePtr<TSpscQueue<AudioEvent>>   Events;     // mixer -> game thread
+        TUniquePtr<AudioMixer>               Mixer;
+
+        // ---- The device and the audio thread (not headless) -------------------------------------
+        TUniquePtr<IAudioDevice>    GivenDevice;   // used instead of the backend's
+        TUniquePtr<IAudioDevice>    Device;
+        TUniquePtr<AudioRingBuffer> Ring;
+        Thread                      MixThread;
+        TAtomic<bool>               bRunning{ false };
+        TAtomic<Uint32>             FramesAhead{ 0 };
+        TAtomic<Uint32>             Underruns{ 0 };
+        Mutex                       WakeMutex;
+        ConditionVariable           Wake;
+        TDynArray<float>            ThreadBlock;
+
+        // ---- The game thread's view --------------------------------------------------------------
+        TDynArray<Slot>    Slots;
+        TDynArray<Retired> RetiredSources;
+        Uint64             NextStartOrder = 1;
+
+        float    BusVolumes[AUDIO_BUS_COUNT + 1] = { 1.f, 1.f, 1.f, 1.f, 1.f };   // master first
+        Vector2F Listener = { 0.f, 0.f };
+
+        /** Headless: the fraction of a frame carried to the next Update, and where the mix goes. */
+        double           PendingFrames = 0.0;
+        TDynArray<float> Discard;
+
+        bool   bWarnedCommandsFull = false;
+        bool   bWarnedVoiceLimit   = false;
+        Uint32 ReportedUnderruns   = 0;
+
+        // =====================================================================
+        // Commands and events
+        // =====================================================================
+
+        /** To the mixer: at once when headless, else through the audio thread's queue. */
+        bool Send(const AudioCommand& InCommand)
         {
-            if (!InSound.IsValid())
+            if (bHeadless)
+            {
+                Mixer->Apply(InCommand);
+                return true;
+            }
+
+            if (Commands->Push(InCommand))
+            {
+                return true;
+            }
+
+            if (!bWarnedCommandsFull)
+            {
+                bWarnedCommandsFull = true;
+                OPAAX_LOG(LogAudio, Error, "The audio command queue is full ({} commands): commands are dropped",
+                          Commands->Capacity());
+            }
+            return false;
+        }
+
+        bool Send(const EAudioCommand InType, const SoundHandle InHandle, const float InValue = 0.f,
+                  const Uint32 InFrames = 0, const bool bInFlag = false)
+        {
+            AudioCommand lCommand;
+            lCommand.Type   = InType;
+            lCommand.Handle = InHandle;
+            lCommand.Value  = InValue;
+            lCommand.Frames = InFrames;
+            lCommand.bFlag  = bInFlag;
+            return Send(lCommand);
+        }
+
+        /** Frees what the voices that ended held. */
+        void DrainEvents()
+        {
+            AudioEvent lEvent;
+            while (Events->Pop(lEvent))
+            {
+                const Uint32 lIndex = lEvent.Handle.GetIndex();
+                if (lIndex < Slots.size() && Slots[lIndex].bActive && Slots[lIndex].Generation == lEvent.Handle.GetGeneration())
+                {
+                    Release(Slots[lIndex]);
+                    continue;
+                }
+
+                // A voice that was replaced: its sources were set apart.
+                RetiredSources.erase(std::remove_if(RetiredSources.begin(), RetiredSources.end(),
+                                                    [&lEvent](const Retired& InRetired) { return InRetired.Handle == lEvent.Handle; }),
+                                     RetiredSources.end());
+            }
+        }
+
+        static void Release(Slot& InSlot)
+        {
+            InSlot.bActive   = false;
+            InSlot.bStopping = false;
+            InSlot.Data.reset();
+            InSlot.Stream.reset();
+        }
+
+        /** Headless: InFrames more of the mix, heard by no one. */
+        void MixHeadless(Uint64 InFrames)
+        {
+            const Uint32 lBlock = Mixer->GetBlockFrames();
+            Discard.resize(static_cast<size_t>(lBlock) * AUDIO_OUTPUT_CHANNELS);
+
+            while (InFrames > 0)
+            {
+                const Uint32 lFrames = static_cast<Uint32>(std::min<Uint64>(InFrames, lBlock));
+                Mixer->Mix(Discard.data(), lFrames);
+                InFrames -= lFrames;
+            }
+        }
+
+        // =====================================================================
+        // The audio thread and the device
+        // =====================================================================
+
+        /** Keeps the ring buffer FramesAhead full, applying commands between blocks. */
+        void ThreadLoop()
+        {
+            const Uint32 lBlock = Mixer->GetBlockFrames();
+
+            while (bRunning.load(std::memory_order_acquire))
+            {
+                AudioCommand lCommand;
+                while (Commands->Pop(lCommand))
+                {
+                    Mixer->Apply(lCommand);
+                }
+
+                while (Ring->GetReadableFrames() < FramesAhead.load(std::memory_order_relaxed) && Ring->GetFreeFrames() >= lBlock)
+                {
+                    Mixer->Mix(ThreadBlock.data(), lBlock);
+                    Ring->Write(ThreadBlock.data(), lBlock);
+
+                    while (Commands->Pop(lCommand))
+                    {
+                        Mixer->Apply(lCommand);
+                    }
+                }
+
+                // Paced by the device: it wakes this thread each time it takes frames.
+                std::unique_lock<Mutex> lLock(WakeMutex);
+                Wake.wait_for(lLock, MIX_THREAD_WAIT, [this]()
+                {
+                    return !bRunning.load(std::memory_order_acquire)
+                        || Ring->GetReadableFrames() < FramesAhead.load(std::memory_order_relaxed);
+                });
+            }
+        }
+
+        /** The device's thread: copies what is mixed, never waits. */
+        static void OnDeviceData(void* InUser, float* OutFrames, const Uint32 InFrameCount)
+        {
+            Impl& lSelf = *static_cast<Impl*>(InUser);
+
+            const Uint32 lRead = lSelf.Ring->Read(OutFrames, InFrameCount);
+            if (lRead < InFrameCount)
+            {
+                std::memset(OutFrames + static_cast<size_t>(lRead) * AUDIO_OUTPUT_CHANNELS, 0,
+                            sizeof(float) * (InFrameCount - lRead) * AUDIO_OUTPUT_CHANNELS);
+                lSelf.Underruns.fetch_add(1, std::memory_order_relaxed);
+            }
+
+            lSelf.Wake.notify_one();
+        }
+
+        /** Starts the audio thread, then the device. False when there is no device (nothing left running). */
+        bool StartDevice()
+        {
+            const Uint32 lBlock = Mixer->GetBlockFrames();
+
+            Device = GivenDevice != nullptr ? Move(GivenDevice) : AudioAPI::CreateDevice(Settings.Backend);
+            if (Device == nullptr)
+            {
+                return false;
+            }
+
+            Commands = MakeUnique<TSpscQueue<AudioCommand>>(COMMAND_CAPACITY);
+            Ring     = MakeUnique<AudioRingBuffer>(RING_CAPACITY_FRAMES, AUDIO_OUTPUT_CHANNELS);
+            ThreadBlock.resize(static_cast<size_t>(lBlock) * AUDIO_OUTPUT_CHANNELS);
+            FramesAhead.store(lBlock * MIN_BLOCKS_AHEAD);
+
+            // The thread first, so the device finds frames ready.
+            bHeadless = false;
+            bRunning.store(true, std::memory_order_release);
+            MixThread = Thread([this]() { ThreadLoop(); });
+
+            AudioDeviceDesc lDesc;
+            lDesc.SampleRate   = Settings.SampleRate;
+            lDesc.Channels     = AUDIO_OUTPUT_CHANNELS;
+            lDesc.PeriodFrames = lBlock;
+
+            if (!Device->Start(lDesc, &Impl::OnDeviceData, this))
+            {
+                StopThread();
+                Device.reset();
+                Commands.reset();
+                Ring.reset();
+                bHeadless = true;
+                return false;
+            }
+
+            // Ahead by the device's period and two blocks more, so a late wake-up is not a gap.
+            const Uint32 lPeriod = Device->GetPeriodFrames();
+            const Uint32 lAhead  = std::max(lBlock * MIN_BLOCKS_AHEAD, ((lPeriod + 2 * lBlock + lBlock - 1) / lBlock) * lBlock);
+            FramesAhead.store(std::min(lAhead, RING_CAPACITY_FRAMES - lBlock));
+            Wake.notify_one();
+            return true;
+        }
+
+        void StopThread()
+        {
+            if (!MixThread.joinable())
+            {
+                return;
+            }
+
+            bRunning.store(false, std::memory_order_release);
+            Wake.notify_all();
+            MixThread.join();
+        }
+
+        // =====================================================================
+        // Voices
+        // =====================================================================
+        Slot* Find(const SoundHandle InSound)
+        {
+            const Uint32 lIndex = InSound.GetIndex();
+            if (!InSound.IsValid() || lIndex >= Slots.size())
             {
                 return nullptr;
             }
 
-            for (const TUniquePtr<Voice>& lVoice : Voices)
-            {
-                if (lVoice->Id == InSound.Id) { return lVoice.get(); }
-            }
-            return nullptr;
+            Slot& lSlot = Slots[lIndex];
+            return (lSlot.bActive && lSlot.Generation == InSound.GetGeneration()) ? &lSlot : nullptr;
         }
 
-        /** The sound first (it reads the decoder), then the decoder. */
-        static void Release(Voice& InVoice)
+        /** A playing sound (not stopping) for InSound, or null. */
+        Slot* FindPlaying(const SoundHandle InSound)
         {
-            if (InVoice.bSoundReady)
-            {
-                ma_sound_uninit(&InVoice.Sound);
-                InVoice.bSoundReady = false;
-            }
-
-            if (InVoice.bDecoderReady)
-            {
-                ma_decoder_uninit(&InVoice.Decoder);
-                InVoice.bDecoderReady = false;
-            }
-
-            InVoice.Bytes.reset();
+            Slot* lSlot = Find(InSound);
+            return (lSlot != nullptr && !lSlot->bStopping) ? lSlot : nullptr;
         }
 
-        void Mix(Uint64 InFrames)
+        /** About how loud a voice is now: its volume, its buses and its distance. */
+        float EstimatedGain(const Slot& InSlot) const
         {
-            const Uint64 lChannels = ma_engine_get_channels(&Engine);
-            Scratch.resize(static_cast<size_t>(HEADLESS_CHUNK_FRAMES * lChannels));
+            float lGain = InSlot.Volume * InSlot.Fade * BusVolumes[MASTER_BUS]
+                        * (InSlot.Bus != MASTER_BUS && InSlot.Bus <= AUDIO_BUS_COUNT ? BusVolumes[InSlot.Bus] : 1.f);
 
-            while (InFrames > 0)
+            if (InSlot.bSpatial)
             {
-                const Uint64 lChunk = std::min(InFrames, HEADLESS_CHUNK_FRAMES);
-                ma_engine_read_pcm_frames(&Engine, Scratch.data(), lChunk, nullptr);
-                InFrames -= lChunk;
+                const Vector2F lOffset = InSlot.Position - Listener;
+                lGain *= AudioSpatial::Attenuate(InSlot.Attenuation, std::sqrt(lOffset.x * lOffset.x + lOffset.y * lOffset.y),
+                                                 InSlot.MinDistance, InSlot.MaxDistance);
             }
+            return lGain;
+        }
+
+        /**
+         * A voice for a new sound of InPriority: a free one, else the one least worth keeping (already
+         * stopping, then the lowest priority, the quietest, the oldest).
+         * @return INVALID_SLOT when every voice plays something of a higher priority
+         */
+        Uint32 PickSlot(const Uint8 InPriority)
+        {
+            for (Uint32 lIndex = 0; lIndex < Slots.size(); ++lIndex)
+            {
+                if (!Slots[lIndex].bActive)
+                {
+                    return lIndex;
+                }
+            }
+
+            Uint32 lVictim = 0;
+            for (Uint32 lIndex = 1; lIndex < Slots.size(); ++lIndex)
+            {
+                const Slot& lA = Slots[lIndex];
+                const Slot& lB = Slots[lVictim];
+                if (lA.bStopping != lB.bStopping)  { if (lA.bStopping) { lVictim = lIndex; } continue; }
+                if (lA.Priority != lB.Priority)    { if (lA.Priority < lB.Priority) { lVictim = lIndex; } continue; }
+
+                const float lGainA = EstimatedGain(lA);
+                const float lGainB = EstimatedGain(lB);
+                if (lGainA != lGainB)              { if (lGainA < lGainB) { lVictim = lIndex; } continue; }
+                if (lA.StartOrder < lB.StartOrder) { lVictim = lIndex; }
+            }
+
+            const Slot& lChosen = Slots[lVictim];
+            if (!lChosen.bStopping && lChosen.Priority > InPriority)
+            {
+                return INVALID_SLOT;
+            }
+
+            if (!bWarnedVoiceLimit)
+            {
+                bWarnedVoiceLimit = true;
+                OPAAX_LOG(LogAudio, Warn, "{} sounds are already playing (Audio.MaxVoices): new ones replace the least "
+                          "important", Slots.size());
+            }
+            return lVictim;
+        }
+
+        /** Sets a replaced voice's sources apart until the mixer is done with them. */
+        void Retire(Slot& InSlot, const Uint32 InIndex)
+        {
+            RetiredSources.push_back(Retired{ SoundHandle::Make(InIndex, InSlot.Generation), Move(InSlot.Data), Move(InSlot.Stream) });
+            Release(InSlot);
         }
     };
 
@@ -128,6 +422,13 @@ namespace Opaax
         m_Impl->Settings = InDesc;
     }
 
+    AudioManager::AudioManager(const Desc& InDesc, TUniquePtr<IAudioDevice> InDevice)
+        : m_Impl(MakeUnique<Impl>())
+    {
+        m_Impl->Settings    = InDesc;
+        m_Impl->GivenDevice = Move(InDevice);
+    }
+
     AudioManager::~AudioManager()
     {
         Shutdown();
@@ -138,134 +439,132 @@ namespace Opaax
     // =========================================================================
     bool AudioManager::Startup()
     {
-        if (m_Impl->bEngineReady)
+        Impl& lImpl = *m_Impl;
+        if (lImpl.bStarted)
         {
             return true;
         }
 
         const AudioSettings* lSettings = nullptr;
-        if (m_Impl->bFromConfig)
+        if (lImpl.bFromConfig)
         {
-            m_Impl->EngineConfig = &OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>();
-            lSettings = &m_Impl->EngineConfig->GetData().Audio;
+            lImpl.EngineConfig = &OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>();
+            lSettings = &lImpl.EngineConfig->GetData().Audio;
 
-            m_Impl->Settings.bHeadless = !lSettings->bEnabled;
-            m_Impl->Settings.MaxVoices = lSettings->MaxVoices;
+            lImpl.Settings.bHeadless = !lSettings->bEnabled;
+            lImpl.Settings.Backend   = lSettings->Backend;
+            lImpl.Settings.MaxVoices = lSettings->MaxVoices;
         }
 
-        // A device first, unless headless was asked for. Without one, a headless mix.
-        bool bStarted = false;
-        if (!m_Impl->Settings.bHeadless)
-        {
-            const ma_engine_config lConfig = ma_engine_config_init();
-            bStarted = ma_engine_init(&lConfig, &m_Impl->Engine) == MA_SUCCESS;
+        lImpl.Settings.SampleRate  = std::clamp(lImpl.Settings.SampleRate, 8000u, 192000u);
+        lImpl.Settings.MaxVoices   = std::max(lImpl.Settings.MaxVoices, 1u);
+        lImpl.Settings.BlockFrames = std::clamp(lImpl.Settings.BlockFrames, 32u, 4096u);
+        AudioAPI::SetBackend(lImpl.Settings.Backend);
 
-            if (!bStarted)
+        // The bus tree: the master, then one bus per EAudioBus under it.
+        AudioMixer::Desc lMix;
+        lMix.SampleRate  = lImpl.Settings.SampleRate;
+        lMix.MaxVoices   = lImpl.Settings.MaxVoices;
+        lMix.BlockFrames = lImpl.Settings.BlockFrames;
+        lMix.Buses.push_back(AudioBusDesc{ OPAAX_ID("Master"), -1, lImpl.BusVolumes[MASTER_BUS] });
+        for (Uint8 lBus = 0; lBus < AUDIO_BUS_COUNT; ++lBus)
+        {
+            lMix.Buses.push_back(AudioBusDesc{ OPAAX_ID(ToString(static_cast<EAudioBus>(lBus))), MASTER_BUS, lImpl.BusVolumes[lBus + 1] });
+        }
+
+        // Every voice and every tail can end before the game thread drains: room for all of them twice.
+        lImpl.Events = MakeUnique<TSpscQueue<AudioEvent>>(2 * (lImpl.Settings.MaxVoices + AudioMixer::TAIL_VOICES) + 16);
+        lImpl.Mixer  = MakeUnique<AudioMixer>(lMix, *lImpl.Events);
+        lImpl.Slots.clear();
+        lImpl.Slots.resize(lImpl.Settings.MaxVoices);
+
+        bool bDevice = false;
+        if (!lImpl.Settings.bHeadless)
+        {
+            bDevice = lImpl.StartDevice();
+            if (!bDevice)
             {
                 OPAAX_LOG(LogAudio, Warn, "No audio device could be opened: sounds will play silently");
             }
         }
 
-        m_Impl->bHeadless = !bStarted;
-        if (!bStarted)
-        {
-            ma_engine_config lConfig = ma_engine_config_init();
-            lConfig.noDevice   = MA_TRUE;
-            lConfig.channels   = std::max(m_Impl->Settings.Channels, 1u);
-            lConfig.sampleRate = std::max(m_Impl->Settings.SampleRate, 8000u);
-
-            if (ma_engine_init(&lConfig, &m_Impl->Engine) != MA_SUCCESS)
-            {
-                // Audio is optional: the engine runs on without it.
-                OPAAX_LOG(LogAudio, Error, "The audio mixer could not start: no sound will play");
-                return true;
-            }
-        }
-
-        m_Impl->bEngineReady = true;
-
-        for (Uint8 lBus = 0; lBus < AUDIO_BUS_COUNT; ++lBus)
-        {
-            m_Impl->bBusReady[lBus] = ma_sound_group_init(&m_Impl->Engine, 0, nullptr, &m_Impl->Buses[lBus]) == MA_SUCCESS;
-            if (!m_Impl->bBusReady[lBus])
-            {
-                OPAAX_LOG(LogAudio, Error, "Audio bus '{}' could not be created: its sounds play on the master",
-                          ToString(static_cast<EAudioBus>(lBus)));
-            }
-        }
+        lImpl.bHeadless = !bDevice;
+        lImpl.bStarted  = true;
 
         if (lSettings != nullptr)
         {
             ApplySettings(*lSettings);
 
             // Volumes follow the settings while the game runs.
-            m_Impl->EngineConfig->OnChanged().AddMember(this, &AudioManager::OnEngineConfigChanged);
+            lImpl.EngineConfig->OnChanged().AddMember(this, &AudioManager::OnEngineConfigChanged);
         }
 
-        OPAAX_LOG(LogAudio, Info, "Audio started — {} Hz, {} channel(s){}", GetSampleRate(), GetChannels(),
-                  m_Impl->bHeadless ? ", headless (not heard)" : "");
+        OPAAX_LOG(LogAudio, Info, "Audio started — {}, {} Hz, {} voices{}", ToString(lImpl.Settings.Backend),
+                  lImpl.Settings.SampleRate, lImpl.Settings.MaxVoices,
+                  lImpl.bHeadless ? ", headless (not heard)" : fmt::format(", on '{}'", lImpl.Device->GetName()));
         return true;
     }
 
     void AudioManager::Update(const double InDeltaTime)
     {
-        if (!m_Impl->bEngineReady)
+        Impl& lImpl = *m_Impl;
+        if (!lImpl.bStarted)
         {
             return;
         }
 
         // Nothing pulls a headless mix: it advances by the frame's time, so sounds end on time.
-        if (m_Impl->bHeadless && !m_Impl->Voices.empty() && InDeltaTime > 0.0)
+        if (lImpl.bHeadless && InDeltaTime > 0.0)
         {
-            m_Impl->PendingFrames += InDeltaTime * static_cast<double>(GetSampleRate());
-            const Uint64 lFrames = static_cast<Uint64>(m_Impl->PendingFrames);
-            m_Impl->PendingFrames -= static_cast<double>(lFrames);
+            lImpl.PendingFrames += InDeltaTime * static_cast<double>(lImpl.Settings.SampleRate);
+            const Uint64 lFrames = static_cast<Uint64>(lImpl.PendingFrames);
+            lImpl.PendingFrames -= static_cast<double>(lFrames);
 
-            m_Impl->Mix(lFrames);
+            lImpl.MixHeadless(lFrames);
         }
 
-        // Release the sounds that ended (a looping sound never does).
-        TDynArray<TUniquePtr<Impl::Voice>>& lVoices = m_Impl->Voices;
-        lVoices.erase(std::remove_if(lVoices.begin(), lVoices.end(),
-                                     [](const TUniquePtr<Impl::Voice>& InVoice)
-                                     {
-                                         if (InVoice->bLoop || !ma_sound_at_end(&InVoice->Sound))
-                                         {
-                                             return false;
-                                         }
+        lImpl.DrainEvents();
 
-                                         Impl::Release(*InVoice);
-                                         return true;
-                                     }),
-                      lVoices.end());
+        const Uint32 lUnderruns = lImpl.Underruns.load(std::memory_order_relaxed);
+        if (lImpl.ReportedUnderruns == 0 && lUnderruns > 0)
+        {
+            OPAAX_LOG(LogAudio, Warn, "The audio device ran out of mixed sound (a gap was heard); later gaps are "
+                      "counted in GetUnderrunCount");
+        }
+        lImpl.ReportedUnderruns = lUnderruns;
     }
 
     void AudioManager::Shutdown()
     {
-        if (!m_Impl || !m_Impl->bEngineReady)
+        if (!m_Impl || !m_Impl->bStarted)
         {
             return;
         }
 
-        if (m_Impl->EngineConfig != nullptr)
+        Impl& lImpl = *m_Impl;
+        if (lImpl.EngineConfig != nullptr)
         {
-            m_Impl->EngineConfig->OnChanged().RemoveAll(this);
-            m_Impl->EngineConfig = nullptr;
+            lImpl.EngineConfig->OnChanged().RemoveAll(this);
+            lImpl.EngineConfig = nullptr;
         }
 
-        StopAll();
-
-        for (Uint8 lBus = 0; lBus < AUDIO_BUS_COUNT; ++lBus)
+        // The device first: no callback reads the ring once it is stopped. Then the thread.
+        if (lImpl.Device != nullptr)
         {
-            if (m_Impl->bBusReady[lBus])
-            {
-                ma_sound_group_uninit(&m_Impl->Buses[lBus]);
-                m_Impl->bBusReady[lBus] = false;
-            }
+            lImpl.Device->Stop();
         }
+        lImpl.StopThread();
 
-        ma_engine_uninit(&m_Impl->Engine);
-        m_Impl->bEngineReady = false;
+        lImpl.Device.reset();
+        lImpl.Mixer.reset();
+        lImpl.Ring.reset();
+        lImpl.Commands.reset();
+        lImpl.Events.reset();
+        lImpl.Slots.clear();
+        lImpl.RetiredSources.clear();
+
+        lImpl.bStarted  = false;
+        lImpl.bHeadless = true;
 
         OPAAX_LOG(LogAudio, Trace, "Audio stopped");
     }
@@ -275,134 +574,168 @@ namespace Opaax
     // =========================================================================
     SoundHandle AudioManager::Play(const AudioClipResource& InClip, const PlaySoundParams& InParams)
     {
-        if (!m_Impl->bEngineReady || InClip.IsSilent())
+        Impl& lImpl = *m_Impl;
+        if (!lImpl.bStarted || InClip.IsSilent())
         {
             return SoundHandle{};
         }
 
-        if (m_Impl->Voices.size() >= m_Impl->Settings.MaxVoices)
+        const AudioClipData& lData = *InClip.Data;
+
+        AudioVoiceDesc lVoice;
+        lVoice.Source.Channels   = lData.Format.Channels;
+        lVoice.Source.SampleRate = lData.Format.SampleRate;
+
+        // A streamed clip gets its own decoder, made here: the audio thread never allocates.
+        TUniquePtr<AudioStreamReader> lStream;
+        if (lData.IsStreamed())
         {
-            if (!m_Impl->bWarnedVoiceLimit)
+            TUniquePtr<IAudioDecoder> lDecoder = AudioAPI::OpenDecoder(lData.Encoded.data(), lData.Encoded.size());
+            if (lDecoder == nullptr)
             {
-                m_Impl->bWarnedVoiceLimit = true;
-                OPAAX_LOG(LogAudio, Warn, "{} sounds are already playing (Audio.MaxVoices): the new ones are dropped",
-                          m_Impl->Settings.MaxVoices);
+                OPAAX_LOG(LogAudio, Error, "A sound could not start: its clip does not decode");
+                return SoundHandle{};
             }
+
+            lStream = MakeUnique<AudioStreamReader>(Move(lDecoder), AudioMixer::GetStreamWindowFrames(lImpl.Mixer->GetBlockFrames()));
+            lVoice.Source.Stream = lStream.get();
+        }
+        else
+        {
+            lVoice.Source.Frames     = lData.Frames.data();
+            lVoice.Source.FrameCount = lData.Format.FrameCount;
+        }
+
+        const Uint32 lIndex = lImpl.PickSlot(InParams.Priority);
+        if (lIndex == INVALID_SLOT)
+        {
             return SoundHandle{};
         }
 
-        TUniquePtr<Impl::Voice> lVoice = MakeUnique<Impl::Voice>();
-        lVoice->Bytes = InClip.Encoded;
-        lVoice->bLoop = InParams.bLoop;
-
-        // The clip's own format: the mixer converts channels and sample rate.
-        const ma_decoder_config lDecoderConfig = ma_decoder_config_init(ma_format_f32, 0, 0);
-        if (ma_decoder_init_memory(lVoice->Bytes->data(), lVoice->Bytes->size(), &lDecoderConfig, &lVoice->Decoder) != MA_SUCCESS)
+        Impl::Slot& lSlot = lImpl.Slots[lIndex];
+        if (lSlot.bActive)
         {
-            OPAAX_LOG(LogAudio, Error, "A sound could not start: its clip does not decode");
-            return SoundHandle{};
-        }
-        lVoice->bDecoderReady = true;
-
-        const Uint8     lBus   = static_cast<Uint8>(InParams.Bus);
-        ma_sound_group* lGroup = (lBus < AUDIO_BUS_COUNT && m_Impl->bBusReady[lBus]) ? &m_Impl->Buses[lBus] : nullptr;
-        const ma_uint32 lFlags = InParams.bSpatial ? 0 : MA_SOUND_FLAG_NO_SPATIALIZATION;
-
-        if (ma_sound_init_from_data_source(&m_Impl->Engine, &lVoice->Decoder, lFlags, lGroup, &lVoice->Sound) != MA_SUCCESS)
-        {
-            OPAAX_LOG(LogAudio, Error, "A sound could not start: the mixer refused it");
-            Impl::Release(*lVoice);
-            return SoundHandle{};
-        }
-        lVoice->bSoundReady = true;
-
-        ma_sound* lSound = &lVoice->Sound;
-        ma_sound_set_volume(lSound, std::max(InParams.Volume, 0.f));
-        ma_sound_set_pitch(lSound, std::max(InParams.Pitch, 0.01f));
-        ma_sound_set_looping(lSound, InParams.bLoop ? MA_TRUE : MA_FALSE);
-
-        if (InParams.bSpatial)
-        {
-            // 2D: everything on the z = 0 plane, the listener looking down -z with y up.
-            ma_sound_set_position(lSound, InParams.Position.x, InParams.Position.y, 0.f);
-            ma_sound_set_attenuation_model(lSound, ma_attenuation_model_linear);
-            ma_sound_set_min_distance(lSound, std::max(InParams.MinDistance, 0.f));
-            ma_sound_set_max_distance(lSound, std::max(InParams.MaxDistance, std::max(InParams.MinDistance, 0.f) + MIN_DISTANCE_SPAN));
-            ma_sound_set_doppler_factor(lSound, 0.f);
+            lImpl.Retire(lSlot, lIndex);
         }
 
-        if (ma_sound_start(lSound) != MA_SUCCESS)
+        // Generation 0 is never used: it is the invalid handle.
+        lSlot.Generation = lSlot.Generation == ~0u ? 1u : lSlot.Generation + 1;
+        const SoundHandle lHandle = SoundHandle::Make(lIndex, lSlot.Generation);
+
+        lVoice.Volume       = std::max(InParams.Volume, 0.f);
+        lVoice.Pitch        = InParams.Pitch;
+        lVoice.Bus          = BusIndexOf(InParams.Bus);
+        lVoice.bLoop        = InParams.bLoop;
+        lVoice.FadeInFrames = SecondsToFrames(InParams.FadeInSeconds, lImpl.Settings.SampleRate);
+        lVoice.bSpatial     = InParams.bSpatial;
+        lVoice.Position     = InParams.Position;
+        lVoice.MinDistance  = InParams.MinDistance;
+        lVoice.MaxDistance  = InParams.MaxDistance;
+
+        AudioCommand lCommand;
+        lCommand.Type   = EAudioCommand::Play;
+        lCommand.Handle = lHandle;
+        lCommand.Voice  = lVoice;
+        if (!lImpl.Send(lCommand))
         {
-            OPAAX_LOG(LogAudio, Error, "A sound could not start");
-            Impl::Release(*lVoice);
             return SoundHandle{};
         }
 
-        lVoice->Id = m_Impl->NextId++;
-        const SoundHandle lHandle{ lVoice->Id };
-        m_Impl->Voices.push_back(Move(lVoice));
+        lSlot.bActive     = true;
+        lSlot.bStopping   = false;
+        lSlot.Priority    = InParams.Priority;
+        lSlot.StartOrder  = lImpl.NextStartOrder++;
+        lSlot.Volume      = lVoice.Volume;
+        lSlot.Fade        = 1.f;
+        lSlot.Bus         = lVoice.Bus;
+        lSlot.bSpatial    = lVoice.bSpatial;
+        lSlot.Position    = lVoice.Position;
+        lSlot.MinDistance = lVoice.MinDistance;
+        lSlot.MaxDistance = lVoice.MaxDistance;
+        lSlot.Attenuation = lVoice.Attenuation;
+        lSlot.Data        = InClip.Data;
+        lSlot.Stream      = Move(lStream);
         return lHandle;
     }
 
-    void AudioManager::Stop(const SoundHandle InSound)
+    void AudioManager::Stop(const SoundHandle InSound, const float InFadeOutSeconds)
     {
-        TDynArray<TUniquePtr<Impl::Voice>>& lVoices = m_Impl->Voices;
-        for (auto lIt = lVoices.begin(); lIt != lVoices.end(); ++lIt)
+        if (Impl::Slot* lSlot = m_Impl->FindPlaying(InSound))
         {
-            if ((*lIt)->Id == InSound.Id)
-            {
-                Impl::Release(**lIt);
-                lVoices.erase(lIt);
-                return;
-            }
+            lSlot->bStopping = true;
+            m_Impl->Send(EAudioCommand::Stop, InSound, 0.f, SecondsToFrames(InFadeOutSeconds, m_Impl->Settings.SampleRate));
         }
     }
 
-    void AudioManager::StopAll()
+    void AudioManager::StopAll(const float InFadeOutSeconds)
     {
-        for (TUniquePtr<Impl::Voice>& lVoice : m_Impl->Voices)
+        Impl& lImpl = *m_Impl;
+        if (!lImpl.bStarted)
         {
-            Impl::Release(*lVoice);
+            return;
         }
-        m_Impl->Voices.clear();
+
+        for (Impl::Slot& lSlot : lImpl.Slots)
+        {
+            lSlot.bStopping = lSlot.bActive;
+        }
+
+        AudioCommand lCommand;
+        lCommand.Type   = EAudioCommand::StopAll;
+        lCommand.Frames = SecondsToFrames(InFadeOutSeconds, lImpl.Settings.SampleRate);
+        lImpl.Send(lCommand);
     }
 
     bool AudioManager::IsPlaying(const SoundHandle InSound) const
     {
-        const Impl::Voice* lVoice = m_Impl->Find(InSound);
-        return lVoice != nullptr && (lVoice->bLoop || !ma_sound_at_end(&lVoice->Sound));
+        return m_Impl->FindPlaying(InSound) != nullptr;
     }
 
     void AudioManager::SetVolume(const SoundHandle InSound, const float InVolume)
     {
-        if (Impl::Voice* lVoice = m_Impl->Find(InSound))
+        if (Impl::Slot* lSlot = m_Impl->Find(InSound))
         {
-            ma_sound_set_volume(&lVoice->Sound, std::max(InVolume, 0.f));
+            lSlot->Volume = std::max(InVolume, 0.f);
+            m_Impl->Send(EAudioCommand::SetVolume, InSound, lSlot->Volume);
+        }
+    }
+
+    void AudioManager::FadeTo(const SoundHandle InSound, const float InVolume, const float InSeconds)
+    {
+        if (Impl::Slot* lSlot = m_Impl->FindPlaying(InSound))
+        {
+            lSlot->Fade = std::max(InVolume, 0.f);
+            m_Impl->Send(EAudioCommand::FadeVolume, InSound, lSlot->Fade, SecondsToFrames(InSeconds, m_Impl->Settings.SampleRate));
         }
     }
 
     void AudioManager::SetPitch(const SoundHandle InSound, const float InPitch)
     {
-        if (Impl::Voice* lVoice = m_Impl->Find(InSound))
+        if (m_Impl->Find(InSound) != nullptr)
         {
-            ma_sound_set_pitch(&lVoice->Sound, std::max(InPitch, 0.01f));
+            m_Impl->Send(EAudioCommand::SetPitch, InSound, InPitch);
         }
     }
 
     void AudioManager::SetPosition(const SoundHandle InSound, const Vector2F InPosition)
     {
-        if (Impl::Voice* lVoice = m_Impl->Find(InSound))
+        if (Impl::Slot* lSlot = m_Impl->Find(InSound))
         {
-            ma_sound_set_position(&lVoice->Sound, InPosition.x, InPosition.y, 0.f);
+            lSlot->Position = InPosition;
+
+            AudioCommand lCommand;
+            lCommand.Type     = EAudioCommand::SetPosition;
+            lCommand.Handle   = InSound;
+            lCommand.Position = InPosition;
+            m_Impl->Send(lCommand);
         }
     }
 
     void AudioManager::SetPaused(const SoundHandle InSound, const bool bInPaused)
     {
-        if (Impl::Voice* lVoice = m_Impl->Find(InSound))
+        if (m_Impl->Find(InSound) != nullptr)
         {
-            if (bInPaused) { ma_sound_stop(&lVoice->Sound); }
-            else           { ma_sound_start(&lVoice->Sound); }
+            m_Impl->Send(EAudioCommand::SetPaused, InSound, 0.f, 0, bInPaused);
         }
     }
 
@@ -411,51 +744,62 @@ namespace Opaax
     // =========================================================================
     void AudioManager::SetBusVolume(const EAudioBus InBus, const float InVolume)
     {
-        const Uint8 lBus = static_cast<Uint8>(InBus);
-        if (lBus >= AUDIO_BUS_COUNT)
+        const Uint16 lBus = BusIndexOf(InBus);
+        if (lBus > AUDIO_BUS_COUNT)
         {
             return;
         }
 
         m_Impl->BusVolumes[lBus] = std::max(InVolume, 0.f);
-        if (m_Impl->bBusReady[lBus])
+        if (m_Impl->bStarted)
         {
-            ma_sound_group_set_volume(&m_Impl->Buses[lBus], m_Impl->BusVolumes[lBus]);
+            AudioCommand lCommand;
+            lCommand.Type  = EAudioCommand::SetBusVolume;
+            lCommand.Bus   = lBus;
+            lCommand.Value = m_Impl->BusVolumes[lBus];
+            m_Impl->Send(lCommand);
         }
     }
 
     float AudioManager::GetBusVolume(const EAudioBus InBus) const
     {
-        const Uint8 lBus = static_cast<Uint8>(InBus);
-        return lBus < AUDIO_BUS_COUNT ? m_Impl->BusVolumes[lBus] : 0.f;
+        const Uint16 lBus = BusIndexOf(InBus);
+        return lBus <= AUDIO_BUS_COUNT ? m_Impl->BusVolumes[lBus] : 0.f;
     }
 
     void AudioManager::SetMasterVolume(const float InVolume)
     {
-        m_Impl->MasterVolume = std::max(InVolume, 0.f);
-        if (m_Impl->bEngineReady)
+        m_Impl->BusVolumes[MASTER_BUS] = std::max(InVolume, 0.f);
+        if (m_Impl->bStarted)
         {
-            ma_engine_set_volume(&m_Impl->Engine, m_Impl->MasterVolume);
+            AudioCommand lCommand;
+            lCommand.Type  = EAudioCommand::SetBusVolume;
+            lCommand.Bus   = MASTER_BUS;
+            lCommand.Value = m_Impl->BusVolumes[MASTER_BUS];
+            m_Impl->Send(lCommand);
         }
     }
 
     float AudioManager::GetMasterVolume() const
     {
-        return m_Impl->MasterVolume;
+        return m_Impl->BusVolumes[MASTER_BUS];
     }
 
     void AudioManager::SetListenerPosition(const Vector2F InPosition)
     {
-        m_Impl->ListenerPosition = InPosition;
-        if (m_Impl->bEngineReady)
+        m_Impl->Listener = InPosition;
+        if (m_Impl->bStarted)
         {
-            ma_engine_listener_set_position(&m_Impl->Engine, 0, InPosition.x, InPosition.y, 0.f);
+            AudioCommand lCommand;
+            lCommand.Type     = EAudioCommand::SetListener;
+            lCommand.Position = InPosition;
+            m_Impl->Send(lCommand);
         }
     }
 
     Vector2F AudioManager::GetListenerPosition() const
     {
-        return m_Impl->ListenerPosition;
+        return m_Impl->Listener;
     }
 
     void AudioManager::ApplySettings(const AudioSettings& InSettings)
@@ -480,7 +824,7 @@ namespace Opaax
     // =========================================================================
     bool AudioManager::IsStarted() const noexcept
     {
-        return m_Impl->bEngineReady;
+        return m_Impl->bStarted;
     }
 
     bool AudioManager::IsHeadless() const noexcept
@@ -490,28 +834,42 @@ namespace Opaax
 
     Uint64 AudioManager::GetVoiceCount() const noexcept
     {
-        return static_cast<Uint64>(m_Impl->Voices.size());
+        return static_cast<Uint64>(std::count_if(m_Impl->Slots.begin(), m_Impl->Slots.end(),
+                                                 [](const Impl::Slot& InSlot) { return InSlot.bActive && !InSlot.bStopping; }));
     }
 
     Uint64 AudioManager::RenderFrames(float* OutFrames, const Uint64 InFrameCount)
     {
-        if (!m_Impl->bEngineReady || !m_Impl->bHeadless || OutFrames == nullptr)
+        Impl& lImpl = *m_Impl;
+        if (!lImpl.bStarted || !lImpl.bHeadless || OutFrames == nullptr)
         {
             return 0;
         }
 
-        ma_uint64 lRead = 0;
-        ma_engine_read_pcm_frames(&m_Impl->Engine, OutFrames, InFrameCount, &lRead);
-        return static_cast<Uint64>(lRead);
+        Uint64 lDone = 0;
+        while (lDone < InFrameCount)
+        {
+            const Uint32 lFrames = static_cast<Uint32>(std::min<Uint64>(InFrameCount - lDone, 1u << 20));
+            lImpl.Mixer->Mix(OutFrames + lDone * AUDIO_OUTPUT_CHANNELS, lFrames);
+            lDone += lFrames;
+        }
+
+        lImpl.DrainEvents();
+        return InFrameCount;
     }
 
     Uint32 AudioManager::GetSampleRate() const noexcept
     {
-        return m_Impl->bEngineReady ? ma_engine_get_sample_rate(&m_Impl->Engine) : 0;
+        return m_Impl->bStarted ? m_Impl->Settings.SampleRate : 0;
     }
 
     Uint32 AudioManager::GetChannels() const noexcept
     {
-        return m_Impl->bEngineReady ? ma_engine_get_channels(&m_Impl->Engine) : 0;
+        return m_Impl->bStarted ? AUDIO_OUTPUT_CHANNELS : 0;
+    }
+
+    Uint32 AudioManager::GetUnderrunCount() const noexcept
+    {
+        return m_Impl->Underruns.load(std::memory_order_relaxed);
     }
 }

@@ -1,16 +1,18 @@
-// Suite: audio — clips (format, failure policy), the mixer (sounds that end, loop, stop, volumes,
-// spatial attenuation and panning, the voice limit) and a Play world's sounds (sources that start
-// with their entity, follow it and stop with it; behaviours that play clips). Everything runs on a
-// headless mixer: what would be heard is rendered into a buffer and measured. The sounds are
-// generated WAV files.
+// Suite: audio — clips (format, decoded or streamed, failure policy), the AudioManager (sounds that
+// end, loop, stop and fade, volumes, spatial attenuation and panning, old handles, a full voice pool,
+// the audio thread feeding a device) and a Play world's sounds (sources that start with their entity,
+// follow it and stop with it; behaviours that play clips). Most of it runs headless: what would be
+// heard is rendered into a buffer and measured. The sounds are generated WAV files.
 #include <doctest.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <functional>
 #include <string>
+#include <thread>
 
 #include "Application/Services/IPaths.h"
 #include "Audio/AudioClipResource.h"
@@ -18,6 +20,7 @@
 #include "Audio/AudioSubsystem.h"
 #include "Audio/Components/AudioListenerComponent.h"
 #include "Audio/Components/AudioSourceComponent.h"
+#include "Audio/IAudioDevice.h"
 #include "Engine/Config/EngineConfigData.h"
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/InputManager.h"
@@ -67,9 +70,11 @@ namespace
         return lOut;
     }
 
-    AudioClipResource MakeClip(const float InSeconds, const float InAmplitude = 0.5f)
+    AudioClipResource MakeClip(const float InSeconds, const float InAmplitude = 0.5f,
+                               const AudioClipResource::EResidency InResidency = AudioClipResource::EResidency::Auto)
     {
-        std::optional<AudioClipResource> lClip = AudioClipResource::FromMemory(MakeWav(44100, InSeconds, 440.f, InAmplitude), "Test");
+        std::optional<AudioClipResource> lClip = AudioClipResource::FromMemory(MakeWav(44100, InSeconds, 440.f, InAmplitude),
+                                                                                "Test", InResidency);
         REQUIRE(lClip.has_value());
         return *lClip;
     }
@@ -79,7 +84,6 @@ namespace
         AudioManager::Desc lDesc;
         lDesc.bHeadless  = true;
         lDesc.SampleRate = MIX_RATE;
-        lDesc.Channels   = 2;
         lDesc.MaxVoices  = InMaxVoices;
         return lDesc;
     }
@@ -106,6 +110,12 @@ namespace
             lPeaks.Right = std::max(lPeaks.Right, std::abs(lBuffer[static_cast<size_t>(lFrame * 2 + 1)]));
         }
         return lPeaks;
+    }
+
+    /** Lets a change (a volume, a stop, a pause) finish its ramp: one mix block. */
+    void Settle(AudioManager& InAudio)
+    {
+        RenderPeaks(InAudio, 256.f / MIX_RATE);
     }
 
     // Every asset under one temp root, so AssetToAbsolute is a concatenation.
@@ -180,7 +190,7 @@ namespace
 // =============================================================================
 // Clips
 // =============================================================================
-TEST_CASE("AudioClip: a WAV file loads with its format and length")
+TEST_CASE("AudioClip: a WAV file loads with its format and length; a short one is decoded")
 {
     const AudioClipResource lClip = MakeClip(0.25f);
 
@@ -189,7 +199,20 @@ TEST_CASE("AudioClip: a WAV file loads with its format and length")
     CHECK(lClip.SampleRate == 44100);
     CHECK(lClip.FrameCount == 11025);
     CHECK(lClip.GetDuration() == doctest::Approx(0.25f));
-    CHECK(lClip.ByteSize() == 44 + 11025 * 2);
+
+    CHECK_FALSE(lClip.IsStreamed());
+    CHECK(lClip.ByteSize() == 11025 * sizeof(float));
+}
+
+TEST_CASE("AudioClip: a long sound keeps its file and is decoded while it plays")
+{
+    const AudioClipResource lLong = MakeClip(AudioClipResource::DECODE_MAX_SECONDS + 1.f);
+    CHECK(lLong.IsStreamed());
+    CHECK(lLong.ByteSize() == 44 + lLong.FrameCount * 2);   // the WAV file, not its samples
+
+    const AudioClipResource lForced = MakeClip(0.25f, 0.5f, AudioClipResource::EResidency::Streamed);
+    CHECK(lForced.IsStreamed());
+    CHECK(lForced.FrameCount == 11025);
 }
 
 TEST_CASE("AudioClip: bytes that are not a sound are refused; a missing file loads as silence")
@@ -216,7 +239,7 @@ TEST_CASE("AudioClip: bytes that are not a sound are refused; a missing file loa
 }
 
 // =============================================================================
-// Mixer
+// AudioManager
 // =============================================================================
 TEST_CASE("AudioManager: a sound plays for its length, then is released")
 {
@@ -257,6 +280,35 @@ TEST_CASE("AudioManager: a looping sound plays until it is stopped")
     lAudio.Stop(lSound);
     CHECK_FALSE(lAudio.IsPlaying(lSound));
     CHECK(lAudio.GetVoiceCount() == 0);
+
+    // It fades out over one block, then nothing.
+    Settle(lAudio);
+    CHECK(RenderPeaks(lAudio).Max() == 0.f);
+}
+
+TEST_CASE("AudioManager: a stop can fade out; FadeTo and a fade-in take their time")
+{
+    AudioManager lAudio(Headless());
+    REQUIRE(lAudio.Startup());
+
+    PlaySoundParams lParams;
+    lParams.bLoop         = true;
+    lParams.FadeInSeconds = 0.2f;
+    const SoundHandle lSound = lAudio.Play(MakeClip(0.5f), lParams);
+
+    CHECK(RenderPeaks(lAudio, 0.02f).Max() < 0.1f);
+    RenderPeaks(lAudio, 0.2f);
+    const float lFull = RenderPeaks(lAudio).Max();
+    CHECK(lFull == doctest::Approx(0.5f).epsilon(0.05));
+
+    lAudio.FadeTo(lSound, 0.5f, 0.1f);
+    RenderPeaks(lAudio, 0.11f);
+    CHECK(RenderPeaks(lAudio).Max() == doctest::Approx(lFull * 0.5f).epsilon(0.05));
+
+    lAudio.Stop(lSound, 0.5f);
+    CHECK_FALSE(lAudio.IsPlaying(lSound));
+    CHECK(RenderPeaks(lAudio, 0.2f).Max() > 0.05f);   // still fading
+    RenderPeaks(lAudio, 0.35f);
     CHECK(RenderPeaks(lAudio).Max() == 0.f);
 }
 
@@ -273,26 +325,31 @@ TEST_CASE("AudioManager: what is heard follows the sound, bus and master volumes
     const float lFull = RenderPeaks(lAudio).Max();
     REQUIRE(lFull > 0.2f);
 
+    // Each change ramps over one block, so nothing clicks: let it finish, then measure.
     SUBCASE("the bus")
     {
         lAudio.SetBusVolume(EAudioBus::Effects, 0.f);
+        Settle(lAudio);
         CHECK(RenderPeaks(lAudio).Max() < 1e-4f);
 
         // Another bus is not affected.
         lAudio.SetBusVolume(EAudioBus::Effects, 1.f);
         lAudio.SetBusVolume(EAudioBus::Music, 0.f);
+        Settle(lAudio);
         CHECK(RenderPeaks(lAudio).Max() == doctest::Approx(lFull).epsilon(0.05));
     }
 
     SUBCASE("the master")
     {
         lAudio.SetMasterVolume(0.5f);
+        Settle(lAudio);
         CHECK(RenderPeaks(lAudio).Max() == doctest::Approx(lFull * 0.5f).epsilon(0.05));
     }
 
     SUBCASE("the sound")
     {
         lAudio.SetVolume(lSound, 0.25f);
+        Settle(lAudio);
         CHECK(RenderPeaks(lAudio).Max() == doctest::Approx(lFull * 0.25f).epsilon(0.05));
     }
 
@@ -303,6 +360,7 @@ TEST_CASE("AudioManager: what is heard follows the sound, bus and master volumes
         lSettings.EffectsVolume = 0.5f;
         lAudio.ApplySettings(lSettings);
         CHECK(lAudio.GetBusVolume(EAudioBus::Effects) == 0.5f);
+        Settle(lAudio);
         CHECK(RenderPeaks(lAudio).Max() == doctest::Approx(lFull * 0.5f).epsilon(0.05));
     }
 }
@@ -354,7 +412,51 @@ TEST_CASE("AudioManager: a spatial sound is panned toward its side and silent be
     }
 }
 
-TEST_CASE("AudioManager: sounds over the voice limit, silent clips and a stopped mixer play nothing")
+TEST_CASE("AudioManager: a handle of a sound that ended does nothing to the sound that took its voice")
+{
+    AudioManager lAudio(Headless(/*InMaxVoices*/1));
+    REQUIRE(lAudio.Startup());
+
+    const SoundHandle lOld = lAudio.Play(MakeClip(0.05f));
+    lAudio.Update(0.1);
+    REQUIRE_FALSE(lAudio.IsPlaying(lOld));
+
+    PlaySoundParams lParams;
+    lParams.bLoop = true;
+    const SoundHandle lNew = lAudio.Play(MakeClip(0.5f), lParams);
+    REQUIRE(lNew.GetIndex() == lOld.GetIndex());   // the same voice, another generation
+    CHECK(lNew != lOld);
+
+    lAudio.Stop(lOld);
+    lAudio.SetVolume(lOld, 0.f);
+    lAudio.SetPaused(lOld, true);
+
+    CHECK(lAudio.IsPlaying(lNew));
+    Settle(lAudio);
+    CHECK(RenderPeaks(lAudio).Max() == doctest::Approx(0.5f).epsilon(0.05));
+}
+
+TEST_CASE("AudioManager: a streamed clip sounds exactly like the same clip decoded")
+{
+    const auto lRender = [](const AudioClipResource& InClip)
+    {
+        AudioManager lAudio(Headless());
+        REQUIRE(lAudio.Startup());
+        lAudio.Play(InClip);
+
+        TDynArray<float> lFrames(static_cast<size_t>(MIX_RATE / 2) * 2);
+        lAudio.RenderFrames(lFrames.data(), MIX_RATE / 2);
+        CHECK(lAudio.GetVoiceCount() == 0);   // ended within the half second
+        return lFrames;
+    };
+
+    const TDynArray<float> lDecoded  = lRender(MakeClip(0.3f, 0.5f, AudioClipResource::EResidency::Decoded));
+    const TDynArray<float> lStreamed = lRender(MakeClip(0.3f, 0.5f, AudioClipResource::EResidency::Streamed));
+    CHECK(lDecoded == lStreamed);
+    CHECK(*std::max_element(lDecoded.begin(), lDecoded.end()) > 0.4f);
+}
+
+TEST_CASE("AudioManager: when every voice plays, a new sound replaces the least important one")
 {
     AudioManager lAudio(Headless(/*InMaxVoices*/2));
 
@@ -364,9 +466,43 @@ TEST_CASE("AudioManager: sounds over the voice limit, silent clips and a stopped
     REQUIRE(lAudio.Startup());
     CHECK_FALSE(lAudio.Play(AudioClipResource::Placeholder()).IsValid());
 
-    CHECK(lAudio.Play(MakeClip(0.1f)).IsValid());
-    CHECK(lAudio.Play(MakeClip(0.1f)).IsValid());
-    CHECK_FALSE(lAudio.Play(MakeClip(0.1f)).IsValid());   // the limit
+    PlaySoundParams lLoud;
+    lLoud.bLoop = true;
+    PlaySoundParams lQuiet = lLoud;
+    lQuiet.Volume = 0.1f;
+
+    SUBCASE("the quietest of equal priority")
+    {
+        const SoundHandle lA = lAudio.Play(MakeClip(0.5f), lLoud);
+        const SoundHandle lB = lAudio.Play(MakeClip(0.5f), lQuiet);
+        CHECK(lAudio.Play(MakeClip(0.5f), lLoud).IsValid());
+        CHECK(lAudio.IsPlaying(lA));
+        CHECK_FALSE(lAudio.IsPlaying(lB));
+        CHECK(lAudio.GetVoiceCount() == 2);
+    }
+
+    SUBCASE("the lowest priority, but never for a sound of an even lower one")
+    {
+        PlaySoundParams lLow = lLoud;
+        lLow.Priority = 10;
+        PlaySoundParams lLower = lLoud;
+        lLower.Priority = 5;
+
+        const SoundHandle lA = lAudio.Play(MakeClip(0.5f), lLow);
+        const SoundHandle lB = lAudio.Play(MakeClip(0.5f), lQuiet);   // quieter, but priority 128
+        CHECK_FALSE(lAudio.Play(MakeClip(0.5f), lLower).IsValid());
+        CHECK(lAudio.Play(MakeClip(0.5f), lLoud).IsValid());
+        CHECK_FALSE(lAudio.IsPlaying(lA));
+        CHECK(lAudio.IsPlaying(lB));
+    }
+
+    // Every voice comes back once the mixer is done with it: two new sounds start in free voices.
+    lAudio.StopAll();
+    Settle(lAudio);
+    const SoundHandle lFirst  = lAudio.Play(MakeClip(0.1f));
+    const SoundHandle lSecond = lAudio.Play(MakeClip(0.1f));
+    CHECK(lFirst.IsValid());
+    CHECK(lSecond.IsValid());
     CHECK(lAudio.GetVoiceCount() == 2);
 
     lAudio.Shutdown();
@@ -374,7 +510,7 @@ TEST_CASE("AudioManager: sounds over the voice limit, silent clips and a stopped
     CHECK(lAudio.GetVoiceCount() == 0);
 }
 
-TEST_CASE("AudioManager: a playing sound keeps its clip's bytes after the clip is gone")
+TEST_CASE("AudioManager: a playing sound keeps its clip's data after the clip is gone")
 {
     AudioManager lAudio(Headless());
     REQUIRE(lAudio.Startup());
@@ -389,6 +525,121 @@ TEST_CASE("AudioManager: a playing sound keeps its clip's bytes after the clip i
 
     CHECK(lAudio.IsPlaying(lSound));
     CHECK(RenderPeaks(lAudio).Max() > 0.1f);
+}
+
+namespace
+{
+    /** What a recording device heard, shared with the test (the manager owns the device). */
+    struct Recording
+    {
+        Mutex            Lock;
+        TDynArray<float> Frames;
+        TAtomic<Uint32>  Calls{ 0 };
+
+        /** The loudest sample of the last InFrames frames heard. */
+        float LastPeak(const size_t InFrames)
+        {
+            TLockGuard<Mutex> lGuard(Lock);
+            const size_t lStart = Frames.size() > InFrames * 2 ? Frames.size() - InFrames * 2 : 0;
+
+            float lPeak = 0.f;
+            for (size_t lIndex = lStart; lIndex < Frames.size(); ++lIndex)
+            {
+                lPeak = std::max(lPeak, std::abs(Frames[lIndex]));
+            }
+            return lPeak;
+        }
+    };
+
+    /** A device with its own thread pulling a period at a time, like a sound card, keeping it all. */
+    class RecordingDevice final : public IAudioDevice
+    {
+    public:
+        explicit RecordingDevice(TSharedPtr<Recording> InRecording) : m_Recording(Move(InRecording)) {}
+        ~RecordingDevice() override { Stop(); }
+
+        bool Start(const AudioDeviceDesc& InDesc, const AudioDeviceCallback InCallback, void* InUser) override
+        {
+            m_bRunning = true;
+            m_Thread   = Thread([this, InDesc, InCallback, InUser]()
+            {
+                TDynArray<float> lPeriod(static_cast<size_t>(PERIOD) * InDesc.Channels);
+                while (m_bRunning)
+                {
+                    InCallback(InUser, lPeriod.data(), PERIOD);
+                    {
+                        TLockGuard<Mutex> lGuard(m_Recording->Lock);
+                        m_Recording->Frames.insert(m_Recording->Frames.end(), lPeriod.begin(), lPeriod.end());
+                    }
+                    ++m_Recording->Calls;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                }
+            });
+            return true;
+        }
+
+        void Stop() override
+        {
+            m_bRunning = false;
+            if (m_Thread.joinable())
+            {
+                m_Thread.join();
+            }
+        }
+
+        Uint32      GetPeriodFrames() const noexcept override { return PERIOD; }
+        const char* GetName()         const noexcept override { return "Recording"; }
+
+    private:
+        static constexpr Uint32 PERIOD = 256;
+
+        TSharedPtr<Recording> m_Recording;
+        Thread                m_Thread;
+        TAtomic<bool>         m_bRunning{ false };
+    };
+
+    /** Waits up to 5 s for InCondition. */
+    bool WaitFor(const TFunction<bool()>& InCondition)
+    {
+        for (int lTry = 0; lTry < 5000; ++lTry)
+        {
+            if (InCondition())
+            {
+                return true;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        return InCondition();
+    }
+}
+
+TEST_CASE("AudioManager: with a device, the audio thread mixes ahead and the device plays it")
+{
+    TSharedPtr<Recording> lRecording = MakeShared<Recording>();
+
+    AudioManager::Desc lDesc = Headless();
+    lDesc.bHeadless = false;
+    AudioManager lAudio(lDesc, MakeUnique<RecordingDevice>(lRecording));
+    REQUIRE(lAudio.Startup());
+    CHECK_FALSE(lAudio.IsHeadless());
+
+    // Before any sound: the device gets silence.
+    REQUIRE(WaitFor([&lRecording]() { return lRecording->Calls.load() > 4; }));
+    CHECK(lRecording->LastPeak(1024) == 0.f);
+
+    PlaySoundParams lParams;
+    lParams.bLoop = true;
+    const SoundHandle lSound = lAudio.Play(MakeClip(0.2f), lParams);
+    CHECK(lAudio.IsPlaying(lSound));   // at once, before the audio thread has seen it
+
+    CHECK(WaitFor([&lRecording]() { return lRecording->LastPeak(256) > 0.4f; }));
+
+    lAudio.Stop(lSound);
+    CHECK_FALSE(lAudio.IsPlaying(lSound));
+    CHECK(WaitFor([&lRecording]() { return lRecording->LastPeak(2048) == 0.f; }));
+
+    lAudio.Shutdown();
+    CHECK_FALSE(lAudio.IsStarted());
 }
 
 // =============================================================================
@@ -521,10 +772,9 @@ TEST_CASE("AudioSubsystem: a spatial source follows its entity, heard from the l
     lFix.Frame();
     CHECK(RenderPeaks(lFix.Audio).Max() > 0.1f);
 
-    // The listener follows its entity too. Gain changes are smoothed over a few milliseconds (no
-    // click), so one more frame lets the mix settle before it is measured.
+    // The listener follows its entity too. Gain changes ramp over a block (no click), which the
+    // frame's mix covers.
     lEar.Get<TransformComponent>().Position = { -5000.f, 0.f };
-    lFix.Frame();
     lFix.Frame();
     CHECK(lFix.Audio.GetListenerPosition().x == doctest::Approx(-5000.f));
     CHECK(RenderPeaks(lFix.Audio).Max() < 1e-4f);
