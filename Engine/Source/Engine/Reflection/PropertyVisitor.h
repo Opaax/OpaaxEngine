@@ -4,7 +4,7 @@
 #include <iterator>
 #include <string_view>
 #include <tuple>
-#include <type_traits>
+#include "Core/Templates/TypeTraits.h"
 #include <utility>
 
 #include "Core/Color/LinearColor.h"
@@ -144,7 +144,7 @@ namespace Opaax
         {
             typename T::DataType;
             requires T::k_IsDataAssetRef;
-            { InValue.Path } -> std::convertible_to<OpaaxString&>;
+            { InValue.Path } -> CConvertibleTo<OpaaxString&>;
         };
 
         template<typename T>
@@ -155,10 +155,10 @@ namespace Opaax
 
         template<typename T>
         inline constexpr bool k_IsPlainVisit =
-            std::is_same_v<T, bool> || std::is_same_v<T, Int16> || std::is_same_v<T, Int32> ||
-            std::is_same_v<T, Uint32> || std::is_same_v<T, float> || std::is_same_v<T, Vector2F> ||
-            std::is_same_v<T, Vector3F> || std::is_same_v<T, Vector4F> || std::is_same_v<T, LinearColor> ||
-            std::is_same_v<T, OpaaxString> || std::is_same_v<T, OpaaxStringID>;
+            TIsSame<T, bool> || TIsSame<T, Int16> || TIsSame<T, Int32> ||
+            TIsSame<T, Uint32> || TIsSame<T, float> || TIsSame<T, Vector2F> ||
+            TIsSame<T, Vector3F> || TIsSame<T, Vector4F> || TIsSame<T, LinearColor> ||
+            TIsSame<T, OpaaxString> || TIsSame<T, OpaaxStringID>;
 
         /** The labels of E, built once. */
         template<CEnumWithValues E>
@@ -266,7 +266,7 @@ namespace Opaax
         {
             InVisitor.VisitDataAssetRef(InName, InValue.Path, DeriveTypeLeafName<typename TValue::DataType>(), InMeta);
         }
-        else if constexpr (k_IsList<TValue> && !std::is_same_v<TValue, TDynArray<bool>>)
+        else if constexpr (k_IsList<TValue> && !TIsSame<TValue, TDynArray<bool>>)
         {
             TPropertyList<typename TValue::value_type> lList(InValue);
             InVisitor.VisitList(InName, lList, InMeta);

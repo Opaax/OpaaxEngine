@@ -4,7 +4,7 @@
 
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringView.hpp"
-#include "Core/Hash/OpaaxHash.h"   // std::hash + OpaaxHash::Hash for both types
+#include "Core/Hash/OpaaxHash.h"   // THash + OpaaxHash::Hash for both types
 
 #include <spdlog/fmt/fmt.h>
 
@@ -210,7 +210,7 @@ TEST_CASE("OpaaxStringView: hashes agree with OpaaxString for the same bytes")
     const OpaaxStringView lView(lStr);
 
     CHECK(OpaaxHash::Hash(lStr) == OpaaxHash::Hash(lView));
-    CHECK(std::hash<OpaaxString>{}(lStr) == std::hash<OpaaxStringView>{}(lView));
+    CHECK(THash<OpaaxString>{}(lStr) == THash<OpaaxStringView>{}(lView));
 
     // And the slice must NOT hash like the whole — that is what proves the length is honoured.
     CHECK(OpaaxHash::Hash(lView.SubString(0, 8)) != OpaaxHash::Hash(lView));

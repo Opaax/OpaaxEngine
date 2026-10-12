@@ -116,7 +116,7 @@ TEST_CASE("OpaaxStringID: Find resolves an existing name and does NOT add a miss
 // =============================================================================
 // Hashing
 // =============================================================================
-TEST_CASE("OpaaxStringID: std::hash makes the handle itself a map key")
+TEST_CASE("OpaaxStringID: THash makes the handle itself a map key")
 {
     TUnorderedMap<OpaaxStringID, int> lMap;
     lMap[OPAAX_ID("OpaaxStringIDTests_Key_A")] = 1;

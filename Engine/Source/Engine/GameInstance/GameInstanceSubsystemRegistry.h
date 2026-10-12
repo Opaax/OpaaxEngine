@@ -1,7 +1,7 @@
 #pragma once
 
 #include <functional>   // std::ref
-#include <type_traits>
+#include "Core/Templates/TypeTraits.h"
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
@@ -38,7 +38,7 @@ namespace Opaax
     //   can register their own types.
     // =============================================================================
     template<typename T>
-    requires std::is_base_of_v<IGameInstanceSubsystem, T>
+    requires TIsBaseOf<IGameInstanceSubsystem, T>
     class TGameInstanceSubsystemEntry final : public IGameInstanceSubsystemEntry
     {
     public:
@@ -91,7 +91,7 @@ namespace Opaax
          * @return True if registered
          */
         template<typename T>
-        requires std::is_base_of_v<IGameInstanceSubsystem, T>
+        requires TIsBaseOf<IGameInstanceSubsystem, T>
         bool Register(OpaaxStringID InName)
         {
             // Built here (T is known), stored by an out-of-line function.

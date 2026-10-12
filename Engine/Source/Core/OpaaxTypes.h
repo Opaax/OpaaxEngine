@@ -13,6 +13,8 @@
 #include <vector>
 #include <filesystem>
 
+#include "Core/Templates/TypeTraits.h"
+
 // =============================================================================
 // Type aliases — use these in engine code instead of bare std types.
 //
@@ -22,6 +24,7 @@
 //               TInitArray<T>                        (std::initializer_list<T>)
 //               TUnorderedMap<K, V[, Hash, Eq, Alloc]> (std::unordered_map)
 //               TUnorderedSet<K[, Hash, Eq, Alloc]>  (std::unordered_set)
+//   Hash:       THash<T>                             (std::hash<T>; specialize it for a key type)
 //   Function:   TFunction<Sig>                       (std::function<Sig>)
 //   Pointers:   TUniquePtr<T>, MakeUnique<T>(args...)
 //               TSharedPtr<T>, MakeShared<T>(args...)
@@ -37,6 +40,7 @@
 //
 // The T prefix marks a template alias.
 // Strings: see Core/String/OpaaxString.hpp and Core/String/OpaaxStringID.hpp.
+// Type traits and concepts: see Core/Templates/TypeTraits.h.
 // Bare types (int, size_t, ...) are fine at third-party API boundaries.
 // =============================================================================
 namespace Opaax
@@ -65,11 +69,20 @@ namespace Opaax
 
     template<typename FType>
     using TInitArray = std::initializer_list<FType>;
-    
+
+    /**
+     * The hash TUnorderedMap and TUnorderedSet use by default. A type becomes a key by
+     * specializing it next to its definition: template<> struct THash<Guid> { size_t operator()... }.
+     */
+    template<typename T>
+    struct THash : std::hash<T>
+    {
+    };
+
     template <
         typename TKey,
         typename TValue,
-        typename Hash = std::hash<TKey>,
+        typename Hash = THash<TKey>,
         typename KeyEqual = std::equal_to<TKey>,
         typename Allocator = std::allocator<std::pair<const TKey, TValue>>
     >
@@ -77,7 +90,7 @@ namespace Opaax
 
     template <
         typename TKey,
-        typename Hash = std::hash<TKey>,
+        typename Hash = THash<TKey>,
         typename KeyEqual = std::equal_to<TKey>,
         typename Allocator = std::allocator<TKey>
     >
@@ -134,19 +147,19 @@ namespace Opaax
     // Misc Aliases
     // =============================================================================
     template <typename T>
-    constexpr std::remove_reference_t<T>&& Move(T&& Arg) noexcept
+    constexpr TRemoveReference<T>&& Move(T&& Arg) noexcept
     {
         return std::move(Arg);
     }
-    
+
     template <typename T>
-    constexpr T&& Forward(std::remove_reference_t<T>& Arg) noexcept
+    constexpr T&& Forward(TRemoveReference<T>& Arg) noexcept
     {
         return static_cast<T&&>(Arg);
     }
 
     template <typename T>
-    constexpr T&& Forward(std::remove_reference_t<T>&& Arg) noexcept
+    constexpr T&& Forward(TRemoveReference<T>&& Arg) noexcept
     {
         return static_cast<T&&>(Arg);
     }

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/OpaaxTypes.h"
-#include <type_traits>
+#include "Core/Templates/TypeTraits.h"
 
 #include "Core/String/OpaaxString.hpp"
 
@@ -60,10 +60,10 @@ namespace Opaax
      * True if T is a hard resource reference.
      */
     template<typename T>
-    struct TIsHardResourcePath : std::false_type {};
+    struct TIsHardResourcePath : FalseType {};
 
     template<typename TResource>
-    struct TIsHardResourcePath<TResourcePath<TResource, EResourceLoad::Hard>> : std::true_type {};
+    struct TIsHardResourcePath<TResourcePath<TResource, EResourceLoad::Hard>> : TrueType {};
 
     template<typename T>
     inline constexpr bool k_IsHardResourcePath = TIsHardResourcePath<T>::value;

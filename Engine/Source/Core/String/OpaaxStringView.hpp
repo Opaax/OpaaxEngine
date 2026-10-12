@@ -16,7 +16,7 @@ namespace Opaax
      * Like std::string_view, do not keep it longer than the bytes it points to.
      *
      * @see OpaaxString for the owning form.
-     * @see Core/Hash/OpaaxHash.h for std::hash<OpaaxStringView>.
+     * @see Core/Hash/OpaaxHash.h for THash<OpaaxStringView>.
      */
     class OpaaxStringView final
     {

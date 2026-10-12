@@ -321,7 +321,7 @@ TEST_CASE("Hard refs: the load policy is part of the TYPE")
 
     // The alias is the SAME type, not a parallel one — which is why one json bridge and one
     // property drawer serve both.
-    static_assert(std::is_same_v<THardResourcePath<ProbeResource>,
+    static_assert(TIsSame<THardResourcePath<ProbeResource>,
                                  TResourcePath<ProbeResource, EResourceLoad::Hard>>);
 
     CHECK(k_IsHardResourcePath<THardResourcePath<ProbeResource>>);

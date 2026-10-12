@@ -6,10 +6,10 @@
 
 namespace Opaax
 {
-    template<CONCEPT_TIsFloat T>
+    template<CFloatingPoint T>
     struct TDegree;
 
-    template<CONCEPT_TIsFloat T>
+    template<CFloatingPoint T>
     struct TRadian final : public TFloatValue<T>
     {
         using Base = TFloatValue<T>;

@@ -1,7 +1,7 @@
 // EditorUndoableConcept.h
 #pragma once
 
-#include <concepts>
+#include "Core/Templates/TypeTraits.h"
 
 namespace Opaax::Editor
 {
@@ -13,8 +13,8 @@ namespace Opaax::Editor
     template<typename T, typename ContextType>
     concept EditorUndoable = requires(T InStep, const T InConstStep, ContextType& InContext)
     {
-        { InStep.Undo(InContext) } -> std::same_as<void>;
-        { InStep.Redo(InContext) } -> std::same_as<void>;
-        { InConstStep.Label() }    -> std::convertible_to<const char*>;
+        { InStep.Undo(InContext) } -> CSameAs<void>;
+        { InStep.Redo(InContext) } -> CSameAs<void>;
+        { InConstStep.Label() }    -> CConvertibleTo<const char*>;
     };
 }

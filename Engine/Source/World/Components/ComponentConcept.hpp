@@ -1,6 +1,6 @@
 #pragma once
 
-#include <type_traits>
+#include "Core/Templates/TypeTraits.h"
 
 #include <nlohmann/json.hpp>
 
@@ -20,9 +20,9 @@ namespace Opaax
     template<typename T>
     concept CComponent =
         // Default-constructible (the "Add Component" path).
-        std::is_default_constructible_v<T>
+        TIsDefaultConstructible<T>
         // Movable: entt relocates components when its pool grows.
-        && std::is_move_constructible_v<T>
+        && TIsMoveConstructible<T>
         // The JSON part, shared with config data types (Core/Serialization/JsonConcept.h).
         && CJsonSerializable<T>;
 }

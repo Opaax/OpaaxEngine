@@ -6,7 +6,7 @@
 
 #include <filesystem>
 #include <string>
-#include <unordered_set>
+#include "Core/OpaaxTypes.h"
 
 #include "Resources/ResourceManager.h"   // before PrefabResource — completes LoadContext
 #include "World/Components/ComponentRegistry.h"
@@ -148,7 +148,7 @@ TEST_CASE("Prefab: one prefab instantiated TWICE into one world gives two live i
     CHECK(lWorld.GetEntityCount() == 4);
 
     // Every identity distinct.
-    std::unordered_set<Guid> lIds;
+    TUnorderedSet<Guid> lIds;
     for (const EntityData& lEntity : lFirst.Entities)  { lIds.insert(lEntity.Id); }
     for (const EntityData& lEntity : lSecond.Entities) { lIds.insert(lEntity.Id); }
     CHECK(lIds.size() == 4);
@@ -321,7 +321,7 @@ TEST_CASE("Prefab: BuildPrefab clears OwnerMap and KEEPS the guids")
 
     // The guids become the file's TEMPLATE ids, so they must survive: BuildInstance derives from
     // them and an override record will key by them.
-    std::unordered_set<Guid> lKept;
+    TUnorderedSet<Guid> lKept;
     for (const EntityData& lEntity : lPrefab.Entities) { lKept.insert(lEntity.Id); }
     CHECK(lKept.count(lA.GetGuid()) == 1);
     CHECK(lKept.count(lB.GetGuid()) == 1);
@@ -496,7 +496,7 @@ TEST_CASE("PrefabFold: Fold -> Expand reproduces the entities, guids included")
     MapData lCaptured = PlaceAndCapture(lWorld, lPrefab, lRegistry, "Prefabs/Gun.opaaxprefab",
                                         Guid::New(), lMap);
 
-    std::unordered_set<Guid> lBefore;
+    TUnorderedSet<Guid> lBefore;
     for (const EntityData& lEntity : lCaptured.Entities) { lBefore.insert(lEntity.Id); }
 
     REQUIRE(PrefabFold::Fold(lCaptured, lResolver, lRegistry) == 1);
@@ -507,7 +507,7 @@ TEST_CASE("PrefabFold: Fold -> Expand reproduces the entities, guids included")
 
     // The guids came back IDENTICAL, which is what an inter-entity reference survives on
     // — and it works because Expand re-derives rather than re-mints.
-    std::unordered_set<Guid> lAfter;
+    TUnorderedSet<Guid> lAfter;
     for (const EntityData& lEntity : lCaptured.Entities) { lAfter.insert(lEntity.Id); }
     CHECK(lAfter == lBefore);
 }

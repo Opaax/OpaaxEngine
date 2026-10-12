@@ -40,7 +40,7 @@ namespace Opaax
          * @return False if sealed, if the name is invalid, or if it is already used (no replacing)
          */
         template<typename T>
-        requires std::is_base_of_v<IMoverMode, T>
+        requires TIsBaseOf<IMoverMode, T>
         bool Register(const OpaaxStringID InName)
         {
             if (m_bSealed)

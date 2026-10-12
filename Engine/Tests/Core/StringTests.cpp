@@ -4,7 +4,7 @@
 #include <doctest.h>
 
 #include "Core/String/OpaaxString.hpp"
-#include "Core/Hash/OpaaxHash.h"   // std::hash<OpaaxString>
+#include "Core/Hash/OpaaxHash.h"   // THash<OpaaxString>
 
 #include <cstdint>
 #include <cstring>
@@ -215,7 +215,7 @@ TEST_CASE("OpaaxString: the string_view ctor copies exactly the view")
 // =============================================================================
 // Hashing — TUnorderedMap<OpaaxString, T> with the DEFAULT hasher
 // =============================================================================
-TEST_CASE("OpaaxString: std::hash makes it a key without naming OpaaxHash at the call site")
+TEST_CASE("OpaaxString: THash makes it a key without naming OpaaxHash at the call site")
 {
     TUnorderedMap<OpaaxString, int> lMap;
     lMap[OpaaxString("alpha")] = 1;
@@ -228,7 +228,7 @@ TEST_CASE("OpaaxString: std::hash makes it a key without naming OpaaxHash at the
     // Equal values hash equally whichever storage they use — the map would lose entries otherwise.
     lMap[OpaaxString("alpha")] = 3;
     CHECK(lMap.size() == 2u);
-    CHECK(std::hash<OpaaxString>{}(OpaaxString("alpha")) == std::hash<OpaaxString>{}(OpaaxString("alpha")));
+    CHECK(THash<OpaaxString>{}(OpaaxString("alpha")) == THash<OpaaxString>{}(OpaaxString("alpha")));
 }
 
 // =============================================================================

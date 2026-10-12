@@ -4,7 +4,7 @@
 // constant evaluation.
 #include <doctest.h>
 
-#include <type_traits>
+#include "Core/Templates/TypeTraits.h"
 
 #include "Core/Maths/MathTypes.h"
 #include "Core/Reflection/OpaaxProperty.h"
@@ -96,14 +96,14 @@ TEST_CASE("OPAAX_PROPERTIES: the value type comes from the member pointer, not f
 {
     constexpr auto lProperties = Probe::GetProperties();
 
-    using Speed  = std::remove_cvref_t<decltype(std::get<0>(lProperties))>;
-    using Count  = std::remove_cvref_t<decltype(std::get<1>(lProperties))>;
-    using Colour = std::remove_cvref_t<decltype(std::get<2>(lProperties))>;
+    using Speed  = TRemoveCVRef<decltype(std::get<0>(lProperties))>;
+    using Count  = TRemoveCVRef<decltype(std::get<1>(lProperties))>;
+    using Colour = TRemoveCVRef<decltype(std::get<2>(lProperties))>;
 
-    static_assert(std::is_same_v<Speed::ValueType, float>);
-    static_assert(std::is_same_v<Count::ValueType, Int32>);
-    static_assert(std::is_same_v<Colour::ValueType, Vector4F>);
-    static_assert(std::is_same_v<Speed::ClassType, Probe>);
+    static_assert(TIsSame<Speed::ValueType, float>);
+    static_assert(TIsSame<Count::ValueType, Int32>);
+    static_assert(TIsSame<Colour::ValueType, Vector4F>);
+    static_assert(TIsSame<Speed::ClassType, Probe>);
 
     CHECK(true); // the assertions above are the test
 }

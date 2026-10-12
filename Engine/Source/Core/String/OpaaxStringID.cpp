@@ -2,7 +2,7 @@
 
 #include "Core/Hash/OpaaxHash.h"
 
-#include <unordered_map>
+#include "Core/OpaaxTypes.h"
 #include <shared_mutex>
 
 namespace Opaax
@@ -69,9 +69,9 @@ namespace Opaax
             return lIt->second;
         }
 
-        std::unordered_map<OpaaxString, Uint32, OpaaxHash> m_Lookup;   // owns the text
-        TDynArray<const OpaaxString*>                      m_Strings;  // id -> text
-        mutable std::shared_mutex                          m_Mutex;
+        TUnorderedMap<OpaaxString, Uint32, OpaaxHash> m_Lookup;   // owns the text
+        TDynArray<const OpaaxString*>                 m_Strings;  // id -> text
+        mutable std::shared_mutex                     m_Mutex;
     };
 
     // =========================================================================

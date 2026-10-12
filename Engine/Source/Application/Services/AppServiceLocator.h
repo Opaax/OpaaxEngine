@@ -1,10 +1,9 @@
 ﻿#pragma once
-#include <type_traits>
 
 #include "Application/Services/IAppService.h"
 #include "Core/EngineAPI.h"
-#include "Core/OpaaxTRequire.hpp"
 #include "Core/OpaaxTypes.h"
+#include "Core/Templates/TypeTraits.h"
 
 namespace Opaax
 {
@@ -41,7 +40,7 @@ namespace Opaax
          * @return The constructed service
          */
         template<class TInterface, class TImpl, typename... Args>
-        requires TIsBaseOf(TImpl, TInterface) && TIsBaseOf(TInterface, IAppService)
+        requires TIsBaseOf<TInterface, TImpl> && TIsBaseOf<IAppService, TInterface>
         TInterface& Provide(Args&&... InArgs)
         {
             TUniquePtr<TImpl>   lImpl   = MakeUnique<TImpl>(Forward<Args>(InArgs)...);
@@ -59,7 +58,7 @@ namespace Opaax
          * @return The adopted service
          */
         template<class TInterface>
-        requires std::is_base_of_v<IAppService, TInterface>
+        requires TIsBaseOf<IAppService, TInterface>
         TInterface& ProvideInstance(TUniquePtr<TInterface> InImpl)
         {
             TInterface&         lRef = *InImpl;
@@ -74,7 +73,7 @@ namespace Opaax
          * @return The service, or its null object if not provided. Never null.
          */
         template<class T>
-        requires std::is_base_of_v<IAppService, T>
+        requires TIsBaseOf<IAppService, T>
         T& Get() const
         {
             const auto lIt = m_Services.find(T::StaticTypeID());
@@ -94,7 +93,7 @@ namespace Opaax
         // * @return 
         // */
         //template<class T>
-        //requires std::is_base_of_v<IAppService, T>
+        //requires TIsBaseOf<IAppService, T>
         //T*   TryGet() const          // raw ptr to the REAL impl, or null
         //{
         //    const auto lIt = m_Services.find(T::StaticTypeID());

@@ -1,7 +1,7 @@
 #include "World/Serialization/MapJson.h"
 
 #include <algorithm>
-#include <type_traits>
+#include "Core/Templates/TypeTraits.h"
 
 namespace Opaax
 {
@@ -11,7 +11,7 @@ namespace Opaax
         template<typename TData>
         nlohmann::json BuildJson(TData&& InData)
         {
-            constexpr bool k_Consume = !std::is_lvalue_reference_v<TData>;
+            constexpr bool k_Consume = !TIsLValueReference<TData>;
 
             nlohmann::json lEntities;
             if constexpr (k_Consume)

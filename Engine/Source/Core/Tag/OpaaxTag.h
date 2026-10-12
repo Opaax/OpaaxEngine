@@ -155,17 +155,17 @@ namespace Opaax
     private:
         OpaaxStringID m_Name;
     };
-} // namespace Opaax
 
-// std::hash<OpaaxTag>: the interned id is already a good hash.
-template <>
-struct std::hash<Opaax::OpaaxTag>
-{
-    size_t operator()(Opaax::OpaaxTag Tag) const noexcept
+    // THash<OpaaxTag>: the interned id is already a good hash.
+    template <>
+    struct THash<OpaaxTag>
     {
-        return static_cast<size_t>(Tag.GetName().GetId());
-    }
-};
+        size_t operator()(OpaaxTag Tag) const noexcept
+        {
+            return static_cast<size_t>(Tag.GetName().GetId());
+        }
+    };
+} // namespace Opaax
 
 // Formatter for spdlog / fmtlib. An invalid tag logs as "None".
 #include <spdlog/fmt/fmt.h>

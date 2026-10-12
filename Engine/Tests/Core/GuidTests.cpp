@@ -1,6 +1,6 @@
 #include <doctest.h>
 
-#include <unordered_set>
+#include "Core/OpaaxTypes.h"
 
 #include "Core/GUID/Guid.h"
 
@@ -83,7 +83,7 @@ TEST_CASE("Guid::Derive: 100 instances x 20 entities collide nowhere")
         lTemplates.emplace_back(Guid::New());
     }
 
-    std::unordered_set<Guid> lSeen;
+    TUnorderedSet<Guid> lSeen;
     for (Int32 lInstance = 0; lInstance < 100; ++lInstance)
     {
         const Guid lInstanceId = Guid::New();

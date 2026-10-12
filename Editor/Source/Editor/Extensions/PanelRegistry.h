@@ -1,6 +1,6 @@
 #pragma once
 
-#include <concepts>
+#include "Core/Templates/TypeTraits.h"
 
 #include "Core/OpaaxTypes.h"                // TUniquePtr, TDynArray, TFunction, Uint64, Move
 #include "Editor/Panels/IEditorPanel.h"     // the factory needs the complete type
@@ -17,7 +17,7 @@ namespace Opaax::Editor
 
     /** What Register<T> accepts: a panel constructed from the context only. */
     template<typename T>
-    concept CEditorPanel = std::derived_from<T, IEditorPanel> && std::constructible_from<T, EditorContext&>;
+    concept CEditorPanel = CDerivedFrom<T, IEditorPanel> && CConstructibleFrom<T, EditorContext&>;
 
     // =============================================================================
     // PanelEntry — one registered panel: its description and the factory that builds it.

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <concepts>
+#include "Core/Templates/TypeTraits.h"
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
@@ -44,7 +44,7 @@ namespace Opaax
     template<typename T>
     concept CResourceFormat = CResource<T> && requires
     {
-        { T::Format } -> std::convertible_to<const ResourceFormat&>;
+        { T::Format } -> CConvertibleTo<const ResourceFormat&>;
     };
 
     /**

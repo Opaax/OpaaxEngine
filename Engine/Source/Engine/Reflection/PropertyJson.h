@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include <type_traits>
+#include "Core/Templates/TypeTraits.h"
 
 #include <nlohmann/json.hpp>
 
@@ -75,7 +75,7 @@ namespace Opaax
             {
                 return PropertiesToJson(InValue);
             }
-            else if constexpr (k_IsList<TValue> && !std::is_same_v<TValue, TDynArray<bool>>)
+            else if constexpr (k_IsList<TValue> && !TIsSame<TValue, TDynArray<bool>>)
             {
                 nlohmann::json lArray = nlohmann::json::array();
                 for (const auto& lElement : InValue)
@@ -115,7 +115,7 @@ namespace Opaax
                     OutBadFields->push_back(InPath);
                 }
             }
-            else if constexpr (k_IsList<TValue> && !std::is_same_v<TValue, TDynArray<bool>>)
+            else if constexpr (k_IsList<TValue> && !TIsSame<TValue, TDynArray<bool>>)
             {
                 if (!InJson.is_array())
                 {

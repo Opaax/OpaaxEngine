@@ -15,9 +15,8 @@
 #include "World/Components/ComponentConcept.hpp"
 #include "World/Entity/EntityTypes.h"
 
-#include <concepts>
+#include "Core/Templates/TypeTraits.h"
 #include <tuple>       // std::apply
-#include <type_traits>
 
 namespace Opaax
 {
@@ -190,11 +189,11 @@ namespace Opaax
             return false;
         }
 
-        bool IsBehaviour() const override { return std::derived_from<T, Behaviour>; }
+        bool IsBehaviour() const override { return CDerivedFrom<T, Behaviour>; }
 
         Behaviour* TryGetBehaviour(EntityRegistry& InRegistry, EntityID InEntity) const override
         {
-            if constexpr (std::derived_from<T, Behaviour>)
+            if constexpr (CDerivedFrom<T, Behaviour>)
             {
                 return InRegistry.try_get<T>(InEntity);
             }
@@ -207,7 +206,7 @@ namespace Opaax
         void ForEachBehaviour(EntityRegistry& InRegistry,
                               const TFunction<void(EntityID, Behaviour&)>& InFunc) const override
         {
-            if constexpr (std::derived_from<T, Behaviour>)
+            if constexpr (CDerivedFrom<T, Behaviour>)
             {
                 for (const auto [lEntity, lBehaviour] : InRegistry.view<T>().each())
                 {
@@ -218,7 +217,7 @@ namespace Opaax
 
         void ConnectBehaviourSignals(EntityRegistry& InRegistry, IBehaviourSignalSink& InSink) const override
         {
-            if constexpr (std::derived_from<T, Behaviour>)
+            if constexpr (CDerivedFrom<T, Behaviour>)
             {
                 InRegistry.on_construct<T>().template connect<&TComponentEntry::OnBehaviourConstructed>(InSink);
                 InRegistry.on_destroy<T>().template connect<&TComponentEntry::OnBehaviourDestroyed>(InSink);
@@ -227,7 +226,7 @@ namespace Opaax
 
         void DisconnectBehaviourSignals(EntityRegistry& InRegistry, IBehaviourSignalSink& InSink) const override
         {
-            if constexpr (std::derived_from<T, Behaviour>)
+            if constexpr (CDerivedFrom<T, Behaviour>)
             {
                 InRegistry.on_construct<T>().template disconnect<&TComponentEntry::OnBehaviourConstructed>(InSink);
                 InRegistry.on_destroy<T>().template disconnect<&TComponentEntry::OnBehaviourDestroyed>(InSink);
@@ -242,7 +241,7 @@ namespace Opaax
 
         static void OnBehaviourDestroyed(IBehaviourSignalSink& InSink, EntityRegistry& InRegistry, EntityID InEntity)
         {
-            if constexpr (std::derived_from<T, Behaviour>)
+            if constexpr (CDerivedFrom<T, Behaviour>)
             {
                 if (T* lBehaviour = InRegistry.try_get<T>(InEntity))
                 {
@@ -264,7 +263,7 @@ namespace Opaax
                            {
                                ([this](const auto& InProperty)
                                 {
-                                    using TValue = typename std::decay_t<decltype(InProperty)>::ValueType;
+                                    using TValue = typename TDecay<decltype(InProperty)>::ValueType;
 
                                     if constexpr (k_IsHardResourcePath<TValue>)
                                     {

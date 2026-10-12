@@ -1,6 +1,6 @@
 #pragma once
 
-#include <concepts>
+#include "Core/Templates/TypeTraits.h"
 #include <optional>
 
 #include "Core/EngineAPI.h"
@@ -460,7 +460,7 @@ namespace Opaax
         static Uint64 ComputeBytes(const T& InValue) noexcept
         {
             // Use ByteSize() if the type has it, else the struct size.
-            if constexpr (requires(const T& v) { { v.ByteSize() } -> std::convertible_to<Uint64>; })
+            if constexpr (requires(const T& v) { { v.ByteSize() } -> CConvertibleTo<Uint64>; })
             {
                 return InValue.ByteSize();
             }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <concepts>
+#include "Core/Templates/TypeTraits.h"
 #include <optional>
 
 #include "Core/OpaaxTypes.h"
@@ -47,11 +47,11 @@ namespace Opaax
     concept CResource = requires(const char* InPath, LoadContext& InCtx)
     {
         // Full object or nothing: no exceptions, no partial resources.
-        { T::Load(InPath, InCtx) } -> std::same_as<std::optional<T>>;
+        { T::Load(InPath, InCtx) } -> CSameAs<std::optional<T>>;
         // Built once per pool (pink texture, silent clip, empty table, ...).
-        { T::Placeholder() }       -> std::same_as<T>;
+        { T::Placeholder() }       -> CSameAs<T>;
         // Placeholder vs FailFast.
-        { T::FailPolicy }          -> std::convertible_to<EFailPolicy>;
+        { T::FailPolicy }          -> CConvertibleTo<EFailPolicy>;
 
         // Optional, detected at compile time:
         //   void   Initialize()      — main-thread GPU upload, run once.

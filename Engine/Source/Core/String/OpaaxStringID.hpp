@@ -101,23 +101,22 @@ namespace Opaax
     // Creates an OpaaxStringID
     #define OPAAX_ID(STR) ::Opaax::OpaaxStringID(STR)
 
-} // namespace Opaax
-
-// std::hash<OpaaxStringID>: the id is already a good hash.
-template<>
-struct std::hash<Opaax::OpaaxStringID>
-{
-    size_t operator()(const Opaax::OpaaxStringID& StringID) const noexcept
+    // THash<OpaaxStringID>: the id is already a good hash.
+    template<>
+    struct THash<OpaaxStringID>
     {
-        return static_cast<size_t>(StringID.GetId());
-    }
-};
+        size_t operator()(const OpaaxStringID& StringID) const noexcept
+        {
+            return static_cast<size_t>(StringID.GetId());
+        }
+    };
+} // namespace Opaax
 
 // Formatter for spdlog / fmtlib (no copy).
 #include <spdlog/fmt/fmt.h>
 
 template<typename T>
-struct fmt::formatter<T, std::enable_if_t<std::is_same_v<T, Opaax::OpaaxStringID>, char>>
+struct fmt::formatter<T, Opaax::TEnableIf<Opaax::TIsSame<T, Opaax::OpaaxStringID>, char>>
     : fmt::formatter<fmt::string_view>
 {
     auto format(const T& StringID, format_context& CTX) const

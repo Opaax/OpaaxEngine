@@ -5,8 +5,6 @@
 #include "Core/String/OpaaxString.hpp"
 #include "World/Entity/EntityTypes.h"
 
-#include <unordered_map>
-
 namespace Opaax
 {
     class Entity;
@@ -89,7 +87,7 @@ namespace Opaax::Editor
 
         const TDynArray<EntityID>* ChildrenOf(EntityID InEntity) const;
 
-        std::unordered_map<Uint32, TDynArray<EntityID>> m_Children;   // by entity bits
+        TUnorderedMap<Uint32, TDynArray<EntityID>> m_Children;   // by entity bits
         TDynArray<EntityID>                             m_Roots;
 
         EntityTreeDrop       m_Drop;

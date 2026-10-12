@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-#include "Core/OpaaxTRequire.hpp"
+#include "Core/Templates/TypeTraits.h"
 #include "Core/EngineAPI.h"
 #include "Core/Maths/MathsStatics.h"
 #include "Core/OpaaxTypes.h"
@@ -19,7 +19,7 @@ namespace Opaax
         * @param A    The number for which to calculate the absolute value
         * @return     The absolute value of the input number
         */
-        template <CONCEPT_TIsFloatOrIntegral T>
+        template <CArithmetic T>
         [[nodiscard]] static constexpr FORCEINLINE T Abs(const T A)
         {
             return A < static_cast<T>(0) ? -A : A;
@@ -32,7 +32,7 @@ namespace Opaax
          * @param B   Second value to compare
          * @return    The larger of the two input values
          */
-        template <CONCEPT_TIsFloatOrIntegral T>
+        template <CArithmetic T>
         [[nodiscard]] static constexpr FORCEINLINE T Max(const T A, const T B)
         {
             return B < A ? A : B;
@@ -45,7 +45,7 @@ namespace Opaax
          * @param B   Second value to compare
          * @return    The smaller of the two input values
          */
-        template <CONCEPT_TIsFloatOrIntegral T>
+        template <CArithmetic T>
         [[nodiscard]] static constexpr FORCEINLINE T Min(const T A, const T B)
         {
             return A < B ? A : B;
@@ -54,7 +54,7 @@ namespace Opaax
         /**
          * Checks if value is within a range, exclusive on MaxValue.
          */
-        template <CONCEPT_TIsFloatOrIntegral T, CONCEPT_TIsFloatOrIntegral U>
+        template <CArithmetic T, CArithmetic U>
         [[nodiscard]] static constexpr FORCEINLINE bool IsWithin(const T& TestValue, const U& MinValue, const U& MaxValue)
         {
             return TestValue >= MinValue && TestValue < MaxValue;
@@ -63,7 +63,7 @@ namespace Opaax
         /**
          * Checks if value is within a range, inclusive on MaxValue.
          */
-        template <CONCEPT_TIsFloatOrIntegral T, CONCEPT_TIsFloatOrIntegral U>
+        template <CArithmetic T, CArithmetic U>
         [[nodiscard]] static constexpr FORCEINLINE bool IsWithinInclusive(const T& TestValue, const U& MinValue, const U& MaxValue)
         {
             return TestValue >= MinValue && TestValue <= MaxValue;
@@ -126,7 +126,7 @@ namespace Opaax
          * @param Value    Number to check if it is NaN
          * @return     true if F is NaN, false otherwise
          */
-        template <CONCEPT_TIsFloat T>
+        template <CFloatingPoint T>
         [[nodiscard]] static FORCEINLINE bool IsNaN(T Value)
         {
             // std::isnan() is C99, not supported by all compilers
@@ -195,7 +195,7 @@ namespace Opaax
          * @param MaxValue  The maximum value of the range
          * @return          The clamped value within the specified range
          */
-        template <CONCEPT_TIsFloatOrIntegral T>
+        template <CArithmetic T>
         [[nodiscard]] static constexpr FORCEINLINE T Clamp(const T X, const T MinValue, const T MaxValue)
         {
             return Max(Min(X, MaxValue), MinValue);
@@ -737,7 +737,7 @@ namespace Opaax
          *	@param Alpha The interpolation factor (usually between 0.0 and 1.0)
          *	@return      The interpolated value between A and B at the given Alpha factor
          */
-        template <typename T, typename U, TEnebleIf(TIsFloat(U)|| TIsSameAs(T, U) && TIsSameAs(T, bool))>
+        template <typename T, typename U, TEnableIf<TIsFloatingPoint<U> || (TIsSame<T, U> && TIsSame<T, bool>), int> = 0>
         [[nodiscard]] static constexpr FORCEINLINE T Lerp(const T& A, const T& B, const U& Alpha)
         {
             return static_cast<T>(A + Alpha * (B - A));
@@ -752,7 +752,7 @@ namespace Opaax
          * @param Alpha  The interpolation factor between A and B (0.0 for A, 1.0 for B)
          * @return       The interpolated value between A and B based on Alpha
          */
-        template <typename T1, typename T2, typename T3, TEnebleIf(TIsFloat(T3) &&!TIsSameAs(T1, bool) &&!TIsSameAs(T2, bool))>
+        template <typename T1, typename T2, typename T3, TEnableIf<TIsFloatingPoint<T3> && !TIsSame<T1, bool> && !TIsSame<T2, bool>, int> = 0>
         [[nodiscard]] static auto Lerp(const T1 A, const T2 B, const T3 Alpha) -> decltype(A * B)
         {
             using ABType = decltype(A * B);

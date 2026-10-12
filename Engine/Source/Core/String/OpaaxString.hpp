@@ -17,7 +17,7 @@ namespace Opaax
      * 24 bytes. Same thread safety as std::string.
      *
      * @see OpaaxStringID for interned strings.
-     * @see Core/Hash/OpaaxHash.h for std::hash<OpaaxString>.
+     * @see Core/Hash/OpaaxHash.h for THash<OpaaxString>.
      */
     class OpaaxString final
     {
@@ -459,7 +459,7 @@ namespace Opaax
 #include <spdlog/fmt/fmt.h>
 
 template <typename T>
-struct fmt::formatter<T, std::enable_if_t<std::is_base_of<Opaax::OpaaxString, T>::value, char>>
+struct fmt::formatter<T, Opaax::TEnableIf<Opaax::TIsBaseOf<Opaax::OpaaxString, T>, char>>
     : fmt::formatter<fmt::string_view>
 {
     auto format(const T& String, format_context& CTX) const
