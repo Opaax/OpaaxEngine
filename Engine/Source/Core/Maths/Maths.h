@@ -44,9 +44,10 @@ namespace Opaax
 
         /**
          * The largest of the values; the first of them when several are equal. Not empty.
+         * std::initializer_list, not TInitArray: Clang does not deduce T through an alias here.
          */
         template <CArithmetic T>
-        [[nodiscard]] static constexpr T Max(const TInitArray<T> InValues)
+        [[nodiscard]] static constexpr T Max(const std::initializer_list<T> InValues)
         {
             const T* lIt     = InValues.begin();
             T        lResult = *lIt;
@@ -74,7 +75,7 @@ namespace Opaax
          * The smallest of the values; the first of them when several are equal. Not empty.
          */
         template <CArithmetic T>
-        [[nodiscard]] static constexpr T Min(const TInitArray<T> InValues)
+        [[nodiscard]] static constexpr T Min(const std::initializer_list<T> InValues)
         {
             const T* lIt     = InValues.begin();
             T        lResult = *lIt;

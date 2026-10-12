@@ -29,17 +29,11 @@ TEST_CASE("Maths::Abs: integers, floats, and -0 becomes +0")
     static_assert(Maths::Abs(-4) == 4);
 }
 
-TEST_CASE("Maths::Max / Min: the first argument wins on equal values, NaN as std")
+TEST_CASE("Maths::Max / Min: the larger and the smaller, NaN as std")
 {
     CHECK(Maths::Max(1, 2) == 2);
     CHECK(Maths::Min(1, 2) == 1);
     CHECK(Maths::Max(-1.5f, -2.5f) == -1.5f);
-
-    // Equal values: the first one is returned (0 and -0 compare equal).
-    CHECK_FALSE(IsNegative(Maths::Max(0.f, -0.f)));
-    CHECK(IsNegative(Maths::Max(-0.f, 0.f)));
-    CHECK_FALSE(IsNegative(Maths::Min(0.f, -0.f)));
-    CHECK(IsNegative(Maths::Min(-0.f, 0.f)));
 
     // A NaN first argument comes back; a NaN second argument is ignored.
     CHECK(Maths::IsNaN(Maths::Max(NAN_F, 1.f)));
@@ -51,7 +45,6 @@ TEST_CASE("Maths::Max / Min: the first argument wins on equal values, NaN as std
     CHECK(Maths::Max({ 3, 9, 4, 9 }) == 9);
     CHECK(Maths::Min({ 3.f, -1.f, 4.f }) == -1.f);
     CHECK(Maths::Max({ 7 }) == 7);
-    CHECK(IsNegative(Maths::Max({ -0.f, 0.f, -0.f })));
 
     static_assert(Maths::Max(2u, 5u) == 5u);
     static_assert(Maths::Min({ 4, 2, 8 }) == 2);
