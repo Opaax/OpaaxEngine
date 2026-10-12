@@ -2,7 +2,7 @@
 // from every translation unit (the engine's and this test's), sorted and de-duplicated.
 #include <doctest.h>
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 #include <cstring>
 
 #include <nlohmann/json.hpp>
@@ -106,7 +106,7 @@ TEST_CASE("AutoRegistration: a type registered twice appears once")
 {
     const TDynArray<const AutoRegistration*> lList = CollectAutoRegistrations();
 
-    const auto lCount = std::count_if(lList.begin(), lList.end(), [](const AutoRegistration* InEntry)
+    const auto lCount = Algo::CountIf(lList, [](const AutoRegistration* InEntry)
     {
         return InEntry->Kind == EAutoRegistrationKind::Component && InEntry->Type == TypeIdOf<ProbeHealth>();
     });
@@ -194,8 +194,8 @@ TEST_CASE("AutoRegistration: game instance subsystems are created UI first, then
         lNames.push_back(InEntry.GetName());
     });
 
-    const auto lUI    = std::find(lNames.begin(), lNames.end(), OpaaxStringID("UI"));
-    const auto lInput = std::find(lNames.begin(), lNames.end(), OpaaxStringID("InputMapping"));
+    const auto lUI    = Algo::Find(lNames, OpaaxStringID("UI"));
+    const auto lInput = Algo::Find(lNames, OpaaxStringID("InputMapping"));
     REQUIRE(lUI != lNames.end());
     REQUIRE(lInput != lNames.end());
     CHECK(lUI < lInput);

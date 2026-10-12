@@ -4,7 +4,7 @@
 // journal ("<entity name>:<what>") that the case reads back.
 #include <doctest.h>
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 #include <filesystem>
 #include "Core/OpaaxTypes.h"
 #include <string>
@@ -45,26 +45,26 @@ using namespace Opaax;
 
 namespace
 {
-    TDynArray<std::string>& Journal()
+    TDynArray<OpaaxString>& Journal()
     {
-        static TDynArray<std::string> s_Journal;
+        static TDynArray<OpaaxString> s_Journal;
         return s_Journal;
     }
 
     void Note(const Behaviour& InSelf, const char* InWhat)
     {
-        Journal().push_back(std::string(InSelf.GetEntityName().CStr()) + ":" + InWhat);
+        Journal().push_back(InSelf.GetEntityName() + ":" + InWhat);
     }
 
     Uint64 CountOf(const char* InEntry)
     {
-        return static_cast<Uint64>(std::count(Journal().begin(), Journal().end(), std::string(InEntry)));
+        return Algo::Count(Journal(), OpaaxString(InEntry));
     }
 
     /** Position of the first InEntry in the journal, or -1. */
     Int64 IndexOf(const char* InEntry)
     {
-        const auto lFound = std::find(Journal().begin(), Journal().end(), std::string(InEntry));
+        const auto lFound = Algo::Find(Journal(), OpaaxString(InEntry));
         return (lFound == Journal().end()) ? -1 : static_cast<Int64>(lFound - Journal().begin());
     }
 }
@@ -789,7 +789,7 @@ TEST_CASE("Behaviours: OnStart runs once, before the first update and the first 
     CHECK(lFix.Runtime->GetPendingCount() == 1);
 
     lFix.Frame();
-    CHECK(Journal() == TDynArray<std::string>{ "A:Start", "A:Update", "A:Fixed" });
+    CHECK(Journal() == TDynArray<OpaaxString>{ "A:Start", "A:Update", "A:Fixed" });
 
     lFix.Frame();
     CHECK(CountOf("A:Start") == 1);
@@ -808,7 +808,7 @@ TEST_CASE("Behaviours: a behaviour already in the world when it starts is starte
     CHECK(Journal().empty());
 
     lFix.Frame();
-    CHECK(Journal() == TDynArray<std::string>{ "Early:Start", "Early:Update", "Early:Fixed" });
+    CHECK(Journal() == TDynArray<OpaaxString>{ "Early:Start", "Early:Update", "Early:Fixed" });
 }
 
 TEST_CASE("Behaviours: one added during a pass starts in that pass and is first updated in the next")
@@ -898,7 +898,7 @@ TEST_CASE("Behaviours: a behaviour destroying its own entity finishes its update
 
     lFix.Worlds.Update(1.0 / 60.0);
 
-    CHECK(Journal() == TDynArray<std::string>{ "Self:Start", "Self:Update", "Self:Destroy" });
+    CHECK(Journal() == TDynArray<OpaaxString>{ "Self:Start", "Self:Update", "Self:Destroy" });
     CHECK_FALSE(lSelf.IsValid());
 }
 
@@ -1476,7 +1476,7 @@ TEST_CASE("Behaviours: OverlapBox lists the entities whose colliders are in the 
     const TDynArray<Entity>& lAround = lSeeker.Get<Seeker>().Around;
     const auto lHas = [&lAround](const Entity InEntity)
     {
-        return std::any_of(lAround.begin(), lAround.end(),
+        return Algo::AnyOf(lAround,
                            [InEntity](const Entity InFound) { return InFound.GetHandle() == InEntity.GetHandle(); });
     };
 

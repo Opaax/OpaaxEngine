@@ -1,6 +1,6 @@
 #pragma once
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 
 #include "Audio/AudioGlobalBank.h"
 #include "Audio/AudioManager.h"
@@ -276,7 +276,7 @@ namespace TestWorld
                 }
             }
 
-            Distinct = static_cast<Opaax::Int32>(std::count(lHeard.begin(), lHeard.end(), true));
+            Distinct = static_cast<Opaax::Int32>(Opaax::Algo::Count(lHeard, true));
         }
     };
 

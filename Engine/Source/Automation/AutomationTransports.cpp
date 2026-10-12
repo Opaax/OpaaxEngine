@@ -1,6 +1,6 @@
 #include "Automation/AutomationTransports.h"
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 #include <fstream>
 #include <sstream>
 #include <system_error>
@@ -86,7 +86,7 @@ namespace Opaax
         }
 
         // Name order: an agent numbers its files to keep them in order.
-        std::sort(lFiles.begin(), lFiles.end());
+        Algo::Sort(lFiles);
 
         Uint32 lQueued = 0;
         for (const std::filesystem::path& lPath : lFiles)

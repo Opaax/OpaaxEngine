@@ -30,7 +30,7 @@ TEST_SUITE("perf" * doctest::skip())
 
         // The music: decoded while it plays, resampled from 44.1 kHz.
         TOptional<AudioClipResource> lMusic = AudioClipResource::FromMemory(AudioTest::MakeWav(44100, 180.f, 220.f),
-                                                                                "Music", AudioClipResource::EResidency::Streamed);
+                                                                            "Music", AudioClipResource::EResidency::Streamed);
         REQUIRE(lMusic.has_value());
 
         PlaySoundParams lMusicParams;

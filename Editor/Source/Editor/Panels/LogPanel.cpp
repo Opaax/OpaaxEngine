@@ -4,7 +4,7 @@
 
 #include <imgui.h>
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 #include <cstdio>
 #include <cstring>
 #include <ctime>
@@ -215,7 +215,7 @@ namespace Opaax::Editor
             return std::strcmp(InA.CStr(), InB.CStr()) < 0;
         };
 
-        const auto lAt = std::lower_bound(m_Categories.begin(), m_Categories.end(), InCategory, lByName);
+        const auto lAt = Algo::LowerBound(m_Categories, InCategory, lByName);
         if (lAt == m_Categories.end() || *lAt != InCategory)
         {
             m_Categories.insert(lAt, InCategory);

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
@@ -99,7 +99,7 @@ namespace Opaax
                 return 0.f;
             }
 
-            const auto lLower = std::lower_bound(Kerning.begin(), Kerning.end(), PackKey(InFirst, InSecond),
+            const auto lLower = Algo::LowerBound(Kerning, PackKey(InFirst, InSecond),
                                                  [](const FontKerningPair& InPair, const Uint64 InKey)
                                                  {
                                                      return PackKey(InPair.First, InPair.Second) < InKey;

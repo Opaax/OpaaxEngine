@@ -1,5 +1,7 @@
 #include "World/Prefab/PrefabOverrides.h"
 
+#include "Core/Algo/Algo.h"
+
 namespace Opaax
 {
     namespace
@@ -194,11 +196,11 @@ namespace Opaax
             // null removes the component.
             if (lPatch.is_null())
             {
-                std::erase_if(InOutEntity.Components,
-                              [lId](const ComponentData& InComponent)
-                              {
-                                  return InComponent.TypeName == lId;
-                              });
+                Algo::RemoveIf(InOutEntity.Components,
+                               [lId](const ComponentData& InComponent)
+                               {
+                                   return InComponent.TypeName == lId;
+                               });
                 continue;
             }
 

@@ -1,6 +1,6 @@
 #include "Automation/AutomationRunner.h"
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 #include "Core/Maths/Maths.h"
 
 namespace Opaax
@@ -184,7 +184,7 @@ namespace Opaax
         {
             lNames.push_back(lName);
         }
-        std::sort(lNames.begin(), lNames.end());
+        Algo::Sort(lNames);
 
         nlohmann::json lList = nlohmann::json::array();
         for (const std::string& lName : lNames)

@@ -4,7 +4,7 @@
 // and from sources.
 #include <doctest.h>
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 #include "Core/Maths/Maths.h"
 #include <filesystem>
 #include <fstream>
@@ -171,7 +171,7 @@ TEST_CASE("AudioClipDef: Random follows the weights; a weight of 0 never plays")
     // Every weight at 0: equally likely, rather than nothing.
     for (AudioClipEntry& lEntry : lDef.Clips) { lEntry.Weight = 0.f; }
     const TDynArray<Int32> lEqual = Picks(lDef, 300);
-    CHECK(std::count(lEqual.begin(), lEqual.end(), 1) > 50);
+    CHECK(Algo::Count(lEqual, 1) > 50);
 }
 
 TEST_CASE("AudioClipDef: Single, Sequential and Shuffle; no clips plays nothing")
@@ -186,7 +186,7 @@ TEST_CASE("AudioClipDef: Single, Sequential and Shuffle; no clips plays nothing"
     {
         TDynArray<Int32> lOne(lShuffled.begin() + static_cast<PtrDiff>(lRound),
                               lShuffled.begin() + static_cast<PtrDiff>(lRound + 4));
-        std::sort(lOne.begin(), lOne.end());
+        Algo::Sort(lOne);
         CHECK(lOne == TDynArray<Int32>{ 0, 1, 2, 3 });
 
         if (lRound > 0)

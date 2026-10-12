@@ -1,6 +1,6 @@
 #include "AutoRegistration.h"
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 #include <cstring>
 #include "Core/OpaaxTypes.h"
 
@@ -34,25 +34,23 @@ namespace Opaax
             lRegistrations.push_back(lNode);
         }
 
-        std::sort(lRegistrations.begin(), lRegistrations.end(),
-                  [](const AutoRegistration* InA, const AutoRegistration* InB)
-                  {
-                      if (InA->Kind != InB->Kind)   { return InA->Kind < InB->Kind; }
-                      if (InA->Order != InB->Order) { return InA->Order < InB->Order; }
+        Algo::Sort(lRegistrations,
+                   [](const AutoRegistration* InA, const AutoRegistration* InB)
+                   {
+                       if (InA->Kind != InB->Kind)   { return InA->Kind < InB->Kind; }
+                       if (InA->Order != InB->Order) { return InA->Order < InB->Order; }
 
-                      const int lByName = std::strcmp(InA->Name, InB->Name);
-                      if (lByName != 0)             { return lByName < 0; }
+                       const int lByName = std::strcmp(InA->Name, InB->Name);
+                       if (lByName != 0)             { return lByName < 0; }
 
-                      return InA->Type < InB->Type;
-                  });
+                       return InA->Type < InB->Type;
+                   });
 
         // The same type registered from several translation units (a macro in a header) once.
-        const auto lDuplicate = std::unique(lRegistrations.begin(), lRegistrations.end(),
-                                            [](const AutoRegistration* InA, const AutoRegistration* InB)
-                                            {
-                                                return InA->Kind == InB->Kind && InA->Type == InB->Type;
-                                            });
-        lRegistrations.erase(lDuplicate, lRegistrations.end());
+        Algo::Unique(lRegistrations, [](const AutoRegistration* InA, const AutoRegistration* InB)
+        {
+            return InA->Kind == InB->Kind && InA->Type == InB->Type;
+        });
 
         return lRegistrations;
     }

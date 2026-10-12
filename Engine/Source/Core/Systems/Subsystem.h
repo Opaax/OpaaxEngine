@@ -1,7 +1,5 @@
 ﻿#pragma once
 
-#include <algorithm>
-
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 

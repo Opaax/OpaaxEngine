@@ -1,6 +1,6 @@
 #include "Audio/Mixer/AudioMixer.h"
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 #include "Core/Maths/Maths.h"
 #include <cstring>
 
@@ -162,7 +162,7 @@ namespace Opaax
 
     Uint32 AudioMixer::GetActiveVoiceCount() const noexcept
     {
-        return static_cast<Uint32>(std::count_if(m_Voices.begin(), m_Voices.end(),
+        return static_cast<Uint32>(Algo::CountIf(m_Voices,
                                                  [](const Voice& InVoice) { return !InVoice.IsFree(); }));
     }
 
@@ -342,7 +342,7 @@ namespace Opaax
 
         // Read the source frames this block covers.
         const double lStep  = Maths::Clamp(static_cast<double>(lDesc.Pitch) * lDesc.Source.SampleRate / m_SampleRate,
-                                         1.0 / 1024.0, MAX_STEP);
+                                           1.0 / 1024.0, MAX_STEP);
         const double lFloor = Maths::Floor(InVoice.Cursor);
         const Uint64 lFirst = static_cast<Uint64>(lFloor);
         const Uint32 lCount = static_cast<Uint32>((InVoice.Cursor - lFloor) + InFrames * lStep) + 2;

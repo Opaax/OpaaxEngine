@@ -80,7 +80,7 @@ namespace Opaax
         lResource.Pixels.reserve(PLACEHOLDER_EXTENT * PLACEHOLDER_EXTENT * PLACEHOLDER_CHANNELS);
         for (Uint32 lTexel = 0; lTexel < PLACEHOLDER_EXTENT * PLACEHOLDER_EXTENT; ++lTexel)
         {
-            lResource.Pixels.insert(lResource.Pixels.end(), std::begin(PLACEHOLDER_RGBA), std::end(PLACEHOLDER_RGBA));
+            lResource.Pixels.insert(lResource.Pixels.end(), PLACEHOLDER_RGBA, PLACEHOLDER_RGBA + ArraySize(PLACEHOLDER_RGBA));
         }
 
         return lResource;

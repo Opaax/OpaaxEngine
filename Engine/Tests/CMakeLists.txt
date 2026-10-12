@@ -18,6 +18,7 @@ set(OPAAX_TEST_SOURCES
     Automation/AutomationTests.cpp
 
     # Core
+    Core/AlgoTests.cpp
     Core/ColorTests.cpp
     Core/Config/EngineConfigDataTests.cpp
     Core/GuidTests.cpp

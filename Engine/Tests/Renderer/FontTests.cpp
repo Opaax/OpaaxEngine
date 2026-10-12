@@ -107,7 +107,7 @@ TEST_SUITE("FontFaceData")
     {
         FontFaceData lFace = MakeFace();
 
-        // Inserted in the SAME order FontBake's std::sort produces — PackKey is shared by both sides
+        // Inserted in the SAME order FontBake's Algo::Sort produces — PackKey is shared by both sides
         // precisely so they cannot disagree, and a lookup into a differently-ordered array is the one
         // way a sorted-array search goes silently wrong.
         lFace.Kerning.emplace_back(FontKerningPair{ GAMMA, ALPHA, -1.5f });

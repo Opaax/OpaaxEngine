@@ -1,6 +1,6 @@
 #include "Renderer/Renderer2DBatchPlan.h"
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 
 #include "Core/Maths/Maths.h"
 
@@ -47,7 +47,7 @@ namespace Opaax
         OutPlan.reserve(lCount);
         for (Uint32 i = 0; i < lCount; ++i) { OutPlan.emplace_back(i, 0u, 0u, 0u, 0u); }
 
-        std::stable_sort(OutPlan.begin(), OutPlan.end(),
+        Algo::StableSort(OutPlan,
             [&InKeys](const QuadPlacement& InA, const QuadPlacement& InB)
             { return InKeys[InA.QuadIndex] < InKeys[InB.QuadIndex]; });
 

@@ -5,7 +5,7 @@
 // heard is rendered into a buffer and measured. The sounds are generated WAV files.
 #include <doctest.h>
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 #include "Core/Maths/Maths.h"
 #include <filesystem>
 #include <fstream>
@@ -475,7 +475,7 @@ TEST_CASE("AudioManager: a streamed clip sounds exactly like the same clip decod
     const TDynArray<float> lDecoded  = lRender(MakeClip(0.3f, 0.5f, AudioClipResource::EResidency::Decoded));
     const TDynArray<float> lStreamed = lRender(MakeClip(0.3f, 0.5f, AudioClipResource::EResidency::Streamed));
     CHECK(lDecoded == lStreamed);
-    CHECK(*std::max_element(lDecoded.begin(), lDecoded.end()) > 0.4f);
+    CHECK(*Algo::MaxElement(lDecoded) > 0.4f);
 }
 
 TEST_CASE("AudioManager: when every voice plays, a new sound replaces the least important one")

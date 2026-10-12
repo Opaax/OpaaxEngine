@@ -6,6 +6,7 @@
 #include "Editor/Resources/ResourcePreview.h"
 
 #include "Application/Services/IEngine.h"
+#include "Core/Algo/Algo.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Resources/ResourceManager.h"
 
@@ -158,19 +159,16 @@ namespace Opaax::Editor
 
     void ResourcePreviewPanel::ReleaseClosedClaims()
     {
-        for (auto lIt = m_Claims.begin(); lIt != m_Claims.end();)
+        Algo::RemoveIf(m_Claims, [this](const auto& InClaim)
         {
-            bool bStillOpen = false;
             for (const ResourcePreviewEntry& lEntry : m_Context.Preview.Entries())
             {
-                if (OpaaxStringID(lEntry.File.AbsPath).GetId() == lIt->first)
+                if (OpaaxStringID(lEntry.File.AbsPath).GetId() == InClaim.first)
                 {
-                    bStillOpen = true;
-                    break;
+                    return false;
                 }
             }
-
-            lIt = bStillOpen ? std::next(lIt) : m_Claims.erase(lIt);
-        }
+            return true;
+        });
     }
 }

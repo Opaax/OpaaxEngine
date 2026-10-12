@@ -1,6 +1,6 @@
 #include "Audio/AudioClipDef.h"
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 
 #include "Audio/AudioRandom.h"
 #include "Core/Maths/Maths.h"
@@ -114,7 +114,7 @@ namespace Opaax
 
         case EAudioSelection::Shuffle:
             // Clips added or removed since the last draw: a new order.
-            if (InOutState.Bag.empty() || std::any_of(InOutState.Bag.begin(), InOutState.Bag.end(),
+            if (InOutState.Bag.empty() || Algo::AnyOf(InOutState.Bag,
                                                       [lCount](const Uint32 InIndex) { return InIndex >= lCount; }))
             {
                 Refill(InOutState.Bag, lCount, InOutState.Last, InRandom);

@@ -4,7 +4,7 @@
 #include "Core/String/OpaaxPathString.h"                  // Extension
 #include "Resources/ResourceFormat.h"   // NormalizeExtension
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 #include <cstring>
 
 using namespace Opaax;
@@ -57,11 +57,11 @@ namespace Opaax::Editor
             }
 
             // Sorted once per scan, so every view shows the same order.
-            std::sort(OutFolder.Folders.begin(), OutFolder.Folders.end(),
+            Algo::Sort(OutFolder.Folders,
                 [](const ResourceFolder& InLeft, const ResourceFolder& InRight)
                 { return NameLess(InLeft.Name, InRight.Name); });
 
-            std::sort(OutFolder.Files.begin(), OutFolder.Files.end(),
+            Algo::Sort(OutFolder.Files,
                 [](const ResourceFile& InLeft, const ResourceFile& InRight)
                 { return NameLess(InLeft.Name, InRight.Name); });
         }

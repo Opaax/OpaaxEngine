@@ -1,6 +1,6 @@
 #pragma once
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 
 #include "Animation/SpriteAnimatorComponent.h"
 #include "Core/String/OpaaxStringJson.h"
@@ -50,7 +50,7 @@ namespace TestWorld
             LastSheet   = lSprite->Sheet.Path;
 
             // Frames are counted while the first clip plays, so a switch does not add to them.
-            if (!bSwitched && std::find(m_Seen.begin(), m_Seen.end(), LastFrame) == m_Seen.end())
+            if (!bSwitched && !Opaax::Algo::Contains(m_Seen, LastFrame))
             {
                 m_Seen.push_back(LastFrame);
                 FramesSeen = static_cast<Opaax::Int32>(m_Seen.size());

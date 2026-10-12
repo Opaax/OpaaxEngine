@@ -26,7 +26,7 @@ namespace Opaax
     }
 
     TOptional<AudioClipResource> AudioClipResource::FromMemory(TDynArray<Uint8> InBytes, const char* InNameForLogs,
-                                                                   const EResidency InResidency)
+                                                               const EResidency InResidency)
     {
         if (InBytes.empty())
         {

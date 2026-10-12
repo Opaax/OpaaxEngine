@@ -4,7 +4,7 @@
 //   Run in Release (build.bat bench): Debug numbers are meaningless.
 #pragma once
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 #include <chrono>
 #include "Core/OpaaxTypes.h"
 #include <cstdio>
@@ -41,7 +41,7 @@ namespace Opaax::Perf
             lNsPerOp.push_back(lNs / static_cast<double>(InOps));
         }
 
-        std::sort(lNsPerOp.begin(), lNsPerOp.end());
+        Algo::Sort(lNsPerOp);
         const double lMedian = lNsPerOp[lNsPerOp.size() / 2];
 
         return { lMedian, lMedian > 0.0 ? 1000.0 / lMedian : 0.0 }; // ns/op -> Mops/s

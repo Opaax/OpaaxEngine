@@ -79,7 +79,7 @@ namespace Opaax
          * @param InNameForLogs Names the clip in the error when the bytes are not a supported sound
          */
         static TOptional<AudioClipResource> FromMemory(TDynArray<Uint8> InBytes, const char* InNameForLogs,
-                                                           EResidency InResidency = EResidency::Auto);
+                                                       EResidency InResidency = EResidency::Auto);
 
         static AudioClipResource Placeholder() { return AudioClipResource{}; }
 

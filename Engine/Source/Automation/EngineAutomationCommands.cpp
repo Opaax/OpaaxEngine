@@ -1,6 +1,6 @@
 #include "Automation/EngineAutomationCommands.h"
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 #include <chrono>
 #include "Core/Maths/Maths.h"
 #include <filesystem>
@@ -407,9 +407,7 @@ namespace Opaax::EngineAutomation
                         }
 
                         nlohmann::json lEntity = DescribeEntity(Entity{ InId, lWorld }, lTypes, false);
-                        if (!lComponent.empty()
-                            && std::find(lEntity["components"].begin(), lEntity["components"].end(), lComponent)
-                                   == lEntity["components"].end())
+                        if (!lComponent.empty() && !Algo::Contains(lEntity["components"], lComponent))
                         {
                             return;
                         }

@@ -92,7 +92,7 @@ namespace Opaax
             lOrdered.emplace_back(&lRecord);
         }
 
-        std::sort(lOrdered.begin(), lOrdered.end(),
+        Algo::Sort(lOrdered,
             [](const PrefabInstanceRecord* InLeft, const PrefabInstanceRecord* InRight)
             {
                 return InLeft->InstanceId.High != InRight->InstanceId.High

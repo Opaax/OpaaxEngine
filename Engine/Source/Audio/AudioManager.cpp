@@ -1,6 +1,6 @@
 #include "Audio/AudioManager.h"
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/Maths.h"
 #include <cstring>
@@ -207,9 +207,7 @@ namespace Opaax
                 }
 
                 // A voice that was replaced: its sources were set apart.
-                RetiredSources.erase(std::remove_if(RetiredSources.begin(), RetiredSources.end(),
-                                                    [&lEvent](const Retired& InRetired) { return InRetired.Handle == lEvent.Handle; }),
-                                     RetiredSources.end());
+                Algo::RemoveIf(RetiredSources, [&lEvent](const Retired& InRetired) { return InRetired.Handle == lEvent.Handle; });
             }
         }
 
@@ -234,9 +232,7 @@ namespace Opaax
         /** Forgets a sound still waiting for its clip: the mixer never had it. */
         void CancelPending(const SoundHandle InSound)
         {
-            Pending.erase(std::remove_if(Pending.begin(), Pending.end(),
-                                         [InSound](const PendingPlay& InPending) { return InPending.Handle == InSound; }),
-                          Pending.end());
+            Algo::RemoveIf(Pending, [InSound](const PendingPlay& InPending) { return InPending.Handle == InSound; });
 
             if (Slot* lSlot = Find(InSound))
             {
@@ -1199,7 +1195,7 @@ namespace Opaax
 
     Uint64 AudioManager::GetVoiceCount() const noexcept
     {
-        return static_cast<Uint64>(std::count_if(m_Impl->Slots.begin(), m_Impl->Slots.end(),
+        return static_cast<Uint64>(Algo::CountIf(m_Impl->Slots,
                                                  [](const Impl::Slot& InSlot) { return InSlot.bActive && !InSlot.bStopping; }));
     }
 

@@ -1,6 +1,6 @@
 #include "Renderer/Lighting/Lighting2D.h"
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 
 #include "Core/Maths/Maths.h"
 #include "Renderer/Components/Light2DComponent.h"
@@ -94,7 +94,7 @@ namespace Opaax
         const Uint32 lReaching = static_cast<Uint32>(lCandidates.size());
         if (lReaching > MAX_LIGHTS_2D)
         {
-            std::stable_sort(lCandidates.begin(), lCandidates.end(),
+            Algo::StableSort(lCandidates,
                              [](const Candidate& InA, const Candidate& InB) { return InA.Score > InB.Score; });
             lCandidates.resize(MAX_LIGHTS_2D);
         }
@@ -138,7 +138,7 @@ namespace Opaax
             }
         }
 
-        std::stable_sort(lShadowed.begin(), lShadowed.end(), [&lCandidates](const Uint32 InA, const Uint32 InB)
+        Algo::StableSort(lShadowed, [&lCandidates](const Uint32 InA, const Uint32 InB)
         {
             return lCandidates[InA].Score > lCandidates[InB].Score;
         });

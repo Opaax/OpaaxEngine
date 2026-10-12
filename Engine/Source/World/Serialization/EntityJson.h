@@ -2,7 +2,7 @@
 
 #include <nlohmann/json.hpp>
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 #include "Core/Templates/TypeTraits.h"
 
 #include "Core/EngineAPI.h"
@@ -114,7 +114,7 @@ namespace Opaax
                 lOrdered.emplace_back(&lEntity);
             }
 
-            std::sort(lOrdered.begin(), lOrdered.end(),
+            Algo::Sort(lOrdered,
                 [](const EntityData* InLeft, const EntityData* InRight)
                 {
                     // High then Low, like Guid::ToString.

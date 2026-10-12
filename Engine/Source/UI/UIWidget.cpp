@@ -1,6 +1,6 @@
 #include "UI/UIWidget.h"
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 
 #include "Core/Maths/Maths.h"
 #include "UI/UICanvas.h"
@@ -50,7 +50,7 @@ namespace Opaax
 
     TUniquePtr<UIWidget> UIWidget::RemoveChild(UIWidget& InChild)
     {
-        const auto lIt = std::find_if(m_Children.begin(), m_Children.end(),
+        const auto lIt = Algo::FindIf(m_Children,
                                       [&InChild](const TUniquePtr<UIWidget>& InOwned) { return InOwned.get() == &InChild; });
         if (lIt == m_Children.end())
         {

@@ -1,6 +1,5 @@
 #include "World/Serialization/MapJson.h"
 
-#include <algorithm>
 #include "Core/Templates/TypeTraits.h"
 
 namespace Opaax

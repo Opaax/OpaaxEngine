@@ -1,6 +1,6 @@
 #include "World/Behaviour/BehaviourSubsystem.h"
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 
 #include "Core/Events/EventBus.h"
 #include "Core/Maths/Maths.h"
@@ -394,9 +394,7 @@ namespace Opaax
         if (lListeners != m_Listeners.end())
         {
             TDynArray<Listener>& lList = lListeners->second;
-            lList.erase(std::remove_if(lList.begin(), lList.end(),
-                                       [InType](const Listener& InListener) { return InListener.BehaviourType == InType; }),
-                        lList.end());
+            Algo::RemoveIf(lList, [InType](const Listener& InListener) { return InListener.BehaviourType == InType; });
             if (lList.empty())
             {
                 m_Listeners.erase(lListeners);
@@ -447,9 +445,7 @@ namespace Opaax
     {
         for (TypeBucket& lBucket : m_Buckets)
         {
-            lBucket.Instances.erase(std::remove_if(lBucket.Instances.begin(), lBucket.Instances.end(),
-                                                   [](const Instance& InInstance) { return InInstance.Ptr == nullptr; }),
-                                    lBucket.Instances.end());
+            Algo::RemoveIf(lBucket.Instances, [](const Instance& InInstance) { return InInstance.Ptr == nullptr; });
         }
     }
 
@@ -507,7 +503,7 @@ namespace Opaax
         for (const EntityData& lEntity : lInstance.Entities)
         {
             const bool bParentInside = lEntity.Parent.IsValid()
-                && std::any_of(lInstance.Entities.begin(), lInstance.Entities.end(),
+                && Algo::AnyOf(lInstance.Entities,
                                [&](const EntityData& InOther) { return InOther.Id == lEntity.Parent; });
             if (!bParentInside)
             {
@@ -762,9 +758,7 @@ namespace Opaax
             else if (lCallback)    { lCallback(); }
         }
 
-        m_Timers.erase(std::remove_if(m_Timers.begin(), m_Timers.end(),
-                                      [](const Timer& InTimer) { return InTimer.Id == 0; }),
-                       m_Timers.end());
+        Algo::RemoveIf(m_Timers, [](const Timer& InTimer) { return InTimer.Id == 0; });
     }
 
     // =========================================================================
@@ -815,7 +809,7 @@ namespace Opaax
 
     Uint64 BehaviourSubsystem::GetTimerCount() const noexcept
     {
-        return static_cast<Uint64>(std::count_if(m_Timers.begin(), m_Timers.end(),
+        return static_cast<Uint64>(Algo::CountIf(m_Timers,
                                                  [](const Timer& InTimer) { return InTimer.Id != 0; }));
     }
 

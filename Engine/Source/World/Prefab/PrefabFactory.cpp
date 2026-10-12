@@ -2,6 +2,7 @@
 
 #include <entt/entt.hpp>
 
+#include "Core/Algo/Algo.h"
 #include "World/Components/ComponentRegistry.h"
 #include "World/Components/PrefabInstanceComponent.h"
 #include "World/Prefab/PrefabFold.h"
@@ -21,11 +22,11 @@ namespace Opaax
         {
             if (!InMarkerName.IsValid()) { return; }
 
-            std::erase_if(InOutEntity.Components,
-                          [InMarkerName](const ComponentData& InComponent)
-                          {
-                              return InComponent.TypeName == InMarkerName;
-                          });
+            Algo::RemoveIf(InOutEntity.Components,
+                           [InMarkerName](const ComponentData& InComponent)
+                           {
+                               return InComponent.TypeName == InMarkerName;
+                           });
         }
 
         bool Names(const TDynArray<EntityData>& InEntities, const Guid& InId)
