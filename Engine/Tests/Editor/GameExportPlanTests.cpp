@@ -3,8 +3,6 @@
 // the export itself runs CMake, which the CI release jobs exercise through the same install rules.
 #include <doctest.h>
 
-#include <string>
-
 #include "Editor/Export/GameExportPlan.hpp"
 
 using namespace Opaax;
@@ -19,7 +17,7 @@ TEST_CASE("GameExportPlan: configure the release preset, build the game, install
     CHECK(lSteps[1].Command == "cmake --build build/release --config Release --target TestWorld");
     CHECK(lSteps[2].Command
           == "cmake --install build/release --config Release --component TestWorld --prefix \"C:/Exports/My Game\"");
-    CHECK(lSteps[2].Description.find("C:/Exports/My Game") != std::string::npos);
+    CHECK(lSteps[2].Description.Contains("C:/Exports/My Game"));
 }
 
 TEST_CASE("GameExportPlan: a game name is an identifier, a path holds no quote: anything else makes no steps")
@@ -42,10 +40,10 @@ TEST_CASE("GameExportPlan: a game name is an identifier, a path holds no quote: 
 
 TEST_CASE("GameExportPlan: a step runs from the workspace, its output added to the log")
 {
-    const std::string lPosix = GameExportPlan::ShellLine("cmake --preset release", "/src/opaax", "/tmp/export.log", false);
+    const OpaaxString lPosix = GameExportPlan::ShellLine("cmake --preset release", "/src/opaax", "/tmp/export.log", false);
     CHECK(lPosix == "cd \"/src/opaax\" && cmake --preset release >> \"/tmp/export.log\" 2>&1");
 
     // cmd.exe /c strips one pair of quotes around the whole line.
-    const std::string lWindows = GameExportPlan::ShellLine("cmake --preset release", "W:/opaax", "W:/export.log", true);
+    const OpaaxString lWindows = GameExportPlan::ShellLine("cmake --preset release", "W:/opaax", "W:/export.log", true);
     CHECK(lWindows == "\"cd /d \"W:/opaax\" && cmake --preset release >> \"W:/export.log\" 2>&1\"");
 }

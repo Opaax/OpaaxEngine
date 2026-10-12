@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string>
+#include "Core/String/OpaaxString.hpp"
 
 namespace Opaax::Editor
 {
@@ -13,12 +13,12 @@ namespace Opaax::Editor
     namespace ExportOps
     {
         /** The edited game: its project file's name, which is also its CMake target. */
-        std::string GameName(const EditorContext& InContext);
+        OpaaxString GameName(const EditorContext& InContext);
 
         /** Where the export's output goes: <project>/Save/Export.log. */
-        std::string LogPath(const EditorContext& InContext);
+        OpaaxString LogPath(const EditorContext& InContext);
 
         /** Starts exporting the edited game into InDestination. False (logged) when refused. */
-        bool Start(EditorContext& InContext, const std::string& InDestination);
+        bool Start(EditorContext& InContext, const OpaaxString& InDestination);
     }
 }

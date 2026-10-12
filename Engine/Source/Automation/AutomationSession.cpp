@@ -4,10 +4,11 @@
 
 namespace Opaax
 {
-    TUniquePtr<AutomationSession> AutomationSession::Create(const char* InScript, const char* InScriptOutput,
-                                                            const char* InInbox)
+    TUniquePtr<AutomationSession> AutomationSession::Create(const OpaaxString& InScript,
+                                                            const OpaaxString& InScriptOutput,
+                                                            const OpaaxString& InInbox)
     {
-        if (InScript == nullptr && InInbox == nullptr)
+        if (InScript.IsEmpty() && InInbox.IsEmpty())
         {
             return nullptr;
         }
@@ -22,22 +23,21 @@ namespace Opaax
             if (lSelf.m_Inbox != nullptr)  { lSelf.m_Inbox->Answer(InResponse); }
         });
 
-        if (InScript != nullptr)
+        if (!InScript.IsEmpty())
         {
-            const std::filesystem::path lScript(InScript);
-            const std::filesystem::path lOutput = (InScriptOutput != nullptr) ? std::filesystem::path(InScriptOutput)
-                                                                              : AutomationScript::DefaultOutput(lScript);
+            const OpaaxString lOutput = InScriptOutput.IsEmpty() ? AutomationScript::DefaultOutput(InScript)
+                                                                 : InScriptOutput;
 
             lSelf.m_Script = MakeUnique<AutomationScript>();
-            if (!lSelf.m_Script->Load(lScript, lOutput, lSelf.m_Runner))
+            if (!lSelf.m_Script->Load(InScript, lOutput, lSelf.m_Runner))
             {
                 return nullptr;
             }
         }
 
-        if (InInbox != nullptr)
+        if (!InInbox.IsEmpty())
         {
-            lSelf.m_Inbox = MakeUnique<AutomationInbox>(std::filesystem::path(InInbox));
+            lSelf.m_Inbox = MakeUnique<AutomationInbox>(InInbox);
             if (!lSelf.m_Inbox->Open())
             {
                 lSelf.m_Inbox.reset();
@@ -65,10 +65,10 @@ namespace Opaax
 
     bool AutomationSession::EndFrame(IEngine& InEngine)
     {
-        if (!m_PendingScreenshot.empty())
+        if (!m_PendingScreenshot.IsEmpty())
         {
-            InEngine.CaptureFrame(OpaaxString(m_PendingScreenshot.c_str()));
-            m_PendingScreenshot.clear();
+            InEngine.CaptureFrame(m_PendingScreenshot);
+            m_PendingScreenshot.Clear();
         }
 
         // A script with no inbox beside it ends the session once answered.
@@ -92,7 +92,7 @@ namespace Opaax
         return (m_Script != nullptr && (m_Script->GetFailed() > 0 || !m_Script->IsDone())) ? 1 : 0;
     }
 
-    void AutomationSession::RequestScreenshot(const std::string& InPath)
+    void AutomationSession::RequestScreenshot(const OpaaxString& InPath)
     {
         m_PendingScreenshot = InPath;
     }

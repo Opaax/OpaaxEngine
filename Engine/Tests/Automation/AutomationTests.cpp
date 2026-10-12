@@ -3,15 +3,13 @@
 // the runner is ticked by hand, a tick standing for a frame.
 #include <doctest.h>
 
-#include <filesystem>
-#include <fstream>
-#include <sstream>
-#include <string>
-
+#include "../TestTempDir.h"
 #include "Automation/AutomationRunner.h"
 #include "Automation/AutomationSession.h"
 #include "Automation/AutomationTransports.h"
 #include "Automation/EngineAutomationCommands.h"
+#include "Core/IO/FileIO.h"
+#include "Core/String/OpaaxStringJson.h"
 #include "UI/UICanvas.h"
 #include "UI/UIRect.h"
 #include "UI/Widgets/UIButton.h"
@@ -24,47 +22,10 @@ using namespace Opaax;
 
 namespace
 {
-    namespace fs = std::filesystem;
-
-    class ScopedTempDir
+    nlohmann::json ReadJson(const OpaaxString& InPath)
     {
-    public:
-        explicit ScopedTempDir(const char* InTag)
-        {
-            m_Path = fs::temp_directory_path() / ("OpaaxAutomationTests_" + std::string(InTag));
-
-            std::error_code lError;
-            fs::remove_all(m_Path, lError);   // a previous crashed run must not poison this one
-            fs::create_directories(m_Path, lError);
-        }
-
-        ~ScopedTempDir()
-        {
-            std::error_code lError;
-            fs::remove_all(m_Path, lError);
-        }
-
-        ScopedTempDir(const ScopedTempDir&)            = delete;
-        ScopedTempDir& operator=(const ScopedTempDir&) = delete;
-
-        const fs::path& Path() const noexcept { return m_Path; }
-
-    private:
-        fs::path m_Path;
-    };
-
-    void WriteFile(const fs::path& InPath, const std::string& InText)
-    {
-        std::ofstream lFile(InPath, std::ios::binary | std::ios::trunc);
-        lFile << InText;
-    }
-
-    nlohmann::json ReadJson(const fs::path& InPath)
-    {
-        std::ifstream      lFile(InPath, std::ios::binary);
-        std::ostringstream lStream;
-        lStream << lFile.rdbuf();
-        return nlohmann::json::parse(lStream.str(), nullptr, false);
+        const OpaaxString lText = FileIO::ReadAllText(InPath);
+        return nlohmann::json::parse(lText.begin(), lText.end(), nullptr, false);
     }
 
     AutomationRequest Request(const char* InId, const char* InCommand, nlohmann::json InParams = nlohmann::json::object())
@@ -293,9 +254,9 @@ TEST_CASE("Automation: an unknown command and bad params fail, and the queue goe
 
     REQUIRE(lRecorder.Responses.size() == 3);
     CHECK_FALSE(lRecorder.Responses[0].bOk);
-    CHECK(lRecorder.Responses[0].Error.find("unknown command") != std::string::npos);
+    CHECK(lRecorder.Responses[0].Error.Contains("unknown command"));
     CHECK_FALSE(lRecorder.Responses[1].bOk);
-    CHECK(lRecorder.Responses[1].Error.find("bad params") != std::string::npos);
+    CHECK(lRecorder.Responses[1].Error.Contains("bad params"));
     CHECK(lRecorder.Responses[2].bOk);
     CHECK(lRecorder.Runner.GetFailed() == 2);
 }
@@ -324,11 +285,11 @@ TEST_CASE("Automation: a request expecting a failure passes on a refusal and fai
     CHECK(lRecorder.Responses[0].bOk);
     CHECK(lRecorder.Responses[0].Result.at("refused") == "not here");
     CHECK_FALSE(lRecorder.Responses[1].bOk);
-    CHECK(lRecorder.Responses[1].Error.find("expected to fail") != std::string::npos);
+    CHECK(lRecorder.Responses[1].Error.Contains("expected to fail"));
 
     // A command that does not exist is a mistake in the script, not a refusal.
     CHECK_FALSE(lRecorder.Responses[2].bOk);
-    CHECK(lRecorder.Responses[2].Error.find("unknown command") != std::string::npos);
+    CHECK(lRecorder.Responses[2].Error.Contains("unknown command"));
     CHECK(lRecorder.Runner.GetFailed() == 2);
 }
 
@@ -353,7 +314,7 @@ TEST_CASE("Automation: an answer matches what is expected by the keys named, ite
     const nlohmann::json lAnswer = nlohmann::json::parse(
         R"({"level": "Levels/A.opaaxlevel", "unsaved": true, "count": 2.00001,
             "maps": [{"id": "A", "focused": false}, {"id": "B", "focused": true}]})");
-    std::string lWhy;
+    OpaaxString lWhy;
 
     CHECK(MatchesExpected(nlohmann::json::parse(R"({"unsaved": true})"), lAnswer, lWhy));
     CHECK(MatchesExpected(nlohmann::json::parse(R"({"count": 2})"), lAnswer, lWhy));
@@ -362,11 +323,11 @@ TEST_CASE("Automation: an answer matches what is expected by the keys named, ite
     CHECK_FALSE(MatchesExpected(nlohmann::json::parse(R"({"maps": [{}, {"focused": false}]})"), lAnswer, lWhy));
     CHECK(lWhy == "maps/1/focused is true, expected false");
     CHECK_FALSE(MatchesExpected(nlohmann::json::parse(R"({"maps": [{}]})"), lAnswer, lWhy));
-    CHECK(lWhy.find("expected 1 item(s)") != std::string::npos);
+    CHECK(lWhy.Contains("expected 1 item(s)"));
     CHECK_FALSE(MatchesExpected(nlohmann::json::parse(R"({"world": "A"})"), lAnswer, lWhy));
     CHECK(lWhy == "world is missing");
     CHECK_FALSE(MatchesExpected(nlohmann::json::parse(R"("text")"), lAnswer, lWhy));
-    CHECK(lWhy.find("the answer is") == 0);
+    CHECK(lWhy.StartsWith("the answer is"));
 }
 
 TEST_CASE("Automation: a request with an expected answer fails when its answer differs")
@@ -388,7 +349,7 @@ TEST_CASE("Automation: a request with an expected answer fails when its answer d
     CHECK(lRecorder.Responses[1].Error == "the answer differs: n is 2, expected 1");
 
     TDynArray<AutomationRequest> lRequests;
-    std::string                  lError;
+    OpaaxString                  lError;
     REQUIRE(ParseAutomationScript(R"([{"command": "a", "expect": {"n": 1}}])", lRequests, lError));
     CHECK(lRequests[0].Expect.at("n") == 1);
     CHECK_FALSE(ParseAutomationScript(R"([{"command": "a", "expect": {}, "expectFailure": true}])", lRequests, lError));
@@ -413,7 +374,7 @@ TEST_CASE("Automation: a script is an array or {requests}; ids default to positi
           "expectFailure is a bool")
 {
     TDynArray<AutomationRequest> lRequests;
-    std::string                  lError;
+    OpaaxString                  lError;
 
     REQUIRE(ParseAutomationScript(R"([{"command": "a"}, {"id": "named", "command": "b", "params": {"k": 1}}])",
                                   lRequests, lError));
@@ -426,7 +387,7 @@ TEST_CASE("Automation: a script is an array or {requests}; ids default to positi
     CHECK(lRequests.size() == 1);
 
     CHECK_FALSE(ParseAutomationScript(R"([{"command": "a"}, {"params": {}}])", lRequests, lError));
-    CHECK(lError.find("request 1") != std::string::npos);
+    CHECK(lError.Contains("request 1"));
     CHECK(lRequests.empty());
 
     CHECK_FALSE(ParseAutomationScript(R"([{"command": "a", "params": [1, 2]}])", lRequests, lError));
@@ -437,15 +398,15 @@ TEST_CASE("Automation: a script is an array or {requests}; ids default to positi
     CHECK(lRequests[0].bExpectFailure);
     CHECK_FALSE(lRequests[1].bExpectFailure);
     CHECK_FALSE(ParseAutomationScript(R"([{"command": "a", "expectFailure": "yes"}])", lRequests, lError));
-    CHECK(lError.find("expectFailure") != std::string::npos);
+    CHECK(lError.Contains("expectFailure"));
 }
 
 TEST_CASE("Automation inbox: request files run in name order and are answered beside them")
 {
-    ScopedTempDir lDir("Inbox");
-    Recorder      lRecorder;
+    TestTempDir lDir("AutomationInbox");
+    Recorder    lRecorder;
 
-    AutomationInbox lInbox(lDir.Path() / "inbox");
+    AutomationInbox lInbox(lDir.Sub("inbox"));
     REQUIRE(lInbox.Open());
     lRecorder.Runner.SetResponseSink([&](const AutomationResponse& InResponse)
     {
@@ -453,10 +414,11 @@ TEST_CASE("Automation inbox: request files run in name order and are answered be
         lInbox.Answer(InResponse);
     });
 
-    WriteFile(lInbox.GetFolder() / "002.request.json", R"({"command": "echo", "params": {"n": 2}})");
-    WriteFile(lInbox.GetFolder() / "001.request.json", R"({"command": "echo", "params": {"n": 1}})");
-    WriteFile(lInbox.GetFolder() / "bad.request.json", "{ not json");
-    WriteFile(lInbox.GetFolder() / "notes.txt", "ignored");
+    const auto lInInbox = [&lInbox](const char* InName) { return PathString::Join(lInbox.GetFolder(), InName); };
+    FileIO::WriteAllText(lInInbox("002.request.json"), R"({"command": "echo", "params": {"n": 2}})");
+    FileIO::WriteAllText(lInInbox("001.request.json"), R"({"command": "echo", "params": {"n": 1}})");
+    FileIO::WriteAllText(lInInbox("bad.request.json"), "{ not json");
+    FileIO::WriteAllText(lInInbox("notes.txt"), "ignored");
 
     CHECK(lInbox.Poll(lRecorder.Runner) == 2);
     lRecorder.Runner.Tick();
@@ -466,15 +428,15 @@ TEST_CASE("Automation inbox: request files run in name order and are answered be
     CHECK(lRecorder.Responses[0].Id == "001");
     CHECK(lRecorder.Responses[1].Id == "002");
 
-    const nlohmann::json lFirst = ReadJson(lInbox.GetFolder() / "001.response.json");
+    const nlohmann::json lFirst = ReadJson(lInInbox("001.response.json"));
     CHECK(lFirst.at("ok") == true);
     CHECK(lFirst.at("result").at("n") == 1);
 
     // A malformed request is answered at once; requests are consumed.
-    const nlohmann::json lBad = ReadJson(lInbox.GetFolder() / "bad.response.json");
+    const nlohmann::json lBad = ReadJson(lInInbox("bad.response.json"));
     CHECK(lBad.at("ok") == false);
-    CHECK_FALSE(fs::exists(lInbox.GetFolder() / "001.request.json"));
-    CHECK(fs::exists(lInbox.GetFolder() / "notes.txt"));
+    CHECK_FALSE(FileSystem::Exists(lInInbox("001.request.json")));
+    CHECK(FileSystem::Exists(lInInbox("notes.txt")));
 
     CHECK(lInbox.Poll(lRecorder.Runner) == 0);
 }
@@ -490,19 +452,19 @@ TEST_CASE("Automation entities: found by id or by a unique name, with a reason w
     const Entity lCrate = lWorld.CreateEntity("Crate");
     lWorld.CreateEntity("Crate");
 
-    std::string lError;
+    OpaaxString lError;
     CHECK(EngineAutomation::FindEntity(lWorld, nlohmann::json{ { "entity", "Hero" } }, lError).GetHandle()
           == lHero.GetHandle());
 
-    const std::string lCrateId = lCrate.GetGuid().ToString().CStr();
+    const OpaaxString lCrateId = lCrate.GetGuid().ToString();
     CHECK(EngineAutomation::FindEntity(lWorld, nlohmann::json{ { "entity", lCrateId } }, lError).GetHandle()
           == lCrate.GetHandle());
 
     CHECK_FALSE(EngineAutomation::FindEntity(lWorld, nlohmann::json{ { "entity", "Crate" } }, lError).IsValid());
-    CHECK(lError.find("2 entities") != std::string::npos);
+    CHECK(lError.Contains("2 entities"));
 
     CHECK_FALSE(EngineAutomation::FindEntity(lWorld, nlohmann::json{ { "entity", "Ghost" } }, lError).IsValid());
-    CHECK(lError.find("no entity named") != std::string::npos);
+    CHECK(lError.Contains("no entity named"));
 
     CHECK_FALSE(EngineAutomation::FindEntity(lWorld, nlohmann::json::object(), lError).IsValid());
 }
@@ -523,7 +485,7 @@ TEST_CASE("Automation entities: described with their components, and patched fie
 
     // Only the fields given change.
     lHero.Get<TransformComponent>().Rotation = 45.f;
-    std::string lError;
+    OpaaxString lError;
     REQUIRE(EngineAutomation::PatchComponent(
         lHero, lTypes, nlohmann::json{ { "type", "Transform" }, { "value", { { "Position", { { "x", 12.0 } } } } } },
         lError));
@@ -536,14 +498,14 @@ TEST_CASE("Automation entities: described with their components, and patched fie
     CHECK(lFull.at("components").at("Transform").at("Position").at("x") == 12.0);
 
     CHECK_FALSE(EngineAutomation::PatchComponent(lHero, lTypes, nlohmann::json{ { "type", "Nope" } }, lError));
-    CHECK(lError.find("unknown component") != std::string::npos);
+    CHECK(lError.Contains("unknown component"));
     CHECK_FALSE(EngineAutomation::PatchComponent(
         lHero, lTypes, nlohmann::json{ { "type", "Transform" }, { "value", 3 } }, lError));
 }
 
 TEST_CASE("Automation expectations: equals, near, greater, less and between, with what was found")
 {
-    std::string lError;
+    OpaaxString lError;
 
     // equals: numbers within 1e-4, objects on the fields given, arrays element by element.
     CHECK(EngineAutomation::CheckExpectation(1.00001, nlohmann::json{ { "equals", 1.0 } }, lError));
@@ -612,7 +574,7 @@ TEST_CASE("Automation UI: widgets are listed in screen pixels, and a click lands
     CHECK(EngineAutomation::DescribeWidgets(lCanvas, "Secret")[0].at("visible") == false);
 
     Vector2F    lPixel{ 0.f, 0.f };
-    std::string lError;
+    OpaaxString lError;
     REQUIRE(EngineAutomation::FindWidgetCentre(lCanvas, "Play", lPixel, lError));
     CHECK(lPixel.x == doctest::Approx(1060.f));
     CHECK(lPixel.y == doctest::Approx(340.f));
@@ -621,22 +583,22 @@ TEST_CASE("Automation UI: widgets are listed in screen pixels, and a click lands
     CHECK_FALSE(EngineAutomation::FindWidgetCentre(lCanvas, "Secret", lPixel, lError));
     CHECK(lError == "'Secret' is hidden");
     CHECK_FALSE(EngineAutomation::FindWidgetCentre(lCanvas, "Missing", lPixel, lError));
-    CHECK(lError.find("no widget named 'Missing'") != std::string::npos);
+    CHECK(lError.Contains("no widget named 'Missing'"));
 }
 
 TEST_CASE("Automation script: answers are written as they come, then marked done")
 {
-    ScopedTempDir lDir("Script");
-    Recorder      lRecorder;
+    TestTempDir lDir("AutomationScript");
+    Recorder    lRecorder;
 
-    const fs::path lScriptPath = lDir.Path() / "steps.json";
-    WriteFile(lScriptPath, R"([{"command": "echo"}, {"command": "frames.wait"}, {"command": "nope"}])");
+    const OpaaxString lScriptPath = lDir.Sub("steps.json");
+    FileIO::WriteAllText(lScriptPath, R"([{"command": "echo"}, {"command": "frames.wait"}, {"command": "nope"}])");
 
     AutomationScript lScript;
     lRecorder.Runner.SetResponseSink([&](const AutomationResponse& InResponse) { lScript.Answer(InResponse); });
 
-    const fs::path lOutput = AutomationScript::DefaultOutput(lScriptPath);
-    CHECK(lOutput.filename() == "steps.out.json");
+    const OpaaxString lOutput = AutomationScript::DefaultOutput(lScriptPath);
+    CHECK(PathString::FileName(lOutput) == "steps.out.json");
     REQUIRE(lScript.Load(lScriptPath, lOutput, lRecorder.Runner));
     CHECK(ReadJson(lOutput).at("done") == false);
 
@@ -657,16 +619,16 @@ TEST_CASE("Automation script: answers are written as they come, then marked done
 
 TEST_CASE("Automation session: a script the app closed on fails the run; a finished one passes")
 {
-    ScopedTempDir lDir("Session");
+    TestTempDir lDir("AutomationSession");
 
-    const fs::path lScriptPath = lDir.Path() / "steps.json";
-    const fs::path lOutput     = lDir.Path() / "steps.out.json";
-    WriteFile(lScriptPath, R"([{"command": "frames.wait", "params": {"count": 2}}, {"command": "commands.list"}])");
+    const OpaaxString lScriptPath = lDir.Sub("steps.json");
+    const OpaaxString lOutput     = lDir.Sub("steps.out.json");
+    FileIO::WriteAllText(lScriptPath,
+                         R"([{"command": "frames.wait", "params": {"count": 2}}, {"command": "commands.list"}])");
 
     SUBCASE("closed before the end")
     {
-        TUniquePtr<AutomationSession> lSession =
-            AutomationSession::Create(lScriptPath.string().c_str(), lOutput.string().c_str(), nullptr);
+        TUniquePtr<AutomationSession> lSession = AutomationSession::Create(lScriptPath, lOutput, OpaaxString());
         REQUIRE(lSession != nullptr);
 
         lSession->BeginFrame();   // the wait holds commands.list
@@ -680,8 +642,7 @@ TEST_CASE("Automation session: a script the app closed on fails the run; a finis
 
     SUBCASE("run to the end")
     {
-        TUniquePtr<AutomationSession> lSession =
-            AutomationSession::Create(lScriptPath.string().c_str(), lOutput.string().c_str(), nullptr);
+        TUniquePtr<AutomationSession> lSession = AutomationSession::Create(lScriptPath, lOutput, OpaaxString());
         REQUIRE(lSession != nullptr);
 
         for (int lFrame = 0; lFrame < 3; ++lFrame)
@@ -697,17 +658,16 @@ TEST_CASE("Automation session: a script the app closed on fails the run; a finis
 
 TEST_CASE("Automation session: a script owns the input; an inbox shares it with the window")
 {
-    ScopedTempDir lDir("Owner");
+    TestTempDir lDir("AutomationOwner");
 
-    const fs::path lScriptPath = lDir.Path() / "steps.json";
-    WriteFile(lScriptPath, R"([{"command": "frames.wait"}])");
+    const OpaaxString lScriptPath = lDir.Sub("steps.json");
+    FileIO::WriteAllText(lScriptPath, R"([{"command": "frames.wait"}])");
 
-    TUniquePtr<AutomationSession> lScripted =
-        AutomationSession::Create(lScriptPath.string().c_str(), nullptr, nullptr);
+    TUniquePtr<AutomationSession> lScripted = AutomationSession::Create(lScriptPath, OpaaxString(), OpaaxString());
     REQUIRE(lScripted != nullptr);
     CHECK(lScripted->OwnsInput());
 
-    TUniquePtr<AutomationSession> lInbox = AutomationSession::Create(nullptr, nullptr, lDir.Path().string().c_str());
+    TUniquePtr<AutomationSession> lInbox = AutomationSession::Create(OpaaxString(), OpaaxString(), lDir.Path());
     REQUIRE(lInbox != nullptr);
     CHECK_FALSE(lInbox->OwnsInput());
 }

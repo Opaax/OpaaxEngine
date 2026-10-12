@@ -32,8 +32,7 @@ namespace Opaax
         }
 
         // Throws on an unknown label; TConfig::Load catches it and keeps the defaults.
-        const OpaaxString lMessage = "unknown enumerator '" + lText + "' for this enum";
         throw nlohmann::json::type_error::create(
-            302, nlohmann::json::string_t(lMessage.CStr(), lMessage.GetLength()), &InJson);
+            302, ToJsonString("unknown enumerator '" + lText + "' for this enum"), &InJson);
     }
 }

@@ -23,6 +23,13 @@ namespace Opaax
         InValue = OpaaxString(lText.data(), static_cast<Uint32>(lText.size()));
     }
 
+    /** InText as nlohmann's own string, for the json functions that take one (json_pointer, errors). */
+    inline nlohmann::json::string_t ToJsonString(const OpaaxStringView InText)
+    {
+        return InText.IsEmpty() ? nlohmann::json::string_t()
+                                : nlohmann::json::string_t(InText.Data(), InText.GetLength());
+    }
+
     /** InJson as text: on one line, or indented by InIndent spaces. */
     inline OpaaxString ToJsonText(const nlohmann::json& InJson, const Int32 InIndent = -1)
     {

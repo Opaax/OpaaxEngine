@@ -1,27 +1,26 @@
 #include "Editor/Operation/ExportOperations.h"
 
-#include <filesystem>
-
 #include "Application/Services/IPaths.h"
+#include "Core/String/OpaaxPathString.h"
 #include "Editor/EditorContext.h"
 #include "Editor/Export/GameExport.h"
 
 namespace Opaax::Editor::ExportOps
 {
-    std::string GameName(const EditorContext& InContext)
+    OpaaxString GameName(const EditorContext& InContext)
     {
-        return std::filesystem::path(InContext.Paths.ProjectFile().CStr()).stem().string();
+        return PathString::Stem(InContext.Paths.ProjectFile()).ToString();
     }
 
-    std::string LogPath(const EditorContext& InContext)
+    OpaaxString LogPath(const EditorContext& InContext)
     {
-        return (std::filesystem::path(InContext.Paths.SaveDir().CStr()) / "Export.log").generic_string();
+        return PathString::Join(InContext.Paths.SaveDir(), "Export.log");
     }
 
-    bool Start(EditorContext& InContext, const std::string& InDestination)
+    bool Start(EditorContext& InContext, const OpaaxString& InDestination)
     {
         OPAAX_LOG(LogGameExport, Info, "The export builds from the saved files: unsaved changes are not in it");
-        return InContext.Export.Start(std::string(InContext.Paths.WorkspaceRoot().CStr()), GameName(InContext),
-                                      InDestination, LogPath(InContext));
+        return InContext.Export.Start(InContext.Paths.WorkspaceRoot(), GameName(InContext), InDestination,
+                                      LogPath(InContext));
     }
 }

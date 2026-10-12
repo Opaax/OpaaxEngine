@@ -2,6 +2,7 @@
 
 #include "Core/Maths/Maths.h"
 #include "Core/String/CString.h"
+#include "Core/String/OpaaxUtf8.h"
 
 #include "Automation/AutomationSession.h"
 #include "Platform/CrashHandler.h"
@@ -55,6 +56,12 @@ namespace
             if (InArgv[i] != nullptr && CString::Equals(InArgv[i], InFlag)) { return InArgv[i + 1]; }
         }
         return nullptr;
+    }
+
+    /** A path from the command line (in the system's encoding) in UTF-8; empty for null. */
+    OpaaxString CommandLinePath(const char* InValue)
+    {
+        return (InValue != nullptr) ? Utf8::FromNative(InValue) : OpaaxString();
     }
 
     /** Frames drawn before a --capture is taken, when --capture-frame does not say. */
@@ -256,7 +263,9 @@ void OpaaxApplication::RunApplication()
     // (AutomationSession). A script that cannot be run fails the run instead of starting it.
     const char* lScript = FindCommandLineValue(m_Argc, m_Argv, "--exec");
     const char* lInbox  = FindCommandLineValue(m_Argc, m_Argv, "--automation");
-    m_Automation = AutomationSession::Create(lScript, FindCommandLineValue(m_Argc, m_Argv, "--exec-out"), lInbox);
+    m_Automation = AutomationSession::Create(CommandLinePath(lScript),
+                                             CommandLinePath(FindCommandLineValue(m_Argc, m_Argv, "--exec-out")),
+                                             CommandLinePath(lInbox));
     if (m_Automation != nullptr)
     {
         m_Automation->Start(Engine());

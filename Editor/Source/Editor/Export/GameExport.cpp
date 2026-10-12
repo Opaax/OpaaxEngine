@@ -1,8 +1,7 @@
 #include "Editor/Export/GameExport.h"
 
-#include <cstdlib>
-#include <filesystem>
-#include <fstream>
+#include "Core/IO/FileIO.h"
+#include "Platform/Process.h"
 
 namespace Opaax::Editor
 {
@@ -27,8 +26,8 @@ namespace Opaax::Editor
         }
     }
 
-    bool GameExport::Start(const std::string& InWorkspace, const std::string& InGame, const std::string& InDestination,
-                           const std::string& InLog)
+    bool GameExport::Start(const OpaaxString& InWorkspace, const OpaaxString& InGame, const OpaaxString& InDestination,
+                           const OpaaxString& InLog)
     {
         if (IsRunning())
         {
@@ -49,9 +48,7 @@ namespace Opaax::Editor
             m_Worker.join();
         }
 
-        std::error_code lError;
-        std::filesystem::create_directories(std::filesystem::path(InLog).parent_path(), lError);
-        std::ofstream(InLog, std::ios::trunc) << "Export of " << InGame << " into " << InDestination << "\n";
+        FileIO::WriteAllText(InLog, OpaaxString::Format("Export of {} into {}\n", InGame, InDestination));
 
         m_Steps       = Move(lSteps);
         m_Workspace   = InWorkspace;
@@ -66,10 +63,10 @@ namespace Opaax::Editor
         return true;
     }
 
-    std::string GameExport::GetFailedStep() const
+    OpaaxString GameExport::GetFailedStep() const
     {
         const Int32 lStep = m_FailedStep.load();
-        return (lStep >= 0 && GetState() == EState::Failed) ? m_Steps[static_cast<Uint64>(lStep)].Description : std::string();
+        return (lStep >= 0 && GetState() == EState::Failed) ? m_Steps[static_cast<Uint64>(lStep)].Description : OpaaxString();
     }
 
     void GameExport::Run()
@@ -79,8 +76,8 @@ namespace Opaax::Editor
             const ExportStep& lStep = m_Steps[lIndex];
             OPAAX_LOG(LogGameExport, Info, "Export step {}/{}: {}", lIndex + 1, m_Steps.size(), lStep.Description);
 
-            const std::string lLine = GameExportPlan::ShellLine(lStep.Command, m_Workspace, m_Log, IS_WINDOWS);
-            if (std::system(lLine.c_str()) != 0)
+            const OpaaxString lLine = GameExportPlan::ShellLine(lStep.Command, m_Workspace, m_Log, IS_WINDOWS);
+            if (Process::RunCommandLine(lLine) != 0)
             {
                 m_FailedStep = static_cast<Int32>(lIndex);
                 m_State      = EState::Failed;
