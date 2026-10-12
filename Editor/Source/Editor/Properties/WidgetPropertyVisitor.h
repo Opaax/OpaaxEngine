@@ -40,7 +40,7 @@ namespace Opaax::Editor
         bool BeginGroup(const char* InName, const PropertyMeta& InMeta) override;
         void EndGroup() override;
 
-        void VisitUnsupported(const char* InName, std::string_view InTypeName) override;
+        void VisitUnsupported(const char* InName, OpaaxStringView InTypeName) override;
 
         void VisitList(const char* InName, IPropertyList& InList, const PropertyMeta& InMeta) override;
 

@@ -3,8 +3,6 @@
 // entt: any difference would change the keys written in map files.
 #include <doctest.h>
 
-#include <string>
-
 #include <entt/entt.hpp>
 
 #include "Core/Reflection/TypeInfo.h"
@@ -34,8 +32,8 @@ namespace
     void CheckSameAsEntt()
     {
         // As strings, so a failure prints both names.
-        const std::string lOurs(TypeNameOf<T>());
-        const std::string lEntt(entt::type_name<T>::value());
+        const OpaaxString lOurs(TypeNameOf<T>());
+        const OpaaxString lEntt{ OpaaxStringView(entt::type_name<T>::value()) };
         CHECK(lOurs == lEntt);
     }
 }
@@ -75,6 +73,6 @@ TEST_CASE("TypeIdOf: a global type and an engine type of the same name stay dist
     // GCC spells a type relative to the signature function's namespace: were that function in
     // Opaax, both would read "SameNameProbe" and share one id.
     CHECK(TypeIdOf<::SameNameProbe>() != TypeIdOf<Opaax::SameNameProbe>());
-    CHECK(std::string(TypeNameOf<::SameNameProbe>()) != std::string(TypeNameOf<Opaax::SameNameProbe>()));
+    CHECK(TypeNameOf<::SameNameProbe>() != TypeNameOf<Opaax::SameNameProbe>());
     CHECK(DeriveTypeLeafName<Opaax::SameNameProbe>() == OpaaxStringID("SameNameProbe"));
 }

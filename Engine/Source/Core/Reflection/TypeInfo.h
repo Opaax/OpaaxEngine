@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string_view>
-
 #include "Core/Hash/OpaaxHash.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxStringID.hpp"
@@ -14,7 +12,7 @@ namespace OpaaxTypeInfo
 {
     /** The compiler's signature of this function for T. Unique per type. */
     template<typename T>
-    constexpr std::string_view TypeSignature() noexcept
+    constexpr Opaax::OpaaxStringView TypeSignature() noexcept
     {
 #if defined(_MSC_VER) && !defined(__clang__)
         return __FUNCSIG__;
@@ -41,23 +39,23 @@ namespace Opaax
      * keyword ("struct Opaax::QuadComponent"); clang/gcc do not.
      */
     template<typename T>
-    constexpr std::string_view TypeNameOf() noexcept
+    constexpr OpaaxStringView TypeNameOf() noexcept
     {
-        constexpr std::string_view lSignature = TypeSignature<T>();
+        constexpr OpaaxStringView lSignature = TypeSignature<T>();
 
 #if defined(_MSC_VER) && !defined(__clang__)
         // "... __cdecl OpaaxTypeInfo::TypeSignature<struct Opaax::QuadComponent>(void) noexcept"
-        constexpr std::string_view lOpen  = "TypeSignature<";
-        constexpr Uint64           lStart = lSignature.find(lOpen) + lOpen.size();
-        constexpr Uint64           lEnd   = lSignature.rfind(">(void)");
+        constexpr OpaaxStringView lOpen  = "TypeSignature<";
+        constexpr Uint32          lStart = static_cast<Uint32>(lSignature.Find(lOpen)) + lOpen.GetLength();
+        constexpr Uint32          lEnd   = static_cast<Uint32>(lSignature.FindLast(">(void)"));
 #else
         // "... TypeSignature() [T = Opaax::QuadComponent]" (clang) or "[with T = ...; ...]" (gcc)
-        constexpr std::string_view lOpen  = "T = ";
-        constexpr Uint64           lStart = lSignature.find(lOpen) + lOpen.size();
-        constexpr Uint64           lEnd   = lSignature.find_first_of(";]", lStart);
+        constexpr OpaaxStringView lOpen  = "T = ";
+        constexpr Uint32          lStart = static_cast<Uint32>(lSignature.Find(lOpen)) + lOpen.GetLength();
+        constexpr Uint32          lEnd   = static_cast<Uint32>(lSignature.FindFirstOf(";]", lStart));
 #endif
 
-        return lSignature.substr(lStart, lEnd - lStart);
+        return lSignature.SubString(lStart, lEnd - lStart);
     }
 
     template<typename T>

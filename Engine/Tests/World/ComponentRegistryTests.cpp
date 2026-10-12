@@ -319,7 +319,7 @@ namespace
         void VisitDataAssetRef(const char*, OpaaxString&, OpaaxStringID, const PropertyMeta&) override {}
         bool BeginGroup(const char*, const PropertyMeta&) override { return true; }
         void EndGroup() override {}
-        void VisitUnsupported(const char*, std::string_view) override {}
+        void VisitUnsupported(const char*, OpaaxStringView) override {}
     };
 }
 

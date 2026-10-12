@@ -20,6 +20,7 @@ static_assert(OpaaxStringView("abc").GetLength() == 3);
 static_assert(OpaaxStringView("hello world").SubString(0, 5) == "hello");
 static_assert(OpaaxStringView("hello world").SubString(0, 5).Find("world") == -1);
 static_assert(OpaaxStringView("Maps/Decor.opaaxmap").FindLastOf("/\\") == 4);
+static_assert(OpaaxStringView("[with T = Int; U = Float]").FindFirstOf(";]", 9) == 13);
 
 TEST_CASE("OpaaxStringView: default view is empty and owns nothing")
 {
@@ -142,6 +143,18 @@ TEST_CASE("OpaaxStringView: FindLast walks backwards")
     CHECK(lView.FindLastOf(":ab") == 5);
     CHECK(OpaaxStringView("C:/Maps\\Decor").FindLastOf("/\\") == 7);
     CHECK(OpaaxStringView("nodots").FindLastOf("/\\") == -1);
+}
+
+TEST_CASE("OpaaxStringView: FindFirstOf walks forwards from a start position")
+{
+    const OpaaxStringView lView("[with T = A; U = B]");
+
+    CHECK(lView.FindFirstOf(";]") == 11);
+    CHECK(lView.FindFirstOf(";]", 12) == 18);      // the next one after the first
+    CHECK(lView.FindFirstOf(";]", 19) == -1);      // at the end
+    CHECK(lView.FindFirstOf(";]", 40) == -1);      // past the end
+    CHECK(lView.FindFirstOf("") == -1);            // no characters to find
+    CHECK(lView.FindFirstOf("[") == 0);
 }
 
 TEST_CASE("OpaaxStringView: StartsWith / EndsWith / Contains on the edges")

@@ -289,7 +289,7 @@ namespace
         bool BeginGroup(const char*, const PropertyMeta&) override { return true; }
         void EndGroup() override {}
 
-        void VisitUnsupported(const char* InName, std::string_view) override { Unsupported.emplace_back(InName); }
+        void VisitUnsupported(const char* InName, OpaaxStringView) override { Unsupported.emplace_back(InName); }
 
         void VisitList(const char* InName, IPropertyList& InList, const PropertyMeta& InMeta) override
         {

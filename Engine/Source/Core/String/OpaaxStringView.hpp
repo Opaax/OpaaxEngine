@@ -136,6 +136,16 @@ namespace Opaax
             return -1;
         }
 
+        /** @return Index of the first byte at or after InStartPos that is any of InChars, or -1. */
+        constexpr Int32 FindFirstOf(OpaaxStringView InChars, Uint32 InStartPos = 0) const noexcept
+        {
+            for (Uint32 i = InStartPos; i < m_Length; ++i)
+            {
+                if (InChars.Find(m_Data[i]) >= 0) { return static_cast<Int32>(i); }
+            }
+            return -1;
+        }
+
         /** @return Index of the last byte that is any of InChars, or -1. */
         constexpr Int32 FindLastOf(OpaaxStringView InChars) const noexcept
         {

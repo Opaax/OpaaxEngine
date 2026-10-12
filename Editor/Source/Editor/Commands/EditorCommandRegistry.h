@@ -1,10 +1,9 @@
 // EditorCommandRegistry.h
 #pragma once
 
-#include <typeindex>
-
 #include "Core/Log/Logger.h"
 #include "Core/OpaaxTypes.h"
+#include "Core/Reflection/TypeInfo.h"
 #include "Core/Tag/OpaaxTag.h"
 #include "Editor/EditorContext.h"
 #include "Editor/Commands/IEditorCommand.h"
@@ -43,7 +42,8 @@ namespace Opaax::Editor
             }
 
             m_Commands.emplace(InTag, EditorCommandRegisteryEntry{
-                                   .ParamsType = typeid(typename T::Params),
+                                   .ParamsType     = TypeIdOf<typename T::Params>(),
+                                   .ParamsTypeName = TypeNameOf<typename T::Params>(),
                                    .Create = []()
                                    {
                                        return IEditorCommand(T{});
@@ -68,11 +68,11 @@ namespace Opaax::Editor
 
             const EditorCommandRegisteryEntry& lCommandEntry = lEntry->second;
 
-            if (lCommandEntry.ParamsType != typeid(TParams))
+            if (lCommandEntry.ParamsType != TypeIdOf<TParams>())
             {
                 OPAAX_LOG(LogEditorCommandRegistry, Error,
                           "Command '{}' expects {} but was given {} — not executed", InTag,
-                          lCommandEntry.ParamsType.name(), typeid(TParams).name());
+                          lCommandEntry.ParamsTypeName, TypeNameOf<TParams>());
                 return false;
             }
 
@@ -103,7 +103,8 @@ namespace Opaax::Editor
     private:
         struct EditorCommandRegisteryEntry
         {
-            std::type_index ParamsType;
+            TypeId                      ParamsType = 0;
+            OpaaxStringView             ParamsTypeName;   // for the mismatch message
             TFunction<IEditorCommand()> Create;
         };
 

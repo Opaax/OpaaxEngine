@@ -1,6 +1,4 @@
 ﻿#pragma once
- 
-#include <string_view>
 
 #include "Core/EngineAPI.h"
 #include "Core/String/OpaaxString.hpp"
@@ -45,7 +43,7 @@ namespace Opaax
         static constexpr Uint64 FNV1a_OffsetBasis64 = 14695981039346656037ull;
 
         // 64-bit hash for stable identities (e.g. ResourceTypeID).
-        static constexpr Uint64 Hash64(std::string_view Str, Uint64 HashValue = FNV1a_OffsetBasis64) noexcept
+        static constexpr Uint64 Hash64(OpaaxStringView Str, Uint64 HashValue = FNV1a_OffsetBasis64) noexcept
         {
             for (const char lChar : Str)
             {

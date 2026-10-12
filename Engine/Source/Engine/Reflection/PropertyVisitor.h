@@ -1,6 +1,5 @@
 #pragma once
 
-#include <string_view>
 #include "Core/Templates/TypeTraits.h"
 
 #include "Core/Color/LinearColor.h"
@@ -114,7 +113,7 @@ namespace Opaax
         virtual void EndGroup() = 0;
 
         /** A field of a type no visit exists for. It is reported, not dropped. */
-        virtual void VisitUnsupported(const char* InName, std::string_view InTypeName) = 0;
+        virtual void VisitUnsupported(const char* InName, OpaaxStringView InTypeName) = 0;
 
         /** A list. By default each element is visited, named by its index ("[0]"). */
         virtual void VisitList(const char* /*InName*/, IPropertyList& InList, const PropertyMeta& InMeta)

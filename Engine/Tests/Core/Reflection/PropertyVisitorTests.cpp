@@ -133,7 +133,7 @@ namespace
         }
         void EndGroup() override { Lines.emplace_back("end"); }
 
-        void VisitUnsupported(const char* InName, std::string_view) override { Add("unsupported", InName); }
+        void VisitUnsupported(const char* InName, OpaaxStringView) override { Add("unsupported", InName); }
 
         void VisitList(const char* InName, IPropertyList& InList, const PropertyMeta& InMeta) override
         {
