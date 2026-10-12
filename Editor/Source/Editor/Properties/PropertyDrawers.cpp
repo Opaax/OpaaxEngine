@@ -220,12 +220,18 @@ namespace Opaax::Editor
         const bool bOpen = InWidgets.BeginTreeNode(InLabel);
         InWidgets.SameLine();
         InWidgets.TextDisabled(("(" + std::to_string(InList.Count()) + ")").c_str());
+        DrawPropertyNote(InWidgets, InMeta);
 
         if (bOpen)
         {
             // Applied after the loop: the elements are drawn from the list being changed.
             Int64 lRemove = -1;
             Int64 lMoveUp = -1;
+
+            // The elements keep the list's range and step; its note is shown once, beside its name.
+            PropertyMeta lElementMeta = InMeta;
+            lElementMeta.Tooltip = nullptr;
+            lElementMeta.Flags   = EPropertyFlags::None;
 
             WidgetPropertyVisitor lVisitor(InWidgets);
             for (Uint32 lIndex = 0; lIndex < InList.Count(); ++lIndex)
@@ -246,7 +252,7 @@ namespace Opaax::Editor
                 InWidgets.EndDisabled();
                 InWidgets.SameLine();
 
-                InList.VisitElement(lIndex, PropertyListLabel(lIndex).Text, lVisitor, InMeta);
+                InList.VisitElement(lIndex, PropertyListLabel(lIndex).Text, lVisitor, lElementMeta);
                 InWidgets.PopId();
             }
 
@@ -261,7 +267,6 @@ namespace Opaax::Editor
             InWidgets.EndTreeNode();
         }
 
-        DrawPropertyNote(InWidgets, InMeta);
         InWidgets.PopId();
     }
 }
