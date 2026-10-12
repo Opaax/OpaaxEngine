@@ -88,6 +88,23 @@ namespace Opaax::Editor
         }
     };
 
+    /**
+     * A list as a tree node: each element with a remove and a move-up button, then an Add button.
+     * Shared by the typed drawer below and the type-erased one.
+     */
+    void DrawPropertyListField(IEditorWidgets& InWidgets, const char* InLabel, IPropertyList& InList,
+                               const PropertyMeta& InMeta);
+
+    template<typename T>
+    struct TPropertyDrawer<TDynArray<T>>
+    {
+        static void Draw(IEditorWidgets& InWidgets, const char* InLabel, TDynArray<T>& InValue, const PropertyMeta& InMeta)
+        {
+            TPropertyList<T> lList(InValue);
+            DrawPropertyListField(InWidgets, InLabel, lList, InMeta);
+        }
+    };
+
     template<CEnumWithValues T>
     struct TPropertyDrawer<T>
     {

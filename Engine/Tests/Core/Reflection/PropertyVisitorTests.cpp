@@ -59,7 +59,9 @@ namespace
         TResourcePath<VisitorTestResource> Asset;
         TDataAssetRef<VisitorTestData>     Stats;
         VisitorTestInner                   Inner;
-        TDynArray<int>                     NotDrawable;
+        TDynArray<Int32>                   Numbers  = { 5, 6 };
+        TDynArray<VisitorTestInner>        Items    = { VisitorTestInner{} };
+        Uint64                             NotDrawable = 0;
 
         OPAAX_PROPERTIES(VisitorTestSubject,
                          OPAAX_PROP(bEnabled),
@@ -71,6 +73,8 @@ namespace
                          OPAAX_PROP(Asset),
                          OPAAX_PROP(Stats),
                          OPAAX_PROP(Inner).SetRange(0.f, 10.f).SetDragStep(0.5f),
+                         OPAAX_PROP(Numbers),
+                         OPAAX_PROP(Items),
                          OPAAX_PROP(NotDrawable))
     };
 
@@ -131,6 +135,13 @@ namespace
 
         void VisitUnsupported(const char* InName, std::string_view) override { Add("unsupported", InName); }
 
+        void VisitList(const char* InName, IPropertyList& InList, const PropertyMeta& InMeta) override
+        {
+            Add("list", InName);
+            Lines.back() += " " + std::to_string(InList.Count());
+            IPropertyVisitor::VisitList(InName, InList, InMeta);
+        }
+
         Uint32 LastResourceTypeId = 0;
 
     private:
@@ -165,6 +176,14 @@ TEST_CASE("PropertyVisitor: every field is visited once, in declaration order, b
         "float Amount [0,10]",     // inherits the group's range
         "float Bounded [-1,1]",    // its own range wins
         "end",
+        "list Numbers 2",          // a list, then each element named by its index
+        "int32 [0]",
+        "int32 [1]",
+        "list Items 1",
+        "group [0]",
+        "float Amount [0,0]",
+        "float Bounded [-1,1]",
+        "end",
         "unsupported NotDrawable", // reported, not dropped
     };
 
@@ -181,6 +200,32 @@ TEST_CASE("PropertyVisitor: writes through the visitor land in the object")
 
     CHECK(lSubject.Count == 42);
     CHECK(lSubject.Mode == EVisitorTestMode::Run);
+    CHECK(lSubject.Numbers == TDynArray<Int32>{ 42, 42 });   // list elements too
+}
+
+TEST_CASE("PropertyVisitor: a list is edited through IPropertyList without knowing its element type")
+{
+    TDynArray<VisitorTestInner> lValues(2);
+    lValues[0].Amount = 10.f;
+    lValues[1].Amount = 20.f;
+
+    TPropertyList<VisitorTestInner> lTyped(lValues);
+    IPropertyList&                  lList = lTyped;
+
+    lList.Add();
+    CHECK(lList.Count() == 3);
+    CHECK(lValues[2].Amount == 1.f);   // the element's default
+
+    lList.Swap(0, 1);
+    CHECK(lValues[0].Amount == 20.f);
+
+    lList.RemoveAt(0);
+    lList.RemoveAt(9);                 // out of range: nothing
+    CHECK(lList.Count() == 2);
+    CHECK(lValues[0].Amount == 10.f);
+
+    CHECK(std::string(PropertyListLabel(0).Text) == "[0]");
+    CHECK(std::string(PropertyListLabel(1234567).Text) == "[1234567]");
 }
 
 TEST_CASE("PropertyVisitor: a group the visitor declines is skipped, with no EndGroup")

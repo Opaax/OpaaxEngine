@@ -42,6 +42,8 @@ namespace Opaax::Editor
 
         void VisitUnsupported(const char* InName, std::string_view InTypeName) override;
 
+        void VisitList(const char* InName, IPropertyList& InList, const PropertyMeta& InMeta) override;
+
     private:
         IEditorWidgets& m_Widgets;
     };

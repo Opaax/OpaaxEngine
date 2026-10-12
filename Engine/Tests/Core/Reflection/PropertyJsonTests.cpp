@@ -62,6 +62,7 @@ namespace
         TDataAssetRef<JsonTestData>     Stats;
         JsonTestInner                   Inner;
         TDynArray<Int32>                Numbers;
+        TDynArray<JsonTestInner>        Items;
         Int32                           NotListed = 7;
 
         OPAAX_PROPERTIES(JsonTestSubject,
@@ -77,7 +78,8 @@ namespace
                          OPAAX_PROP(Asset),
                          OPAAX_PROP(Stats),
                          OPAAX_PROP(Inner),
-                         OPAAX_PROP(Numbers))
+                         OPAAX_PROP(Numbers),
+                         OPAAX_PROP(Items))
     };
 
     JsonTestSubject MakeEdited()
@@ -97,6 +99,7 @@ namespace
         lSubject.Inner.Amount = 4.5f;
         lSubject.Inner.Level  = 9;
         lSubject.Numbers      = { 1, 2, 3 };
+        lSubject.Items        = { JsonTestInner{ 0.5f, 1 }, JsonTestInner{ 2.5f, 3 } };
         lSubject.NotListed    = 99;
         return lSubject;
     }
@@ -121,18 +124,23 @@ TEST_CASE("PropertyJson: every listed field round-trips, with no NLOHMANN macro"
     CHECK(lRead.Stats.Path == "Data/Grunt.opaaxdata");
     CHECK(lRead.Inner.Level == 9);
     CHECK(lRead.Numbers == TDynArray<Int32>{ 1, 2, 3 });
+    REQUIRE(lRead.Items.size() == 2);
+    CHECK(lRead.Items[1].Amount == 2.5f);
+    CHECK(lRead.Items[1].Level == 3);
 }
 
 TEST_CASE("PropertyJson: the file shape: field names as keys, a group as an object, an enum as its label")
 {
     const nlohmann::json lJson = PropertiesToJson(MakeEdited());
 
-    CHECK(lJson.size() == 13);              // the listed fields only
+    CHECK(lJson.size() == 14);              // the listed fields only
     CHECK_FALSE(lJson.contains("NotListed"));
     CHECK(lJson.at("Mode") == "Run");       // a label, so reordering the enum is safe
     CHECK(lJson.at("Asset") == "Textures/Hero.png");
     CHECK(lJson.at("Inner").is_object());
     CHECK(lJson.at("Inner").at("Level") == 9);
+    CHECK(lJson.at("Items").is_array());    // a list of groups: an array of objects
+    CHECK(lJson.at("Items").at(0).at("Amount") == 0.5f);
 }
 
 TEST_CASE("PropertyJson: a type with both descriptions writes exactly what its NLOHMANN macro writes")
@@ -158,6 +166,27 @@ TEST_CASE("PropertyJson: a missing key keeps the field's value")
     CHECK(lRead.Speed == 1.5f);
     CHECK(lRead.Label == "hello");
     CHECK(lRead.Mode == EJsonTestMode::Walk);
+}
+
+TEST_CASE("PropertyJson: a list is read element by element; a bad element keeps its default and is named")
+{
+    JsonTestSubject        lRead;
+    TDynArray<OpaaxString> lBad;
+    const nlohmann::json   lJson = { { "Items", { { { "Level", 4 } }, { { "Amount", "no" } } } } };
+    CHECK(PropertiesFromJson(lJson, lRead, &lBad));
+
+    REQUIRE(lRead.Items.size() == 2);
+    CHECK(lRead.Items[0].Level == 4);
+    CHECK(lRead.Items[0].Amount == 1.f);   // missing: the default
+    CHECK(lRead.Items[1].Amount == 1.f);   // wrong type: the default
+    CHECK(lBad == TDynArray<OpaaxString>{ OpaaxString("Items[1].Amount") });
+
+    // Not an array: the list is kept and named.
+    lRead.Items.resize(1);
+    lBad.clear();
+    CHECK(PropertiesFromJson(nlohmann::json{ { "Items", 3 } }, lRead, &lBad));
+    CHECK(lRead.Items.size() == 1);
+    CHECK(lBad == TDynArray<OpaaxString>{ OpaaxString("Items") });
 }
 
 TEST_CASE("PropertyJson: a wrong-typed value keeps the field's value and names the field")

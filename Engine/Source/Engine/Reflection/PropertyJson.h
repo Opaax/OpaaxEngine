@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <type_traits>
 
 #include <nlohmann/json.hpp>
@@ -48,6 +49,12 @@ namespace Opaax
             InJson.get_to(InMutable);
         };
 
+        template<typename T>
+        inline constexpr bool k_IsList = false;
+
+        template<typename T>
+        inline constexpr bool k_IsList<TDynArray<T>> = true;
+
         inline OpaaxString JoinPath(const OpaaxString& InPrefix, const char* InName)
         {
             if (InPrefix.IsEmpty())
@@ -67,6 +74,15 @@ namespace Opaax
             if constexpr (CReflected<TValue>)
             {
                 return PropertiesToJson(InValue);
+            }
+            else if constexpr (k_IsList<TValue> && !std::is_same_v<TValue, TDynArray<bool>>)
+            {
+                nlohmann::json lArray = nlohmann::json::array();
+                for (const auto& lElement : InValue)
+                {
+                    lArray.push_back(ValueToJson(lElement));
+                }
+                return lArray;
             }
             else if constexpr (CEnumWithValues<TValue>)
             {
@@ -98,6 +114,26 @@ namespace Opaax
                 {
                     OutBadFields->push_back(InPath);
                 }
+            }
+            else if constexpr (k_IsList<TValue> && !std::is_same_v<TValue, TDynArray<bool>>)
+            {
+                if (!InJson.is_array())
+                {
+                    if (OutBadFields != nullptr) { OutBadFields->push_back(InPath); }
+                    return;
+                }
+
+                // Element by element: one bad element keeps its default, the others are read.
+                TValue lList(InJson.size());
+                for (size_t lIndex = 0; lIndex < InJson.size(); ++lIndex)
+                {
+                    OpaaxString lElementPath = InPath;
+                    lElementPath += "[";
+                    lElementPath += std::to_string(lIndex).c_str();
+                    lElementPath += "]";
+                    ReadValue(InJson[lIndex], lList[lIndex], lElementPath, OutBadFields);
+                }
+                InOutValue = Move(lList);
             }
             else
             {

@@ -71,4 +71,9 @@ namespace Opaax::Editor
         const std::string lText = std::string(InName) + ": " + std::string(InTypeName) + " (no editor for this type)";
         m_Widgets.TextDisabled(lText.c_str());
     }
+
+    void WidgetPropertyVisitor::VisitList(const char* InName, IPropertyList& InList, const PropertyMeta& InMeta)
+    {
+        DrawPropertyListField(m_Widgets, InName, InList, InMeta);
+    }
 }

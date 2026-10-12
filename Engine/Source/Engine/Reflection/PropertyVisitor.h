@@ -5,6 +5,7 @@
 #include <string_view>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 
 #include "Core/Color/LinearColor.h"
 #include "Core/Maths/MathTypes.h"
@@ -19,6 +20,55 @@
 
 namespace Opaax
 {
+    class IPropertyVisitor;
+
+    // =============================================================================
+    // IPropertyList — a list field (TDynArray) seen without its element type: its size, the edits a
+    //   visitor may make, and a visit of each element.
+    // =============================================================================
+    class IPropertyList
+    {
+    public:
+        virtual ~IPropertyList() = default;
+
+        virtual Uint32 Count() const noexcept = 0;
+
+        /** Appends an element with its default value. */
+        virtual void Add() = 0;
+
+        virtual void RemoveAt(Uint32 InIndex) = 0;
+
+        /** Swaps two elements (moving one up or down). */
+        virtual void Swap(Uint32 InFirst, Uint32 InSecond) = 0;
+
+        /** Visits element InIndex as a field named InName. */
+        virtual void VisitElement(Uint32 InIndex, const char* InName, IPropertyVisitor& InVisitor,
+                                  const PropertyMeta& InMeta) = 0;
+    };
+
+    /** "[3]": the name an element of a list is visited under. */
+    struct PropertyListLabel
+    {
+        char Text[16] = {};
+
+        explicit PropertyListLabel(const Uint32 InIndex) noexcept
+        {
+            char   lDigits[12] = {};
+            Uint32 lCount      = 0;
+            Uint32 lValue      = InIndex;
+            do
+            {
+                lDigits[lCount++] = static_cast<char>('0' + lValue % 10);
+                lValue /= 10;
+            } while (lValue > 0);
+
+            Uint32 lAt = 0;
+            Text[lAt++] = '[';
+            while (lCount > 0) { Text[lAt++] = lDigits[--lCount]; }
+            Text[lAt++] = ']';
+        }
+    };
+
     // =============================================================================
     // IPropertyVisitor — walks a reflected object's fields without knowing its type. One call per
     //   field kind; the visitor may read or write the value. This is what lets the editor draw (and a
@@ -69,6 +119,15 @@ namespace Opaax
 
         /** A field of a type no visit exists for. It is reported, not dropped. */
         virtual void VisitUnsupported(const char* InName, std::string_view InTypeName) = 0;
+
+        /** A list. By default each element is visited, named by its index ("[0]"). */
+        virtual void VisitList(const char* /*InName*/, IPropertyList& InList, const PropertyMeta& InMeta)
+        {
+            for (Uint32 lIndex = 0; lIndex < InList.Count(); ++lIndex)
+            {
+                InList.VisitElement(lIndex, PropertyListLabel(lIndex).Text, *this, InMeta);
+            }
+        }
     };
 
     namespace PropertyVisitorDetail
@@ -87,6 +146,12 @@ namespace Opaax
             requires T::k_IsDataAssetRef;
             { InValue.Path } -> std::convertible_to<OpaaxString&>;
         };
+
+        template<typename T>
+        inline constexpr bool k_IsList = false;
+
+        template<typename T>
+        inline constexpr bool k_IsList<TDynArray<T>> = true;
 
         template<typename T>
         inline constexpr bool k_IsPlainVisit =
@@ -111,6 +176,51 @@ namespace Opaax
 
     template<CReflected TOwner>
     void VisitProperties(TOwner& InOwner, IPropertyVisitor& InVisitor, const PropertyMeta& InInherited = {});
+
+    template<typename TValue>
+    void VisitValue(IPropertyVisitor& InVisitor, const char* InName, TValue& InValue, const PropertyMeta& InMeta);
+
+    // =============================================================================
+    // TPropertyList — a TDynArray<T> as an IPropertyList.
+    // =============================================================================
+    template<typename TElement>
+    class TPropertyList final : public IPropertyList
+    {
+    public:
+        explicit TPropertyList(TDynArray<TElement>& InValues) : m_Values(InValues) {}
+
+        Uint32 Count() const noexcept override { return static_cast<Uint32>(m_Values.size()); }
+
+        void Add() override { m_Values.emplace_back(); }
+
+        void RemoveAt(const Uint32 InIndex) override
+        {
+            if (InIndex < m_Values.size())
+            {
+                m_Values.erase(m_Values.begin() + InIndex);
+            }
+        }
+
+        void Swap(const Uint32 InFirst, const Uint32 InSecond) override
+        {
+            if (InFirst < m_Values.size() && InSecond < m_Values.size())
+            {
+                std::swap(m_Values[InFirst], m_Values[InSecond]);
+            }
+        }
+
+        void VisitElement(const Uint32 InIndex, const char* InName, IPropertyVisitor& InVisitor,
+                          const PropertyMeta& InMeta) override
+        {
+            if (InIndex < m_Values.size())
+            {
+                VisitValue(InVisitor, InName, m_Values[InIndex], InMeta);
+            }
+        }
+
+    private:
+        TDynArray<TElement>& m_Values;
+    };
 
     /**
      * Visits one value. InMeta is already inherited (a group passes its range/step down).
@@ -155,6 +265,11 @@ namespace Opaax
         else if constexpr (CDataAssetRefField<TValue>)
         {
             InVisitor.VisitDataAssetRef(InName, InValue.Path, DeriveTypeLeafName<typename TValue::DataType>(), InMeta);
+        }
+        else if constexpr (k_IsList<TValue> && !std::is_same_v<TValue, TDynArray<bool>>)
+        {
+            TPropertyList<typename TValue::value_type> lList(InValue);
+            InVisitor.VisitList(InName, lList, InMeta);
         }
         else
         {
