@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Audio/AudioBackend.h"
+#include "Audio/AudioBusSettings.h"
 #include "Audio/AudioTypes.h"
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
@@ -41,6 +42,9 @@ namespace Opaax
             Uint32        SampleRate  = 48000;
             Uint32        MaxVoices   = 64;
             Uint32        BlockFrames = 256;
+
+            /** The buses under the master. */
+            TDynArray<AudioBusSettings> Buses = DefaultAudioBuses();
         };
 
         // =============================================================================
@@ -107,20 +111,39 @@ namespace Opaax
         void SetPaused(SoundHandle InSound, bool bInPaused);
 
         // =============================================================================
-        // Mix
+        // Buses — named as in the engine config ("Master", "Music", "SFX"...). A name that is not
+        //   a bus is logged once and does nothing.
         // =============================================================================
     public:
-        void  SetBusVolume(EAudioBus InBus, float InVolume);
-        float GetBusVolume(EAudioBus InBus) const;
+        bool HasBus(OpaaxStringID InBus) const;
+
+        /** The bus's own volume (the settings' one). */
+        void  SetBusVolume(OpaaxStringID InBus, float InVolume);
+        float GetBusVolume(OpaaxStringID InBus) const;
+
+        /**
+         * Moves the bus's fade to InVolume over InSeconds, on top of its volume: a cutscene fades the
+         * music out without touching the volume the player chose.
+         */
+        void FadeBus(OpaaxStringID InBus, float InVolume, float InSeconds);
+
+        void SetBusMuted(OpaaxStringID InBus, bool bInMuted);
+
+        /** While a bus is soloed, only it and the buses under it are heard. */
+        void SetBusSolo(OpaaxStringID InBus, bool bInSolo);
 
         void  SetMasterVolume(float InVolume);
         float GetMasterVolume() const;
 
+        // =============================================================================
+        // Listener and settings
+        // =============================================================================
+    public:
         /** Where spatial sounds are heard from (usually the camera or the player). */
         void     SetListenerPosition(Vector2F InPosition);
         Vector2F GetListenerPosition() const;
 
-        /** Volumes from the engine config (startup, and when the config changes). */
+        /** Volumes from the engine config (startup, and when the config changes). The bus tree is built at Startup. */
         void ApplySettings(const AudioSettings& InSettings);
 
         // =============================================================================

@@ -3,7 +3,7 @@
         {
             "components": {
                 "AudioSource": {
-                    "Bus": "Effects",
+                    "Bus": "SFX",
                     "Clip": "Audio/Beep.wav",
                     "MaxDistance": 1500.0,
                     "MinDistance": 100.0,
@@ -86,7 +86,7 @@
                     "bSourceStopped": false
                 },
                 "AudioSource": {
-                    "Bus": "Effects",
+                    "Bus": "SFX",
                     "Clip": "Audio/Beep.wav",
                     "MaxDistance": 1500.0,
                     "MinDistance": 100.0,

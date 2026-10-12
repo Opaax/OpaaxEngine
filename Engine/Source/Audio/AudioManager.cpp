@@ -35,13 +35,8 @@ namespace Opaax
 
         constexpr Uint32 INVALID_SLOT = ~0u;
 
-        /** The mixer's buses: the master, then one per EAudioBus, in its order. */
+        /** The master is the mixer's first bus. */
         constexpr Uint16 MASTER_BUS = 0;
-
-        Uint16 BusIndexOf(const EAudioBus InBus) noexcept
-        {
-            return static_cast<Uint16>(static_cast<Uint8>(InBus) + 1);
-        }
 
         Uint32 SecondsToFrames(const float InSeconds, const Uint32 InSampleRate) noexcept
         {
@@ -116,7 +111,20 @@ namespace Opaax
         TDynArray<Retired> RetiredSources;
         Uint64             NextStartOrder = 1;
 
-        float    BusVolumes[AUDIO_BUS_COUNT + 1] = { 1.f, 1.f, 1.f, 1.f, 1.f };   // master first
+        /** The game thread's view of a bus: what the mixer was last told. */
+        struct BusView
+        {
+            OpaaxStringID Id;
+            Int32         Parent = -1;
+            float         Volume = 1.f;
+            float         Fade   = 1.f;
+            bool          bMuted = false;
+        };
+
+        TDynArray<BusView>                   Buses;        // the mixer's order: the master first
+        TUnorderedMap<OpaaxStringID, Uint16> BusIndices;
+        TUnorderedSet<OpaaxStringID>         WarnedBuses;  // names not found, already logged
+
         Vector2F Listener = { 0.f, 0.f };
 
         /** Headless: the fraction of a frame carried to the next Update, and where the mix goes. */
@@ -340,11 +348,137 @@ namespace Opaax
             return (lSlot != nullptr && !lSlot->bStopping) ? lSlot : nullptr;
         }
 
+        // =====================================================================
+        // Buses
+        // =====================================================================
+
+        /**
+         * The bus tree from InBuses, under the master: a parent is placed before its children. A bus
+         * without a name, listed twice, or under a parent that is not a bus (or under itself) is
+         * logged; the last two go under the master.
+         */
+        void BuildBuses(const TDynArray<AudioBusSettings>& InBuses)
+        {
+            Buses.clear();
+            BusIndices.clear();
+            Buses.push_back(BusView{ AudioMasterBus(), -1 });
+            BusIndices.emplace(AudioMasterBus(), MASTER_BUS);
+
+            TDynArray<const AudioBusSettings*> lPending;
+            TUnorderedSet<OpaaxStringID>       lNames;
+            for (const AudioBusSettings& lBus : InBuses)
+            {
+                if (!lBus.Name.IsValid())
+                {
+                    OPAAX_LOG(LogAudio, Warn, "An audio bus has no name (Audio.Buses): it is left out");
+                    continue;
+                }
+
+                if (lBus.Name == AudioMasterBus() || !lNames.insert(lBus.Name).second)
+                {
+                    OPAAX_LOG(LogAudio, Warn, "Audio bus '{}' is listed twice (Audio.Buses; the master is always there): "
+                              "the first one is kept", lBus.Name);
+                    continue;
+                }
+                lPending.push_back(&lBus);
+            }
+
+            // Place every bus whose parent is placed, until none moves.
+            bool bPlaced = true;
+            while (!lPending.empty() && bPlaced)
+            {
+                bPlaced = false;
+                for (auto lIt = lPending.begin(); lIt != lPending.end();)
+                {
+                    const OpaaxStringID lParent = (*lIt)->Parent.IsValid() ? (*lIt)->Parent : AudioMasterBus();
+                    const auto          lFound  = BusIndices.find(lParent);
+                    if (lFound == BusIndices.end())
+                    {
+                        ++lIt;
+                        continue;
+                    }
+
+                    AddBus(**lIt, lFound->second);
+                    lIt     = lPending.erase(lIt);
+                    bPlaced = true;
+                }
+            }
+
+            for (const AudioBusSettings* lBus : lPending)
+            {
+                OPAAX_LOG(LogAudio, Warn, "Audio bus '{}' is under '{}', which is not a bus above it (Audio.Buses): it is "
+                          "put under the master", lBus->Name, lBus->Parent);
+                AddBus(*lBus, MASTER_BUS);
+            }
+        }
+
+        void AddBus(const AudioBusSettings& InBus, const Uint16 InParent)
+        {
+            BusIndices.emplace(InBus.Name, static_cast<Uint16>(Buses.size()));
+            Buses.push_back(BusView{ InBus.Name, InParent, std::max(InBus.Volume, 0.f) });
+        }
+
+        /** A bus by name, or -1. Unknown names are logged once. */
+        Int32 FindBus(const OpaaxStringID InBus)
+        {
+            const auto lFound = BusIndices.find(InBus);
+            if (lFound != BusIndices.end())
+            {
+                return lFound->second;
+            }
+
+            if (bStarted && WarnedBuses.insert(InBus).second)
+            {
+                OPAAX_LOG(LogAudio, Warn, "No audio bus is named '{}' (Engine.config, Audio.Buses)", InBus);
+            }
+            return -1;
+        }
+
+        /** The bus a sound plays in: its own, the default one when it names none, else the master. */
+        Uint16 ResolveBus(const OpaaxStringID InBus)
+        {
+            // Maps saved before the bus tree name the effects bus "Effects".
+            static const OpaaxStringID s_OldEffects = OPAAX_ID("Effects");
+
+            OpaaxStringID lName = InBus.IsValid() ? InBus : AudioDefaultBus();
+            if (lName == s_OldEffects && !BusIndices.contains(lName))
+            {
+                lName = AudioDefaultBus();
+            }
+
+            const Int32 lBus = FindBus(lName);
+            return lBus >= 0 ? static_cast<Uint16>(lBus) : MASTER_BUS;
+        }
+
+        /** A bus's gain through its chain up to the master, as last set (fades at their target). */
+        float ChainGain(Int32 InBus) const
+        {
+            float lGain = 1.f;
+            while (InBus >= 0 && InBus < static_cast<Int32>(Buses.size()))
+            {
+                const BusView& lBus = Buses[InBus];
+                lGain *= lBus.bMuted ? 0.f : lBus.Volume * lBus.Fade;
+                InBus  = lBus.Parent;
+            }
+            return lGain;
+        }
+
+        void SendBus(const EAudioCommand InType, const Uint16 InBus, const float InValue, const Uint32 InFrames = 0,
+                     const bool bInFlag = false)
+        {
+            AudioCommand lCommand;
+            lCommand.Type   = InType;
+            lCommand.Bus    = InBus;
+            lCommand.Value  = InValue;
+            lCommand.Frames = InFrames;
+            lCommand.bFlag  = bInFlag;
+            Send(lCommand);
+        }
+
         /** About how loud a voice is now: its volume, its buses and its distance. */
         float EstimatedGain(const Slot& InSlot) const
         {
-            float lGain = InSlot.Volume * InSlot.Fade * BusVolumes[MASTER_BUS]
-                        * (InSlot.Bus != MASTER_BUS && InSlot.Bus <= AUDIO_BUS_COUNT ? BusVolumes[InSlot.Bus] : 1.f);
+            float lGain = InSlot.Volume * InSlot.Fade * ChainGain(InSlot.Bus);
 
             if (InSlot.bSpatial)
             {
@@ -454,6 +588,7 @@ namespace Opaax
             lImpl.Settings.bHeadless = !lSettings->bEnabled;
             lImpl.Settings.Backend   = lSettings->Backend;
             lImpl.Settings.MaxVoices = lSettings->MaxVoices;
+            lImpl.Settings.Buses     = lSettings->Buses;
         }
 
         lImpl.Settings.SampleRate  = std::clamp(lImpl.Settings.SampleRate, 8000u, 192000u);
@@ -461,15 +596,15 @@ namespace Opaax
         lImpl.Settings.BlockFrames = std::clamp(lImpl.Settings.BlockFrames, 32u, 4096u);
         AudioAPI::SetBackend(lImpl.Settings.Backend);
 
-        // The bus tree: the master, then one bus per EAudioBus under it.
         AudioMixer::Desc lMix;
         lMix.SampleRate  = lImpl.Settings.SampleRate;
         lMix.MaxVoices   = lImpl.Settings.MaxVoices;
         lMix.BlockFrames = lImpl.Settings.BlockFrames;
-        lMix.Buses.push_back(AudioBusDesc{ OPAAX_ID("Master"), -1, lImpl.BusVolumes[MASTER_BUS] });
-        for (Uint8 lBus = 0; lBus < AUDIO_BUS_COUNT; ++lBus)
+
+        lImpl.BuildBuses(lImpl.Settings.Buses);
+        for (const Impl::BusView& lBus : lImpl.Buses)
         {
-            lMix.Buses.push_back(AudioBusDesc{ OPAAX_ID(ToString(static_cast<EAudioBus>(lBus))), MASTER_BUS, lImpl.BusVolumes[lBus + 1] });
+            lMix.Buses.push_back(AudioBusDesc{ lBus.Id, lBus.Parent, lBus.Volume });
         }
 
         // Every voice and every tail can end before the game thread drains: room for all of them twice.
@@ -624,13 +759,14 @@ namespace Opaax
 
         lVoice.Volume       = std::max(InParams.Volume, 0.f);
         lVoice.Pitch        = InParams.Pitch;
-        lVoice.Bus          = BusIndexOf(InParams.Bus);
+        lVoice.Bus          = lImpl.ResolveBus(InParams.Bus);
         lVoice.bLoop        = InParams.bLoop;
         lVoice.FadeInFrames = SecondsToFrames(InParams.FadeInSeconds, lImpl.Settings.SampleRate);
         lVoice.bSpatial     = InParams.bSpatial;
         lVoice.Position     = InParams.Position;
         lVoice.MinDistance  = InParams.MinDistance;
         lVoice.MaxDistance  = InParams.MaxDistance;
+        lVoice.Attenuation  = InParams.Attenuation;
 
         AudioCommand lCommand;
         lCommand.Type   = EAudioCommand::Play;
@@ -742,47 +878,65 @@ namespace Opaax
     // =========================================================================
     // Mix
     // =========================================================================
-    void AudioManager::SetBusVolume(const EAudioBus InBus, const float InVolume)
+    bool AudioManager::HasBus(const OpaaxStringID InBus) const
     {
-        const Uint16 lBus = BusIndexOf(InBus);
-        if (lBus > AUDIO_BUS_COUNT)
-        {
-            return;
-        }
+        return m_Impl->BusIndices.contains(InBus);
+    }
 
-        m_Impl->BusVolumes[lBus] = std::max(InVolume, 0.f);
-        if (m_Impl->bStarted)
+    void AudioManager::SetBusVolume(const OpaaxStringID InBus, const float InVolume)
+    {
+        const Int32 lBus = m_Impl->FindBus(InBus);
+        if (lBus >= 0)
         {
-            AudioCommand lCommand;
-            lCommand.Type  = EAudioCommand::SetBusVolume;
-            lCommand.Bus   = lBus;
-            lCommand.Value = m_Impl->BusVolumes[lBus];
-            m_Impl->Send(lCommand);
+            m_Impl->Buses[lBus].Volume = std::max(InVolume, 0.f);
+            m_Impl->SendBus(EAudioCommand::SetBusVolume, static_cast<Uint16>(lBus), m_Impl->Buses[lBus].Volume);
         }
     }
 
-    float AudioManager::GetBusVolume(const EAudioBus InBus) const
+    float AudioManager::GetBusVolume(const OpaaxStringID InBus) const
     {
-        const Uint16 lBus = BusIndexOf(InBus);
-        return lBus <= AUDIO_BUS_COUNT ? m_Impl->BusVolumes[lBus] : 0.f;
+        const auto lFound = m_Impl->BusIndices.find(InBus);
+        return lFound != m_Impl->BusIndices.end() ? m_Impl->Buses[lFound->second].Volume : 0.f;
+    }
+
+    void AudioManager::FadeBus(const OpaaxStringID InBus, const float InVolume, const float InSeconds)
+    {
+        const Int32 lBus = m_Impl->FindBus(InBus);
+        if (lBus >= 0)
+        {
+            m_Impl->Buses[lBus].Fade = std::max(InVolume, 0.f);
+            m_Impl->SendBus(EAudioCommand::FadeBus, static_cast<Uint16>(lBus), m_Impl->Buses[lBus].Fade,
+                            SecondsToFrames(InSeconds, m_Impl->Settings.SampleRate));
+        }
+    }
+
+    void AudioManager::SetBusMuted(const OpaaxStringID InBus, const bool bInMuted)
+    {
+        const Int32 lBus = m_Impl->FindBus(InBus);
+        if (lBus >= 0)
+        {
+            m_Impl->Buses[lBus].bMuted = bInMuted;
+            m_Impl->SendBus(EAudioCommand::SetBusMute, static_cast<Uint16>(lBus), 0.f, 0, bInMuted);
+        }
+    }
+
+    void AudioManager::SetBusSolo(const OpaaxStringID InBus, const bool bInSolo)
+    {
+        const Int32 lBus = m_Impl->FindBus(InBus);
+        if (lBus >= 0)
+        {
+            m_Impl->SendBus(EAudioCommand::SetBusSolo, static_cast<Uint16>(lBus), 0.f, 0, bInSolo);
+        }
     }
 
     void AudioManager::SetMasterVolume(const float InVolume)
     {
-        m_Impl->BusVolumes[MASTER_BUS] = std::max(InVolume, 0.f);
-        if (m_Impl->bStarted)
-        {
-            AudioCommand lCommand;
-            lCommand.Type  = EAudioCommand::SetBusVolume;
-            lCommand.Bus   = MASTER_BUS;
-            lCommand.Value = m_Impl->BusVolumes[MASTER_BUS];
-            m_Impl->Send(lCommand);
-        }
+        SetBusVolume(AudioMasterBus(), InVolume);
     }
 
     float AudioManager::GetMasterVolume() const
     {
-        return m_Impl->BusVolumes[MASTER_BUS];
+        return GetBusVolume(AudioMasterBus());
     }
 
     void AudioManager::SetListenerPosition(const Vector2F InPosition)
@@ -805,10 +959,15 @@ namespace Opaax
     void AudioManager::ApplySettings(const AudioSettings& InSettings)
     {
         SetMasterVolume(InSettings.MasterVolume);
-        SetBusVolume(EAudioBus::Music,    InSettings.MusicVolume);
-        SetBusVolume(EAudioBus::Effects,  InSettings.EffectsVolume);
-        SetBusVolume(EAudioBus::Ambience, InSettings.AmbienceVolume);
-        SetBusVolume(EAudioBus::UI,       InSettings.UIVolume);
+
+        // A bus added since Startup is built at the next start.
+        for (const AudioBusSettings& lBus : InSettings.Buses)
+        {
+            if (HasBus(lBus.Name))
+            {
+                SetBusVolume(lBus.Name, lBus.Volume);
+            }
+        }
     }
 
     void AudioManager::OnEngineConfigChanged()

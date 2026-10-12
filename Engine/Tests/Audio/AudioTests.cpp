@@ -319,7 +319,7 @@ TEST_CASE("AudioManager: what is heard follows the sound, bus and master volumes
 
     PlaySoundParams lParams;
     lParams.bLoop = true;
-    lParams.Bus   = EAudioBus::Effects;
+    lParams.Bus   = OPAAX_ID("SFX");
     const SoundHandle lSound = lAudio.Play(MakeClip(0.5f), lParams);
 
     const float lFull = RenderPeaks(lAudio).Max();
@@ -328,13 +328,13 @@ TEST_CASE("AudioManager: what is heard follows the sound, bus and master volumes
     // Each change ramps over one block, so nothing clicks: let it finish, then measure.
     SUBCASE("the bus")
     {
-        lAudio.SetBusVolume(EAudioBus::Effects, 0.f);
+        lAudio.SetBusVolume(OPAAX_ID("SFX"), 0.f);
         Settle(lAudio);
         CHECK(RenderPeaks(lAudio).Max() < 1e-4f);
 
         // Another bus is not affected.
-        lAudio.SetBusVolume(EAudioBus::Effects, 1.f);
-        lAudio.SetBusVolume(EAudioBus::Music, 0.f);
+        lAudio.SetBusVolume(OPAAX_ID("SFX"), 1.f);
+        lAudio.SetBusVolume(OPAAX_ID("Music"), 0.f);
         Settle(lAudio);
         CHECK(RenderPeaks(lAudio).Max() == doctest::Approx(lFull).epsilon(0.05));
     }
@@ -356,13 +356,95 @@ TEST_CASE("AudioManager: what is heard follows the sound, bus and master volumes
     SUBCASE("the settings")
     {
         AudioSettings lSettings;
-        lSettings.MasterVolume  = 1.f;
-        lSettings.EffectsVolume = 0.5f;
+        lSettings.MasterVolume = 1.f;
+        for (AudioBusSettings& lBus : lSettings.Buses)
+        {
+            if (lBus.Name == OPAAX_ID("SFX")) { lBus.Volume = 0.5f; }
+        }
         lAudio.ApplySettings(lSettings);
-        CHECK(lAudio.GetBusVolume(EAudioBus::Effects) == 0.5f);
+        CHECK(lAudio.GetBusVolume(OPAAX_ID("SFX")) == 0.5f);
         Settle(lAudio);
         CHECK(RenderPeaks(lAudio).Max() == doctest::Approx(lFull * 0.5f).epsilon(0.05));
     }
+}
+
+TEST_CASE("AudioManager: the bus tree comes from the settings; a fade, mute and solo on a bus")
+{
+    AudioManager::Desc lDesc = Headless();
+    lDesc.Buses = {
+        AudioBusSettings{ OPAAX_ID("Footsteps"), OPAAX_ID("SFX"), 1.f },   // listed before its parent
+        AudioBusSettings{ OPAAX_ID("SFX"), OpaaxStringID(), 0.5f },
+        AudioBusSettings{ OPAAX_ID("Music"), OpaaxStringID(), 1.f },
+        AudioBusSettings{ OPAAX_ID("SFX"), OpaaxStringID(), 1.f },        // twice: the first is kept
+        AudioBusSettings{ OPAAX_ID("Lost"), OPAAX_ID("Nowhere"), 1.f },   // under the master
+    };
+
+    AudioManager lAudio(lDesc);
+    REQUIRE(lAudio.Startup());
+    CHECK(lAudio.HasBus(OPAAX_ID("Master")));
+    CHECK(lAudio.HasBus(OPAAX_ID("Footsteps")));
+    CHECK(lAudio.HasBus(OPAAX_ID("Lost")));
+    CHECK(lAudio.GetBusVolume(OPAAX_ID("SFX")) == 0.5f);
+
+    PlaySoundParams lParams;
+    lParams.bLoop = true;
+    lParams.Bus   = OPAAX_ID("Footsteps");
+    lAudio.Play(MakeClip(0.5f), lParams);
+
+    // Under SFX at 0.5: half of what the clip holds.
+    CHECK(RenderPeaks(lAudio).Max() == doctest::Approx(0.25f).epsilon(0.05));
+
+    SUBCASE("a fade on the parent reaches the child, in its time")
+    {
+        lAudio.FadeBus(OPAAX_ID("SFX"), 0.f, 0.2f);
+        CHECK(RenderPeaks(lAudio, 0.1f).Max() > 0.05f);
+        RenderPeaks(lAudio, 0.11f);
+        CHECK(RenderPeaks(lAudio).Max() == 0.f);
+        CHECK(lAudio.GetBusVolume(OPAAX_ID("SFX")) == 0.5f);   // the volume is not the fade
+    }
+
+    SUBCASE("mute")
+    {
+        lAudio.SetBusMuted(OPAAX_ID("SFX"), true);
+        Settle(lAudio);
+        CHECK(RenderPeaks(lAudio).Max() == 0.f);
+    }
+
+    SUBCASE("solo")
+    {
+        lAudio.SetBusSolo(OPAAX_ID("Music"), true);
+        Settle(lAudio);
+        CHECK(RenderPeaks(lAudio).Max() == 0.f);
+
+        lAudio.SetBusSolo(OPAAX_ID("SFX"), true);   // a soloed parent: its children are heard
+        Settle(lAudio);
+        CHECK(RenderPeaks(lAudio).Max() > 0.2f);
+    }
+
+    SUBCASE("an unknown bus does nothing; a sound naming one plays in the master")
+    {
+        lAudio.SetBusVolume(OPAAX_ID("Nope"), 0.f);
+        CHECK_FALSE(lAudio.HasBus(OPAAX_ID("Nope")));
+
+        PlaySoundParams lLost;
+        lLost.Bus = OPAAX_ID("Nope");
+        CHECK(lAudio.Play(MakeClip(0.5f), lLost).IsValid());
+    }
+}
+
+TEST_CASE("AudioManager: a sound naming no bus plays in SFX; the old bus name \"Effects\" is SFX")
+{
+    AudioManager lAudio(Headless());
+    REQUIRE(lAudio.Startup());
+    lAudio.SetBusVolume(OPAAX_ID("SFX"), 0.f);
+
+    PlaySoundParams lParams;
+    lParams.bLoop = true;
+    lAudio.Play(MakeClip(0.5f), lParams);
+    lParams.Bus = OPAAX_ID("Effects");
+    lAudio.Play(MakeClip(0.5f), lParams);
+
+    CHECK(RenderPeaks(lAudio).Max() == 0.f);
 }
 
 TEST_CASE("AudioManager: a spatial sound is panned toward its side and silent beyond its max distance")

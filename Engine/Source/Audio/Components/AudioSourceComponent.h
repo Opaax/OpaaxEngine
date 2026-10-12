@@ -2,9 +2,11 @@
 
 #include <nlohmann/json.hpp>
 
+#include "Audio/AudioBusSettings.h"
 #include "Audio/AudioTypes.h"
 #include "Core/Reflection/OpaaxEnumJson.h"
 #include "Core/Reflection/OpaaxProperty.h"
+#include "Core/String/OpaaxStringIDJson.h"
 #include "Resources/ResourcePath.h"
 #include "Resources/ResourcePathJson.h"
 
@@ -21,11 +23,11 @@ namespace Opaax
     {
         TResourcePath<AudioClipResource> Clip;
 
-        EAudioBus Bus          = EAudioBus::Effects;
-        float     Volume       = 1.f;
-        float     Pitch        = 1.f;
-        bool      bLoop        = false;
-        bool      bPlayOnStart = true;
+        OpaaxStringID Bus          = AudioDefaultBus();
+        float         Volume       = 1.f;
+        float         Pitch        = 1.f;
+        bool          bLoop        = false;
+        bool          bPlayOnStart = true;
 
         /** Heard from the listener: panned, and quieter with distance. Off for music and UI. */
         bool  bSpatial    = true;
@@ -37,7 +39,7 @@ namespace Opaax
 
         OPAAX_PROPERTIES(AudioSourceComponent,
                          OPAAX_PROP(Clip).SetTooltip("The sound file (.wav, .mp3, .flac)."),
-                         OPAAX_PROP(Bus).SetTooltip("Mix group: its volume is set in the audio settings."),
+                         OPAAX_PROP(Bus).SetTooltip("The bus it plays in (\"Music\", \"SFX\"...): Audio.Buses in Engine.config."),
                          OPAAX_PROP(Volume).SetRange(0.f, 2.f),
                          OPAAX_PROP(Pitch).SetRange(0.1f, 4.f).SetTooltip("2 is an octave up, and twice as fast."),
                          OPAAX_PROP(bLoop),
