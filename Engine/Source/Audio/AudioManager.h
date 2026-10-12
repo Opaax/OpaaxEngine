@@ -6,10 +6,12 @@
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
+#include "Resources/ResourceRef.hpp"
 
 namespace Opaax
 {
     class IAudioDevice;
+    struct AudioClipDef;
     struct AudioClipResource;
     struct AudioSettings;
 
@@ -87,6 +89,24 @@ namespace Opaax
          *   something of a higher priority
          */
         SoundHandle Play(const AudioClipResource& InClip, const PlaySoundParams& InParams = {});
+
+        /**
+         * Starts InClip, or, while it is still loading, starts it as soon as it is loaded: the handle
+         * is playing from now, and every call on it is kept until then.
+         * @return Invalid when the clip failed to load, or as Play above
+         */
+        SoundHandle Play(const ResourceRef<AudioClipResource>& InClip, const PlaySoundParams& InParams = {});
+
+        /**
+         * Chooses which clip of InDef plays now and how: its bus, volume and pitch (with the spread
+         * drawn now), loop and space. Game thread, seeded random (SetRandomSeed).
+         * @param InKey Keeps the definition's choices between plays (its path): no repeat, the order
+         * @return The clip's index in InDef.Clips, -1 when it has none
+         */
+        Int32 SelectClip(const AudioClipDef& InDef, OpaaxStringID InKey, PlaySoundParams& OutParams);
+
+        /** Same seed, same choices: variations, volume and pitch spread. */
+        void SetRandomSeed(Uint64 InSeed);
 
         /**
          * Stops a sound, fading it out over InFadeOutSeconds. It no longer counts as playing.

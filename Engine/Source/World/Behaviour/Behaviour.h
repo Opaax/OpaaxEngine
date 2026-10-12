@@ -437,13 +437,18 @@ namespace Opaax
         // Audio — the world's sounds (they stop when the world ends). Silent without audio.
         // =============================================================================
     public:
-        /** Plays a clip, not positioned (music, UI, a pickup): PlaySound("Audio/Coin.wav"). */
-        SoundHandle PlaySound(const OpaaxString& InClipPath, float InVolume = 1.f, float InPitch = 1.f) const;
+        /**
+         * Plays a sound file or a clip definition, not positioned (music, UI, a pickup):
+         * PlaySound("Audio/Coin.wav"), PlaySound("Audio/Steps.opaaxdata"). A definition's own volume
+         * and pitch are scaled by these.
+         */
+        SoundHandle PlaySound(const OpaaxString& InPath, float InVolume = 1.f, float InPitch = 1.f) const;
 
-        /** Plays a clip at a place in the world, heard from the listener (panned, attenuated). */
-        SoundHandle PlaySoundAt(const OpaaxString& InClipPath, const Vector2F& InPosition, float InVolume = 1.f) const;
+        /** Plays a sound file or a clip definition at a place in the world, heard from the listener. */
+        SoundHandle PlaySoundAt(const OpaaxString& InPath, const Vector2F& InPosition, float InVolume = 1.f) const;
 
-        void StopSound(SoundHandle InSound) const;
+        /** Stops a sound, fading it out over InFadeOutSeconds (0 still avoids a click). */
+        void StopSound(SoundHandle InSound, float InFadeOutSeconds = 0.f) const;
 
         /** Plays this entity's AudioSourceComponent from the start. */
         void PlayAudioSource() const;

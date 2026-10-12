@@ -397,7 +397,7 @@ namespace Opaax
     // =========================================================================
     // Audio
     // =========================================================================
-    SoundHandle Behaviour::PlaySound(const OpaaxString& InClipPath, const float InVolume, const float InPitch) const
+    SoundHandle Behaviour::PlaySound(const OpaaxString& InPath, const float InVolume, const float InPitch) const
     {
         AudioSubsystem* lAudio = GetSubsystem<AudioSubsystem>();
         if (lAudio == nullptr)
@@ -408,10 +408,10 @@ namespace Opaax
         PlaySoundParams lParams;
         lParams.Volume = InVolume;
         lParams.Pitch  = InPitch;
-        return lAudio->PlaySound(InClipPath, lParams);
+        return lAudio->PlaySound(InPath, lParams);
     }
 
-    SoundHandle Behaviour::PlaySoundAt(const OpaaxString& InClipPath, const Vector2F& InPosition, const float InVolume) const
+    SoundHandle Behaviour::PlaySoundAt(const OpaaxString& InPath, const Vector2F& InPosition, const float InVolume) const
     {
         AudioSubsystem* lAudio = GetSubsystem<AudioSubsystem>();
         if (lAudio == nullptr)
@@ -423,14 +423,14 @@ namespace Opaax
         lParams.Volume   = InVolume;
         lParams.bSpatial = true;
         lParams.Position = InPosition;
-        return lAudio->PlaySound(InClipPath, lParams);
+        return lAudio->PlaySound(InPath, lParams);
     }
 
-    void Behaviour::StopSound(const SoundHandle InSound) const
+    void Behaviour::StopSound(const SoundHandle InSound, const float InFadeOutSeconds) const
     {
         if (AudioSubsystem* lAudio = GetSubsystem<AudioSubsystem>())
         {
-            lAudio->Stop(InSound);
+            lAudio->Stop(InSound, InFadeOutSeconds);
         }
     }
 

@@ -18,6 +18,17 @@ namespace Opaax
         Linear,
         InverseSquare
     };
+
+    /** Enum to string. */
+    inline const char* ToString(const EAudioAttenuation InAttenuation) noexcept
+    {
+        switch (InAttenuation)
+        {
+        case EAudioAttenuation::Linear:        return "Linear";
+        case EAudioAttenuation::InverseSquare: return "InverseSquare";
+        }
+        return "Linear";
+    }
 }
 
 OPAAX_ENUM_VALUES(Opaax::EAudioAttenuation, Linear, InverseSquare)

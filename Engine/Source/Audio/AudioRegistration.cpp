@@ -1,4 +1,5 @@
 // The Audio module's types. Each registers itself; see Engine/Registries/AutoRegistration.h.
+#include "Audio/AudioClipDef.h"
 #include "Audio/AudioClipResource.h"
 #include "Audio/AudioSubsystem.h"
 #include "Audio/Components/AudioListenerComponent.h"
@@ -8,6 +9,7 @@
 namespace Opaax
 {
     OPAAX_REGISTER_NAMED_RESOURCE(AudioClipResource, "AudioClip");
+    OPAAX_REGISTER_DATA_ASSET(AudioClipDef);
 
     OPAAX_REGISTER_NAMED_COMPONENT(AudioSourceComponent, "AudioSource");
     OPAAX_REGISTER_NAMED_COMPONENT(AudioListenerComponent, "AudioListener");

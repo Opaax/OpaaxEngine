@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "Audio/AudioManager.h"
 #include "Audio/AudioSubsystem.h"
 #include "Core/String/OpaaxStringJson.h"
 #include "Input/InputManager.h"
@@ -227,5 +228,53 @@ namespace TestWorld
         }
 
         Opaax::SoundHandle m_Placed;
+    };
+
+    // =============================================================================
+    // StepsProbe — plays the Steps clip definition, then draws 50 more footsteps from it as the audio
+    //   does: none is the one just before, and every clip is heard.
+    // =============================================================================
+    class StepsProbe : public Opaax::Behaviour
+    {
+    public:
+        Opaax::TDataAssetRef<Opaax::AudioClipDef> Steps;
+
+        bool         bPlayed     = false;
+        bool         bNeverTwice = false;
+        Opaax::Int32 Distinct    = 0;
+
+        OPAAX_PROPERTIES(StepsProbe, OPAAX_PROP(Steps), OPAAX_PROP(bPlayed), OPAAX_PROP(bNeverTwice), OPAAX_PROP(Distinct))
+
+        void OnStart() override
+        {
+            bPlayed = PlaySound(Steps.Path).IsValid();
+
+            const Opaax::TDataAssetHandle<Opaax::AudioClipDef> lSteps = Opaax::LoadDataAsset(GetContext().Resources,
+                                                                                               GetContext().Paths, Steps);
+            const Opaax::AudioSubsystem* lAudio = GetSubsystem<Opaax::AudioSubsystem>();
+            if (lSteps.Get() == nullptr || lAudio == nullptr || lAudio->GetAudio() == nullptr)
+            {
+                return;
+            }
+
+            Opaax::TDynArray<bool> lHeard(lSteps.Get()->Clips.size(), false);
+            Opaax::Int32           lLast = -1;
+            bNeverTwice = true;
+
+            for (int lStep = 0; lStep < 50; ++lStep)
+            {
+                Opaax::PlaySoundParams lParams;
+                const Opaax::Int32 lIndex = lAudio->GetAudio()->SelectClip(*lSteps.Get(), OPAAX_ID("StepsProbe"), lParams);
+                bNeverTwice = bNeverTwice && lIndex >= 0 && lIndex != lLast;
+                lLast       = lIndex;
+
+                if (lIndex >= 0)
+                {
+                    lHeard[lIndex] = true;
+                }
+            }
+
+            Distinct = static_cast<Opaax::Int32>(std::count(lHeard.begin(), lHeard.end(), true));
+        }
     };
 }

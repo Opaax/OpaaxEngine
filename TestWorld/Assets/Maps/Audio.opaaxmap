@@ -3,15 +3,18 @@
         {
             "components": {
                 "AudioSource": {
+                    "Attenuation": "Linear",
                     "Bus": "SFX",
                     "Clip": "Audio/Beep.wav",
                     "MaxDistance": 1500.0,
                     "MinDistance": 100.0,
                     "Pitch": 1.0,
+                    "Sound": "",
                     "Volume": 0.5,
                     "bLoop": true,
                     "bPlayOnStart": true,
-                    "bSpatial": true
+                    "bSpatial": true,
+                    "bStopOnDestroy": true
                 },
                 "Transform": {
                     "Position": {
@@ -27,6 +30,62 @@
             },
             "guid": "04027758e0145555b2177998e74e65a9",
             "name": "Speaker",
+            "ownerMap": "Audio"
+        },
+        {
+            "components": {
+                "AudioSource": {
+                    "Attenuation": "Linear",
+                    "Bus": "SFX",
+                    "Clip": "",
+                    "MaxDistance": 1500.0,
+                    "MinDistance": 100.0,
+                    "Pitch": 1.0,
+                    "Sound": "Audio/Steps.opaaxdata",
+                    "Volume": 1.0,
+                    "bLoop": false,
+                    "bPlayOnStart": true,
+                    "bSpatial": false,
+                    "bStopOnDestroy": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": -100.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "2100ca0f1191535ba8263e954dbeadf9",
+            "name": "Walker",
+            "ownerMap": "Audio"
+        },
+        {
+            "components": {
+                "StepsProbe": {
+                    "Distinct": 0,
+                    "Steps": "Audio/Steps.opaaxdata",
+                    "bNeverTwice": false,
+                    "bPlayed": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "21a3a54f67fb5a9e83b07c79c1484d09",
+            "name": "Steps",
             "ownerMap": "Audio"
         },
         {
@@ -86,15 +145,18 @@
                     "bSourceStopped": false
                 },
                 "AudioSource": {
+                    "Attenuation": "Linear",
                     "Bus": "SFX",
                     "Clip": "Audio/Beep.wav",
                     "MaxDistance": 1500.0,
                     "MinDistance": 100.0,
                     "Pitch": 1.0,
+                    "Sound": "",
                     "Volume": 0.5,
                     "bLoop": true,
                     "bPlayOnStart": false,
-                    "bSpatial": false
+                    "bSpatial": false,
+                    "bStopOnDestroy": true
                 },
                 "Transform": {
                     "Position": {

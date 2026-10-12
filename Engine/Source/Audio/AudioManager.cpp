@@ -8,7 +8,9 @@
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IConfigSystem.h"
 #include "Audio/AudioAPI.h"
+#include "Audio/AudioClipDef.h"
 #include "Audio/AudioClipResource.h"
+#include "Audio/AudioRandom.h"
 #include "Audio/Mixer/AudioMixer.h"
 #include "Audio/Mixer/AudioRingBuffer.h"
 #include "Audio/Mixer/AudioSpatial.h"
@@ -16,6 +18,7 @@
 #include "Audio/Mixer/SpscQueue.h"
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/Config/EngineConfigData.h"
+#include "Resources/ResourceManager.h"
 
 namespace Opaax
 {
@@ -55,6 +58,7 @@ namespace Opaax
             Uint32 Generation = 0;
             bool   bActive    = false;   // the mixer holds it, until it reports the voice ended
             bool   bStopping  = false;   // stopped by the game: fading out, no longer playing
+            bool   bPending   = false;   // reserved for a clip still loading: the mixer has not seen it
 
             Uint8             Priority    = 128;
             Uint64            StartOrder  = 0;
@@ -70,6 +74,17 @@ namespace Opaax
             /** What the voice reads, kept alive until it ended. */
             TSharedPtr<const AudioClipData> Data;
             TUniquePtr<AudioStreamReader>   Stream;
+        };
+
+        /** A sound whose clip is still loading, and what was asked of it meanwhile. */
+        struct PendingPlay
+        {
+            SoundHandle                    Handle;
+            ResourceRef<AudioClipResource> Clip;
+            PlaySoundParams                Params;
+            bool                           bPaused    = false;
+            float                          FadeTarget = -1.f;   // -1: no FadeTo asked
+            Uint32                         FadeFrames = 0;
         };
 
         /** The sources of a voice replaced in the mixer, kept until it reports it ended. */
@@ -107,9 +122,13 @@ namespace Opaax
         TDynArray<float>            ThreadBlock;
 
         // ---- The game thread's view --------------------------------------------------------------
-        TDynArray<Slot>    Slots;
-        TDynArray<Retired> RetiredSources;
-        Uint64             NextStartOrder = 1;
+        TDynArray<Slot>        Slots;
+        TDynArray<Retired>     RetiredSources;
+        TDynArray<PendingPlay> Pending;
+        Uint64                 NextStartOrder = 1;
+
+        AudioRandom                                       Random;
+        TUnorderedMap<OpaaxStringID, AudioSelectionState> Selections;   // by clip definition
 
         /** The game thread's view of a bus: what the mixer was last told. */
         struct BusView
@@ -198,8 +217,74 @@ namespace Opaax
         {
             InSlot.bActive   = false;
             InSlot.bStopping = false;
+            InSlot.bPending  = false;
             InSlot.Data.reset();
             InSlot.Stream.reset();
+        }
+
+        PendingPlay* FindPending(const SoundHandle InSound)
+        {
+            for (PendingPlay& lPending : Pending)
+            {
+                if (lPending.Handle == InSound) { return &lPending; }
+            }
+            return nullptr;
+        }
+
+        /** Forgets a sound still waiting for its clip: the mixer never had it. */
+        void CancelPending(const SoundHandle InSound)
+        {
+            Pending.erase(std::remove_if(Pending.begin(), Pending.end(),
+                                         [InSound](const PendingPlay& InPending) { return InPending.Handle == InSound; }),
+                          Pending.end());
+
+            if (Slot* lSlot = Find(InSound))
+            {
+                Release(*lSlot);
+            }
+        }
+
+        /** Starts the sounds whose clip finished loading, and frees those whose clip failed. */
+        void UpdatePending()
+        {
+            for (size_t lIndex = 0; lIndex < Pending.size();)
+            {
+                PendingPlay&         lPending = Pending[lIndex];
+                const EResourceState lState   = lPending.Clip.GetManager()->GetState<AudioClipResource>(lPending.Clip.GetHandle());
+                if (lState == EResourceState::Loading)
+                {
+                    ++lIndex;
+                    continue;
+                }
+
+                // Moved out first: starting may log, and nothing else touches the list meanwhile.
+                PendingPlay lReady = Move(lPending);
+                Pending.erase(Pending.begin() + static_cast<std::ptrdiff_t>(lIndex));
+
+                Slot* lSlot = Find(lReady.Handle);
+                if (lSlot == nullptr)
+                {
+                    continue;
+                }
+
+                const AudioClipResource* lClip = lReady.Clip.Get();
+                if (lState != EResourceState::Loaded || lClip == nullptr || lClip->IsSilent()
+                    || !StartVoice(lReady.Handle, *lClip, lReady.Params))
+                {
+                    Release(*lSlot);
+                    continue;
+                }
+
+                // What was asked while it loaded.
+                if (lReady.bPaused)
+                {
+                    Send(EAudioCommand::SetPaused, lReady.Handle, 0.f, 0, true);
+                }
+                if (lReady.FadeTarget >= 0.f)
+                {
+                    Send(EAudioCommand::FadeVolume, lReady.Handle, lReady.FadeTarget, lReady.FadeFrames);
+                }
+            }
         }
 
         /** Headless: InFrames more of the mix, heard by no one. */
@@ -536,8 +621,115 @@ namespace Opaax
         /** Sets a replaced voice's sources apart until the mixer is done with them. */
         void Retire(Slot& InSlot, const Uint32 InIndex)
         {
-            RetiredSources.push_back(Retired{ SoundHandle::Make(InIndex, InSlot.Generation), Move(InSlot.Data), Move(InSlot.Stream) });
+            const SoundHandle lHandle = SoundHandle::Make(InIndex, InSlot.Generation);
+            if (InSlot.bPending)
+            {
+                CancelPending(lHandle);
+                return;
+            }
+
+            RetiredSources.push_back(Retired{ lHandle, Move(InSlot.Data), Move(InSlot.Stream) });
             Release(InSlot);
+        }
+
+        /**
+         * A voice for a new sound, its view filled from InParams (the voice still to start).
+         * @return Invalid when every voice plays something of a higher priority
+         */
+        SoundHandle Reserve(const PlaySoundParams& InParams)
+        {
+            const Uint32 lIndex = PickSlot(InParams.Priority);
+            if (lIndex == INVALID_SLOT)
+            {
+                return SoundHandle{};
+            }
+
+            Slot& lSlot = Slots[lIndex];
+            if (lSlot.bActive)
+            {
+                Retire(lSlot, lIndex);
+            }
+
+            // Generation 0 is never used: it is the invalid handle.
+            lSlot.Generation  = lSlot.Generation == ~0u ? 1u : lSlot.Generation + 1;
+            lSlot.bActive     = true;
+            lSlot.bStopping   = false;
+            lSlot.bPending    = false;
+            lSlot.Priority    = InParams.Priority;
+            lSlot.StartOrder  = NextStartOrder++;
+            lSlot.Volume      = std::max(InParams.Volume, 0.f);
+            lSlot.Fade        = 1.f;
+            lSlot.Bus         = ResolveBus(InParams.Bus);
+            lSlot.bSpatial    = InParams.bSpatial;
+            lSlot.Position    = InParams.Position;
+            lSlot.MinDistance = InParams.MinDistance;
+            lSlot.MaxDistance = InParams.MaxDistance;
+            lSlot.Attenuation = InParams.Attenuation;
+            return SoundHandle::Make(lIndex, lSlot.Generation);
+        }
+
+        /**
+         * Starts the reserved voice InSound with InClip.
+         * @return False when it could not (the caller frees the voice)
+         */
+        bool StartVoice(const SoundHandle InSound, const AudioClipResource& InClip, const PlaySoundParams& InParams)
+        {
+            Slot* lSlot = Find(InSound);
+            if (lSlot == nullptr || InClip.IsSilent())
+            {
+                return false;
+            }
+
+            const AudioClipData& lData = *InClip.Data;
+
+            AudioVoiceDesc lVoice;
+            lVoice.Source.Channels   = lData.Format.Channels;
+            lVoice.Source.SampleRate = lData.Format.SampleRate;
+
+            // A streamed clip gets its own decoder, made here: the audio thread never allocates.
+            TUniquePtr<AudioStreamReader> lStream;
+            if (lData.IsStreamed())
+            {
+                TUniquePtr<IAudioDecoder> lDecoder = AudioAPI::OpenDecoder(lData.Encoded.data(), lData.Encoded.size());
+                if (lDecoder == nullptr)
+                {
+                    OPAAX_LOG(LogAudio, Error, "A sound could not start: its clip does not decode");
+                    return false;
+                }
+
+                lStream = MakeUnique<AudioStreamReader>(Move(lDecoder), AudioMixer::GetStreamWindowFrames(Mixer->GetBlockFrames()));
+                lVoice.Source.Stream = lStream.get();
+            }
+            else
+            {
+                lVoice.Source.Frames     = lData.Frames.data();
+                lVoice.Source.FrameCount = lData.Format.FrameCount;
+            }
+
+            lVoice.Volume       = lSlot->Volume;
+            lVoice.Pitch        = InParams.Pitch;
+            lVoice.Bus          = lSlot->Bus;
+            lVoice.bLoop        = InParams.bLoop;
+            lVoice.FadeInFrames = SecondsToFrames(InParams.FadeInSeconds, Settings.SampleRate);
+            lVoice.bSpatial     = lSlot->bSpatial;
+            lVoice.Position     = lSlot->Position;
+            lVoice.MinDistance  = lSlot->MinDistance;
+            lVoice.MaxDistance  = lSlot->MaxDistance;
+            lVoice.Attenuation  = lSlot->Attenuation;
+
+            AudioCommand lCommand;
+            lCommand.Type   = EAudioCommand::Play;
+            lCommand.Handle = InSound;
+            lCommand.Voice  = lVoice;
+            if (!Send(lCommand))
+            {
+                return false;
+            }
+
+            lSlot->bPending = false;
+            lSlot->Data     = InClip.Data;
+            lSlot->Stream   = Move(lStream);
+            return true;
         }
     };
 
@@ -659,6 +851,7 @@ namespace Opaax
         }
 
         lImpl.DrainEvents();
+        lImpl.UpdatePending();
 
         const Uint32 lUnderruns = lImpl.Underruns.load(std::memory_order_relaxed);
         if (lImpl.ReportedUnderruns == 0 && lUnderruns > 0)
@@ -697,6 +890,7 @@ namespace Opaax
         lImpl.Events.reset();
         lImpl.Slots.clear();
         lImpl.RetiredSources.clear();
+        lImpl.Pending.clear();
 
         lImpl.bStarted  = false;
         lImpl.bHeadless = true;
@@ -715,87 +909,70 @@ namespace Opaax
             return SoundHandle{};
         }
 
-        const AudioClipData& lData = *InClip.Data;
-
-        AudioVoiceDesc lVoice;
-        lVoice.Source.Channels   = lData.Format.Channels;
-        lVoice.Source.SampleRate = lData.Format.SampleRate;
-
-        // A streamed clip gets its own decoder, made here: the audio thread never allocates.
-        TUniquePtr<AudioStreamReader> lStream;
-        if (lData.IsStreamed())
+        const SoundHandle lHandle = lImpl.Reserve(InParams);
+        if (lHandle.IsValid() && !lImpl.StartVoice(lHandle, InClip, InParams))
         {
-            TUniquePtr<IAudioDecoder> lDecoder = AudioAPI::OpenDecoder(lData.Encoded.data(), lData.Encoded.size());
-            if (lDecoder == nullptr)
-            {
-                OPAAX_LOG(LogAudio, Error, "A sound could not start: its clip does not decode");
-                return SoundHandle{};
-            }
-
-            lStream = MakeUnique<AudioStreamReader>(Move(lDecoder), AudioMixer::GetStreamWindowFrames(lImpl.Mixer->GetBlockFrames()));
-            lVoice.Source.Stream = lStream.get();
-        }
-        else
-        {
-            lVoice.Source.Frames     = lData.Frames.data();
-            lVoice.Source.FrameCount = lData.Format.FrameCount;
-        }
-
-        const Uint32 lIndex = lImpl.PickSlot(InParams.Priority);
-        if (lIndex == INVALID_SLOT)
-        {
+            lImpl.Release(*lImpl.Find(lHandle));
             return SoundHandle{};
         }
-
-        Impl::Slot& lSlot = lImpl.Slots[lIndex];
-        if (lSlot.bActive)
-        {
-            lImpl.Retire(lSlot, lIndex);
-        }
-
-        // Generation 0 is never used: it is the invalid handle.
-        lSlot.Generation = lSlot.Generation == ~0u ? 1u : lSlot.Generation + 1;
-        const SoundHandle lHandle = SoundHandle::Make(lIndex, lSlot.Generation);
-
-        lVoice.Volume       = std::max(InParams.Volume, 0.f);
-        lVoice.Pitch        = InParams.Pitch;
-        lVoice.Bus          = lImpl.ResolveBus(InParams.Bus);
-        lVoice.bLoop        = InParams.bLoop;
-        lVoice.FadeInFrames = SecondsToFrames(InParams.FadeInSeconds, lImpl.Settings.SampleRate);
-        lVoice.bSpatial     = InParams.bSpatial;
-        lVoice.Position     = InParams.Position;
-        lVoice.MinDistance  = InParams.MinDistance;
-        lVoice.MaxDistance  = InParams.MaxDistance;
-        lVoice.Attenuation  = InParams.Attenuation;
-
-        AudioCommand lCommand;
-        lCommand.Type   = EAudioCommand::Play;
-        lCommand.Handle = lHandle;
-        lCommand.Voice  = lVoice;
-        if (!lImpl.Send(lCommand))
-        {
-            return SoundHandle{};
-        }
-
-        lSlot.bActive     = true;
-        lSlot.bStopping   = false;
-        lSlot.Priority    = InParams.Priority;
-        lSlot.StartOrder  = lImpl.NextStartOrder++;
-        lSlot.Volume      = lVoice.Volume;
-        lSlot.Fade        = 1.f;
-        lSlot.Bus         = lVoice.Bus;
-        lSlot.bSpatial    = lVoice.bSpatial;
-        lSlot.Position    = lVoice.Position;
-        lSlot.MinDistance = lVoice.MinDistance;
-        lSlot.MaxDistance = lVoice.MaxDistance;
-        lSlot.Attenuation = lVoice.Attenuation;
-        lSlot.Data        = InClip.Data;
-        lSlot.Stream      = Move(lStream);
         return lHandle;
+    }
+
+    SoundHandle AudioManager::Play(const ResourceRef<AudioClipResource>& InClip, const PlaySoundParams& InParams)
+    {
+        Impl& lImpl = *m_Impl;
+        if (!lImpl.bStarted || !InClip.IsValid())
+        {
+            return SoundHandle{};
+        }
+
+        const EResourceState lState = InClip.GetManager()->GetState<AudioClipResource>(InClip.GetHandle());
+        if (lState == EResourceState::Loaded)
+        {
+            return Play(*InClip.Get(), InParams);
+        }
+
+        if (lState != EResourceState::Loading)
+        {
+            return SoundHandle{};
+        }
+
+        // Started by Update once the clip is loaded.
+        const SoundHandle lHandle = lImpl.Reserve(InParams);
+        if (lHandle.IsValid())
+        {
+            lImpl.Find(lHandle)->bPending = true;
+            lImpl.Pending.push_back(Impl::PendingPlay{ lHandle, InClip, InParams });
+        }
+        return lHandle;
+    }
+
+    Int32 AudioManager::SelectClip(const AudioClipDef& InDef, const OpaaxStringID InKey, PlaySoundParams& OutParams)
+    {
+        Impl& lImpl = *m_Impl;
+
+        const Int32 lIndex = SelectAudioClip(InDef, lImpl.Selections[InKey], lImpl.Random);
+        if (lIndex >= 0)
+        {
+            OutParams = MakePlaySoundParams(InDef, lIndex, lImpl.Random);
+        }
+        return lIndex;
+    }
+
+    void AudioManager::SetRandomSeed(const Uint64 InSeed)
+    {
+        m_Impl->Random.Seed(InSeed);
+        m_Impl->Selections.clear();
     }
 
     void AudioManager::Stop(const SoundHandle InSound, const float InFadeOutSeconds)
     {
+        if (m_Impl->FindPending(InSound) != nullptr)
+        {
+            m_Impl->CancelPending(InSound);
+            return;
+        }
+
         if (Impl::Slot* lSlot = m_Impl->FindPlaying(InSound))
         {
             lSlot->bStopping = true;
@@ -809,6 +986,11 @@ namespace Opaax
         if (!lImpl.bStarted)
         {
             return;
+        }
+
+        while (!lImpl.Pending.empty())
+        {
+            lImpl.CancelPending(lImpl.Pending.back().Handle);
         }
 
         for (Impl::Slot& lSlot : lImpl.Slots)
@@ -832,7 +1014,10 @@ namespace Opaax
         if (Impl::Slot* lSlot = m_Impl->Find(InSound))
         {
             lSlot->Volume = std::max(InVolume, 0.f);
-            m_Impl->Send(EAudioCommand::SetVolume, InSound, lSlot->Volume);
+            if (!lSlot->bPending)
+            {
+                m_Impl->Send(EAudioCommand::SetVolume, InSound, lSlot->Volume);
+            }
         }
     }
 
@@ -841,13 +1026,25 @@ namespace Opaax
         if (Impl::Slot* lSlot = m_Impl->FindPlaying(InSound))
         {
             lSlot->Fade = std::max(InVolume, 0.f);
-            m_Impl->Send(EAudioCommand::FadeVolume, InSound, lSlot->Fade, SecondsToFrames(InSeconds, m_Impl->Settings.SampleRate));
+            const Uint32 lFrames = SecondsToFrames(InSeconds, m_Impl->Settings.SampleRate);
+
+            if (Impl::PendingPlay* lPending = m_Impl->FindPending(InSound))
+            {
+                lPending->FadeTarget = lSlot->Fade;
+                lPending->FadeFrames = lFrames;
+                return;
+            }
+            m_Impl->Send(EAudioCommand::FadeVolume, InSound, lSlot->Fade, lFrames);
         }
     }
 
     void AudioManager::SetPitch(const SoundHandle InSound, const float InPitch)
     {
-        if (m_Impl->Find(InSound) != nullptr)
+        if (Impl::PendingPlay* lPending = m_Impl->FindPending(InSound))
+        {
+            lPending->Params.Pitch = InPitch;
+        }
+        else if (m_Impl->Find(InSound) != nullptr)
         {
             m_Impl->Send(EAudioCommand::SetPitch, InSound, InPitch);
         }
@@ -855,9 +1052,14 @@ namespace Opaax
 
     void AudioManager::SetPosition(const SoundHandle InSound, const Vector2F InPosition)
     {
-        if (Impl::Slot* lSlot = m_Impl->Find(InSound))
+        Impl::Slot* lSlot = m_Impl->Find(InSound);
+        if (lSlot != nullptr && lSlot->Position != InPosition)
         {
             lSlot->Position = InPosition;
+            if (lSlot->bPending)
+            {
+                return;
+            }
 
             AudioCommand lCommand;
             lCommand.Type     = EAudioCommand::SetPosition;
@@ -869,7 +1071,11 @@ namespace Opaax
 
     void AudioManager::SetPaused(const SoundHandle InSound, const bool bInPaused)
     {
-        if (m_Impl->Find(InSound) != nullptr)
+        if (Impl::PendingPlay* lPending = m_Impl->FindPending(InSound))
+        {
+            lPending->bPaused = bInPaused;
+        }
+        else if (m_Impl->Find(InSound) != nullptr)
         {
             m_Impl->Send(EAudioCommand::SetPaused, InSound, 0.f, 0, bInPaused);
         }
