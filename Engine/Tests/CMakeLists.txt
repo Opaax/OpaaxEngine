@@ -9,6 +9,7 @@ set(OPAAX_TEST_SOURCES
     SmokeTest.cpp
 
     # Audio
+    Audio/AudioMixerTests.cpp
     Audio/AudioTests.cpp
 
     # Automation
