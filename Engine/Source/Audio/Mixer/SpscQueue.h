@@ -44,15 +44,15 @@ namespace Opaax
          */
         bool Push(const T& InItem)
         {
-            const Uint32 lTail = m_Tail.load(std::memory_order_relaxed);
+            const Uint32 lTail = m_Tail.load(EMemoryOrder::Relaxed);
             const Uint32 lNext = (lTail + 1) & m_Mask;
-            if (lNext == m_Head.load(std::memory_order_acquire))
+            if (lNext == m_Head.load(EMemoryOrder::Acquire))
             {
                 return false;
             }
 
             m_Slots[lTail] = InItem;
-            m_Tail.store(lNext, std::memory_order_release);
+            m_Tail.store(lNext, EMemoryOrder::Release);
             return true;
         }
 
@@ -62,14 +62,14 @@ namespace Opaax
          */
         bool Pop(T& OutItem)
         {
-            const Uint32 lHead = m_Head.load(std::memory_order_relaxed);
-            if (lHead == m_Tail.load(std::memory_order_acquire))
+            const Uint32 lHead = m_Head.load(EMemoryOrder::Relaxed);
+            if (lHead == m_Tail.load(EMemoryOrder::Acquire))
             {
                 return false;
             }
 
             OutItem = m_Slots[lHead];
-            m_Head.store((lHead + 1) & m_Mask, std::memory_order_release);
+            m_Head.store((lHead + 1) & m_Mask, EMemoryOrder::Release);
             return true;
         }
 
@@ -79,7 +79,7 @@ namespace Opaax
         /** Approximate when the other thread is working on the queue. */
         bool IsEmpty() const noexcept
         {
-            return m_Head.load(std::memory_order_acquire) == m_Tail.load(std::memory_order_acquire);
+            return m_Head.load(EMemoryOrder::Acquire) == m_Tail.load(EMemoryOrder::Acquire);
         }
 
         // =============================================================================

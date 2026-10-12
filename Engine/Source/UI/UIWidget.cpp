@@ -22,7 +22,7 @@ namespace Opaax
 
     UIWidget* UIWidget::AddChild(TUniquePtr<UIWidget> InChild)
     {
-        return AddChild(std::move(InChild), m_Children.size());
+        return AddChild(Move(InChild), m_Children.size());
     }
 
     UIWidget* UIWidget::AddChild(TUniquePtr<UIWidget> InChild, const Uint64 InIndex)
@@ -35,8 +35,8 @@ namespace Opaax
         UIWidget* lChild = InChild.get();
         lChild->m_Parent = this;
         lChild->SetCanvasRecursive(m_Canvas);
-        m_Children.emplace(m_Children.begin() + static_cast<std::ptrdiff_t>(std::min(InIndex, static_cast<Uint64>(m_Children.size()))),
-                           std::move(InChild));
+        m_Children.emplace(m_Children.begin() + static_cast<PtrDiff>(std::min(InIndex, static_cast<Uint64>(m_Children.size()))),
+                           Move(InChild));
 
         // The new child only needs to be reached by the walk, unless I lay out my children
         // (then every slot may have moved).
@@ -56,7 +56,7 @@ namespace Opaax
             return nullptr;
         }
 
-        TUniquePtr<UIWidget> lRemoved = std::move(*lIt);
+        TUniquePtr<UIWidget> lRemoved = Move(*lIt);
         m_Children.erase(lIt);
 
         // Clear pointer state under this subtree before it can be destroyed.

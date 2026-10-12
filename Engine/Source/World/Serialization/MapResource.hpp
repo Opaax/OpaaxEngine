@@ -1,6 +1,6 @@
 #pragma once
 
-#include <optional>
+#include "Core/OpaaxTypes.h"
 
 #include "Resources/ResourceFormat.h"
 #include "World/Serialization/MapFile.h"
@@ -22,13 +22,13 @@ namespace Opaax
 
         static constexpr EFailPolicy FailPolicy = EFailPolicy::FailFast;
 
-        static std::optional<MapResource> Load(const char* InPath, LoadContext& /*InCtx*/)
+        static TOptional<MapResource> Load(const char* InPath, LoadContext& /*InCtx*/)
         {
             // InCtx unused (see above).
             MapResource lResource;
             if (!MapFile::Load(OpaaxString(InPath), lResource.Data))
             {
-                return std::nullopt;   // MapFile already logged why
+                return NullOpt;   // MapFile already logged why
             }
 
             return lResource;

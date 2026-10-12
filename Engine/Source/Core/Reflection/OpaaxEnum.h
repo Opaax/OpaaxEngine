@@ -1,6 +1,5 @@
 #pragma once
 
-#include <iterator>
 #include "Core/Templates/TypeTraits.h"
 
 #include "Core/OpaaxTypes.h"
@@ -26,7 +25,7 @@ namespace Opaax
     template<CEnumWithValues T>
     constexpr Uint64 EnumValueCount() noexcept
     {
-        return static_cast<Uint64>(std::size(TEnumValues<T>::Values));
+        return static_cast<Uint64>(ArraySize(TEnumValues<T>::Values));
     }
 }
 

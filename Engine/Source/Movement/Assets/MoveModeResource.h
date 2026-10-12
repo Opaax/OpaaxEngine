@@ -1,6 +1,6 @@
 #pragma once
 
-#include <optional>
+#include "Core/OpaaxTypes.h"
 
 #include "Resources/ResourceFormat.h"
 #include "Movement/Assets/MoveModeData.h"
@@ -21,12 +21,12 @@ namespace Opaax
 
         static constexpr EFailPolicy FailPolicy = EFailPolicy::Placeholder;
 
-        static std::optional<MoveModeResource> Load(const char* InPath, LoadContext& /*InCtx*/)
+        static TOptional<MoveModeResource> Load(const char* InPath, LoadContext& /*InCtx*/)
         {
             MoveModeResource lResource;
             if (!MoveModeFile::Load(OpaaxString(InPath), lResource.Data))
             {
-                return std::nullopt;   // MoveModeFile already logged why
+                return NullOpt;   // MoveModeFile already logged why
             }
 
             return lResource;

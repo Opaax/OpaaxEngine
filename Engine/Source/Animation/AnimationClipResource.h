@@ -1,6 +1,6 @@
 #pragma once
 
-#include <optional>
+#include "Core/OpaaxTypes.h"
 
 #include "Resources/ResourceFormat.h"
 #include "Animation/AnimationClipData.h"
@@ -22,12 +22,12 @@ namespace Opaax
 
         static constexpr EFailPolicy FailPolicy = EFailPolicy::Placeholder;
 
-        static std::optional<AnimationClipResource> Load(const char* InPath, LoadContext& /*InCtx*/)
+        static TOptional<AnimationClipResource> Load(const char* InPath, LoadContext& /*InCtx*/)
         {
             AnimationClipResource lResource;
             if (!AnimationClipFile::Load(OpaaxString(InPath), lResource.Data))
             {
-                return std::nullopt;   // AnimationClipFile already logged why
+                return NullOpt;   // AnimationClipFile already logged why
             }
 
             return lResource;

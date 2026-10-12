@@ -93,9 +93,9 @@ namespace Sandbox
             lLabel->SetSize(InTextSize);
             lLabel->SetAlign(ETextAlign::Center, EUIVAlign::Middle);
             lLabel->SetText(InLabel);
-            lButton->AddChild(std::move(lLabel));
+            lButton->AddChild(Move(lLabel));
 
-            return static_cast<UIButton*>(InParent.AddChild(std::move(lButton)));
+            return static_cast<UIButton*>(InParent.AddChild(Move(lButton)));
         }
     }
 
@@ -127,7 +127,7 @@ namespace Sandbox
         lMenu->Opacity  = 0.f;   // so the first Open fades in too
         lMenu->SetRect(Stretched());
         lMenu->OnEscape = [this]() { Close(); };
-        m_Menu = lCanvas.Root().AddChild(std::move(lMenu));
+        m_Menu = lCanvas.Root().AddChild(Move(lMenu));
 
         UIButton* lResume = nullptr;
         UIButton* lNext   = nullptr;

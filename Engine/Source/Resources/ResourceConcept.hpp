@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Core/Templates/TypeTraits.h"
-#include <optional>
 
 #include "Core/OpaaxTypes.h"
 
@@ -47,7 +46,7 @@ namespace Opaax
     concept CResource = requires(const char* InPath, LoadContext& InCtx)
     {
         // Full object or nothing: no exceptions, no partial resources.
-        { T::Load(InPath, InCtx) } -> CSameAs<std::optional<T>>;
+        { T::Load(InPath, InCtx) } -> CSameAs<TOptional<T>>;
         // Built once per pool (pink texture, silent clip, empty table, ...).
         { T::Placeholder() }       -> CSameAs<T>;
         // Placeholder vs FailFast.

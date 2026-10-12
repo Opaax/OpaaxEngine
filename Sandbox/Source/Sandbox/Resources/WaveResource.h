@@ -1,6 +1,6 @@
 #pragma once
 
-#include <optional>
+#include "Core/OpaaxTypes.h"
 
 #include "Core/IO/FileIO.h"
 #include "Resources/ResourceFormat.h"
@@ -22,12 +22,12 @@ namespace Sandbox
 
         static constexpr Opaax::EFailPolicy FailPolicy = Opaax::EFailPolicy::Placeholder;
 
-        static std::optional<WaveResource> Load(const char* InPath, Opaax::LoadContext& /*InCtx*/)
+        static Opaax::TOptional<WaveResource> Load(const char* InPath, Opaax::LoadContext& /*InCtx*/)
         {
             WaveResource lResource;
             if (!Opaax::FileIO::ReadAllBytes(Opaax::OpaaxString(InPath), lResource.Bytes))
             {
-                return std::nullopt;
+                return Opaax::NullOpt;
             }
 
             return lResource;

@@ -92,8 +92,8 @@ namespace Opaax::PngWriter
             lZlib.push_back(static_cast<Uint8>(lLength >> 8));
             lZlib.push_back(static_cast<Uint8>(~lLength & 0xFF));
             lZlib.push_back(static_cast<Uint8>((~lLength >> 8) & 0xFF));
-            lZlib.insert(lZlib.end(), lRaw.begin() + static_cast<std::ptrdiff_t>(lOffset),
-                         lRaw.begin() + static_cast<std::ptrdiff_t>(lOffset + lLength));
+            lZlib.insert(lZlib.end(), lRaw.begin() + static_cast<PtrDiff>(lOffset),
+                         lRaw.begin() + static_cast<PtrDiff>(lOffset + lLength));
 
             lOffset += lLength;
         }

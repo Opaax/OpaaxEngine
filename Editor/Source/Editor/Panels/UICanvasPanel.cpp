@@ -276,7 +276,7 @@ namespace Opaax::Editor
 
     void UICanvasPanel::DrawNode(UIWidget& InWidget, const UIWidgetPath& InPath)
     {
-        ImGui::PushID(static_cast<int>(reinterpret_cast<std::uintptr_t>(&InWidget)));
+        ImGui::PushID(static_cast<int>(reinterpret_cast<UintPtr>(&InWidget)));
 
         const bool lLeaf     = InWidget.GetChildren().empty();
         const bool lSelected = m_Context.UICanvasDocument.SelectedPath() == InPath;

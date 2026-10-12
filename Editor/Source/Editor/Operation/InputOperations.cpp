@@ -108,7 +108,7 @@ namespace Opaax::Editor
 
         const InputActionData lBefore = lData;
 
-        std::swap(lData.Modifiers[InIndex], lData.Modifiers[static_cast<Uint32>(lTarget)]);
+        Swap(lData.Modifiers[InIndex], lData.Modifiers[static_cast<Uint32>(lTarget)]);
 
         return RecordActionEdit(InContext, lBefore, "Reorder Modifier");
     }
@@ -170,7 +170,7 @@ namespace Opaax::Editor
 
         const TDynArray<InputMappingEntry> lBefore = lData.Mappings;
 
-        std::swap(lData.Mappings[InIndex], lData.Mappings[static_cast<Uint32>(lTarget)]);
+        Swap(lData.Mappings[InIndex], lData.Mappings[static_cast<Uint32>(lTarget)]);
 
         return RecordMappingsEdit(InContext, lBefore, "Reorder Mapping");
     }

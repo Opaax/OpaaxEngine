@@ -15,7 +15,7 @@
 
 #include <cstdio>
 #include <cstring>
-#include <tuple>
+#include "Core/OpaaxTypes.h"
 
 using namespace Opaax;
 
@@ -197,7 +197,7 @@ namespace Opaax::Editor
         ImGui::PushID(static_cast<int>(lIndex));
 
         // DrawProperties' fold, done by hand so Key can be skipped (drawn below by a filtered combo).
-        std::apply([this, &lEntry](const auto&... lProperties)
+        TupleApply([this, &lEntry](const auto&... lProperties)
                    {
                        ([&]
                         {

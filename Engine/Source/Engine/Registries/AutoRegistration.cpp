@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include <cstring>
-#include <tuple>
+#include "Core/OpaaxTypes.h"
 
 namespace Opaax
 {

@@ -2,7 +2,7 @@
 
 #include "Core/Log/Logger.h"   // ELogLevel, LogEntry
 
-#include <array>
+#include "Core/OpaaxTypes.h"
 #include <cctype>
 #include <string>
 #include <string_view>
@@ -67,7 +67,7 @@ namespace Opaax::Editor
     // =============================================================================
     struct LogFilter
     {
-        std::array<bool, static_cast<size_t>(ELogLevelFilter::Count)> ShowLevel{ true, true, true, true };
+        TFixedArray<bool, static_cast<size_t>(ELogLevelFilter::Count)> ShowLevel{ true, true, true, true };
 
         /** Matched against the message, case-insensitively. Empty = every message. */
         std::string Search;

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstring>       // std::strcmp
-#include <tuple>
 #include "Core/Templates/TypeTraits.h"
 
 #include "Core/Log/Logger.h"
@@ -53,7 +52,7 @@ namespace Opaax
     {
         bool lFound = false;
 
-        std::apply([&](const auto&... lProperties)
+        TupleApply([&](const auto&... lProperties)
         {
             const auto lTry = [&](const auto& InProp)
             {

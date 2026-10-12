@@ -1,7 +1,5 @@
 #pragma once
 
-#include <optional>
-
 #include "Core/Log/Logger.h"
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
@@ -32,7 +30,7 @@ namespace Opaax
 
         static constexpr EFailPolicy FailPolicy = EFailPolicy::Placeholder;
 
-        static std::optional<UICanvasResource> Load(const char* InPath, LoadContext& /*InCtx*/)
+        static TOptional<UICanvasResource> Load(const char* InPath, LoadContext& /*InCtx*/)
         {
             // Only read the bytes: parsing needs the widget registry (done in BuildTree).
             const OpaaxString lText = FileIO::ReadAllText(OpaaxString(InPath));
@@ -40,7 +38,7 @@ namespace Opaax
             if (lText.IsEmpty())
             {
                 OPAAX_LOG(LogUICanvasResource, Error, "Canvas '{}' is missing, empty or unreadable", InPath);
-                return std::nullopt;
+                return NullOpt;
             }
 
             UICanvasResource lResource;

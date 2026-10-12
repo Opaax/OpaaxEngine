@@ -1,7 +1,5 @@
 #pragma once
 
-#include <optional>
-
 #include "Audio/IAudioDecoder.h"
 #include "Core/OpaaxTypes.h"
 #include "Resources/ResourceConcept.hpp"
@@ -74,13 +72,13 @@ namespace Opaax
         static constexpr EFailPolicy FailPolicy = EFailPolicy::Placeholder;
 
         /** Reads the file and decodes it or checks that it decodes. Null for a missing or unsupported file (logged). */
-        static std::optional<AudioClipResource> Load(const char* InPath, LoadContext& InCtx);
+        static TOptional<AudioClipResource> Load(const char* InPath, LoadContext& InCtx);
 
         /**
          * A clip from a file's bytes (generated sounds, packed data).
          * @param InNameForLogs Names the clip in the error when the bytes are not a supported sound
          */
-        static std::optional<AudioClipResource> FromMemory(TDynArray<Uint8> InBytes, const char* InNameForLogs,
+        static TOptional<AudioClipResource> FromMemory(TDynArray<Uint8> InBytes, const char* InNameForLogs,
                                                            EResidency InResidency = EResidency::Auto);
 
         static AudioClipResource Placeholder() { return AudioClipResource{}; }

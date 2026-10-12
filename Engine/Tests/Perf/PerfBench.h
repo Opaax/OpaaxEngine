@@ -6,9 +6,8 @@
 
 #include <algorithm>
 #include <chrono>
-#include <cstdint>
+#include "Core/OpaaxTypes.h"
 #include <cstdio>
-#include <vector>
 
 #include <doctest.h>
 
@@ -23,14 +22,14 @@ namespace Opaax::Perf
     // InOps: how many operations the lambda performs per call. InEpochs: timed repetitions
     // (use an ODD count so the median is a single sample). Returns the median ns-per-op.
     template<typename TFn>
-    Result Measure(std::uint64_t InOps, int InEpochs, TFn&& InFn)
+    Result Measure(Uint64 InOps, int InEpochs, TFn&& InFn)
     {
         using Clock = std::chrono::steady_clock;
 
         InFn(); // warmup — not timed
 
-        std::vector<double> lNsPerOp;
-        lNsPerOp.reserve(static_cast<std::size_t>(InEpochs));
+        TDynArray<double> lNsPerOp;
+        lNsPerOp.reserve(static_cast<size_t>(InEpochs));
 
         for (int lEpoch = 0; lEpoch < InEpochs; ++lEpoch)
         {

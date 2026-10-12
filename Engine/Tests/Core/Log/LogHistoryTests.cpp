@@ -104,7 +104,7 @@ TEST_CASE("Logger: history is off by default, and on it keeps the message WITHOU
     TDynArray<spdlog::sink_ptr> lSinks;
     for (std::ostringstream* lOut : { &lOutA, &lOutB })
     {
-        lSinks.push_back(std::make_shared<spdlog::sinks::ostream_sink_mt>(*lOut));
+        lSinks.push_back(MakeShared<spdlog::sinks::ostream_sink_mt>(*lOut));
         lSinks.back()->set_pattern("%v");
     }
     lLogger.AttachSinks(lSinks);

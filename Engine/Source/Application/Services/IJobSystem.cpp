@@ -87,8 +87,8 @@ namespace Opaax
     {
         {
             TLockGuard<Mutex> lLock(m_QueueMutex);
-            if (m_Stopping.load(std::memory_order_acquire)) { return; } // already stopped
-            m_Stopping.store(true, std::memory_order_release);
+            if (m_Stopping.load(EMemoryOrder::Acquire)) { return; } // already stopped
+            m_Stopping.store(true, EMemoryOrder::Release);
         }
         m_QueueCV.notify_all();
 
@@ -182,7 +182,7 @@ namespace Opaax
 
         // Not from a worker thread: without work-stealing it could deadlock.
         TUniqueLock<Mutex> lLock(m_DoneMutex);
-        m_DoneCV.wait(lLock, [&lState] { return lState->bDone.load(std::memory_order_acquire); });
+        m_DoneCV.wait(lLock, [&lState] { return lState->bDone.load(EMemoryOrder::Acquire); });
     }
 
     // =========================================================================
@@ -197,7 +197,7 @@ namespace Opaax
                 TUniqueLock<Mutex> lLock(m_QueueMutex);
                 m_QueueCV.wait(lLock, [this]
                 {
-                    return m_Stopping.load(std::memory_order_acquire) || !m_Queue.empty();
+                    return m_Stopping.load(EMemoryOrder::Acquire) || !m_Queue.empty();
                 });
 
                 // Drain remaining work even while stopping; only exit once empty.
@@ -220,7 +220,7 @@ namespace Opaax
                 TLockGuard<Mutex> lLock(m_DoneMutex);
                 if (lJob.State)
                 {
-                    lJob.State->bDone.store(true, std::memory_order_release);
+                    lJob.State->bDone.store(true, EMemoryOrder::Release);
                 }
             }
             m_DoneCV.notify_all();

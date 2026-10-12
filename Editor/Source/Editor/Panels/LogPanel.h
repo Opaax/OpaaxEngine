@@ -4,8 +4,7 @@
 #include "Editor/Panels/IEditorPanel.h"
 #include "Editor/Panels/LogFilter.h"
 
-#include <array>
-#include <deque>
+#include "Core/OpaaxTypes.h"
 
 namespace Opaax::Editor
 {
@@ -91,13 +90,13 @@ namespace Opaax::Editor
         static constexpr size_t LEVEL_COUNT = static_cast<size_t>(ELogLevelFilter::Count);
 
         /** Contiguous in sequence. */
-        std::deque<LogEntry> m_Entries;
+        TDeque<LogEntry> m_Entries;
 
         /** Sequences of the lines that pass m_Filter, oldest first. */
-        std::deque<Uint64>   m_Shown;
+        TDeque<Uint64>   m_Shown;
 
         /** Lines per level button (all of them, whatever the filter). */
-        std::array<Uint32, LEVEL_COUNT> m_LevelCounts{};
+        TFixedArray<Uint32, LEVEL_COUNT> m_LevelCounts{};
 
         LogFilter            m_Filter;
 

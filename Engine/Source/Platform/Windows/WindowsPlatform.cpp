@@ -4,7 +4,7 @@
 
 #include "Core/String/OpaaxUtf8.h"
 
-#include <thread>
+#include "Core/OpaaxTypes.h"
 #include <chrono>
 #include <string>
 

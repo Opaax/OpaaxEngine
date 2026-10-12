@@ -16,7 +16,7 @@ namespace
     // Message text only, one per line, so a test asserts exactly what the call site produced.
     spdlog::sink_ptr MakeCaptureSink(std::ostringstream& OutStream)
     {
-        spdlog::sink_ptr lSink = std::make_shared<spdlog::sinks::ostream_sink_mt>(OutStream);
+        spdlog::sink_ptr lSink = MakeShared<spdlog::sinks::ostream_sink_mt>(OutStream);
         lSink->set_pattern("%v");
         return lSink;
     }

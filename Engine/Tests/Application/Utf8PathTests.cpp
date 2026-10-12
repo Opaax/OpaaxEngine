@@ -277,7 +277,7 @@ TEST_CASE("BinaryResource: loads a file from a non-ASCII directory")
     ResourceDependencyGraph lDeps;
     LoadContext             lCtx(lManager, lDeps);
 
-    const std::optional<BinaryResource> lRes =
+    const TOptional<BinaryResource> lRes =
         BinaryResource::Load(lDir.Utf8File("blob.bin").CStr(), lCtx);
 
     REQUIRE(lRes.has_value());

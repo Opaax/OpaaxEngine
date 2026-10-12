@@ -1,7 +1,7 @@
 #include "Audio/AudioManager.h"
 
 #include <algorithm>
-#include <chrono>
+#include "Core/OpaaxTypes.h"
 #include <cmath>
 #include <cstring>
 
@@ -34,7 +34,7 @@ namespace Opaax
         constexpr Uint32 RING_CAPACITY_FRAMES = 16384;
 
         /** The audio thread wakes at least this often, should a device wake-up be missed. */
-        constexpr auto MIX_THREAD_WAIT = std::chrono::milliseconds(2);
+        constexpr auto MIX_THREAD_WAIT = Milliseconds(2);
 
         constexpr Uint32 INVALID_SLOT = ~0u;
 
@@ -259,7 +259,7 @@ namespace Opaax
 
                 // Moved out first: starting may log, and nothing else touches the list meanwhile.
                 PendingPlay lReady = Move(lPending);
-                Pending.erase(Pending.begin() + static_cast<std::ptrdiff_t>(lIndex));
+                Pending.erase(Pending.begin() + static_cast<PtrDiff>(lIndex));
 
                 Slot* lSlot = Find(lReady.Handle);
                 if (lSlot == nullptr)
@@ -310,7 +310,7 @@ namespace Opaax
         {
             const Uint32 lBlock = Mixer->GetBlockFrames();
 
-            while (bRunning.load(std::memory_order_acquire))
+            while (bRunning.load(EMemoryOrder::Acquire))
             {
                 AudioCommand lCommand;
                 while (Commands->Pop(lCommand))
@@ -318,7 +318,7 @@ namespace Opaax
                     Mixer->Apply(lCommand);
                 }
 
-                while (Ring->GetReadableFrames() < FramesAhead.load(std::memory_order_relaxed) && Ring->GetFreeFrames() >= lBlock)
+                while (Ring->GetReadableFrames() < FramesAhead.load(EMemoryOrder::Relaxed) && Ring->GetFreeFrames() >= lBlock)
                 {
                     Mixer->Mix(ThreadBlock.data(), lBlock);
                     Ring->Write(ThreadBlock.data(), lBlock);
@@ -330,11 +330,11 @@ namespace Opaax
                 }
 
                 // Paced by the device: it wakes this thread each time it takes frames.
-                std::unique_lock<Mutex> lLock(WakeMutex);
+                TUniqueLock<Mutex> lLock(WakeMutex);
                 Wake.wait_for(lLock, MIX_THREAD_WAIT, [this]()
                 {
-                    return !bRunning.load(std::memory_order_acquire)
-                        || Ring->GetReadableFrames() < FramesAhead.load(std::memory_order_relaxed);
+                    return !bRunning.load(EMemoryOrder::Acquire)
+                        || Ring->GetReadableFrames() < FramesAhead.load(EMemoryOrder::Relaxed);
                 });
             }
         }
@@ -349,7 +349,7 @@ namespace Opaax
             {
                 std::memset(OutFrames + static_cast<size_t>(lRead) * AUDIO_OUTPUT_CHANNELS, 0,
                             sizeof(float) * (InFrameCount - lRead) * AUDIO_OUTPUT_CHANNELS);
-                lSelf.Underruns.fetch_add(1, std::memory_order_relaxed);
+                lSelf.Underruns.fetch_add(1, EMemoryOrder::Relaxed);
             }
 
             lSelf.Wake.notify_one();
@@ -373,7 +373,7 @@ namespace Opaax
 
             // The thread first, so the device finds frames ready.
             bHeadless = false;
-            bRunning.store(true, std::memory_order_release);
+            bRunning.store(true, EMemoryOrder::Release);
             MixThread = Thread([this]() { ThreadLoop(); });
 
             AudioDeviceDesc lDesc;
@@ -406,7 +406,7 @@ namespace Opaax
                 return;
             }
 
-            bRunning.store(false, std::memory_order_release);
+            bRunning.store(false, EMemoryOrder::Release);
             Wake.notify_all();
             MixThread.join();
         }
@@ -853,7 +853,7 @@ namespace Opaax
         lImpl.DrainEvents();
         lImpl.UpdatePending();
 
-        const Uint32 lUnderruns = lImpl.Underruns.load(std::memory_order_relaxed);
+        const Uint32 lUnderruns = lImpl.Underruns.load(EMemoryOrder::Relaxed);
         if (lImpl.ReportedUnderruns == 0 && lUnderruns > 0)
         {
             OPAAX_LOG(LogAudio, Warn, "The audio device ran out of mixed sound (a gap was heard); later gaps are "
@@ -1235,6 +1235,6 @@ namespace Opaax
 
     Uint32 AudioManager::GetUnderrunCount() const noexcept
     {
-        return m_Impl->Underruns.load(std::memory_order_relaxed);
+        return m_Impl->Underruns.load(EMemoryOrder::Relaxed);
     }
 }

@@ -53,9 +53,9 @@ namespace Opaax
             // Match the ticket, not the name: an entry re-added under this name belongs to someone else.
             if (m_Names[lIndex] == InHandle.Name && m_Tickets[lIndex] == InHandle.Ticket)
             {
-                m_Names.erase(m_Names.begin() + static_cast<std::ptrdiff_t>(lIndex));
-                m_Readers.erase(m_Readers.begin() + static_cast<std::ptrdiff_t>(lIndex));
-                m_Tickets.erase(m_Tickets.begin() + static_cast<std::ptrdiff_t>(lIndex));
+                m_Names.erase(m_Names.begin() + static_cast<PtrDiff>(lIndex));
+                m_Readers.erase(m_Readers.begin() + static_cast<PtrDiff>(lIndex));
+                m_Tickets.erase(m_Tickets.begin() + static_cast<PtrDiff>(lIndex));
                 return;
             }
         }

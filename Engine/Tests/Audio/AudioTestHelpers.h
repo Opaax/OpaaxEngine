@@ -6,7 +6,6 @@
 #include <cmath>
 #include <filesystem>
 #include <fstream>
-#include <utility>
 
 #include "Application/Services/IJobSystem.h"
 #include "Application/Services/IPaths.h"
@@ -124,6 +123,6 @@ namespace AudioTest
         bool HasJobs() const noexcept { return !m_Jobs.empty(); }
 
     private:
-        Opaax::TDynArray<std::pair<Opaax::TFunction<void()>, Opaax::TFunction<void()>>> m_Jobs;
+        Opaax::TDynArray<Opaax::TPair<Opaax::TFunction<void()>, Opaax::TFunction<void()>>> m_Jobs;
     };
 }

@@ -41,7 +41,7 @@ namespace
 
     // A bare manager creates worlds with no subsystems (it has no engine to build a context from),
     // so the counter is injected the way CreateSubsystemsFor would have: context first, then
-    // register, then StartupAll. std::ref is load-bearing.
+    // register, then StartupAll. Ref is load-bearing.
     struct GatedWorld
     {
         ResourceManager  Resources;
@@ -59,7 +59,7 @@ namespace
             REQUIRE(TheWorld != nullptr);
 
             TheWorld->SetContext(WorldContext{*TheWorld, Resources, IPaths::Null(), Events, Input, Config, /*Actions*/ nullptr, /*UI*/ nullptr, Debug});
-            TheWorld->GetSubsystems().RegisterSubsystem<CounterSubsystem>(std::ref(*TheWorld->GetContext()));
+            TheWorld->GetSubsystems().RegisterSubsystem<CounterSubsystem>(Ref(*TheWorld->GetContext()));
             TheWorld->GetSubsystems().StartupAll();
 
             Counter = TheWorld->GetSubsystems().GetSubsystem<CounterSubsystem>();

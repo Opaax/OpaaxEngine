@@ -6,10 +6,9 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Core/Hash/OpaaxHash.h"   // THash<OpaaxString>
 
-#include <cstdint>
+#include "Core/OpaaxTypes.h"
 #include <cstring>
 #include <string_view>
-#include <utility>
 
 using namespace Opaax;
 
@@ -61,7 +60,7 @@ TEST_CASE("OpaaxString: move transfers ownership and empties the source")
     REQUIRE(lA.IsUsingHeap());
     const Uint32 lLen = lA.GetLength();
 
-    OpaaxString lB(std::move(lA));
+    OpaaxString lB(Move(lA));
     CHECK(lB.GetLength() == lLen);
     CHECK(lB.IsUsingHeap());
     CHECK(lA.IsEmpty());            // moved-from -> valid empty SSO state

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <optional>
+#include "Core/OpaaxTypes.h"
 
 #include "Resources/ResourceFormat.h"
 #include "World/Prefab/PrefabFile.h"
@@ -22,12 +22,12 @@ namespace Opaax
 
         static constexpr EFailPolicy FailPolicy = EFailPolicy::FailFast;
 
-        static std::optional<PrefabResource> Load(const char* InPath, LoadContext& /*InCtx*/)
+        static TOptional<PrefabResource> Load(const char* InPath, LoadContext& /*InCtx*/)
         {
             PrefabResource lResource;
             if (!PrefabFile::Load(OpaaxString(InPath), lResource.Data))
             {
-                return std::nullopt;   // PrefabFile already logged why
+                return NullOpt;   // PrefabFile already logged why
             }
 
             return lResource;

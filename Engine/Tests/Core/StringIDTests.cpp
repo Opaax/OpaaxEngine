@@ -214,7 +214,7 @@ TEST_CASE("OpaaxStringID: concurrent interning and reading stay consistent")
     {
         lThreads.emplace_back([&]
         {
-            while (!lStop.load(std::memory_order_relaxed))
+            while (!lStop.load(EMemoryOrder::Relaxed))
             {
                 for (size_t i = 0; i < lSeedIds.size(); ++i)
                 {

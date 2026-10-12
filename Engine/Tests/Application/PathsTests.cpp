@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <string>
-#include <utility>
+#include "Core/OpaaxTypes.h"
 
 #include "Application/Services/IPaths.h"
 #include "Platform/IPlatform.h"
@@ -23,7 +23,7 @@ namespace
     class StubPlatform final : public IPlatform
     {
     public:
-        explicit StubPlatform(OpaaxString InExe) : m_Exe(std::move(InExe)) {}
+        explicit StubPlatform(OpaaxString InExe) : m_Exe(Move(InExe)) {}
         Uint32      GetLogicalCoreCount() const override { return 4; }
         double      GetTimeSeconds()      const override { return 0.0; }
         OpaaxString GetExecutablePath()   const override { return m_Exe; }

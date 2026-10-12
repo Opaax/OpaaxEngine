@@ -2,7 +2,7 @@
 // live reload through a held handle.
 #include <doctest.h>
 
-#include <atomic>
+#include "Core/OpaaxTypes.h"
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -49,7 +49,7 @@ namespace
 
         TempDir()
         {
-            static std::atomic<Uint64> s_Counter{0};
+            static TAtomic<Uint64> s_Counter{0};
             const Uint64 lTick = static_cast<Uint64>(std::chrono::steady_clock::now().time_since_epoch().count());
             Dir = std::filesystem::temp_directory_path() /
                   ("opaax_data_" + std::to_string(lTick) + "_" + std::to_string(s_Counter.fetch_add(1)));

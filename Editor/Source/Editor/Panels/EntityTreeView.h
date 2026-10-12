@@ -87,7 +87,7 @@ namespace Opaax::Editor
 
         const TDynArray<EntityID>* ChildrenOf(EntityID InEntity) const;
 
-        TUnorderedMap<Uint32, TDynArray<EntityID>> m_Children;   // by entity bits
+        TUnorderedMap<Uint32, TDynArray<EntityID>>      m_Children;   // by entity bits
         TDynArray<EntityID>                             m_Roots;
 
         EntityTreeDrop       m_Drop;

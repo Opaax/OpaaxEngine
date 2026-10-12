@@ -21,7 +21,7 @@ namespace Opaax
     }
 
     Profiler::Profiler()
-        : m_RecordingThread(std::this_thread::get_id())
+        : m_RecordingThread(ThisThread::GetId())
     {
     }
 
@@ -29,7 +29,7 @@ namespace Opaax
 
     void Profiler::Init(const bool bInEnabled)
     {
-        m_RecordingThread = std::this_thread::get_id();
+        m_RecordingThread = ThisThread::GetId();
         m_bEnabled        = bInEnabled;
     }
 

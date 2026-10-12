@@ -1,6 +1,6 @@
 #include "World/Level.h"
 
-#include <cstddef>   // std::ptrdiff_t
+#include "Core/OpaaxTypes.h"
 
 #include "Application/Services/IPaths.h"
 #include "Resources/ResourceManager.h"   // before the resources (completes LoadContext)
@@ -258,7 +258,7 @@ namespace Opaax
         OPAAX_LOG(LogLevel, Trace, "Unmounted '{}' from world '{}' — {} entity(ies) destroyed",
                   m_Mounted[lFound].AssetRelPath.CStr(), m_World.GetName().CStr(), lDoomed.size());
 
-        m_Mounted.erase(m_Mounted.begin() + static_cast<std::ptrdiff_t>(lFound));
+        m_Mounted.erase(m_Mounted.begin() + static_cast<PtrDiff>(lFound));
         return true;
     }
 
@@ -355,7 +355,7 @@ namespace Opaax
             return;
         }
 
-        m_Data.Maps.erase(m_Data.Maps.begin() + static_cast<std::ptrdiff_t>(InIndex));
+        m_Data.Maps.erase(m_Data.Maps.begin() + static_cast<PtrDiff>(InIndex));
 
         // Removing an entry before the persistent one shifts its index: fix it.
         if (m_Data.PersistentMapIndex > InIndex) { --m_Data.PersistentMapIndex; }

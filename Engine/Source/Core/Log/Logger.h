@@ -7,10 +7,6 @@
 
 #include <spdlog/spdlog.h>
 
-#include <deque>
-#include <iterator>
-#include <mutex>
-
 namespace Opaax
 {
     enum class ELogLevel : Uint8
@@ -88,9 +84,9 @@ namespace Opaax
                   spdlog::format_string_t<TArgs...> InFormat, TArgs&&... InArgs)
         {
             fmt::memory_buffer lLine;
-            fmt::format_to(std::back_inserter(lLine), "[{}] ", InCategory.Name);
+            fmt::format_to(fmt::appender(lLine), "[{}] ", InCategory.Name);
             const size_t lMessageStart = lLine.size();
-            fmt::format_to(std::back_inserter(lLine), InFormat, std::forward<TArgs>(InArgs)...);
+            fmt::format_to(fmt::appender(lLine), InFormat, Forward<TArgs>(InArgs)...);
             WriteLine(InLevel, InCategory, std::string_view(lLine.data(), lLine.size()), lMessageStart);
         }
 
@@ -125,11 +121,11 @@ namespace Opaax
         };
 
         // Guards the sinks and the pending lines.
-        mutable std::mutex              m_Mutex;
-        std::shared_ptr<spdlog::logger> m_Logger;
-        std::deque<PendingLine>         m_Pending;
-        Uint32                          m_DroppedPending = 0;
-        LogHistory                      m_History;
+        mutable Mutex              m_Mutex;
+        TSharedPtr<spdlog::logger> m_Logger;
+        TDeque<PendingLine>        m_Pending;
+        Uint32                     m_DroppedPending = 0;
+        LogHistory                 m_History;
     };
 }
 

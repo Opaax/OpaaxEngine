@@ -91,7 +91,7 @@ TEST_SUITE("TextureResource")
         const OpaaxString   lPath = lTemp.Write("Sprite.png", k_Png4x2Rgb, sizeof(k_Png4x2Rgb));
 
         LoadFixture lFixture;
-        std::optional<TextureResource> lTexture = TextureResource::Load(lPath.CStr(), lFixture.Ctx);
+        TOptional<TextureResource> lTexture = TextureResource::Load(lPath.CStr(), lFixture.Ctx);
 
         REQUIRE(lTexture.has_value());
         CHECK(lTexture->Width    == 4u);
@@ -109,7 +109,7 @@ TEST_SUITE("TextureResource")
         const OpaaxString   lPath = lTemp.Write("Sprite.png", k_Png4x2Rgb, sizeof(k_Png4x2Rgb));
 
         LoadFixture lFixture;
-        std::optional<TextureResource> lTexture = TextureResource::Load(lPath.CStr(), lFixture.Ctx);
+        TOptional<TextureResource> lTexture = TextureResource::Load(lPath.CStr(), lFixture.Ctx);
 
         REQUIRE(lTexture.has_value());
         REQUIRE(lTexture->Pixels.size() >= 3u);
@@ -170,7 +170,7 @@ TEST_SUITE("TextureResource")
         const OpaaxString   lPath = lTemp.Write("Sprite.png", k_Png4x2Rgb, sizeof(k_Png4x2Rgb));
 
         LoadFixture lFixture;
-        std::optional<TextureResource> lTexture = TextureResource::Load(lPath.CStr(), lFixture.Ctx);
+        TOptional<TextureResource> lTexture = TextureResource::Load(lPath.CStr(), lFixture.Ctx);
         REQUIRE(lTexture.has_value());
 
         lTexture->Initialize();   // IEngine::Null(): no device

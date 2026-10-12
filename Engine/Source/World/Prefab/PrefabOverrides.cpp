@@ -45,7 +45,7 @@ namespace Opaax
             {
                 if (InLeft.size() != InRight.size()) { return false; }
 
-                for (std::size_t lIndex = 0; lIndex < InLeft.size(); ++lIndex)
+                for (size_t lIndex = 0; lIndex < InLeft.size(); ++lIndex)
                 {
                     if (!SameValue(InLeft[lIndex], InRight[lIndex])) { return false; }
                 }

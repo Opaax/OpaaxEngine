@@ -7,7 +7,7 @@
 #include "Core/Profiling/StatsHistory.h"
 #include "Editor/Panels/StatsDisplay.h"   // header-only, no ImGui
 
-#include <thread>
+#include "Core/OpaaxTypes.h"
 
 using namespace Opaax;
 
@@ -688,7 +688,7 @@ TEST_CASE("Profiler: only the thread that called Init records")
     lProfiler.Init(true);
 
     bool bWorkerGotRecorder = true;
-    std::thread lWorker([&]
+    Thread lWorker([&]
     {
         bWorkerGotRecorder = lProfiler.GetRecorder() != nullptr;
         lProfiler.AddCount("FromWorker", 1);

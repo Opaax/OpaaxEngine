@@ -3,7 +3,7 @@
 // Probe types are defined here, like a game module's.
 #include <doctest.h>
 
-#include <optional>
+#include "Core/OpaaxTypes.h"
 
 #include "Resources/ResourceFormatRegistry.h"
 
@@ -18,8 +18,8 @@ namespace
 
         static constexpr EFailPolicy FailPolicy = EFailPolicy::Placeholder;
 
-        static std::optional<ProbeTextureResource> Load(const char*, LoadContext&) { return ProbeTextureResource{}; }
-        static ProbeTextureResource                Placeholder() { return ProbeTextureResource{}; }
+        static TOptional<ProbeTextureResource> Load(const char*, LoadContext&) { return ProbeTextureResource{}; }
+        static ProbeTextureResource            Placeholder() { return ProbeTextureResource{}; }
     };
 
     // Single extension, written WITHOUT its dot — a registrant may be sloppy; the table may not.
@@ -29,8 +29,8 @@ namespace
 
         static constexpr EFailPolicy FailPolicy = EFailPolicy::Placeholder;
 
-        static std::optional<ProbeSoundResource> Load(const char*, LoadContext&) { return ProbeSoundResource{}; }
-        static ProbeSoundResource                Placeholder() { return ProbeSoundResource{}; }
+        static TOptional<ProbeSoundResource> Load(const char*, LoadContext&) { return ProbeSoundResource{}; }
+        static ProbeSoundResource            Placeholder() { return ProbeSoundResource{}; }
     };
 
     // Structurally identical to ProbeSoundResource, and claims an extension it already owns.
@@ -40,8 +40,8 @@ namespace
 
         static constexpr EFailPolicy FailPolicy = EFailPolicy::Placeholder;
 
-        static std::optional<ProbeRivalResource> Load(const char*, LoadContext&) { return ProbeRivalResource{}; }
-        static ProbeRivalResource                Placeholder() { return ProbeRivalResource{}; }
+        static TOptional<ProbeRivalResource> Load(const char*, LoadContext&) { return ProbeRivalResource{}; }
+        static ProbeRivalResource            Placeholder() { return ProbeRivalResource{}; }
     };
 
     // Claims a FREE extension first and a taken one second — the all-or-nothing probe.
@@ -51,8 +51,8 @@ namespace
 
         static constexpr EFailPolicy FailPolicy = EFailPolicy::Placeholder;
 
-        static std::optional<ProbePartialResource> Load(const char*, LoadContext&) { return ProbePartialResource{}; }
-        static ProbePartialResource                Placeholder() { return ProbePartialResource{}; }
+        static TOptional<ProbePartialResource> Load(const char*, LoadContext&) { return ProbePartialResource{}; }
+        static ProbePartialResource            Placeholder() { return ProbePartialResource{}; }
     };
 }
 

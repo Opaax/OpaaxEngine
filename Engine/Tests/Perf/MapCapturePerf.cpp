@@ -68,9 +68,9 @@ namespace
     }
 
     // One authored map's worth of entities, all claiming InMapId so the filtered capture keeps them.
-    void FillWorld(World& InWorld, MapId InMapId, std::uint64_t InCount)
+    void FillWorld(World& InWorld, MapId InMapId, Uint64 InCount)
     {
-        for (std::uint64_t lIndex = 0; lIndex < InCount; ++lIndex)
+        for (Uint64 lIndex = 0; lIndex < InCount; ++lIndex)
         {
             Entity lEntity = InWorld.CreateEntity("BenchEntity", InMapId);
             lEntity.Add<BenchTransform>();
@@ -80,7 +80,7 @@ namespace
 
     // ns/op is per ENTITY; a frame budget is per PASS. Print both — the second is the one that
     // answers "how big can a level get before the check is visible?".
-    void ReportPass(const char* InLabel, const Perf::Result& InResult, std::uint64_t InEntities,
+    void ReportPass(const char* InLabel, const Perf::Result& InResult, Uint64 InEntities,
                     double InBudgetNsPerEntity)
     {
         std::printf("  [perf] %-38s %9.3f ms/pass  (%llu entities)\n", InLabel,
@@ -100,7 +100,7 @@ namespace
         CloneCapture  // CaptureWorld, no text          (WorldManager::CloneWorld)
     };
 
-    void RunCase(const char* InLabel, EPath InPath, std::uint64_t InCount, int InEpochs,
+    void RunCase(const char* InLabel, EPath InPath, Uint64 InCount, int InEpochs,
                  double InBudgetNsPerEntity)
     {
         const MapId lMapId("BenchMap");

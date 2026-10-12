@@ -1,6 +1,6 @@
 #pragma once
 
-#include <optional>
+#include "Core/OpaaxTypes.h"
 
 #include "Resources/ResourceFormat.h"
 #include "Renderer/Text/FontFamilyData.h"
@@ -22,12 +22,12 @@ namespace Opaax
 
         static constexpr EFailPolicy FailPolicy = EFailPolicy::Placeholder;
 
-        static std::optional<FontFamilyResource> Load(const char* InPath, LoadContext& /*InCtx*/)
+        static TOptional<FontFamilyResource> Load(const char* InPath, LoadContext& /*InCtx*/)
         {
             FontFamilyResource lResource;
             if (!FontFamilyFile::Load(OpaaxString(InPath), lResource.Data))
             {
-                return std::nullopt;   // FontFamilyFile already logged why
+                return NullOpt;   // FontFamilyFile already logged why
             }
 
             return lResource;

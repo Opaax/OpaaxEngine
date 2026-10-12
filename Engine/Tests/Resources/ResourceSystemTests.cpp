@@ -3,13 +3,10 @@
 // dependency release, cycles, fail policies, byte counts, Pin and TypeID.
 #include <doctest.h>
 
-#include <atomic>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
-#include <optional>
 #include <string>
-#include <thread>
 
 #include "Core/OpaaxTypes.h"
 #include "Application/Services/IJobSystem.h"
@@ -32,7 +29,7 @@ namespace
 
         TempWorkspace()
         {
-            static std::atomic<Uint64> s_Counter{0};
+            static TAtomic<Uint64> s_Counter{0};
             const Uint64 lTick = static_cast<Uint64>(std::chrono::steady_clock::now().time_since_epoch().count());
             Dir = std::filesystem::temp_directory_path() /
                   ("opaax_res_" + std::to_string(lTick) + "_" + std::to_string(s_Counter.fetch_add(1)));
@@ -76,10 +73,10 @@ namespace
 
         static constexpr EFailPolicy FailPolicy = EFailPolicy::FailFast;
 
-        static std::optional<ManifestResource> Load(const char* InPath, LoadContext& InCtx)
+        static TOptional<ManifestResource> Load(const char* InPath, LoadContext& InCtx)
         {
             std::ifstream lFile(InPath, std::ios::binary);
-            if (!lFile.is_open()) { return std::nullopt; }
+            if (!lFile.is_open()) { return NullOpt; }
 
             ManifestResource lManifest;
             std::string      lLine;
@@ -89,7 +86,7 @@ namespace
                 if (lChildPath.empty()) { continue; }
 
                 ResourceRef<ManifestResource> lChild = InCtx.Acquire<ManifestResource>(lChildPath.c_str());
-                if (!lChild) { return std::nullopt; } // FailFast: cycle / missing child fails us
+                if (!lChild) { return NullOpt; } // FailFast: cycle / missing child fails us
                 lManifest.Children.push_back(Move(lChild));
             }
             return lManifest;
@@ -103,17 +100,17 @@ namespace
     // -------------------------------------------------------------------------
     struct GpuLikeResource
     {
-        std::thread::id LoadThread{};
+        ThreadId        LoadThread{};
         int             InitCount = 0;
 
         static constexpr EFailPolicy FailPolicy = EFailPolicy::Placeholder;
 
-        static std::optional<GpuLikeResource> Load(const char* InPath, LoadContext& /*InCtx*/)
+        static TOptional<GpuLikeResource> Load(const char* InPath, LoadContext& /*InCtx*/)
         {
             std::ifstream lFile(InPath, std::ios::binary);
-            if (!lFile.is_open()) { return std::nullopt; }
+            if (!lFile.is_open()) { return NullOpt; }
             GpuLikeResource lRes;
-            lRes.LoadThread = std::this_thread::get_id();
+            lRes.LoadThread = ThisThread::GetId();
             return lRes;
         }
 
@@ -129,7 +126,7 @@ namespace
         {
             InJobs.DrainCompletions();
             InMgr.Update(0.0);
-            std::this_thread::yield();
+            ThisThread::YieldNow();
         }
     }
 }
@@ -399,7 +396,7 @@ TEST_CASE("Resources: LoadAsync loads off the main thread and publishes at the p
     // (both have the same fields, and the placeholder is initialized too).
     CHECK(lLoaded != lWhileLoading);
     CHECK(lLoaded->InitCount == 1);                              // Initialize ran exactly once...
-    CHECK(lLoaded->LoadThread != std::this_thread::get_id());    // ...and Load ran on a worker thread
+    CHECK(lLoaded->LoadThread != ThisThread::GetId());    // ...and Load ran on a worker thread
 }
 
 // =============================================================================
@@ -471,7 +468,7 @@ TEST_CASE("Resources: LoadAsync completion callback fires Loaded and can retain 
     {
         lJobs.DrainCompletions();
         lMgr.Update(0.0);
-        std::this_thread::yield();
+        ThisThread::YieldNow();
     }
 
     CHECK(lFired == 1);
@@ -506,7 +503,7 @@ TEST_CASE("Resources: LoadAsync completion callback reports failure for a missin
     {
         lJobs.DrainCompletions();
         lMgr.Update(0.0);
-        std::this_thread::yield();
+        ThisThread::YieldNow();
     }
 
     CHECK(lFired == 1);
@@ -535,7 +532,7 @@ TEST_CASE("Resources: a callback that drops the result lets the resource unload"
     {
         lJobs.DrainCompletions();
         lMgr.Update(0.0);
-        std::this_thread::yield();
+        ThisThread::YieldNow();
     }
 
     CHECK(lFired == 1);

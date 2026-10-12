@@ -1,7 +1,5 @@
 #pragma once
 
-#include <array>
-
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/MathTypes.h"
@@ -135,9 +133,9 @@ namespace Opaax
     private:
         // Held state, plus press/release flags set by the feed and cleared by EndFrame
         // (so a tap within one frame is not lost).
-        std::array<bool, KEY_STATE_COUNT> m_Current{};
-        std::array<bool, KEY_STATE_COUNT> m_PressedThisFrame{};
-        std::array<bool, KEY_STATE_COUNT> m_ReleasedThisFrame{};
+        TFixedArray<bool, KEY_STATE_COUNT> m_Current{};
+        TFixedArray<bool, KEY_STATE_COUNT> m_PressedThisFrame{};
+        TFixedArray<bool, KEY_STATE_COUNT> m_ReleasedThisFrame{};
 
         Vector2F m_MousePosition{0.f, 0.f};
         Vector2F m_MousePrevious{0.f, 0.f};

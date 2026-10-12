@@ -43,7 +43,7 @@ namespace Opaax::Editor
             {
                 if (m_Ids[lIndex] != InEntity.GetHandle()) { continue; }
 
-                m_Ids.erase(m_Ids.begin() + static_cast<std::ptrdiff_t>(lIndex));
+                m_Ids.erase(m_Ids.begin() + static_cast<PtrDiff>(lIndex));
                 if (m_Ids.empty()) { m_World = nullptr; }
                 return;
             }

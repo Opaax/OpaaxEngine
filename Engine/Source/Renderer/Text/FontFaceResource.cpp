@@ -14,13 +14,13 @@ namespace Opaax
         constexpr Int32 ATLAS_CHANNELS = 1;
     }
 
-    std::optional<FontFaceResource> FontFaceResource::Load(const char* InPath, LoadContext& /*InCtx*/)
+    TOptional<FontFaceResource> FontFaceResource::Load(const char* InPath, LoadContext& /*InCtx*/)
     {
         TDynArray<Uint8> lFileBytes;
         if (!FileIO::ReadAllBytes(OpaaxString(InPath), lFileBytes))
         {
             OPAAX_LOG(LogFontFaceResource, Error, "cannot read '{}'", InPath);
-            return std::nullopt;
+            return NullOpt;
         }
 
         FontFaceResource lResource;
@@ -28,7 +28,7 @@ namespace Opaax
                             lResource.Face, lResource.Pixels))
         {
             OPAAX_LOG(LogFontFaceResource, Error, "cannot bake '{}'", InPath);
-            return std::nullopt;
+            return NullOpt;
         }
 
         // Named local: Stem returns a view into a temporary.

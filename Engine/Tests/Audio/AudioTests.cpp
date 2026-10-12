@@ -6,13 +6,11 @@
 #include <doctest.h>
 
 #include <algorithm>
-#include <chrono>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
-#include <functional>
+#include "Core/OpaaxTypes.h"
 #include <string>
-#include <thread>
 
 #include "Application/Services/IPaths.h"
 #include "Audio/AudioClipResource.h"
@@ -51,7 +49,7 @@ namespace
     AudioClipResource MakeClip(const float InSeconds, const float InAmplitude = 0.5f,
                                const AudioClipResource::EResidency InResidency = AudioClipResource::EResidency::Auto)
     {
-        std::optional<AudioClipResource> lClip = AudioClipResource::FromMemory(MakeWav(44100, InSeconds, 440.f, InAmplitude),
+        TOptional<AudioClipResource> lClip = AudioClipResource::FromMemory(MakeWav(44100, InSeconds, 440.f, InAmplitude),
                                                                                 "Test", InResidency);
         REQUIRE(lClip.has_value());
         return *lClip;
@@ -596,7 +594,7 @@ namespace
                         m_Recording->Frames.insert(m_Recording->Frames.end(), lPeriod.begin(), lPeriod.end());
                     }
                     ++m_Recording->Calls;
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    ThisThread::SleepFor(Milliseconds(1));
                 }
             });
             return true;
@@ -631,7 +629,7 @@ namespace
             {
                 return true;
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            ThisThread::SleepFor(Milliseconds(1));
         }
         return InCondition();
     }
@@ -713,8 +711,8 @@ namespace
                                                /*Actions*/ nullptr, /*UI*/ nullptr, Debug, &Components, &Audio });
 
             WorldSubsystemMgr& lSubsystems = TheWorld->GetSubsystems();
-            lSubsystems.RegisterSubsystem<BehaviourSubsystem>(std::ref(*TheWorld->GetContext()));
-            lSubsystems.RegisterSubsystem<AudioSubsystem>(std::ref(*TheWorld->GetContext()));
+            lSubsystems.RegisterSubsystem<BehaviourSubsystem>(Ref(*TheWorld->GetContext()));
+            lSubsystems.RegisterSubsystem<AudioSubsystem>(Ref(*TheWorld->GetContext()));
             lSubsystems.StartupAll();
 
             Sounds = lSubsystems.GetSubsystem<AudioSubsystem>();

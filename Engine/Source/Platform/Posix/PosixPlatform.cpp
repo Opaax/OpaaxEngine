@@ -6,7 +6,7 @@
 #include <climits>
 #include <cstdlib>
 #include <string>
-#include <thread>
+#include "Core/OpaaxTypes.h"
 
 #include <unistd.h>
 

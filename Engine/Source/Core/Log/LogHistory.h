@@ -6,7 +6,6 @@
 #include "Core/String/OpaaxStringID.hpp"
 
 #include <chrono>
-#include <deque>
 #include <string_view>
 
 namespace Opaax
@@ -68,7 +67,7 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        std::deque<LogEntry> m_Entries;
+        TDeque<LogEntry>     m_Entries;
         Uint32               m_Capacity     = 0;
         Uint64               m_LastSequence = 0;
     };

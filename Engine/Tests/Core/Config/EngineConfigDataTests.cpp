@@ -271,7 +271,7 @@ namespace
                 bFound = true;
             }
         };
-        std::apply([&](const auto&... InEach) { (lVisit(InEach), ...); }, InProperties);
+        TupleApply([&](const auto&... InEach) { (lVisit(InEach), ...); }, InProperties);
 
         REQUIRE_MESSAGE(bFound, "no property named " << InName);
         return lFlags;

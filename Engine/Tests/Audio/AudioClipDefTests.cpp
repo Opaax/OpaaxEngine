@@ -8,7 +8,7 @@
 #include <cmath>
 #include <filesystem>
 #include <fstream>
-#include <functional>
+#include "Core/OpaaxTypes.h"
 #include <string>
 
 #include "Application/Services/IJobSystem.h"
@@ -184,8 +184,8 @@ TEST_CASE("AudioClipDef: Single, Sequential and Shuffle; no clips plays nothing"
     const TDynArray<Int32> lShuffled = Picks(MakeDef(EAudioSelection::Shuffle, 4), 40);
     for (size_t lRound = 0; lRound < lShuffled.size(); lRound += 4)
     {
-        TDynArray<Int32> lOne(lShuffled.begin() + static_cast<std::ptrdiff_t>(lRound),
-                              lShuffled.begin() + static_cast<std::ptrdiff_t>(lRound + 4));
+        TDynArray<Int32> lOne(lShuffled.begin() + static_cast<PtrDiff>(lRound),
+                              lShuffled.begin() + static_cast<PtrDiff>(lRound + 4));
         std::sort(lOne.begin(), lOne.end());
         CHECK(lOne == TDynArray<Int32>{ 0, 1, 2, 3 });
 
@@ -446,8 +446,8 @@ namespace
                                                /*Actions*/ nullptr, /*UI*/ nullptr, Debug, &Components, &Audio });
 
             WorldSubsystemMgr& lSubsystems = TheWorld->GetSubsystems();
-            lSubsystems.RegisterSubsystem<BehaviourSubsystem>(std::ref(*TheWorld->GetContext()));
-            lSubsystems.RegisterSubsystem<AudioSubsystem>(std::ref(*TheWorld->GetContext()));
+            lSubsystems.RegisterSubsystem<BehaviourSubsystem>(Ref(*TheWorld->GetContext()));
+            lSubsystems.RegisterSubsystem<AudioSubsystem>(Ref(*TheWorld->GetContext()));
             lSubsystems.StartupAll();
 
             Sounds = lSubsystems.GetSubsystem<AudioSubsystem>();

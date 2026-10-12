@@ -1,6 +1,6 @@
 #pragma once
 
-#include <optional>
+#include "Core/OpaaxTypes.h"
 
 #include "Resources/ResourceFormat.h"
 #include "Input/Assets/InputMappingContextData.h"
@@ -21,12 +21,12 @@ namespace Opaax
 
         static constexpr EFailPolicy FailPolicy = EFailPolicy::Placeholder;
 
-        static std::optional<InputMappingContextResource> Load(const char* InPath, LoadContext& /*InCtx*/)
+        static TOptional<InputMappingContextResource> Load(const char* InPath, LoadContext& /*InCtx*/)
         {
             InputMappingContextResource lResource;
             if (!InputMappingContextFile::Load(OpaaxString(InPath), lResource.Data))
             {
-                return std::nullopt;   // InputMappingContextFile already logged why
+                return NullOpt;   // InputMappingContextFile already logged why
             }
 
             return lResource;

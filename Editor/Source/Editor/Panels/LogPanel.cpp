@@ -110,7 +110,7 @@ namespace Opaax::Editor
                 m_Shown.push_back(lEntry.Sequence);
             }
 
-            m_Entries.push_back(std::move(lEntry));
+            m_Entries.push_back(Move(lEntry));
         }
 
         while (m_Entries.size() > MAX_LINES)

@@ -68,12 +68,12 @@ namespace Opaax
             // Fisher-Yates; the bag is drawn from its back.
             for (Uint32 lIndex = InCount; lIndex > 1; --lIndex)
             {
-                std::swap(OutBag[lIndex - 1], OutBag[InRandom.Below(lIndex)]);
+                Swap(OutBag[lIndex - 1], OutBag[InRandom.Below(lIndex)]);
             }
 
             if (InCount > 1 && static_cast<Int32>(OutBag.back()) == InAvoid)
             {
-                std::swap(OutBag.back(), OutBag.front());
+                Swap(OutBag.back(), OutBag.front());
             }
         }
     }

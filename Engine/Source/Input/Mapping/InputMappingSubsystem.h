@@ -1,7 +1,5 @@
 #pragma once
 
-#include <utility>   // std::forward
-
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Log/Logger.h"
@@ -110,7 +108,7 @@ namespace Opaax
 
         /** Visits every action and its state (editor Input panel). */
         template<typename TFunc>
-        void ForEachAction(TFunc&& InFunc) const { m_Evaluator.ForEachAction(std::forward<TFunc>(InFunc)); }
+        void ForEachAction(TFunc&& InFunc) const { m_Evaluator.ForEachAction(Forward<TFunc>(InFunc)); }
 
         /** Number of bound handlers. */
         Uint64 GetBindingCount() const noexcept;

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <atomic>
 #include <string>
 
 #include "Core/Log/Logger.h"
@@ -59,8 +58,8 @@ namespace Opaax::Editor
 
     private:
         Thread                 m_Worker;
-        std::atomic<EState>    m_State{ EState::Idle };
-        std::atomic<Int32>     m_FailedStep{ -1 };
+        TAtomic<EState>        m_State{ EState::Idle };
+        TAtomic<Int32>         m_FailedStep{ -1 };
 
         // Written by Start before the worker starts, read-only while it runs.
         TDynArray<ExportStep> m_Steps;

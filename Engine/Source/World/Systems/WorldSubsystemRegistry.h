@@ -1,6 +1,5 @@
 #pragma once
 
-#include <functional>   // std::ref
 #include "Core/Templates/TypeTraits.h"
 
 #include "Core/EngineAPI.h"
@@ -69,9 +68,9 @@ namespace Opaax
         void CreateInto(WorldSubsystemMgr& InManager, WorldContext& InContext) const override
         {
             // T must be constructible from WorldContext&.
-            // std::ref: the factory captures its arguments by value, and a copy would leave subsystems
+            // Ref: the factory captures its arguments by value, and a copy would leave subsystems
             // with dangling references.
-            InManager.RegisterSubsystem<T>(std::ref(InContext));
+            InManager.RegisterSubsystem<T>(Ref(InContext));
         }
 
     private:

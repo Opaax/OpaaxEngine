@@ -41,7 +41,7 @@ namespace Opaax
         /** True once the worker has run the job's work (or the handle is null). */
         bool IsComplete() const noexcept
         {
-            return !m_State || m_State->bDone.load(std::memory_order_acquire);
+            return !m_State || m_State->bDone.load(EMemoryOrder::Acquire);
         }
 
         /** True when this handle refers to a real submitted job. */

@@ -46,7 +46,7 @@ namespace
     };
 
     /** Decodes a PNG file the way the engine does, without uploading it. */
-    std::optional<TextureResource> Decode(const OpaaxString& InPath)
+    TOptional<TextureResource> Decode(const OpaaxString& InPath)
     {
         ResourceManager         lManager;
         ResourceDependencyGraph lDeps;
@@ -106,7 +106,7 @@ TEST_CASE("PngWriter: an RGBA image reads back exactly")
     const TDynArray<Uint8> lImage = MakeImage(5, 3, 4);
     REQUIRE(PngWriter::Write(lPath, 5, 3, 4, lImage.data()));
 
-    const std::optional<TextureResource> lTexture = Decode(lPath);
+    const TOptional<TextureResource> lTexture = Decode(lPath);
     REQUIRE(lTexture.has_value());
     CheckRoundTrip(*lTexture, 5, 3, 4);
 }
@@ -120,7 +120,7 @@ TEST_CASE("PngWriter: an RGB image larger than one stored block reads back exact
     const TDynArray<Uint8> lImage = MakeImage(200, 200, 3);
     REQUIRE(PngWriter::Write(lPath, 200, 200, 3, lImage.data()));
 
-    const std::optional<TextureResource> lTexture = Decode(lPath);
+    const TOptional<TextureResource> lTexture = Decode(lPath);
     REQUIRE(lTexture.has_value());
     CheckRoundTrip(*lTexture, 200, 200, 3);
 }

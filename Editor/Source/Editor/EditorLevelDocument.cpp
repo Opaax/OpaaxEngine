@@ -1,6 +1,6 @@
 #include "Editor/EditorLevelDocument.h"
 
-#include <cstddef>   // std::ptrdiff_t
+#include "Core/OpaaxTypes.h"
 #include <string>
 
 #include "Application/Services/IPaths.h"
@@ -140,7 +140,7 @@ namespace Opaax::Editor
         {
             if (InLevel.IsMounted(m_Maps[lIndex - 1].Id)) { continue; }
 
-            m_Maps.erase(m_Maps.begin() + static_cast<std::ptrdiff_t>(lIndex - 1));
+            m_Maps.erase(m_Maps.begin() + static_cast<PtrDiff>(lIndex - 1));
         }
 
         // --- add a record for each newly mounted map ----------------------------------------------

@@ -33,7 +33,7 @@ namespace
 
     // The list must be a CONSTANT EXPRESSION, not merely const: the editor reads its size at compile
     // time to log a count, and nothing may end up in a shipped binary that is not referenced.
-    static_assert(std::tuple_size_v<decltype(Probe::GetProperties())> == 3);
+    static_assert(TTupleSize<decltype(Probe::GetProperties())> == 3);
     static_assert(CReflected<Probe>);
     static_assert(!CReflected<NoProperties>);
 }
@@ -42,9 +42,9 @@ TEST_CASE("OPAAX_PROPERTIES: names are the field names, in declaration order")
 {
     constexpr auto lProperties = Probe::GetProperties();
 
-    CHECK(OpaaxString(std::get<0>(lProperties).Name) == "Speed");
-    CHECK(OpaaxString(std::get<1>(lProperties).Name) == "Count");
-    CHECK(OpaaxString(std::get<2>(lProperties).Name) == "Colour");
+    CHECK(OpaaxString(TupleGet<0>(lProperties).Name) == "Speed");
+    CHECK(OpaaxString(TupleGet<1>(lProperties).Name) == "Count");
+    CHECK(OpaaxString(TupleGet<2>(lProperties).Name) == "Colour");
 }
 
 TEST_CASE("OPAAX_PROPERTIES: the member pointer reads AND writes the field it names")
@@ -53,13 +53,13 @@ TEST_CASE("OPAAX_PROPERTIES: the member pointer reads AND writes the field it na
     constexpr auto lProperties = Probe::GetProperties();
 
     // Read through the description.
-    CHECK(lProbe.*(std::get<0>(lProperties).Member) == doctest::Approx(1.f));
-    CHECK(lProbe.*(std::get<1>(lProperties).Member) == 2);
+    CHECK(lProbe.*(TupleGet<0>(lProperties).Member) == doctest::Approx(1.f));
+    CHECK(lProbe.*(TupleGet<1>(lProperties).Member) == 2);
 
     // Write through it — this is what a drawer does, and a member pointer aimed at the wrong field
     // would pass every read-only check above.
-    lProbe.*(std::get<0>(lProperties).Member) = 42.f;
-    lProbe.*(std::get<1>(lProperties).Member) = 7;
+    lProbe.*(TupleGet<0>(lProperties).Member) = 42.f;
+    lProbe.*(TupleGet<1>(lProperties).Member) = 7;
 
     CHECK(lProbe.Speed == doctest::Approx(42.f));
     CHECK(lProbe.Count == 7);
@@ -70,13 +70,13 @@ TEST_CASE("OPAAX_PROPERTIES: SetRange marks one property and leaves its siblings
 {
     constexpr auto lProperties = Probe::GetProperties();
 
-    CHECK(std::get<0>(lProperties).Meta.RangeMin == doctest::Approx(0.f));
-    CHECK(std::get<0>(lProperties).Meta.RangeMax == doctest::Approx(10.f));
+    CHECK(TupleGet<0>(lProperties).Meta.RangeMin == doctest::Approx(0.f));
+    CHECK(TupleGet<0>(lProperties).Meta.RangeMax == doctest::Approx(10.f));
 
     // Unset is Min == Max, which every ImGui drag reads as "unbounded" — so an ordinary property
     // needs no flag saying it has no range.
-    CHECK(std::get<1>(lProperties).Meta.RangeMin == std::get<1>(lProperties).Meta.RangeMax);
-    CHECK(std::get<2>(lProperties).Meta.RangeMin == std::get<2>(lProperties).Meta.RangeMax);
+    CHECK(TupleGet<1>(lProperties).Meta.RangeMin == TupleGet<1>(lProperties).Meta.RangeMax);
+    CHECK(TupleGet<2>(lProperties).Meta.RangeMin == TupleGet<2>(lProperties).Meta.RangeMax);
 }
 
 TEST_CASE("OPAAX_PROPERTIES: SetTooltip carries the text and chains with the other facets")
@@ -85,20 +85,20 @@ TEST_CASE("OPAAX_PROPERTIES: SetTooltip carries the text and chains with the oth
 
     // Chained onto SetRange, so neither facet may drop the other's work — every facet returns a
     // modified COPY, which is what makes the order they are written in irrelevant.
-    CHECK(OpaaxString(std::get<0>(lProperties).Meta.Tooltip) == "Units per second.");
-    CHECK(std::get<0>(lProperties).Meta.RangeMax == doctest::Approx(10.f));
+    CHECK(OpaaxString(TupleGet<0>(lProperties).Meta.Tooltip) == "Units per second.");
+    CHECK(TupleGet<0>(lProperties).Meta.RangeMax == doctest::Approx(10.f));
 
     // Absent is null, so a property with nothing to explain draws no marker.
-    CHECK(std::get<1>(lProperties).Meta.Tooltip == nullptr);
+    CHECK(TupleGet<1>(lProperties).Meta.Tooltip == nullptr);
 }
 
 TEST_CASE("OPAAX_PROPERTIES: the value type comes from the member pointer, not from the author")
 {
     constexpr auto lProperties = Probe::GetProperties();
 
-    using Speed  = TRemoveCVRef<decltype(std::get<0>(lProperties))>;
-    using Count  = TRemoveCVRef<decltype(std::get<1>(lProperties))>;
-    using Colour = TRemoveCVRef<decltype(std::get<2>(lProperties))>;
+    using Speed  = TRemoveCVRef<decltype(TupleGet<0>(lProperties))>;
+    using Count  = TRemoveCVRef<decltype(TupleGet<1>(lProperties))>;
+    using Colour = TRemoveCVRef<decltype(TupleGet<2>(lProperties))>;
 
     static_assert(TIsSame<Speed::ValueType, float>);
     static_assert(TIsSame<Count::ValueType, Int32>);

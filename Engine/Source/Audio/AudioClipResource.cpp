@@ -13,32 +13,32 @@ namespace Opaax
         constexpr Uint64 DECODE_CHUNK_FRAMES = 4096;
     }
 
-    std::optional<AudioClipResource> AudioClipResource::Load(const char* InPath, LoadContext& /*InCtx*/)
+    TOptional<AudioClipResource> AudioClipResource::Load(const char* InPath, LoadContext& /*InCtx*/)
     {
         TDynArray<Uint8> lBytes;
         if (!FileIO::ReadAllBytes(OpaaxString(InPath), lBytes))
         {
             OPAAX_LOG(LogAudio, Error, "Audio clip '{}' cannot be read", InPath);
-            return std::nullopt;
+            return NullOpt;
         }
 
         return FromMemory(Move(lBytes), InPath);
     }
 
-    std::optional<AudioClipResource> AudioClipResource::FromMemory(TDynArray<Uint8> InBytes, const char* InNameForLogs,
+    TOptional<AudioClipResource> AudioClipResource::FromMemory(TDynArray<Uint8> InBytes, const char* InNameForLogs,
                                                                    const EResidency InResidency)
     {
         if (InBytes.empty())
         {
             OPAAX_LOG(LogAudio, Error, "Audio clip '{}' is empty", InNameForLogs);
-            return std::nullopt;
+            return NullOpt;
         }
 
         TUniquePtr<IAudioDecoder> lDecoder = AudioAPI::OpenDecoder(InBytes.data(), InBytes.size());
         if (lDecoder == nullptr)
         {
             OPAAX_LOG(LogAudio, Error, "Audio clip '{}' is not a supported sound (.wav, .mp3, .flac)", InNameForLogs);
-            return std::nullopt;
+            return NullOpt;
         }
 
         TSharedPtr<AudioClipData> lData = MakeShared<AudioClipData>();
@@ -64,14 +64,14 @@ namespace Opaax
             Uint64 lRead = 0;
             while ((lRead = lDecoder->Read(lChunk.data(), DECODE_CHUNK_FRAMES)) > 0)
             {
-                lData->Frames.insert(lData->Frames.end(), lChunk.begin(), lChunk.begin() + static_cast<std::ptrdiff_t>(lRead * lFormat.Channels));
+                lData->Frames.insert(lData->Frames.end(), lChunk.begin(), lChunk.begin() + static_cast<PtrDiff>(lRead * lFormat.Channels));
             }
 
             lData->Format.FrameCount = lData->Frames.size() / lFormat.Channels;
             if (lData->Format.FrameCount == 0)
             {
                 OPAAX_LOG(LogAudio, Error, "Audio clip '{}' has no samples", InNameForLogs);
-                return std::nullopt;
+                return NullOpt;
             }
         }
         else

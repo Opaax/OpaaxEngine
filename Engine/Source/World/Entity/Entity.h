@@ -31,7 +31,7 @@ namespace Opaax
         template<typename T, typename... Args>
         T& Add(Args&&... InArgs)
         {
-            return m_World->GetRegistry().emplace<T>(m_Handle, std::forward<Args>(InArgs)...);
+            return m_World->GetRegistry().emplace<T>(m_Handle, Forward<Args>(InArgs)...);
         }
 
         /**
@@ -41,7 +41,7 @@ namespace Opaax
         template<typename T, typename... Args>
         T& AddOrReplace(Args&&... InArgs)
         {
-            return m_World->GetRegistry().emplace_or_replace<T>(m_Handle, std::forward<Args>(InArgs)...);
+            return m_World->GetRegistry().emplace_or_replace<T>(m_Handle, Forward<Args>(InArgs)...);
         }
 
         /**

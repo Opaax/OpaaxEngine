@@ -351,7 +351,7 @@ namespace Opaax
 
     void AudioSubsystem::HoldBanks()
     {
-        TDynArray<std::pair<Uint32, const AudioBanksComponent*>> lNew;
+        TDynArray<TPair<Uint32, const AudioBanksComponent*>> lNew;
         m_Context->OwningWorld.Each<AudioBanksComponent>([this, &lNew](const EntityID InEntity, const AudioBanksComponent& InBanks)
         {
             if (!m_Banks.contains(EntityKey(InEntity)))

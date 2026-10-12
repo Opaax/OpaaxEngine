@@ -371,7 +371,7 @@ TEST_SUITE("AnimationClipResource")
         REQUIRE(AnimationClipFile::Save(lPath, lAuthored));
 
         LoadFixture lFixture;
-        std::optional<AnimationClipResource> lClip = AnimationClipResource::Load(lPath.CStr(), lFixture.Ctx);
+        TOptional<AnimationClipResource> lClip = AnimationClipResource::Load(lPath.CStr(), lFixture.Ctx);
 
         REQUIRE(lClip.has_value());
         CHECK(lClip->Data.StepCount() == 4u);

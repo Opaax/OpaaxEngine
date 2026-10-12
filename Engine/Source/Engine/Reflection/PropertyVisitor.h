@@ -1,11 +1,7 @@
 #pragma once
 
-#include <array>
-#include <iterator>
 #include <string_view>
-#include <tuple>
 #include "Core/Templates/TypeTraits.h"
-#include <utility>
 
 #include "Core/Color/LinearColor.h"
 #include "Core/Maths/MathTypes.h"
@@ -166,7 +162,7 @@ namespace Opaax
         {
             static const auto s_Labels = []
             {
-                std::array<const char*, std::size(TEnumValues<E>::Values)> lLabels{};
+                TFixedArray<const char*, ArraySize(TEnumValues<E>::Values)> lLabels{};
                 for (Uint64 i = 0; i < lLabels.size(); ++i) { lLabels[i] = ToString(TEnumValues<E>::Values[i]); }
                 return lLabels;
             }();
@@ -205,7 +201,7 @@ namespace Opaax
         {
             if (InFirst < m_Values.size() && InSecond < m_Values.size())
             {
-                std::swap(m_Values[InFirst], m_Values[InSecond]);
+                Opaax::Swap(m_Values[InFirst], m_Values[InSecond]);
             }
         }
 
@@ -244,7 +240,7 @@ namespace Opaax
         }
         else if constexpr (CEnumWithValues<TValue>)
         {
-            constexpr Uint32 lCount = static_cast<Uint32>(std::size(TEnumValues<TValue>::Values));
+            constexpr Uint32 lCount = static_cast<Uint32>(ArraySize(TEnumValues<TValue>::Values));
 
             Uint32 lIndex = 0;
             for (Uint32 i = 0; i < lCount; ++i)
@@ -283,7 +279,7 @@ namespace Opaax
     template<CReflected TOwner>
     void VisitProperties(TOwner& InOwner, IPropertyVisitor& InVisitor, const PropertyMeta& InInherited)
     {
-        std::apply([&InOwner, &InVisitor, &InInherited](const auto&... lProperties)
+        TupleApply([&InOwner, &InVisitor, &InInherited](const auto&... lProperties)
                    {
                        (VisitValue(InVisitor, lProperties.Name, InOwner.*(lProperties.Member),
                                    InheritMeta(lProperties.Meta, InInherited)), ...);

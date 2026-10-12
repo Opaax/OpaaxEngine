@@ -87,9 +87,9 @@ return StaticTypeID();                                                   \
         requires TIsBaseOf<SubsystemType, T>
         void RegisterSubsystem(Args&&... InArgs)
         {
-            m_Factories.emplace_back([...Arguments = std::forward<Args>(InArgs)]() mutable
+            m_Factories.emplace_back([...Arguments = Forward<Args>(InArgs)]() mutable
             {
-                return MakeUnique<T>(std::forward<decltype(Arguments)>(Arguments)...);
+                return MakeUnique<T>(Forward<decltype(Arguments)>(Arguments)...);
             });
         }
 

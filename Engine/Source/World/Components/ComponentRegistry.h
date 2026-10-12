@@ -16,7 +16,6 @@
 #include "World/Entity/EntityTypes.h"
 
 #include "Core/Templates/TypeTraits.h"
-#include <tuple>       // std::apply
 
 namespace Opaax
 {
@@ -259,7 +258,7 @@ namespace Opaax
         {
             if constexpr (CReflected<T>)
             {
-                std::apply([this](const auto&... lProperties)
+                TupleApply([this](const auto&... lProperties)
                            {
                                ([this](const auto& InProperty)
                                 {

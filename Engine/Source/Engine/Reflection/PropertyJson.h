@@ -162,7 +162,7 @@ namespace Opaax
                 return false;
             }
 
-            std::apply([&](const auto&... lProperties)
+            TupleApply([&](const auto&... lProperties)
                        {
                            ([&](const auto& InProperty)
                             {
@@ -184,7 +184,7 @@ namespace Opaax
     {
         nlohmann::json lJson = nlohmann::json::object();
 
-        std::apply([&](const auto&... lProperties)
+        TupleApply([&](const auto&... lProperties)
                    {
                        ((lJson[lProperties.Name] = PropertyJsonDetail::ValueToJson(InValue.*(lProperties.Member))), ...);
                    },

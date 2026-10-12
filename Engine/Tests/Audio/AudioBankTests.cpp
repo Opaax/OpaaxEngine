@@ -4,7 +4,7 @@
 // sounds are never loaded again, a level's are let go each time.
 #include <doctest.h>
 
-#include <functional>
+#include "Core/OpaaxTypes.h"
 #include <string>
 
 #include "Audio/AudioBank.h"
@@ -174,8 +174,8 @@ namespace
                                              /*Actions*/ nullptr, /*UI*/ nullptr, Debug, &Components, &Audio });
 
             WorldSubsystemMgr& lSubsystems = lWorld->GetSubsystems();
-            lSubsystems.RegisterSubsystem<BehaviourSubsystem>(std::ref(*lWorld->GetContext()));
-            lSubsystems.RegisterSubsystem<AudioSubsystem>(std::ref(*lWorld->GetContext()));
+            lSubsystems.RegisterSubsystem<BehaviourSubsystem>(Ref(*lWorld->GetContext()));
+            lSubsystems.RegisterSubsystem<AudioSubsystem>(Ref(*lWorld->GetContext()));
             lSubsystems.StartupAll();
             REQUIRE(Worlds.SetActiveWorld(lWorld));
 

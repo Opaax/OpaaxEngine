@@ -3,7 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/String/OpaaxString.hpp"
 
-#include <atomic>
+#include "Core/OpaaxTypes.h"
 #include <filesystem>
 
 namespace Opaax
@@ -91,7 +91,7 @@ namespace Opaax
         std::filesystem::path::string_type m_LogFileNative;
 
         void*            m_PreviousFilter   = nullptr;
-        std::atomic_flag m_bHandling        = ATOMIC_FLAG_INIT;
+        AtomicFlag       m_bHandling        = ATOMIC_FLAG_INIT;
         bool             m_bInstalled       = false;
         bool             m_bSymbolsReady    = false;
     };

@@ -390,7 +390,7 @@ namespace Opaax
 
         // Unlocked, like FillSlot: dependency loads go through this manager.
         LoadContext      lCtx(*this, m_Deps);
-        std::optional<T> lLoaded = T::Load(InPath, lCtx);
+        TOptional<T>     lLoaded = T::Load(InPath, lCtx);
 
         if (!lLoaded.has_value())
         {

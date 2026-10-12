@@ -30,7 +30,7 @@ namespace Opaax
 
         if (lSkip < m_Entries.size())
         {
-            OutEntries.insert(OutEntries.end(), m_Entries.begin() + static_cast<std::ptrdiff_t>(lSkip), m_Entries.end());
+            OutEntries.insert(OutEntries.end(), m_Entries.begin() + static_cast<PtrDiff>(lSkip), m_Entries.end());
         }
 
         return m_LastSequence;

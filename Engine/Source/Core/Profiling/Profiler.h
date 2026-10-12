@@ -5,7 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Profiling/FrameStats.h"
 
-#include <thread>
+#include "Core/OpaaxTypes.h"
 
 namespace Opaax
 {
@@ -63,7 +63,7 @@ namespace Opaax
         /** Null when disabled or not on the recording thread. */
         FrameProfiler* GetRecorder() noexcept
         {
-            return m_bEnabled && std::this_thread::get_id() == m_RecordingThread ? &m_Stats.Profiler : nullptr;
+            return m_bEnabled && ThisThread::GetId() == m_RecordingThread ? &m_Stats.Profiler : nullptr;
         }
 
         /** The last complete frame. Empty when disabled. */
@@ -77,7 +77,7 @@ namespace Opaax
     private:
         // Updated in place: a reader may keep a reference across frames.
         FrameStats      m_Stats;
-        std::thread::id m_RecordingThread;
+        ThreadId        m_RecordingThread;
 
         double m_RecordingGpuMs = -1.0;
         double m_LastFrameStart = 0.0;

@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include <cstdint>
+#include "Core/OpaaxTypes.h"
 #include "Core/EngineAPI.h"
 
 namespace Opaax

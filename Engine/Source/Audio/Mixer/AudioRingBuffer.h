@@ -41,7 +41,7 @@ namespace Opaax
         /** Frames written and not read yet. */
         Uint32 GetReadableFrames() const noexcept
         {
-            return static_cast<Uint32>(m_Written.load(std::memory_order_acquire) - m_Read.load(std::memory_order_acquire));
+            return static_cast<Uint32>(m_Written.load(EMemoryOrder::Acquire) - m_Read.load(EMemoryOrder::Acquire));
         }
 
         /**
@@ -50,12 +50,12 @@ namespace Opaax
          */
         Uint32 Write(const float* InFrames, const Uint32 InFrameCount)
         {
-            const Uint64 lWritten = m_Written.load(std::memory_order_relaxed);
-            const Uint64 lRead    = m_Read.load(std::memory_order_acquire);
+            const Uint64 lWritten = m_Written.load(EMemoryOrder::Relaxed);
+            const Uint64 lRead    = m_Read.load(EMemoryOrder::Acquire);
             const Uint32 lCount   = std::min(InFrameCount, m_Capacity - static_cast<Uint32>(lWritten - lRead));
 
             CopyIn(InFrames, lWritten, lCount);
-            m_Written.store(lWritten + lCount, std::memory_order_release);
+            m_Written.store(lWritten + lCount, EMemoryOrder::Release);
             return lCount;
         }
 
@@ -65,12 +65,12 @@ namespace Opaax
          */
         Uint32 Read(float* OutFrames, const Uint32 InFrameCount)
         {
-            const Uint64 lRead    = m_Read.load(std::memory_order_relaxed);
-            const Uint64 lWritten = m_Written.load(std::memory_order_acquire);
+            const Uint64 lRead    = m_Read.load(EMemoryOrder::Relaxed);
+            const Uint64 lWritten = m_Written.load(EMemoryOrder::Acquire);
             const Uint32 lCount   = std::min(InFrameCount, static_cast<Uint32>(lWritten - lRead));
 
             CopyOut(lRead, lCount, OutFrames);
-            m_Read.store(lRead + lCount, std::memory_order_release);
+            m_Read.store(lRead + lCount, EMemoryOrder::Release);
             return lCount;
         }
 

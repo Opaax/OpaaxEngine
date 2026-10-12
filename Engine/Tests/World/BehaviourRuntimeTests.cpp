@@ -6,9 +6,8 @@
 
 #include <algorithm>
 #include <filesystem>
-#include <functional>
+#include "Core/OpaaxTypes.h"
 #include <string>
-#include <vector>
 
 #include "Application/Services/IPaths.h"
 #include "Core/Events/EventBus.h"
@@ -46,9 +45,9 @@ using namespace Opaax;
 
 namespace
 {
-    std::vector<std::string>& Journal()
+    TDynArray<std::string>& Journal()
     {
-        static std::vector<std::string> s_Journal;
+        static TDynArray<std::string> s_Journal;
         return s_Journal;
     }
 
@@ -624,10 +623,10 @@ namespace
                                                /*Audio*/ nullptr, Game.get() });
 
             WorldSubsystemMgr& lSubsystems = TheWorld->GetSubsystems();
-            lSubsystems.RegisterSubsystem<BehaviourSubsystem>(std::ref(*TheWorld->GetContext()));
+            lSubsystems.RegisterSubsystem<BehaviourSubsystem>(Ref(*TheWorld->GetContext()));
             if (InOptions.bPhysics)
             {
-                lSubsystems.RegisterSubsystem<PhysicsSubsystem>(std::ref(*TheWorld->GetContext()));
+                lSubsystems.RegisterSubsystem<PhysicsSubsystem>(Ref(*TheWorld->GetContext()));
             }
 
             if (InOptions.bStartNow)
@@ -790,7 +789,7 @@ TEST_CASE("Behaviours: OnStart runs once, before the first update and the first 
     CHECK(lFix.Runtime->GetPendingCount() == 1);
 
     lFix.Frame();
-    CHECK(Journal() == std::vector<std::string>{ "A:Start", "A:Update", "A:Fixed" });
+    CHECK(Journal() == TDynArray<std::string>{ "A:Start", "A:Update", "A:Fixed" });
 
     lFix.Frame();
     CHECK(CountOf("A:Start") == 1);
@@ -809,7 +808,7 @@ TEST_CASE("Behaviours: a behaviour already in the world when it starts is starte
     CHECK(Journal().empty());
 
     lFix.Frame();
-    CHECK(Journal() == std::vector<std::string>{ "Early:Start", "Early:Update", "Early:Fixed" });
+    CHECK(Journal() == TDynArray<std::string>{ "Early:Start", "Early:Update", "Early:Fixed" });
 }
 
 TEST_CASE("Behaviours: one added during a pass starts in that pass and is first updated in the next")
@@ -899,7 +898,7 @@ TEST_CASE("Behaviours: a behaviour destroying its own entity finishes its update
 
     lFix.Worlds.Update(1.0 / 60.0);
 
-    CHECK(Journal() == std::vector<std::string>{ "Self:Start", "Self:Update", "Self:Destroy" });
+    CHECK(Journal() == TDynArray<std::string>{ "Self:Start", "Self:Update", "Self:Destroy" });
     CHECK_FALSE(lSelf.IsValid());
 }
 

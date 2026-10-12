@@ -1,7 +1,5 @@
 #pragma once
 
-#include <tuple>
-
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 
@@ -152,6 +150,6 @@ namespace Opaax
 #define OPAAX_PROPERTIES(ClassName, ...)                                            \
     using PropertyOwnerType = ClassName;                                            \
     static constexpr auto GetProperties() noexcept                                  \
-    { return ::std::make_tuple(__VA_ARGS__); }
+    { return ::Opaax::MakeTuple(__VA_ARGS__); }
 
 #define OPAAX_PROP(Field) ::Opaax::MakeProperty(#Field, &PropertyOwnerType::Field)

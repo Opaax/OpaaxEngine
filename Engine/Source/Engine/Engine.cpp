@@ -1,6 +1,6 @@
 #include "Engine/Engine.h"
 
-#include <chrono>
+#include "Core/OpaaxTypes.h"
 
 #include "Application/OpaaxApplication.h"
 #include "Core/Log/Logger.h"
