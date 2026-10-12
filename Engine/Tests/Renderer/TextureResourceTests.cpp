@@ -7,10 +7,9 @@
 // File cases use a unique temp directory, created and removed per case.
 #include <doctest.h>
 
+#include "../TestTempDir.h"
+#include "Core/IO/FileIO.h"
 #include "Core/Memory/Memory.h"
-#include <filesystem>
-#include <fstream>
-#include <string>
 
 #include "Resources/ResourceManager.h"        // completes LoadContext
 #include "Resources/ResourceFormatRegistry.h"
@@ -20,8 +19,6 @@ using namespace Opaax;
 
 namespace
 {
-    namespace fs = std::filesystem;
-
     // 4x2 RGB PNG: top row red, bottom row blue. Stored as bytes (no image file needed).
     constexpr Uint8 k_Png4x2Rgb[] =
     {
@@ -37,41 +34,20 @@ namespace
     class ScopedTempDir
     {
     public:
-        explicit ScopedTempDir(const char* InTag)
-        {
-            m_Path = fs::temp_directory_path() / ("OpaaxTextureTests_" + std::string(InTag));
+        explicit ScopedTempDir(const char* InTag) : m_Dir(InTag) {}
 
-            std::error_code lError;
-            fs::remove_all(m_Path, lError);          // a previous crashed run must not poison this one
-            fs::create_directories(m_Path, lError);
-        }
-
-        ~ScopedTempDir()
-        {
-            std::error_code lError;
-            fs::remove_all(m_Path, lError);
-        }
-
-        ScopedTempDir(const ScopedTempDir&)            = delete;
-        ScopedTempDir& operator=(const ScopedTempDir&) = delete;
-
-        OpaaxString Sub(const char* InRel) const
-        {
-            return OpaaxString((m_Path / InRel).generic_string().c_str());
-        }
+        OpaaxString Sub(const char* InRel) const { return m_Dir.Sub(InRel); }
 
         /** Write raw bytes to InRel and answer its absolute path. */
         OpaaxString Write(const char* InRel, const Uint8* InBytes, Uint64 InCount) const
         {
-            std::ofstream lFile(m_Path / InRel, std::ios::binary);
-            lFile.write(reinterpret_cast<const char*>(InBytes), static_cast<std::streamsize>(InCount));
-            lFile.close();
-
-            return Sub(InRel);
+            const OpaaxString lPath = Sub(InRel);
+            FileIO::WriteAllBytes(lPath, InBytes, InCount);
+            return lPath;
         }
 
     private:
-        fs::path m_Path;
+        TestTempDir m_Dir;
     };
 
     /** A load context. Textures have no dependencies. */

@@ -7,7 +7,7 @@
 //
 // Skipped by default. Run in Release with: build.bat bench
 #include "Core/IO/Console.h"
-#include <string>
+#include "Core/String/OpaaxStringJson.h"
 
 #include <doctest.h>
 
@@ -33,12 +33,11 @@ namespace
         NLOHMANN_DEFINE_TYPE_INTRUSIVE(BenchTransform, X, Y, Rotation, ScaleX, ScaleY)
     };
 
-    // std::string, not OpaaxString: the engine has no json bridge for the latter (real components
-    // carry math types — see QuadComponent). The point here is that ONE component allocates a
-    // string per capture, which the sprite slice will make the common case.
+    // A text field, as a sprite's texture path: ONE component allocates a string per capture,
+    // which the sprite slice will make the common case.
     struct BenchSprite
     {
-        std::string Texture = "Textures/Bench.png";
+        OpaaxString Texture = "Textures/Bench.png";
         int         Layer   = 2;
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE(BenchSprite, Texture, Layer)

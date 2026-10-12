@@ -268,7 +268,7 @@ TEST_CASE("OpaaxStringID json: a round trip COMPARES EQUAL, and writes the text"
     // The text, not the index. A pool index is built in whatever order a process happened to
     // intern things, so a number written today names a different string tomorrow.
     CHECK(lJson.is_string());
-    CHECK(lJson.get<std::string>() == "Idle_0");
+    CHECK(lJson.get<OpaaxString>() == "Idle_0");
 
     // The assertion that actually matters: equality survives, which is the whole point of interning.
     CHECK(lJson.get<OpaaxStringID>() == lId);
@@ -279,14 +279,14 @@ TEST_CASE("OpaaxStringID json: an invalid id writes EMPTY and reads back invalid
     // Not "None": CStr() answers "None" for an invalid id, which would read back as a real name.
     const nlohmann::json lJson = OpaaxStringID();
 
-    CHECK(lJson.get<std::string>().empty());
+    CHECK(lJson.get<OpaaxString>().IsEmpty());
     CHECK_FALSE(lJson.get<OpaaxStringID>().IsValid());
 }
 
 TEST_CASE("OpaaxStringID json: reading a name does not depend on it being interned first")
 {
     // The file is the writer here — nothing in this process has ever said "Attack_Windup_3".
-    const nlohmann::json lJson = std::string("Attack_Windup_3");
+    const nlohmann::json lJson = "Attack_Windup_3";
 
     const OpaaxStringID lRead = lJson.get<OpaaxStringID>();
 

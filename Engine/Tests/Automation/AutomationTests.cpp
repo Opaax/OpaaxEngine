@@ -9,6 +9,8 @@
 #include "Automation/AutomationTransports.h"
 #include "Automation/EngineAutomationCommands.h"
 #include "Core/IO/FileIO.h"
+#include "Core/IO/FileSystem.h"
+#include "Core/String/OpaaxPathString.h"
 #include "Core/String/OpaaxStringJson.h"
 #include "UI/UICanvas.h"
 #include "UI/UIRect.h"

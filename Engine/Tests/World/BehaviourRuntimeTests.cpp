@@ -4,10 +4,11 @@
 // journal ("<entity name>:<what>") that the case reads back.
 #include <doctest.h>
 
+#include "../TestTempDir.h"
 #include "Core/Algo/Algo.h"
-#include <filesystem>
+#include "Core/IO/FileSystem.h"
 #include "Core/OpaaxTypes.h"
-#include <string>
+#include "Core/String/OpaaxPathString.h"
 
 #include "Application/Services/IPaths.h"
 #include "Core/Events/EventBus.h"
@@ -498,7 +499,6 @@ namespace RuntimeProbes
 
 namespace
 {
-    namespace fs = std::filesystem;
     using namespace RuntimeProbes;
 
     void RegisterTypes(ComponentRegistry& InRegistry)
@@ -673,16 +673,16 @@ namespace
     class TempPaths final : public IPaths
     {
     public:
-        explicit TempPaths(const fs::path& InRoot) : m_Root(InRoot) {}
+        explicit TempPaths(const OpaaxString& InRoot) : m_Root(InRoot) {}
 
         OpaaxString AssetToAbsolute(const OpaaxString& InAssetRel) const override
         {
-            return OpaaxString((m_Root / InAssetRel.CStr()).generic_string().c_str());
+            return PathString::Join(m_Root, InAssetRel);
         }
 
         OpaaxString AbsoluteToAsset(const OpaaxString& InAbsPath) const override
         {
-            return OpaaxString(fs::path(InAbsPath.CStr()).lexically_relative(m_Root).generic_string().c_str());
+            return PathString::RelativeTo(InAbsPath, m_Root);
         }
 
         void        LogPaths()      const override {}
@@ -700,35 +700,25 @@ namespace
         OpaaxString ProjectToAbsolute(const OpaaxString& InRel) const override { return AssetToAbsolute(InRel); }
 
     private:
-        OpaaxString Root() const { return OpaaxString(m_Root.generic_string().c_str()); }
+        OpaaxString Root() const { return m_Root; }
 
-        fs::path m_Root;
+        OpaaxString m_Root;
     };
 
+    /** The assets of a case: a temp directory with a Prefabs folder. */
     class ScopedTempDir
     {
     public:
         explicit ScopedTempDir(const char* InTag)
-            : m_Path(fs::temp_directory_path() / ("OpaaxBehaviourRuntimeTests_" + std::string(InTag)))
+            : m_Dir(InTag)
         {
-            std::error_code lError;
-            fs::remove_all(m_Path, lError);
-            fs::create_directories(m_Path / "Prefabs", lError);
+            FileSystem::CreateDirectories(m_Dir.Sub("Prefabs"));
         }
 
-        ~ScopedTempDir()
-        {
-            std::error_code lError;
-            fs::remove_all(m_Path, lError);
-        }
-
-        ScopedTempDir(const ScopedTempDir&)            = delete;
-        ScopedTempDir& operator=(const ScopedTempDir&) = delete;
-
-        const fs::path& Root() const { return m_Path; }
+        const OpaaxString& Root() const { return m_Dir.Path(); }
 
     private:
-        fs::path m_Path;
+        TestTempDir m_Dir;
     };
 
     /** Prefabs/Bullet.opaaxprefab: a root "Bullet" with a HitCounter, and a child "Trail" with a Probe. */

@@ -7,6 +7,7 @@
 set(OPAAX_TEST_SOURCES
     Main.cpp
     SmokeTest.cpp
+    TestTempDir.cpp
 
     # Audio
     Audio/AudioBankTests.cpp
@@ -36,6 +37,7 @@ set(OPAAX_TEST_SOURCES
     Core/Reflection/PropertyJsonTests.cpp
     Core/Reflection/PropertyTests.cpp
     Core/Reflection/PropertyVisitorTests.cpp
+    Core/StdInteropTests.cpp
     Core/StringIDTests.cpp
     Core/StringTests.cpp
     Core/StringViewTests.cpp

@@ -398,7 +398,7 @@ TEST_CASE("PrefabOverrides: a DETACHED instance entity records `parent: \"\"`, a
 
     const nlohmann::json lPatch = PrefabOverrides::Diff(lTemplate, lDetached, k_NoIgnore);
     REQUIRE(lPatch.contains(PrefabOverrides::KEY_PARENT));
-    CHECK(lPatch[PrefabOverrides::KEY_PARENT].get<std::string>().empty());
+    CHECK(lPatch[PrefabOverrides::KEY_PARENT].get<OpaaxString>().IsEmpty());
 
     EntityData lRebuilt = lTemplate;
     PrefabOverrides::Apply(lPatch, lRebuilt);

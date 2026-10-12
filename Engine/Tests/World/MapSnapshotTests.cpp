@@ -391,7 +391,7 @@ TEST_CASE("Snapshot: a tag container round-trips, and the hierarchy still answer
     REQUIRE(lCaptured.Entities[0].Components.size() == 1u);
     const nlohmann::json& lPayload = lCaptured.Entities[0].Components[0].Payload;
     CHECK(lPayload.at("Tags").is_array());
-    CHECK(lPayload.at("Tags")[0].get<std::string>() == "Sandbox.Quad.White");
+    CHECK(lPayload.at("Tags")[0].get<OpaaxString>() == "Sandbox.Quad.White");
 
     World lTarget("Rebuilt");
     REQUIRE(MapFactory::Instantiate(lCaptured, lTarget, lRegistry) == 1u);

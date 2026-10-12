@@ -675,7 +675,7 @@ TEST_CASE("Profiler: enabled publishes the frame's scopes, counters and GPU read
 
     const FrameStats& lStats = lProfiler.GetFrameStats();
     REQUIRE(lStats.Profiler.Samples().size() == 1);
-    CHECK(std::string(lStats.Profiler.Samples()[0].Name) == "Update");
+    CHECK(OpaaxString(lStats.Profiler.Samples()[0].Name) == "Update");
     REQUIRE(lStats.Profiler.Counters().size() == 1);
     CHECK(lStats.Profiler.Counters()[0].Value == 2);
     CHECK(lStats.GpuMs == doctest::Approx(1.5));

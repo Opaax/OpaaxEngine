@@ -35,7 +35,7 @@ namespace
         InJson = nlohmann::json{
             {"Health", InValue.Health},
             {"Speed", InValue.Speed},
-            {"Tag", std::string(InValue.Tag.CStr())}
+            {"Tag", InValue.Tag}
         };
     }
 
@@ -43,7 +43,7 @@ namespace
     {
         InJson.at("Health").get_to(InValue.Health);
         InJson.at("Speed").get_to(InValue.Speed);
-        InValue.Tag = OpaaxString(InJson.at("Tag").get<std::string>().c_str());
+        InValue.Tag = InJson.at("Tag").get<OpaaxString>();
     }
 
     // Concept-satisfaction is a COMPILE-time gate, so it is asserted at compile time. A type

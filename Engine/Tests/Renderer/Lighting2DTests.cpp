@@ -5,7 +5,6 @@
 #include <doctest.h>
 
 #include "Core/Maths/Maths.h"
-#include <string>
 
 #include <nlohmann/json.hpp>
 

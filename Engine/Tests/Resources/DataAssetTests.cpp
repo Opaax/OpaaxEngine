@@ -2,11 +2,9 @@
 // live reload through a held handle.
 #include <doctest.h>
 
+#include "../TestTempDir.h"
+#include "Core/IO/FileIO.h"
 #include "Core/OpaaxTypes.h"
-#include <chrono>
-#include <filesystem>
-#include <fstream>
-#include <string>
 
 #include "Resources/ResourceManager.h"
 #include "Resources/DataAsset/DataAssetFile.h"
@@ -45,30 +43,15 @@ namespace
 {
     struct TempDir
     {
-        std::filesystem::path Dir;
+        TestTempDir Dir{ "DataAsset" };
 
-        TempDir()
+        OpaaxString PathOf(const OpaaxStringView InName) const { return Dir.Sub(InName); }
+
+        OpaaxString Write(const OpaaxStringView InName, const OpaaxString& InText) const
         {
-            static TAtomic<Uint64> s_Counter{0};
-            const Uint64 lTick = static_cast<Uint64>(std::chrono::steady_clock::now().time_since_epoch().count());
-            Dir = std::filesystem::temp_directory_path() /
-                  ("opaax_data_" + std::to_string(lTick) + "_" + std::to_string(s_Counter.fetch_add(1)));
-            std::filesystem::create_directories(Dir);
-        }
-
-        ~TempDir()
-        {
-            std::error_code lEc;
-            std::filesystem::remove_all(Dir, lEc);
-        }
-
-        OpaaxString PathOf(const std::string& InName) const { return OpaaxString((Dir / InName).string().c_str()); }
-
-        OpaaxString Write(const std::string& InName, const std::string& InText) const
-        {
-            std::ofstream lOut(Dir / InName, std::ios::binary);
-            lOut.write(InText.data(), static_cast<std::streamsize>(InText.size()));
-            return PathOf(InName);
+            const OpaaxString lPath = PathOf(InName);
+            FileIO::WriteAllText(lPath, InText);
+            return lPath;
         }
     };
 }

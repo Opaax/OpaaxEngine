@@ -3,53 +3,29 @@
 // Uses a unique directory under the OS temp dir, created and removed per case.
 #include <doctest.h>
 
-#include <filesystem>
-#include <fstream>
-#include <string>
-
+#include "../TestTempDir.h"
+#include "Core/IO/FileIO.h"
 #include "World/Serialization/LevelFile.h"
 
 using namespace Opaax;
 
 namespace
 {
-    namespace fs = std::filesystem;
-
     class ScopedTempDir
     {
     public:
-        explicit ScopedTempDir(const char* InTag)
-        {
-            m_Path = fs::temp_directory_path() / ("OpaaxLevelFileTests_" + std::string(InTag));
-
-            std::error_code lError;
-            fs::remove_all(m_Path, lError);
-            fs::create_directories(m_Path, lError);
-        }
-
-        ~ScopedTempDir()
-        {
-            std::error_code lError;
-            fs::remove_all(m_Path, lError);
-        }
-
-        ScopedTempDir(const ScopedTempDir&)            = delete;
-        ScopedTempDir& operator=(const ScopedTempDir&) = delete;
+        explicit ScopedTempDir(const char* InTag) : m_Dir(InTag) {}
 
         /** Write InText to InRel and return its absolute path, as LevelFile::Load takes one. */
         OpaaxString Write(const char* InRel, const char* InText) const
         {
-            const fs::path lFull = m_Path / InRel;
-
-            std::ofstream lOut(lFull, std::ios::binary);
-            lOut << InText;
-            lOut.close();
-
-            return OpaaxString(lFull.generic_string().c_str());
+            const OpaaxString lPath = m_Dir.Sub(InRel);
+            FileIO::WriteAllText(lPath, InText);
+            return lPath;
         }
 
     private:
-        fs::path m_Path;
+        TestTempDir m_Dir;
     };
 }
 

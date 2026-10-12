@@ -8,7 +8,6 @@
 
 #include "Core/OpaaxTypes.h"
 #include "Core/String/CString.h"
-#include <string_view>
 
 using namespace Opaax;
 
@@ -200,15 +199,6 @@ TEST_CASE("OpaaxString: the counted ctor stops at Count and never needs a termin
     const OpaaxString lLong("0123456789abcdefghijklmnop", 26);
     CHECK(lLong.IsUsingHeap());
     CHECK(lLong.GetLength() == 26u);
-}
-
-TEST_CASE("OpaaxString: the string_view ctor copies exactly the view")
-{
-    const std::string_view lView("hello brave new world");
-
-    CHECK(OpaaxString(lView) == "hello brave new world");
-    CHECK(OpaaxString(lView.substr(6, 5)) == "brave");   // substr view is NOT null-terminated
-    CHECK(OpaaxString(std::string_view{}).IsEmpty());
 }
 
 // =============================================================================

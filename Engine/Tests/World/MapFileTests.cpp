@@ -4,12 +4,8 @@
 // Uses a unique directory under the OS temp dir, created and removed per case.
 #include <doctest.h>
 
-#include <filesystem>
-#include <fstream>
-#include <string>
-
+#include "../TestTempDir.h"
 #include "Core/IO/FileIO.h"
-#include "Core/String/OpaaxUtf8.h"
 #include "Resources/ResourceManager.h"   // before MapResource — completes LoadContext
 #include "World/Components/ComponentRegistry.h"
 #include "Renderer/Components/QuadComponent.h"
@@ -27,39 +23,6 @@ using namespace Opaax;
 
 namespace
 {
-    namespace fs = std::filesystem;
-
-    // One temp directory per case, removed on scope exit — including when a CHECK throws.
-    class ScopedTempDir
-    {
-    public:
-        explicit ScopedTempDir(const char* InTag)
-        {
-            m_Path = fs::temp_directory_path() / ("OpaaxMapFileTests_" + std::string(InTag));
-
-            std::error_code lError;
-            fs::remove_all(m_Path, lError);          // a previous crashed run must not poison this one
-            fs::create_directories(m_Path, lError);
-        }
-
-        ~ScopedTempDir()
-        {
-            std::error_code lError;
-            fs::remove_all(m_Path, lError);
-        }
-
-        ScopedTempDir(const ScopedTempDir&)            = delete;
-        ScopedTempDir& operator=(const ScopedTempDir&) = delete;
-
-        OpaaxString Sub(const char* InRel) const
-        {
-            return OpaaxString((m_Path / InRel).generic_string().c_str());
-        }
-
-    private:
-        fs::path m_Path;
-    };
-
     // A component defined exe-side, as a game module's would be — the same shape
     // MapSnapshotTests uses, so this suite proves module types survive the file too.
     struct StatsComponent
@@ -108,7 +71,7 @@ namespace
 // =============================================================================
 TEST_CASE("MapFile: World -> Capture -> Save -> MapResource -> Instantiate rebuilds the world, GUIDs preserved")
 {
-    const ScopedTempDir lTemp("round_trip");
+    const TestTempDir   lTemp("round_trip");
     const OpaaxString   lPath = lTemp.Sub("Main.opaaxmap");
 
     ComponentRegistry lRegistry;
@@ -165,7 +128,7 @@ TEST_CASE("MapFile: a filtered save writes the MAP's entities and leaves runtime
     // A runtime-spawned entity carries an invalid
     // OwnerMap and so can never match a valid filter. This is what keeps bullets and VFX out of
     // a saved map WITHOUT a special case anywhere.
-    const ScopedTempDir lTemp("filtered");
+    const TestTempDir   lTemp("filtered");
     const OpaaxString   lPath = lTemp.Sub("Filtered.opaaxmap");
 
     ComponentRegistry lRegistry;
@@ -189,7 +152,7 @@ TEST_CASE("MapFile: a filtered save writes the MAP's entities and leaves runtime
 TEST_CASE("MapFile: Save creates missing parent directories")
 {
     // "Save As" into a folder the user just named must not fail because the folder is not there.
-    const ScopedTempDir lTemp("create_parents");
+    const TestTempDir   lTemp("create_parents");
     const OpaaxString   lPath = lTemp.Sub("Levels/Sub/Deep.opaaxmap");
 
     MapData lData;
@@ -207,7 +170,7 @@ TEST_CASE("MapFile: Save creates missing parent directories")
 
 TEST_CASE("MapFile: an EMPTY map saves and loads — clearing a world is a thing authors do")
 {
-    const ScopedTempDir lTemp("empty");
+    const TestTempDir   lTemp("empty");
     const OpaaxString   lPath = lTemp.Sub("Empty.opaaxmap");
 
     REQUIRE(MapFile::Save(lPath, MapData{}));
@@ -227,7 +190,7 @@ TEST_CASE("MapFile: an EMPTY map keeps its identity through the round trip")
     // Before it, a map with no entities had no MapId at
     // all — and an invalid MapId was read one layer up as "no filter, the whole world", so the
     // next save of this map would have written every entity in the world into it.
-    const ScopedTempDir lTemp("empty_identity");
+    const TestTempDir   lTemp("empty_identity");
     const OpaaxString   lPath = lTemp.Sub("Backdrop.opaaxmap");
 
     MapData lData;
@@ -245,10 +208,10 @@ TEST_CASE("MapFile: a map written BEFORE the mapId key still identifies itself f
 {
     // The migration path, and why the format version did NOT move: a v1 file has no `mapId`, and
     // the entities are the authority exactly as they always were.
-    const ScopedTempDir lTemp("legacy_id");
+    const TestTempDir   lTemp("legacy_id");
     const OpaaxString   lPath = lTemp.Sub("Legacy.opaaxmap");
 
-    const std::string lLegacy =
+    const OpaaxString lLegacy =
         "{\n"
         "    \"entities\": [\n"
         "        {\n"
@@ -261,7 +224,7 @@ TEST_CASE("MapFile: a map written BEFORE the mapId key still identifies itself f
         "    \"version\": 1\n"
         "}";
 
-    REQUIRE(FileIO::WriteAllText(lPath, OpaaxString(lLegacy.c_str())));
+    REQUIRE(FileIO::WriteAllText(lPath, lLegacy));
 
     MapData lLoaded;
     REQUIRE(MapFile::Load(lPath, lLoaded));
@@ -273,7 +236,7 @@ TEST_CASE("MapFile: an anonymous EMPTY file falls back to the file STEM, so noth
 {
     // The last fallback, and the one that makes "every map that loads has an identity" total.
     // MapFile is the only layer that can offer it — MapJson has the text, this has the path.
-    const ScopedTempDir lTemp("stem_id");
+    const TestTempDir   lTemp("stem_id");
     const OpaaxString   lPath = lTemp.Sub("Rooftops.opaaxmap");
 
     REQUIRE(FileIO::WriteAllText(lPath, OpaaxString("{\n    \"entities\": [],\n    \"version\": 1\n}")));
@@ -304,7 +267,7 @@ TEST_CASE("MapFile: what New Map writes is ALREADY canonical — a fresh map is 
     // The file New Map creates is an empty MapData carrying only its id. If that did not re-serialize
     // byte-identically, every brand-new map would open reporting unsaved changes it does not have,
     // and the editor's adopt-time round-trip check would warn on it.
-    const ScopedTempDir lTemp("new_map");
+    const TestTempDir   lTemp("new_map");
     const OpaaxString   lPath = lTemp.Sub("Rooftops.opaaxmap");
 
     MapData lFresh;
@@ -366,7 +329,7 @@ TEST_CASE("MapSerializer: CaptureMap stamps the map's own id onto the data it ca
 // =============================================================================
 TEST_CASE("MapFile: loading a missing file fails and LEAVES THE CALLER'S MAP UNTOUCHED")
 {
-    const ScopedTempDir lTemp("missing");
+    const TestTempDir lTemp("missing");
 
     MapData lExisting;
     lExisting.Entities.push_back(EntityData{});
@@ -380,7 +343,7 @@ TEST_CASE("MapFile: loading a missing file fails and LEAVES THE CALLER'S MAP UNT
 
 TEST_CASE("MapFile: malformed contents fail rather than throwing")
 {
-    const ScopedTempDir lTemp("malformed");
+    const TestTempDir   lTemp("malformed");
     const OpaaxString   lPath = lTemp.Sub("Broken.opaaxmap");
 
     REQUIRE(FileIO::WriteAllText(lPath, OpaaxString("{ not a map")));
@@ -394,7 +357,7 @@ TEST_CASE("MapResource: a missing map resolves to NULL, never to an empty placeh
 {
     // The FailFast decision, stated as a test. A placeholder here would not degrade, it would
     // LIE: the level appears to load, the world comes up empty, and nothing reports a problem.
-    const ScopedTempDir lTemp("failfast");
+    const TestTempDir lTemp("failfast");
 
     ResourceManager lResources;
 
@@ -408,7 +371,7 @@ TEST_CASE("MapResource: the same path loads once and is shared")
 {
     // Dedup is the reason the level loader goes through the ResourceManager rather than calling
     // MapFile::Load directly — two worlds opening the same map must not parse it twice.
-    const ScopedTempDir lTemp("dedup");
+    const TestTempDir   lTemp("dedup");
     const OpaaxString   lPath = lTemp.Sub("Shared.opaaxmap");
 
     MapData lData;
@@ -447,41 +410,4 @@ TEST_CASE("MapResource: ByteSize grows with the map")
     }
 
     CHECK(lPopulated.ByteSize() > lEmpty.ByteSize());
-}
-
-// =============================================================================
-// The path is UTF-8, and the file layer must not decode it as ANSI
-// =============================================================================
-TEST_CASE("MapFile: a map saves and loads under a NON-ASCII path")
-{
-    // \uXXXX escapes in a u8 literal, which std::filesystem always reads as UTF-8.
-    // U+65E5 U+672C are outside CP-1252 entirely, so this cannot pass by being consistently wrong.
-    namespace fs = std::filesystem;
-
-    const char8_t* const lUnicodeName = u8"\u65E5\u672C_Caf\u00E9";
-    const fs::path       lDir         = fs::temp_directory_path() / "OpaaxMapFileTests_utf8" / lUnicodeName;
-
-    std::error_code lError;
-    fs::remove_all(lDir.parent_path(), lError);
-    fs::create_directories(lDir, lError);
-
-    const OpaaxString lPath = Utf8::FromFsPath(lDir) + OpaaxString("/Main.opaaxmap");
-
-    MapData lData;
-    EntityData lEntity;
-    lEntity.Id   = Guid::New();
-    lEntity.Name = OpaaxString("Accented");
-    lData.Entities.push_back(Move(lEntity));
-
-    REQUIRE(MapFile::Save(lPath, lData));
-
-    // Verified through std::filesystem — a different mechanism than the one under test.
-    CHECK(fs::exists(lDir / "Main.opaaxmap"));
-
-    MapData lLoaded;
-    REQUIRE(MapFile::Load(lPath, lLoaded));
-    REQUIRE(lLoaded.EntityCount() == 1);
-    CHECK(lLoaded.Entities[0].Name == OpaaxString("Accented"));
-
-    fs::remove_all(lDir.parent_path(), lError);
 }

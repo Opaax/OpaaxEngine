@@ -3,19 +3,16 @@
 // Helpers shared by the audio suites: generated WAV files, an asset folder in the temp folder, and a
 // job system that runs only when told (a load stays "loading" for as long as a test wants).
 
-#include "Core/Maths/Maths.h"
-#include <filesystem>
-#include <fstream>
-
 #include "Application/Services/IJobSystem.h"
 #include "Application/Services/IPaths.h"
+#include "Core/IO/FileIO.h"
+#include "Core/Maths/Maths.h"
 #include "Core/OpaaxTypes.h"
+#include "Core/String/OpaaxPathString.h"
 #include "Core/String/OpaaxString.hpp"
 
 namespace AudioTest
 {
-    namespace fs = std::filesystem;
-
     /** A mono 16-bit PCM WAV file: a sine at InHz, InSeconds long, peaking at InAmplitude. */
     inline Opaax::TDynArray<Opaax::Uint8> MakeWav(const Opaax::Uint32 InSampleRate, const float InSeconds,
                                                   const float InHz = 440.f, const float InAmplitude = 0.5f)
@@ -44,27 +41,26 @@ namespace AudioTest
         return lOut;
     }
 
-    inline void WriteFile(const fs::path& InPath, const Opaax::TDynArray<Opaax::Uint8>& InBytes)
+    /** Writes InBytes at InPath, its folders created. */
+    inline void WriteFile(const Opaax::OpaaxString& InPath, const Opaax::TDynArray<Opaax::Uint8>& InBytes)
     {
-        fs::create_directories(InPath.parent_path());
-        std::ofstream(InPath, std::ios::binary).write(reinterpret_cast<const char*>(InBytes.data()),
-                                                      static_cast<std::streamsize>(InBytes.size()));
+        Opaax::FileIO::WriteAllBytes(InPath, InBytes.data(), InBytes.size());
     }
 
     /** Every asset under one root, so AssetToAbsolute is a concatenation. */
     class TempPaths final : public Opaax::IPaths
     {
     public:
-        explicit TempPaths(const fs::path& InRoot) : m_Root(InRoot) {}
+        explicit TempPaths(const Opaax::OpaaxString& InRoot) : m_Root(InRoot) {}
 
         Opaax::OpaaxString AssetToAbsolute(const Opaax::OpaaxString& InAssetRel) const override
         {
-            return Opaax::OpaaxString((m_Root / InAssetRel.CStr()).generic_string().c_str());
+            return Opaax::PathString::Join(m_Root, InAssetRel);
         }
 
         Opaax::OpaaxString AbsoluteToAsset(const Opaax::OpaaxString& InAbsPath) const override
         {
-            return Opaax::OpaaxString(fs::path(InAbsPath.CStr()).lexically_relative(m_Root).generic_string().c_str());
+            return Opaax::PathString::RelativeTo(InAbsPath, m_Root);
         }
 
         void               LogPaths()      const override {}
@@ -82,9 +78,9 @@ namespace AudioTest
         Opaax::OpaaxString ProjectToAbsolute(const Opaax::OpaaxString& InRel) const override { return AssetToAbsolute(InRel); }
 
     private:
-        Opaax::OpaaxString Root() const { return Opaax::OpaaxString(m_Root.generic_string().c_str()); }
+        Opaax::OpaaxString Root() const { return m_Root; }
 
-        fs::path m_Root;
+        Opaax::OpaaxString m_Root;
     };
 
     /** Runs nothing until RunAll: what it was given stays queued. */

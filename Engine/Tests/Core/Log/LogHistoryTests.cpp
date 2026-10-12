@@ -1,12 +1,9 @@
 // Suite: LogHistory — the Logger's structured tail, read by the editor's Log panel.
 #include <doctest.h>
 
+#include "CaptureSink.h"
 #include "Core/Log/LogHistory.h"
 #include "Core/Log/Logger.h"
-
-#include <spdlog/sinks/ostream_sink.h>
-
-#include <sstream>
 
 using namespace Opaax;
 
@@ -99,15 +96,9 @@ TEST_CASE("Logger: history is off by default, and on it keeps the message WITHOU
     CHECK(lLogger.GetPendingCount() == 2);
 
     // Two sinks attached together: the sink text is "[Category] message", held lines included.
-    std::ostringstream          lOutA;
-    std::ostringstream          lOutB;
-    TDynArray<spdlog::sink_ptr> lSinks;
-    for (std::ostringstream* lOut : { &lOutA, &lOutB })
-    {
-        lSinks.push_back(MakeShared<spdlog::sinks::ostream_sink_mt>(*lOut));
-        lSinks.back()->set_pattern("%v");
-    }
-    lLogger.AttachSinks(lSinks);
+    const TSharedPtr<CaptureSink> lOutA = CaptureSink::Make();
+    const TSharedPtr<CaptureSink> lOutB = CaptureSink::Make();
+    lLogger.AttachSinks({ lOutA, lOutB });
     lLogger.Logf(ELogLevel::Error, LogHistoryTest, "after");
 
     CHECK(lLogger.CopyHistorySince(0, lEntries) == 2);
@@ -117,9 +108,9 @@ TEST_CASE("Logger: history is off by default, and on it keeps the message WITHOU
     CHECK(lEntries[0].Category == OPAAX_ID("HistoryTest"));
     CHECK(lEntries[1].Message == OpaaxString("after"));
 
-    const std::string lEol = spdlog::details::os::default_eol;
-    const std::string lExpected = "[HistoryTest] not kept" + lEol + "[HistoryTest] 3 apples" + lEol
+    const OpaaxString lEol      = spdlog::details::os::default_eol;
+    const OpaaxString lExpected = "[HistoryTest] not kept" + lEol + "[HistoryTest] 3 apples" + lEol
                                 + "[HistoryTest] after" + lEol;
-    CHECK(lOutA.str() == lExpected);
-    CHECK(lOutB.str() == lExpected);
+    CHECK(lOutA->GetText() == lExpected);
+    CHECK(lOutB->GetText() == lExpected);
 }

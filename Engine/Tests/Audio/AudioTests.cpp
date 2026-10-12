@@ -5,12 +5,11 @@
 // heard is rendered into a buffer and measured. The sounds are generated WAV files.
 #include <doctest.h>
 
+#include "../TestTempDir.h"
 #include "Core/Algo/Algo.h"
+#include "Core/IO/FileIO.h"
 #include "Core/Maths/Maths.h"
-#include <filesystem>
-#include <fstream>
 #include "Core/OpaaxTypes.h"
-#include <string>
 
 #include "Application/Services/IPaths.h"
 #include "Audio/AudioClipResource.h"
@@ -42,8 +41,6 @@ using AudioTest::TempPaths;
 
 namespace
 {
-    namespace fs = std::filesystem;
-
     constexpr Uint32 MIX_RATE = 48000;
 
     AudioClipResource MakeClip(const float InSeconds, const float InAmplitude = 0.5f,
@@ -99,31 +96,19 @@ namespace
     {
     public:
         explicit AudioAssets(const char* InTag)
-            : m_Root(fs::temp_directory_path() / ("OpaaxAudioTests_" + std::string(InTag)))
+            : m_Dir(InTag)
         {
-            std::error_code lError;
-            fs::remove_all(m_Root, lError);
-            fs::create_directories(m_Root / "Audio", lError);
-
-            const TDynArray<Uint8> lBeep = MakeWav(44100, 0.25f);
-            std::ofstream(m_Root / "Audio" / "Beep.wav", std::ios::binary)
-                .write(reinterpret_cast<const char*>(lBeep.data()), static_cast<std::streamsize>(lBeep.size()));
-            std::ofstream(m_Root / "Audio" / "NotASound.wav", std::ios::binary) << "this is not audio";
+            AudioTest::WriteFile(m_Dir.Sub("Audio/Beep.wav"), MakeWav(44100, 0.25f));
+            FileIO::WriteAllText(m_Dir.Sub("Audio/NotASound.wav"), "this is not audio");
         }
 
-        ~AudioAssets()
-        {
-            std::error_code lError;
-            fs::remove_all(m_Root, lError);
-        }
+        const OpaaxString& Root() const { return m_Dir.Path(); }
 
-        AudioAssets(const AudioAssets&)            = delete;
-        AudioAssets& operator=(const AudioAssets&) = delete;
-
-        const fs::path& Root() const { return m_Root; }
+        /** InRelative under the folder: Sub("Audio/Beep.wav"). */
+        OpaaxString Sub(const OpaaxStringView InRelative) const { return m_Dir.Sub(InRelative); }
 
     private:
-        fs::path m_Root;
+        TestTempDir m_Dir;
     };
 }
 
@@ -165,15 +150,15 @@ TEST_CASE("AudioClip: bytes that are not a sound are refused; a missing file loa
     const AudioAssets lAssets("clips");
     ResourceManager   lResources;
 
-    const ResourceRef<AudioClipResource> lGood = lResources.Load<AudioClipResource>((lAssets.Root() / "Audio" / "Beep.wav").generic_string().c_str());
+    const ResourceRef<AudioClipResource> lGood = lResources.Load<AudioClipResource>(lAssets.Sub("Audio/Beep.wav").CStr());
     REQUIRE(lGood.Get() != nullptr);
     CHECK(lGood->FrameCount == 11025);
 
-    const ResourceRef<AudioClipResource> lBad = lResources.Load<AudioClipResource>((lAssets.Root() / "Audio" / "NotASound.wav").generic_string().c_str());
+    const ResourceRef<AudioClipResource> lBad = lResources.Load<AudioClipResource>(lAssets.Sub("Audio/NotASound.wav").CStr());
     REQUIRE(lBad.Get() != nullptr);
     CHECK(lBad->IsSilent());
 
-    const ResourceRef<AudioClipResource> lMissing = lResources.Load<AudioClipResource>((lAssets.Root() / "Audio" / "Nope.wav").generic_string().c_str());
+    const ResourceRef<AudioClipResource> lMissing = lResources.Load<AudioClipResource>(lAssets.Sub("Audio/Nope.wav").CStr());
     REQUIRE(lMissing.Get() != nullptr);
     CHECK(lMissing->IsSilent());
 }

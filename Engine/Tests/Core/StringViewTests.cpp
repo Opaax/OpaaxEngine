@@ -8,10 +8,6 @@
 
 #include <spdlog/fmt/fmt.h>
 
-#include <sstream>
-#include <string>
-#include <string_view>
-
 using namespace Opaax;
 
 // The constexpr claim, proven where it cannot silently stop being true.
@@ -72,10 +68,6 @@ TEST_CASE("OpaaxStringView: bytes with NO terminator anywhere")
     CHECK(lView.Find('c') == 2);
     CHECK(lView.ToString() == "abc");
     CHECK(fmt::format("{}", lView) == "abc");
-
-    std::ostringstream lStream;
-    lStream << lView;
-    CHECK(lStream.str() == "abc");
 }
 
 TEST_CASE("OpaaxStringView: SubString clamps against the REMAINDER and never wraps")
@@ -198,8 +190,6 @@ TEST_CASE("OpaaxStringView: an OpaaxString converts implicitly, SSO and heap ali
     CHECK(lLengthOf(lShort) == lShort.GetLength());
     CHECK(lLengthOf(lLong) == lLong.GetLength());
     CHECK(lLengthOf("literal") == 7u);
-    CHECK(lLengthOf(std::string_view("sv", 2)) == 2u);
-    CHECK(lLengthOf(std::string("std")) == 3u);
 
     CHECK(OpaaxStringView(lLong).ToString() == lLong);
     CHECK(OpaaxString(OpaaxStringView(lLong)) == lLong);
@@ -236,21 +226,6 @@ TEST_CASE("OpaaxStringView: fmt formats the view, not the buffer behind it")
     CHECK(fmt::format("{}", lSlice) == "hello");
     CHECK(fmt::format("{:>7}", lSlice) == "  hello");   // the base format spec still applies
     CHECK(fmt::format("{}", OpaaxStringView()).empty());
-}
-
-TEST_CASE("OpaaxStringView: converts to std::string_view for the vendor boundary")
-{
-    const OpaaxStringView lSlice = OpaaxStringView("hello world").SubString(6, 5);
-
-    const std::string_view lStd = lSlice;
-    CHECK(lStd.size() == 5u);
-    CHECK(lStd == "world");
-
-    // Hash64 already takes a std::string_view; a view reaches it through the conversion.
-    CHECK(OpaaxHash::Hash64(lSlice) == OpaaxHash::Hash64(std::string_view("world")));
-
-    const std::string_view lEmpty = OpaaxStringView();
-    CHECK(lEmpty.empty());
 }
 
 TEST_CASE("OpaaxStringView: Trim, TrimStart and TrimEnd drop spaces, tabs and line breaks")

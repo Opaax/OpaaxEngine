@@ -3,9 +3,7 @@
 // Hard fields are collected, soft ones are not. The mounted-map case is in LevelTests.
 #include <doctest.h>
 
-#include <chrono>
-#include <filesystem>
-
+#include "../TestTempDir.h"
 #include "Resources/ResourceFormatRegistry.h"
 #include "Resources/ResourceManager.h"
 #include "Resources/ResourcePathJson.h"   // the json bridge the map writer uses for a path
@@ -31,25 +29,6 @@ namespace
         OPAAX_PROPERTIES(TurretGunComponent, OPAAX_PROP(Bullet), OPAAX_PROP(MuzzleFlash))
     };
 
-    struct ScopedTempDir
-    {
-        std::filesystem::path Dir;
-
-        explicit ScopedTempDir(const char* InTag)
-        {
-            const auto lTick = std::chrono::steady_clock::now().time_since_epoch().count();
-            Dir = std::filesystem::temp_directory_path() / ("opaax_hardref_" + std::string(InTag) + "_" + std::to_string(lTick));
-            std::filesystem::create_directories(Dir);
-        }
-
-        ~ScopedTempDir()
-        {
-            std::error_code lEc;
-            std::filesystem::remove_all(Dir, lEc);
-        }
-
-        OpaaxString Sub(const char* InName) const { return OpaaxString((Dir / InName).string().c_str()); }
-    };
 
     // One entity carrying a gun with the given field values, as the json bridge would write it.
     MapData GunMap(const char* InBullet, const char* InMuzzleFlash)
@@ -107,7 +86,7 @@ TEST_CASE("HardReferences: an empty hard field is a state, not a reference; and 
 
 TEST_CASE("HardReferences: a format entry's Acquire turns a type id into a typed, resident load")
 {
-    const ScopedTempDir lTemp("acquire");
+    const TestTempDir lTemp("acquire");
 
     // A real prefab file — PrefabResource loads through PrefabFile, so no GL is involved.
     PrefabData lPrefab;
