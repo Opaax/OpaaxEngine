@@ -1,8 +1,7 @@
 #include "Application/OpaaxApplication.h"
 
 #include "Core/Maths/Maths.h"
-#include <cstdlib>
-#include <cstring>
+#include "Core/String/CString.h"
 
 #include "Automation/AutomationSession.h"
 #include "Platform/CrashHandler.h"
@@ -43,7 +42,7 @@ namespace
     {
         for (int i = 1; i < InArgc; ++i)
         {
-            if (InArgv[i] != nullptr && std::strcmp(InArgv[i], InFlag) == 0) { return true; }
+            if (InArgv[i] != nullptr && CString::Equals(InArgv[i], InFlag)) { return true; }
         }
         return false;
     }
@@ -53,7 +52,7 @@ namespace
     {
         for (int i = 1; i + 1 < InArgc; ++i)
         {
-            if (InArgv[i] != nullptr && std::strcmp(InArgv[i], InFlag) == 0) { return InArgv[i + 1]; }
+            if (InArgv[i] != nullptr && CString::Equals(InArgv[i], InFlag)) { return InArgv[i + 1]; }
         }
         return nullptr;
     }
@@ -250,7 +249,7 @@ void OpaaxApplication::RunApplication()
     // What an automated check or an agent uses to see the game.
     const char*  lCapturePath  = FindCommandLineValue(m_Argc, m_Argv, "--capture");
     const char*  lCaptureFrame = FindCommandLineValue(m_Argc, m_Argv, "--capture-frame");
-    const Uint64 lCaptureAt    = (lCaptureFrame != nullptr) ? std::strtoull(lCaptureFrame, nullptr, 10) : DEFAULT_CAPTURE_FRAME;
+    const Uint64 lCaptureAt    = (lCaptureFrame != nullptr) ? CString::ToUint64(lCaptureFrame) : DEFAULT_CAPTURE_FRAME;
     Uint64       lFrameIndex   = 0;
 
     // --exec <script.json> [--exec-out <answers.json>], --automation <folder>: driven from outside

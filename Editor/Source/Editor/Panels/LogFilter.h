@@ -3,7 +3,7 @@
 #include "Core/Log/Logger.h"   // ELogLevel, LogEntry
 
 #include "Core/OpaaxTypes.h"
-#include <cctype>
+#include "Core/String/Char.h"
 #include <string>
 #include <string_view>
 
@@ -48,7 +48,7 @@ namespace Opaax::Editor
     {
         if (InNeedle.size() > InText.size()) { return false; }
 
-        const auto lLower = [](const char InChar) { return std::tolower(static_cast<unsigned char>(InChar)); };
+        const auto lLower = [](const char InChar) { return Char::ToLower(InChar); };
 
         for (size_t lStart = 0; lStart + InNeedle.size() <= InText.size(); ++lStart)
         {

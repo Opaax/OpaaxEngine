@@ -3,7 +3,7 @@
 #include <doctest.h>
 
 #include "Core/Algo/Algo.h"
-#include <cstring>
+#include "Core/String/CString.h"
 
 #include <nlohmann/json.hpp>
 
@@ -63,7 +63,7 @@ namespace
     {
         for (Uint64 lIndex = 0; lIndex < InList.size(); ++lIndex)
         {
-            if (std::strcmp(InList[lIndex]->Name, InName) == 0)
+            if (CString::Equals(InList[lIndex]->Name, InName))
             {
                 return static_cast<Int64>(lIndex);
             }
@@ -97,7 +97,7 @@ TEST_CASE("AutoRegistration: the list is sorted by kind, then order, then name")
         const bool bOrdered = lPrevious.Kind < lCurrent.Kind
                            || (lPrevious.Kind == lCurrent.Kind && lPrevious.Order < lCurrent.Order)
                            || (lPrevious.Kind == lCurrent.Kind && lPrevious.Order == lCurrent.Order
-                               && std::strcmp(lPrevious.Name, lCurrent.Name) <= 0);
+                               && CString::Compare(lPrevious.Name, lCurrent.Name) <= 0);
         CHECK(bOrdered);
     }
 }

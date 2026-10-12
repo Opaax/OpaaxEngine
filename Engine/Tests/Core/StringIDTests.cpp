@@ -9,7 +9,7 @@
 #include "Core/String/OpaaxStringIDJson.h"
 #include "Renderer/RenderLayer.h"
 
-#include <cstring>
+#include "Core/String/CString.h"
 
 using namespace Opaax;
 
@@ -83,9 +83,9 @@ TEST_CASE("OpaaxStringID: CStr answers the same bytes as ToString, without the c
 {
     const OpaaxStringID lId = OPAAX_ID("OpaaxStringIDTests_CStr");
 
-    CHECK(std::strcmp(lId.CStr(), "OpaaxStringIDTests_CStr") == 0);
-    CHECK(std::strcmp(lId.CStr(), lId.ToString().CStr()) == 0);
-    CHECK(std::strcmp(OpaaxStringID().CStr(), "None") == 0);
+    CHECK(CString::Equals(lId.CStr(), "OpaaxStringIDTests_CStr"));
+    CHECK(CString::Equals(lId.CStr(), lId.ToString().CStr()));
+    CHECK(CString::Equals(OpaaxStringID().CStr(), "None"));
 
     // The pointer is INTO the pool, so it stays valid — and stays the same — across calls.
     CHECK(lId.CStr() == lId.CStr());
@@ -151,8 +151,8 @@ TEST_CASE("OpaaxStringID: interned text keeps its ADDRESS while the pool grows")
     // A long name's heap pointer would survive a move and hide the bug.
     CHECK(lShort.CStr() == lShortText);
     CHECK(lLong.CStr()  == lLongText);
-    CHECK(std::strcmp(lShortText, "zAddr") == 0);
-    CHECK(std::strcmp(lLongText,  "zAddr_well_past_the_sso_boundary") == 0);
+    CHECK(CString::Equals(lShortText, "zAddr"));
+    CHECK(CString::Equals(lLongText,  "zAddr_well_past_the_sso_boundary"));
 }
 
 // =============================================================================
@@ -220,7 +220,7 @@ TEST_CASE("OpaaxStringID: concurrent interning and reading stay consistent")
                 {
                     // Both read paths: CStr returns a pointer into the entry; ToString copies from it after the
                     // lock is dropped.
-                    if (std::strcmp(lSeedIds[i].CStr(), lSeedText[i].CStr()) != 0) { ++lMismatches; }
+                    if (!CString::Equals(lSeedIds[i].CStr(), lSeedText[i].CStr())) { ++lMismatches; }
                     if (lSeedIds[i].ToString() != lSeedText[i])                    { ++lMismatches; }
                 }
             }

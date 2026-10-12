@@ -3,7 +3,7 @@
 #include "Core/Algo/Algo.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/Maths.h"
-#include <cstring>
+#include "Core/Memory/Memory.h"
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IConfigSystem.h"
@@ -343,8 +343,8 @@ namespace Opaax
             const Uint32 lRead = lSelf.Ring->Read(OutFrames, InFrameCount);
             if (lRead < InFrameCount)
             {
-                std::memset(OutFrames + static_cast<size_t>(lRead) * AUDIO_OUTPUT_CHANNELS, 0,
-                            sizeof(float) * (InFrameCount - lRead) * AUDIO_OUTPUT_CHANNELS);
+                Memory::Zero(OutFrames + static_cast<size_t>(lRead) * AUDIO_OUTPUT_CHANNELS,
+                             sizeof(float) * (InFrameCount - lRead) * AUDIO_OUTPUT_CHANNELS);
                 lSelf.Underruns.fetch_add(1, EMemoryOrder::Relaxed);
             }
 

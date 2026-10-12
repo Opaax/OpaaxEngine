@@ -1,7 +1,7 @@
 #include "AutoRegistration.h"
 
 #include "Core/Algo/Algo.h"
-#include <cstring>
+#include "Core/String/CString.h"
 #include "Core/OpaaxTypes.h"
 
 namespace Opaax
@@ -40,7 +40,7 @@ namespace Opaax
                        if (InA->Kind != InB->Kind)   { return InA->Kind < InB->Kind; }
                        if (InA->Order != InB->Order) { return InA->Order < InB->Order; }
 
-                       const int lByName = std::strcmp(InA->Name, InB->Name);
+                       const int lByName = CString::Compare(InA->Name, InB->Name);
                        if (lByName != 0)             { return lByName < 0; }
 
                        return InA->Type < InB->Type;

@@ -1,6 +1,6 @@
 #include "Editor/Properties/PropertyDrawers.h"
 
-#include <cstring>   // memcpy
+#include "Core/Memory/Memory.h"
 #include <string>
 
 #include "Editor/Properties/WidgetPropertyVisitor.h"
@@ -98,7 +98,7 @@ namespace Opaax::Editor
         }
 
         char lBuffer[k_BlockSize];
-        std::memcpy(lBuffer, InValue.CStr(), InValue.GetLength());
+        Memory::Copy(lBuffer, InValue.CStr(), InValue.GetLength());
         lBuffer[InValue.GetLength()] = '\0';
 
         const bool bEdited = bMultiline
@@ -126,7 +126,7 @@ namespace Opaax::Editor
             const Uint32          lLen  = lText.GetLength() < k_BufferSize - 1
                                               ? lText.GetLength() : k_BufferSize - 1;
 
-            std::memcpy(lBuffer, lText.Data(), lLen);
+            Memory::Copy(lBuffer, lText.Data(), lLen);
             lBuffer[lLen] = '\0';
         }
 

@@ -4,7 +4,7 @@
 
 #include "Core/String/OpaaxUtf8.h"
 
-#include <cstring>
+#include "Core/String/CString.h"
 #include <filesystem>
 
 namespace Opaax
@@ -17,7 +17,7 @@ namespace Opaax
         {
             for (int i = 1; i + 1 < InArgc; ++i)
             {
-                if (std::strcmp(InArgv[i], "--project") == 0)
+                if (CString::Equals(InArgv[i], "--project"))
                 {
                     return OpaaxString(InArgv[i + 1]);
                 }

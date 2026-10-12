@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstring>       // std::strcmp
+#include "Core/String/CString.h"
 #include "Core/Templates/TypeTraits.h"
 
 #include "Core/Log/Logger.h"
@@ -58,7 +58,7 @@ namespace Opaax
             {
                 using ValueType = typename TRemoveCVRef<decltype(InProp)>::ValueType;
 
-                if (lFound || std::strcmp(InProp.Name, InProperty) != 0) { return; }
+                if (lFound || !CString::Equals(InProp.Name, InProperty)) { return; }
 
                 const ValueType& lValue = InSource.*(InProp.Member);
 

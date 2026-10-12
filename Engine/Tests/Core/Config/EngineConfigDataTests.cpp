@@ -3,7 +3,7 @@
 // The codec throws; TConfig::Load catches.
 #include <doctest.h>
 
-#include <cstring>
+#include "Core/String/CString.h"
 #include <filesystem>
 
 #include "Core/Config/TConfig.hpp"
@@ -265,7 +265,7 @@ namespace
 
         const auto lVisit = [&](const auto& InProperty)
         {
-            if (std::strcmp(InProperty.Name, InName) == 0)
+            if (CString::Equals(InProperty.Name, InName))
             {
                 lFlags = InProperty.Meta.Flags;
                 bFound = true;

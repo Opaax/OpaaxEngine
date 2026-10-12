@@ -1,7 +1,7 @@
 #include "RHI/OpenGL/GLSLPort.h"
 
-#include <cctype>
-#include <cstdlib>
+#include "Core/String/CString.h"
+#include "Core/String/Char.h"
 
 namespace Opaax::GLSLPort
 {
@@ -9,12 +9,12 @@ namespace Opaax::GLSLPort
     {
         bool IsIdentChar(const char InChar) noexcept
         {
-            return std::isalnum(static_cast<unsigned char>(InChar)) != 0 || InChar == '_';
+            return Char::IsAlnum(InChar) || InChar == '_';
         }
 
         void SkipSpaces(const std::string& InText, size_t& InOutAt) noexcept
         {
-            while (InOutAt < InText.size() && std::isspace(static_cast<unsigned char>(InText[InOutAt])) != 0)
+            while (InOutAt < InText.size() && Char::IsSpace(InText[InOutAt]))
             {
                 ++InOutAt;
             }
@@ -34,8 +34,8 @@ namespace Opaax::GLSLPort
         {
             size_t lBegin = 0;
             size_t lEnd   = InText.size();
-            while (lBegin < lEnd && std::isspace(static_cast<unsigned char>(InText[lBegin])) != 0) { ++lBegin; }
-            while (lEnd > lBegin && std::isspace(static_cast<unsigned char>(InText[lEnd - 1])) != 0) { --lEnd; }
+            while (lBegin < lEnd && Char::IsSpace(InText[lBegin])) { ++lBegin; }
+            while (lEnd > lBegin && Char::IsSpace(InText[lEnd - 1])) { --lEnd; }
             return InText.substr(lBegin, lEnd - lBegin);
         }
 
@@ -58,7 +58,7 @@ namespace Opaax::GLSLPort
 
             ++lAt;
             SkipSpaces(InQualifier, lAt);
-            OutValue = static_cast<Int32>(std::strtol(InQualifier.c_str() + lAt, nullptr, 10));
+            OutValue = static_cast<Int32>(CString::ToInt64(InQualifier.c_str() + lAt));
             return true;
         }
 
@@ -91,7 +91,7 @@ namespace Opaax::GLSLPort
                 SkipSpaces(InText, InAt);
                 if (InAt < InText.size() && InText[InAt] == '[')
                 {
-                    OutBinding.ArraySize = static_cast<Int32>(std::strtol(InText.c_str() + InAt + 1, nullptr, 10));
+                    OutBinding.ArraySize = static_cast<Int32>(CString::ToInt64(InText.c_str() + InAt + 1));
                 }
             }
             else

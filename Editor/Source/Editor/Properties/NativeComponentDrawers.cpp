@@ -1,6 +1,6 @@
 #include "Editor/Properties/NativeComponentDrawers.h"
 
-#include <cstdio>   // snprintf
+#include "Core/String/CString.h"
 
 #include "Editor/Properties/PropertyDrawers.h"   // DrawProperties
 #include "Editor/UI/IEditorWidgets.h"
@@ -43,16 +43,15 @@ namespace Opaax::Editor::NativeComponentDrawers
             if (bInWinnerSet && bInLoserSet)
             {
                 char lNote[160];
-                std::snprintf(lNote, sizeof(lNote), "%s is ignored while %s is set. Clear %s to use it.",
-                              InLoserLabel, InWinnerLabel, InWinnerLabel);
+                CString::Format(lNote, "{} is ignored while {} is set. Clear {} to use it.",
+                                InLoserLabel, InWinnerLabel, InWinnerLabel);
 
                 InWidgets.TextDisabled(lNote);
             }
             else if (!bInWinnerSet && !bInLoserSet)
             {
                 char lNote[160];
-                std::snprintf(lNote, sizeof(lNote), "Nothing to draw — set %s or %s.",
-                              InWinnerLabel, InLoserLabel);
+                CString::Format(lNote, "Nothing to draw — set {} or {}.", InWinnerLabel, InLoserLabel);
 
                 InWidgets.TextDisabled(lNote);
             }
@@ -129,10 +128,10 @@ namespace Opaax::Editor::NativeComponentDrawers
 
         char lBuffer[64];
 
-        std::snprintf(lBuffer, sizeof(lBuffer), "%s", InInstance.InstanceId.ToString().CStr());
+        CString::Format(lBuffer, "{}", InInstance.InstanceId.ToString());
         InWidgets.LabelText("Instance", lBuffer);
 
-        std::snprintf(lBuffer, sizeof(lBuffer), "%s", InInstance.TemplateGuid.ToString().CStr());
+        CString::Format(lBuffer, "{}", InInstance.TemplateGuid.ToString());
         InWidgets.LabelText("Template", lBuffer);
     }
 }

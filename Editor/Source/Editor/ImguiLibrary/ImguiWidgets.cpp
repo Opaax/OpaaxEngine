@@ -1,6 +1,7 @@
 #include "Editor/ImguiLibrary/ImguiWidgets.h"
 
-#include <cstring>
+#include "Core/Memory/Memory.h"
+#include "Core/String/CString.h"
 
 namespace Opaax::Editor::ImguiWidgets
 {
@@ -51,7 +52,7 @@ namespace Opaax::Editor::ImguiWidgets
 
         char         lBuffer[160];
         const float  lDotsWidth = ImGui::CalcTextSize(ELLIPSIS).x;
-        const size_t lMax       = strlen(InText);
+        const size_t lMax       = CString::Length(InText);
         size_t       lLength    = 0;
         float        lWidth     = 0.f;
 
@@ -62,7 +63,7 @@ namespace Opaax::Editor::ImguiWidgets
             if (lWidth + lDotsWidth > InWidth) { break; }
         }
 
-        memcpy(lBuffer, InText, lLength);
+        Memory::Copy(lBuffer, InText, lLength);
         lBuffer[lLength]     = ELLIPSIS[0];
         lBuffer[lLength + 1] = ELLIPSIS[1];
         lBuffer[lLength + 2] = '\0';

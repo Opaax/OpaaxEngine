@@ -11,7 +11,7 @@
 
 #include <imgui.h>
 
-#include <cstring>   // strcmp
+#include "Core/String/CString.h"
 #include "Core/OpaaxTypes.h"
 
 using namespace Opaax;
@@ -28,8 +28,8 @@ namespace Opaax::Editor
             // Flight has no ground: gravity, friction, jumping and slopes do not apply.
             if (InMode == OPAAX_ID("FlyMove"))
             {
-                return std::strcmp(InField, "MaxSpeed") == 0
-                    || std::strcmp(InField, "Acceleration") == 0;
+                return CString::Equals(InField, "MaxSpeed")
+                    || CString::Equals(InField, "Acceleration");
             }
 
             return true;

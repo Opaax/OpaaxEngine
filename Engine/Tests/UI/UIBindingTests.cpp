@@ -34,6 +34,25 @@ namespace
     };
 }
 
+TEST_CASE("UIBoundValue: a number reads like %g (six significant digits, no trailing zeros)")
+{
+    UIBoundValue lValue;
+    lValue.Kind = UIBoundValue::EKind::Number;
+
+    const auto lTextOf = [&lValue](const double InNumber)
+    {
+        lValue.Number = InNumber;
+        return lValue.ToText();
+    };
+
+    CHECK(lTextOf(0.1 + 0.2) == OpaaxString("0.3"));
+    CHECK(lTextOf(2.0) == OpaaxString("2"));
+    CHECK(lTextOf(-2.5) == OpaaxString("-2.5"));
+    CHECK(lTextOf(0.0001) == OpaaxString("0.0001"));
+    CHECK(lTextOf(0.00001234) == OpaaxString("1.234e-05"));
+    CHECK(lTextOf(1234567.0) == OpaaxString("1.23457e+06"));
+}
+
 TEST_CASE("UIBinding: the reader answers int, float, bool and string by name, and refuses a Vector")
 {
     Model lModel;

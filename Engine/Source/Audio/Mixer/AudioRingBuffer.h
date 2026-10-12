@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/Maths/Maths.h"
-#include <cstring>
+#include "Core/Memory/Memory.h"
 
 #include "Core/OpaaxTypes.h"
 
@@ -96,17 +96,17 @@ namespace Opaax
         void CopyIn(const float* InFrom, const Uint64 InPosition, const Uint32 InCount)
         {
             const Uint32 lFirst = FramesBeforeWrap(InPosition, InCount);
-            std::memcpy(m_Samples.data() + SampleIndex(InPosition), InFrom, sizeof(float) * lFirst * m_Channels);
-            std::memcpy(m_Samples.data(), InFrom + static_cast<size_t>(lFirst) * m_Channels,
-                        sizeof(float) * (InCount - lFirst) * m_Channels);
+            Memory::Copy(m_Samples.data() + SampleIndex(InPosition), InFrom, sizeof(float) * lFirst * m_Channels);
+            Memory::Copy(m_Samples.data(), InFrom + static_cast<size_t>(lFirst) * m_Channels,
+                         sizeof(float) * (InCount - lFirst) * m_Channels);
         }
 
         void CopyOut(const Uint64 InPosition, const Uint32 InCount, float* OutTo) const
         {
             const Uint32 lFirst = FramesBeforeWrap(InPosition, InCount);
-            std::memcpy(OutTo, m_Samples.data() + SampleIndex(InPosition), sizeof(float) * lFirst * m_Channels);
-            std::memcpy(OutTo + static_cast<size_t>(lFirst) * m_Channels, m_Samples.data(),
-                        sizeof(float) * (InCount - lFirst) * m_Channels);
+            Memory::Copy(OutTo, m_Samples.data() + SampleIndex(InPosition), sizeof(float) * lFirst * m_Channels);
+            Memory::Copy(OutTo + static_cast<size_t>(lFirst) * m_Channels, m_Samples.data(),
+                         sizeof(float) * (InCount - lFirst) * m_Channels);
         }
 
         // =============================================================================

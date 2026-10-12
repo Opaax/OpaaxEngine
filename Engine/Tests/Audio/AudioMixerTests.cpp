@@ -5,7 +5,7 @@
 // measured.
 #include <doctest.h>
 
-#include <algorithm>
+#include "Core/Memory/Memory.h"
 #include "Core/Maths/Maths.h"
 
 #include "Audio/AudioTypes.h"
@@ -61,7 +61,8 @@ namespace
         Uint64 Read(float* OutFrames, const Uint64 InFrameCount) override
         {
             const Uint64 lCount = Maths::Min({ InFrameCount, m_MaxRead, m_Format.FrameCount - m_Position });
-            std::copy_n(m_Frames.data() + m_Position * m_Format.Channels, lCount * m_Format.Channels, OutFrames);
+            Memory::Copy(OutFrames, m_Frames.data() + m_Position * m_Format.Channels,
+                         sizeof(float) * lCount * m_Format.Channels);
             m_Position += lCount;
             return lCount;
         }

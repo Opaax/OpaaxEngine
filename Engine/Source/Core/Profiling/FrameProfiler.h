@@ -3,7 +3,7 @@
 #include "Core/OpaaxTypes.h"
 
 #include <chrono>
-#include <cstring>   // strcmp
+#include "Core/String/CString.h"
 
 namespace Opaax
 {
@@ -151,7 +151,7 @@ namespace Opaax
             if (InA == InB)                         { return true; }
             if (InA == nullptr || InB == nullptr)   { return false; }
 
-            return std::strcmp(InA, InB) == 0;
+            return CString::Equals(InA, InB);
         }
 
         /**

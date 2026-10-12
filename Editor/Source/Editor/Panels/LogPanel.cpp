@@ -5,8 +5,7 @@
 #include <imgui.h>
 
 #include "Core/Algo/Algo.h"
-#include <cstdio>
-#include <cstring>
+#include "Core/String/CString.h"
 #include <ctime>
 
 using namespace Opaax;
@@ -168,8 +167,8 @@ namespace Opaax::Editor
         const size_t lHidden = m_Filter.HiddenCategories.size();
 
         char lPreview[48];
-        if (lHidden == 0) { std::snprintf(lPreview, sizeof(lPreview), "All categories"); }
-        else              { std::snprintf(lPreview, sizeof(lPreview), "Categories (%zu hidden)", lHidden); }
+        if (lHidden == 0) { CString::Format(lPreview, "All categories"); }
+        else              { CString::Format(lPreview, "Categories ({} hidden)", lHidden); }
 
         ImGui::SetNextItemWidth(180.f);
         if (!ImGui::BeginCombo("##categories", lPreview, ImGuiComboFlags_HeightLarge))
@@ -212,7 +211,7 @@ namespace Opaax::Editor
     {
         const auto lByName = [](const OpaaxStringID InA, const OpaaxStringID InB)
         {
-            return std::strcmp(InA.CStr(), InB.CStr()) < 0;
+            return CString::Compare(InA.CStr(), InB.CStr()) < 0;
         };
 
         const auto lAt = Algo::LowerBound(m_Categories, InCategory, lByName);
@@ -235,7 +234,7 @@ namespace Opaax::Editor
         }
 
         char lLabel[48];
-        std::snprintf(lLabel, sizeof(lLabel), "%s %u###level%zu", ToString(InLevel), m_LevelCounts[lIndex], lIndex);
+        CString::Format(lLabel, "{} {}###level{}", ToString(InLevel), m_LevelCounts[lIndex], lIndex);
         const bool bClicked = ImGui::Button(lLabel);
 
         ImGui::PopStyleColor(bShown ? 1 : 2);

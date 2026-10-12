@@ -1,7 +1,5 @@
 #include "UI/UIBinding.h"
 
-#include <cstdio>   // std::snprintf
-
 namespace Opaax
 {
     OpaaxString UIBoundValue::ToText() const
@@ -12,9 +10,7 @@ namespace Opaax
             case EKind::Integer: return OpaaxString::FromInt(static_cast<Int64>(Number));
             case EKind::Number:
             {
-                char lBuffer[32];
-                const int lWritten = std::snprintf(lBuffer, sizeof(lBuffer), "%g", Number);
-                return lWritten > 0 ? OpaaxString(lBuffer) : OpaaxString();
+                return OpaaxString::Format("{:g}", Number);
             }
             case EKind::Text:    return Text;
             case EKind::None:    break;

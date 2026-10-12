@@ -2,7 +2,7 @@
 
 #include "Core/Algo/Algo.h"
 #include "Core/Maths/Maths.h"
-#include <cstring>
+#include "Core/Memory/Memory.h"
 
 #include "Audio/Mixer/AudioSpatial.h"
 #include "Audio/Mixer/AudioStreamReader.h"
@@ -250,7 +250,7 @@ namespace Opaax
     // =========================================================================
     void AudioMixer::MixBlock(float* OutFrames, const Uint32 InFrames)
     {
-        std::memset(OutFrames, 0, sizeof(float) * InFrames * AUDIO_OUTPUT_CHANNELS);
+        Memory::Zero(OutFrames, sizeof(float) * InFrames * AUDIO_OUTPUT_CHANNELS);
         UpdateBusGains(InFrames);
 
         for (Voice& lVoice : m_Voices)
@@ -433,14 +433,14 @@ namespace Opaax
             {
                 if (!InVoice.Desc.bLoop)
                 {
-                    std::memset(lOut + lDone * lChannels, 0, sizeof(float) * (lCount - lDone) * lChannels);
+                    Memory::Zero(lOut + lDone * lChannels, sizeof(float) * (lCount - lDone) * lChannels);
                     return lDone;
                 }
                 lAt %= lSource.FrameCount;
             }
 
             const Uint32 lRun = static_cast<Uint32>(Maths::Min<Uint64>(lCount - lDone, lSource.FrameCount - lAt));
-            std::memcpy(lOut + lDone * lChannels, lSource.Frames + lAt * lChannels, sizeof(float) * lRun * lChannels);
+            Memory::Copy(lOut + lDone * lChannels, lSource.Frames + lAt * lChannels, sizeof(float) * lRun * lChannels);
             lDone += lRun;
             lAt   += lRun;
         }

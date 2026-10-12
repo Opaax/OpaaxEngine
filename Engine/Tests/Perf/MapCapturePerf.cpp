@@ -6,7 +6,7 @@
 // stops fitting in a frame.
 //
 // Skipped by default. Run in Release with: build.bat bench
-#include <cstdio>
+#include "Core/IO/Console.h"
 #include <string>
 
 #include <doctest.h>
@@ -83,10 +83,9 @@ namespace
     void ReportPass(const char* InLabel, const Perf::Result& InResult, Uint64 InEntities,
                     double InBudgetNsPerEntity)
     {
-        std::printf("  [perf] %-38s %9.3f ms/pass  (%llu entities)\n", InLabel,
-                    InResult.MedianNsPerOp * static_cast<double>(InEntities) / 1'000'000.0,
-                    static_cast<unsigned long long>(InEntities));
-        std::fflush(stdout);
+        Console::WriteLine(OpaaxString::Format("  [perf] {:<38} {:9.3f} ms/pass  ({} entities)", InLabel,
+                                               InResult.MedianNsPerOp * static_cast<double>(InEntities) / 1'000'000.0,
+                                               InEntities));
 
         Perf::ReportAndGate(InLabel, InResult, InBudgetNsPerEntity);
     }

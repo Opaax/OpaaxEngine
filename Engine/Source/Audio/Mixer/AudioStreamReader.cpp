@@ -1,7 +1,7 @@
 #include "Audio/Mixer/AudioStreamReader.h"
 
 #include "Core/Maths/Maths.h"
-#include <cstring>
+#include "Core/Memory/Memory.h"
 
 namespace Opaax
 {
@@ -33,7 +33,7 @@ namespace Opaax
         if (InFirst > m_WindowStart)
         {
             const Uint32 lDrop = static_cast<Uint32>(Maths::Min<Uint64>(InFirst - m_WindowStart, m_WindowCount));
-            std::memmove(m_Window.data(), m_Window.data() + lDrop * lChannels, (m_WindowCount - lDrop) * lChannels * sizeof(float));
+            Memory::CopyOverlapping(m_Window.data(), m_Window.data() + lDrop * lChannels, (m_WindowCount - lDrop) * lChannels * sizeof(float));
             m_WindowCount -= lDrop;
             m_WindowStart += lDrop;
 
@@ -42,7 +42,7 @@ namespace Opaax
             {
                 FillTo(Maths::Min<Uint64>(InFirst, m_WindowStart + m_WindowCapacity), bInLoop);
                 const Uint32 lSkip = static_cast<Uint32>(Maths::Min<Uint64>(InFirst - m_WindowStart, m_WindowCount));
-                std::memmove(m_Window.data(), m_Window.data() + lSkip * lChannels, (m_WindowCount - lSkip) * lChannels * sizeof(float));
+                Memory::CopyOverlapping(m_Window.data(), m_Window.data() + lSkip * lChannels, (m_WindowCount - lSkip) * lChannels * sizeof(float));
                 m_WindowCount -= lSkip;
                 m_WindowStart += lSkip;
 
@@ -61,8 +61,8 @@ namespace Opaax
         const Uint32 lValid     = InFirst >= lWindowEnd ? 0u : static_cast<Uint32>(Maths::Min<Uint64>(lWindowEnd - InFirst, lCount));
         const size_t lOffset    = static_cast<size_t>(InFirst - Maths::Min(InFirst, m_WindowStart)) * lChannels;
 
-        std::memcpy(OutFrames, m_Window.data() + lOffset, lValid * lChannels * sizeof(float));
-        std::memset(OutFrames + lValid * lChannels, 0, (InCount - lValid) * lChannels * sizeof(float));
+        Memory::Copy(OutFrames, m_Window.data() + lOffset, lValid * lChannels * sizeof(float));
+        Memory::Zero(OutFrames + lValid * lChannels, (InCount - lValid) * lChannels * sizeof(float));
         return lValid;
     }
 

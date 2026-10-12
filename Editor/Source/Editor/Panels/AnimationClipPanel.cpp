@@ -1,7 +1,7 @@
 #include "Editor/Panels/AnimationClipPanel.h"
 
 #include "Core/Maths/Maths.h"
-#include <cstdio>   // snprintf
+#include "Core/String/CString.h"
 
 #include "Editor/Resources/Types/Animation/EditorAnimationClipDocument.h"
 #include "Editor/EditorContext.h"
@@ -317,8 +317,7 @@ namespace Opaax::Editor
                                     : (lStep.Frame.IsValid() ? lStep.Frame.CStr() : "(unnamed frame)");
 
             char lLabel[192];
-            std::snprintf(lLabel, sizeof(lLabel), "%u  %s  x%u##step%u",
-                          lIndex, lWhat, lStep.EffectiveHold(), lIndex);
+            CString::Format(lLabel, "{}  {}  x{}##step{}", lIndex, lWhat, lStep.EffectiveHold(), lIndex);
 
             if (ImGui::Selectable(lLabel, m_Selected == static_cast<Int32>(lIndex)))
             {

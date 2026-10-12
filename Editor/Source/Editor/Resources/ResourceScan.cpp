@@ -5,7 +5,7 @@
 #include "Resources/ResourceFormat.h"   // NormalizeExtension
 
 #include "Core/Algo/Algo.h"
-#include <cstring>
+#include "Core/String/CString.h"
 
 using namespace Opaax;
 
@@ -15,7 +15,7 @@ namespace Opaax::Editor
     {
         bool NameLess(const OpaaxString& InLeft, const OpaaxString& InRight)
         {
-            return std::strcmp(InLeft.CStr(), InRight.CStr()) < 0;
+            return CString::Compare(InLeft.CStr(), InRight.CStr()) < 0;
         }
 
         void ScanFolder(const IFileSystem& InFileSystem, const OpaaxString& InAbsPath,

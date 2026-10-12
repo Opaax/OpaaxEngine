@@ -7,7 +7,7 @@
 #include "Core/Hash/OpaaxHash.h"   // THash<OpaaxString>
 
 #include "Core/OpaaxTypes.h"
-#include <cstring>
+#include "Core/String/CString.h"
 #include <string_view>
 
 using namespace Opaax;
@@ -28,7 +28,7 @@ TEST_CASE("OpaaxString: short string stays in SSO")
     CHECK(lStr.GetLength() == 5u);
     CHECK_FALSE(lStr.IsUsingHeap());
     CHECK(lStr == "hello");
-    CHECK(std::strcmp(lStr.CStr(), "hello") == 0);
+    CHECK(CString::Equals(lStr.CStr(), "hello"));
 }
 
 TEST_CASE("OpaaxString: SSO capacity boundary is 15 chars")
@@ -75,7 +75,7 @@ TEST_CASE("OpaaxString: append transitions SSO -> heap and preserves content")
     lStr.Append("-now this is much longer than fifteen characters");
     CHECK(lStr.IsUsingHeap());
     CHECK(lStr == "short-now this is much longer than fifteen characters");
-    CHECK(lStr.GetLength() == static_cast<Uint32>(std::strlen(lStr.CStr())));
+    CHECK(lStr.GetLength() == static_cast<Uint32>(CString::Length(lStr.CStr())));
 }
 
 TEST_CASE("OpaaxString: CStr stays valid + null-terminated across copy assignment")
@@ -83,7 +83,7 @@ TEST_CASE("OpaaxString: CStr stays valid + null-terminated across copy assignmen
     OpaaxString lA("first value that lives on the heap for sure");
     OpaaxString lB("tiny");
     lB = lA;
-    CHECK(std::strlen(lB.CStr()) == lB.GetLength());
+    CHECK(CString::Length(lB.CStr()) == lB.GetLength());
     CHECK(lB == lA);
 }
 
@@ -99,7 +99,7 @@ TEST_CASE("OpaaxString: counted Append copies exactly Count bytes and stops ther
     lStr.Append(lSource, 3);
     CHECK(lStr == "abc");
     CHECK(lStr.GetLength() == 3u);
-    CHECK(std::strlen(lStr.CStr()) == 3u);   // terminator written at Count
+    CHECK(CString::Length(lStr.CStr()) == 3u);   // terminator written at Count
 
     lStr.Append(lSource + 3, 2);
     CHECK(lStr == "abcde");
@@ -115,7 +115,7 @@ TEST_CASE("OpaaxString: counted Append crosses the SSO boundary correctly")
     lStr.Append(lLong, 30);
     CHECK(lStr.IsUsingHeap());
     CHECK(lStr.GetLength() == 35u);
-    CHECK(std::strlen(lStr.CStr()) == 35u);
+    CHECK(CString::Length(lStr.CStr()) == 35u);
 }
 
 TEST_CASE("OpaaxString: Append(nullptr) and zero-count are no-ops")
@@ -153,7 +153,7 @@ TEST_CASE("OpaaxString: appending a string TO ITSELF does not read freed memory"
         lStr.Append(lStr);
 
         CHECK(lStr.GetLength() == lLen * 2u);
-        CHECK(std::strlen(lStr.CStr()) == lLen * 2u);
+        CHECK(CString::Length(lStr.CStr()) == lLen * 2u);
         CHECK(lStr.SubString(0, lLen) == lStr.SubString(lLen, lLen));
     }
 
@@ -192,7 +192,7 @@ TEST_CASE("OpaaxString: the counted ctor stops at Count and never needs a termin
 
     CHECK(OpaaxString(lSource, 3) == "abc");
     CHECK(OpaaxString(lSource, 3).GetLength() == 3u);
-    CHECK(std::strlen(OpaaxString(lSource, 3).CStr()) == 3u);
+    CHECK(CString::Length(OpaaxString(lSource, 3).CStr()) == 3u);
     CHECK(OpaaxString(lSource, 0).IsEmpty());
     CHECK(OpaaxString(nullptr, 4).IsEmpty());
 

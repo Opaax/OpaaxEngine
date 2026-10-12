@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstring>   // memcpy
+#include "Core/Memory/Memory.h"
 
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
@@ -27,9 +27,9 @@ namespace Opaax::Editor
         inline TDynArray<Uint8> Encode(const Uint32 InTypeId, const Uint32 InSubTypeId, const OpaaxString& InAssetPath)
         {
             TDynArray<Uint8> lBytes(HEADER_SIZE + InAssetPath.GetLength());
-            std::memcpy(lBytes.data(), &InTypeId, sizeof(Uint32));
-            std::memcpy(lBytes.data() + sizeof(Uint32), &InSubTypeId, sizeof(Uint32));
-            std::memcpy(lBytes.data() + HEADER_SIZE, InAssetPath.CStr(), InAssetPath.GetLength());
+            Memory::Copy(lBytes.data(), &InTypeId, sizeof(Uint32));
+            Memory::Copy(lBytes.data() + sizeof(Uint32), &InSubTypeId, sizeof(Uint32));
+            Memory::Copy(lBytes.data() + HEADER_SIZE, InAssetPath.CStr(), InAssetPath.GetLength());
             return lBytes;
         }
 
@@ -42,8 +42,8 @@ namespace Opaax::Editor
             }
 
             const Uint8* lBytes = static_cast<const Uint8*>(InData);
-            std::memcpy(&OutDecoded.TypeId, lBytes, sizeof(Uint32));
-            std::memcpy(&OutDecoded.SubTypeId, lBytes + sizeof(Uint32), sizeof(Uint32));
+            Memory::Copy(&OutDecoded.TypeId, lBytes, sizeof(Uint32));
+            Memory::Copy(&OutDecoded.SubTypeId, lBytes + sizeof(Uint32), sizeof(Uint32));
             OutDecoded.AssetPath = OpaaxString(reinterpret_cast<const char*>(lBytes + HEADER_SIZE),
                                                static_cast<Uint32>(InSize - HEADER_SIZE));
             return true;

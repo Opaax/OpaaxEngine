@@ -7,7 +7,7 @@
 // File cases use a unique temp directory, created and removed per case.
 #include <doctest.h>
 
-#include <cstring>
+#include "Core/Memory/Memory.h"
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -129,7 +129,7 @@ TEST_SUITE("TextureResource")
         // A PNG signature followed by garbage — it passes any "is this a png?" sniff and fails to
         // decode, which is the case a bare extension check would wave through.
         Uint8 lBroken[sizeof(k_Png4x2Rgb)];
-        std::memcpy(lBroken, k_Png4x2Rgb, sizeof(k_Png4x2Rgb));
+        Memory::Copy(lBroken, k_Png4x2Rgb, sizeof(k_Png4x2Rgb));
         lBroken[30] = 0x00;
         lBroken[45] = 0x7F;
 
@@ -192,7 +192,7 @@ TEST_SUITE("TextureResource")
         const ScopedTempDir lTemp("degrade");
 
         Uint8 lBroken[sizeof(k_Png4x2Rgb)];
-        std::memcpy(lBroken, k_Png4x2Rgb, sizeof(k_Png4x2Rgb));
+        Memory::Copy(lBroken, k_Png4x2Rgb, sizeof(k_Png4x2Rgb));
         lBroken[30] = 0x00;
         lBroken[45] = 0x7F;
 
