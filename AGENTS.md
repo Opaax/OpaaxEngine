@@ -70,7 +70,7 @@ Match the code around you. In short:
 ## Architecture rules
 
 - **Third-party APIs only behind their wrapper:** EnTT in `World/`, GLFW in `Platform/`, Box2D in
-  `Physics/Box2D/`, miniaudio in `Audio/`, OpenGL in `RHI/OpenGL/`, stb in the texture loader and
+  `Physics/Box2D/`, miniaudio in `Audio/Miniaudio/`, OpenGL in `RHI/OpenGL/`, stb in the texture loader and
   the font baker, tinyfiledialogs in the editor's dialogs. Type ids come from
   `Core/Reflection/TypeInfo.h`. Gameplay code uses `Entity`, `World`, `Behaviour`: never the registry.
 - **Types register themselves** with `OPAAX_REGISTER_*` (`Engine/Registries/AutoRegistration.h`):

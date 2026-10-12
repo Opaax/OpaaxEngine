@@ -70,6 +70,28 @@ From a behaviour: `Send(entity, event)` / `Listen<&Class::OnEvent>()` for an ent
 `.opaaxaction` files, bound to keys in `.opaaxinputmap` files), `PlaySound("Audio/Coin.wav")`. Handlers
 can be `const` members.
 
+### Sound
+
+- **Play:** `PlaySound(path)` takes a sound file or a clip definition (`"Audio/Steps.opaaxdata"`: its
+  clips are variations, one chosen per play, with its bus, volume, pitch spread, loop and space).
+  `PlaySoundAt(path, position)` places it in the world; `StopSound(handle, fadeSeconds)` fades it out.
+  A handle stays harmless once its sound ended. An `AudioSource` component plays with its entity
+  (`Sound` for a definition, or `Clip` with its own settings) and an `AudioListener` hears for the
+  level (else the camera).
+- **Buses:** `Audio.Buses` in `Engine.config` is the mix tree under the master (Music, SFX, Dialogue,
+  Ambience, UI by default, and any of yours). From code:
+  `GetSubsystem<AudioSubsystem>()->GetAudio()` gives the `AudioManager`, with `SetBusVolume`,
+  `FadeBus(OPAAX_ID("Music"), 0.f, 2.f)` (a fade apart from the player's volume), `SetBusMuted`,
+  `SetBusSolo`.
+- **Banks:** an `AudioBank` (`.opaaxdata`) lists clip definitions and sound files to load before they
+  play. A level lists its banks in an `AudioBanks` component on any entity of its map; `Audio.GlobalBank`
+  in `Engine.config` is held for the whole game (menus, the player). A sound in no bank is logged,
+  loads in the background and plays once loaded.
+- **Tests:** `AudioManager::SetRandomSeed` makes the choices (variations, spread) repeat. Without a
+  device (`Audio.bEnabled` off, a server) the mix runs headless and sounds still end on time.
+- **Another audio library:** implement `IAudioDevice` and `IAudioDecoder` in `Audio/<Library>`, add its
+  `EAudioBackend` value and its case in `AudioBackendFactory.cpp`; `Audio.Backend` picks it.
+
 ## The renderer
 
 A level is framed by a **Camera** entity: its world position and `OrthoSize` (half the visible
@@ -166,7 +188,7 @@ asset files a tool or an agent can write directly.
 ## Rules the engine follows
 
 - Third-party APIs stay behind the code that wraps them: EnTT in `World`, GLFW in `Platform`, Box2D
-  in `Physics/Box2D`, miniaudio in `Audio`, OpenGL in `RHI/OpenGL`, tinyfiledialogs in the editor's
+  in `Physics/Box2D`, miniaudio in `Audio/Miniaudio`, OpenGL in `RHI/OpenGL`, tinyfiledialogs in the editor's
   dialogs. Type ids come from `Core/Reflection/TypeInfo.h`.
 - The engine is a static library linked whole into each executable; a game is declared by
   `opaax_add_game(<Name>)` (`CMake/OpaaxGame.cmake`).

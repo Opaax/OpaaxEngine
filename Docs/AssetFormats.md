@@ -18,12 +18,13 @@ engine content with `/Engine/` (`/Engine/Textures/T_Square_256_White.png`).
 | `.opaaxaction`, `.opaaxinputmap` | Input actions, and the keys that drive them | Input panels |
 | `.opaaxsheet` | A texture cut into named frames | Sprite Sheet panel |
 | `.opaaxclip`, `.opaaxanim` | An animation clip, a library of clips | Animation panels |
-| `.opaaxdata` | A data asset (a `Material2D`, a game's own structs) | Data Asset panel |
+| `.opaaxdata` | A data asset (a `Material2D`, an `AudioClipDef` or `AudioBank`, a game's own structs) | Data Asset panel |
 | `.opaaxmover`, `.opaaxmovemode` | A Mover's modes, and one mode's tuning | Mover panels |
 | `.opaaxfont` | A font family: faces by style | Font Family panel |
 | `Configs/*.config` | Engine, renderer and editor settings | Config panel |
 
-Images are `.png`, sounds `.wav`, `.mp3` or `.flac`, fonts `.ttf`: put them under `Assets`.
+Images are `.png`, sounds `.wav`, `.mp3` or `.flac`, fonts `.ttf`: put them under `Assets`. A sound up
+to 10 s is decoded when it loads; a longer one (music) keeps its file and is decoded while it plays.
 
 ## Project (`.opaaxproj`)
 
@@ -81,8 +82,8 @@ saved like a component, under its class name, with its `OPAAX_PROPERTIES` fields
 ```
 
 The engine's components: `Transform`, `Sprite`, `Quad`, `Text`, `Camera`, `Environment`, `Light2D`,
-`ShadowCaster2D`, `SpriteAnimator`, `Collider`, `Rigidbody`, `Mover`, `AudioSource`, `AudioListener`
-(and `PrefabInstance`, written by the editor on placed prefabs). Their fields are the ones the
+`ShadowCaster2D`, `SpriteAnimator`, `Collider`, `Rigidbody`, `Mover`, `AudioSource`, `AudioListener`,
+`AudioBanks` (and `PrefabInstance`, written by the editor on placed prefabs). Their fields are the ones the
 Inspector shows; `entity.get` (Docs/Automation.md) prints an entity with every field and its value.
 Enums are saved by name (`"Type": "Dynamic"`), colours as `{ "x", "y", "z", "w" }` (red, green, blue,
 alpha from 0 to 1).
@@ -256,6 +257,34 @@ A registered struct (`OPAAX_REGISTER_DATA_ASSET`) by type name, with its fields:
 
 A sprite uses a material through its `Material` field.
 
+## Sound (`AudioClipDef`, `AudioBank`)
+
+Both are data assets. A clip definition says how a sound plays; one of its `Clips` is chosen each
+time:
+
+```json
+{ "Type": "AudioClipDef", "Data": {
+    "Clips": [ { "Clip": "Audio/Step0.wav" }, { "Clip": "Audio/Step1.wav", "Weight": 2.0, "VolumeScale": 0.8 } ],
+    "Selection": "RandomNoRepeat", "Bus": "SFX", "Volume": 0.6, "Pitch": 1.0,
+    "VolumeSpread": 0.1, "PitchSpread": 0.05, "bLoop": false,
+    "bSpatial": true, "MinDistance": 100.0, "MaxDistance": 1500.0, "Attenuation": "Linear", "Priority": 128 } }
+```
+
+`Selection`: `Single` (the first), `Random` (by `Weight`), `RandomNoRepeat` (never the last one again),
+`Sequential`, `Shuffle` (each once per round). The spreads move each play's volume and pitch by up to
+that much, up or down. `Attenuation`: `Linear` or `InverseSquare`, full within `MinDistance`, silent
+from `MaxDistance`. When every voice plays, the lowest `Priority` is replaced first.
+
+A bank lists what to load before it plays: `{ "Type": "AudioBank", "Data": { "ClipDefs":
+["Audio/Steps.opaaxdata"], "Clips": ["Audio/Jump.wav"] } }`. A level holds its banks with an
+`AudioBanks` component (`{ "Banks": ["Audio/Level1.opaaxdata"] }`) on any entity of its map;
+`Audio.GlobalBank` in `Engine.config` names the bank held for the whole game.
+
+An `AudioSource` plays either `Sound` (a clip definition: its `Volume` and `Pitch` then scale the
+definition's) or `Clip` with its own `Bus`, `Volume`, `Pitch`, `bLoop`, `bSpatial`, distances and
+`Attenuation`. `bPlayOnStart` starts it with its entity; `bStopOnDestroy` off lets it play to its end
+after the entity is gone.
+
 ## Movement (`.opaaxmover`, `.opaaxmovemode`)
 
 A mover lists the modes a `Mover` component can switch between; each mode is its own tuning file:
@@ -285,3 +314,12 @@ A family maps styles to font files, so text asks for "Bold Italic" rather than a
 `Engine.config` holds the window, rendering backend, physics (gravity, world bounds) and audio
 settings; `Renderer.config` the renderer's; `EditorImgui.config` the editor's look. They are edited in
 the editor's Config panel; a missing key keeps its default.
+
+The audio settings name the mix tree under the master (a listed `Buses` replaces the default five)
+and the global bank:
+
+```json
+"Audio": { "bEnabled": true, "Backend": "Miniaudio", "MasterVolume": 1.0, "MaxVoices": 64,
+           "GlobalBank": "Audio/Global.opaaxdata",
+           "Buses": [ { "Name": "Music" }, { "Name": "SFX" }, { "Name": "Footsteps", "Parent": "SFX", "Volume": 0.8 } ] }
+```

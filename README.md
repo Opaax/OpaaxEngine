@@ -8,7 +8,8 @@ A 2D game engine in C++20 for Windows, Linux and macOS, with its editor. Games a
   normal maps and emissive materials, soft shadows, ambient occlusion and bloom.
 - **World:** an entity-component world (EnTT), prefabs, levels made of maps, behaviours with an update
   loop, events, timers, spawning and destruction.
-- **Physics** (Box2D), **audio** (miniaudio), **input** with actions and mapping contexts.
+- **Physics** (Box2D), **audio** (the engine's own mixer: buses, fades, variations, banks; miniaudio
+  plays it), **input** with actions and mapping contexts.
 - **Editor:** inspector, hierarchy, viewport with gizmos, play in editor, undo, asset editors, and
   export of a game into a folder that runs on another machine.
 - **Automation:** a game or the editor can be driven by JSON requests (scripts in CI, AI agents):

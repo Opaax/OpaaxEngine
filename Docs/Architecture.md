@@ -15,7 +15,7 @@ how to extend each part.
 | `Resources` | The resource manager: one pool per type, shared, reference counted, loaded on demand or in the background |
 | `World` | Worlds (EnTT), entities, components, behaviours, levels and maps, prefabs, their files |
 | `Physics` | Colliders, rigidbodies, contacts and queries over Box2D (`Physics/Box2D`) |
-| `Audio` | Sound sources and the listener over miniaudio |
+| `Audio` | Sound: the engine's own mixer (voices, buses, fades, spatial sound) on an audio thread, clip definitions and banks, sources and the listener; the device and the decoders behind a backend (`Audio/Miniaudio`) |
 | `Input`, `Animation`, `Movement`, `UI` | Actions and mapping contexts, sprite animation, character movers, UI canvases |
 | `Engine`, `Application` | The application, its services, the registries and the frame loop |
 | `Automation` | The request runner, its two transports (a script, an inbox folder) and the engine's commands |
@@ -40,6 +40,10 @@ game is a module of its own types, linked into its runtime and into its editor
    smooth at any frame rate.
 
 A paused world (in the editor) skips its part of 3 and 4; a step runs it for one frame.
+
+Sound is mixed on its own thread, a few milliseconds ahead of the audio device: during the frame the
+game only sends it commands (play, stop, move, fade), and the audio update frees the sounds that
+ended.
 
 ## Decisions
 
@@ -134,6 +138,23 @@ A game or the editor runs requests from a script (`--exec`) or from files droppe
 - **For:** any tool that writes files can drive it, with no socket or library; the same commands
   work in a game and in the editor; the CI feature tests are plain scripts.
 - **Against:** the inbox is polled once a frame, and the app only answers: it does not push events.
+
+### The engine mixes; an audio library only plays
+
+The mix is engine code (`Audio/Mixer`): voices, the bus tree, fades, resampling, distance and pan. A
+backend only opens the device and decodes files (`IAudioDevice`, `IAudioDecoder`), like the RHI hides
+OpenGL. The game thread sends commands through a lock-free queue to an audio thread that mixes into
+a ring buffer the device reads; handles are reserved on the game thread, so a sound is playing from
+the call that starts it. What plays is described by data: clip definitions (variations, chosen on the
+game thread with a seeded random) and banks that load sounds before they are needed.
+
+- **For:** every backend sounds the same, and switching library is a new folder and a case in
+  `AudioBackendFactory.cpp`; the mix runs without a device, so tests render it into a buffer and
+  measure it; no lock between the game and the audio; a full voice pool replaces the least important
+  sound; no sound file is read or decoded on the game thread when it plays.
+- **Against:** the mixer is ours to keep (linear resampling, no effects, reverb or HRTF); mixing ahead
+  adds about 20 ms of latency over mixing in the device's callback; a sound in no bank plays a frame or
+  two late, once loaded; OGG needs a decoder the backend does not have yet.
 
 ### Vendors only behind their wrappers
 
