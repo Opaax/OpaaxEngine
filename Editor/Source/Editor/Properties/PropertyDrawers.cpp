@@ -1,7 +1,6 @@
 #include "Editor/Properties/PropertyDrawers.h"
 
 #include "Core/Memory/Memory.h"
-#include <string>
 
 #include "Editor/Properties/WidgetPropertyVisitor.h"
 #include "Resources/DataAsset/DataAssetResource.h"
@@ -173,11 +172,11 @@ namespace Opaax::Editor
     void DrawDataAssetRefField(IEditorWidgets& InWidgets, const char* InLabel, OpaaxString& InPath,
                                const OpaaxStringID InDataType)
     {
-        const std::string lEmpty = std::string("(drop a ") + (InDataType.IsValid() ? InDataType.CStr() : "data asset")
-                                 + " here)";
+        const OpaaxString lEmpty = OpaaxString::Format("(drop a {} here)",
+                                                       InDataType.IsValid() ? InDataType.CStr() : "data asset");
 
         DrawDropPathField(InWidgets, InLabel, InPath, ResourceTypeID::Get<DataAssetResource>(), InDataType.GetId(),
-                          lEmpty.c_str());
+                          lEmpty.CStr());
     }
 
     void DrawResourcePathField(IEditorWidgets& InWidgets, const char* InLabel, OpaaxString& InPath,
@@ -219,7 +218,7 @@ namespace Opaax::Editor
 
         const bool bOpen = InWidgets.BeginTreeNode(InLabel);
         InWidgets.SameLine();
-        InWidgets.TextDisabled(("(" + std::to_string(InList.Count()) + ")").c_str());
+        InWidgets.TextDisabled(OpaaxString::Format("({})", InList.Count()).CStr());
         DrawPropertyNote(InWidgets, InMeta);
 
         if (bOpen)

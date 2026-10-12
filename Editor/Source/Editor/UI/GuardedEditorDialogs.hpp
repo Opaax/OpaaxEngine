@@ -1,8 +1,5 @@
 #pragma once
 
-#include <algorithm>
-#include <string>
-
 #include "Core/OpaaxTypes.h"            // TUniquePtr, TDynArray, Move
 #include "Core/String/OpaaxString.hpp"
 #include "Editor/UI/IEditorDialogs.h"
@@ -75,9 +72,9 @@ namespace Opaax::Editor
             }
 
             // On one line: it ends up in a request's answer.
-            std::string lAsked = std::string(InTitle.CStr()) + ": " + InMessage.CStr();
-            std::replace(lAsked.begin(), lAsked.end(), '\n', ' ');
-            m_Unanswered.emplace_back(lAsked.c_str());
+            OpaaxString lAsked = InTitle + ": " + InMessage;
+            lAsked.ReplaceCharInline('\n', ' ');
+            m_Unanswered.push_back(Move(lAsked));
 
             // The safe answer: the question guards something that cannot be undone.
             if (InOnAnswered)

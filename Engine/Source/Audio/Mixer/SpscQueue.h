@@ -1,7 +1,5 @@
 #pragma once
 
-#include <new>
-
 #include "Core/OpaaxTypes.h"
 
 namespace Opaax

@@ -99,7 +99,16 @@ namespace Opaax
         return *s_Instance;
     }
 
-    CrashHandler::CrashHandler() = default;
+    struct CrashHandler::NativePaths
+    {
+        std::string DumpDir;
+        std::string LogFile;
+    };
+
+    CrashHandler::CrashHandler()
+        : m_Native(MakeUnique<NativePaths>())
+    {
+    }
 
     CrashHandler::~CrashHandler()
     {
@@ -117,12 +126,12 @@ namespace Opaax
 
     void CrashHandler::Configure(const CrashHandlerSettings& InSettings)
     {
-        m_Settings      = InSettings;
-        m_DumpDirNative = Utf8::ToFsPath(InSettings.DumpDir).native();
-        m_LogFileNative = Utf8::ToFsPath(InSettings.LogFile).native();
+        m_Settings        = InSettings;
+        m_Native->DumpDir = Utf8::ToFsPath(InSettings.DumpDir).native();
+        m_Native->LogFile = Utf8::ToFsPath(InSettings.LogFile).native();
 
         std::error_code lError;
-        std::filesystem::create_directories(std::filesystem::path(m_DumpDirNative), lError);
+        std::filesystem::create_directories(std::filesystem::path(m_Native->DumpDir), lError);
     }
 
     void CrashHandler::Install(const CrashHandlerSettings& InSettings)
@@ -175,7 +184,7 @@ namespace Opaax
         char lStamp[32];
         FormatStamp(lStamp);
 
-        const std::string lReportPath = m_DumpDirNative + "/" + lStamp + ".txt";
+        const std::string lReportPath = m_Native->DumpDir + "/" + lStamp + ".txt";
 
         // 1. The report file: what happened and the raw stack. open, write and
         //    backtrace_symbols_fd do not allocate.
@@ -225,11 +234,11 @@ namespace Opaax
 
         // 3. The log next to the report (the next launch overwrites the original).
         Logger::Get().Flush();
-        if (!m_LogFileNative.empty())
+        if (!m_Native->LogFile.empty())
         {
             std::error_code lError;
-            std::filesystem::copy_file(std::filesystem::path(m_LogFileNative),
-                                       std::filesystem::path(m_DumpDirNative + "/" + lStamp + ".log"),
+            std::filesystem::copy_file(std::filesystem::path(m_Native->LogFile),
+                                       std::filesystem::path(m_Native->DumpDir + "/" + lStamp + ".log"),
                                        std::filesystem::copy_options::overwrite_existing, lError);
         }
 

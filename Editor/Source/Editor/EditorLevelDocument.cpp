@@ -1,10 +1,10 @@
 #include "Editor/EditorLevelDocument.h"
 
 #include "Core/OpaaxTypes.h"
-#include <string>
 
 #include "Application/Services/IPaths.h"
 #include "Core/IO/FileIO.h"                      // round-trip check
+#include "Core/String/OpaaxPathString.h"
 #include "World/Level.h"
 #include "World/World.h"                         // GetRevision
 #include "World/Serialization/LevelFile.h"
@@ -413,9 +413,6 @@ namespace Opaax::Editor
     {
         if (!HasLevel()) { return OpaaxString(); }
 
-        const std::string lPath(m_AbsPath.CStr());
-        const size_t      lSlash = lPath.find_last_of("/\\");
-
-        return OpaaxString(lSlash == std::string::npos ? lPath.c_str() : lPath.c_str() + lSlash + 1);
+        return PathString::FileName(m_AbsPath).ToString();
     }
 }
