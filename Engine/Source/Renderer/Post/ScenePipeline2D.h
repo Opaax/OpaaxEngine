@@ -1,6 +1,6 @@
 #pragma once
 
-#include <algorithm>
+#include "Core/Maths/Maths.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/Maths/MathTypes.h"
@@ -40,9 +40,9 @@ namespace Opaax
             PostSettings lSettings;
             lSettings.ExposureStops  = InEnvironment.Exposure;
             lSettings.Tonemapper     = InEnvironment.Tonemapper;
-            lSettings.BloomIntensity = InEnvironment.bBloom ? std::max(InEnvironment.BloomIntensity, 0.f) : 0.f;
-            lSettings.BloomThreshold = std::max(InEnvironment.BloomThreshold, 0.f);
-            lSettings.BloomSoftness  = std::clamp(InEnvironment.BloomSoftness, 0.f, 1.f);
+            lSettings.BloomIntensity = InEnvironment.bBloom ? Maths::Max(InEnvironment.BloomIntensity, 0.f) : 0.f;
+            lSettings.BloomThreshold = Maths::Max(InEnvironment.BloomThreshold, 0.f);
+            lSettings.BloomSoftness  = Maths::Clamp(InEnvironment.BloomSoftness, 0.f, 1.f);
             return lSettings;
         }
     };

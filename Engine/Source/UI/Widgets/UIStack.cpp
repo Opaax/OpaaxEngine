@@ -1,6 +1,6 @@
 #include "UI/Widgets/UIStack.h"
 
-#include <algorithm>
+#include "Core/Maths/Maths.h"
 
 #include "Core/Reflection/OpaaxEnumJson.h"
 
@@ -82,7 +82,7 @@ namespace Opaax
         for (Uint64 lIndex = 0; lIndex < lChildren.size(); ++lIndex)
         {
             const Vector2F& lSize = lChildren[lIndex]->Rect.SizeDelta;
-            lTotal += std::max(lVertical ? lSize.y : lSize.x, 0.f);
+            lTotal += Maths::Max(lVertical ? lSize.y : lSize.x, 0.f);
             if (lIndex > 0) { lTotal += Spacing; }
         }
 
@@ -116,8 +116,8 @@ namespace Opaax
 
         // The inner rect, padding removed; a padding wider than the rect collapses it.
         const Vector2F lMin{ lBounds.Min().x + Padding.Left,  lBounds.Min().y + Padding.Bottom };
-        const Vector2F lMax{ std::max(lBounds.Max().x - Padding.Right, lMin.x),
-                             std::max(lBounds.Max().y - Padding.Top,   lMin.y) };
+        const Vector2F lMax{ Maths::Max(lBounds.Max().x - Padding.Right, lMin.x),
+                             Maths::Max(lBounds.Max().y - Padding.Top,   lMin.y) };
 
         const bool lVertical = Axis == EUIAxis::Vertical;
         float      lCursor   = lVertical ? lMax.y : lMin.x;   // top, or left
@@ -126,7 +126,7 @@ namespace Opaax
 
         for (const TUniquePtr<UIWidget>& lChild : GetChildren())
         {
-            const Vector2F lSize{ std::max(lChild->Rect.SizeDelta.x, 0.f), std::max(lChild->Rect.SizeDelta.y, 0.f) };
+            const Vector2F lSize{ Maths::Max(lChild->Rect.SizeDelta.x, 0.f), Maths::Max(lChild->Rect.SizeDelta.y, 0.f) };
 
             if (lVertical)
             {

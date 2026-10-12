@@ -1,6 +1,6 @@
 #include "Application/OpaaxApplication.h"
 
-#include <algorithm>
+#include "Core/Maths/Maths.h"
 #include <cstdlib>
 #include <cstring>
 
@@ -321,7 +321,7 @@ void OpaaxApplication::RunApplication()
         // 2.1 Capture, before the swap (the backbuffer holds the frame).
         // ----------------------------------------------------------------
         ++lFrameIndex;
-        if (lCapturePath != nullptr && lFrameIndex == std::max<Uint64>(lCaptureAt, 1))
+        if (lCapturePath != nullptr && lFrameIndex == Maths::Max<Uint64>(lCaptureAt, 1))
         {
             Engine().CaptureFrame(OpaaxString(lCapturePath));
             lWindow->RequestClose();
@@ -345,7 +345,7 @@ void OpaaxApplication::RunApplication()
     if (m_Automation != nullptr)
     {
         m_Automation->Close();
-        SetExitCode(std::max(GetExitCode(), m_Automation->GetExitCode()));
+        SetExitCode(Maths::Max(GetExitCode(), m_Automation->GetExitCode()));
         m_Automation.reset();
     }
 

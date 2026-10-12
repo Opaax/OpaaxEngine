@@ -1,7 +1,6 @@
 #include "Renderer/Lighting/Lighting2D.h"
 
 #include <algorithm>
-#include <cmath>
 
 #include "Core/Maths/Maths.h"
 #include "Renderer/Components/Light2DComponent.h"
@@ -29,10 +28,10 @@ namespace Opaax
             // The circle touches the box when the box's nearest point to its centre is within the radius.
             const Vector2F lMin = InView.Center - InView.HalfExtent;
             const Vector2F lMax = InView.Center + InView.HalfExtent;
-            const Vector2F lNearest{ std::clamp(InLight.Position.x, lMin.x, lMax.x),
-                                     std::clamp(InLight.Position.y, lMin.y, lMax.y) };
+            const Vector2F lNearest{ Maths::Clamp(InLight.Position.x, lMin.x, lMax.x),
+                                     Maths::Clamp(InLight.Position.y, lMin.y, lMax.y) };
             const Vector2F lOffset = InLight.Position - lNearest;
-            const float    lRadius = std::max(InLight.Light->Radius, 0.f);
+            const float    lRadius = Maths::Max(InLight.Light->Radius, 0.f);
 
             return lOffset.x * lOffset.x + lOffset.y * lOffset.y <= lRadius * lRadius;
         }
@@ -47,8 +46,8 @@ namespace Opaax
             }
 
             const Vector2F lOffset   = InLight.Position - InView.Center;
-            const float    lDistance = std::sqrt(lOffset.x * lOffset.x + lOffset.y * lOffset.y);
-            const float    lRadius   = std::max(lLight.Radius, 1.f);
+            const float    lDistance = Maths::Sqrt(lOffset.x * lOffset.x + lOffset.y * lOffset.y);
+            const float    lRadius   = Maths::Max(lLight.Radius, 1.f);
             return lLight.Intensity * lRadius / (lDistance + lRadius);
         }
 
@@ -67,13 +66,13 @@ namespace Opaax
     float ScreenToLinear(const float InChannel) noexcept
     {
         // The same approximation as the shaders' decode.
-        return std::pow(std::max(InChannel, 0.f), 2.2f);
+        return Maths::Pow(Maths::Max(InChannel, 0.f), 2.2f);
     }
 
     Uint32 PackLights2D(const TDynArray<Light2DInstance>& InLights, const Bounds2D& InView,
                         const Vector3F& InAmbientColor, const float InAmbientIntensity, LightsBlock2D& OutBlock)
     {
-        const float lAmbient = std::max(InAmbientIntensity, 0.f);
+        const float lAmbient = Maths::Max(InAmbientIntensity, 0.f);
 
         OutBlock = LightsBlock2D{};
         OutBlock.Ambient = Vector4F{ ScreenToLinear(InAmbientColor.x) * lAmbient, ScreenToLinear(InAmbientColor.y) * lAmbient,
@@ -108,23 +107,23 @@ namespace Opaax
             const float lRotation = Maths::DegreesToRadians(lInstance.RotationDegrees);
 
             // A spot fades from its inner half-angle (full light) to its outer one (none).
-            const float lHalfOuter = Maths::DegreesToRadians(std::clamp(lLight.ConeAngle, 1.f, 360.f) * 0.5f);
-            const float lHalfInner = lHalfOuter * (1.f - std::clamp(lLight.ConeSoftness, 0.f, 1.f));
+            const float lHalfOuter = Maths::DegreesToRadians(Maths::Clamp(lLight.ConeAngle, 1.f, 360.f) * 0.5f);
+            const float lHalfInner = lHalfOuter * (1.f - Maths::Clamp(lLight.ConeSoftness, 0.f, 1.f));
 
             const float lHeight = (lLight.Type == ELight2DType::Global)
-                                      ? std::sin(Maths::DegreesToRadians(std::clamp(lLight.Elevation, 1.f, 90.f)))
-                                      : std::max(lLight.Height, 1.f);
+                                      ? Maths::Sin(Maths::DegreesToRadians(Maths::Clamp(lLight.Elevation, 1.f, 90.f)))
+                                      : Maths::Max(lLight.Height, 1.f);
 
             OutBlock.Position[lIndex]  = Vector4F{ lInstance.Position.x, lInstance.Position.y,
-                                                   std::max(lLight.Radius, 1.f), TypeCode(lLight.Type) };
+                                                   Maths::Max(lLight.Radius, 1.f), TypeCode(lLight.Type) };
             OutBlock.Color[lIndex]     = Vector4F{ ScreenToLinear(lLight.Color.r) * lLight.Intensity,
                                                    ScreenToLinear(lLight.Color.g) * lLight.Intensity,
                                                    ScreenToLinear(lLight.Color.b) * lLight.Intensity,
-                                                   std::max(lLight.Falloff, 0.01f) };
-            OutBlock.Direction[lIndex] = Vector4F{ std::cos(lRotation), std::sin(lRotation),
-                                                   std::cos(lHalfOuter), std::cos(lHalfInner) };
-            OutBlock.Params[lIndex]    = Vector4F{ lHeight, -1.f, std::max(lLight.ShadowSoftness, 0.f),
-                                                   std::clamp(lLight.ShadowStrength, 0.f, 1.f) };
+                                                   Maths::Max(lLight.Falloff, 0.01f) };
+            OutBlock.Direction[lIndex] = Vector4F{ Maths::Cos(lRotation), Maths::Sin(lRotation),
+                                                   Maths::Cos(lHalfOuter), Maths::Cos(lHalfInner) };
+            OutBlock.Params[lIndex]    = Vector4F{ lHeight, -1.f, Maths::Max(lLight.ShadowSoftness, 0.f),
+                                                   Maths::Clamp(lLight.ShadowStrength, 0.f, 1.f) };
         }
 
         // Shadow map rows: the strongest shadowed point and spot lights first.
@@ -144,7 +143,7 @@ namespace Opaax
             return lCandidates[InA].Score > lCandidates[InB].Score;
         });
 
-        const Uint32 lRows = std::min(static_cast<Uint32>(lShadowed.size()), MAX_SHADOWED_LIGHTS_2D);
+        const Uint32 lRows = Maths::Min(static_cast<Uint32>(lShadowed.size()), MAX_SHADOWED_LIGHTS_2D);
         for (Uint32 lRow = 0; lRow < lRows; ++lRow)
         {
             OutBlock.Params[lShadowed[lRow]].y = static_cast<float>(lRow);
@@ -178,7 +177,7 @@ namespace Opaax
             const Uint32    lRowIndex = static_cast<Uint32>(lRow);
             const Vector4F& lLight    = InLights.Position[lIndex];
             OutBlock.Light[lRowIndex] = Vector4F{ lLight.x, lLight.y, lLight.z, 0.f };
-            lRows = std::max(lRows, lRowIndex + 1u);
+            lRows = Maths::Max(lRows, lRowIndex + 1u);
         }
 
         OutBlock.Info.x = static_cast<float>(lRows);
@@ -194,19 +193,19 @@ namespace Opaax
         for (Uint32 lRow = 0; lRow < InShadows.GetCount() && lRow < MAX_SHADOWED_LIGHTS_2D; ++lRow)
         {
             const Vector4F& lLight = InShadows.Light[lRow];
-            lMin = Vector2F{ std::min(lMin.x, lLight.x - lLight.z), std::min(lMin.y, lLight.y - lLight.z) };
-            lMax = Vector2F{ std::max(lMax.x, lLight.x + lLight.z), std::max(lMax.y, lLight.y + lLight.z) };
+            lMin = Vector2F{ Maths::Min(lMin.x, lLight.x - lLight.z), Maths::Min(lMin.y, lLight.y - lLight.z) };
+            lMax = Vector2F{ Maths::Max(lMax.x, lLight.x + lLight.z), Maths::Max(lMax.y, lLight.y + lLight.z) };
         }
 
         // At most a few times the view: the shadows of farther casters are not worth the pixels.
         const Vector2F lLimit = InView.HalfExtent * OCCLUSION_MAX_SCALE_2D;
-        lMin = Vector2F{ std::max(lMin.x, InView.Center.x - lLimit.x), std::max(lMin.y, InView.Center.y - lLimit.y) };
-        lMax = Vector2F{ std::min(lMax.x, InView.Center.x + lLimit.x), std::min(lMax.y, InView.Center.y + lLimit.y) };
+        lMin = Vector2F{ Maths::Max(lMin.x, InView.Center.x - lLimit.x), Maths::Max(lMin.y, InView.Center.y - lLimit.y) };
+        lMax = Vector2F{ Maths::Min(lMax.x, InView.Center.x + lLimit.x), Maths::Min(lMax.y, InView.Center.y + lLimit.y) };
 
-        const Vector2F lSize{ std::max(lMax.x - lMin.x, 0.f), std::max(lMax.y - lMin.y, 0.f) };
+        const Vector2F lSize{ Maths::Max(lMax.x - lMin.x, 0.f), Maths::Max(lMax.y - lMin.y, 0.f) };
 
         // Screen density, unless the map would grow past its largest size.
-        const float lLargest = std::max(lSize.x, lSize.y);
+        const float lLargest = Maths::Max(lSize.x, lSize.y);
         float       lDensity = (InPixelsPerUnit > 0.f) ? InPixelsPerUnit : 1.f;
         if (lLargest * lDensity > static_cast<float>(OCCLUSION_MAX_SIZE_2D))
         {
@@ -216,8 +215,8 @@ namespace Opaax
         // Rounded up, past a float's noise (1000 * 1.2f is a hair above 1200).
         const auto lPixels = [lDensity](const float InExtent)
         {
-            const float lExact = std::ceil(InExtent * lDensity - 1.0e-3f);
-            return std::clamp(static_cast<Uint32>(std::max(lExact, 0.f)), 1u, OCCLUSION_MAX_SIZE_2D);
+            const float lExact = Maths::Ceil(InExtent * lDensity - 1.0e-3f);
+            return Maths::Clamp(static_cast<Uint32>(Maths::Max(lExact, 0.f)), 1u, OCCLUSION_MAX_SIZE_2D);
         };
 
         OcclusionLayout2D lLayout;
@@ -233,7 +232,7 @@ namespace Opaax
 
     Uint32 AmbientOcclusionExtent2D(const Uint32 InOcclusionExtent) noexcept
     {
-        return std::max((InOcclusionExtent + AO_DOWNSAMPLE_2D - 1) / AO_DOWNSAMPLE_2D, 1u);
+        return Maths::Max((InOcclusionExtent + AO_DOWNSAMPLE_2D - 1) / AO_DOWNSAMPLE_2D, 1u);
     }
 
     float AmbientOcclusionSigma2D(const float InRadius, const OcclusionLayout2D& InLayout) noexcept
@@ -246,7 +245,7 @@ namespace Opaax
 
         // World units -> occlusion texels -> ambient occlusion texels.
         const float lDensity = static_cast<float>(InLayout.Width) / lWorldWidth;
-        return std::max(InRadius, 0.f) * 0.5f * lDensity / static_cast<float>(AO_DOWNSAMPLE_2D);
+        return Maths::Max(InRadius, 0.f) * 0.5f * lDensity / static_cast<float>(AO_DOWNSAMPLE_2D);
     }
 
     void PackAmbientOcclusion2D(LightsBlock2D& InOutBlock, const OcclusionLayout2D& InLayout, const float InStrength) noexcept
@@ -254,7 +253,7 @@ namespace Opaax
         // Each of its texels covers AO_DOWNSAMPLE_2D occlusion texels a side, so it can reach a little past them.
         const auto lCovered = [](const Uint32 InExtent)
         {
-            const Uint32 lExtent = std::max(InExtent, 1u);
+            const Uint32 lExtent = Maths::Max(InExtent, 1u);
             return static_cast<float>(AmbientOcclusionExtent2D(lExtent) * AO_DOWNSAMPLE_2D) / static_cast<float>(lExtent);
         };
 
@@ -262,6 +261,6 @@ namespace Opaax
         const Vector2F lSize = InLayout.Bounds.Size();
 
         InOutBlock.AORect   = Vector4F{ lMin.x, lMin.y, lSize.x * lCovered(InLayout.Width), lSize.y * lCovered(InLayout.Height) };
-        InOutBlock.AOParams = Vector4F{ std::clamp(InStrength, 0.f, 1.f), 0.f, 0.f, 0.f };
+        InOutBlock.AOParams = Vector4F{ Maths::Clamp(InStrength, 0.f, 1.f), 0.f, 0.f, 0.f };
     }
 }

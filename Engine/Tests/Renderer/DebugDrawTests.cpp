@@ -5,7 +5,7 @@
 #include "Renderer/DebugDraw.h"
 #include "Renderer/Renderer2D.h"   // MakeOutlineInnerHalf — the border maths, GPU-free
 
-#include <cmath>
+#include "Core/Maths/Maths.h"
 
 using namespace Opaax;
 
@@ -67,10 +67,10 @@ TEST_CASE("DebugDraw: DrawBox covers the rectangle it was given, corner to corne
 
     // Centre (10,20), full size (4,6) -> corners x in [8,12], y in [17,23].
     const DebugBox& lBox = lDebug.GetBoxes()[0];
-    CHECK(std::fabs((lBox.Center.x - lBox.Size.x * 0.5f) - 8.f)  < kEps);
-    CHECK(std::fabs((lBox.Center.x + lBox.Size.x * 0.5f) - 12.f) < kEps);
-    CHECK(std::fabs((lBox.Center.y - lBox.Size.y * 0.5f) - 17.f) < kEps);
-    CHECK(std::fabs((lBox.Center.y + lBox.Size.y * 0.5f) - 23.f) < kEps);
+    CHECK(Maths::Abs((lBox.Center.x - lBox.Size.x * 0.5f) - 8.f)  < kEps);
+    CHECK(Maths::Abs((lBox.Center.x + lBox.Size.x * 0.5f) - 12.f) < kEps);
+    CHECK(Maths::Abs((lBox.Center.y - lBox.Size.y * 0.5f) - 17.f) < kEps);
+    CHECK(Maths::Abs((lBox.Center.y + lBox.Size.y * 0.5f) - 23.f) < kEps);
 }
 
 TEST_CASE("DebugDraw: a primitive names its world, and null means the active one")
@@ -155,7 +155,7 @@ TEST_CASE("ToQuad: direction is signed — reversing the endpoints flips the rot
     // Same covered pixels either way (a quad is symmetric), but the maths must stay consistent.
     CHECK(lForward.Center.x == doctest::Approx(lReverse.Center.x));
     CHECK(lForward.Size.x   == doctest::Approx(lReverse.Size.x));
-    CHECK(std::fabs(lReverse.RotationRad) == doctest::Approx(kPi));
+    CHECK(Maths::Abs(lReverse.RotationRad) == doctest::Approx(kPi));
 }
 
 TEST_CASE("ToQuad: a diagonal segment gets its true length, not its bounding box")
@@ -163,7 +163,7 @@ TEST_CASE("ToQuad: a diagonal segment gets its true length, not its bounding box
     const DebugQuad lQuad = ToQuad(DebugLine{ { 0.f, 0.f }, { 3.f, 4.f }, {}, 1.f });
 
     CHECK(lQuad.Size.x      == doctest::Approx(5.f));            // 3-4-5, not 3 or 4
-    CHECK(lQuad.RotationRad == doctest::Approx(std::atan2(4.f, 3.f)));
+    CHECK(lQuad.RotationRad == doctest::Approx(Maths::Atan2(4.f, 3.f)));
 }
 
 TEST_CASE("ToQuad: a degenerate zero-length segment is invisible, never NaN")
@@ -176,7 +176,7 @@ TEST_CASE("ToQuad: a degenerate zero-length segment is invisible, never NaN")
     CHECK(lQuad.Size.x   == doctest::Approx(0.f));
     CHECK(lQuad.Size.y   == doctest::Approx(3.f));
     CHECK(lQuad.RotationRad == doctest::Approx(0.f));
-    CHECK_FALSE(std::isnan(lQuad.RotationRad));
+    CHECK_FALSE(Maths::IsNaN(lQuad.RotationRad));
 }
 
 // =============================================================================
@@ -395,7 +395,7 @@ TEST_CASE("BuildCircleOutline: every point is EXACTLY the radius from the centre
     for (const Vector2F& lPoint : lPoints)
     {
         const Vector2F lDelta = lPoint - Vector2F{ 30.f, -12.f };
-        CHECK(std::sqrt(lDelta.x * lDelta.x + lDelta.y * lDelta.y) == doctest::Approx(25.f));
+        CHECK(Maths::Sqrt(lDelta.x * lDelta.x + lDelta.y * lDelta.y) == doctest::Approx(25.f));
     }
 }
 
@@ -409,12 +409,12 @@ TEST_CASE("BuildCircleOutline: consecutive points are EVENLY spaced")
     // The closing edge is implied, so the wrap-around span is measured too — an off-by-one in the
     // step would leave exactly that one gap wrong while every other span looked perfect.
     const Vector2F lFirstSpan = lPoints[1] - lPoints[0];
-    const float    lExpected  = std::sqrt(lFirstSpan.x * lFirstSpan.x + lFirstSpan.y * lFirstSpan.y);
+    const float    lExpected  = Maths::Sqrt(lFirstSpan.x * lFirstSpan.x + lFirstSpan.y * lFirstSpan.y);
 
     for (size_t i = 0; i < lPoints.size(); ++i)
     {
         const Vector2F lSpan = lPoints[(i + 1) % lPoints.size()] - lPoints[i];
-        CHECK(std::sqrt(lSpan.x * lSpan.x + lSpan.y * lSpan.y) == doctest::Approx(lExpected));
+        CHECK(Maths::Sqrt(lSpan.x * lSpan.x + lSpan.y * lSpan.y) == doctest::Approx(lExpected));
     }
 }
 
@@ -444,8 +444,8 @@ TEST_CASE("BuildCapsuleOutline: every point is the radius from the cap it belong
         const Vector2F lD1 = lPoint - lC1;
         const Vector2F lD2 = lPoint - lC2;
 
-        const float lDist1 = std::sqrt(lD1.x * lD1.x + lD1.y * lD1.y);
-        const float lDist2 = std::sqrt(lD2.x * lD2.x + lD2.y * lD2.y);
+        const float lDist1 = Maths::Sqrt(lD1.x * lD1.x + lD1.y * lD1.y);
+        const float lDist2 = Maths::Sqrt(lD2.x * lD2.x + lD2.y * lD2.y);
 
         // Belonging to the NEARER cap is the whole invariant: a point that is the right distance
         // from neither centre is on some other shape entirely.
@@ -494,7 +494,7 @@ TEST_CASE("BuildCapsuleOutline: coincident caps ARE a circle, not a zero-length 
     for (const Vector2F& lPoint : lPoints)
     {
         const Vector2F lDelta = lPoint - Vector2F{ 5.f, 5.f };
-        CHECK(std::sqrt(lDelta.x * lDelta.x + lDelta.y * lDelta.y) == doctest::Approx(15.f));
+        CHECK(Maths::Sqrt(lDelta.x * lDelta.x + lDelta.y * lDelta.y) == doctest::Approx(15.f));
     }
 }
 

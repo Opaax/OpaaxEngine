@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include "Core/OpaaxTypes.h"
-#include <cmath>
+#include "Core/Maths/Maths.h"
 #include <cstring>
 
 #include "Application/OpaaxApplication.h"
@@ -43,7 +43,7 @@ namespace Opaax
 
         Uint32 SecondsToFrames(const float InSeconds, const Uint32 InSampleRate) noexcept
         {
-            return InSeconds > 0.f ? static_cast<Uint32>(std::lround(static_cast<double>(InSeconds) * InSampleRate)) : 0u;
+            return InSeconds > 0.f ? static_cast<Uint32>(Maths::RoundHalfFromZero(static_cast<double>(InSeconds) * InSampleRate)) : 0u;
         }
     }
 
@@ -295,7 +295,7 @@ namespace Opaax
 
             while (InFrames > 0)
             {
-                const Uint32 lFrames = static_cast<Uint32>(std::min<Uint64>(InFrames, lBlock));
+                const Uint32 lFrames = static_cast<Uint32>(Maths::Min<Uint64>(InFrames, lBlock));
                 Mixer->Mix(Discard.data(), lFrames);
                 InFrames -= lFrames;
             }
@@ -393,8 +393,8 @@ namespace Opaax
 
             // Ahead by the device's period and two blocks more, so a late wake-up is not a gap.
             const Uint32 lPeriod = Device->GetPeriodFrames();
-            const Uint32 lAhead  = std::max(lBlock * MIN_BLOCKS_AHEAD, ((lPeriod + 2 * lBlock + lBlock - 1) / lBlock) * lBlock);
-            FramesAhead.store(std::min(lAhead, RING_CAPACITY_FRAMES - lBlock));
+            const Uint32 lAhead  = Maths::Max(lBlock * MIN_BLOCKS_AHEAD, ((lPeriod + 2 * lBlock + lBlock - 1) / lBlock) * lBlock);
+            FramesAhead.store(Maths::Min(lAhead, RING_CAPACITY_FRAMES - lBlock));
             Wake.notify_one();
             return true;
         }
@@ -500,7 +500,7 @@ namespace Opaax
         void AddBus(const AudioBusSettings& InBus, const Uint16 InParent)
         {
             BusIndices.emplace(InBus.Name, static_cast<Uint16>(Buses.size()));
-            Buses.push_back(BusView{ InBus.Name, InParent, std::max(InBus.Volume, 0.f) });
+            Buses.push_back(BusView{ InBus.Name, InParent, Maths::Max(InBus.Volume, 0.f) });
         }
 
         /** A bus by name, or -1. Unknown names are logged once. */
@@ -568,7 +568,7 @@ namespace Opaax
             if (InSlot.bSpatial)
             {
                 const Vector2F lOffset = InSlot.Position - Listener;
-                lGain *= AudioSpatial::Attenuate(InSlot.Attenuation, std::sqrt(lOffset.x * lOffset.x + lOffset.y * lOffset.y),
+                lGain *= AudioSpatial::Attenuate(InSlot.Attenuation, Maths::Sqrt(lOffset.x * lOffset.x + lOffset.y * lOffset.y),
                                                  InSlot.MinDistance, InSlot.MaxDistance);
             }
             return lGain;
@@ -657,7 +657,7 @@ namespace Opaax
             lSlot.bPending    = false;
             lSlot.Priority    = InParams.Priority;
             lSlot.StartOrder  = NextStartOrder++;
-            lSlot.Volume      = std::max(InParams.Volume, 0.f);
+            lSlot.Volume      = Maths::Max(InParams.Volume, 0.f);
             lSlot.Fade        = 1.f;
             lSlot.Bus         = ResolveBus(InParams.Bus);
             lSlot.bSpatial    = InParams.bSpatial;
@@ -783,9 +783,9 @@ namespace Opaax
             lImpl.Settings.Buses     = lSettings->Buses;
         }
 
-        lImpl.Settings.SampleRate  = std::clamp(lImpl.Settings.SampleRate, 8000u, 192000u);
-        lImpl.Settings.MaxVoices   = std::max(lImpl.Settings.MaxVoices, 1u);
-        lImpl.Settings.BlockFrames = std::clamp(lImpl.Settings.BlockFrames, 32u, 4096u);
+        lImpl.Settings.SampleRate  = Maths::Clamp(lImpl.Settings.SampleRate, 8000u, 192000u);
+        lImpl.Settings.MaxVoices   = Maths::Max(lImpl.Settings.MaxVoices, 1u);
+        lImpl.Settings.BlockFrames = Maths::Clamp(lImpl.Settings.BlockFrames, 32u, 4096u);
         AudioAPI::SetBackend(lImpl.Settings.Backend);
 
         AudioMixer::Desc lMix;
@@ -1013,7 +1013,7 @@ namespace Opaax
     {
         if (Impl::Slot* lSlot = m_Impl->Find(InSound))
         {
-            lSlot->Volume = std::max(InVolume, 0.f);
+            lSlot->Volume = Maths::Max(InVolume, 0.f);
             if (!lSlot->bPending)
             {
                 m_Impl->Send(EAudioCommand::SetVolume, InSound, lSlot->Volume);
@@ -1025,7 +1025,7 @@ namespace Opaax
     {
         if (Impl::Slot* lSlot = m_Impl->FindPlaying(InSound))
         {
-            lSlot->Fade = std::max(InVolume, 0.f);
+            lSlot->Fade = Maths::Max(InVolume, 0.f);
             const Uint32 lFrames = SecondsToFrames(InSeconds, m_Impl->Settings.SampleRate);
 
             if (Impl::PendingPlay* lPending = m_Impl->FindPending(InSound))
@@ -1094,7 +1094,7 @@ namespace Opaax
         const Int32 lBus = m_Impl->FindBus(InBus);
         if (lBus >= 0)
         {
-            m_Impl->Buses[lBus].Volume = std::max(InVolume, 0.f);
+            m_Impl->Buses[lBus].Volume = Maths::Max(InVolume, 0.f);
             m_Impl->SendBus(EAudioCommand::SetBusVolume, static_cast<Uint16>(lBus), m_Impl->Buses[lBus].Volume);
         }
     }
@@ -1110,7 +1110,7 @@ namespace Opaax
         const Int32 lBus = m_Impl->FindBus(InBus);
         if (lBus >= 0)
         {
-            m_Impl->Buses[lBus].Fade = std::max(InVolume, 0.f);
+            m_Impl->Buses[lBus].Fade = Maths::Max(InVolume, 0.f);
             m_Impl->SendBus(EAudioCommand::FadeBus, static_cast<Uint16>(lBus), m_Impl->Buses[lBus].Fade,
                             SecondsToFrames(InSeconds, m_Impl->Settings.SampleRate));
         }
@@ -1214,7 +1214,7 @@ namespace Opaax
         Uint64 lDone = 0;
         while (lDone < InFrameCount)
         {
-            const Uint32 lFrames = static_cast<Uint32>(std::min<Uint64>(InFrameCount - lDone, 1u << 20));
+            const Uint32 lFrames = static_cast<Uint32>(Maths::Min<Uint64>(InFrameCount - lDone, 1u << 20));
             lImpl.Mixer->Mix(OutFrames + lDone * AUDIO_OUTPUT_CHANNELS, lFrames);
             lDone += lFrames;
         }

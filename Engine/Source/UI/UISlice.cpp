@@ -1,6 +1,6 @@
 #include "UI/UISlice.h"
 
-#include <algorithm>
+#include "Core/Maths/Maths.h"
 
 namespace Opaax
 {
@@ -9,8 +9,8 @@ namespace Opaax
         /** Keeps a pair of opposite edges inside InExtent, scaled to keep their ratio. */
         void FitPair(float& InOutLow, float& InOutHigh, const float InExtent) noexcept
         {
-            InOutLow  = std::max(0.f, InOutLow);
-            InOutHigh = std::max(0.f, InOutHigh);
+            InOutLow  = Maths::Max(0.f, InOutLow);
+            InOutHigh = Maths::Max(0.f, InOutHigh);
 
             const float lSum = InOutLow + InOutHigh;
             if (lSum > InExtent && lSum > 0.f)
@@ -90,8 +90,8 @@ namespace Opaax
             const Vector2F lQuadMin = lQuad.Bounds.Min();
             const Vector2F lQuadMax = lQuad.Bounds.Max();
 
-            const Vector2F lNewMin{ std::max(lQuadMin.x, lClipMin.x), std::max(lQuadMin.y, lClipMin.y) };
-            const Vector2F lNewMax{ std::min(lQuadMax.x, lClipMax.x), std::min(lQuadMax.y, lClipMax.y) };
+            const Vector2F lNewMin{ Maths::Max(lQuadMin.x, lClipMin.x), Maths::Max(lQuadMin.y, lClipMin.y) };
+            const Vector2F lNewMax{ Maths::Min(lQuadMax.x, lClipMax.x), Maths::Min(lQuadMax.y, lClipMax.y) };
 
             if (lNewMax.x <= lNewMin.x || lNewMax.y <= lNewMin.y)
             {

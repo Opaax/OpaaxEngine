@@ -1,6 +1,6 @@
 #include "Input/Mapping/InputModifiers.h"
 
-#include <cmath>
+#include "Core/Maths/Maths.h"
 
 namespace Opaax
 {
@@ -8,7 +8,7 @@ namespace Opaax
     {
         float Magnitude(Vector2F InValue) noexcept
         {
-            return std::sqrt(InValue.x * InValue.x + InValue.y * InValue.y);
+            return Maths::Sqrt(InValue.x * InValue.x + InValue.y * InValue.y);
         }
     }
 

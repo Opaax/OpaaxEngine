@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "Core/Events/EventBus.h"
+#include "Core/Maths/Maths.h"
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/Mapping/InputMappingSubsystem.h"
 #include "Physics/PhysicsEvents.h"
@@ -696,7 +697,7 @@ namespace Opaax
         lTimer.Id            = m_NextTimerId++;
         lTimer.Entity        = InEntity;
         lTimer.BehaviourType = InBehaviourType;
-        lTimer.Interval      = std::max(InSeconds, 0.f);
+        lTimer.Interval      = Maths::Max(InSeconds, 0.f);
         lTimer.Due           = m_Time + lTimer.Interval;
         lTimer.bRepeat       = bInRepeat;
         lTimer.Thunk         = InThunk;
@@ -746,7 +747,7 @@ namespace Opaax
             if (m_Timers[lIndex].bRepeat)
             {
                 // A long frame fires once, not several times.
-                m_Timers[lIndex].Due = std::max(m_Timers[lIndex].Due + m_Timers[lIndex].Interval, m_Time);
+                m_Timers[lIndex].Due = Maths::Max(m_Timers[lIndex].Due + m_Timers[lIndex].Interval, m_Time);
             }
             else
             {

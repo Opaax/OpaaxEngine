@@ -5,7 +5,7 @@
 //   GizmoDrag is header-only (no ImGui), so no editor link is needed.
 #include <doctest.h>
 
-#include <cmath>
+#include "Core/Maths/Maths.h"
 #include <glm/mat2x2.hpp>
 #include <glm/matrix.hpp>
 #include <glm/trigonometric.hpp>
@@ -52,8 +52,8 @@ namespace
         if (InDegrees == 0.f) { return { glm::length(lLinear[0]), glm::length(lLinear[1]) }; }
 
         const float     lRad = glm::radians(InDegrees);
-        const glm::mat2 lRot{ Vector2F{ std::cos(lRad), std::sin(lRad) },
-                              Vector2F{ -std::sin(lRad), std::cos(lRad) } };
+        const glm::mat2 lRot{ Vector2F{ Maths::Cos(lRad), Maths::Sin(lRad) },
+                              Vector2F{ -Maths::Sin(lRad), Maths::Cos(lRad) } };
 
         const glm::mat2 lLocal = glm::transpose(lRot) * lLinear * lRot;
 
@@ -66,15 +66,15 @@ namespace
         const glm::mat2 lLinear{ Vector2F{ InDelta[0][0], InDelta[0][1] },
                                  Vector2F{ InDelta[1][0], InDelta[1][1] } };
 
-        if (InDegrees == 0.f) { return glm::degrees(std::atan2(lLinear[0][1], lLinear[0][0])); }
+        if (InDegrees == 0.f) { return glm::degrees(Maths::Atan2(lLinear[0][1], lLinear[0][0])); }
 
         const float     lRad = glm::radians(InDegrees);
-        const glm::mat2 lRot{ Vector2F{ std::cos(lRad), std::sin(lRad) },
-                              Vector2F{ -std::sin(lRad), std::cos(lRad) } };
+        const glm::mat2 lRot{ Vector2F{ Maths::Cos(lRad), Maths::Sin(lRad) },
+                              Vector2F{ -Maths::Sin(lRad), Maths::Cos(lRad) } };
 
         const glm::mat2 lLocal = glm::transpose(lRot) * lLinear * lRot;
 
-        return glm::degrees(std::atan2(lLocal[0][1], lLocal[0][0]));
+        return glm::degrees(Maths::Atan2(lLocal[0][1], lLocal[0][0]));
     }
 }
 
@@ -265,8 +265,8 @@ TEST_CASE("GizmoDrag: a rotation delta is unaffected by which frame it is read i
 
     // Turn the gizmo a further 10 degrees, as a rotate drag would.
     const float lNew = glm::radians(30.f);
-    lGizmo.Matrix()[0] = Vector4F{ std::cos(lNew), std::sin(lNew), 0.f, 0.f };
-    lGizmo.Matrix()[1] = Vector4F{ -std::sin(lNew), std::cos(lNew), 0.f, 0.f };
+    lGizmo.Matrix()[0] = Vector4F{ Maths::Cos(lNew), Maths::Sin(lNew), 0.f, 0.f };
+    lGizmo.Matrix()[1] = Vector4F{ -Maths::Sin(lNew), Maths::Cos(lNew), 0.f, 0.f };
     lGizmo.BankFrameDelta();
 
     const Matrix44F lDelta = lGizmo.ConsumeDelta();
@@ -373,8 +373,8 @@ TEST_CASE("GizmoDrag: a SHARED-pivot rotation orbits, which is what Individual m
     lGizmo.ReseatAt(lPivot, 0.f);
 
     const float lNew = glm::radians(90.f);
-    lGizmo.Matrix()[0] = Vector4F{ std::cos(lNew), std::sin(lNew), 0.f, 0.f };
-    lGizmo.Matrix()[1] = Vector4F{ -std::sin(lNew), std::cos(lNew), 0.f, 0.f };
+    lGizmo.Matrix()[0] = Vector4F{ Maths::Cos(lNew), Maths::Sin(lNew), 0.f, 0.f };
+    lGizmo.Matrix()[1] = Vector4F{ -Maths::Sin(lNew), Maths::Cos(lNew), 0.f, 0.f };
     lGizmo.BankFrameDelta();
 
     const Matrix44F lDelta = lGizmo.ConsumeDelta();

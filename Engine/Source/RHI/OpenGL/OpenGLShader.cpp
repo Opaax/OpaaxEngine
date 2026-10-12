@@ -1,6 +1,6 @@
 #include "RHI/OpenGL/OpenGLShader.h"
 
-#include <algorithm>
+#include "Core/Maths/Maths.h"
 #include <string>
 
 #include <glm/gtc/type_ptr.hpp>
@@ -33,8 +33,8 @@ namespace Opaax
             {
                 GLint lLength = 0;
                 glGetShaderiv(lShader, GL_INFO_LOG_LENGTH, &lLength);
-                std::string lLog(static_cast<size_t>(std::max(lLength, 1)), '\0');
-                glGetShaderInfoLog(lShader, std::max(lLength, 1), nullptr, lLog.data());
+                std::string lLog(static_cast<size_t>(Maths::Max(lLength, 1)), '\0');
+                glGetShaderInfoLog(lShader, Maths::Max(lLength, 1), nullptr, lLog.data());
 
                 OPAAX_ENGINE_LOG(Error, "OpenGLShader '{}': the {} stage does not compile:\n{}",
                                  InShaderName, StageName(InStage), lLog.c_str());
@@ -111,8 +111,8 @@ namespace Opaax
         {
             GLint lLength = 0;
             glGetProgramiv(m_RendererID, GL_INFO_LOG_LENGTH, &lLength);
-            std::string lLog(static_cast<size_t>(std::max(lLength, 1)), '\0');
-            glGetProgramInfoLog(m_RendererID, std::max(lLength, 1), nullptr, lLog.data());
+            std::string lLog(static_cast<size_t>(Maths::Max(lLength, 1)), '\0');
+            glGetProgramInfoLog(m_RendererID, Maths::Max(lLength, 1), nullptr, lLog.data());
 
             OPAAX_ENGINE_LOG(Error, "OpenGLShader '{}': the program does not link:\n{}", lName, lLog.c_str());
             glDeleteProgram(m_RendererID);

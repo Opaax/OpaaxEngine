@@ -1,7 +1,6 @@
 #include "Editor/Panels/UICanvasPanel.h"
 
-#include <algorithm>
-#include <cmath>       // std::fabs
+#include "Core/Maths/Maths.h"
 
 #include <imgui.h>
 
@@ -736,8 +735,8 @@ namespace Opaax::Editor
             const Vector2F lA = CanvasToPreview(InBounds.Min()) + InOrigin;
             const Vector2F lB = CanvasToPreview(InBounds.Max()) + InOrigin;
 
-            lDraw->AddRect(ImVec2(std::min(lA.x, lB.x), std::min(lA.y, lB.y)),
-                           ImVec2(std::max(lA.x, lB.x), std::max(lA.y, lB.y)),
+            lDraw->AddRect(ImVec2(Maths::Min(lA.x, lB.x), Maths::Min(lA.y, lB.y)),
+                           ImVec2(Maths::Max(lA.x, lB.x), Maths::Max(lA.y, lB.y)),
                            InColor, 0.f, 0, InThickness);
         };
 
@@ -796,7 +795,7 @@ namespace Opaax::Editor
         const Vector2F lA = CanvasToPreview(lWidget->GetBounds().Min());
         const Vector2F lB = CanvasToPreview(lWidget->GetBounds().Max());
 
-        return { std::min(lA.x, lB.x), std::min(lA.y, lB.y), std::fabs(lB.x - lA.x), std::fabs(lB.y - lA.y) };
+        return { Maths::Min(lA.x, lB.x), Maths::Min(lA.y, lB.y), Maths::Abs(lB.x - lA.x), Maths::Abs(lB.y - lA.y) };
     }
 
     // =============================================================================

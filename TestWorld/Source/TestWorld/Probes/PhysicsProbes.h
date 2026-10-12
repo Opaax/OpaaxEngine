@@ -1,7 +1,6 @@
 #pragma once
 
-#include <algorithm>
-#include <cmath>
+#include "Core/Maths/Maths.h"
 
 #include "Core/String/OpaaxStringJson.h"
 #include "Physics/Collision/CollisionChannel.h"
@@ -194,7 +193,7 @@ namespace TestWorld
                 return;
             }
 
-            const float lStep = std::min(Speed * InFixedDeltaTime, Height - m_Risen);
+            const float lStep = Opaax::Maths::Min(Speed * InFixedDeltaTime, Height - m_Risen);
             m_Risen += lStep;
             SetPosition(GetPosition() + Opaax::Vector2F{ 0.f, lStep });
         }
@@ -221,7 +220,7 @@ namespace TestWorld
             if (!bSampled && m_Simulated + 0.5f * InFixedDeltaTime >= SampleAfter)
             {
                 const Opaax::Vector2F lVelocity = GetVelocity();
-                Speed    = std::sqrt(lVelocity.x * lVelocity.x + lVelocity.y * lVelocity.y);
+                Speed    = Opaax::Maths::Sqrt(lVelocity.x * lVelocity.x + lVelocity.y * lVelocity.y);
                 bSampled = true;
             }
             m_Simulated += InFixedDeltaTime;

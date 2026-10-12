@@ -1,6 +1,6 @@
 #include "Renderer/Post/ScenePipeline2D.h"
 
-#include <cmath>
+#include "Core/Maths/Maths.h"
 
 #include "Renderer/Lighting/Lighting2D.h"
 #include "Renderer/RenderTarget.hpp"
@@ -58,7 +58,7 @@ namespace Opaax
     {
         TDynArray<BloomLevel2D> lLevels;
 
-        BloomLevel2D lLevel{ std::max(InWidth / 2u, 1u), std::max(InHeight / 2u, 1u) };
+        BloomLevel2D lLevel{ Maths::Max(InWidth / 2u, 1u), Maths::Max(InHeight / 2u, 1u) };
         lLevels.push_back(lLevel);
 
         while (lLevels.size() < MAX_BLOOM_LEVELS_2D)
@@ -227,7 +227,7 @@ namespace Opaax
         const Uint32 lBloomLevels = (InSettings.BloomIntensity > 0.f && CanBloom()) ? BuildBloom(InCmd, InSettings) : 0u;
         const float  lBloom       = (lBloomLevels > 0) ? InSettings.BloomIntensity / static_cast<float>(lBloomLevels) : 0.f;
 
-        const Vector4F lPost{ std::exp2(InSettings.ExposureStops), static_cast<float>(InSettings.Tonemapper), lBloom, 0.f };
+        const Vector4F lPost{ Maths::Exp2(InSettings.ExposureStops), static_cast<float>(InSettings.Tonemapper), lBloom, 0.f };
         m_PostUBO->SetData(&lPost, static_cast<Uint32>(sizeof(lPost)));
 
         // Every pixel is written: nothing to clear.

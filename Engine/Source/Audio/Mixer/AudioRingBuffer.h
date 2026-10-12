@@ -1,6 +1,6 @@
 #pragma once
 
-#include <algorithm>
+#include "Core/Maths/Maths.h"
 #include <cstring>
 
 #include "Core/OpaaxTypes.h"
@@ -52,7 +52,7 @@ namespace Opaax
         {
             const Uint64 lWritten = m_Written.load(EMemoryOrder::Relaxed);
             const Uint64 lRead    = m_Read.load(EMemoryOrder::Acquire);
-            const Uint32 lCount   = std::min(InFrameCount, m_Capacity - static_cast<Uint32>(lWritten - lRead));
+            const Uint32 lCount   = Maths::Min(InFrameCount, m_Capacity - static_cast<Uint32>(lWritten - lRead));
 
             CopyIn(InFrames, lWritten, lCount);
             m_Written.store(lWritten + lCount, EMemoryOrder::Release);
@@ -67,7 +67,7 @@ namespace Opaax
         {
             const Uint64 lRead    = m_Read.load(EMemoryOrder::Relaxed);
             const Uint64 lWritten = m_Written.load(EMemoryOrder::Acquire);
-            const Uint32 lCount   = std::min(InFrameCount, static_cast<Uint32>(lWritten - lRead));
+            const Uint32 lCount   = Maths::Min(InFrameCount, static_cast<Uint32>(lWritten - lRead));
 
             CopyOut(lRead, lCount, OutFrames);
             m_Read.store(lRead + lCount, EMemoryOrder::Release);
@@ -90,7 +90,7 @@ namespace Opaax
         /** Frames from InPosition to the end of the ring, at most InCount: the part before the wrap. */
         Uint32 FramesBeforeWrap(const Uint64 InPosition, const Uint32 InCount) const noexcept
         {
-            return std::min(InCount, m_Capacity - static_cast<Uint32>(InPosition % m_Capacity));
+            return Maths::Min(InCount, m_Capacity - static_cast<Uint32>(InPosition % m_Capacity));
         }
 
         void CopyIn(const float* InFrom, const Uint64 InPosition, const Uint32 InCount)

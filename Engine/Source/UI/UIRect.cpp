@@ -1,6 +1,6 @@
 #include "UI/UIRect.h"
 
-#include <algorithm>   // std::max
+#include "Core/Maths/Maths.h"
 
 namespace Opaax
 {
@@ -20,8 +20,8 @@ namespace Opaax
 
             // An inverted anchor pair is clamped (it would give a negative size, and the rect would end
             // up somewhere wrong). Anchors outside 0..1 are allowed.
-            const Vector2F lAnchorMax{ std::max(InRect.AnchorMin.x, InRect.AnchorMax.x),
-                                       std::max(InRect.AnchorMin.y, InRect.AnchorMax.y) };
+            const Vector2F lAnchorMax{ Maths::Max(InRect.AnchorMin.x, InRect.AnchorMax.x),
+                                       Maths::Max(InRect.AnchorMin.y, InRect.AnchorMax.y) };
 
             return { lParentMin + InRect.AnchorMin * lParentSize,
                      (lAnchorMax - InRect.AnchorMin) * lParentSize };

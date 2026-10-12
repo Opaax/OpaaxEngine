@@ -7,7 +7,7 @@
 
 #include <imgui.h>
 
-#include <cmath>
+#include "Core/Maths/Maths.h"
 
 using namespace Opaax;
 
@@ -78,7 +78,7 @@ namespace Opaax::Editor
         if (lNeeded <= MIN_GRAPH_CEILING_MS) { return MIN_GRAPH_CEILING_MS; }
 
         // Whole frames, so the ceiling steps down once instead of sliding every frame.
-        return std::ceil(lNeeded / k_FrameMs60) * k_FrameMs60;
+        return Maths::Ceil(lNeeded / k_FrameMs60) * k_FrameMs60;
     }
 
     void StatsPanel::DrawFrameTime()

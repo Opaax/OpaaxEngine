@@ -1,6 +1,6 @@
 #pragma once
 
-#include <algorithm>
+#include "Core/Maths/Maths.h"
 
 #include "Core/String/OpaaxStringJson.h"
 #include "Physics/PhysicsSubsystem.h"
@@ -97,7 +97,7 @@ namespace TestWorld
             bSawHelper = bSawHelper || FindBehaviour<HelperProbe>() != nullptr;
             Opaax::Int32 lHelpers = 0;
             ForEachBehaviour<HelperProbe>([&lHelpers](HelperProbe&) { ++lHelpers; });
-            HelpersSeen = std::max(HelpersSeen, lHelpers);
+            HelpersSeen = Opaax::Maths::Max(HelpersSeen, lHelpers);
 
             SetRotation(GetRotation() + 90.f * InDeltaTime);
             Rotation = GetRotation();

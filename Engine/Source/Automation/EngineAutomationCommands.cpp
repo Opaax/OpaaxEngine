@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
-#include <cmath>
+#include "Core/Maths/Maths.h"
 #include <filesystem>
 
 #include "Application/OpaaxApplication.h"
@@ -139,7 +139,7 @@ namespace Opaax::EngineAutomation
         {
             if (InActual.is_number() && InExpected.is_number())
             {
-                return std::abs(InActual.get<double>() - InExpected.get<double>()) <= InTolerance;
+                return Maths::Abs(InActual.get<double>() - InExpected.get<double>()) <= InTolerance;
             }
 
             if (InActual.is_object() && InExpected.is_object())
@@ -299,7 +299,7 @@ namespace Opaax::EngineAutomation
 
                     Press(lInput, lKey);
                     AutomationResult lResult;
-                    lResult.WaitFrames = std::max(InParams.value("frames", DEFAULT_TAP_FRAMES), 1u);
+                    lResult.WaitFrames = Maths::Max(InParams.value("frames", DEFAULT_TAP_FRAMES), 1u);
                     lResult.AfterWait  = [&lInput, lKey] { Release(lInput, lKey); };
                     return lResult;
                 });
@@ -353,7 +353,7 @@ namespace Opaax::EngineAutomation
                     Press(lInput, EKeyCode::Mouse_Left);
 
                     AutomationResult lResult = AutomationResult::Ok(nlohmann::json{ { "x", lPixel.x }, { "y", lPixel.y } });
-                    lResult.WaitFrames = std::max(InParams.value("frames", DEFAULT_TAP_FRAMES), 1u);
+                    lResult.WaitFrames = Maths::Max(InParams.value("frames", DEFAULT_TAP_FRAMES), 1u);
                     lResult.AfterWait  = [&lInput] { Release(lInput, EKeyCode::Mouse_Left); };
                     return lResult;
                 });

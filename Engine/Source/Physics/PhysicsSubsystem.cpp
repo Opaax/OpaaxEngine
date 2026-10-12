@@ -1,7 +1,5 @@
 #include "Physics/PhysicsSubsystem.h"
 
-#include <cmath>
-
 #include "Core/Events/EventBus.h"
 #include "Core/Maths/Maths.h"   // DegreesToRadians
 #include "Core/Profiling/Profiler.h"
@@ -271,7 +269,7 @@ namespace Opaax
                 // A move one step cannot sweep (the backend caps speeds) is a jump: placed at once.
                 const Vector2F lMove    = lWorldXf.Position - lBodyPosition;
                 const float    lMaxMove = m_World->GetMaxLinearSpeed() * InDeltaTime;
-                const float    lTurn    = std::abs(std::remainder(lWorldXf.Rotation - Maths::RadiansToDegrees(lBodyRadians), 360.f));
+                const float    lTurn    = Maths::Abs(Maths::Remainder(lWorldXf.Rotation - Maths::RadiansToDegrees(lBodyRadians), 360.f));
                 if (lMove.x * lMove.x + lMove.y * lMove.y > lMaxMove * lMaxMove || lTurn > KINEMATIC_MAX_SWEEP_DEGREES)
                 {
                     m_World->SetBodyTransform(lRecord.Handle, lWorldXf.Position, lRadians);

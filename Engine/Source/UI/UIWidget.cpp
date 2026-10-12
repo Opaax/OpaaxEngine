@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "Core/Maths/Maths.h"
 #include "UI/UICanvas.h"
 
 namespace Opaax
@@ -35,7 +36,7 @@ namespace Opaax
         UIWidget* lChild = InChild.get();
         lChild->m_Parent = this;
         lChild->SetCanvasRecursive(m_Canvas);
-        m_Children.emplace(m_Children.begin() + static_cast<PtrDiff>(std::min(InIndex, static_cast<Uint64>(m_Children.size()))),
+        m_Children.emplace(m_Children.begin() + static_cast<PtrDiff>(Maths::Min(InIndex, static_cast<Uint64>(m_Children.size()))),
                            Move(InChild));
 
         // The new child only needs to be reached by the walk, unless I lay out my children

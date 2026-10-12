@@ -26,6 +26,7 @@ set(OPAAX_TEST_SOURCES
     Core/Log/LoggerTests.cpp
     Core/Maths/AngleTests.cpp
     Core/Maths/Bounds2DTests.cpp
+    Core/Maths/MathsTests.cpp
     Core/PathStringTests.cpp
     Core/Profiling/StatsTests.cpp
     Core/Reflection/EnumTests.cpp

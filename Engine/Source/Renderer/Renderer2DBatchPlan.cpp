@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include "Core/Maths/Maths.h"
+
 namespace Opaax
 {
     namespace
@@ -36,11 +38,11 @@ namespace Opaax
     {
         OutPlan.clear();
 
-        const Uint32 lCount = static_cast<Uint32>(std::min(InKeys.size(), InTextureIds.size()));
+        const Uint32 lCount = static_cast<Uint32>(Maths::Min(InKeys.size(), InTextureIds.size()));
         if (lCount == 0) { return; }
 
-        const Uint32 lMaxQuads = std::max(InLimits.MaxQuads, 1u);
-        const Uint32 lMaxSlots = std::max(InLimits.MaxTextureSlots, 2u);
+        const Uint32 lMaxQuads = Maths::Max(InLimits.MaxQuads, 1u);
+        const Uint32 lMaxSlots = Maths::Max(InLimits.MaxTextureSlots, 2u);
 
         OutPlan.reserve(lCount);
         for (Uint32 i = 0; i < lCount; ++i) { OutPlan.emplace_back(i, 0u, 0u, 0u, 0u); }

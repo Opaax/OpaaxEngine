@@ -1,7 +1,7 @@
 #include "Audio/Mixer/AudioMixer.h"
 
 #include <algorithm>
-#include <cmath>
+#include "Core/Maths/Maths.h"
 #include <cstring>
 
 #include "Audio/Mixer/AudioSpatial.h"
@@ -17,7 +17,7 @@ namespace Opaax
         /** Frames one block may read: the block at the fastest step, the fraction and the next frame. */
         Uint32 SourceFramesPerBlock(const Uint32 InBlockFrames) noexcept
         {
-            return static_cast<Uint32>(std::ceil(InBlockFrames * AudioMixer::MAX_STEP)) + 4;
+            return static_cast<Uint32>(Maths::Ceil(InBlockFrames * AudioMixer::MAX_STEP)) + 4;
         }
     }
 
@@ -25,19 +25,19 @@ namespace Opaax
     // CTORS - DTORS
     // =========================================================================
     AudioMixer::AudioMixer(const Desc& InDesc, TSpscQueue<AudioEvent>& InEvents)
-        : m_SampleRate(std::max(InDesc.SampleRate, 1u))
-        , m_BlockFrames(std::max(InDesc.BlockFrames, 1u))
-        , m_Voices(std::max(InDesc.MaxVoices, 1u))
+        : m_SampleRate(Maths::Max(InDesc.SampleRate, 1u))
+        , m_BlockFrames(Maths::Max(InDesc.BlockFrames, 1u))
+        , m_Voices(Maths::Max(InDesc.MaxVoices, 1u))
         , m_Events(InEvents)
     {
         // The master first; a parent must come before its children, else it is the master.
-        m_Buses.reserve(std::max<size_t>(InDesc.Buses.size(), 1));
+        m_Buses.reserve(Maths::Max<size_t>(InDesc.Buses.size(), 1));
         for (const AudioBusDesc& lDesc : InDesc.Buses)
         {
             Bus lBus;
             lBus.Desc        = lDesc;
-            lBus.Desc.Volume = std::max(lDesc.Volume, 0.f);
-            lBus.Desc.Parent = m_Buses.empty() ? -1 : std::clamp<Int32>(lDesc.Parent, 0, static_cast<Int32>(m_Buses.size()) - 1);
+            lBus.Desc.Volume = Maths::Max(lDesc.Volume, 0.f);
+            lBus.Desc.Parent = m_Buses.empty() ? -1 : Maths::Clamp<Int32>(lDesc.Parent, 0, static_cast<Int32>(m_Buses.size()) - 1);
             m_Buses.push_back(lBus);
         }
 
@@ -90,8 +90,8 @@ namespace Opaax
             }
 
             Bus& lBus = m_Buses[InCommand.Bus];
-            if      (InCommand.Type == EAudioCommand::SetBusVolume) { lBus.Desc.Volume = std::max(InCommand.Value, 0.f); }
-            else if (InCommand.Type == EAudioCommand::FadeBus)      { lBus.Fader.FadeTo(std::max(InCommand.Value, 0.f), InCommand.Frames); }
+            if      (InCommand.Type == EAudioCommand::SetBusVolume) { lBus.Desc.Volume = Maths::Max(InCommand.Value, 0.f); }
+            else if (InCommand.Type == EAudioCommand::FadeBus)      { lBus.Fader.FadeTo(Maths::Max(InCommand.Value, 0.f), InCommand.Frames); }
             else if (InCommand.Type == EAudioCommand::SetBusMute)   { lBus.bMute = InCommand.bFlag; }
             else                                                    { lBus.bSolo = InCommand.bFlag; }
             return;
@@ -120,19 +120,19 @@ namespace Opaax
             break;
 
         case EAudioCommand::SetVolume:
-            lVoice->Desc.Volume = std::max(InCommand.Value, 0.f);
+            lVoice->Desc.Volume = Maths::Max(InCommand.Value, 0.f);
             break;
 
         case EAudioCommand::FadeVolume:
             // A stopping voice keeps fading out.
             if (!lVoice->bStopping)
             {
-                lVoice->Fader.FadeTo(std::max(InCommand.Value, 0.f), InCommand.Frames);
+                lVoice->Fader.FadeTo(Maths::Max(InCommand.Value, 0.f), InCommand.Frames);
             }
             break;
 
         case EAudioCommand::SetPitch:
-            lVoice->Desc.Pitch = std::clamp(InCommand.Value, MIN_PITCH, MAX_PITCH);
+            lVoice->Desc.Pitch = Maths::Clamp(InCommand.Value, MIN_PITCH, MAX_PITCH);
             break;
 
         case EAudioCommand::SetPosition:
@@ -149,7 +149,7 @@ namespace Opaax
         Uint32 lDone = 0;
         while (lDone < InFrameCount)
         {
-            const Uint32 lFrames = std::min(m_BlockFrames, InFrameCount - lDone);
+            const Uint32 lFrames = Maths::Min(m_BlockFrames, InFrameCount - lDone);
             MixBlock(OutFrames + static_cast<size_t>(lDone) * AUDIO_OUTPUT_CHANNELS, lFrames);
             lDone += lFrames;
         }
@@ -157,7 +157,7 @@ namespace Opaax
 
     Uint32 AudioMixer::GetStreamWindowFrames(const Uint32 InBlockFrames) noexcept
     {
-        return SourceFramesPerBlock(std::max(InBlockFrames, 1u));
+        return SourceFramesPerBlock(Maths::Max(InBlockFrames, 1u));
     }
 
     Uint32 AudioMixer::GetActiveVoiceCount() const noexcept
@@ -205,8 +205,8 @@ namespace Opaax
         lVoice             = Voice{};
         lVoice.Handle      = InCommand.Handle;
         lVoice.Desc        = lDesc;
-        lVoice.Desc.Volume = std::max(lDesc.Volume, 0.f);
-        lVoice.Desc.Pitch  = std::clamp(lDesc.Pitch, MIN_PITCH, MAX_PITCH);
+        lVoice.Desc.Volume = Maths::Max(lDesc.Volume, 0.f);
+        lVoice.Desc.Pitch  = Maths::Clamp(lDesc.Pitch, MIN_PITCH, MAX_PITCH);
         lVoice.Desc.Bus    = lDesc.Bus < m_Buses.size() ? lDesc.Bus : 0;
 
         if (lDesc.FadeInFrames > 0)
@@ -312,7 +312,7 @@ namespace Opaax
         if (lDesc.bSpatial)
         {
             const Vector2F lOffset = lDesc.Position - m_Listener;
-            lGain *= AudioSpatial::Attenuate(lDesc.Attenuation, std::sqrt(lOffset.x * lOffset.x + lOffset.y * lOffset.y),
+            lGain *= AudioSpatial::Attenuate(lDesc.Attenuation, Maths::Sqrt(lOffset.x * lOffset.x + lOffset.y * lOffset.y),
                                              lDesc.MinDistance, lDesc.MaxDistance);
             lPan   = AudioSpatial::PanFromOffset(lOffset.x, lDesc.MaxDistance);
         }
@@ -341,9 +341,9 @@ namespace Opaax
         }
 
         // Read the source frames this block covers.
-        const double lStep  = std::clamp(static_cast<double>(lDesc.Pitch) * lDesc.Source.SampleRate / m_SampleRate,
+        const double lStep  = Maths::Clamp(static_cast<double>(lDesc.Pitch) * lDesc.Source.SampleRate / m_SampleRate,
                                          1.0 / 1024.0, MAX_STEP);
-        const double lFloor = std::floor(InVoice.Cursor);
+        const double lFloor = Maths::Floor(InVoice.Cursor);
         const Uint64 lFirst = static_cast<Uint64>(lFloor);
         const Uint32 lCount = static_cast<Uint32>((InVoice.Cursor - lFloor) + InFrames * lStep) + 2;
         const Uint32 lValid = FetchSource(InVoice, lFirst, lCount);
@@ -406,7 +406,7 @@ namespace Opaax
         // A decoded loop wraps; a stream counts on (its reader loops).
         if (lDesc.bLoop && lDesc.Source.Stream == nullptr && lDesc.Source.FrameCount > 0)
         {
-            InVoice.Cursor = std::fmod(InVoice.Cursor, static_cast<double>(lDesc.Source.FrameCount));
+            InVoice.Cursor = Maths::FMod(InVoice.Cursor, static_cast<double>(lDesc.Source.FrameCount));
         }
 
         return false;
@@ -416,7 +416,7 @@ namespace Opaax
     {
         const AudioVoiceSource& lSource   = InVoice.Desc.Source;
         float*                  lOut      = m_Source.data();
-        const Uint32            lCount    = std::min<Uint32>(InCount, static_cast<Uint32>(m_Source.size() / AUDIO_OUTPUT_CHANNELS));
+        const Uint32            lCount    = Maths::Min<Uint32>(InCount, static_cast<Uint32>(m_Source.size() / AUDIO_OUTPUT_CHANNELS));
         const size_t            lChannels = lSource.Channels;
 
         if (lSource.Stream != nullptr)
@@ -439,7 +439,7 @@ namespace Opaax
                 lAt %= lSource.FrameCount;
             }
 
-            const Uint32 lRun = static_cast<Uint32>(std::min<Uint64>(lCount - lDone, lSource.FrameCount - lAt));
+            const Uint32 lRun = static_cast<Uint32>(Maths::Min<Uint64>(lCount - lDone, lSource.FrameCount - lAt));
             std::memcpy(lOut + lDone * lChannels, lSource.Frames + lAt * lChannels, sizeof(float) * lRun * lChannels);
             lDone += lRun;
             lAt   += lRun;

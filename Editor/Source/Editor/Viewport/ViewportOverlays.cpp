@@ -1,6 +1,6 @@
 #include "Editor/Viewport/ViewportOverlays.h"
 
-#include <algorithm>
+#include "Core/Maths/Maths.h"
 
 #include "Core/Maths/Bounds2D.h"
 #include "Renderer/CameraView.h"
@@ -35,7 +35,7 @@ namespace Opaax::Editor::ViewportOverlays
         Vector4F GizmoColor(const Light2DComponent& InLight)
         {
             const LinearColor& lColor = InLight.Color;
-            const float        lPeak  = std::max(lColor.r, std::max(lColor.g, lColor.b));
+            const float        lPeak  = Maths::Max(lColor.r, Maths::Max(lColor.g, lColor.b));
             const float        lAlpha = InLight.bEnabled ? 0.9f : 0.35f;
 
             if (lPeak < 0.05f)

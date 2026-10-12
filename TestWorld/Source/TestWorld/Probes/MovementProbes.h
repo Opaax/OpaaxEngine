@@ -1,7 +1,6 @@
 #pragma once
 
-#include <algorithm>
-#include <cmath>
+#include "Core/Maths/Maths.h"
 
 #include "Movement/MoverComponent.h"
 #include "World/Behaviour/Behaviour.h"
@@ -54,7 +53,7 @@ namespace TestWorld
                     RestY   = lHere.y;
                 }
                 lMover->Input.MoveDir = { 1.f, 0.f };
-                PeakSpeed = std::max(PeakSpeed, std::abs(lMover->Velocity.x));
+                PeakSpeed = Opaax::Maths::Max(PeakSpeed, Opaax::Maths::Abs(lMover->Velocity.x));
             }
             else if (m_Time < FlyAt)
             {
@@ -65,7 +64,7 @@ namespace TestWorld
                     lMover->Input.bJump = true;
                 }
                 lMover->Input.MoveDir = { 0.f, 0.f };
-                JumpHeight = std::max(JumpHeight, lHere.y - RestY);
+                JumpHeight = Opaax::Maths::Max(JumpHeight, lHere.y - RestY);
             }
             else
             {

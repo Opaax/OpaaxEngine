@@ -6,7 +6,7 @@
 #include <doctest.h>
 
 #include <algorithm>
-#include <cmath>
+#include "Core/Maths/Maths.h"
 #include <filesystem>
 #include <fstream>
 #include "Core/OpaaxTypes.h"
@@ -69,7 +69,7 @@ namespace
         float Left  = 0.f;
         float Right = 0.f;
 
-        float Max() const { return std::max(Left, Right); }
+        float Max() const { return Maths::Max(Left, Right); }
     };
 
     /** Renders InSeconds of the mix and measures the loudest sample of each channel. */
@@ -82,8 +82,8 @@ namespace
         Peaks lPeaks;
         for (Uint64 lFrame = 0; lFrame < lFrames; ++lFrame)
         {
-            lPeaks.Left  = std::max(lPeaks.Left,  std::abs(lBuffer[static_cast<size_t>(lFrame * 2)]));
-            lPeaks.Right = std::max(lPeaks.Right, std::abs(lBuffer[static_cast<size_t>(lFrame * 2 + 1)]));
+            lPeaks.Left  = Maths::Max(lPeaks.Left,  Maths::Abs(lBuffer[static_cast<size_t>(lFrame * 2)]));
+            lPeaks.Right = Maths::Max(lPeaks.Right, Maths::Abs(lBuffer[static_cast<size_t>(lFrame * 2 + 1)]));
         }
         return lPeaks;
     }
@@ -567,7 +567,7 @@ namespace
             float lPeak = 0.f;
             for (size_t lIndex = lStart; lIndex < Frames.size(); ++lIndex)
             {
-                lPeak = std::max(lPeak, std::abs(Frames[lIndex]));
+                lPeak = Maths::Max(lPeak, Maths::Abs(Frames[lIndex]));
             }
             return lPeak;
         }

@@ -1,6 +1,6 @@
 #include "Editor/Panels/AnimationClipPanel.h"
 
-#include <cmath>    // fmod
+#include "Core/Maths/Maths.h"
 #include <cstdio>   // snprintf
 
 #include "Editor/Resources/Types/Animation/EditorAnimationClipDocument.h"
@@ -199,7 +199,7 @@ namespace Opaax::Editor
 
         if (lLength > 0.f)
         {
-            float lScrub = (m_PreviewTime > lLength) ? std::fmod(m_PreviewTime, lLength) : m_PreviewTime;
+            float lScrub = (m_PreviewTime > lLength) ? Maths::FMod(m_PreviewTime, lLength) : m_PreviewTime;
 
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 8.f);
             if (ImGui::SliderFloat("##scrub", &lScrub, 0.f, lLength, "%.2fs"))

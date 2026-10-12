@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "Audio/AudioRandom.h"
+#include "Core/Maths/Maths.h"
 
 namespace Opaax
 {
@@ -21,7 +22,7 @@ namespace Opaax
             for (Int32 lIndex = 0; lIndex < lCount; ++lIndex)
             {
                 if (lIndex == InExcluded) { continue; }
-                lTotal += std::max(InClips[lIndex].Weight, 0.f);
+                lTotal += Maths::Max(InClips[lIndex].Weight, 0.f);
                 ++lCandidates;
             }
 
@@ -44,7 +45,7 @@ namespace Opaax
             Int32 lLast = -1;
             for (Int32 lIndex = 0; lIndex < lCount; ++lIndex)
             {
-                const float lWeight = std::max(InClips[lIndex].Weight, 0.f);
+                const float lWeight = Maths::Max(InClips[lIndex].Weight, 0.f);
                 if (lIndex == InExcluded || lWeight <= 0.f) { continue; }
 
                 lLast = lIndex;
@@ -132,8 +133,8 @@ namespace Opaax
         const AudioClipEntry* lEntry = (InIndex >= 0 && InIndex < static_cast<Int32>(InDef.Clips.size()))
                                      ? &InDef.Clips[InIndex] : nullptr;
 
-        const float lVolumeSpread = std::clamp(InDef.VolumeSpread, 0.f, 1.f);
-        const float lPitchSpread  = std::clamp(InDef.PitchSpread, 0.f, 1.f);
+        const float lVolumeSpread = Maths::Clamp(InDef.VolumeSpread, 0.f, 1.f);
+        const float lPitchSpread  = Maths::Clamp(InDef.PitchSpread, 0.f, 1.f);
 
         PlaySoundParams lParams;
         lParams.Bus         = InDef.Bus;
@@ -142,7 +143,7 @@ namespace Opaax
         lParams.Pitch       = InDef.Pitch * (lEntry != nullptr ? lEntry->PitchScale : 1.f)
                             * (lPitchSpread > 0.f ? 1.f + InRandom.Range(-lPitchSpread, lPitchSpread) : 1.f);
         lParams.bLoop       = InDef.bLoop;
-        lParams.Priority    = static_cast<Uint8>(std::min<Uint32>(InDef.Priority, 255u));
+        lParams.Priority    = static_cast<Uint8>(Maths::Min<Uint32>(InDef.Priority, 255u));
         lParams.bSpatial    = InDef.bSpatial;
         lParams.MinDistance = InDef.MinDistance;
         lParams.MaxDistance = InDef.MaxDistance;

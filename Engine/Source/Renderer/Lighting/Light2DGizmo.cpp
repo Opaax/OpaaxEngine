@@ -1,8 +1,5 @@
 #include "Renderer/Lighting/Light2DGizmo.h"
 
-#include <algorithm>
-#include <cmath>
-
 #include "Core/Maths/Maths.h"
 #include "Renderer/Components/Light2DComponent.h"
 
@@ -22,7 +19,7 @@ namespace Opaax
 
         Vector2F Along(const Vector2F& InFrom, const float InAngleRad, const float InLength)
         {
-            return InFrom + Vector2F{ std::cos(InAngleRad), std::sin(InAngleRad) } * InLength;
+            return InFrom + Vector2F{ Maths::Cos(InAngleRad), Maths::Sin(InAngleRad) } * InLength;
         }
 
         void AddArc(const Vector2F& InCenter, const float InRadius, const float InFromRad, const float InToRad,
@@ -43,7 +40,7 @@ namespace Opaax
         OutLines.clear();
 
         const float lRotation = Maths::DegreesToRadians(InRotationDegrees);
-        const float lRadius   = std::max(InLight.Radius, 0.f);
+        const float lRadius   = Maths::Max(InLight.Radius, 0.f);
 
         switch (InLight.Type)
         {
@@ -55,14 +52,14 @@ namespace Opaax
         case ELight2DType::Spot:
         {
             // The same angles as the shader's cone (Lighting2D: PackLights2D).
-            const float lHalfDegrees = std::clamp(InLight.ConeAngle, 1.f, 360.f) * 0.5f;
+            const float lHalfDegrees = Maths::Clamp(InLight.ConeAngle, 1.f, 360.f) * 0.5f;
             const float lHalfOuter   = Maths::DegreesToRadians(lHalfDegrees);
-            const float lHalfInner   = lHalfOuter * (1.f - std::clamp(InLight.ConeSoftness, 0.f, 1.f));
+            const float lHalfInner   = lHalfOuter * (1.f - Maths::Clamp(InLight.ConeSoftness, 0.f, 1.f));
 
             OutLines.push_back(GizmoLine2D{ InPosition, Along(InPosition, lRotation - lHalfOuter, lRadius) });
             OutLines.push_back(GizmoLine2D{ InPosition, Along(InPosition, lRotation + lHalfOuter, lRadius) });
 
-            const Uint32 lSegments = std::max(2u, static_cast<Uint32>(std::ceil(2.f * lHalfDegrees / ARC_DEGREES_PER_SEGMENT)));
+            const Uint32 lSegments = Maths::Max(2u, static_cast<Uint32>(Maths::Ceil(2.f * lHalfDegrees / ARC_DEGREES_PER_SEGMENT)));
             AddArc(InPosition, lRadius, lRotation - lHalfOuter, lRotation + lHalfOuter, lSegments, OutLines);
 
             // Where the light is full, when it fades before the edge.

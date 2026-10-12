@@ -1,7 +1,7 @@
 #include "Automation/AutomationRunner.h"
 
 #include <algorithm>
-#include <cmath>
+#include "Core/Maths/Maths.h"
 
 namespace Opaax
 {
@@ -70,7 +70,7 @@ namespace Opaax
             }
 
             const bool bSame = (InExpected.is_number() && InActual.is_number())
-                                   ? std::abs(InExpected.get<double>() - InActual.get<double>()) <= 1e-4
+                                   ? Maths::Abs(InExpected.get<double>() - InActual.get<double>()) <= 1e-4
                                    : InExpected == InActual;
             if (!bSame)
             {
@@ -161,7 +161,7 @@ namespace Opaax
                  [](const nlohmann::json& InParams)
                  {
                      AutomationResult lResult;
-                     lResult.WaitFrames = std::max(InParams.value("count", 1u), 1u);
+                     lResult.WaitFrames = Maths::Max(InParams.value("count", 1u), 1u);
                      return lResult;
                  });
     }

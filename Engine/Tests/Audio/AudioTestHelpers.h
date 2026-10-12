@@ -3,7 +3,7 @@
 // Helpers shared by the audio suites: generated WAV files, an asset folder in the temp folder, and a
 // job system that runs only when told (a load stays "loading" for as long as a test wants).
 
-#include <cmath>
+#include "Core/Maths/Maths.h"
 #include <filesystem>
 #include <fstream>
 
@@ -37,7 +37,7 @@ namespace AudioTest
         for (Uint32 lFrame = 0; lFrame < lFrames; ++lFrame)
         {
             const double lPhase  = 2.0 * 3.14159265358979 * InHz * lFrame / InSampleRate;
-            const auto   lSample = static_cast<Int16>(InAmplitude * 32767.0 * std::sin(lPhase));
+            const auto   lSample = static_cast<Int16>(InAmplitude * 32767.0 * Maths::Sin(lPhase));
             lPut16(static_cast<Uint16>(lSample));
         }
 

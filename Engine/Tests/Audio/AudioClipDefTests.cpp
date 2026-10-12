@@ -5,7 +5,7 @@
 #include <doctest.h>
 
 #include <algorithm>
-#include <cmath>
+#include "Core/Maths/Maths.h"
 #include <filesystem>
 #include <fstream>
 #include "Core/OpaaxTypes.h"
@@ -91,7 +91,7 @@ namespace
         InAudio.RenderFrames(lBuffer.data(), lFrames);
 
         float lPeak = 0.f;
-        for (const float lSample : lBuffer) { lPeak = std::max(lPeak, std::abs(lSample)); }
+        for (const float lSample : lBuffer) { lPeak = Maths::Max(lPeak, Maths::Abs(lSample)); }
         return lPeak;
     }
 }
@@ -221,8 +221,8 @@ TEST_CASE("AudioClipDef: each play takes the definition's settings, the clip's s
         CHECK(lParams.Volume <= 0.8f * 0.5f * 1.1f + 1e-5f);
         CHECK(lParams.Pitch >= 0.95f - 1e-5f);
         CHECK(lParams.Pitch <= 1.05f + 1e-5f);
-        lLowest  = std::min(lLowest, lParams.Pitch);
-        lHighest = std::max(lHighest, lParams.Pitch);
+        lLowest  = Maths::Min(lLowest, lParams.Pitch);
+        lHighest = Maths::Max(lHighest, lParams.Pitch);
     }
     CHECK(lHighest - lLowest > 0.05f);   // it does spread
 

@@ -2,19 +2,23 @@
 
 #include <cmath>
 
-#include "Core/Templates/TypeTraits.h"
 #include "Core/EngineAPI.h"
 #include "Core/Maths/MathsStatics.h"
 #include "Core/OpaaxTypes.h"
+#include "Core/Templates/TypeTraits.h"
 
 namespace Opaax
 {
+    // =============================================================================
+    // Maths — the engine's maths functions. Where a std function exists they give its result
+    //   (Max, Min and Clamp keep std's order on equal values; Abs turns -0 into +0 like fabs).
+    // =============================================================================
     struct Maths
     {
         // =============================================================================
         // Bounds
         /**
-        * Computes the absolute value of a given number.
+        * Computes the absolute value of a given number. A floating -0 gives +0.
         *
         * @param A    The number for which to calculate the absolute value
         * @return     The absolute value of the input number
@@ -22,7 +26,7 @@ namespace Opaax
         template <CArithmetic T>
         [[nodiscard]] static constexpr FORCEINLINE T Abs(const T A)
         {
-            return A < static_cast<T>(0) ? -A : A;
+            return A < static_cast<T>(0) ? -A : (A == static_cast<T>(0) ? static_cast<T>(0) : A);
         }
 
         /**
@@ -30,12 +34,27 @@ namespace Opaax
          *
          * @param A   First value to compare
          * @param B   Second value to compare
-         * @return    The larger of the two input values
+         * @return    The larger of the two input values; A when they are equal
          */
         template <CArithmetic T>
         [[nodiscard]] static constexpr FORCEINLINE T Max(const T A, const T B)
         {
-            return B < A ? A : B;
+            return A < B ? B : A;
+        }
+
+        /**
+         * The largest of the values; the first of them when several are equal. Not empty.
+         */
+        template <CArithmetic T>
+        [[nodiscard]] static constexpr T Max(const TInitArray<T> InValues)
+        {
+            const T* lIt     = InValues.begin();
+            T        lResult = *lIt;
+            for (++lIt; lIt != InValues.end(); ++lIt)
+            {
+                lResult = Max(lResult, *lIt);
+            }
+            return lResult;
         }
 
         /**
@@ -43,12 +62,27 @@ namespace Opaax
          *
          * @param A   First value to compare
          * @param B   Second value to compare
-         * @return    The smaller of the two input values
+         * @return    The smaller of the two input values; A when they are equal
          */
         template <CArithmetic T>
         [[nodiscard]] static constexpr FORCEINLINE T Min(const T A, const T B)
         {
-            return A < B ? A : B;
+            return B < A ? B : A;
+        }
+
+        /**
+         * The smallest of the values; the first of them when several are equal. Not empty.
+         */
+        template <CArithmetic T>
+        [[nodiscard]] static constexpr T Min(const TInitArray<T> InValues)
+        {
+            const T* lIt     = InValues.begin();
+            T        lResult = *lIt;
+            for (++lIt; lIt != InValues.end(); ++lIt)
+            {
+                lResult = Min(lResult, *lIt);
+            }
+            return lResult;
         }
 
         /**
@@ -188,7 +222,7 @@ namespace Opaax
         }
 
         /**
-         * Clamps X to be between Min and Max, inclusive
+         * Clamps X to be between Min and Max, inclusive. MinValue must not be above MaxValue.
          *
          * @param X         The value to clamp within the range
          * @param MinValue  The minimum value of the range
@@ -198,7 +232,7 @@ namespace Opaax
         template <CArithmetic T>
         [[nodiscard]] static constexpr FORCEINLINE T Clamp(const T X, const T MinValue, const T MaxValue)
         {
-            return Max(Min(X, MaxValue), MinValue);
+            return X < MinValue ? MinValue : (MaxValue < X ? MaxValue : X);
         }
 
         // End Bounds
@@ -247,7 +281,11 @@ namespace Opaax
          * @return     The truncated double value of the input
          */
         [[nodiscard]] static FORCEINLINE double TruncToDouble(double Value) { return std::trunc(Value); }
-        
+
+        /** Rounds towards zero, in the type of Value. */
+        [[nodiscard]] static FORCEINLINE float  Trunc(float Value)  { return std::trunc(Value); }
+        [[nodiscard]] static FORCEINLINE double Trunc(double Value) { return std::trunc(Value); }
+
         // End Truncate
         // =============================================================================
         
@@ -313,6 +351,10 @@ namespace Opaax
         {
             return std::floor(Value);
         }
+
+        /** Rounds towards negative infinity, in the type of Value. */
+        [[nodiscard]] static FORCEINLINE float  Floor(float Value)  { return std::floor(Value); }
+        [[nodiscard]] static FORCEINLINE double Floor(double Value) { return std::floor(Value); }
         // End Floor
         // =============================================================================
         
@@ -372,6 +414,13 @@ namespace Opaax
         {
             return FloorToDouble(Value + 0.5);
         }
+
+        /**
+         * Rounds to the nearest integer, halves away from zero (-2.5 gives -3), in the type of Value.
+         * RoundToFloat rounds halves up instead (-2.5 gives -2).
+         */
+        [[nodiscard]] static FORCEINLINE float  RoundHalfFromZero(float Value)  { return std::round(Value); }
+        [[nodiscard]] static FORCEINLINE double RoundHalfFromZero(double Value) { return std::round(Value); }
         // End Round
         // =============================================================================
         
@@ -437,6 +486,10 @@ namespace Opaax
         {
             return std::ceil(Value);
         }
+
+        /** Rounds towards positive infinity, in the type of Value. */
+        [[nodiscard]] static FORCEINLINE float  Ceil(float Value)  { return std::ceil(Value); }
+        [[nodiscard]] static FORCEINLINE double Ceil(double Value) { return std::ceil(Value); }
         // End Ceil
         // =============================================================================
         
@@ -609,21 +662,25 @@ namespace Opaax
 
         /**
          * Calculates the arctangent of the quotient of two specified numbers.
-         * Unreal version.
          * @param Y The numerator
          * @param X The denominator
-         * @return The angle in radians whose tangent is the quotient of Y and X
+         * @return The angle in radians whose tangent is the quotient of Y and X, in [-PI, PI]
          */
-        [[nodiscard]] static float Atan2(float Y, float X);
+        [[nodiscard]] static FORCEINLINE float Atan2(float Y, float X) { return std::atan2(Y, X); }
 
         /**
          * Calculates the arctangent of the quotient of two specified numbers.
-         * Unreal version.
          * @param Y The numerator
          * @param X The denominator
-         * @return The angle in radians whose tangent is the quotient of Y and X
+         * @return The angle in radians whose tangent is the quotient of Y and X, in [-PI, PI]
          */
-        [[nodiscard]] static double Atan2(double Y, double X);
+        [[nodiscard]] static FORCEINLINE double Atan2(double Y, double X) { return std::atan2(Y, X); }
+
+        /**
+         * Atan2 from a minimax polynomial (Unreal version): about twice as fast, relative error up to
+         * 7.15e-7. Returns 0 for (0, 0).
+         */
+        [[nodiscard]] static float FastAtan2(float Y, float X);
         
         // End SOH CAH TOA
         // =============================================================================
@@ -778,8 +835,8 @@ namespace Opaax
          * @param Value 
          * @return 
          */
-        [[nodiscard]] static FORCEINLINE float  Exp2( float Value ) { return std::pow(2.f, Value); /*exp2f(Value);*/ }
-        [[nodiscard]] static FORCEINLINE double Exp2(double Value)  { return std::pow(2.0, Value); /*exp2(Value);*/ }
+        [[nodiscard]] static FORCEINLINE float  Exp2( float Value ) { return std::exp2(Value); }
+        [[nodiscard]] static FORCEINLINE double Exp2(double Value)  { return std::exp2(Value); }
 
         /**
          * 
@@ -824,7 +881,11 @@ namespace Opaax
          * @return 
          */
         [[nodiscard]] static FORCEINLINE double Log2(double Value) { return Logarithm(Value) * 1.442695040888963387; }
-        
+
+        /** Base-10 logarithm. */
+        [[nodiscard]] static FORCEINLINE float  Log10(float Value)  { return std::log10(Value); }
+        [[nodiscard]] static FORCEINLINE double Log10(double Value) { return std::log10(Value); }
+
         
         /**
         * Breaks the given value into an integral and a fractional part.
@@ -873,7 +934,14 @@ namespace Opaax
          * @return the floating-point remainder of X / Y
          */
         [[nodiscard]] static double FMod(double X, double Y);
-        
+
+        /**
+         * X minus the multiple of Y nearest to it (ties to the even multiple), so the result is in
+         * [-|Y|/2, |Y|/2]: Remainder(370, 360) is 10, Remainder(350, 360) is -10.
+         */
+        [[nodiscard]] static FORCEINLINE float  Remainder(float X, float Y)   { return std::remainder(X, Y); }
+        [[nodiscard]] static FORCEINLINE double Remainder(double X, double Y) { return std::remainder(X, Y); }
+
         // End Compute
         // =============================================================================
         
