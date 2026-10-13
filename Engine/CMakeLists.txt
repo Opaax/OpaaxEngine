@@ -119,8 +119,8 @@ target_link_libraries(OpaaxEngineLib
 )
 
 if(WIN32)
-    # Crash handler: minidumps and symbolized stacks.
-    target_link_libraries(OpaaxEngineLib PRIVATE dbghelp)
+    # Crash handler: minidumps and symbolized stacks. The command line split from its wide form.
+    target_link_libraries(OpaaxEngineLib PRIVATE dbghelp shell32)
 endif()
 
 if(APPLE)

@@ -48,37 +48,6 @@ namespace Opaax::Utf8
                             lUtf8.data(), lUtf8Len, nullptr, nullptr);
         return OpaaxString(lUtf8.c_str());
     }
-
-    OpaaxString FromNative(const char* InText)
-    {
-        if (InText == nullptr || InText[0] == '\0')
-        {
-            return {};
-        }
-
-        // The ANSI code page (how Windows reads a narrow path), through UTF-16.
-        const int lWideLen = MultiByteToWideChar(CP_ACP, 0, InText, -1, nullptr, 0);
-        if (lWideLen <= 1)
-        {
-            return {};
-        }
-
-        std::wstring lWide(static_cast<size_t>(lWideLen), L'\0');
-        MultiByteToWideChar(CP_ACP, 0, InText, -1, lWide.data(), lWideLen);
-        lWide.resize(static_cast<size_t>(lWideLen) - 1);   // the terminator
-        return FromWide(lWide);
-    }
-}
-
-#else
-
-namespace Opaax::Utf8
-{
-    OpaaxString FromNative(const char* InText)
-    {
-        // The native encoding is already UTF-8.
-        return OpaaxString(InText);
-    }
 }
 
 #endif // OPAAX_PLATFORM_WINDOWS

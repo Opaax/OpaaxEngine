@@ -2,26 +2,14 @@
 
 #include "Core/IO/FileSystem.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/CString.h"
 #include "Core/String/OpaaxPathString.h"
+#include "Platform/CommandLine.h"
 #include "Platform/IPlatform.h"
 
 namespace Opaax
 {
     namespace
     {
-        OpaaxString FindProjectArg(int InArgc, char** InArgv)
-        {
-            for (int i = 1; i + 1 < InArgc; ++i)
-            {
-                if (CString::Equals(InArgv[i], "--project"))
-                {
-                    return OpaaxString(InArgv[i + 1]);
-                }
-            }
-            return OpaaxString();
-        }
-
         // =====================================================================
         // NullPaths — every path empty.
         // =====================================================================
@@ -140,7 +128,7 @@ namespace Opaax
     // =========================================================================
     // Paths
     // =========================================================================
-    Paths::Paths(const IPlatform& InPlatform, int InArgc, char** InArgv,
+    Paths::Paths(const IPlatform& InPlatform, const CommandLine& InCommandLine,
                  const OpaaxString& InProjectOverride)
     {
         OpaaxString lWorkspace;
@@ -151,7 +139,7 @@ namespace Opaax
         const OpaaxString lExe = InPlatform.GetExecutablePath();
 
         // --project first, then the host's project, else the default from the exe name.
-        OpaaxString lProjArg = FindProjectArg(InArgc, InArgv);
+        OpaaxString lProjArg = InCommandLine.GetValue("--project");
         if (lProjArg.IsEmpty())
         {
             lProjArg = InProjectOverride;

@@ -83,12 +83,6 @@ namespace Opaax::Utf8
         return lCodepoint;
     }
 
-    /**
-     * Text in the system's narrow encoding (argv, an environment variable) as UTF-8: the ANSI code
-     * page on Windows, UTF-8 already on Linux and macOS. nullptr gives an empty string.
-     */
-    OpaaxString FromNative(const char* InText);
-
 #ifdef OPAAX_PLATFORM_WINDOWS
 
     /** UTF-8 -> UTF-16. Empty in, empty out. */

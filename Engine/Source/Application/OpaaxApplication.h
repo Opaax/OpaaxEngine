@@ -5,6 +5,7 @@
 #include "Application/Services/AppServiceLocator.h"
 #include "World/WorldSpec.h"   // GetStartupWorldSpec returns one by value
 #include "Core/Events/Event.h"
+#include "Platform/CommandLine.h"
 
 namespace Opaax
 {
@@ -59,7 +60,7 @@ namespace Opaax
         /**
          * Creates the Paths service. Editor and standalone use different paths.
          */
-        virtual TUniquePtr<IPaths> CreatePaths(const IPlatform& InPlatform, int InArgc, char** InArgv);
+        virtual TUniquePtr<IPaths> CreatePaths(const IPlatform& InPlatform, const CommandLine& InCommandLine);
     private:
         IConfigSystem&      BootConfigSystem(const IPaths& Paths);
         IProjectManager&    BootProjectManager(const IPaths& Paths);
@@ -235,9 +236,8 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        int    m_Argc     = 0;
-        char** m_Argv     = nullptr;
-        int    m_ExitCode = 0;
+        CommandLine m_CommandLine;
+        int         m_ExitCode = 0;
         
         bool bHasBootstrap      = false;
         bool bHasInitialized    = false;

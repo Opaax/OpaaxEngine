@@ -27,8 +27,8 @@ namespace Opaax::Editor
         // =============================================================================
         // CTOR
         // =============================================================================
-        EditorPaths(const IPlatform& InPlatform, int InArgc, char** InArgv, const OpaaxString& InProjectRel)
-            : Paths(InPlatform, InArgc, InArgv, InProjectRel)
+        EditorPaths(const IPlatform& InPlatform, const CommandLine& InCommandLine, const OpaaxString& InProjectRel)
+            : Paths(InPlatform, InCommandLine, InProjectRel)
         {
         }
 

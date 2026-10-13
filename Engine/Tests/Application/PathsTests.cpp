@@ -11,6 +11,7 @@
 #include "Core/OpaaxTypes.h"
 
 #include "Application/Services/IPaths.h"
+#include "Platform/CommandLine.h"
 #include "Platform/IPlatform.h"
 #include "Platform/IFileSystem.h"   // StubPlatform hands out the null one
 #include "Application/Services/AppServiceLocator.h"
@@ -129,14 +130,10 @@ TEST_CASE("ResolveProjectLayout: absolute --project overrides the workspace")
 // =============================================================================
 TEST_CASE("Paths: ctor + resolvers (absolute --project is workspace-independent)")
 {
-    StubPlatform lPlatform(Abs("deploy/bin/Game.exe"));
-    OpaaxString  lProject = Abs("proj/MyGame/MyGame.opaaxproj");
+    StubPlatform      lPlatform(Abs("deploy/bin/Game.exe"));
+    const CommandLine lCommandLine({ "Game.exe", "--project", Abs("proj/MyGame/MyGame.opaaxproj") });
 
-    char  lArg0[] = "Game.exe";
-    char  lArg1[] = "--project";
-    char* lArgv[] = { lArg0, lArg1, lProject.Data() };
-
-    const Paths lPaths(lPlatform, 3, lArgv);
+    const Paths lPaths(lPlatform, lCommandLine);
 
     CHECK(lPaths.ProjectRoot() == Abs("proj/MyGame"));
     CHECK(lPaths.AssetsDir()   == Abs("proj/MyGame/Assets"));
@@ -150,6 +147,19 @@ TEST_CASE("Paths: ctor + resolvers (absolute --project is workspace-independent)
     CHECK(lEngineRel.Contains("/Engine/Assets/Shaders"));
 }
 
+TEST_CASE("Paths: a non-ASCII --project reaches every path whole")
+{
+    // An accented folder name in UTF-8, as CommandLine hands it over on every platform.
+    StubPlatform      lPlatform(Abs("deploy/bin/Game.exe"));
+    const CommandLine lCommandLine({ "Game.exe", "--project", Abs("Zo\xC3\xA9/MyGame/MyGame.opaaxproj") });
+
+    const Paths lPaths(lPlatform, lCommandLine);
+
+    CHECK(lPaths.ProjectRoot() == Abs("Zo\xC3\xA9/MyGame"));
+    CHECK(lPaths.AssetsDir()   == Abs("Zo\xC3\xA9/MyGame/Assets"));
+    CHECK(lPaths.ProjectFile() == Abs("Zo\xC3\xA9/MyGame/MyGame.opaaxproj"));
+}
+
 TEST_CASE("Paths: AbsoluteToAsset is the inverse of AssetToAbsolute")
 {
     // Against a REAL directory: AbsoluteToAsset canonicalises BOTH sides, so a fabricated path
@@ -157,14 +167,10 @@ TEST_CASE("Paths: AbsoluteToAsset is the inverse of AssetToAbsolute")
     const TestTempDir lRoot("PathsAsset");
     FileSystem::CreateDirectories(lRoot.Sub("Assets/Maps"));
 
-    StubPlatform lPlatform(Abs("deploy/bin/Game.exe"));
-    OpaaxString  lProject = lRoot.Sub("MyGame.opaaxproj");
+    StubPlatform      lPlatform(Abs("deploy/bin/Game.exe"));
+    const CommandLine lCommandLine({ "Game.exe", "--project", lRoot.Sub("MyGame.opaaxproj") });
 
-    char  lArg0[] = "Game.exe";
-    char  lArg1[] = "--project";
-    char* lArgv[] = { lArg0, lArg1, lProject.Data() };
-
-    const Paths lPaths(lPlatform, 3, lArgv);
+    const Paths lPaths(lPlatform, lCommandLine);
 
     const OpaaxString lAbs = lPaths.AssetToAbsolute(OpaaxString("Maps/Main.opaaxmap"));
     CHECK(lPaths.AbsoluteToAsset(lAbs) == OpaaxString("Maps/Main.opaaxmap"));
@@ -199,14 +205,10 @@ TEST_CASE("Paths: AbsoluteToAsset is the inverse of AssetToAbsolute")
 // =============================================================================
 TEST_CASE("Paths: ENGINE_MOUNT resolves against the engine's assets, not the project's")
 {
-    StubPlatform lPlatform(Abs("deploy/bin/Game.exe"));
-    OpaaxString  lProject = Abs("proj/MyGame/MyGame.opaaxproj");
+    StubPlatform      lPlatform(Abs("deploy/bin/Game.exe"));
+    const CommandLine lCommandLine({ "Game.exe", "--project", Abs("proj/MyGame/MyGame.opaaxproj") });
 
-    char  lArg0[] = "Game.exe";
-    char  lArg1[] = "--project";
-    char* lArgv[] = { lArg0, lArg1, lProject.Data() };
-
-    const Paths lPaths(lPlatform, 3, lArgv);
+    const Paths lPaths(lPlatform, lCommandLine);
 
     // EngineRoot follows the suite's own workspace (the editor define), so assert the SHAPE — the
     // claim under test is "which root", not "which machine".
@@ -238,14 +240,10 @@ TEST_CASE("Paths: AbsoluteToAsset names engine content by its mount")
     const TestTempDir lRoot("PathsMount");
     FileSystem::CreateDirectories(lRoot.Sub("Assets/Textures"));
 
-    StubPlatform lPlatform(Abs("deploy/bin/Game.exe"));
-    OpaaxString  lProject = lRoot.Sub("MyGame.opaaxproj");
+    StubPlatform      lPlatform(Abs("deploy/bin/Game.exe"));
+    const CommandLine lCommandLine({ "Game.exe", "--project", lRoot.Sub("MyGame.opaaxproj") });
 
-    char  lArg0[] = "Game.exe";
-    char  lArg1[] = "--project";
-    char* lArgv[] = { lArg0, lArg1, lProject.Data() };
-
-    const Paths lPaths(lPlatform, 3, lArgv);
+    const Paths lPaths(lPlatform, lCommandLine);
 
     SUBCASE("an engine file round-trips through its mount")
     {
