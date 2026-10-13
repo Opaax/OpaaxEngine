@@ -1,4 +1,4 @@
-// Suite: IFileSystem, through StdFileSystem. Each case uses its own directory under the OS
+// Suite: IFileSystem, through NativeFileSystem. Each case uses its own directory under the OS
 // temp dir, removed afterwards. Non-ASCII names: Utf8PathTests.cpp.
 #include <doctest.h>
 
@@ -6,7 +6,7 @@
 #include "Core/IO/FileIO.h"
 #include "Core/IO/FileSystem.h"
 #include "Platform/IFileSystem.h"
-#include "Platform/StdFileSystem.h"
+#include "Platform/NativeFileSystem.h"
 
 using namespace Opaax;
 
@@ -32,8 +32,8 @@ namespace
 // =============================================================================
 TEST_CASE("IFileSystem: CreateDirectories builds a nested chain and is idempotent")
 {
-    const TestTempDir   lTemp("create_nested");
-    const StdFileSystem lFS{};
+    const TestTempDir      lTemp("create_nested");
+    const NativeFileSystem lFS{};
 
     const OpaaxString lNested = lTemp.Sub("A/B/C");
 
@@ -48,7 +48,7 @@ TEST_CASE("IFileSystem: CreateDirectories builds a nested chain and is idempoten
 
 TEST_CASE("IFileSystem: an empty path is rejected by every entry point, never crashes")
 {
-    const StdFileSystem lFS{};
+    const NativeFileSystem lFS{};
     const OpaaxString lEmpty{};
 
     CHECK_FALSE(lFS.CreateDirectories(lEmpty));
@@ -65,8 +65,8 @@ TEST_CASE("IFileSystem: an empty path is rejected by every entry point, never cr
 // =============================================================================
 TEST_CASE("IFileSystem: ListDirectory separates files from directories, one level only")
 {
-    const TestTempDir   lTemp("list_one_level");
-    const StdFileSystem lFS{};
+    const TestTempDir      lTemp("list_one_level");
+    const NativeFileSystem lFS{};
 
     REQUIRE(lFS.CreateDirectories(lTemp.Sub("Waves")));
     WriteFile(lTemp.Sub("Waves/Deep.wave"));       // one level DOWN — must not appear
@@ -95,8 +95,8 @@ TEST_CASE("IFileSystem: ListDirectory separates files from directories, one leve
 
 TEST_CASE("IFileSystem: ListDirectory reports false for a missing dir and for a file, leaving the output untouched")
 {
-    const TestTempDir   lTemp("list_bad_targets");
-    const StdFileSystem lFS{};
+    const TestTempDir      lTemp("list_bad_targets");
+    const NativeFileSystem lFS{};
 
     WriteFile(lTemp.Sub("NotADir.txt"));
 
@@ -113,8 +113,8 @@ TEST_CASE("IFileSystem: ListDirectory reports false for a missing dir and for a 
 
 TEST_CASE("IFileSystem: ListDirectory APPENDS, so one container can accumulate several roots")
 {
-    const TestTempDir   lTemp("list_appends");
-    const StdFileSystem lFS{};
+    const TestTempDir      lTemp("list_appends");
+    const NativeFileSystem lFS{};
 
     REQUIRE(lFS.CreateDirectories(lTemp.Sub("RootA")));
     REQUIRE(lFS.CreateDirectories(lTemp.Sub("RootB")));
@@ -154,8 +154,8 @@ TEST_CASE("IFileSystem::Null: inert — every primitive fails and nothing reache
 
 TEST_CASE("IFileSystem: Entry paths use forward slashes and resolve back to the real file")
 {
-    const TestTempDir   lTemp("entry_paths");
-    const StdFileSystem lFS{};
+    const TestTempDir      lTemp("entry_paths");
+    const NativeFileSystem lFS{};
 
     WriteFile(lTemp.Sub("Wave01.wave"));
 

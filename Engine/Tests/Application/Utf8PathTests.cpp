@@ -11,7 +11,7 @@
 #include "Core/String/OpaaxUtf8.h"
 #include "Core/IO/FileIO.h"
 #include "Application/Services/IPaths.h"
-#include "Platform/StdFileSystem.h"
+#include "Platform/NativeFileSystem.h"
 #include "Resources/ResourceManager.h"   // before BinaryResource (completes LoadContext)
 #include "Resources/BinaryResource.hpp"
 #include "World/Serialization/MapFile.h"
@@ -310,16 +310,16 @@ TEST_CASE("MapFile: a map saves and loads under a NON-ASCII path")
 }
 
 // =============================================================================
-// StdFileSystem
+// NativeFileSystem
 // =============================================================================
 // The platform emits UTF-8, so the file system must read UTF-8 too (MSVC's
 // std::filesystem::path(const char*) uses the ANSI code page). The directory is created from a u8
 // literal, which std::filesystem always reads as UTF-8, so the name on disk is really Unicode.
 // =============================================================================
-TEST_CASE("StdFileSystem: non-ASCII paths round-trip as UTF-8, not as the ANSI code page")
+TEST_CASE("NativeFileSystem: non-ASCII paths round-trip as UTF-8, not as the ANSI code page")
 {
-    const TestTempDir   lTemp("Utf8RoundTrip");
-    const StdFileSystem lFS{};
+    const TestTempDir      lTemp("Utf8RoundTrip");
+    const NativeFileSystem lFS{};
 
     // \u escapes, not literal characters: this file has no BOM and there is no /utf-8, so MSVC would
     // read literal bytes with the ANSI code page.
@@ -345,10 +345,10 @@ TEST_CASE("StdFileSystem: non-ASCII paths round-trip as UTF-8, not as the ANSI c
     CHECK(lFS.IsPathExist(lEntries[0].AbsPath));
 }
 
-TEST_CASE("StdFileSystem: CreateDirectories accepts a non-ASCII name and the OS agrees it is there")
+TEST_CASE("NativeFileSystem: CreateDirectories accepts a non-ASCII name and the OS agrees it is there")
 {
-    const TestTempDir   lTemp("Utf8Create");
-    const StdFileSystem lFS{};
+    const TestTempDir      lTemp("Utf8Create");
+    const NativeFileSystem lFS{};
 
     const OpaaxString lUtf8Dir(lTemp.Path() + OpaaxString("/\xE6\x97\xA5\xE6\x9C\xAC" "_Waves"));
     REQUIRE(lFS.CreateDirectories(lUtf8Dir));
