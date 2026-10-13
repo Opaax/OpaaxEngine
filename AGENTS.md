@@ -23,6 +23,8 @@ and why they are built that way: [Docs/Architecture.md](Docs/Architecture.md).
   screenshots go to `build/debug-editor/TestWorldResults/`. They open a window: they need a display.
 - A new source file is picked up at configure time: run the full `build` once after adding one.
   Test files are listed by hand in `Engine/Tests/CMakeLists.txt`.
+- The standard library check alone: `cmake -P CMake/CheckStdUse.cmake` (CTest runs it as `StdUse`);
+  it lists each std use outside the wrapper files as `file:line: text`.
 - Work stays in the repository: a trial checkout, its build, a test project or a tool kept between
   sessions goes in `Scratch/`, which git ignores (a build under the system's temp folder misses header
   changes). Throwaway files (edit lists, logs, screenshots) may go to a temp folder. Never use `.claude/`
@@ -55,9 +57,13 @@ Match the code around you. In short:
 - Allman braces, 4 spaces, no tabs. One class per header/source pair when it has code.
 - Names: `m_Member`, `InParam`, `OutParam`, `lLocal`, `bBool` (and `bInFlag` for a bool parameter),
   `TTemplate`, `EEnum`, `IInterface`, `UPPER_CASE` constants. Types and functions in PascalCase.
-- Engine aliases: `TDynArray`, `TUnorderedMap`, `TUnorderedSet`, `TUniquePtr`/`MakeUnique`,
-  `TSharedPtr`/`MakeShared`, `TFunction`, `TFixedArray`, `Move`, `Int32`, `Uint64`...
-  (`Core/OpaaxTypes.h`); `OpaaxString`, `OpaaxStringID` (`OPAAX_ID("Name")`).
+- No `std::` and no standard header outside Core's wrappers (see the architecture rules). Engine
+  aliases: `TDynArray`, `TUnorderedMap`, `TUnorderedSet`, `TUniquePtr`/`MakeUnique`,
+  `TSharedPtr`/`MakeShared`, `TFunction`, `TFixedArray`, `TOptional`, `Move`, `Int32`, `Uint64`...
+  (`Core/OpaaxTypes.h`); traits and concepts (`TIsSame`, `TNumericLimits`, `CDerivedFrom`...,
+  `Core/Templates/TypeTraits.h`); `Algo`, `Memory`, `CString`, `Char`, `Maths`, `Random`, `Clock`,
+  `DateTime`, `FileSystem`, `FileIO`, `Console` (`Core/`), `Process` (`Platform/`); `OpaaxString`,
+  `OpaaxStringView`, `PathString`, `OpaaxStringID` (`OPAAX_ID("Name")`).
 - Logging: `OPAAX_LOG_CATEGORY(Name)` once, then `OPAAX_LOG(LogName, Info, "x = {}", lX)`. Levels:
   Trace, Info, Warn, Error, Critical. CI fails a render check that logs an error.
 - Sections are separated by `// ===` banners; interface overrides by `//~Begin X interface` and
@@ -73,6 +79,11 @@ Match the code around you. In short:
   `Physics/Box2D/`, miniaudio in `Audio/Miniaudio/`, OpenGL in `RHI/OpenGL/`, stb in the texture loader and
   the font baker, tinyfiledialogs in the editor's dialogs. Type ids come from
   `Core/Reflection/TypeInfo.h`. Gameplay code uses `Entity`, `World`, `Behaviour`: never the registry.
+- **The standard library is a vendor too:** engine, editor, game and test code use the core types
+  and functions above. std appears only in the files that wrap it (listed in
+  `CMake/CheckStdUse.cmake`) and in the platform's OS code. A facility that has no wrapper yet gets
+  one in Core first. Where a vendor takes or gives std types, the glue sits with the wrapper
+  (`Core/String/OpaaxStringJson.h`: `ToJsonString`, `FromJsonString`, `ToJsonText`).
 - **Types register themselves** with `OPAAX_REGISTER_*` (`Engine/Registries/AutoRegistration.h`):
   no central list to edit.
 - The engine is a static library, linked whole; it knows nothing of the editor. The editor library
@@ -123,3 +134,5 @@ Match the code around you. In short:
   warning MSB8029), and stale objects then crash at run time. Keep checkouts and builds out of it.
 - A `git worktree` has no submodules: run `git submodule update --init --recursive` in it before the
   first build (the configure step says so).
+- Core has namespaces named `Clock`, `Random`, `Algo`, `Memory`, `FileSystem`, `Console`, `Process`:
+  a type of the same name, used under `using namespace Opaax`, is ambiguous. Name it otherwise.
