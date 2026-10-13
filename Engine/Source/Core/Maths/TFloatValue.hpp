@@ -1,7 +1,7 @@
 ﻿#pragma once
 
+#include "Core/OpaaxTypes.h"
 #include "Core/Templates/TypeTraits.h"
-#include <compare>
 
 namespace Opaax
 {

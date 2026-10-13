@@ -2,6 +2,7 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <compare>
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
@@ -18,7 +19,6 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#include <filesystem>
 
 #include "Core/Templates/TypeTraits.h"
 
