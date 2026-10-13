@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Core/Maths/Maths.h"
 #include <glm/matrix.hpp>   // inverse
 
 #include "Core/Maths/MathTypes.h"
+#include "Core/Maths/Maths.h"
 #include "Core/OpaaxTypes.h"
 
 namespace Opaax::Editor

@@ -14,10 +14,10 @@
 #include "Renderer/RenderView.h"
 #include "Renderer/RenderSystemDesc.h"
 #include "Core/EngineAPI.h"
+#include "Core/Maths/Maths.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include "Core/Maths/Maths.h"
 
 namespace Opaax
 {

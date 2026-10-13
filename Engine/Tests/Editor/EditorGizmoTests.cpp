@@ -5,11 +5,11 @@
 //   GizmoDrag is header-only (no ImGui), so no editor link is needed.
 #include <doctest.h>
 
-#include "Core/Maths/Maths.h"
 #include <glm/mat2x2.hpp>
 #include <glm/matrix.hpp>
 #include <glm/trigonometric.hpp>
 
+#include "Core/Maths/Maths.h"
 #include "Editor/Operation/EditorGizmo.hpp"
 
 using namespace Opaax;
