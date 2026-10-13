@@ -4,6 +4,7 @@
 #include <doctest.h>
 
 #include "Core/String/OpaaxString.hpp"
+#include "Core/String/OpaaxStringJson.h"
 #include "Core/Hash/OpaaxHash.h"   // THash<OpaaxString>
 
 #include "Core/OpaaxTypes.h"
@@ -353,4 +354,23 @@ TEST_CASE("OpaaxString: operator< is byte order, so strings sort")
 
     // A byte above 127 sorts after ASCII, as unsigned.
     CHECK(OpaaxString("z") < OpaaxString("\xC3\xA9"));
+}
+
+// =============================================================================
+// JSON — the string, a key, and dumped text
+// =============================================================================
+TEST_CASE("OpaaxString json: values and keys come across whole, an embedded NUL included")
+{
+    const nlohmann::json lValue = OpaaxString("Hero");
+    CHECK(lValue.is_string());
+    CHECK(lValue.get<OpaaxString>() == "Hero");
+
+    const char     lRaw[] = { 'k', '\0', 'y' };
+    nlohmann::json lObject = nlohmann::json::object();
+    lObject[ToJsonString(OpaaxStringView(lRaw, 3))] = 1;
+    REQUIRE(lObject.size() == 1u);
+    CHECK(FromJsonString(lObject.begin().key()).GetLength() == 3u);
+
+    CHECK(ToJsonText(nlohmann::json{ { "a", 1 } }) == R"({"a":1})");
+    CHECK(ToJsonText(nlohmann::json{ { "a", 1 } }, 2).Contains(R"(  "a": 1)"));
 }

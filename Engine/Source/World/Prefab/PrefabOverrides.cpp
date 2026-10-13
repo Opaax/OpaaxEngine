@@ -191,7 +191,7 @@ namespace Opaax
         {
             if (lTypeName.empty()) { continue; }
 
-            const OpaaxStringID lId(lTypeName);
+            const OpaaxStringID lId(FromJsonString(lTypeName));
 
             // null removes the component.
             if (lPatch.is_null())

@@ -35,7 +35,7 @@ namespace Opaax
                 }
                 for (const auto& [lKey, lValue] : InExpected.items())
                 {
-                    const OpaaxString lKeyText{ OpaaxStringView(lKey) };
+                    const OpaaxString lKeyText = FromJsonString(lKey);
                     const OpaaxString lPath = InPath.IsEmpty() ? lKeyText : InPath + "/" + lKeyText;
                     const auto        lIt   = InActual.find(lKey);
                     if (lIt == InActual.end())

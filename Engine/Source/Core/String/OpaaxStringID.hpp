@@ -32,8 +32,7 @@ namespace Opaax
 
         constexpr explicit OpaaxStringID(Uint32 InID) noexcept : m_ID(InID) {}
 
-        OpaaxStringID(const char*        InString) : OpaaxStringID(OpaaxString(InString)) {}
-        OpaaxStringID(const std::string& InString) : OpaaxStringID(OpaaxString(InString.c_str())) {}
+        OpaaxStringID(const char* InString) : OpaaxStringID(OpaaxString(InString)) {}
 
         OpaaxStringID(const OpaaxStringID&)            = default;
         OpaaxStringID(OpaaxStringID&&) noexcept        = default;

@@ -65,7 +65,7 @@ namespace Opaax
                 {
                     if (lTypeName.empty()) { continue; }   // no name to look up
 
-                    lEntity.Components.emplace_back(OpaaxStringID(lTypeName), lPayload);
+                    lEntity.Components.emplace_back(OpaaxStringID(FromJsonString(lTypeName)), lPayload);
                 }
             }
 
@@ -147,8 +147,7 @@ namespace Opaax
                 for (const auto& [lGuidText, lPatch] : lOverridesIt->items())
                 {
                     PrefabOverrideEntry lEntry;
-                    if (!Guid::FromString(OpaaxString(lGuidText.c_str(), static_cast<Uint32>(lGuidText.size())),
-                                          lEntry.TemplateGuid))
+                    if (!Guid::FromString(FromJsonString(lGuidText), lEntry.TemplateGuid))
                     {
                         // An override naming no entity of the prefab cannot be applied: dropped.
                         continue;
