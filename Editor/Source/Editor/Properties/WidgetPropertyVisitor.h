@@ -37,6 +37,9 @@ namespace Opaax::Editor
         void VisitDataAssetRef(const char* InName, OpaaxString& InPath, OpaaxStringID InDataType,
                                const PropertyMeta& InMeta) override;
 
+        void VisitObjectRef(const char* InName, ObjectHandle& InHandle, const ObjectClass& InClass,
+                            const PropertyMeta& InMeta) override;
+
         bool BeginGroup(const char* InName, const PropertyMeta& InMeta) override;
         void EndGroup() override;
 

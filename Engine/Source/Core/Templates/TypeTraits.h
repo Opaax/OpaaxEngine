@@ -11,7 +11,8 @@
 //
 //   Values:     TIsSame<A, B>, TIsBaseOf<Base, Derived>, TIsEnum<T>, TIsIntegral<T>,
 //               TIsFloatingPoint<T>, TIsArithmetic<T>, TIsTriviallyCopyable<T>,
-//               TIsDefaultConstructible<T>, TIsMoveConstructible<T>, TIsLValueReference<T>
+//               TIsDefaultConstructible<T>, TIsMoveConstructible<T>, TIsLValueReference<T>,
+//               TIsAbstract<T>
 //   Types:      TRemoveReference<T>, TRemoveCVRef<T>, TDecay<T>, TConditional<B, TTrue, TFalse>,
 //               TEnableIf<B[, T]>, TrueType, FalseType, TNumericLimits<T>
 //   Concepts:   CSameAs<A, B>, CDerivedFrom<Derived, Base>, CConvertibleTo<From, To>,
@@ -53,6 +54,10 @@ namespace Opaax
 
     template<typename T>
     inline constexpr bool TIsLValueReference = std::is_lvalue_reference_v<T>;
+
+    /** T has a pure virtual function, so it cannot be constructed. */
+    template<typename T>
+    inline constexpr bool TIsAbstract = std::is_abstract_v<T>;
 
     // =============================================================================
     // Types

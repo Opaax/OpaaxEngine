@@ -1,6 +1,8 @@
 #include "Editor/Properties/WidgetPropertyVisitor.h"
 
 #include "Editor/Properties/PropertyDrawers.h"
+#include "Object/Object.h"
+#include "Object/ObjectTable.h"
 
 namespace Opaax::Editor
 {
@@ -44,6 +46,21 @@ namespace Opaax::Editor
                                                   const OpaaxStringID InDataType, const PropertyMeta& InMeta)
     {
         DrawDataAssetRefField(m_Widgets, InName, InPath, InDataType);
+        DrawPropertyNote(m_Widgets, InMeta);
+    }
+
+    void WidgetPropertyVisitor::VisitObjectRef(const char* InName, ObjectHandle& InHandle,
+                                               const ObjectClass& InClass, const PropertyMeta& InMeta)
+    {
+        // A link between live objects: shown, not edited (nothing would save it).
+        const Object* lTarget = ObjectTable::Get().Resolve(InHandle);
+
+        const OpaaxString lValue = (lTarget != nullptr)
+                                       ? OpaaxString::Format("{} ({})", lTarget->GetName().CStr(),
+                                                             lTarget->GetClass().GetName().CStr())
+                                       : OpaaxString::Format("(no {})", InClass.GetName().CStr());
+
+        m_Widgets.LabelText(InName, lValue.CStr());
         DrawPropertyNote(m_Widgets, InMeta);
     }
 

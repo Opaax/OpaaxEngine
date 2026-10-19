@@ -124,6 +124,11 @@ namespace
             Lines.back() += OpaaxString::Format(" {}", InDataType.CStr());
         }
 
+        void VisitObjectRef(const char* InName, ObjectHandle&, const ObjectClass&, const PropertyMeta&) override
+        {
+            Add("object", InName);
+        }
+
         bool BeginGroup(const char* InName, const PropertyMeta&) override
         {
             Add("group", InName);

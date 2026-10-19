@@ -67,6 +67,9 @@ set(OPAAX_TEST_SOURCES
     Engine/GameInstanceTests.cpp
     Engine/ModuleRegistrarTests.cpp
 
+    # Object
+    Object/ObjectTests.cpp
+
     # Resources
     Resources/DataAssetTests.cpp
     Resources/ResourceFormatRegistryTests.cpp

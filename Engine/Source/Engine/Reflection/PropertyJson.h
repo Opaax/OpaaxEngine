@@ -14,6 +14,7 @@
 #include "Core/String/OpaaxStringIDJson.h"
 #include "Core/String/OpaaxStringJson.h"
 #include "Core/Tag/OpaaxTagJson.h"
+#include "Object/ObjectHandle.h"
 #include "Resources/ResourcePathJson.h"
 
 namespace Opaax
@@ -21,7 +22,8 @@ namespace Opaax
     // =============================================================================
     // PropertyJson — a reflected type's JSON, read and written from its property list
     //   (OPAAX_PROPERTIES), so its fields are listed once. Only listed fields are saved.
-    //   A nested reflected type is an object written the same way.
+    //   A nested reflected type is an object written the same way. An object reference (TObjectPtr,
+    //   or a list of them) links live objects and is neither written nor read.
     // =============================================================================
 
     /**
@@ -53,6 +55,17 @@ namespace Opaax
 
         template<typename T>
         inline constexpr bool k_IsList<TDynArray<T>> = true;
+
+        /** A value that is not saved: an object reference, or a list of them. */
+        template<typename T>
+        inline constexpr bool k_IsUnsaved = CObjectPtrField<T>;
+
+        template<typename T>
+        inline constexpr bool k_IsUnsaved<TDynArray<T>> = k_IsUnsaved<T>;
+
+        /** The value type of a property (a TProperty). */
+        template<typename TPropertyType>
+        using TPropertyValue = typename TRemoveCVRef<TPropertyType>::ValueType;
 
         inline OpaaxString JoinPath(const OpaaxString& InPrefix, const char* InName)
         {
@@ -165,11 +178,14 @@ namespace Opaax
                        {
                            ([&](const auto& InProperty)
                             {
-                                const auto lIt = InJson.find(InProperty.Name);
-                                if (lIt != InJson.end())
+                                if constexpr (!k_IsUnsaved<TPropertyValue<decltype(InProperty)>>)
                                 {
-                                    ReadValue(*lIt, InOutValue.*(InProperty.Member),
-                                              JoinPath(InPrefix, InProperty.Name), OutBadFields);
+                                    const auto lIt = InJson.find(InProperty.Name);
+                                    if (lIt != InJson.end())
+                                    {
+                                        ReadValue(*lIt, InOutValue.*(InProperty.Member),
+                                                  JoinPath(InPrefix, InProperty.Name), OutBadFields);
+                                    }
                                 }
                             }(lProperties), ...);
                        },
@@ -185,7 +201,13 @@ namespace Opaax
 
         TupleApply([&](const auto&... lProperties)
                    {
-                       ((lJson[lProperties.Name] = PropertyJsonDetail::ValueToJson(InValue.*(lProperties.Member))), ...);
+                       ([&](const auto& InProperty)
+                        {
+                            if constexpr (!PropertyJsonDetail::k_IsUnsaved<PropertyJsonDetail::TPropertyValue<decltype(InProperty)>>)
+                            {
+                                lJson[InProperty.Name] = PropertyJsonDetail::ValueToJson(InValue.*(InProperty.Member));
+                            }
+                        }(lProperties), ...);
                    },
                    T::GetProperties());
         return lJson;

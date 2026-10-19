@@ -10,12 +10,14 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/Reflection/TypeInfo.h"
+#include "Object/ObjectHandle.h"
 #include "Resources/ResourcePath.h"
 #include "Resources/ResourceTypeID.hpp"
 
 namespace Opaax
 {
     class IPropertyVisitor;
+    class ObjectClass;
 
     // =============================================================================
     // IPropertyList — a list field (TDynArray) seen without its element type: its size, the edits a
@@ -104,6 +106,12 @@ namespace Opaax
          */
         virtual void VisitDataAssetRef(const char* InName, OpaaxString& InPath, OpaaxStringID InDataType,
                                        const PropertyMeta& InMeta) = 0;
+
+        /**
+         * An object reference (TObjectPtr): its handle and the class it accepts. Not saved in files.
+         */
+        virtual void VisitObjectRef(const char* InName, ObjectHandle& InHandle, const ObjectClass& InClass,
+                                    const PropertyMeta& InMeta) = 0;
 
         /**
          * A nested reflected struct. Return false to skip its fields (e.g. a collapsed tree node);
@@ -260,6 +268,10 @@ namespace Opaax
         else if constexpr (CDataAssetRefField<TValue>)
         {
             InVisitor.VisitDataAssetRef(InName, InValue.Path, DeriveTypeLeafName<typename TValue::DataType>(), InMeta);
+        }
+        else if constexpr (CObjectPtrField<TValue>)
+        {
+            InVisitor.VisitObjectRef(InName, InValue.GetMutableHandle(), TValue::ObjectType::StaticClass(), InMeta);
         }
         else if constexpr (k_IsList<TValue> && !TIsSame<TValue, TDynArray<bool>>)
         {
