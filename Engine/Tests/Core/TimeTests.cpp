@@ -1,13 +1,16 @@
 // Suite: Clock (steady time), DateTime (the wall clock's local date and time), Random (system
-// seeded bits) and Process::RunCommandLine (a shell command's exit code).
+// seeded bits) and Process::RunCommandLine (a shell command's exit code, its UTF-8 text).
 #include <doctest.h>
 
+#include "Core/IO/FileSystem.h"
 #include "Core/Maths/Maths.h"
 #include "Core/Maths/Random.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Time/Clock.h"
 #include "Core/Time/DateTime.h"
 #include "Platform/Process.h"
+
+#include "../TestTempDir.h"
 
 using namespace Opaax;
 
@@ -71,4 +74,20 @@ TEST_CASE("Process::RunCommandLine: the command's exit code, on every platform")
 {
     CHECK(Process::RunCommandLine("exit 0") == 0);
     CHECK(Process::RunCommandLine("exit 3") == 3);
+}
+
+TEST_CASE("Process::RunCommandLine: a path with characters no code page holds reaches the shell whole")
+{
+    // Two CJK characters and an accented e, in UTF-8: an export into such a folder must work.
+    const TestTempDir lTemp("Process");
+    const OpaaxString lName = "\xE6\x97\xA5\xE6\x9C\xAC Zo\xC3\xA9";
+
+#ifdef OPAAX_PLATFORM_WINDOWS
+    const OpaaxString lLine = OpaaxString::Format("cd /d \"{}\" && mkdir \"{}\"", lTemp.Path(), lName);
+#else
+    const OpaaxString lLine = OpaaxString::Format("cd \"{}\" && mkdir \"{}\"", lTemp.Path(), lName);
+#endif
+
+    CHECK(Process::RunCommandLine(lLine) == 0);
+    CHECK(FileSystem::IsDirectory(lTemp.Sub(lName)));
 }

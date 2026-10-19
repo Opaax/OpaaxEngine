@@ -4,6 +4,8 @@
 
 #ifdef OPAAX_PLATFORM_POSIX
 #include <sys/wait.h>
+#else
+#include "Core/String/OpaaxUtf8.h"
 #endif
 
 namespace Opaax::Process
@@ -15,13 +17,14 @@ namespace Opaax::Process
 
     Int32 RunCommandLine(const OpaaxString& InCommandLine)
     {
+#ifdef OPAAX_PLATFORM_POSIX
         const int lStatus = std::system(InCommandLine.CStr());
 
-#ifdef OPAAX_PLATFORM_POSIX
         // A wait status there: the exit code when the shell exited, -1 when a signal ended it.
         return (lStatus != -1 && WIFEXITED(lStatus)) ? static_cast<Int32>(WEXITSTATUS(lStatus)) : -1;
 #else
-        return static_cast<Int32>(lStatus);
+        // The wide call: the narrow one reads its text in the ANSI code page, not UTF-8.
+        return static_cast<Int32>(_wsystem(Utf8::ToWide(InCommandLine).c_str()));
 #endif
     }
 }
