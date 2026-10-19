@@ -19,6 +19,7 @@ namespace Opaax::Editor
 {
     struct EditorContext;
     struct ResourceTypeDesc;
+    struct ResourceSavedEvent;
 
     // =============================================================================
     // ResourceBrowserPanel — the "Resource Browser": the project's files on disk, in three views
@@ -55,11 +56,20 @@ namespace Opaax::Editor
         /** Tiles = grid (default), Tree = folder outline, List = flat. */
         enum class EBrowserView : Uint8 { Tiles, Tree, List };
 
-        /** One file: its type (engine) and how it looks (editor). */
+        /** How one asset class looks, built once at Startup from AssetTypes(). */
+        struct AssetChrome
+        {
+            OpaaxString                  Label;
+            OpaaxString                  Glyph;
+            ResourceRef<TextureResource> Icon;
+        };
+
+        /** One file: its type (engine) and how it looks (editor); an asset's class has its own look. */
         struct FileType
         {
             const ResourceFormatEntry* Format = nullptr;
             const ResourceTypeDesc*    Chrome = nullptr;
+            const AssetChrome*         Asset  = nullptr;
         };
 
         // =============================================================================
@@ -108,8 +118,20 @@ namespace Opaax::Editor
         /** @return The type's fallback text, else the unknown-type glyph (used when there is no icon image) */
         static const char* GlyphOf(const FileType& InType);
 
-        /** Loads every registered type's icon once, at Startup. */
+        /** Loads every registered type's icon once, at Startup, and builds each asset class's look. */
         void LoadTypeIcons();
+
+        /**
+         * The New Asset menu: the classes an asset can be made of, by category. Picking one writes a new
+         * asset in InFolderAbsPath and opens it.
+         */
+        void DrawNewAssetMenu(const OpaaxString& InFolderAbsPath);
+
+        /** A document wrote a file: rescans when it is one the browser does not list yet. */
+        void HandleResourceSaved(const ResourceSavedEvent& InEvent);
+
+        /** @return True if the scanned roots list InAbsPath */
+        bool IsListed(const OpaaxString& InAbsPath) const;
 
         /**
          * The type's icon image.
@@ -189,5 +211,8 @@ namespace Opaax::Editor
         // ResourceTypeID -> the icon texture claim. Filled once at Startup (failed loads kept too,
         // so drawing is a plain lookup).
         TUnorderedMap<Uint32, ResourceRef<TextureResource>> m_TypeIcons;
+
+        // An asset class's name id -> its look. Built once at Startup.
+        TUnorderedMap<Uint32, AssetChrome> m_AssetChrome;
     };
 }

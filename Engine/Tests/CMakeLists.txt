@@ -157,6 +157,8 @@ set(OPAAX_TEST_SOURCES
     UI/UITextTests.cpp
 
     # Editor logic that needs no ImGui (header-only editor types)
+    Editor/AssetDocumentTests.cpp
+    Editor/AssetTypeRegistryTests.cpp
     Editor/ConfigChangeTrackerTests.cpp
     Editor/DrawerRegistryTests.cpp
     Editor/EditorGizmoTests.cpp

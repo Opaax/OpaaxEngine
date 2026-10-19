@@ -21,6 +21,9 @@ namespace Opaax::Editor
         OpaaxString   RelPath;     // "Waves/Wave01.wave" — root-relative, forward slashes
         OpaaxString   AbsPath;
         OpaaxStringID Extension;   // ".wave", normalized; INVALID for an extension-less file
+
+        /** The class an .opaaxasset names, read at scan time. Invalid for other files and unknown classes. */
+        OpaaxStringID AssetClass;
     };
 
     // =============================================================================

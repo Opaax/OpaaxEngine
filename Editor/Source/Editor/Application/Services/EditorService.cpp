@@ -33,6 +33,7 @@
 #include "Editor/Panels/MoveModePanel.h"
 #include "Editor/Panels/DataAssetPanel.h"
 #include "Resources/DataAsset/DataAssetResource.h"
+#include "Resources/Asset/AssetResource.h"
 #include "Editor/Panels/InputActionPanel.h"
 #include "Editor/Panels/InputMappingContextPanel.h"
 #include "Editor/Panels/MoverPanel.h"
@@ -171,6 +172,7 @@ namespace Opaax::Editor
         m_InputMapDocument    = MakeUnique<EditorInputMappingContextDocument>();
         m_DataAssetDocument   = MakeUnique<EditorDataAssetDocument>();
         m_Export              = MakeUnique<GameExport>();
+        m_AssetEditors        = MakeUnique<AssetEditors>();
     }
 
     void EditorService::ClearEditorSystems()
@@ -186,6 +188,8 @@ namespace Opaax::Editor
 
         // Waits for an export still running.
         m_Export.reset();
+
+        m_AssetEditors.reset();
     }
 
     void EditorService::CreateEditorContext(Window* InWindow, IEngine& InEngine)
@@ -228,8 +232,11 @@ namespace Opaax::Editor
             OpaaxApplication::GetAppService<IConfigSystem>(),
             *InWindow,
             m_EditorPaths,
-            *m_Export
+            *m_Export,
+            *m_AssetEditors
         });
+
+        m_AssetEditors->Bind(*m_Context);
 
         // After the context, because it holds one. The reconciler handles prefab instances (entities,
         // which a plain Reload cannot update).
@@ -293,6 +300,9 @@ namespace Opaax::Editor
         lFile.AddSeparator();
         lFile.AddSeparator();
         lFile.AddCommand("New UI...", Tags::EDITOR_COMMAND_NEW_UI);
+        lFile.AddSeparator();
+        lFile.AddCommand("Save All Assets", Tags::EDITOR_COMMAND_SAVE_ALL_ASSETS)
+             .SetEnabled([](const EditorContext& InContext) { return InContext.Assets.HasUnsaved(); });
         lFile.AddSeparator();
         lFile.AddCommand("New Level...", Tags::EDITOR_COMMAND_NEW_LEVEL).SetEnabled(IsEditing);
         lFile.AddCommand("Open Level...", Tags::EDITOR_COMMAND_OPEN_LEVEL);
@@ -464,6 +474,15 @@ namespace Opaax::Editor
         lCommands.Register<RedoCommand>(Tags::EDITOR_COMMAND_REDO);
 
         lCommands.Register<ExportGameCommand>(Tags::EDITOR_COMMAND_EXPORT_GAME);
+
+        // Every asset class, through one set of commands.
+        lCommands.Register<OpenAssetCommand>(Tags::EDITOR_COMMAND_OPEN_ASSET);
+        lCommands.Register<NewAssetCommand>(Tags::EDITOR_COMMAND_NEW_ASSET);
+        lCommands.Register<SaveAssetCommand>(Tags::EDITOR_COMMAND_SAVE_ASSET);
+        lCommands.Register<SaveAllAssetsCommand>(Tags::EDITOR_COMMAND_SAVE_ALL_ASSETS);
+        lCommands.Register<CloseAssetCommand>(Tags::EDITOR_COMMAND_CLOSE_ASSET);
+        lCommands.Register<UndoAssetCommand>(Tags::EDITOR_COMMAND_UNDO_ASSET);
+        lCommands.Register<RedoAssetCommand>(Tags::EDITOR_COMMAND_REDO_ASSET);
     }
 
     void EditorService::RegisterNativeViewportTools()
@@ -592,6 +611,15 @@ namespace Opaax::Editor
 
     void EditorService::RegisterNativeResourceTypes()
     {
+        // Every asset class opens in a window of its own; how each looks comes from AssetTypes().
+        m_Extensions.ResourceTypes().Register<AssetResource>()
+            .SetGlyph(OpaaxString("[A]"))
+            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
+            {
+                InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_ASSET, InContext,
+                                                        AssetPathParams{ InFile.AbsPath });
+            });
+
         // Both are set: the image shows, the glyph is the fallback if the image is missing.
         m_Extensions.ResourceTypes().Register<MapResource>()
             .SetIcon(OpaaxString("Icons/T_Map_Icon.png"))
@@ -1230,6 +1258,26 @@ namespace Opaax::Editor
         // keyboard (so they are in the route); Ctrl+S only matters while the editor has it.
         if (m_Context == nullptr) { return; }
 
+        // An asset window has the focus: the chords act on that asset's file and history.
+        if (const AssetDocument* lAsset = m_Context->Assets.GetFocused())
+        {
+            const AssetPathParams lTarget{ lAsset->GetAbsPath() };
+
+            if (m_Gui->Shortcut(EKeyCode::LeftControl, EKeyCode::S))
+            {
+                m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_SAVE_ASSET, *m_Context, lTarget);
+            }
+            if (m_Gui->Shortcut(EKeyCode::LeftControl, EKeyCode::Z))
+            {
+                m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_UNDO_ASSET, *m_Context, lTarget);
+            }
+            if (m_Gui->Shortcut(EKeyCode::LeftControl, EKeyCode::Y))
+            {
+                m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_REDO_ASSET, *m_Context, lTarget);
+            }
+            return;
+        }
+
         // One chord for every document: the target follows the focused panel, which declares it
         // (PanelDesc::SaveCommand, Undo/Redo/DeleteCommand). Invalid = the level's command.
         const auto lCommandForFocused = [this](const OpaaxTag& InDefault, OpaaxTag PanelDesc::* InMember)
@@ -1310,6 +1358,12 @@ namespace Opaax::Editor
 
         // 0. Unsubscribe from the WorldManager before the panels and selection its handlers use are destroyed.
         ClearWorldManager();
+
+        // The asset windows (a custom editor may hold textures it shows) before the UI goes.
+        if (m_AssetEditors != nullptr)
+        {
+            m_AssetEditors->CloseAll();
+        }
 
         // 1. The whole UI (panels, then backend): the Viewport frees its FBO while the GL context is
         //    current. Destroying the context also saves the dock layout. Before m_Context.reset().

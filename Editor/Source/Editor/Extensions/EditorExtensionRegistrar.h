@@ -5,6 +5,7 @@
 #include "Editor/Extensions/PanelRegistry.h"       
 #include "Editor/Extensions/DrawerRegistry.h"      
 #include "Editor/Extensions/ResourceTypeRegistry.h"
+#include "Editor/Extensions/AssetTypeRegistry.h"
 #include "Editor/Extensions/ViewportToolbarRegistry.h"
 #include "Editor/TitleBar/TitleBarRegistry.h"
 #include "Editor/Commands/EditorCommandRegistry.h"
@@ -26,6 +27,7 @@ namespace Opaax::Editor
         ConfigDrawerRegistry&      ConfigDrawers()    noexcept { return m_ConfigDrawers; }
         PanelRegistry&             Panels()           noexcept { return m_Panels; }
         ResourceTypeRegistry&      ResourceTypes()    noexcept { return m_ResourceTypes; }
+        AssetTypeRegistry&         AssetTypes()       noexcept { return m_AssetTypes; }
         TitleBarRegistry&          TitleBar()         noexcept { return m_TitleBar; }
         WorldSubsystemRoute&       EditWorldSystems() noexcept { return m_EditWorldSystems; }
         EditorCommandRegistry&     Commands()         noexcept { return m_EditorCommands; }
@@ -36,6 +38,7 @@ namespace Opaax::Editor
         const ConfigDrawerRegistry&  ConfigDrawers()   const noexcept { return m_ConfigDrawers; }
         const PanelRegistry&         Panels()          const noexcept { return m_Panels; }
         const ResourceTypeRegistry&  ResourceTypes()   const noexcept { return m_ResourceTypes; }
+        const AssetTypeRegistry&     AssetTypes()      const noexcept { return m_AssetTypes; }
         const TitleBarRegistry&      TitleBar()        const noexcept { return m_TitleBar; }
         const WorldSubsystemRoute&   EditWorldSystems() const noexcept { return m_EditWorldSystems; }
         const EditorCommandRegistry& Commands()        const noexcept { return m_EditorCommands; }
@@ -53,6 +56,9 @@ namespace Opaax::Editor
         UIWidgetDrawerRegistry  m_UIWidgetDrawers;
         PanelRegistry        m_Panels;
         ResourceTypeRegistry m_ResourceTypes;
+
+        // How each asset class looks and what edits it (its window's body).
+        AssetTypeRegistry    m_AssetTypes;
 
         TitleBarRegistry     m_TitleBar;
 

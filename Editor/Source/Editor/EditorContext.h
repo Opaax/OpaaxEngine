@@ -42,6 +42,7 @@ namespace Opaax
         class EditorPanels;             // live panels and visibility
         class GameExport;               // exporting the game, in the background
         class ResourcePreview;          // which resource a double-click asked to preview
+        class AssetEditors;             // the open .opaaxasset files, a window each
 
         // =============================================================================
         // EditorContext — references to editor and engine systems, built once by EditorService and
@@ -160,6 +161,9 @@ namespace Opaax
 
             // Exporting the edited game into a folder that runs elsewhere (File > Export Game, automation).
             GameExport& Export;
+
+            // The open assets, whatever their class: one window, one history and one Save each.
+            AssetEditors& Assets;
         };
     }
 }

@@ -65,6 +65,13 @@ namespace Opaax
         bool Load(const OpaaxString& InAbsPath, Contents& OutContents);
 
         /**
+         * The class an asset file's text names, when that name is already known (a registered class):
+         * never adds a name, so it suits scanning many files. Logs nothing.
+         * @return Invalid for text that is not an asset file, or an unknown class
+         */
+        OpaaxStringID FindClassName(const OpaaxString& InText);
+
+        /**
          * A new asset of the class InContents names, its properties read from them.
          * @param InName The asset's name (its file's stem)
          * @param OutError Why it failed (optional)

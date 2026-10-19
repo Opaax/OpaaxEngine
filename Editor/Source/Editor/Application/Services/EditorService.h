@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Editor/Application/Services/IEditorService.h"
+#include "Editor/Assets/AssetEditors.h"
 #include "Editor/EditorContext.h"
 #include "Editor/Application/Services/EditorPaths.h"
 #include "Editor/Camera/EditorCamera.h"
@@ -333,6 +334,9 @@ namespace Opaax::Editor
         TUniquePtr<EditorInputMappingContextDocument> m_InputMapDocument;
         TUniquePtr<EditorDataAssetDocument>           m_DataAssetDocument;
         TUniquePtr<GameExport>                        m_Export;
+
+        /** The open .opaaxasset files, a window each. */
+        TUniquePtr<AssetEditors>                      m_AssetEditors;
         
         TUniquePtr<EditorContext>       m_Context;
         

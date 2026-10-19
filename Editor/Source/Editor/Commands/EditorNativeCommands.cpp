@@ -1,8 +1,11 @@
 #include "Editor/Commands/EditorNativeCommands.h"
 
+#include "Editor/Assets/AssetEditors.h"
 #include "Editor/EditorContext.h"
 #include "Editor/EditorLevelDocument.h"
 #include "Editor/EditorMapDocument.h"
+#include "Core/String/OpaaxPathString.h"
+#include "Resources/Asset/AssetFile.h"
 #include "Editor/Operation/EditorGizmo.hpp"   // SetMode
 #include "Editor/Operation/EditorSelection.hpp"   // the primary selection
 #include "Editor/Undo/EditorUndo.h"           // Undo / Redo
@@ -963,5 +966,99 @@ namespace Opaax::Editor
         if (lLevel == nullptr) { return; }
 
         AddMapAt(InContext, *lLevel, InParams.AbsPath);
+    }
+
+    // =============================================================================
+    // Assets
+    // =============================================================================
+
+    namespace
+    {
+        /** The asset a command acts on: its params' path, else the focused asset window's. Empty: none. */
+        OpaaxString TargetAsset(EditorContext& InContext, const AssetPathParams& InParams, const char* InCommand)
+        {
+            if (!InParams.AbsPath.IsEmpty())
+            {
+                return InParams.AbsPath;
+            }
+
+            const AssetDocument* lFocused = InContext.Assets.GetFocused();
+            if (lFocused == nullptr)
+            {
+                OPAAX_LOG(LogEditorCommands, Warn, "{} ignored — no asset window has the focus", InCommand);
+                return OpaaxString();
+            }
+
+            return lFocused->GetAbsPath();
+        }
+    }
+
+    void OpenAssetCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        InContext.Assets.Open(InParams.AbsPath);
+    }
+
+    void NewAssetCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        const ObjectClass* lClass = InContext.Engine.GetRegistries().ObjectClasses().FindByName(InParams.ClassName);
+        if (lClass == nullptr)
+        {
+            OPAAX_LOG(LogEditorCommands, Warn, "New Asset ignored — no class '{}' is registered", InParams.ClassName);
+            return;
+        }
+
+        // New<Class>, then New<Class>1, New<Class>2...: a new asset never replaces a file.
+        const OpaaxString lStem = OpaaxString("New") + lClass->GetName().ToString();
+        OpaaxString       lPath = PathString::Join(InParams.FolderAbsPath, lStem + AssetFile::ASSET_EXTENSION);
+
+        for (Uint32 lNumber = 1; InContext.FileSystem.IsPathExist(lPath) && lNumber < 1000; ++lNumber)
+        {
+            lPath = PathString::Join(InParams.FolderAbsPath,
+                                     lStem + OpaaxString::FromUInt(lNumber) + AssetFile::ASSET_EXTENSION);
+        }
+
+        InContext.Assets.Create(lPath, *lClass);
+    }
+
+    void SaveAssetCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        const OpaaxString lPath = TargetAsset(InContext, InParams, "Save Asset");
+        if (!lPath.IsEmpty())
+        {
+            InContext.Assets.Save(lPath);
+        }
+    }
+
+    void SaveAllAssetsCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        const Uint32 lSaved = InContext.Assets.SaveAll();
+        OPAAX_LOG(LogEditorCommands, Info, "Save All Assets — {} asset(s) written", lSaved);
+    }
+
+    void CloseAssetCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        const OpaaxString lPath = TargetAsset(InContext, InParams, "Close Asset");
+        if (!lPath.IsEmpty())
+        {
+            InContext.Assets.Close(lPath);
+        }
+    }
+
+    void UndoAssetCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        const OpaaxString lPath = TargetAsset(InContext, InParams, "Undo");
+        if (!lPath.IsEmpty())
+        {
+            InContext.Assets.Undo(lPath);
+        }
+    }
+
+    void RedoAssetCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        const OpaaxString lPath = TargetAsset(InContext, InParams, "Redo");
+        if (!lPath.IsEmpty())
+        {
+            InContext.Assets.Redo(lPath);
+        }
     }
 }

@@ -107,6 +107,24 @@ namespace Opaax
         return true;
     }
 
+    OpaaxStringID AssetFile::FindClassName(const OpaaxString& InText)
+    {
+        const nlohmann::json lJson = nlohmann::json::parse(InText.CStr(), nullptr, false);
+
+        if (lJson.is_discarded() || !lJson.is_object())
+        {
+            return OpaaxStringID();
+        }
+
+        const auto lClass = lJson.find("Class");
+        if (lClass == lJson.end() || !lClass->is_string())
+        {
+            return OpaaxStringID();
+        }
+
+        return OpaaxStringID::Find(lClass->get<OpaaxString>());
+    }
+
     TStrongObjectPtr<Asset> AssetFile::Instantiate(const Contents& InContents, const ObjectClassRegistry& InClasses,
                                                    const OpaaxStringID InName, OpaaxString* OutError)
     {

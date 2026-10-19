@@ -11,6 +11,7 @@
 #include "Editor/Imgui/Configs/Config_EditorImgui.h"
 #include "Core/EngineAPI.h"   // OPAAX_ASSERT
 #include "Platform/Window/Window.h"
+#include "Editor/Assets/AssetEditors.h"
 #include "Editor/EditorContext.h"
 #include "Editor/Application/EditorApplication.h"
 #include "Editor/Panels/EditorPanels.h"
@@ -344,6 +345,9 @@ namespace Opaax::Editor
         ImGui::End();
 
         m_Panels.Draw(*this);
+
+        // The open assets' windows, docked like panels.
+        InContext.Assets.Draw(*this);
 
         // Last: it reads IsAnyItemActive, which is only meaningful after the panels submitted.
         m_ImGuiTitleBar.UpdateResizeBorder(InContext);
