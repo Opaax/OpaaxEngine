@@ -49,6 +49,13 @@ namespace Opaax::Editor
         DrawPropertyNote(m_Widgets, InMeta);
     }
 
+    void WidgetPropertyVisitor::VisitAssetRef(const char* InName, OpaaxString& InPath, const ObjectClass& InClass,
+                                              const PropertyMeta& InMeta)
+    {
+        DrawAssetRefField(m_Widgets, InName, InPath, InClass);
+        DrawPropertyNote(m_Widgets, InMeta);
+    }
+
     void WidgetPropertyVisitor::VisitObjectRef(const char* InName, ObjectHandle& InHandle,
                                                const ObjectClass& InClass, const PropertyMeta& InMeta)
     {

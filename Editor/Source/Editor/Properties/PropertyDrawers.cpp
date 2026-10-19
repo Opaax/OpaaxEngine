@@ -3,6 +3,8 @@
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Properties/WidgetPropertyVisitor.h"
+#include "Object/ObjectClass.h"
+#include "Resources/Asset/AssetResource.h"
 #include "Resources/DataAsset/DataAssetResource.h"
 
 #include <glm/gtc/type_ptr.hpp>   // value_ptr
@@ -138,9 +140,9 @@ namespace Opaax::Editor
 
     namespace
     {
-        /** A path field as a drop target. InSubTypeId 0 accepts any file of the resource type. */
+        /** A path field as a drop target. InKind 0 accepts any file of the resource type. */
         void DrawDropPathField(IEditorWidgets& InWidgets, const char* InLabel, OpaaxString& InPath,
-                               const Uint32 InResourceTypeId, const Uint32 InSubTypeId, const char* InEmptyText)
+                               const Uint32 InResourceTypeId, const Uint32 InKind, const char* InEmptyText)
         {
             InWidgets.PushId(InLabel);
 
@@ -151,7 +153,7 @@ namespace Opaax::Editor
             InWidgets.Button(lText, -1.f, bEmpty ? nullptr : InPath.CStr());
 
             // Right after the receiving widget; opens and closes the drop target itself.
-            if (OpaaxString lDropped; AcceptResourceDragPayload(InResourceTypeId, lDropped, InSubTypeId))
+            if (OpaaxString lDropped; AcceptResourceDragPayload(InResourceTypeId, lDropped, InKind))
             {
                 InPath = Move(lDropped);
             }
@@ -177,6 +179,16 @@ namespace Opaax::Editor
 
         DrawDropPathField(InWidgets, InLabel, InPath, ResourceTypeID::Get<DataAssetResource>(), InDataType.GetId(),
                           lEmpty.CStr());
+    }
+
+    void DrawAssetRefField(IEditorWidgets& InWidgets, const char* InLabel, OpaaxString& InPath,
+                           const ObjectClass& InClass)
+    {
+        const OpaaxString lEmpty = OpaaxString::Format("(drop a {} here)", InClass.GetName().CStr());
+
+        // The payload lists the dropped asset's class and its parents: a subclass matches too.
+        DrawDropPathField(InWidgets, InLabel, InPath, ResourceTypeID::Get<AssetResource>(),
+                          InClass.GetName().GetId(), lEmpty.CStr());
     }
 
     void DrawResourcePathField(IEditorWidgets& InWidgets, const char* InLabel, OpaaxString& InPath,

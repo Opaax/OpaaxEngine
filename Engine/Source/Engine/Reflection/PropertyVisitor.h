@@ -108,6 +108,12 @@ namespace Opaax
                                        const PropertyMeta& InMeta) = 0;
 
         /**
+         * An asset reference (TAssetRef): its asset-relative path and the class it accepts (subclasses too).
+         */
+        virtual void VisitAssetRef(const char* InName, OpaaxString& InPath, const ObjectClass& InClass,
+                                   const PropertyMeta& InMeta) = 0;
+
+        /**
          * An object reference (TObjectPtr): its handle and the class it accepts. Not saved in files.
          */
         virtual void VisitObjectRef(const char* InName, ObjectHandle& InHandle, const ObjectClass& InClass,
@@ -147,6 +153,15 @@ namespace Opaax
         {
             typename T::DataType;
             requires T::k_IsDataAssetRef;
+            { InValue.Path } -> CConvertibleTo<OpaaxString&>;
+        };
+
+        /** A TAssetRef<T>, recognised by its marker (Resources/Asset/AssetRef.h is not needed here). */
+        template<typename T>
+        concept CAssetRefField = requires(T& InValue)
+        {
+            typename T::AssetType;
+            requires T::k_IsAssetRef;
             { InValue.Path } -> CConvertibleTo<OpaaxString&>;
         };
 
@@ -268,6 +283,10 @@ namespace Opaax
         else if constexpr (CDataAssetRefField<TValue>)
         {
             InVisitor.VisitDataAssetRef(InName, InValue.Path, DeriveTypeLeafName<typename TValue::DataType>(), InMeta);
+        }
+        else if constexpr (CAssetRefField<TValue>)
+        {
+            InVisitor.VisitAssetRef(InName, InValue.Path, TValue::AssetType::StaticClass(), InMeta);
         }
         else if constexpr (CObjectPtrField<TValue>)
         {

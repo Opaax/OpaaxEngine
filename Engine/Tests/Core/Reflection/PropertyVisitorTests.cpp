@@ -124,6 +124,11 @@ namespace
             Lines.back() += OpaaxString::Format(" {}", InDataType.CStr());
         }
 
+        void VisitAssetRef(const char* InName, OpaaxString&, const ObjectClass&, const PropertyMeta&) override
+        {
+            Add("asset", InName);
+        }
+
         void VisitObjectRef(const char* InName, ObjectHandle&, const ObjectClass&, const PropertyMeta&) override
         {
             Add("object", InName);

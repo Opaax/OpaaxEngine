@@ -15,6 +15,8 @@
 #include "Resources/ResourceManager.h"
 #include "Resources/ResourceTypeID.hpp"
 #include "Renderer/Textures/TextureResource.h"
+#include "Resources/Asset/AssetFile.h"
+#include "Resources/Asset/AssetResource.h"
 #include "Resources/DataAsset/DataAssetFile.h"
 #include "Resources/DataAsset/DataAssetResource.h"
 
@@ -415,17 +417,14 @@ namespace Opaax::Editor
         // has no asset path and carries no payload.
         if (lType.Format != nullptr && ImGui::BeginDragDropSource())
         {
-            // A data asset also says which struct it holds, so a typed field can refuse the others.
-            if (lType.Format->TypeId == ResourceTypeID::Get<DataAssetResource>() && m_DragSubTypePath != InFile.AbsPath)
+            // An asset also says which class it holds, so a typed field can refuse the others.
+            if (m_DragKindsPath != InFile.AbsPath)
             {
-                DataAssetFile::Contents lContents;
-                m_DragSubTypePath = InFile.AbsPath;
-                m_DragSubTypeId   = DataAssetFile::Load(InFile.AbsPath, lContents) ? lContents.Type.GetId() : 0;
+                m_DragKindsPath = InFile.AbsPath;
+                m_DragKinds     = ReadKinds(InFile, lType);
             }
 
-            const Uint32 lSubType = lType.Format->TypeId == ResourceTypeID::Get<DataAssetResource>() ? m_DragSubTypeId : 0;
-
-            SetResourceDragPayload(lType.Format->TypeId, m_Context.Paths.AbsoluteToAsset(InFile.AbsPath), lSubType);
+            SetResourceDragPayload(lType.Format->TypeId, m_Context.Paths.AbsoluteToAsset(InFile.AbsPath), m_DragKinds);
 
             const float lIconSize = RowIconSize();
             ImguiWidgets::Image(TileImageOf(InFile, lType), ImVec2(lIconSize, lIconSize));
@@ -483,6 +482,41 @@ namespace Opaax::Editor
         }
 
         return lType;
+    }
+
+    TDynArray<Uint32> ResourceBrowserPanel::ReadKinds(const ResourceFile& InFile, const FileType& InType) const
+    {
+        TDynArray<Uint32> lKinds;
+
+        if (InType.Format == nullptr)
+        {
+            return lKinds;
+        }
+
+        if (InType.Format->TypeId == ResourceTypeID::Get<AssetResource>())
+        {
+            // The class, then each parent: a field for a base class accepts its subclasses.
+            AssetFile::Contents lContents;
+            if (AssetFile::Load(InFile.AbsPath, lContents))
+            {
+                const ObjectClass* lClass = m_Context.Engine.GetRegistries().ObjectClasses().FindByName(lContents.Class);
+
+                for (; lClass != nullptr; lClass = lClass->GetSuper())
+                {
+                    lKinds.emplace_back(lClass->GetName().GetId());
+                }
+            }
+        }
+        else if (InType.Format->TypeId == ResourceTypeID::Get<DataAssetResource>())
+        {
+            DataAssetFile::Contents lContents;
+            if (DataAssetFile::Load(InFile.AbsPath, lContents))
+            {
+                lKinds.emplace_back(lContents.Type.GetId());
+            }
+        }
+
+        return lKinds;
     }
 
     const char* ResourceBrowserPanel::LabelOf(const FileType& InType)

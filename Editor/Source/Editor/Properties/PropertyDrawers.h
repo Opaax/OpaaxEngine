@@ -7,6 +7,7 @@
 #include "Core/String/OpaaxStringID.hpp"
 #include "Engine/Reflection/PropertyVisitor.h"            // EnumLabels
 #include "Resources/ResourcePath.h"     // TResourcePath
+#include "Resources/Asset/AssetRef.h"           // TAssetRef
 #include "Resources/DataAsset/DataAssetRef.h"   // TDataAssetRef
 #include "Resources/ResourceTypeID.hpp" // ResourceTypeID
 #include "Editor/Properties/PropertyDrawer.h"
@@ -67,6 +68,21 @@ namespace Opaax::Editor
         static void Draw(IEditorWidgets& InWidgets, const char* InLabel, TDataAssetRef<T>& InValue, const PropertyMeta&)
         {
             DrawDataAssetRefField(InWidgets, InLabel, InValue.Path, DataAssetTypeName<T>());
+        }
+    };
+
+    /**
+     * An asset reference as a drop target: only an .opaaxasset of InClass, or of a subclass, is accepted.
+     */
+    void DrawAssetRefField(IEditorWidgets& InWidgets, const char* InLabel, OpaaxString& InPath,
+                           const ObjectClass& InClass);
+
+    template<typename T>
+    struct TPropertyDrawer<TAssetRef<T>>
+    {
+        static void Draw(IEditorWidgets& InWidgets, const char* InLabel, TAssetRef<T>& InValue, const PropertyMeta&)
+        {
+            DrawAssetRefField(InWidgets, InLabel, InValue.Path, T::StaticClass());
         }
     };
 

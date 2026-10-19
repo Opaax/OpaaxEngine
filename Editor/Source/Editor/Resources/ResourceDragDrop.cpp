@@ -25,7 +25,7 @@ namespace Opaax::Editor
         }
     }
 
-    void SetResourceDragPayload(const Uint32 InTypeId, const OpaaxString& InAssetPath, const Uint32 InSubTypeId)
+    void SetResourceDragPayload(const Uint32 InTypeId, const OpaaxString& InAssetPath, const TDynArray<Uint32>& InKinds)
     {
         if (InAssetPath.IsEmpty())
         {
@@ -33,11 +33,11 @@ namespace Opaax::Editor
         }
 
         // Built every frame of the drag: ImGui copies the bytes immediately.
-        const TDynArray<Uint8> lBytes = ResourceDragPayload::Encode(InTypeId, InSubTypeId, InAssetPath);
+        const TDynArray<Uint8> lBytes = ResourceDragPayload::Encode(InTypeId, InKinds, InAssetPath);
         ImGui::SetDragDropPayload(RESOURCE_PAYLOAD_ID, lBytes.data(), lBytes.size());
     }
 
-    bool AcceptResourceDragPayload(const Uint32 InTypeId, OpaaxString& OutAssetPath, const Uint32 InSubTypeId)
+    bool AcceptResourceDragPayload(const Uint32 InTypeId, OpaaxString& OutAssetPath, const Uint32 InKind)
     {
         if (!ImGui::BeginDragDropTarget())
         {
@@ -50,7 +50,7 @@ namespace Opaax::Editor
         // this widget for a type it then refuses.
         ResourceDragPayload::Decoded lPeek;
 
-        if (DecodeCurrent(ImGui::GetDragDropPayload(), lPeek) && ResourceDragPayload::Accepts(lPeek, InTypeId, InSubTypeId))
+        if (DecodeCurrent(ImGui::GetDragDropPayload(), lPeek) && ResourceDragPayload::Accepts(lPeek, InTypeId, InKind))
         {
             if (ImGui::AcceptDragDropPayload(RESOURCE_PAYLOAD_ID) != nullptr)
             {

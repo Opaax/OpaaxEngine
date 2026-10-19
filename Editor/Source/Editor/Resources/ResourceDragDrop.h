@@ -20,17 +20,19 @@ namespace Opaax::Editor
      * @param InTypeId ResourceTypeID of the type registered for this file's extension
      * @param InAssetPath Asset-relative path. Empty sets no payload (a file outside the project's
      *   assets cannot be dropped into a field)
-     * @param InSubTypeId What kind inside the type (a .opaaxdata's data type id); 0 for none
+     * @param InKinds What the file holds, for a type that holds many: an asset's class name id, then its
+     *   parents' (a .opaaxdata's data type id). Empty for none
      */
-    void SetResourceDragPayload(Uint32 InTypeId, const OpaaxString& InAssetPath, Uint32 InSubTypeId = 0);
+    void SetResourceDragPayload(Uint32 InTypeId, const OpaaxString& InAssetPath, const TDynArray<Uint32>& InKinds = {});
 
     /**
      * Accepts a dropped resource path if it carries InTypeId. Call right after the receiving widget;
      * it opens and closes the drop target itself. A payload of another type is ignored, so the widget
      * shows no highlight and the drag stays live.
      * @param OutAssetPath Written only when something was accepted
-     * @param InSubTypeId Also require this sub-type (e.g. one data type); 0 accepts any
+     * @param InKind Also require this kind among the file's (an asset class: its subclasses match too);
+     *   0 accepts any
      * @return True when OutAssetPath was written this frame
      */
-    bool AcceptResourceDragPayload(Uint32 InTypeId, OpaaxString& OutAssetPath, Uint32 InSubTypeId = 0);
+    bool AcceptResourceDragPayload(Uint32 InTypeId, OpaaxString& OutAssetPath, Uint32 InKind = 0);
 }

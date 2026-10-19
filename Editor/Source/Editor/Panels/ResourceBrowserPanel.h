@@ -95,6 +95,13 @@ namespace Opaax::Editor
          */
         FileType FindType(const ResourceFile& InFile) const;
 
+        /**
+         * What a file of a many-kind type holds, for its drag payload: an asset's class then its parents
+         * (by name id), a data asset's struct. Reads the file.
+         * @return Empty for other types, or when the file or its class cannot be read
+         */
+        TDynArray<Uint32> ReadKinds(const ResourceFile& InFile, const FileType& InType) const;
+
         /** @return The chrome's label, else the format's label, else "Unknown type" */
         static const char* LabelOf(const FileType& InType);
 
@@ -174,10 +181,10 @@ namespace Opaax::Editor
         OpaaxString             m_Filter;
         OpaaxString             m_SelectedPath;   // "<Root>/<RelPath>", highlight only (not EditorSelection)
 
-        // The data type of the .opaaxdata being dragged, read once per file (a drag rebuilds its payload
-        // every frame).
-        OpaaxString             m_DragSubTypePath;
-        Uint32                  m_DragSubTypeId = 0;
+        // What the file being dragged holds (an asset's class chain, a data asset's struct), read once per
+        // file: a drag rebuilds its payload every frame.
+        OpaaxString             m_DragKindsPath;
+        TDynArray<Uint32>       m_DragKinds;
 
         // ResourceTypeID -> the icon texture claim. Filled once at Startup (failed loads kept too,
         // so drawing is a plain lookup).
