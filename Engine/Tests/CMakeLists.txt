@@ -68,6 +68,7 @@ set(OPAAX_TEST_SOURCES
     Engine/ModuleRegistrarTests.cpp
 
     # Object
+    Object/ObjectClassRegistryTests.cpp
     Object/ObjectTests.cpp
 
     # Resources
