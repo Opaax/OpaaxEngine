@@ -3,8 +3,7 @@
 // File cases use a unique temp directory, created and removed per case.
 #include <doctest.h>
 
-#include <filesystem>
-#include <string>
+#include "../TestTempDir.h"
 
 #include "Core/IO/FileIO.h"
 #include "Renderer/Textures/SpriteSheetData.h"
@@ -14,37 +13,6 @@ using namespace Opaax;
 
 namespace
 {
-    namespace fs = std::filesystem;
-
-    class ScopedTempDir
-    {
-    public:
-        explicit ScopedTempDir(const char* InTag)
-        {
-            m_Path = fs::temp_directory_path() / ("OpaaxSheetTests_" + std::string(InTag));
-
-            std::error_code lError;
-            fs::remove_all(m_Path, lError);          // a previous crashed run must not poison this one
-            fs::create_directories(m_Path, lError);
-        }
-
-        ~ScopedTempDir()
-        {
-            std::error_code lError;
-            fs::remove_all(m_Path, lError);
-        }
-
-        ScopedTempDir(const ScopedTempDir&)            = delete;
-        ScopedTempDir& operator=(const ScopedTempDir&) = delete;
-
-        OpaaxString Sub(const char* InRel) const
-        {
-            return OpaaxString((m_Path / InRel).generic_string().c_str());
-        }
-
-    private:
-        fs::path m_Path;
-    };
 
     /** A 2x2 sheet over a 64x64 texture: cells of 32, no margin, no spacing. */
     SpriteSheetData MakeProbeSheet()
@@ -210,7 +178,7 @@ TEST_CASE("FrameAt: out of range answers NULL rather than clamping")
 // =============================================================================
 TEST_CASE("SpriteSheetFile: save then load round-trips every field")
 {
-    const ScopedTempDir   lDir("roundtrip");
+    const TestTempDir     lDir("roundtrip");
     const OpaaxString     lPath  = lDir.Sub("Hero.opaaxsheet");
     SpriteSheetData       lSaved = MakeProbeSheet();
 
@@ -239,7 +207,7 @@ TEST_CASE("SpriteSheetFile: the text a save writes is the text a save writes aga
 
     CHECK(SpriteSheetFile::Serialize(lData) == SpriteSheetFile::Serialize(lData));
 
-    const ScopedTempDir lDir("stable");
+    const TestTempDir   lDir("stable");
     const OpaaxString   lPath = lDir.Sub("Stable.opaaxsheet");
     REQUIRE(SpriteSheetFile::Save(lPath, lData));
 
@@ -251,7 +219,7 @@ TEST_CASE("SpriteSheetFile: the text a save writes is the text a save writes aga
 
 TEST_CASE("SpriteSheetFile: a missing or malformed file leaves the caller's data untouched")
 {
-    const ScopedTempDir lDir("bad");
+    const TestTempDir lDir("bad");
 
     SpriteSheetData lExisting = MakeProbeSheet();
 
@@ -268,7 +236,7 @@ TEST_CASE("SpriteSheetFile: a missing or malformed file leaves the caller's data
 
 TEST_CASE("SpriteSheetFile: a file missing keys keeps the defaults (_WITH_DEFAULT), a wrong TYPE fails")
 {
-    const ScopedTempDir lDir("partial");
+    const TestTempDir lDir("partial");
 
     // Adding a field must not break sheets saved before it.
     const OpaaxString lPartial = lDir.Sub("Partial.opaaxsheet");

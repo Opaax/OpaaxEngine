@@ -1,9 +1,8 @@
 #pragma once
 
 #include "Core/OpaaxTypes.h"
-
-#include <chrono>
-#include <cstring>   // strcmp
+#include "Core/String/CString.h"
+#include "Core/Time/Clock.h"
 
 namespace Opaax
 {
@@ -151,7 +150,7 @@ namespace Opaax
             if (InA == InB)                         { return true; }
             if (InA == nullptr || InB == nullptr)   { return false; }
 
-            return std::strcmp(InA, InB) == 0;
+            return CString::Equals(InA, InB);
         }
 
         /**
@@ -200,18 +199,17 @@ namespace Opaax
         {
             if (m_Profiler == nullptr) { return; }
 
-            m_Index = m_Profiler->Open(InName);
-            m_Start = std::chrono::steady_clock::now();
+            m_Index   = m_Profiler->Open(InName);
+            m_StartNs = Clock::NowNanoseconds();
         }
 
         ~ScopedStat()
         {
             if (m_Profiler == nullptr) { return; }
 
-            const std::chrono::duration<double, std::milli> lElapsed =
-                std::chrono::steady_clock::now() - m_Start;
+            const double lElapsedMs = static_cast<double>(Clock::NowNanoseconds() - m_StartNs) / 1'000'000.0;
 
-            m_Profiler->Close(m_Index, lElapsed.count());
+            m_Profiler->Close(m_Index, lElapsedMs);
         }
 
         // =============================================================================
@@ -226,8 +224,8 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        FrameProfiler*                        m_Profiler = nullptr;
-        Int32                                 m_Index    = -1;
-        std::chrono::steady_clock::time_point m_Start;
+        FrameProfiler* m_Profiler = nullptr;
+        Int32          m_Index    = -1;
+        Uint64         m_StartNs  = 0;
     };
 }

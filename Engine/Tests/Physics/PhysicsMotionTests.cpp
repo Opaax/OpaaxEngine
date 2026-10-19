@@ -21,7 +21,7 @@
 #include "World/World.h"
 #include "World/WorldManager.h"
 
-#include <functional>
+#include "Core/OpaaxTypes.h"
 
 using namespace Opaax;
 
@@ -52,7 +52,7 @@ namespace
 
             TheWorld->SetContext(WorldContext{ *TheWorld, Resources, IPaths::Null(), Events,
                                                Input, Config, /*Actions*/ nullptr, /*UI*/ nullptr, Debug });
-            TheWorld->GetSubsystems().RegisterSubsystem<PhysicsSubsystem>(std::ref(*TheWorld->GetContext()));
+            TheWorld->GetSubsystems().RegisterSubsystem<PhysicsSubsystem>(Ref(*TheWorld->GetContext()));
             TheWorld->GetSubsystems().StartupAll();
 
             Physics = TheWorld->GetSubsystems().GetSubsystem<PhysicsSubsystem>();

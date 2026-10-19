@@ -1,9 +1,9 @@
 #pragma once
 
-#include <cmath>            // cos/sin
 #include <glm/matrix.hpp>   // inverse
 
 #include "Core/Maths/MathTypes.h"
+#include "Core/Maths/Maths.h"
 #include "Core/OpaaxTypes.h"
 
 namespace Opaax::Editor
@@ -202,8 +202,8 @@ namespace Opaax::Editor
          */
         void ReseatAt(const Vector2F& InPivot, const float InRotationRad) noexcept
         {
-            const float lCos = std::cos(InRotationRad);
-            const float lSin = std::sin(InRotationRad);
+            const float lCos = Maths::Cos(InRotationRad);
+            const float lSin = Maths::Sin(InRotationRad);
 
             m_Matrix = Matrix44F(1.f);
 

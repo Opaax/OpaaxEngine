@@ -108,7 +108,7 @@ namespace Opaax::Editor
             ImGui::PushID(static_cast<int>(lIndex));
 
             char lLabel[64];
-            std::snprintf(lLabel, sizeof(lLabel), "%u. %s", lIndex, ToString(InData.Modifiers[lIndex].Type));
+            CString::Format(lLabel, "{}. {}", lIndex, ToString(InData.Modifiers[lIndex].Type));
 
             if (ImGui::Selectable(lLabel, m_SelectedModifier == static_cast<Int32>(lIndex)))
             {

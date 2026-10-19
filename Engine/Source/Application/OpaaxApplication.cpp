@@ -1,8 +1,7 @@
 #include "Application/OpaaxApplication.h"
 
-#include <algorithm>
-#include <cstdlib>
-#include <cstring>
+#include "Core/Maths/Maths.h"
+#include "Core/String/CString.h"
 
 #include "Automation/AutomationSession.h"
 #include "Platform/CrashHandler.h"
@@ -39,25 +38,6 @@ using namespace Opaax;
 
 namespace
 {
-    bool HasCommandLineFlag(const int InArgc, char** InArgv, const char* InFlag)
-    {
-        for (int i = 1; i < InArgc; ++i)
-        {
-            if (InArgv[i] != nullptr && std::strcmp(InArgv[i], InFlag) == 0) { return true; }
-        }
-        return false;
-    }
-
-    /** The argument after InFlag, or null. */
-    const char* FindCommandLineValue(const int InArgc, char** InArgv, const char* InFlag)
-    {
-        for (int i = 1; i + 1 < InArgc; ++i)
-        {
-            if (InArgv[i] != nullptr && std::strcmp(InArgv[i], InFlag) == 0) { return InArgv[i + 1]; }
-        }
-        return nullptr;
-    }
-
     /** Frames drawn before a --capture is taken, when --capture-frame does not say. */
     constexpr Uint64 DEFAULT_CAPTURE_FRAME = 60;
 }
@@ -69,8 +49,7 @@ AppServiceLocator OpaaxApplication::m_Services = AppServiceLocator();
 // =============================================================================
 
 OpaaxApplication::OpaaxApplication(int InArgc, char** InArgv)
-    : m_Argc(InArgc)
-    , m_Argv(InArgv)
+    : m_CommandLine(CommandLine::FromMain(InArgc, InArgv))
     , m_ModuleRegistrar(MakeUnique<ModuleRegistrar>())
 {
 }
@@ -134,12 +113,12 @@ IPlatform& OpaaxApplication::BootPlatform()
 
 IPaths& OpaaxApplication::BootPaths()
 {
-    return m_Services.ProvideInstance<IPaths>(CreatePaths(Platform(), m_Argc, m_Argv));
+    return m_Services.ProvideInstance<IPaths>(CreatePaths(Platform(), m_CommandLine));
 }
 
-TUniquePtr<IPaths> OpaaxApplication::CreatePaths(const IPlatform& InPlatform, int InArgc, char** InArgv)
+TUniquePtr<IPaths> OpaaxApplication::CreatePaths(const IPlatform& InPlatform, const CommandLine& InCommandLine)
 {
-    return MakeUnique<Opaax::Paths>(InPlatform, InArgc, InArgv);
+    return MakeUnique<Opaax::Paths>(InPlatform, InCommandLine);
 }
 
 IConfigSystem& OpaaxApplication::BootConfigSystem(const IPaths& Paths)
@@ -240,7 +219,7 @@ void OpaaxApplication::RunApplication()
 
 #if defined(OPAAX_WORKSPACE_DIR)
     // Dev builds only: tests the crash path (dump, stack, log copy, dialog).
-    if (HasCommandLineFlag(m_Argc, m_Argv, "--crash-test"))
+    if (m_CommandLine.HasFlag("--crash-test"))
     {
         CrashHandler::TriggerTestCrash();
     }
@@ -248,16 +227,18 @@ void OpaaxApplication::RunApplication()
 
     // --capture <file.png> [--capture-frame N]: saves frame N (default 60) as a PNG, then quits.
     // What an automated check or an agent uses to see the game.
-    const char*  lCapturePath  = FindCommandLineValue(m_Argc, m_Argv, "--capture");
-    const char*  lCaptureFrame = FindCommandLineValue(m_Argc, m_Argv, "--capture-frame");
-    const Uint64 lCaptureAt    = (lCaptureFrame != nullptr) ? std::strtoull(lCaptureFrame, nullptr, 10) : DEFAULT_CAPTURE_FRAME;
-    Uint64       lFrameIndex   = 0;
+    const OpaaxString* lCapturePath  = m_CommandLine.FindValue("--capture");
+    const OpaaxString* lCaptureFrame = m_CommandLine.FindValue("--capture-frame");
+    const Uint64       lCaptureAt    = (lCaptureFrame != nullptr) ? CString::ToUint64(lCaptureFrame->CStr())
+                                                                  : DEFAULT_CAPTURE_FRAME;
+    Uint64             lFrameIndex   = 0;
 
     // --exec <script.json> [--exec-out <answers.json>], --automation <folder>: driven from outside
     // (AutomationSession). A script that cannot be run fails the run instead of starting it.
-    const char* lScript = FindCommandLineValue(m_Argc, m_Argv, "--exec");
-    const char* lInbox  = FindCommandLineValue(m_Argc, m_Argv, "--automation");
-    m_Automation = AutomationSession::Create(lScript, FindCommandLineValue(m_Argc, m_Argv, "--exec-out"), lInbox);
+    const OpaaxString* lScript = m_CommandLine.FindValue("--exec");
+    const OpaaxString* lInbox  = m_CommandLine.FindValue("--automation");
+    m_Automation = AutomationSession::Create(m_CommandLine.GetValue("--exec"), m_CommandLine.GetValue("--exec-out"),
+                                             m_CommandLine.GetValue("--automation"));
     if (m_Automation != nullptr)
     {
         m_Automation->Start(Engine());
@@ -321,9 +302,9 @@ void OpaaxApplication::RunApplication()
         // 2.1 Capture, before the swap (the backbuffer holds the frame).
         // ----------------------------------------------------------------
         ++lFrameIndex;
-        if (lCapturePath != nullptr && lFrameIndex == std::max<Uint64>(lCaptureAt, 1))
+        if (lCapturePath != nullptr && lFrameIndex == Maths::Max<Uint64>(lCaptureAt, 1))
         {
-            Engine().CaptureFrame(OpaaxString(lCapturePath));
+            Engine().CaptureFrame(*lCapturePath);
             lWindow->RequestClose();
         }
 
@@ -345,7 +326,7 @@ void OpaaxApplication::RunApplication()
     if (m_Automation != nullptr)
     {
         m_Automation->Close();
-        SetExitCode(std::max(GetExitCode(), m_Automation->GetExitCode()));
+        SetExitCode(Maths::Max(GetExitCode(), m_Automation->GetExitCode()));
         m_Automation.reset();
     }
 

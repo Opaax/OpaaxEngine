@@ -1,6 +1,6 @@
 #pragma once
 
-#include <algorithm>
+#include "Core/Maths/Maths.h"
 
 #include "Core/OpaaxTypes.h"
 
@@ -44,7 +44,7 @@ namespace Opaax
                 return;
             }
 
-            const Uint32 lFrames = std::min(InFrames, RemainingFrames);
+            const Uint32 lFrames = Maths::Min(InFrames, RemainingFrames);
             Current += (Target - Current) * (static_cast<float>(lFrames) / static_cast<float>(RemainingFrames));
             RemainingFrames -= lFrames;
 

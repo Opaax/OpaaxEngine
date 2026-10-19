@@ -1,7 +1,6 @@
 #pragma once
 
-#include <functional>   // std::ref
-#include <type_traits>
+#include "Core/Templates/TypeTraits.h"
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
@@ -45,7 +44,7 @@ namespace Opaax
     //   register their own types.
     // =============================================================================
     template<typename T>
-    requires std::is_base_of_v<IWorldSubsystem, T>
+    requires TIsBaseOf<IWorldSubsystem, T>
     class TWorldSubsystemEntry final : public IWorldSubsystemEntry
     {
     public:
@@ -56,7 +55,7 @@ namespace Opaax
         bool ShouldCreate(const World& InWorld) const override
         {
             // Optional: a type with static bool ShouldCreate(const World&) is asked; others are always created.
-            if constexpr (requires { { T::ShouldCreate(InWorld) } -> std::convertible_to<bool>; })
+            if constexpr (requires { { T::ShouldCreate(InWorld) } -> CConvertibleTo<bool>; })
             {
                 return T::ShouldCreate(InWorld);
             }
@@ -69,9 +68,9 @@ namespace Opaax
         void CreateInto(WorldSubsystemMgr& InManager, WorldContext& InContext) const override
         {
             // T must be constructible from WorldContext&.
-            // std::ref: the factory captures its arguments by value, and a copy would leave subsystems
+            // Ref: the factory captures its arguments by value, and a copy would leave subsystems
             // with dangling references.
-            InManager.RegisterSubsystem<T>(std::ref(InContext));
+            InManager.RegisterSubsystem<T>(Ref(InContext));
         }
 
     private:
@@ -112,7 +111,7 @@ namespace Opaax
          * @return True if registered
          */
         template<typename T>
-        requires std::is_base_of_v<IWorldSubsystem, T>
+        requires TIsBaseOf<IWorldSubsystem, T>
         bool Register(OpaaxStringID InName)
         {
             // Built here (T is known), stored by an out-of-line function.

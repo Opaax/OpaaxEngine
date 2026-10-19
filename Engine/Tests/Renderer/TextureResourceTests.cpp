@@ -7,10 +7,9 @@
 // File cases use a unique temp directory, created and removed per case.
 #include <doctest.h>
 
-#include <cstring>
-#include <filesystem>
-#include <fstream>
-#include <string>
+#include "../TestTempDir.h"
+#include "Core/IO/FileIO.h"
+#include "Core/Memory/Memory.h"
 
 #include "Resources/ResourceManager.h"        // completes LoadContext
 #include "Resources/ResourceFormatRegistry.h"
@@ -20,8 +19,6 @@ using namespace Opaax;
 
 namespace
 {
-    namespace fs = std::filesystem;
-
     // 4x2 RGB PNG: top row red, bottom row blue. Stored as bytes (no image file needed).
     constexpr Uint8 k_Png4x2Rgb[] =
     {
@@ -37,41 +34,20 @@ namespace
     class ScopedTempDir
     {
     public:
-        explicit ScopedTempDir(const char* InTag)
-        {
-            m_Path = fs::temp_directory_path() / ("OpaaxTextureTests_" + std::string(InTag));
+        explicit ScopedTempDir(const char* InTag) : m_Dir(InTag) {}
 
-            std::error_code lError;
-            fs::remove_all(m_Path, lError);          // a previous crashed run must not poison this one
-            fs::create_directories(m_Path, lError);
-        }
-
-        ~ScopedTempDir()
-        {
-            std::error_code lError;
-            fs::remove_all(m_Path, lError);
-        }
-
-        ScopedTempDir(const ScopedTempDir&)            = delete;
-        ScopedTempDir& operator=(const ScopedTempDir&) = delete;
-
-        OpaaxString Sub(const char* InRel) const
-        {
-            return OpaaxString((m_Path / InRel).generic_string().c_str());
-        }
+        OpaaxString Sub(const char* InRel) const { return m_Dir.Sub(InRel); }
 
         /** Write raw bytes to InRel and answer its absolute path. */
         OpaaxString Write(const char* InRel, const Uint8* InBytes, Uint64 InCount) const
         {
-            std::ofstream lFile(m_Path / InRel, std::ios::binary);
-            lFile.write(reinterpret_cast<const char*>(InBytes), static_cast<std::streamsize>(InCount));
-            lFile.close();
-
-            return Sub(InRel);
+            const OpaaxString lPath = Sub(InRel);
+            FileIO::WriteAllBytes(lPath, InBytes, InCount);
+            return lPath;
         }
 
     private:
-        fs::path m_Path;
+        TestTempDir m_Dir;
     };
 
     /** A load context. Textures have no dependencies. */
@@ -91,7 +67,7 @@ TEST_SUITE("TextureResource")
         const OpaaxString   lPath = lTemp.Write("Sprite.png", k_Png4x2Rgb, sizeof(k_Png4x2Rgb));
 
         LoadFixture lFixture;
-        std::optional<TextureResource> lTexture = TextureResource::Load(lPath.CStr(), lFixture.Ctx);
+        TOptional<TextureResource> lTexture = TextureResource::Load(lPath.CStr(), lFixture.Ctx);
 
         REQUIRE(lTexture.has_value());
         CHECK(lTexture->Width    == 4u);
@@ -109,7 +85,7 @@ TEST_SUITE("TextureResource")
         const OpaaxString   lPath = lTemp.Write("Sprite.png", k_Png4x2Rgb, sizeof(k_Png4x2Rgb));
 
         LoadFixture lFixture;
-        std::optional<TextureResource> lTexture = TextureResource::Load(lPath.CStr(), lFixture.Ctx);
+        TOptional<TextureResource> lTexture = TextureResource::Load(lPath.CStr(), lFixture.Ctx);
 
         REQUIRE(lTexture.has_value());
         REQUIRE(lTexture->Pixels.size() >= 3u);
@@ -129,7 +105,7 @@ TEST_SUITE("TextureResource")
         // A PNG signature followed by garbage — it passes any "is this a png?" sniff and fails to
         // decode, which is the case a bare extension check would wave through.
         Uint8 lBroken[sizeof(k_Png4x2Rgb)];
-        std::memcpy(lBroken, k_Png4x2Rgb, sizeof(k_Png4x2Rgb));
+        Memory::Copy(lBroken, k_Png4x2Rgb, sizeof(k_Png4x2Rgb));
         lBroken[30] = 0x00;
         lBroken[45] = 0x7F;
 
@@ -170,7 +146,7 @@ TEST_SUITE("TextureResource")
         const OpaaxString   lPath = lTemp.Write("Sprite.png", k_Png4x2Rgb, sizeof(k_Png4x2Rgb));
 
         LoadFixture lFixture;
-        std::optional<TextureResource> lTexture = TextureResource::Load(lPath.CStr(), lFixture.Ctx);
+        TOptional<TextureResource> lTexture = TextureResource::Load(lPath.CStr(), lFixture.Ctx);
         REQUIRE(lTexture.has_value());
 
         lTexture->Initialize();   // IEngine::Null(): no device
@@ -192,7 +168,7 @@ TEST_SUITE("TextureResource")
         const ScopedTempDir lTemp("degrade");
 
         Uint8 lBroken[sizeof(k_Png4x2Rgb)];
-        std::memcpy(lBroken, k_Png4x2Rgb, sizeof(k_Png4x2Rgb));
+        Memory::Copy(lBroken, k_Png4x2Rgb, sizeof(k_Png4x2Rgb));
         lBroken[30] = 0x00;
         lBroken[45] = 0x7F;
 

@@ -1,7 +1,5 @@
 ﻿#pragma once
 
-#include <algorithm>
-
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 
@@ -56,7 +54,7 @@ return StaticTypeID();                                                   \
      * @tparam TSubsystem The subsystem base type this manager handles
      */
     template <class TSubsystem>
-    requires std::is_base_of_v<ISubsystem, TSubsystem>
+    requires TIsBaseOf<ISubsystem, TSubsystem>
     class ISubsystemManager
     {
         using SubsystemType = TSubsystem;
@@ -84,12 +82,12 @@ return StaticTypeID();                                                   \
          * Registers a subsystem type. It is created and started in StartupAll.
          */
         template<typename T, typename... Args>
-        requires std::is_base_of_v<SubsystemType, T>
+        requires TIsBaseOf<SubsystemType, T>
         void RegisterSubsystem(Args&&... InArgs)
         {
-            m_Factories.emplace_back([...Arguments = std::forward<Args>(InArgs)]() mutable
+            m_Factories.emplace_back([...Arguments = Forward<Args>(InArgs)]() mutable
             {
-                return MakeUnique<T>(std::forward<decltype(Arguments)>(Arguments)...);
+                return MakeUnique<T>(Forward<decltype(Arguments)>(Arguments)...);
             });
         }
 
@@ -172,7 +170,7 @@ return StaticTypeID();                                                   \
         const TDynArray<TUniquePtr<SubsystemType>>& GetSystems() const { return m_Systems; }
         
         template<typename T>
-        requires std::is_base_of_v<SubsystemType, T>
+        requires TIsBaseOf<SubsystemType, T>
         T* GetSubsystem()
         {
             for (auto& lSystem : m_Systems)
@@ -187,7 +185,7 @@ return StaticTypeID();                                                   \
         }
 
         template<typename T>
-        requires std::is_base_of_v<SubsystemType, T>
+        requires TIsBaseOf<SubsystemType, T>
         const T* GetSubsystem() const
         {
             for (const auto& lSystem : m_Systems)

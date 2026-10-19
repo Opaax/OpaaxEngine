@@ -3,7 +3,7 @@
 #include <imgui.h>
 #include <ImGuizmo.h>
 
-#include <cstdio>   // snprintf
+#include "Core/String/CString.h"
 
 #include "Editor/Imgui/ImguiHelper.h"
 #include "Application/Services/IConfigSystem.h"
@@ -318,7 +318,7 @@ namespace Opaax::Editor
         // snprintf (ImFormatString is in imgui_internal.h). The format matches DockSpaceOverViewport; the
         // saved layout is keyed on it.
         char lLabel[32];
-        std::snprintf(lLabel, sizeof(lLabel), "WindowOverViewport_%08X", lViewport->ID);
+        CString::Format(lLabel, "WindowOverViewport_{:08X}", lViewport->ID);
 
         // Pos/Size rather than WorkPos/WorkSize: the bar is inside this window.
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);

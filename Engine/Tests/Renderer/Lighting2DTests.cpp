@@ -4,8 +4,7 @@
 // render check.
 #include <doctest.h>
 
-#include <cmath>
-#include <string>
+#include "Core/Maths/Maths.h"
 
 #include <nlohmann/json.hpp>
 
@@ -40,7 +39,7 @@ TEST_CASE("Lights: the ambient light is decoded to linear and scaled by its inte
     LightsBlock2D lBlock;
     PackLights2D({}, VIEW, Vector3F{ 0.5f, 1.f, 0.f }, 2.f, lBlock);
 
-    CHECK(lBlock.Ambient.x == doctest::Approx(std::pow(0.5f, 2.2f) * 2.f));
+    CHECK(lBlock.Ambient.x == doctest::Approx(Maths::Pow(0.5f, 2.2f) * 2.f));
     CHECK(lBlock.Ambient.y == doctest::Approx(2.f));
     CHECK(lBlock.Ambient.z == doctest::Approx(0.f));
     CHECK(lBlock.GetCount() == 0);
@@ -100,7 +99,7 @@ TEST_CASE("Lights: a light is packed the way the shader reads it")
 
     // Linear colour times intensity; the falloff exponent rides along.
     CHECK(lBlock.Color[0].x == doctest::Approx(3.f));
-    CHECK(lBlock.Color[0].y == doctest::Approx(std::pow(0.5f, 2.2f) * 3.f));
+    CHECK(lBlock.Color[0].y == doctest::Approx(Maths::Pow(0.5f, 2.2f) * 3.f));
     CHECK(lBlock.Color[0].z == doctest::Approx(0.f));
     CHECK(lBlock.Color[0].w == doctest::Approx(1.5f));
 
@@ -108,8 +107,8 @@ TEST_CASE("Lights: a light is packed the way the shader reads it")
     // of it (softness 0.5) 22.5.
     CHECK(lBlock.Direction[0].x == doctest::Approx(0.f).epsilon(1e-5));
     CHECK(lBlock.Direction[0].y == doctest::Approx(1.f));
-    CHECK(lBlock.Direction[0].z == doctest::Approx(std::cos(3.14159265f / 4.f)));
-    CHECK(lBlock.Direction[0].w == doctest::Approx(std::cos(3.14159265f / 8.f)));
+    CHECK(lBlock.Direction[0].z == doctest::Approx(Maths::Cos(3.14159265f / 4.f)));
+    CHECK(lBlock.Direction[0].w == doctest::Approx(Maths::Cos(3.14159265f / 8.f)));
 
     CHECK(lBlock.Params[0].x == doctest::Approx(80.f));
     CHECK(lBlock.Params[0].y == doctest::Approx(-1.f));   // no shadow
@@ -149,7 +148,7 @@ TEST_CASE("Lights: past the limit, global lights and the strongest point lights 
     CHECK(lBlock.Position[0].w == LIGHT_CODE_GLOBAL);
     CHECK(lBlock.Color[1].x == doctest::Approx(40.f));
     float lWeakest = 1.0e9f;
-    for (Uint32 lIndex = 1; lIndex < MAX_LIGHTS_2D; ++lIndex) { lWeakest = std::min(lWeakest, lBlock.Color[lIndex].x); }
+    for (Uint32 lIndex = 1; lIndex < MAX_LIGHTS_2D; ++lIndex) { lWeakest = Maths::Min(lWeakest, lBlock.Color[lIndex].x); }
     CHECK(lWeakest == doctest::Approx(10.f));
 }
 
@@ -356,7 +355,7 @@ namespace
     float DistanceBetween(const Vector2F& InA, const Vector2F& InB)
     {
         const Vector2F lOffset = InA - InB;
-        return std::sqrt(lOffset.x * lOffset.x + lOffset.y * lOffset.y);
+        return Maths::Sqrt(lOffset.x * lOffset.x + lOffset.y * lOffset.y);
     }
 }
 
@@ -391,7 +390,7 @@ TEST_CASE("Light gizmo: a spot light is its cone along the entity's rotation, in
     // Two edges, the arc (90 degrees, a segment per 7.5), two inner edges.
     REQUIRE(lLines.size() == 2 + 12 + 2);
 
-    const float lDiagonal = 100.f * std::sqrt(0.5f);
+    const float lDiagonal = 100.f * Maths::Sqrt(0.5f);
     CHECK(lLines[0].End.x == doctest::Approx(lDiagonal));    // 45 degrees
     CHECK(lLines[0].End.y == doctest::Approx(lDiagonal));
     CHECK(lLines[1].End.x == doctest::Approx(-lDiagonal));   // 135 degrees
@@ -405,8 +404,8 @@ TEST_CASE("Light gizmo: a spot light is its cone along the entity's rotation, in
     }
 
     // The inner cone: 22.5 degrees each side of up.
-    CHECK(lLines[14].End.x == doctest::Approx(100.f * std::sin(3.14159265f / 8.f)));
-    CHECK(lLines[15].End.x == doctest::Approx(-100.f * std::sin(3.14159265f / 8.f)));
+    CHECK(lLines[14].End.x == doctest::Approx(100.f * Maths::Sin(3.14159265f / 8.f)));
+    CHECK(lLines[15].End.x == doctest::Approx(-100.f * Maths::Sin(3.14159265f / 8.f)));
 }
 
 TEST_CASE("Light gizmo: a hard spot has no inner edges; a global light is an arrow of the given length")

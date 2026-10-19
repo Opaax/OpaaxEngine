@@ -1,8 +1,6 @@
 #pragma once
 
-#include <filesystem>
-#include <string>
-
+#include "Core/String/OpaaxPathString.h"
 #include "Core/String/OpaaxString.hpp"
 #include "World/Serialization/LevelFile.h"   // LevelData
 #include "World/Serialization/MapFile.h"     // MAP_EXTENSION
@@ -19,22 +17,20 @@ namespace Opaax::Editor
         /** InPath ends with InExtension (".opaaxlevel"), and has a name before it. */
         inline bool HasExtension(const OpaaxString& InPath, const char* InExtension)
         {
-            const std::filesystem::path lPath(InPath.CStr());
-            return lPath.extension() == InExtension && !lPath.stem().empty();
+            return PathString::Extension(InPath) == InExtension && !PathString::Stem(InPath).IsEmpty();
         }
 
         /** The map a new level gets when none is named: Maps/<the level's file name>.opaaxmap. */
         inline OpaaxString DefaultMap(const OpaaxString& InLevelPath)
         {
-            const std::string lName = std::filesystem::path(InLevelPath.CStr()).stem().generic_string();
-            return OpaaxString(("Maps/" + lName + MapFile::MAP_EXTENSION).c_str());
+            return "Maps/" + PathString::Stem(InLevelPath).ToString() + MapFile::MAP_EXTENSION;
         }
 
         /** The level file's content: named after its file, InMapPath its only (and persistent) map. */
         inline LevelData Make(const OpaaxString& InLevelPath, const OpaaxString& InMapPath)
         {
             LevelData lData;
-            lData.Name = OpaaxString(std::filesystem::path(InLevelPath.CStr()).stem().generic_string().c_str());
+            lData.Name = PathString::Stem(InLevelPath).ToString();
             lData.Maps.push_back(InMapPath);
             lData.PersistentMapIndex = 0;
             return lData;

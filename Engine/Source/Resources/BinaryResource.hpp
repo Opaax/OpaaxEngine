@@ -1,7 +1,5 @@
 #pragma once
 
-#include <optional>
-
 #include "Core/OpaaxTypes.h"
 #include "Core/IO/FileIO.h"
 #include "Core/Log/Logger.h"
@@ -21,13 +19,13 @@ namespace Opaax
         // ---- CResource contract --------------------------------------------------
         static constexpr EFailPolicy FailPolicy = EFailPolicy::Placeholder;
 
-        static std::optional<BinaryResource> Load(const char* InPath, LoadContext& /*InCtx*/)
+        static TOptional<BinaryResource> Load(const char* InPath, LoadContext& /*InCtx*/)
         {
             BinaryResource lResource;
             if (!FileIO::ReadAllBytes(OpaaxString(InPath), lResource.Bytes))
             {
                 OPAAX_ENGINE_LOG(Error, "BinaryResource: cannot read '{}'", InPath);
-                return std::nullopt;
+                return NullOpt;
             }
 
             return lResource;

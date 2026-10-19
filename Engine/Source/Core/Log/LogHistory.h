@@ -4,10 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
-
-#include <chrono>
-#include <deque>
-#include <string_view>
+#include "Core/Time/DateTime.h"
 
 namespace Opaax
 {
@@ -17,15 +14,15 @@ namespace Opaax
     struct LogEntry
     {
         /** Starts at 1, +1 per line. A reader resumes from the last one it saw. */
-        Uint64                                Sequence = 0;
-        std::chrono::system_clock::time_point Time;
-        ELogLevel                             Level{};
+        Uint64        Sequence = 0;
+        DateTime      Time;       // local time
+        ELogLevel     Level{};
 
         /** Interned: the category name lives in the module that declared it. */
-        OpaaxStringID                         Category;
+        OpaaxStringID Category;
 
         /** Without the "[Category] " prefix. */
-        OpaaxString                           Message;
+        OpaaxString   Message;
     };
 
     // =============================================================================
@@ -45,7 +42,7 @@ namespace Opaax
         // =============================================================================
     public:
         /** Drops the oldest line when full. Does nothing when capacity is 0. */
-        void Push(ELogLevel InLevel, OpaaxStringID InCategory, std::string_view InMessage);
+        void Push(ELogLevel InLevel, OpaaxStringID InCategory, OpaaxStringView InMessage);
 
         /**
          * Appends every line newer than InAfterSequence to OutEntries, oldest first.
@@ -68,7 +65,7 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        std::deque<LogEntry> m_Entries;
+        TDeque<LogEntry>     m_Entries;
         Uint32               m_Capacity     = 0;
         Uint64               m_LastSequence = 0;
     };

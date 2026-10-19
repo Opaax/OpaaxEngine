@@ -1,6 +1,6 @@
 #pragma once
 
-#include <type_traits>
+#include "Core/Templates/TypeTraits.h"
 
 #include "Application/Services/IAppService.h"
 #include "Core/Log/Logger.h"
@@ -49,7 +49,7 @@ namespace Opaax
          * @return The owned config
          */
         template<class T>
-        requires std::is_base_of_v<IConfig, T>
+        requires TIsBaseOf<IConfig, T>
         T& Register()
         {
             return static_cast<T&>(FindOrCreate(T::StaticTypeID(),
@@ -60,7 +60,7 @@ namespace Opaax
          * @return The config, registered on first use. Never null.
          */
         template<class T>
-        requires std::is_base_of_v<IConfig, T>
+        requires TIsBaseOf<IConfig, T>
         T& Get() { return Register<T>(); }
 
         /**
@@ -68,7 +68,7 @@ namespace Opaax
          * @return False if T was never registered
          */
         template<class T>
-        requires std::is_base_of_v<IConfig, T>
+        requires TIsBaseOf<IConfig, T>
         bool Save() { return SaveConfig(T::StaticTypeID()); }
 
         // Saves every registered config.

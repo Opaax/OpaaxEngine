@@ -6,8 +6,6 @@
 #include "Application/Services/IAppService.h"
 #include "Platform/IPlatform.h"
 #include "Core/OpaaxTypes.h"
-
-#include <string>
 #include "Platform/NativePlatform.h"
 
 using namespace Opaax;
@@ -157,10 +155,9 @@ TEST_CASE("NativePlatform: reports real OS values through the locator")
     const OpaaxString lExe = lPlatform.GetExecutablePath();
     CHECK_FALSE(lExe.IsEmpty());
 
-    const std::string lPath = lExe.CStr();
-    CHECK(lPath.find("OpaaxTests") != std::string::npos);
-    CHECK(lPath.find('\\') == std::string::npos); // normalised to '/'
+    CHECK(lExe.Contains("OpaaxTests"));
+    CHECK(lExe.Find('\\') < 0); // normalised to '/'
 #ifdef OPAAX_PLATFORM_WINDOWS
-    CHECK(lPath.find(".exe") != std::string::npos);
+    CHECK(lExe.Contains(".exe"));
 #endif
 }

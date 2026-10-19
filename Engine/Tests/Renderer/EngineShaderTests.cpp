@@ -4,10 +4,9 @@
 // a GPU, which the CI render check has.
 #include <doctest.h>
 
-#include <regex>
-#include <string>
-
 #include "Core/IO/FileIO.h"
+#include "Core/String/Char.h"
+#include "Core/String/CString.h"
 #include "Renderer/Lighting/Lighting2D.h"
 #include "Renderer/ShaderSource.h"
 #include "RHI/OpenGL/GLSLPort.h"
@@ -16,20 +15,49 @@ using namespace Opaax;
 
 namespace
 {
-    std::string ReadShader(const char* InFile)
+    OpaaxString ReadShader(const char* InFile)
     {
-        const std::string lPath = std::string(OPAAX_TEST_ENGINE_ASSETS) + "/Shaders/" + InFile;
-        return std::string(FileIO::ReadAllText(OpaaxString(lPath.c_str())).CStr());
+        return FileIO::ReadAllText(OpaaxString::Format("{}/Shaders/{}", OPAAX_TEST_ENGINE_ASSETS, InFile));
+    }
+
+    /** Moves past the spaces at the start of InOutText; false when there were fewer than InMinimum. */
+    bool SkipSpaces(OpaaxStringView& InOutText, const Uint32 InMinimum)
+    {
+        const OpaaxStringView lTrimmed = InOutText.TrimStart();
+        const Uint32          lSkipped = InOutText.GetLength() - lTrimmed.GetLength();
+        InOutText = lTrimmed;
+        return lSkipped >= InMinimum;
+    }
+
+    /** Moves past InWord when InOutText starts with it. */
+    bool Consume(OpaaxStringView& InOutText, const OpaaxStringView InWord)
+    {
+        if (!InOutText.StartsWith(InWord)) { return false; }
+
+        InOutText.RemovePrefix(InWord.GetLength());
+        return true;
+    }
+
+    /** InText holds a `binding` followed by spaces and `=`. */
+    bool HasBindingAssignment(const OpaaxStringView InText)
+    {
+        for (Int32 lAt = InText.Find("binding"); lAt >= 0; lAt = InText.Find("binding", static_cast<Uint32>(lAt) + 1))
+        {
+            OpaaxStringView lAfter = InText.SubString(static_cast<Uint32>(lAt) + 7);
+            SkipSpaces(lAfter, 0);
+            if (lAfter.StartsWith("=")) { return true; }
+        }
+        return false;
     }
 
     /** The bindings a stage declares, once ported. Fails the test when a `binding = N` is left behind. */
     TDynArray<GLSLPort::ResourceBinding> PortStage(const OpaaxString& InStage)
     {
         TDynArray<GLSLPort::ResourceBinding> lBindings;
-        const std::string lPorted = GLSLPort::To410(std::string(InStage.CStr()), lBindings);
+        const OpaaxString lPorted = GLSLPort::To410(InStage, lBindings);
 
-        CHECK(lPorted.rfind("#version 410 core\n", 0) == 0);
-        CHECK_FALSE(std::regex_search(lPorted, std::regex("binding\\s*=")));
+        CHECK(lPorted.StartsWith("#version 410 core\n"));
+        CHECK_FALSE(HasBindingAssignment(lPorted));
         return lBindings;
     }
 
@@ -42,21 +70,54 @@ namespace
         return nullptr;
     }
 
-    /** The value of `const <type> InName = <value>;` in InSource, or -1. */
-    double ConstantIn(const std::string& InSource, const char* InName)
+    /** The value of `const <int or float> InName = <digits and dots>;` in InSource, or -1. */
+    double ConstantIn(const OpaaxStringView InSource, const char* InName)
     {
-        const std::regex lPattern(std::string("const\\s+(int|float)\\s+") + InName + "\\s*=\\s*([0-9.]+)\\s*;");
-        std::smatch      lMatch;
-        return std::regex_search(InSource, lMatch, lPattern) ? std::stod(lMatch[2].str()) : -1.0;
+        for (Int32 lAt = InSource.Find("const"); lAt >= 0; lAt = InSource.Find("const", static_cast<Uint32>(lAt) + 1))
+        {
+            OpaaxStringView lText = InSource.SubString(static_cast<Uint32>(lAt) + 5);
+            if (!SkipSpaces(lText, 1) || !(Consume(lText, "int") || Consume(lText, "float"))
+                || !SkipSpaces(lText, 1) || !Consume(lText, InName))
+            {
+                continue;
+            }
+
+            SkipSpaces(lText, 0);
+            if (!Consume(lText, "=")) { continue; }
+            SkipSpaces(lText, 0);
+
+            Uint32 lDigits = 0;
+            while (lDigits < lText.GetLength() && (Char::IsDigit(lText[lDigits]) || lText[lDigits] == '.')) { ++lDigits; }
+
+            OpaaxStringView lAfter = lText.SubString(lDigits);
+            SkipSpaces(lAfter, 0);
+            if (lDigits == 0 || !lAfter.StartsWith(";")) { continue; }
+
+            return CString::ToDouble(lText.SubString(0, lDigits).ToString().CStr());
+        }
+        return -1.0;
     }
+}
+
+TEST_CASE("Engine shaders: the checks find what they look for")
+{
+    CHECK(HasBindingAssignment("layout(binding = 2) uniform Block"));
+    CHECK(HasBindingAssignment("binding=1"));
+    CHECK_FALSE(HasBindingAssignment("layout(bindings = 2) uniform Block"));
+    CHECK_FALSE(HasBindingAssignment("binding"));
+
+    CHECK(ConstantIn("const int MAX = 32;", "MAX") == doctest::Approx(32));
+    CHECK(ConstantIn("const  float  K=0.5 ;", "K") == doctest::Approx(0.5));
+    CHECK(ConstantIn("const int MAX_X = 1;", "MAX") == doctest::Approx(-1));
+    CHECK(ConstantIn("constint MAX = 3;", "MAX") == doctest::Approx(-1));
 }
 
 TEST_CASE("Engine shaders: the sprite shader ports with its samplers, camera and lights")
 {
-    const std::string lSource = ReadShader("Sprite.glsl");
-    REQUIRE_FALSE(lSource.empty());
+    const OpaaxString lSource = ReadShader("Sprite.glsl");
+    REQUIRE_FALSE(lSource.IsEmpty());
 
-    const ShaderDesc lDesc = ShaderSource::FromSource(OpaaxString(lSource.c_str()), OpaaxString("Sprite.glsl"));
+    const ShaderDesc lDesc = ShaderSource::FromSource(lSource, OpaaxString("Sprite.glsl"));
     REQUIRE_FALSE(lDesc.VertexSrc.IsEmpty());
     REQUIRE_FALSE(lDesc.FragmentSrc.IsEmpty());
 
@@ -79,7 +140,7 @@ TEST_CASE("Engine shaders: the sprite shader ports with its samplers, camera and
 
 TEST_CASE("Engine shaders: the sprite shader's lighting constants match Lighting2D")
 {
-    const std::string lSource = ReadShader("Sprite.glsl");
+    const OpaaxString lSource = ReadShader("Sprite.glsl");
 
     CHECK(ConstantIn(lSource, "MAX_LIGHTS") == doctest::Approx(MAX_LIGHTS_2D));
     CHECK(ConstantIn(lSource, "SHADOW_ROWS") == doctest::Approx(MAX_SHADOWED_LIGHTS_2D));
@@ -92,10 +153,10 @@ TEST_CASE("Engine shaders: the sprite shader's lighting constants match Lighting
 
 TEST_CASE("Engine shaders: the ambient occlusion shader ports with its source and block")
 {
-    const std::string lSource = ReadShader("AmbientOcclusion2D.glsl");
-    REQUIRE_FALSE(lSource.empty());
+    const OpaaxString lSource = ReadShader("AmbientOcclusion2D.glsl");
+    REQUIRE_FALSE(lSource.IsEmpty());
 
-    const ShaderDesc lDesc = ShaderSource::FromSource(OpaaxString(lSource.c_str()), OpaaxString("AmbientOcclusion2D.glsl"));
+    const ShaderDesc lDesc = ShaderSource::FromSource(lSource, OpaaxString("AmbientOcclusion2D.glsl"));
     REQUIRE_FALSE(lDesc.VertexSrc.IsEmpty());
     REQUIRE_FALSE(lDesc.FragmentSrc.IsEmpty());
 
@@ -115,10 +176,10 @@ TEST_CASE("Engine shaders: the ambient occlusion shader ports with its source an
 
 TEST_CASE("Engine shaders: the shadow map shader ports with its occlusion map and block")
 {
-    const std::string lSource = ReadShader("Shadow2D.glsl");
-    REQUIRE_FALSE(lSource.empty());
+    const OpaaxString lSource = ReadShader("Shadow2D.glsl");
+    REQUIRE_FALSE(lSource.IsEmpty());
 
-    const ShaderDesc lDesc = ShaderSource::FromSource(OpaaxString(lSource.c_str()), OpaaxString("Shadow2D.glsl"));
+    const ShaderDesc lDesc = ShaderSource::FromSource(lSource, OpaaxString("Shadow2D.glsl"));
     REQUIRE_FALSE(lDesc.VertexSrc.IsEmpty());
     REQUIRE_FALSE(lDesc.FragmentSrc.IsEmpty());
 
@@ -138,10 +199,10 @@ TEST_CASE("Engine shaders: the shadow map shader ports with its occlusion map an
 
 TEST_CASE("Engine shaders: the tonemap shader ports with its scene and post block")
 {
-    const std::string lSource = ReadShader("Tonemap.glsl");
-    REQUIRE_FALSE(lSource.empty());
+    const OpaaxString lSource = ReadShader("Tonemap.glsl");
+    REQUIRE_FALSE(lSource.IsEmpty());
 
-    const ShaderDesc lDesc = ShaderSource::FromSource(OpaaxString(lSource.c_str()), OpaaxString("Tonemap.glsl"));
+    const ShaderDesc lDesc = ShaderSource::FromSource(lSource, OpaaxString("Tonemap.glsl"));
     REQUIRE_FALSE(lDesc.VertexSrc.IsEmpty());
     REQUIRE_FALSE(lDesc.FragmentSrc.IsEmpty());
 
@@ -163,10 +224,10 @@ TEST_CASE("Engine shaders: the tonemap shader ports with its scene and post bloc
 
 TEST_CASE("Engine shaders: the bloom shader ports with its source and block")
 {
-    const std::string lSource = ReadShader("Bloom2D.glsl");
-    REQUIRE_FALSE(lSource.empty());
+    const OpaaxString lSource = ReadShader("Bloom2D.glsl");
+    REQUIRE_FALSE(lSource.IsEmpty());
 
-    const ShaderDesc lDesc = ShaderSource::FromSource(OpaaxString(lSource.c_str()), OpaaxString("Bloom2D.glsl"));
+    const ShaderDesc lDesc = ShaderSource::FromSource(lSource, OpaaxString("Bloom2D.glsl"));
     REQUIRE_FALSE(lDesc.VertexSrc.IsEmpty());
     REQUIRE_FALSE(lDesc.FragmentSrc.IsEmpty());
 

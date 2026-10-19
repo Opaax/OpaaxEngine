@@ -3,6 +3,7 @@
 #include <doctest.h>
 
 #include "Core/GUID/Guid.h"
+#include "Core/String/OpaaxStringJson.h"
 #include "World/Serialization/MapJson.h"
 
 using namespace Opaax;
@@ -172,7 +173,7 @@ TEST_CASE("MapJson: an interned id is written as its STRING, never as its index"
     // string on the next run. Assert the type, not just the value.
     const nlohmann::json& lEntityJson = lJson.at(MapJson::KEY_ENTITIES).at(0);
     CHECK(lEntityJson.at(MapJson::KEY_OWNER_MAP).is_string());
-    CHECK(lEntityJson.at(MapJson::KEY_OWNER_MAP).get<std::string>() == "Level01");
+    CHECK(lEntityJson.at(MapJson::KEY_OWNER_MAP).get<OpaaxString>() == "Level01");
     CHECK(lEntityJson.at(MapJson::KEY_COMPONENTS).contains("Stats"));
 }
 
@@ -197,7 +198,7 @@ TEST_CASE("MapJson: an invalid OwnerMap is written as \"\", not as \"None\"")
     lData.Entities.push_back(MakeEntity(Guid::New(), "Bullet", MapId{}));
 
     const nlohmann::json lJson = MapJson::ToJson(lData);
-    CHECK(lJson.at(MapJson::KEY_ENTITIES).at(0).at(MapJson::KEY_OWNER_MAP).get<std::string>().empty());
+    CHECK(lJson.at(MapJson::KEY_ENTITIES).at(0).at(MapJson::KEY_OWNER_MAP).get<OpaaxString>().IsEmpty());
 
     MapData lParsed;
     REQUIRE(MapJson::FromJson(lJson, lParsed));
@@ -224,9 +225,9 @@ TEST_CASE("MapJson: entities are written sorted by Guid, whatever order they wer
 
     const nlohmann::json lEntities = MapJson::ToJson(lData).at(MapJson::KEY_ENTITIES);
     REQUIRE(lEntities.size() == 3);
-    CHECK(lEntities.at(0).at(MapJson::KEY_NAME).get<std::string>() == "First");
-    CHECK(lEntities.at(1).at(MapJson::KEY_NAME).get<std::string>() == "Second");
-    CHECK(lEntities.at(2).at(MapJson::KEY_NAME).get<std::string>() == "Third");
+    CHECK(lEntities.at(0).at(MapJson::KEY_NAME).get<OpaaxString>() == "First");
+    CHECK(lEntities.at(1).at(MapJson::KEY_NAME).get<OpaaxString>() == "Second");
+    CHECK(lEntities.at(2).at(MapJson::KEY_NAME).get<OpaaxString>() == "Third");
 
     // The same MapData in a different capture order must produce byte-identical text — that is
     // the property the dirty check actually depends on.

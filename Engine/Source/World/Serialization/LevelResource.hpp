@@ -1,6 +1,6 @@
 #pragma once
 
-#include <optional>
+#include "Core/OpaaxTypes.h"
 
 #include "Resources/ResourceFormat.h"
 #include "World/Serialization/LevelFile.h"
@@ -22,13 +22,13 @@ namespace Opaax
 
         static constexpr EFailPolicy FailPolicy = EFailPolicy::FailFast;
 
-        static std::optional<LevelResource> Load(const char* InPath, LoadContext& /*InCtx*/)
+        static TOptional<LevelResource> Load(const char* InPath, LoadContext& /*InCtx*/)
         {
             // InCtx unused on purpose: do not load the maps here (see above).
             LevelResource lResource;
             if (!LevelFile::Load(OpaaxString(InPath), lResource.Data))
             {
-                return std::nullopt;   // LevelFile already logged why
+                return NullOpt;   // LevelFile already logged why
             }
 
             return lResource;

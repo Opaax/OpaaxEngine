@@ -8,7 +8,7 @@ how to extend each part.
 
 | Module | Holds |
 |---|---|
-| `Core` | Types and aliases, strings, logging, reflection (`OPAAX_PROPERTIES`), events, jobs, maths, configs |
+| `Core` | Types and aliases over the standard library, strings and paths, files, time, logging, reflection (`OPAAX_PROPERTIES`), events, jobs, maths, configs |
 | `Platform` | The window and input devices (GLFW), the file system |
 | `RHI` | The rendering interface and its OpenGL 4.1 backend (`RHI/OpenGL`) |
 | `Renderer` | Sprites, text and debug drawing in batches, cameras, and the HDR path: lights, soft shadows, ambient occlusion, bloom, tonemapping (`Post/ScenePipeline2D`) |
@@ -164,6 +164,26 @@ and the folders follow the modules above.
 - **For:** replacing a library touches only the code that wraps it; the rest reads as the engine's
   own API, which ended the old code being spread everywhere (what is left of it is in `Archive/`).
 - **Against:** a wrapper to extend before a game can use a new vendor feature.
+
+### The standard library behind the core types
+
+The standard library is treated as one more vendor. Code uses the engine's names: containers and
+pointers through aliases (`TDynArray`, `TUnorderedMap`, `TUniquePtr`... in `Core/OpaaxTypes.h`),
+traits and concepts (`Core/Templates/TypeTraits.h`), `Algo`, `Memory`, `CString`, `Maths` and
+`Random`, `Clock` and `DateTime`, `FileSystem` and `FileIO`, `OpaaxString`, `OpaaxStringView` and
+`PathString`, `Process`. Only those files, the platform's OS code and two test suites of the boundary
+write `std::`; `CMake/CheckStdUse.cmake` (CTest `StdUse`) lists any other use. Most aliases are the
+standard types for now: what the engine owns is the name and the one place it is defined, as engines
+commonly do with their own containers and strings (Unreal's `TArray` and `FString`, the custom
+allocators of Gregory's *Game Engine Architecture*).
+
+- **For:** one place decides how a facility behaves on every platform (UTF-8 file names on Windows,
+  `Maths` giving the standard results, a command's exit code on Linux and macOS); a type can get its
+  own implementation or allocator later without touching its users; the code reads one way, in the
+  engine's naming, and the check keeps it so.
+- **Against:** a facility with no wrapper needs one before its first use; an alias is the standard
+  type, so vendor code and the debugger still show `std::vector`; Core's namespaces (`Clock`,
+  `FileSystem`...) take names a game might want for its own types.
 
 ### Tests at three levels
 

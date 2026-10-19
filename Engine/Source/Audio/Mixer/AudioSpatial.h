@@ -1,6 +1,6 @@
 #pragma once
 
-#include <algorithm>
+#include "Core/Maths/Maths.h"
 
 #include "Audio/AudioTypes.h"
 #include "Core/Maths/MathTypes.h"
@@ -24,8 +24,8 @@ namespace Opaax
         inline float Attenuate(const EAudioAttenuation InCurve, const float InDistance, const float InMinDistance,
                                const float InMaxDistance) noexcept
         {
-            const float lMin = std::max(InMinDistance, 0.f);
-            const float lMax = std::max(InMaxDistance, lMin + MIN_DISTANCE_SPAN);
+            const float lMin = Maths::Max(InMinDistance, 0.f);
+            const float lMax = Maths::Max(InMaxDistance, lMin + MIN_DISTANCE_SPAN);
 
             if (InDistance <= lMin) { return 1.f; }
             if (InDistance >= lMax) { return 0.f; }
@@ -35,10 +35,10 @@ namespace Opaax
             case EAudioAttenuation::InverseSquare:
             {
                 // A min distance of 0 would make every distance silent: the curve starts at 1 unit.
-                const float lRef   = std::max(lMin, 1.f);
+                const float lRef   = Maths::Max(lMin, 1.f);
                 const float lAtMax = (lRef / lMax) * (lRef / lMax);
-                const float lHere  = (lRef / std::max(InDistance, lRef)) * (lRef / std::max(InDistance, lRef));
-                return std::clamp((lHere - lAtMax) / (1.f - lAtMax), 0.f, 1.f);
+                const float lHere  = (lRef / Maths::Max(InDistance, lRef)) * (lRef / Maths::Max(InDistance, lRef));
+                return Maths::Clamp((lHere - lAtMax) / (1.f - lAtMax), 0.f, 1.f);
             }
 
             case EAudioAttenuation::Linear:
@@ -50,7 +50,7 @@ namespace Opaax
         /** -1 (left) to 1 (right): the sound's offset along X from the listener, over InMaxDistance. */
         inline float PanFromOffset(const float InOffsetX, const float InMaxDistance) noexcept
         {
-            return std::clamp(InOffsetX / std::max(InMaxDistance, MIN_DISTANCE_SPAN), -1.f, 1.f);
+            return Maths::Clamp(InOffsetX / Maths::Max(InMaxDistance, MIN_DISTANCE_SPAN), -1.f, 1.f);
         }
 
         /**
@@ -59,7 +59,7 @@ namespace Opaax
          */
         inline Vector2F BalanceGains(const float InPan) noexcept
         {
-            const float lPan = std::clamp(InPan, -1.f, 1.f);
+            const float lPan = Maths::Clamp(InPan, -1.f, 1.f);
             return Vector2F{ lPan > 0.f ? 1.f - lPan : 1.f, lPan < 0.f ? 1.f + lPan : 1.f };
         }
     }

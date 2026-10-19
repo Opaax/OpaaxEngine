@@ -18,14 +18,14 @@ namespace Opaax
         constexpr Uint8  PLACEHOLDER_RGBA[4]  = { 255, 0, 255, 255 };
     }
 
-    std::optional<TextureResource> TextureResource::Load(const char* InPath, LoadContext& /*InCtx*/)
+    TOptional<TextureResource> TextureResource::Load(const char* InPath, LoadContext& /*InCtx*/)
     {
         // Read the file ourselves: stbi_load(path) mishandles non-ASCII paths on MSVC.
         TDynArray<Uint8> lFileBytes;
         if (!FileIO::ReadAllBytes(OpaaxString(InPath), lFileBytes))
         {
             OPAAX_LOG(LogTextureResource, Error, "cannot read '{}'", InPath);
-            return std::nullopt;
+            return NullOpt;
         }
 
         // Thread-local flip (Load may run on a worker). GL samples bottom-up, stb decodes top-down.
@@ -38,7 +38,7 @@ namespace Opaax
         if (lPixels == nullptr)
         {
             OPAAX_LOG(LogTextureResource, Error, "cannot decode '{}' — {}", InPath, stbi_failure_reason());
-            return std::nullopt;
+            return NullOpt;
         }
 
         TextureResource lResource;
@@ -80,7 +80,7 @@ namespace Opaax
         lResource.Pixels.reserve(PLACEHOLDER_EXTENT * PLACEHOLDER_EXTENT * PLACEHOLDER_CHANNELS);
         for (Uint32 lTexel = 0; lTexel < PLACEHOLDER_EXTENT * PLACEHOLDER_EXTENT; ++lTexel)
         {
-            lResource.Pixels.insert(lResource.Pixels.end(), std::begin(PLACEHOLDER_RGBA), std::end(PLACEHOLDER_RGBA));
+            lResource.Pixels.insert(lResource.Pixels.end(), PLACEHOLDER_RGBA, PLACEHOLDER_RGBA + ArraySize(PLACEHOLDER_RGBA));
         }
 
         return lResource;

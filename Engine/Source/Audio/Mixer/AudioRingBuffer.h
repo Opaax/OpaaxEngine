@@ -1,7 +1,7 @@
 #pragma once
 
-#include <algorithm>
-#include <cstring>
+#include "Core/Maths/Maths.h"
+#include "Core/Memory/Memory.h"
 
 #include "Core/OpaaxTypes.h"
 
@@ -41,7 +41,7 @@ namespace Opaax
         /** Frames written and not read yet. */
         Uint32 GetReadableFrames() const noexcept
         {
-            return static_cast<Uint32>(m_Written.load(std::memory_order_acquire) - m_Read.load(std::memory_order_acquire));
+            return static_cast<Uint32>(m_Written.load(EMemoryOrder::Acquire) - m_Read.load(EMemoryOrder::Acquire));
         }
 
         /**
@@ -50,12 +50,12 @@ namespace Opaax
          */
         Uint32 Write(const float* InFrames, const Uint32 InFrameCount)
         {
-            const Uint64 lWritten = m_Written.load(std::memory_order_relaxed);
-            const Uint64 lRead    = m_Read.load(std::memory_order_acquire);
-            const Uint32 lCount   = std::min(InFrameCount, m_Capacity - static_cast<Uint32>(lWritten - lRead));
+            const Uint64 lWritten = m_Written.load(EMemoryOrder::Relaxed);
+            const Uint64 lRead    = m_Read.load(EMemoryOrder::Acquire);
+            const Uint32 lCount   = Maths::Min(InFrameCount, m_Capacity - static_cast<Uint32>(lWritten - lRead));
 
             CopyIn(InFrames, lWritten, lCount);
-            m_Written.store(lWritten + lCount, std::memory_order_release);
+            m_Written.store(lWritten + lCount, EMemoryOrder::Release);
             return lCount;
         }
 
@@ -65,12 +65,12 @@ namespace Opaax
          */
         Uint32 Read(float* OutFrames, const Uint32 InFrameCount)
         {
-            const Uint64 lRead    = m_Read.load(std::memory_order_relaxed);
-            const Uint64 lWritten = m_Written.load(std::memory_order_acquire);
-            const Uint32 lCount   = std::min(InFrameCount, static_cast<Uint32>(lWritten - lRead));
+            const Uint64 lRead    = m_Read.load(EMemoryOrder::Relaxed);
+            const Uint64 lWritten = m_Written.load(EMemoryOrder::Acquire);
+            const Uint32 lCount   = Maths::Min(InFrameCount, static_cast<Uint32>(lWritten - lRead));
 
             CopyOut(lRead, lCount, OutFrames);
-            m_Read.store(lRead + lCount, std::memory_order_release);
+            m_Read.store(lRead + lCount, EMemoryOrder::Release);
             return lCount;
         }
 
@@ -90,23 +90,23 @@ namespace Opaax
         /** Frames from InPosition to the end of the ring, at most InCount: the part before the wrap. */
         Uint32 FramesBeforeWrap(const Uint64 InPosition, const Uint32 InCount) const noexcept
         {
-            return std::min(InCount, m_Capacity - static_cast<Uint32>(InPosition % m_Capacity));
+            return Maths::Min(InCount, m_Capacity - static_cast<Uint32>(InPosition % m_Capacity));
         }
 
         void CopyIn(const float* InFrom, const Uint64 InPosition, const Uint32 InCount)
         {
             const Uint32 lFirst = FramesBeforeWrap(InPosition, InCount);
-            std::memcpy(m_Samples.data() + SampleIndex(InPosition), InFrom, sizeof(float) * lFirst * m_Channels);
-            std::memcpy(m_Samples.data(), InFrom + static_cast<size_t>(lFirst) * m_Channels,
-                        sizeof(float) * (InCount - lFirst) * m_Channels);
+            Memory::Copy(m_Samples.data() + SampleIndex(InPosition), InFrom, sizeof(float) * lFirst * m_Channels);
+            Memory::Copy(m_Samples.data(), InFrom + static_cast<size_t>(lFirst) * m_Channels,
+                         sizeof(float) * (InCount - lFirst) * m_Channels);
         }
 
         void CopyOut(const Uint64 InPosition, const Uint32 InCount, float* OutTo) const
         {
             const Uint32 lFirst = FramesBeforeWrap(InPosition, InCount);
-            std::memcpy(OutTo, m_Samples.data() + SampleIndex(InPosition), sizeof(float) * lFirst * m_Channels);
-            std::memcpy(OutTo + static_cast<size_t>(lFirst) * m_Channels, m_Samples.data(),
-                        sizeof(float) * (InCount - lFirst) * m_Channels);
+            Memory::Copy(OutTo, m_Samples.data() + SampleIndex(InPosition), sizeof(float) * lFirst * m_Channels);
+            Memory::Copy(OutTo + static_cast<size_t>(lFirst) * m_Channels, m_Samples.data(),
+                         sizeof(float) * (InCount - lFirst) * m_Channels);
         }
 
         // =============================================================================

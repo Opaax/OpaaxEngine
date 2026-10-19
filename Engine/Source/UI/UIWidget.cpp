@@ -1,7 +1,8 @@
 #include "UI/UIWidget.h"
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 
+#include "Core/Maths/Maths.h"
 #include "UI/UICanvas.h"
 
 namespace Opaax
@@ -22,7 +23,7 @@ namespace Opaax
 
     UIWidget* UIWidget::AddChild(TUniquePtr<UIWidget> InChild)
     {
-        return AddChild(std::move(InChild), m_Children.size());
+        return AddChild(Move(InChild), m_Children.size());
     }
 
     UIWidget* UIWidget::AddChild(TUniquePtr<UIWidget> InChild, const Uint64 InIndex)
@@ -35,8 +36,8 @@ namespace Opaax
         UIWidget* lChild = InChild.get();
         lChild->m_Parent = this;
         lChild->SetCanvasRecursive(m_Canvas);
-        m_Children.emplace(m_Children.begin() + static_cast<std::ptrdiff_t>(std::min(InIndex, static_cast<Uint64>(m_Children.size()))),
-                           std::move(InChild));
+        m_Children.emplace(m_Children.begin() + static_cast<PtrDiff>(Maths::Min(InIndex, static_cast<Uint64>(m_Children.size()))),
+                           Move(InChild));
 
         // The new child only needs to be reached by the walk, unless I lay out my children
         // (then every slot may have moved).
@@ -49,14 +50,14 @@ namespace Opaax
 
     TUniquePtr<UIWidget> UIWidget::RemoveChild(UIWidget& InChild)
     {
-        const auto lIt = std::find_if(m_Children.begin(), m_Children.end(),
+        const auto lIt = Algo::FindIf(m_Children,
                                       [&InChild](const TUniquePtr<UIWidget>& InOwned) { return InOwned.get() == &InChild; });
         if (lIt == m_Children.end())
         {
             return nullptr;
         }
 
-        TUniquePtr<UIWidget> lRemoved = std::move(*lIt);
+        TUniquePtr<UIWidget> lRemoved = Move(*lIt);
         m_Children.erase(lIt);
 
         // Clear pointer state under this subtree before it can be destroyed.

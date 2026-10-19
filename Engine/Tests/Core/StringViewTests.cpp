@@ -4,13 +4,9 @@
 
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringView.hpp"
-#include "Core/Hash/OpaaxHash.h"   // std::hash + OpaaxHash::Hash for both types
+#include "Core/Hash/OpaaxHash.h"   // THash + OpaaxHash::Hash for both types
 
 #include <spdlog/fmt/fmt.h>
-
-#include <sstream>
-#include <string>
-#include <string_view>
 
 using namespace Opaax;
 
@@ -20,6 +16,7 @@ static_assert(OpaaxStringView("abc").GetLength() == 3);
 static_assert(OpaaxStringView("hello world").SubString(0, 5) == "hello");
 static_assert(OpaaxStringView("hello world").SubString(0, 5).Find("world") == -1);
 static_assert(OpaaxStringView("Maps/Decor.opaaxmap").FindLastOf("/\\") == 4);
+static_assert(OpaaxStringView("[with T = Int; U = Float]").FindFirstOf(";]", 9) == 13);
 
 TEST_CASE("OpaaxStringView: default view is empty and owns nothing")
 {
@@ -71,10 +68,6 @@ TEST_CASE("OpaaxStringView: bytes with NO terminator anywhere")
     CHECK(lView.Find('c') == 2);
     CHECK(lView.ToString() == "abc");
     CHECK(fmt::format("{}", lView) == "abc");
-
-    std::ostringstream lStream;
-    lStream << lView;
-    CHECK(lStream.str() == "abc");
 }
 
 TEST_CASE("OpaaxStringView: SubString clamps against the REMAINDER and never wraps")
@@ -144,6 +137,18 @@ TEST_CASE("OpaaxStringView: FindLast walks backwards")
     CHECK(OpaaxStringView("nodots").FindLastOf("/\\") == -1);
 }
 
+TEST_CASE("OpaaxStringView: FindFirstOf walks forwards from a start position")
+{
+    const OpaaxStringView lView("[with T = A; U = B]");
+
+    CHECK(lView.FindFirstOf(";]") == 11);
+    CHECK(lView.FindFirstOf(";]", 12) == 18);      // the next one after the first
+    CHECK(lView.FindFirstOf(";]", 19) == -1);      // at the end
+    CHECK(lView.FindFirstOf(";]", 40) == -1);      // past the end
+    CHECK(lView.FindFirstOf("") == -1);            // no characters to find
+    CHECK(lView.FindFirstOf("[") == 0);
+}
+
 TEST_CASE("OpaaxStringView: StartsWith / EndsWith / Contains on the edges")
 {
     const OpaaxStringView lView("abc");
@@ -185,8 +190,6 @@ TEST_CASE("OpaaxStringView: an OpaaxString converts implicitly, SSO and heap ali
     CHECK(lLengthOf(lShort) == lShort.GetLength());
     CHECK(lLengthOf(lLong) == lLong.GetLength());
     CHECK(lLengthOf("literal") == 7u);
-    CHECK(lLengthOf(std::string_view("sv", 2)) == 2u);
-    CHECK(lLengthOf(std::string("std")) == 3u);
 
     CHECK(OpaaxStringView(lLong).ToString() == lLong);
     CHECK(OpaaxString(OpaaxStringView(lLong)) == lLong);
@@ -210,7 +213,7 @@ TEST_CASE("OpaaxStringView: hashes agree with OpaaxString for the same bytes")
     const OpaaxStringView lView(lStr);
 
     CHECK(OpaaxHash::Hash(lStr) == OpaaxHash::Hash(lView));
-    CHECK(std::hash<OpaaxString>{}(lStr) == std::hash<OpaaxStringView>{}(lView));
+    CHECK(THash<OpaaxString>{}(lStr) == THash<OpaaxStringView>{}(lView));
 
     // And the slice must NOT hash like the whole — that is what proves the length is honoured.
     CHECK(OpaaxHash::Hash(lView.SubString(0, 8)) != OpaaxHash::Hash(lView));
@@ -225,17 +228,14 @@ TEST_CASE("OpaaxStringView: fmt formats the view, not the buffer behind it")
     CHECK(fmt::format("{}", OpaaxStringView()).empty());
 }
 
-TEST_CASE("OpaaxStringView: converts to std::string_view for the vendor boundary")
+TEST_CASE("OpaaxStringView: Trim, TrimStart and TrimEnd drop spaces, tabs and line breaks")
 {
-    const OpaaxStringView lSlice = OpaaxStringView("hello world").SubString(6, 5);
+    CHECK(OpaaxStringView("  \t name \r\n").Trim() == "name");
+    CHECK(OpaaxStringView("  name ").TrimStart() == "name ");
+    CHECK(OpaaxStringView("  name ").TrimEnd() == "  name");
+    CHECK(OpaaxStringView(" \t\n").Trim().IsEmpty());
+    CHECK(OpaaxStringView("").Trim().IsEmpty());
+    CHECK(OpaaxStringView("a b").Trim() == "a b");   // inside spaces stay
 
-    const std::string_view lStd = lSlice;
-    CHECK(lStd.size() == 5u);
-    CHECK(lStd == "world");
-
-    // Hash64 already takes a std::string_view; a view reaches it through the conversion.
-    CHECK(OpaaxHash::Hash64(lSlice) == OpaaxHash::Hash64(std::string_view("world")));
-
-    const std::string_view lEmpty = OpaaxStringView();
-    CHECK(lEmpty.empty());
+    static_assert(OpaaxStringView(" x ").Trim() == "x");
 }

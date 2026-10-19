@@ -1,8 +1,7 @@
 #include "Editor/EditorMapDocument.h"
 
-#include <string>
-
 #include "Core/IO/FileIO.h"
+#include "Core/String/OpaaxPathString.h"
 #include "World/Serialization/MapData.h"
 #include "World/Serialization/MapFile.h"   // StemId
 #include "World/Serialization/MapJson.h"
@@ -46,9 +45,6 @@ namespace Opaax::Editor
     {
         if (!HasMap()) { return OpaaxString(); }
 
-        const std::string lPath(m_AbsPath.CStr());
-        const size_t      lSlash = lPath.find_last_of("/\\");
-
-        return OpaaxString(lSlash == std::string::npos ? lPath.c_str() : lPath.c_str() + lSlash + 1);
+        return PathString::FileName(m_AbsPath).ToString();
     }
 }

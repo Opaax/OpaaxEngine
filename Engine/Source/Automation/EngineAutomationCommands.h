@@ -1,12 +1,11 @@
 #pragma once
 
-#include <string>
-
 #include <nlohmann/json.hpp>
 
 #include "Automation/AutomationRunner.h"
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
+#include "Core/String/OpaaxString.hpp"
 
 namespace Opaax
 {
@@ -23,7 +22,7 @@ namespace Opaax
         virtual ~IAutomationHost() = default;
 
         /** Saves the frame being drawn as a PNG at InPath once it is drawn. */
-        virtual void RequestScreenshot(const std::string& InPath) = 0;
+        virtual void RequestScreenshot(const OpaaxString& InPath) = 0;
 
         /** Closes the app at the end of this frame. */
         virtual void RequestQuit() = 0;
@@ -46,7 +45,7 @@ namespace Opaax
          * The entity InParams["entity"] names in InWorld: its id (Guid text) or its name (which must
          * be unique). Invalid, with OutError saying why, when there is none.
          */
-        Entity FindEntity(World& InWorld, const nlohmann::json& InParams, std::string& OutError);
+        Entity FindEntity(World& InWorld, const nlohmann::json& InParams, OpaaxString& OutError);
 
         /**
          * An entity as JSON: {"id", "name", "parent", "map", "components": [names]}, or with
@@ -60,7 +59,7 @@ namespace Opaax
          * @return False, with OutError, for an unknown type or a value that is not an object
          */
         bool PatchComponent(Entity InEntity, const ComponentRegistry& InTypes, const nlohmann::json& InParams,
-                            std::string& OutError);
+                            OpaaxString& OutError);
 
         /**
          * Whether InActual meets what InParams expects: "equals" (numbers within 1e-4, objects and
@@ -68,19 +67,19 @@ namespace Opaax
          * "between" [min, max]. With none of them, any value passes. OutError tells what was found
          * when it does not.
          */
-        bool CheckExpectation(const nlohmann::json& InActual, const nlohmann::json& InParams, std::string& OutError);
+        bool CheckExpectation(const nlohmann::json& InActual, const nlohmann::json& InParams, OpaaxString& OutError);
 
         /**
          * InCanvas's widgets, depth-first: [{"name", "type", "visible", "x", "y", "width", "height"}],
          * x and y their centre, in the pixels of the canvas's target (origin top left). With InName,
          * only the widgets with that name.
          */
-        nlohmann::json DescribeWidgets(const UICanvas& InCanvas, const std::string& InName);
+        nlohmann::json DescribeWidgets(const UICanvas& InCanvas, const OpaaxString& InName);
 
         /**
          * The pixel at the centre of InCanvas's widget named InName, where a click lands on it. False,
          * with OutError, when there is no such widget or it is hidden.
          */
-        bool FindWidgetCentre(UICanvas& InCanvas, const std::string& InName, Vector2F& OutPixel, std::string& OutError);
+        bool FindWidgetCentre(UICanvas& InCanvas, const OpaaxString& InName, Vector2F& OutPixel, OpaaxString& OutError);
     }
 }

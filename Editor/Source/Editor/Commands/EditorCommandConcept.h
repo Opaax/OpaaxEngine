@@ -1,7 +1,7 @@
 // EditorCommandConcept.h
 #pragma once
 
-#include <concepts>
+#include "Core/Templates/TypeTraits.h"
 
 namespace Opaax::Editor
 {
@@ -14,6 +14,6 @@ namespace Opaax::Editor
     concept EditorCommand =
         requires(T Command, ContextType& Context, const typename T::Params& Params)
     {
-        { Command.Execute(Context, Params) } -> std::same_as<void>;
+        { Command.Execute(Context, Params) } -> CSameAs<void>;
     };
 }

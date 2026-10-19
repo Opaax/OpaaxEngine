@@ -1,7 +1,7 @@
 #include "Editor/Operation/UICanvasOperations.h"
 #include "Editor/Operation/ResourceOperations.h"
 
-#include <algorithm>   // std::clamp
+#include "Core/Maths/Maths.h"
 
 #include "Application/OpaaxApplication.h"
 #include "Core/IO/FileIO.h"
@@ -146,7 +146,7 @@ namespace Opaax::Editor
         UIWidget& lParent = *lWidget->GetParent();
         const Int64 lCount = static_cast<Int64>(lParent.GetChildren().size());
         const Int64 lFrom  = static_cast<Int64>(InPath.back());
-        const Int64 lTo    = std::clamp(lFrom + InDelta, Int64{ 0 }, lCount - 1);
+        const Int64 lTo    = Maths::Clamp(lFrom + InDelta, Int64{ 0 }, lCount - 1);
 
         if (lTo == lFrom) { return false; }   // already at that end
 

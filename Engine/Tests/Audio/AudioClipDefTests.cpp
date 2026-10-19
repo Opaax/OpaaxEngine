@@ -4,12 +4,11 @@
 // and from sources.
 #include <doctest.h>
 
-#include <algorithm>
-#include <cmath>
-#include <filesystem>
-#include <fstream>
-#include <functional>
-#include <string>
+#include "../TestTempDir.h"
+#include "Core/Algo/Algo.h"
+#include "Core/IO/FileSystem.h"
+#include "Core/Maths/Maths.h"
+#include "Core/OpaaxTypes.h"
 
 #include "Application/Services/IJobSystem.h"
 #include "Application/Services/IPaths.h"
@@ -47,8 +46,6 @@ using AudioTest::TempPaths;
 
 namespace
 {
-    namespace fs = std::filesystem;
-
     AudioClipDef MakeDef(const EAudioSelection InSelection, const Uint32 InCount)
     {
         AudioClipDef lDef;
@@ -56,7 +53,7 @@ namespace
         for (Uint32 lIndex = 0; lIndex < InCount; ++lIndex)
         {
             AudioClipEntry lEntry;
-            lEntry.Clip.Path = OpaaxString(("Audio/Step" + std::to_string(lIndex) + ".wav").c_str());
+            lEntry.Clip.Path = OpaaxString::Format("Audio/Step{}.wav", lIndex);
             lDef.Clips.push_back(lEntry);
         }
         return lDef;
@@ -91,7 +88,7 @@ namespace
         InAudio.RenderFrames(lBuffer.data(), lFrames);
 
         float lPeak = 0.f;
-        for (const float lSample : lBuffer) { lPeak = std::max(lPeak, std::abs(lSample)); }
+        for (const float lSample : lBuffer) { lPeak = Maths::Max(lPeak, Maths::Abs(lSample)); }
         return lPeak;
     }
 }
@@ -171,7 +168,7 @@ TEST_CASE("AudioClipDef: Random follows the weights; a weight of 0 never plays")
     // Every weight at 0: equally likely, rather than nothing.
     for (AudioClipEntry& lEntry : lDef.Clips) { lEntry.Weight = 0.f; }
     const TDynArray<Int32> lEqual = Picks(lDef, 300);
-    CHECK(std::count(lEqual.begin(), lEqual.end(), 1) > 50);
+    CHECK(Algo::Count(lEqual, 1) > 50);
 }
 
 TEST_CASE("AudioClipDef: Single, Sequential and Shuffle; no clips plays nothing")
@@ -184,9 +181,9 @@ TEST_CASE("AudioClipDef: Single, Sequential and Shuffle; no clips plays nothing"
     const TDynArray<Int32> lShuffled = Picks(MakeDef(EAudioSelection::Shuffle, 4), 40);
     for (size_t lRound = 0; lRound < lShuffled.size(); lRound += 4)
     {
-        TDynArray<Int32> lOne(lShuffled.begin() + static_cast<std::ptrdiff_t>(lRound),
-                              lShuffled.begin() + static_cast<std::ptrdiff_t>(lRound + 4));
-        std::sort(lOne.begin(), lOne.end());
+        TDynArray<Int32> lOne(lShuffled.begin() + static_cast<PtrDiff>(lRound),
+                              lShuffled.begin() + static_cast<PtrDiff>(lRound + 4));
+        Algo::Sort(lOne);
         CHECK(lOne == TDynArray<Int32>{ 0, 1, 2, 3 });
 
         if (lRound > 0)
@@ -221,8 +218,8 @@ TEST_CASE("AudioClipDef: each play takes the definition's settings, the clip's s
         CHECK(lParams.Volume <= 0.8f * 0.5f * 1.1f + 1e-5f);
         CHECK(lParams.Pitch >= 0.95f - 1e-5f);
         CHECK(lParams.Pitch <= 1.05f + 1e-5f);
-        lLowest  = std::min(lLowest, lParams.Pitch);
-        lHighest = std::max(lHighest, lParams.Pitch);
+        lLowest  = Maths::Min(lLowest, lParams.Pitch);
+        lHighest = Maths::Max(lHighest, lParams.Pitch);
     }
     CHECK(lHighest - lLowest > 0.05f);   // it does spread
 
@@ -269,7 +266,7 @@ namespace
     class DrawableCheck final : public IPropertyVisitor
     {
     public:
-        TDynArray<std::string> Unsupported;
+        TDynArray<OpaaxString> Unsupported;
         Uint32                 Lists = 0;
 
         void Visit(const char*, bool&, const PropertyMeta&) override          {}
@@ -289,7 +286,7 @@ namespace
         bool BeginGroup(const char*, const PropertyMeta&) override { return true; }
         void EndGroup() override {}
 
-        void VisitUnsupported(const char* InName, std::string_view) override { Unsupported.emplace_back(InName); }
+        void VisitUnsupported(const char* InName, OpaaxStringView) override { Unsupported.emplace_back(InName); }
 
         void VisitList(const char* InName, IPropertyList& InList, const PropertyMeta& InMeta) override
         {
@@ -333,11 +330,9 @@ TEST_CASE("Audio types: every field has an editor widget, lists and their elemen
 // =============================================================================
 TEST_CASE("AudioManager: a sound whose clip is loading plays once it is loaded; a stop before cancels it")
 {
-    const fs::path lFile = fs::temp_directory_path() / "OpaaxAudioPending.wav";
-    {
-        const TDynArray<Uint8> lWav = MakeWav(44100, 0.5f);
-        std::ofstream(lFile, std::ios::binary).write(reinterpret_cast<const char*>(lWav.data()), static_cast<std::streamsize>(lWav.size()));
-    }
+    const TestTempDir lDir("AudioPending");
+    const OpaaxString lFile = lDir.Sub("Pending.wav");
+    AudioTest::WriteFile(lFile, MakeWav(44100, 0.5f));
 
     ManualJobs      lJobs;
     ResourceManager lResources;
@@ -351,7 +346,7 @@ TEST_CASE("AudioManager: a sound whose clip is loading plays once it is loaded; 
 
     SUBCASE("it starts when loaded, with what was asked meanwhile")
     {
-        const ResourceRef<AudioClipResource> lClip = lResources.LoadAsync<AudioClipResource>(lFile.generic_string().c_str());
+        const ResourceRef<AudioClipResource> lClip = lResources.LoadAsync<AudioClipResource>(lFile.CStr());
         const SoundHandle lSound = lAudio.Play(lClip, lParams);
         REQUIRE(lSound.IsValid());
         CHECK(lAudio.IsPlaying(lSound));   // from now
@@ -367,7 +362,7 @@ TEST_CASE("AudioManager: a sound whose clip is loading plays once it is loaded; 
 
     SUBCASE("a stop before it loads: it never plays")
     {
-        const ResourceRef<AudioClipResource> lClip = lResources.LoadAsync<AudioClipResource>(lFile.generic_string().c_str());
+        const ResourceRef<AudioClipResource> lClip = lResources.LoadAsync<AudioClipResource>(lFile.CStr());
         const SoundHandle lSound = lAudio.Play(lClip, lParams);
         lAudio.Stop(lSound);
         CHECK_FALSE(lAudio.IsPlaying(lSound));
@@ -380,8 +375,8 @@ TEST_CASE("AudioManager: a sound whose clip is loading plays once it is loaded; 
 
     SUBCASE("a clip that fails to load frees its voice")
     {
-        const ResourceRef<AudioClipResource> lClip = lResources.LoadAsync<AudioClipResource>(
-            (fs::temp_directory_path() / "OpaaxAudioNope.wav").generic_string().c_str());
+        const OpaaxString                    lMissing = lDir.Sub("Nope.wav");
+        const ResourceRef<AudioClipResource> lClip    = lResources.LoadAsync<AudioClipResource>(lMissing.CStr());
         const SoundHandle lSound = lAudio.Play(lClip, lParams);
 
         lJobs.RunAll();
@@ -391,8 +386,6 @@ TEST_CASE("AudioManager: a sound whose clip is loading plays once it is loaded; 
     }
 
     lAudio.Shutdown();
-    std::error_code lError;
-    fs::remove(lFile, lError);
 }
 
 // =============================================================================
@@ -403,8 +396,8 @@ namespace
     /** Audio/Step0..2.wav, Audio/Steps.opaaxdata (RandomNoRepeat over them) and Audio/Empty.opaaxdata. */
     struct DefWorldFixture
     {
-        fs::path          Root = fs::temp_directory_path() / "OpaaxAudioDefTests";
-        TempPaths         Paths{ Root };
+        TestTempDir       Dir{ "AudioDefs" };
+        TempPaths         Paths{ Dir.Path() };
         ResourceManager   Resources;
         EngineEventBus    Events;
         DebugDraw         Debug;
@@ -419,22 +412,19 @@ namespace
 
         DefWorldFixture()
         {
-            std::error_code lError;
-            fs::remove_all(Root, lError);
-            fs::create_directories(Root / "Audio", lError);
+            FileSystem::CreateDirectories(Dir.Sub("Audio"));
 
             AudioClipDef lSteps = MakeDef(EAudioSelection::RandomNoRepeat, 3);
             for (Uint32 lIndex = 0; lIndex < 3; ++lIndex)
             {
                 const TDynArray<Uint8> lWav = MakeWav(44100, 0.2f, 300.f + 100.f * lIndex);
-                std::ofstream(Root / "Audio" / ("Step" + std::to_string(lIndex) + ".wav"), std::ios::binary)
-                    .write(reinterpret_cast<const char*>(lWav.data()), static_cast<std::streamsize>(lWav.size()));
+                AudioTest::WriteFile(Dir.Sub(OpaaxString::Format("Audio/Step{}.wav", lIndex)), lWav);
             }
             lSteps.Volume = 0.5f;
 
-            REQUIRE(DataAssetFile::Save(OpaaxString((Root / "Audio" / "Steps.opaaxdata").generic_string().c_str()),
+            REQUIRE(DataAssetFile::Save(Dir.Sub("Audio/Steps.opaaxdata"),
                                         DataAssetTypeName<AudioClipDef>(), nlohmann::json(lSteps)));
-            REQUIRE(DataAssetFile::Save(OpaaxString((Root / "Audio" / "Empty.opaaxdata").generic_string().c_str()),
+            REQUIRE(DataAssetFile::Save(Dir.Sub("Audio/Empty.opaaxdata"),
                                         DataAssetTypeName<AudioClipDef>(), nlohmann::json(AudioClipDef{})));
 
             REQUIRE(Audio.Startup());
@@ -446,8 +436,8 @@ namespace
                                                /*Actions*/ nullptr, /*UI*/ nullptr, Debug, &Components, &Audio });
 
             WorldSubsystemMgr& lSubsystems = TheWorld->GetSubsystems();
-            lSubsystems.RegisterSubsystem<BehaviourSubsystem>(std::ref(*TheWorld->GetContext()));
-            lSubsystems.RegisterSubsystem<AudioSubsystem>(std::ref(*TheWorld->GetContext()));
+            lSubsystems.RegisterSubsystem<BehaviourSubsystem>(Ref(*TheWorld->GetContext()));
+            lSubsystems.RegisterSubsystem<AudioSubsystem>(Ref(*TheWorld->GetContext()));
             lSubsystems.StartupAll();
 
             Sounds = lSubsystems.GetSubsystem<AudioSubsystem>();
@@ -458,8 +448,6 @@ namespace
         ~DefWorldFixture()
         {
             Worlds.DestroyWorld(TheWorld);
-            std::error_code lError;
-            fs::remove_all(Root, lError);
         }
 
         void Frame(const double InDeltaTime = 1.0 / 60.0)

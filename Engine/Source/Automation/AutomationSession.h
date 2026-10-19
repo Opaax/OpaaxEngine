@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string>
-
 #include "Automation/AutomationRunner.h"
 #include "Automation/EngineAutomationCommands.h"
 #include "Automation/AutomationTransports.h"
@@ -22,11 +20,12 @@ namespace Opaax
     {
     public:
         /**
-         * A session when InScript or InInbox is given, else null (also when the script cannot be
-         * read: logged).
-         * @param InScriptOutput Where the script's answers go; null: beside the script
+         * A session when InScript or InInbox is given (not empty), else null (also when the script
+         * cannot be read: logged). Paths are in UTF-8.
+         * @param InScriptOutput Where the script's answers go; empty: beside the script
          */
-        static TUniquePtr<AutomationSession> Create(const char* InScript, const char* InScriptOutput, const char* InInbox);
+        static TUniquePtr<AutomationSession> Create(const OpaaxString& InScript, const OpaaxString& InScriptOutput,
+                                                    const OpaaxString& InInbox);
 
         AutomationRunner& GetRunner() noexcept { return m_Runner; }
 
@@ -57,7 +56,7 @@ namespace Opaax
 
         //~Begin IAutomationHost interface
     public:
-        void   RequestScreenshot(const std::string& InPath) override;
+        void   RequestScreenshot(const OpaaxString& InPath) override;
         void   RequestQuit() override { m_bQuitRequested = true; }
         Uint64 GetFrameIndex() const override { return m_Frame; }
         //~End IAutomationHost interface
@@ -67,7 +66,7 @@ namespace Opaax
         TUniquePtr<AutomationInbox>  m_Inbox;
         TUniquePtr<AutomationScript> m_Script;
 
-        std::string m_PendingScreenshot;
+        OpaaxString m_PendingScreenshot;
         bool        m_bQuitRequested = false;
         Uint64      m_Frame          = 0;
     };

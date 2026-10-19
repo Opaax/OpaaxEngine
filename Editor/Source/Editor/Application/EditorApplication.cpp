@@ -12,8 +12,6 @@
 #include "Application/Services/IEngine.h"
 #include "Core/Log/Logger.h"
 
-#include <string>
-
 using namespace Opaax;
 
 namespace
@@ -73,7 +71,7 @@ namespace Opaax::Editor
         });
     }
     
-    TUniquePtr<IPaths> EditorApplication::CreatePaths(const IPlatform& InPlatform, int InArgc, char** InArgv)
+    TUniquePtr<IPaths> EditorApplication::CreatePaths(const IPlatform& InPlatform, const CommandLine& InCommandLine)
     {
         const OpaaxString lName = GetEditedProjectName();
         if (lName.IsEmpty())
@@ -81,15 +79,14 @@ namespace Opaax::Editor
             // No project declared — fall back to the exe-stem default (usually wrong for an editor exe).
             OPAAX_LOG(LogEditorApp, Warn,
                 "No edited project declared (override GetEditedProjectName); using the exe-stem default.");
-            return OpaaxApplication::CreatePaths(InPlatform, InArgc, InArgv);
+            return OpaaxApplication::CreatePaths(InPlatform, InCommandLine);
         }
 
         // Layout convention: <name>/<name>.opaaxproj under the source workspace.
-        const std::string lN = lName.CStr();
-        const OpaaxString  lProjRel((lN + "/" + lN + ".opaaxproj").c_str());
-        OPAAX_LOG(LogEditorApp, Info, "Editing project '{}' -> {}", lN, lProjRel.CStr());
+        const OpaaxString lProjRel = lName + "/" + lName + ".opaaxproj";
+        OPAAX_LOG(LogEditorApp, Info, "Editing project '{}' -> {}", lName, lProjRel);
 
-        return MakeUnique<EditorPaths>(InPlatform, InArgc, InArgv, lProjRel);
+        return MakeUnique<EditorPaths>(InPlatform, InCommandLine, lProjRel);
     }
     
     WorldSpec EditorApplication::GetStartupWorldSpec() const

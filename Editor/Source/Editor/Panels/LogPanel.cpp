@@ -4,10 +4,8 @@
 
 #include <imgui.h>
 
-#include <algorithm>
-#include <cstdio>
-#include <cstring>
-#include <ctime>
+#include "Core/Algo/Algo.h"
+#include "Core/String/CString.h"
 
 using namespace Opaax;
 using namespace Opaax::Editor;
@@ -57,17 +55,10 @@ namespace
         return static_cast<size_t>(ToLevelFilter(InLevel));
     }
 
-    /** HH:MM:SS local time. */
-    void FormatTime(const std::chrono::system_clock::time_point InTime, char (&OutText)[16])
+    /** HH:MM:SS. */
+    void FormatTime(const DateTime& InTime, char (&OutText)[16])
     {
-        const std::time_t lTime = std::chrono::system_clock::to_time_t(InTime);
-        std::tm           lLocal{};
-#if defined(_WIN32)
-        localtime_s(&lLocal, &lTime);
-#else
-        localtime_r(&lTime, &lLocal);
-#endif
-        std::strftime(OutText, sizeof(OutText), "%H:%M:%S", &lLocal);
+        CString::Format(OutText, "{:02}:{:02}:{:02}", InTime.Hour, InTime.Minute, InTime.Second);
     }
 }
 
@@ -110,7 +101,7 @@ namespace Opaax::Editor
                 m_Shown.push_back(lEntry.Sequence);
             }
 
-            m_Entries.push_back(std::move(lEntry));
+            m_Entries.push_back(Move(lEntry));
         }
 
         while (m_Entries.size() > MAX_LINES)
@@ -168,8 +159,8 @@ namespace Opaax::Editor
         const size_t lHidden = m_Filter.HiddenCategories.size();
 
         char lPreview[48];
-        if (lHidden == 0) { std::snprintf(lPreview, sizeof(lPreview), "All categories"); }
-        else              { std::snprintf(lPreview, sizeof(lPreview), "Categories (%zu hidden)", lHidden); }
+        if (lHidden == 0) { CString::Format(lPreview, "All categories"); }
+        else              { CString::Format(lPreview, "Categories ({} hidden)", lHidden); }
 
         ImGui::SetNextItemWidth(180.f);
         if (!ImGui::BeginCombo("##categories", lPreview, ImGuiComboFlags_HeightLarge))
@@ -212,10 +203,10 @@ namespace Opaax::Editor
     {
         const auto lByName = [](const OpaaxStringID InA, const OpaaxStringID InB)
         {
-            return std::strcmp(InA.CStr(), InB.CStr()) < 0;
+            return CString::Compare(InA.CStr(), InB.CStr()) < 0;
         };
 
-        const auto lAt = std::lower_bound(m_Categories.begin(), m_Categories.end(), InCategory, lByName);
+        const auto lAt = Algo::LowerBound(m_Categories, InCategory, lByName);
         if (lAt == m_Categories.end() || *lAt != InCategory)
         {
             m_Categories.insert(lAt, InCategory);
@@ -235,7 +226,7 @@ namespace Opaax::Editor
         }
 
         char lLabel[48];
-        std::snprintf(lLabel, sizeof(lLabel), "%s %u###level%zu", ToString(InLevel), m_LevelCounts[lIndex], lIndex);
+        CString::Format(lLabel, "{} {}###level{}", ToString(InLevel), m_LevelCounts[lIndex], lIndex);
         const bool bClicked = ImGui::Button(lLabel);
 
         ImGui::PopStyleColor(bShown ? 1 : 2);

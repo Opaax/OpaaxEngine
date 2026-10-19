@@ -3,8 +3,6 @@
 // inline on the calling thread.
 #include <doctest.h>
 
-#include <thread>
-
 #include "Application/Services/IJobSystem.h"
 #include "Application/Services/AppServiceLocator.h"
 #include "Core/OpaaxTypes.h"
@@ -17,10 +15,10 @@ TEST_CASE("JobSystem: Submit runs the work; Wait blocks until it has run")
     CHECK(lJobs.GetWorkerCount() >= 1);
 
     TAtomic<bool> lRan{false};
-    JobHandle lHandle = lJobs.Submit([&lRan] { lRan.store(true, std::memory_order_release); });
+    JobHandle lHandle = lJobs.Submit([&lRan] { lRan.store(true, EMemoryOrder::Release); });
 
     lJobs.Wait(lHandle);
-    CHECK(lRan.load(std::memory_order_acquire));
+    CHECK(lRan.load(EMemoryOrder::Acquire));
     CHECK(lHandle.IsComplete());
 }
 
@@ -32,20 +30,20 @@ TEST_CASE("JobSystem: OnComplete is deferred until DrainCompletions (main-thread
     TAtomic<bool> lCompleteRan{false};
 
     JobHandle lHandle = lJobs.Submit(
-        [&lWorkRan]     { lWorkRan.store(true, std::memory_order_release); },
-        [&lCompleteRan] { lCompleteRan.store(true, std::memory_order_release); });
+        [&lWorkRan]     { lWorkRan.store(true, EMemoryOrder::Release); },
+        [&lCompleteRan] { lCompleteRan.store(true, EMemoryOrder::Release); });
 
     lJobs.Wait(lHandle);
-    CHECK(lWorkRan.load(std::memory_order_acquire));
-    CHECK_FALSE(lCompleteRan.load(std::memory_order_acquire)); // never runs without a drain
+    CHECK(lWorkRan.load(EMemoryOrder::Acquire));
+    CHECK_FALSE(lCompleteRan.load(EMemoryOrder::Acquire)); // never runs without a drain
 
     // The worker pushes OnComplete just after Wait wakes; drain until it lands.
-    for (int i = 0; i < 2000 && !lCompleteRan.load(std::memory_order_acquire); ++i)
+    for (int i = 0; i < 2000 && !lCompleteRan.load(EMemoryOrder::Acquire); ++i)
     {
         lJobs.DrainCompletions();
-        std::this_thread::yield();
+        ThisThread::YieldNow();
     }
-    CHECK(lCompleteRan.load(std::memory_order_acquire));
+    CHECK(lCompleteRan.load(EMemoryOrder::Acquire));
 }
 
 TEST_CASE("JobSystem: ParallelFor covers every index in [0, count)")
@@ -76,9 +74,9 @@ TEST_CASE("IJobSystem: the null system runs jobs inline and is never null")
     TAtomic<bool> lWorkRan{false};
     TAtomic<bool> lCompleteRan{false};
     lSys.Submit(
-        [&lWorkRan]     { lWorkRan.store(true, std::memory_order_release); },
-        [&lCompleteRan] { lCompleteRan.store(true, std::memory_order_release); });
+        [&lWorkRan]     { lWorkRan.store(true, EMemoryOrder::Release); },
+        [&lCompleteRan] { lCompleteRan.store(true, EMemoryOrder::Release); });
 
-    CHECK(lWorkRan.load(std::memory_order_acquire));
-    CHECK(lCompleteRan.load(std::memory_order_acquire));
+    CHECK(lWorkRan.load(EMemoryOrder::Acquire));
+    CHECK(lCompleteRan.load(EMemoryOrder::Acquire));
 }

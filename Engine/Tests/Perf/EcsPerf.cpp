@@ -24,12 +24,12 @@ TEST_SUITE("perf" * doctest::skip())
 {
     TEST_CASE("perf: spawn 10k entities + Add<BenchBullet>")
     {
-        constexpr std::uint64_t kN = 10'000;
+        constexpr Uint64 kN = 10'000;
 
         const Perf::Result lResult = Perf::Measure(kN, 15, []
         {
             World lWorld("Bench");
-            for (std::uint64_t lI = 0; lI < kN; ++lI)
+            for (Uint64 lI = 0; lI < kN; ++lI)
             {
                 Entity lEntity = lWorld.CreateEntity("b");
                 lEntity.Add<BenchBullet>();
@@ -41,11 +41,11 @@ TEST_SUITE("perf" * doctest::skip())
 
     TEST_CASE("perf: integrate 100k BenchBullet via World::Each")
     {
-        constexpr std::uint64_t kN = 100'000;
+        constexpr Uint64 kN = 100'000;
 
         // Build the world ONCE (not part of the timed body — we measure iteration, not spawn).
         World lWorld("Bench");
-        for (std::uint64_t lI = 0; lI < kN; ++lI)
+        for (Uint64 lI = 0; lI < kN; ++lI)
         {
             Entity lEntity = lWorld.CreateEntity("b");
             lEntity.Add<BenchBullet>();

@@ -1,6 +1,6 @@
 #include "QuadOscillatorSubsystem.h"
 
-#include <cmath>
+#include "Core/Maths/Maths.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/Profiling/Profiler.h"   // OPAAX_STAT_SCOPE
@@ -84,7 +84,7 @@ namespace Sandbox
             const float lPhase = static_cast<float>(lIndex) * PHASE_PER_QUAD;
 
             lXf->Position.y = lBaseline.Position.y
-                            + std::sin(static_cast<float>(m_Elapsed) * SPEED + lPhase) * AMPLITUDE;
+                            + Maths::Sin(static_cast<float>(m_Elapsed) * SPEED + lPhase) * AMPLITUDE;
         }
     }
 

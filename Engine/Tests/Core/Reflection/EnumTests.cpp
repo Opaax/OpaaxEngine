@@ -37,11 +37,11 @@ TEST_CASE("Enum json: written as the ToString LABEL, not as an ordinal")
     const nlohmann::json lJson = nlohmann::json(EWindowMode::Borderless);
 
     REQUIRE(lJson.is_string());
-    CHECK(lJson.get<std::string>() == "Borderless");
+    CHECK(lJson.get<OpaaxString>() == "Borderless");
 
     // And it is the SAME text the string-typed config field used to hold, which is why converting it
     // left Engine.config byte-identical.
-    CHECK(nlohmann::json(EBackend::OpenGL).get<std::string>() == "OpenGL");
+    CHECK(nlohmann::json(EBackend::OpenGL).get<OpaaxString>() == "OpenGL");
 }
 
 TEST_CASE("Enum json: every declared value round-trips")

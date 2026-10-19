@@ -2,8 +2,7 @@
 
 #include "Core/Hash/OpaaxHash.h"
 
-#include <unordered_map>
-#include <shared_mutex>
+#include "Core/OpaaxTypes.h"
 
 namespace Opaax
 {
@@ -24,14 +23,14 @@ namespace Opaax
 
         Uint32 GetOrAdd(const OpaaxString& InString)
         {
-            std::unique_lock lLock(m_Mutex);
+            TUniqueLock<SharedMutex> lLock(m_Mutex);
             return Insert(InString);
         }
 
         /** Id of an already-interned string, or ID_None. Never adds. */
         Uint32 FindExisting(const OpaaxString& InString) const
         {
-            std::shared_lock lLock(m_Mutex);
+            TSharedLock<SharedMutex> lLock(m_Mutex);
 
             const auto lIt = m_Lookup.find(InString);
             return (lIt != m_Lookup.end()) ? lIt->second : OpaaxGlobal::ID_None;
@@ -42,7 +41,7 @@ namespace Opaax
         {
             const OpaaxString* lText = nullptr;
             {
-                std::shared_lock lLock(m_Mutex);
+                TSharedLock<SharedMutex> lLock(m_Mutex);
                 lText = (InIndex < m_Strings.size()) ? m_Strings[InIndex] : m_Strings[OpaaxGlobal::ID_None];
             }
             return *lText;
@@ -50,7 +49,7 @@ namespace Opaax
 
         Uint32 GetPoolSize() const
         {
-            std::shared_lock lLock(m_Mutex);
+            TSharedLock<SharedMutex> lLock(m_Mutex);
             return static_cast<Uint32>(m_Strings.size());
         }
 
@@ -69,9 +68,9 @@ namespace Opaax
             return lIt->second;
         }
 
-        std::unordered_map<OpaaxString, Uint32, OpaaxHash> m_Lookup;   // owns the text
-        TDynArray<const OpaaxString*>                      m_Strings;  // id -> text
-        mutable std::shared_mutex                          m_Mutex;
+        TUnorderedMap<OpaaxString, Uint32, OpaaxHash> m_Lookup;   // owns the text
+        TDynArray<const OpaaxString*>                 m_Strings;  // id -> text
+        mutable SharedMutex                           m_Mutex;
     };
 
     // =========================================================================

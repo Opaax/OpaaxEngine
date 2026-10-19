@@ -1,10 +1,10 @@
 #include "Editor/EditorLevelDocument.h"
 
-#include <cstddef>   // std::ptrdiff_t
-#include <string>
+#include "Core/OpaaxTypes.h"
 
 #include "Application/Services/IPaths.h"
 #include "Core/IO/FileIO.h"                      // round-trip check
+#include "Core/String/OpaaxPathString.h"
 #include "World/Level.h"
 #include "World/World.h"                         // GetRevision
 #include "World/Serialization/LevelFile.h"
@@ -140,7 +140,7 @@ namespace Opaax::Editor
         {
             if (InLevel.IsMounted(m_Maps[lIndex - 1].Id)) { continue; }
 
-            m_Maps.erase(m_Maps.begin() + static_cast<std::ptrdiff_t>(lIndex - 1));
+            m_Maps.erase(m_Maps.begin() + static_cast<PtrDiff>(lIndex - 1));
         }
 
         // --- add a record for each newly mounted map ----------------------------------------------
@@ -413,9 +413,6 @@ namespace Opaax::Editor
     {
         if (!HasLevel()) { return OpaaxString(); }
 
-        const std::string lPath(m_AbsPath.CStr());
-        const size_t      lSlash = lPath.find_last_of("/\\");
-
-        return OpaaxString(lSlash == std::string::npos ? lPath.c_str() : lPath.c_str() + lSlash + 1);
+        return PathString::FileName(m_AbsPath).ToString();
     }
 }

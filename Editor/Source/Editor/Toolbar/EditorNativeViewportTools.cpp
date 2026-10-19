@@ -12,7 +12,7 @@
 
 #include <imgui.h>
 
-#include <cstdio>   // snprintf
+#include "Core/String/CString.h"
 
 namespace
 {
@@ -128,7 +128,7 @@ namespace Opaax::Editor::NativeViewportTools
 
         // "###pivot" keeps the ImGui ID stable while the label changes.
         char lLabel[48];
-        std::snprintf(lLabel, sizeof(lLabel), "Pivot: %s###pivot", ToString(lPivot));
+        CString::Format(lLabel, "Pivot: {}###pivot", ToString(lPivot));
 
         if (ImGui::SmallButton(lLabel))
         {

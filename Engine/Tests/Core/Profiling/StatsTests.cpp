@@ -7,7 +7,7 @@
 #include "Core/Profiling/StatsHistory.h"
 #include "Editor/Panels/StatsDisplay.h"   // header-only, no ImGui
 
-#include <thread>
+#include "Core/OpaaxTypes.h"
 
 using namespace Opaax;
 
@@ -675,7 +675,7 @@ TEST_CASE("Profiler: enabled publishes the frame's scopes, counters and GPU read
 
     const FrameStats& lStats = lProfiler.GetFrameStats();
     REQUIRE(lStats.Profiler.Samples().size() == 1);
-    CHECK(std::string(lStats.Profiler.Samples()[0].Name) == "Update");
+    CHECK(OpaaxString(lStats.Profiler.Samples()[0].Name) == "Update");
     REQUIRE(lStats.Profiler.Counters().size() == 1);
     CHECK(lStats.Profiler.Counters()[0].Value == 2);
     CHECK(lStats.GpuMs == doctest::Approx(1.5));
@@ -688,7 +688,7 @@ TEST_CASE("Profiler: only the thread that called Init records")
     lProfiler.Init(true);
 
     bool bWorkerGotRecorder = true;
-    std::thread lWorker([&]
+    Thread lWorker([&]
     {
         bWorkerGotRecorder = lProfiler.GetRecorder() != nullptr;
         lProfiler.AddCount("FromWorker", 1);

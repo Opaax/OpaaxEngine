@@ -1,8 +1,6 @@
 // Suite: IPropertyVisitor — a reflected object's fields walked without knowing its type.
 #include <doctest.h>
 
-#include <string>
-
 #include "Engine/Reflection/PropertyVisitor.h"
 #include "Resources/DataAsset/DataAssetRef.h"
 
@@ -82,7 +80,7 @@ namespace
     class RecordingVisitor final : public IPropertyVisitor
     {
     public:
-        TDynArray<std::string> Lines;
+        TDynArray<OpaaxString> Lines;
         bool                   bOpenGroups = true;
 
         void Visit(const char* InName, bool&, const PropertyMeta&) override          { Add("bool", InName); }
@@ -108,7 +106,7 @@ namespace
                        Uint32& InOutIndex, const PropertyMeta&) override
         {
             Add("enum", InName);
-            Lines.back() += " " + std::to_string(InCount) + " " + InLabels[InOutIndex];
+            Lines.back() += OpaaxString::Format(" {} {}", InCount, InLabels[InOutIndex]);
             InOutIndex = 2;   // pick "Run"
         }
 
@@ -123,7 +121,7 @@ namespace
                                const PropertyMeta&) override
         {
             Add("dataasset", InName);
-            Lines.back() += std::string(" ") + InDataType.CStr();
+            Lines.back() += OpaaxString::Format(" {}", InDataType.CStr());
         }
 
         bool BeginGroup(const char* InName, const PropertyMeta&) override
@@ -133,25 +131,28 @@ namespace
         }
         void EndGroup() override { Lines.emplace_back("end"); }
 
-        void VisitUnsupported(const char* InName, std::string_view) override { Add("unsupported", InName); }
+        void VisitUnsupported(const char* InName, OpaaxStringView) override { Add("unsupported", InName); }
 
         void VisitList(const char* InName, IPropertyList& InList, const PropertyMeta& InMeta) override
         {
             Add("list", InName);
-            Lines.back() += " " + std::to_string(InList.Count());
+            Lines.back() += OpaaxString::Format(" {}", InList.Count());
             IPropertyVisitor::VisitList(InName, InList, InMeta);
         }
 
         Uint32 LastResourceTypeId = 0;
 
     private:
-        void Add(const char* InKind, const char* InName) { Lines.emplace_back(std::string(InKind) + " " + InName); }
+        void Add(const char* InKind, const char* InName)
+        {
+            Lines.push_back(OpaaxString::Format("{} {}", InKind, InName));
+        }
 
         void Add(const char* InKind, const char* InName, const PropertyMeta& InMeta)
         {
             Add(InKind, InName);
-            Lines.back() += " [" + std::to_string(static_cast<int>(InMeta.RangeMin)) + ","
-                          + std::to_string(static_cast<int>(InMeta.RangeMax)) + "]";
+            Lines.back() += OpaaxString::Format(" [{},{}]", static_cast<int>(InMeta.RangeMin),
+                                                static_cast<int>(InMeta.RangeMax));
         }
     };
 }
@@ -163,7 +164,7 @@ TEST_CASE("PropertyVisitor: every field is visited once, in declaration order, b
 
     VisitProperties(lSubject, lVisitor);
 
-    const TDynArray<std::string> lExpected = {
+    const TDynArray<OpaaxString> lExpected = {
         "bool bEnabled",
         "int32 Count",
         "vec2 Offset",
@@ -224,8 +225,8 @@ TEST_CASE("PropertyVisitor: a list is edited through IPropertyList without knowi
     CHECK(lList.Count() == 2);
     CHECK(lValues[0].Amount == 10.f);
 
-    CHECK(std::string(PropertyListLabel(0).Text) == "[0]");
-    CHECK(std::string(PropertyListLabel(1234567).Text) == "[1234567]");
+    CHECK(OpaaxString(PropertyListLabel(0).Text) == "[0]");
+    CHECK(OpaaxString(PropertyListLabel(1234567).Text) == "[1234567]");
 }
 
 TEST_CASE("PropertyVisitor: a group the visitor declines is skipped, with no EndGroup")
@@ -236,9 +237,9 @@ TEST_CASE("PropertyVisitor: a group the visitor declines is skipped, with no End
 
     VisitProperties(lSubject, lVisitor);
 
-    for (const std::string& lLine : lVisitor.Lines)
+    for (const OpaaxString& lLine : lVisitor.Lines)
     {
-        CHECK(lLine.find("Amount") == std::string::npos);
+        CHECK_FALSE(lLine.Contains("Amount"));
         CHECK(lLine != "end");
     }
 }

@@ -1,13 +1,13 @@
 #include "Automation/EngineAutomationCommands.h"
 
-#include <algorithm>
-#include <chrono>
-#include <cmath>
-#include <filesystem>
-
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"
 #include "Application/Services/IPaths.h"
+#include "Core/Algo/Algo.h"
+#include "Core/IO/FileSystem.h"
+#include "Core/Maths/Maths.h"
+#include "Core/String/OpaaxStringJson.h"
+#include "Core/Time/Clock.h"
 #include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
 #include "Engine/Registries/EngineRegistries.h"
@@ -31,13 +31,8 @@ namespace Opaax::EngineAutomation
         /** The frames a tapped key stays down, so a fixed-step game surely sees it. */
         constexpr Uint32 DEFAULT_TAP_FRAMES = 2;
 
-        std::string Text(const OpaaxString& InText)
-        {
-            return std::string(InText.CStr());
-        }
-
         /** The key or mouse button InName names ("Space", "A", "Mouse_Left"...). */
-        bool ParseKey(const std::string& InName, EKeyCode& OutKey)
+        bool ParseKey(const OpaaxString& InName, EKeyCode& OutKey)
         {
             for (const EKeyCode lKey : TEnumValues<EKeyCode>::Values)
             {
@@ -52,7 +47,7 @@ namespace Opaax::EngineAutomation
 
         bool IsMouseButton(const EKeyCode InKey)
         {
-            return std::string(ToString(InKey)).rfind("Mouse_", 0) == 0;
+            return OpaaxStringView(ToString(InKey)).StartsWith("Mouse_");
         }
 
         void Press(InputManager& InInput, const EKeyCode InKey)
@@ -68,7 +63,7 @@ namespace Opaax::EngineAutomation
         }
 
         /** The running game's UI canvas, or null with OutError. */
-        UICanvas* GameCanvas(IEngine& InEngine, std::string& OutError)
+        UICanvas* GameCanvas(IEngine& InEngine, OpaaxString& OutError)
         {
             GameInstance* const lGame = InEngine.GetGameInstances().GetGameInstance();
             UISubsystem* const  lUI   = (lGame != nullptr) ? lGame->GetSubsystems().GetSubsystem<UISubsystem>() : nullptr;
@@ -93,17 +88,17 @@ namespace Opaax::EngineAutomation
             return true;
         }
 
-        void DescribeTree(const UICanvas& InCanvas, const UIWidget& InWidget, const std::string& InName,
+        void DescribeTree(const UICanvas& InCanvas, const UIWidget& InWidget, const OpaaxString& InName,
                           nlohmann::json& OutList)
         {
-            if (InName.empty() || InName == InWidget.Name.CStr())
+            if (InName.IsEmpty() || InName == InWidget.Name)
             {
                 const Bounds2D& lBounds   = InWidget.GetBounds();
                 const Vector2F  lCentre   = InCanvas.CanvasToScreen(lBounds.Center);
                 const float     lPerPixel = InCanvas.UnitsPerPixel();
 
                 OutList.push_back(nlohmann::json{
-                    { "name",    Text(InWidget.Name) },
+                    { "name",    InWidget.Name },
                     { "type",    InWidget.GetTypeName().CStr() },
                     { "visible", IsShown(InWidget) },
                     { "x",       lCentre.x },
@@ -118,7 +113,7 @@ namespace Opaax::EngineAutomation
             }
         }
 
-        World* ActiveWorld(IEngine& InEngine, std::string& OutError)
+        World* ActiveWorld(IEngine& InEngine, OpaaxString& OutError)
         {
             World* lWorld = InEngine.GetWorldManager().GetActiveWorld();
             if (lWorld == nullptr)
@@ -139,7 +134,7 @@ namespace Opaax::EngineAutomation
         {
             if (InActual.is_number() && InExpected.is_number())
             {
-                return std::abs(InActual.get<double>() - InExpected.get<double>()) <= InTolerance;
+                return Maths::Abs(InActual.get<double>() - InExpected.get<double>()) <= InTolerance;
             }
 
             if (InActual.is_object() && InExpected.is_object())
@@ -175,11 +170,11 @@ namespace Opaax::EngineAutomation
         }
 
         /** The entities of InWorld whose name is InName (any when empty) and that have InComponent (any when empty). */
-        Uint64 CountEntities(World& InWorld, const ComponentRegistry& InTypes, const std::string& InName,
-                             const std::string& InComponent)
+        Uint64 CountEntities(World& InWorld, const ComponentRegistry& InTypes, const OpaaxString& InName,
+                             const OpaaxString& InComponent)
         {
-            const IComponentEntry* lEntry = InComponent.empty() ? nullptr : InTypes.FindByName(OpaaxStringID(InComponent.c_str()));
-            if (!InComponent.empty() && lEntry == nullptr)
+            const IComponentEntry* lEntry = InComponent.IsEmpty() ? nullptr : InTypes.FindByName(OpaaxStringID(InComponent));
+            if (!InComponent.IsEmpty() && lEntry == nullptr)
             {
                 return 0;
             }
@@ -187,7 +182,7 @@ namespace Opaax::EngineAutomation
             Uint64 lCount = 0;
             InWorld.Each<EntityMeta>([&](const EntityID InId, const EntityMeta& InMeta)
             {
-                if (!InName.empty() && InName != InMeta.Name.CStr())
+                if (!InName.IsEmpty() && InName != InMeta.Name)
                 {
                     return;
                 }
@@ -211,10 +206,10 @@ namespace Opaax::EngineAutomation
                     const IPaths& lPaths = OpaaxApplication::GetAppService<IPaths>();
                     return AutomationResult::Ok(nlohmann::json{
                         { "frame",     InHost.GetFrameIndex() },
-                        { "workspace", Text(lPaths.WorkspaceRoot()) },
-                        { "project",   Text(lPaths.ProjectRoot()) },
-                        { "assets",    Text(lPaths.AssetsDir()) },
-                        { "save",      Text(lPaths.SaveDir()) } });
+                        { "workspace", lPaths.WorkspaceRoot() },
+                        { "project",   lPaths.ProjectRoot() },
+                        { "assets",    lPaths.AssetsDir() },
+                        { "save",      lPaths.SaveDir() } });
                 });
 
             InRunner.Register("app.quit", "Closes the app at the end of this frame.",
@@ -230,14 +225,13 @@ namespace Opaax::EngineAutomation
                 [](const nlohmann::json& InParams)
                 {
                     const double lSeconds  = InParams.value("seconds", 10.0);
-                    const auto   lDeadline = std::chrono::steady_clock::now()
-                        + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(lSeconds));
+                    const double lDeadline = Clock::NowSeconds() + lSeconds;
 
                     AutomationResult lResult;
-                    lResult.WaitUntil = [lDeadline]() { return std::chrono::steady_clock::now() >= lDeadline; };
+                    lResult.WaitUntil = [lDeadline]() { return Clock::NowSeconds() >= lDeadline; };
                     lResult.Answer    = [lSeconds]()
                     {
-                        return AutomationResult::Fail("the app is still open after " + nlohmann::json(lSeconds).dump() + " s");
+                        return AutomationResult::Fail("the app is still open after " + ToJsonText(nlohmann::json(lSeconds)) + " s");
                     };
                     lResult.OnClose   = []() { return AutomationResult::Ok(nlohmann::json{ { "closed", true } }); };
                     return lResult;
@@ -248,13 +242,13 @@ namespace Opaax::EngineAutomation
                 "request runs once it is written.",
                 [&InHost](const nlohmann::json& InParams)
                 {
-                    const std::string lPath = InParams.value("path", std::string());
-                    if (lPath.empty())
+                    const OpaaxString lPath = InParams.value("path", OpaaxString());
+                    if (lPath.IsEmpty())
                     {
                         return AutomationResult::Fail("\"path\" names the PNG to write");
                     }
 
-                    const std::string lAbsolute = std::filesystem::absolute(lPath).generic_string();
+                    const OpaaxString lAbsolute = FileSystem::MakeAbsolute(lPath);
                     InHost.RequestScreenshot(lAbsolute);
 
                     AutomationResult lResult = AutomationResult::Ok(nlohmann::json{ { "path", lAbsolute } });
@@ -274,14 +268,14 @@ namespace Opaax::EngineAutomation
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     EKeyCode          lKey = EKeyCode::None;
-                    const std::string lName = InParams.value("key", std::string());
+                    const OpaaxString lName = InParams.value("key", OpaaxString());
                     if (!ParseKey(lName, lKey))
                     {
                         return AutomationResult::Fail("unknown key '" + lName + "'");
                     }
 
                     InputManager&     lInput  = InEngine.GetInput();
-                    const std::string lAction = InParams.value("action", std::string("tap"));
+                    const OpaaxString lAction = InParams.value("action", OpaaxString("tap"));
                     if (lAction == "press")
                     {
                         Press(lInput, lKey);
@@ -299,7 +293,7 @@ namespace Opaax::EngineAutomation
 
                     Press(lInput, lKey);
                     AutomationResult lResult;
-                    lResult.WaitFrames = std::max(InParams.value("frames", DEFAULT_TAP_FRAMES), 1u);
+                    lResult.WaitFrames = Maths::Max(InParams.value("frames", DEFAULT_TAP_FRAMES), 1u);
                     lResult.AfterWait  = [&lInput, lKey] { Release(lInput, lKey); };
                     return lResult;
                 });
@@ -323,14 +317,14 @@ namespace Opaax::EngineAutomation
                 "centre in game-view pixels. Filter: {name}.",
                 [&InEngine](const nlohmann::json& InParams)
                 {
-                    std::string     lError;
+                    OpaaxString     lError;
                     UICanvas* const lCanvas = GameCanvas(InEngine, lError);
                     if (lCanvas == nullptr)
                     {
                         return AutomationResult::Fail(lError);
                     }
                     return AutomationResult::Ok(nlohmann::json{
-                        { "widgets", DescribeWidgets(*lCanvas, InParams.value("name", std::string())) } });
+                        { "widgets", DescribeWidgets(*lCanvas, InParams.value("name", OpaaxString())) } });
                 });
 
             InRunner.Register("ui.click",
@@ -338,11 +332,11 @@ namespace Opaax::EngineAutomation
                 "is tapped (down for {frames}, default 2).",
                 [&InEngine](const nlohmann::json& InParams)
                 {
-                    std::string     lError;
+                    OpaaxString     lError;
                     UICanvas* const lCanvas = GameCanvas(InEngine, lError);
                     Vector2F        lPixel  = { 0.f, 0.f };
                     if (lCanvas == nullptr
-                        || !FindWidgetCentre(*lCanvas, InParams.value("widget", std::string()), lPixel, lError))
+                        || !FindWidgetCentre(*lCanvas, InParams.value("widget", OpaaxString()), lPixel, lError))
                     {
                         return AutomationResult::Fail(lError);
                     }
@@ -353,7 +347,7 @@ namespace Opaax::EngineAutomation
                     Press(lInput, EKeyCode::Mouse_Left);
 
                     AutomationResult lResult = AutomationResult::Ok(nlohmann::json{ { "x", lPixel.x }, { "y", lPixel.y } });
-                    lResult.WaitFrames = std::max(InParams.value("frames", DEFAULT_TAP_FRAMES), 1u);
+                    lResult.WaitFrames = Maths::Max(InParams.value("frames", DEFAULT_TAP_FRAMES), 1u);
                     lResult.AfterWait  = [&lInput] { Release(lInput, EKeyCode::Mouse_Left); };
                     return lResult;
                 });
@@ -367,7 +361,7 @@ namespace Opaax::EngineAutomation
             InRunner.Register("world.info", "The active world: {name, mode, paused, entities, camera}.",
                 [&InEngine](const nlohmann::json&)
                 {
-                    std::string  lError;
+                    OpaaxString  lError;
                     World* const lWorld = ActiveWorld(InEngine, lError);
                     if (lWorld == nullptr)
                     {
@@ -376,7 +370,7 @@ namespace Opaax::EngineAutomation
 
                     const CameraView& lView = lWorld->GetCameraView();
                     return AutomationResult::Ok(nlohmann::json{
-                        { "name",     Text(lWorld->GetName()) },
+                        { "name",     lWorld->GetName() },
                         { "mode",     ToString(lWorld->GetMode()) },
                         { "paused",   InEngine.GetWorldManager().IsPaused() },
                         { "entities", lWorld->GetEntityCount() },
@@ -387,7 +381,7 @@ namespace Opaax::EngineAutomation
                 "The active world's entities: [{id, name, parent, map, components}]. Filters: {name}, {component}.",
                 [&InEngine](const nlohmann::json& InParams)
                 {
-                    std::string  lError;
+                    OpaaxString  lError;
                     World* const lWorld = ActiveWorld(InEngine, lError);
                     if (lWorld == nullptr)
                     {
@@ -395,21 +389,19 @@ namespace Opaax::EngineAutomation
                     }
 
                     const ComponentRegistry& lTypes     = InEngine.GetRegistries().Components();
-                    const std::string        lName      = InParams.value("name", std::string());
-                    const std::string        lComponent = InParams.value("component", std::string());
+                    const OpaaxString        lName      = InParams.value("name", OpaaxString());
+                    const OpaaxString        lComponent = InParams.value("component", OpaaxString());
 
                     nlohmann::json lList = nlohmann::json::array();
                     lWorld->Each<EntityMeta>([&](const EntityID InId, const EntityMeta& InMeta)
                     {
-                        if (!lName.empty() && lName != InMeta.Name.CStr())
+                        if (!lName.IsEmpty() && lName != InMeta.Name)
                         {
                             return;
                         }
 
                         nlohmann::json lEntity = DescribeEntity(Entity{ InId, lWorld }, lTypes, false);
-                        if (!lComponent.empty()
-                            && std::find(lEntity["components"].begin(), lEntity["components"].end(), lComponent)
-                                   == lEntity["components"].end())
+                        if (!lComponent.IsEmpty() && !Algo::Contains(lEntity["components"], nlohmann::json(lComponent)))
                         {
                             return;
                         }
@@ -422,7 +414,7 @@ namespace Opaax::EngineAutomation
             InRunner.Register("entity.get", "One entity of the active world with its components' values: {entity} (id or name).",
                 [&InEngine](const nlohmann::json& InParams)
                 {
-                    std::string  lError;
+                    OpaaxString  lError;
                     World* const lWorld = ActiveWorld(InEngine, lError);
                     if (lWorld == nullptr)
                     {
@@ -442,7 +434,7 @@ namespace Opaax::EngineAutomation
                 "Changes fields of {entity}'s component {type}: {value} is merged into it (added when missing).",
                 [&InEngine](const nlohmann::json& InParams)
                 {
-                    std::string  lError;
+                    OpaaxString  lError;
                     World* const lWorld = ActiveWorld(InEngine, lError);
                     if (lWorld == nullptr)
                     {
@@ -476,16 +468,15 @@ namespace Opaax::EngineAutomation
                 "runs once it is open.",
                 [&InEngine](const nlohmann::json& InParams)
                 {
-                    const std::string lPath = InParams.value("path", std::string());
-                    const OpaaxString lAbsolute =
-                        OpaaxApplication::GetAppService<IPaths>().AssetToAbsolute(OpaaxString(lPath.c_str()));
-                    if (lPath.empty() || !std::filesystem::is_regular_file(std::filesystem::path(lAbsolute.CStr())))
+                    const OpaaxString lPath     = InParams.value("path", OpaaxString());
+                    const OpaaxString lAbsolute = OpaaxApplication::GetAppService<IPaths>().AssetToAbsolute(lPath);
+                    if (lPath.IsEmpty() || !FileSystem::IsFile(lAbsolute))
                     {
                         return AutomationResult::Fail("no level at '" + lPath + "' (paths are relative to the assets)");
                     }
 
                     WorldSpec lSpec;
-                    lSpec.LevelPath = OpaaxString(lPath.c_str());
+                    lSpec.LevelPath = lPath;
                     lSpec.Mode      = EWorldMode::Play;
                     InEngine.RequestOpenLevel(lSpec);
 
@@ -500,7 +491,7 @@ namespace Opaax::EngineAutomation
                 "next request. Ends early if the world changes.",
                 [&InEngine](const nlohmann::json& InParams)
                 {
-                    std::string  lError;
+                    OpaaxString  lError;
                     World* const lWorld = ActiveWorld(InEngine, lError);
                     if (lWorld == nullptr)
                     {
@@ -540,7 +531,7 @@ namespace Opaax::EngineAutomation
                 "tolerance), greater, less or between [min, max].",
                 [&InEngine](const nlohmann::json& InParams)
                 {
-                    std::string  lError;
+                    OpaaxString  lError;
                     World* const lWorld = ActiveWorld(InEngine, lError);
                     if (lWorld == nullptr)
                     {
@@ -553,10 +544,10 @@ namespace Opaax::EngineAutomation
                         return AutomationResult::Fail(lError);
                     }
 
-                    const std::string    lPath    = InParams.value("path", std::string());
+                    const OpaaxString    lPath    = InParams.value("path", OpaaxString());
                     const nlohmann::json lValues  = DescribeEntity(lEntity, InEngine.GetRegistries().Components(), true);
-                    const auto           lPointer = nlohmann::json::json_pointer("/components/" + lPath);
-                    if (lPath.empty() || !lValues.contains(lPointer))
+                    const auto           lPointer = nlohmann::json::json_pointer(ToJsonString("/components/" + lPath));
+                    if (lPath.IsEmpty() || !lValues.contains(lPointer))
                     {
                         return AutomationResult::Fail("no value at '" + lPath + "' (Component/Field/...)");
                     }
@@ -564,7 +555,7 @@ namespace Opaax::EngineAutomation
                     const nlohmann::json& lActual = lValues.at(lPointer);
                     if (!CheckExpectation(lActual, InParams, lError))
                     {
-                        return AutomationResult::Fail(InParams.at("entity").get<std::string>() + " " + lPath + ": " + lError);
+                        return AutomationResult::Fail(InParams.at("entity").get<OpaaxString>() + " " + lPath + ": " + lError);
                     }
                     return AutomationResult::Ok(nlohmann::json{ { "value", lActual } });
                 });
@@ -574,7 +565,7 @@ namespace Opaax::EngineAutomation
                 "less or between [min, max].",
                 [&InEngine](const nlohmann::json& InParams)
                 {
-                    std::string  lError;
+                    OpaaxString  lError;
                     World* const lWorld = ActiveWorld(InEngine, lError);
                     if (lWorld == nullptr)
                     {
@@ -582,8 +573,8 @@ namespace Opaax::EngineAutomation
                     }
 
                     const Uint64 lCount = CountEntities(*lWorld, InEngine.GetRegistries().Components(),
-                                                        InParams.value("name", std::string()),
-                                                        InParams.value("component", std::string()));
+                                                        InParams.value("name", OpaaxString()),
+                                                        InParams.value("component", OpaaxString()));
                     if (!CheckExpectation(nlohmann::json(lCount), InParams, lError))
                     {
                         return AutomationResult::Fail("entity count: " + lError);
@@ -595,15 +586,15 @@ namespace Opaax::EngineAutomation
                 "Fails unless an entity named {entity} (or with that id) exists; with {exists: false}, unless none does.",
                 [&InEngine](const nlohmann::json& InParams)
                 {
-                    std::string  lError;
+                    OpaaxString  lError;
                     World* const lWorld = ActiveWorld(InEngine, lError);
                     if (lWorld == nullptr)
                     {
                         return AutomationResult::Fail(lError);
                     }
 
-                    const std::string lRef = InParams.value("entity", std::string());
-                    if (lRef.empty())
+                    const OpaaxString lRef = InParams.value("entity", OpaaxString());
+                    if (lRef.IsEmpty())
                     {
                         return AutomationResult::Fail("\"entity\" names an entity: its id or its name");
                     }
@@ -611,7 +602,7 @@ namespace Opaax::EngineAutomation
                     // By name, any number of them counts.
                     const bool bWanted = InParams.value("exists", true);
                     Guid       lId;
-                    const bool bFound  = Guid::FromString(OpaaxString(lRef.c_str()), lId)
+                    const bool bFound  = Guid::FromString(lRef, lId)
                                              ? lWorld->FindByGuid(lId).IsValid()
                                              : CountEntities(*lWorld, InEngine.GetRegistries().Components(), lRef, {}) > 0;
                     if (bFound != bWanted)
@@ -633,16 +624,16 @@ namespace Opaax::EngineAutomation
         RegisterExpectations(InRunner, InEngine);
     }
 
-    nlohmann::json DescribeWidgets(const UICanvas& InCanvas, const std::string& InName)
+    nlohmann::json DescribeWidgets(const UICanvas& InCanvas, const OpaaxString& InName)
     {
         nlohmann::json lList = nlohmann::json::array();
         DescribeTree(InCanvas, InCanvas.Root(), InName, lList);
         return lList;
     }
 
-    bool FindWidgetCentre(UICanvas& InCanvas, const std::string& InName, Vector2F& OutPixel, std::string& OutError)
+    bool FindWidgetCentre(UICanvas& InCanvas, const OpaaxString& InName, Vector2F& OutPixel, OpaaxString& OutError)
     {
-        UIWidget* const lWidget = InName.empty() ? nullptr : InCanvas.Root().FindByName(OpaaxString(InName.c_str()));
+        UIWidget* const lWidget = InName.IsEmpty() ? nullptr : InCanvas.Root().FindByName(InName);
         if (lWidget == nullptr)
         {
             OutError = "no widget named '" + InName + "' in the game's UI (ui.list lists them)";
@@ -658,18 +649,18 @@ namespace Opaax::EngineAutomation
         return true;
     }
 
-    bool CheckExpectation(const nlohmann::json& InActual, const nlohmann::json& InParams, std::string& OutError)
+    bool CheckExpectation(const nlohmann::json& InActual, const nlohmann::json& InParams, OpaaxString& OutError)
     {
-        const auto lFail = [&InActual, &OutError](const std::string& InExpected)
+        const auto lFail = [&InActual, &OutError](const OpaaxString& InExpected)
         {
-            OutError = "expected " + InExpected + ", found " + InActual.dump();
+            OutError = "expected " + InExpected + ", found " + ToJsonText(InActual);
             return false;
         };
 
         if (const auto lEquals = InParams.find("equals"); lEquals != InParams.end()
             && !Matches(InActual, *lEquals, EQUALS_TOLERANCE))
         {
-            return lFail(lEquals->dump());
+            return lFail(ToJsonText(*lEquals));
         }
 
         if (const auto lNear = InParams.find("near"); lNear != InParams.end())
@@ -677,7 +668,7 @@ namespace Opaax::EngineAutomation
             const double lTolerance = InParams.value("tolerance", 0.01);
             if (!Matches(InActual, *lNear, lTolerance))
             {
-                return lFail(lNear->dump() + " within " + nlohmann::json(lTolerance).dump());
+                return lFail(ToJsonText(*lNear) + " within " + ToJsonText(nlohmann::json(lTolerance)));
             }
         }
 
@@ -691,13 +682,13 @@ namespace Opaax::EngineAutomation
         if (const auto lGreater = InParams.find("greater"); lGreater != InParams.end()
             && !(InActual.get<double>() > lGreater->get<double>()))
         {
-            return lFail("more than " + lGreater->dump());
+            return lFail("more than " + ToJsonText(*lGreater));
         }
 
         if (const auto lLess = InParams.find("less"); lLess != InParams.end()
             && !(InActual.get<double>() < lLess->get<double>()))
         {
-            return lFail("less than " + lLess->dump());
+            return lFail("less than " + ToJsonText(*lLess));
         }
 
         if (const auto lBetween = InParams.find("between"); lBetween != InParams.end())
@@ -710,26 +701,26 @@ namespace Opaax::EngineAutomation
             }
             if (lValue < (*lBetween)[0].get<double>() || lValue > (*lBetween)[1].get<double>())
             {
-                return lFail("between " + (*lBetween)[0].dump() + " and " + (*lBetween)[1].dump());
+                return lFail("between " + ToJsonText((*lBetween)[0]) + " and " + ToJsonText((*lBetween)[1]));
             }
         }
 
         return true;
     }
 
-    Entity FindEntity(World& InWorld, const nlohmann::json& InParams, std::string& OutError)
+    Entity FindEntity(World& InWorld, const nlohmann::json& InParams, OpaaxString& OutError)
     {
         const auto lRef = InParams.find("entity");
-        if (lRef == InParams.end() || !lRef->is_string() || lRef->get<std::string>().empty())
+        if (lRef == InParams.end() || !lRef->is_string() || lRef->get<OpaaxString>().IsEmpty())
         {
             OutError = "\"entity\" names an entity: its id or its name";
             return Entity{};
         }
 
-        const std::string lText = lRef->get<std::string>();
+        const OpaaxString lText = lRef->get<OpaaxString>();
 
         Guid lId;
-        if (Guid::FromString(OpaaxString(lText.c_str()), lId))
+        if (Guid::FromString(lText, lId))
         {
             const Entity lEntity = InWorld.FindByGuid(lId);
             if (!lEntity.IsValid())
@@ -744,7 +735,7 @@ namespace Opaax::EngineAutomation
         Uint32 lMatches = 0;
         InWorld.Each<EntityMeta>([&](const EntityID InId, const EntityMeta& InMeta)
         {
-            if (lText == InMeta.Name.CStr())
+            if (lText == InMeta.Name)
             {
                 lFound = Entity{ InId, &InWorld };
                 ++lMatches;
@@ -758,7 +749,7 @@ namespace Opaax::EngineAutomation
         }
         if (lMatches > 1)
         {
-            OutError = std::to_string(lMatches) + " entities are named '" + lText + "': name one by its id";
+            OutError = OpaaxString::Format("{} entities are named '{}': name one by its id", lMatches, lText);
             return Entity{};
         }
         return lFound;
@@ -769,9 +760,9 @@ namespace Opaax::EngineAutomation
         nlohmann::json lJson = nlohmann::json::object();
         if (const EntityMeta* lMeta = InEntity.TryGet<EntityMeta>())
         {
-            lJson["id"]     = Text(lMeta->Id.ToString());
-            lJson["name"]   = Text(lMeta->Name);
-            lJson["parent"] = lMeta->Parent.IsValid() ? nlohmann::json(Text(lMeta->Parent.ToString())) : nlohmann::json();
+            lJson["id"]     = lMeta->Id.ToString();
+            lJson["name"]   = lMeta->Name;
+            lJson["parent"] = lMeta->Parent.IsValid() ? nlohmann::json(lMeta->Parent.ToString()) : nlohmann::json();
             lJson["map"]    = lMeta->OwnerMap.IsValid() ? nlohmann::json(lMeta->OwnerMap.CStr()) : nlohmann::json();
         }
 
@@ -797,10 +788,10 @@ namespace Opaax::EngineAutomation
     }
 
     bool PatchComponent(Entity InEntity, const ComponentRegistry& InTypes, const nlohmann::json& InParams,
-                        std::string& OutError)
+                        OpaaxString& OutError)
     {
-        const std::string      lType  = InParams.value("type", std::string());
-        const IComponentEntry* lEntry = InTypes.FindByName(OpaaxStringID(lType.c_str()));
+        const OpaaxString      lType  = InParams.value("type", OpaaxString());
+        const IComponentEntry* lEntry = InTypes.FindByName(OpaaxStringID(lType));
         if (lEntry == nullptr)
         {
             OutError = "unknown component type '" + lType + "'";

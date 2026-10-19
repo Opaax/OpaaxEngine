@@ -23,6 +23,12 @@ namespace Opaax
             }
             return spdlog::level::info;
         }
+
+        /** InText as spdlog takes it, without a copy. */
+        spdlog::string_view_t ToSpdText(const OpaaxStringView InText)
+        {
+            return spdlog::string_view_t(InText.Data(), InText.GetLength());
+        }
     }
 
     Logger& Logger::Get()
@@ -34,7 +40,7 @@ namespace Opaax
 
     Logger::Logger()
         // Not registered with spdlog, so several Loggers (engine, tests) can coexist.
-        : m_Logger(std::make_shared<spdlog::logger>(LOGGER_NAME))
+        : m_Logger(MakeShared<spdlog::logger>(LOGGER_NAME))
     {
         m_Logger->set_level(spdlog::level::trace);
         m_Logger->flush_on(spdlog::level::trace);
@@ -44,13 +50,13 @@ namespace Opaax
 
     void Logger::Init(const OpaaxStringView InLogFile)
     {
-        TDynArray<spdlog::sink_ptr> lSinks{ std::make_shared<spdlog::sinks::stdout_color_sink_mt>() };
+        TDynArray<spdlog::sink_ptr> lSinks{ MakeShared<spdlog::sinks::stdout_color_sink_mt>() };
         OpaaxString                 lFileError;
 
         try
         {
-            lSinks.push_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>(
-                std::string(InLogFile.Data(), InLogFile.GetLength()), true));
+            lSinks.push_back(MakeShared<spdlog::sinks::basic_file_sink_mt>(
+                spdlog::filename_t(InLogFile.Data(), InLogFile.GetLength()), true));
         }
         catch (const spdlog::spdlog_ex& lError)
         {
@@ -79,7 +85,7 @@ namespace Opaax
 
     void Logger::AttachSinks(const TDynArray<spdlog::sink_ptr>& InSinks)
     {
-        std::lock_guard lLock(m_Mutex);
+        TLockGuard<Mutex> lLock(m_Mutex);
 
         for (const spdlog::sink_ptr& lSink : InSinks)
         {
@@ -87,14 +93,15 @@ namespace Opaax
 
             for (const PendingLine& lLine : m_Pending)
             {
-                lSink->log(spdlog::details::log_msg(lLine.Time, spdlog::source_loc{}, LOGGER_NAME, lLine.Level, lLine.Text));
+                lSink->log(spdlog::details::log_msg(lLine.Time, spdlog::source_loc{}, LOGGER_NAME, lLine.Level,
+                                                    ToSpdText(lLine.Text)));
             }
 
             if (m_DroppedPending > 0)
             {
-                const std::string lNote = fmt::format("[{}] {} line(s) logged before the sinks existed were dropped",
-                                                      LogOpaaxApplication.Name, m_DroppedPending);
-                lSink->log(spdlog::details::log_msg(spdlog::source_loc{}, LOGGER_NAME, spdlog::level::warn, lNote));
+                const OpaaxString lNote = OpaaxString::Format("[{}] {} line(s) logged before the sinks existed were dropped",
+                                                              LogOpaaxApplication.Name, m_DroppedPending);
+                lSink->log(spdlog::details::log_msg(spdlog::source_loc{}, LOGGER_NAME, spdlog::level::warn, ToSpdText(lNote)));
             }
 
             lSink->flush();
@@ -107,7 +114,7 @@ namespace Opaax
 
     void Logger::Shutdown()
     {
-        std::lock_guard lLock(m_Mutex);
+        TLockGuard<Mutex> lLock(m_Mutex);
 
         m_Logger->flush();
         m_Logger->sinks().clear();
@@ -115,7 +122,7 @@ namespace Opaax
 
     void Logger::Flush()
     {
-        std::lock_guard lLock(m_Mutex);
+        TLockGuard<Mutex> lLock(m_Mutex);
         m_Logger->flush();
     }
 
@@ -126,44 +133,44 @@ namespace Opaax
 
     void Logger::EnableHistory(const Uint32 InCapacity)
     {
-        std::lock_guard lLock(m_Mutex);
+        TLockGuard<Mutex> lLock(m_Mutex);
         m_History.SetCapacity(InCapacity);
     }
 
     Uint64 Logger::CopyHistorySince(const Uint64 InAfterSequence, TDynArray<LogEntry>& OutEntries) const
     {
-        std::lock_guard lLock(m_Mutex);
+        TLockGuard<Mutex> lLock(m_Mutex);
         return m_History.CopySince(InAfterSequence, OutEntries);
     }
 
     bool Logger::HasSinks() const
     {
-        std::lock_guard lLock(m_Mutex);
+        TLockGuard<Mutex> lLock(m_Mutex);
         return !m_Logger->sinks().empty();
     }
 
     Uint32 Logger::GetPendingCount() const
     {
-        std::lock_guard lLock(m_Mutex);
+        TLockGuard<Mutex> lLock(m_Mutex);
         return static_cast<Uint32>(m_Pending.size());
     }
 
-    void Logger::WriteLine(const ELogLevel InLevel, const LogCategory& InCategory, const std::string_view InLine,
-                           const size_t InMessageStart)
+    void Logger::WriteLine(const ELogLevel InLevel, const LogCategory& InCategory, const OpaaxStringView InLine,
+                           const Uint32 InMessageStart)
     {
-        std::lock_guard lLock(m_Mutex);
+        TLockGuard<Mutex> lLock(m_Mutex);
 
         // Recorded in the history even before Init.
         if (m_History.IsEnabled())
         {
-            m_History.Push(InLevel, OpaaxStringID(InCategory.Name), InLine.substr(InMessageStart));
+            m_History.Push(InLevel, OpaaxStringID(InCategory.Name), InLine.SubString(InMessageStart));
         }
 
         const spdlog::level::level_enum lLevel = ToSpdLevel(InLevel);
 
         if (!m_Logger->sinks().empty())
         {
-            m_Logger->log(lLevel, InLine);
+            m_Logger->log(lLevel, ToSpdText(InLine));
             return;
         }
 
@@ -174,6 +181,6 @@ namespace Opaax
             return;
         }
 
-        m_Pending.push_back({ spdlog::log_clock::now(), lLevel, std::string(InLine) });
+        m_Pending.push_back({ spdlog::log_clock::now(), lLevel, InLine.ToString() });
     }
 }

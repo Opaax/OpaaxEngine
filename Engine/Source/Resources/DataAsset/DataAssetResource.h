@@ -1,6 +1,6 @@
 #pragma once
 
-#include <optional>
+#include "Core/OpaaxTypes.h"
 
 #include <nlohmann/json.hpp>
 
@@ -25,12 +25,12 @@ namespace Opaax
 
         static constexpr EFailPolicy FailPolicy = EFailPolicy::FailFast;
 
-        static std::optional<DataAssetResource> Load(const char* InPath, LoadContext& /*InCtx*/)
+        static TOptional<DataAssetResource> Load(const char* InPath, LoadContext& /*InCtx*/)
         {
             DataAssetFile::Contents lContents;
             if (!DataAssetFile::Load(OpaaxString(InPath), lContents))
             {
-                return std::nullopt;   // DataAssetFile already logged why
+                return NullOpt;   // DataAssetFile already logged why
             }
 
             DataAssetResource lResource;

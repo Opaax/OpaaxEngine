@@ -2,7 +2,7 @@
 
 #include "Engine/Registries/AutoRegistration.h"
 
-#include <algorithm>
+#include "Core/Maths/Maths.h"
 
 #include <glm/geometric.hpp>   // glm::length
 
@@ -76,10 +76,10 @@ namespace Sandbox
         float lFastest = 0.f;
         m_Context->OwningWorld.Each<MoverComponent>([&lFastest](EntityID, const MoverComponent& InMover)
         {
-            lFastest = std::max(lFastest, glm::length(InMover.Velocity));
+            lFastest = Maths::Max(lFastest, glm::length(InMover.Velocity));
         });
 
-        m_Model.Speed = std::clamp(lFastest / kFullSpeed, 0.f, 1.f);
+        m_Model.Speed = Maths::Clamp(lFastest / kFullSpeed, 0.f, 1.f);
     }
 
     void HudSubsystem::Shutdown()

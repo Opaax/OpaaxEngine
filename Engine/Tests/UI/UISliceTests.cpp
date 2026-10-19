@@ -1,6 +1,6 @@
 // Suite: rect -> quads geometry (UI/UISlice.h): 9-slice and the fill clip. Pure (a 9-slice only
 // needs the texture size).
-#include <cmath>
+#include "Core/Maths/Maths.h"
 
 #include <doctest.h>
 
@@ -24,7 +24,7 @@ namespace
         for (const UIQuad& lQuad : InQuads)
         {
             const Vector2F lMin = lQuad.Bounds.Min();
-            if (std::fabs(lMin.x - InMin.x) < 0.01f && std::fabs(lMin.y - InMin.y) < 0.01f)
+            if (Maths::Abs(lMin.x - InMin.x) < 0.01f && Maths::Abs(lMin.y - InMin.y) < 0.01f)
             {
                 return &lQuad;
             }

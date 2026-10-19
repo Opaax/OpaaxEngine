@@ -24,7 +24,7 @@
 #include "Application/Services/IEngine.h"
 #include "Core/Log/Logger.h"
 
-#include <cmath>                            // ceil/floor/log10/pow
+#include "Core/Maths/Maths.h"
 
 #include "Renderer/DebugDraw.h"             // selection outline + grid
 #include "Renderer/RenderTarget.hpp"        // OffscreenRenderTarget
@@ -229,7 +229,7 @@ namespace Opaax::Editor
         const float lMinWorld = m_GridMinCellPx * lWorldPerPixel;
 
         return lStep < lMinWorld
-                   ? lStep * std::pow(10.f, std::ceil(std::log10(lMinWorld / lStep)))
+                   ? lStep * Maths::Pow(10.f, Maths::Ceil(Maths::Log10(lMinWorld / lStep)))
                    : lStep;
     }
 
@@ -267,10 +267,10 @@ namespace Opaax::Editor
         const Vector2F lMin = lView.Min();
         const Vector2F lMax = lView.Max();
 
-        const Int32 lFirstX = static_cast<Int32>(std::ceil(lMin.x / lSpacing));
-        const Int32 lLastX  = static_cast<Int32>(std::floor(lMax.x / lSpacing));
-        const Int32 lFirstY = static_cast<Int32>(std::ceil(lMin.y / lSpacing));
-        const Int32 lLastY  = static_cast<Int32>(std::floor(lMax.y / lSpacing));
+        const Int32 lFirstX = static_cast<Int32>(Maths::Ceil(lMin.x / lSpacing));
+        const Int32 lLastX  = static_cast<Int32>(Maths::Floor(lMax.x / lSpacing));
+        const Int32 lFirstY = static_cast<Int32>(Maths::Ceil(lMin.y / lSpacing));
+        const Int32 lLastY  = static_cast<Int32>(Maths::Floor(lMax.y / lSpacing));
 
         const Int64 lCount = static_cast<Int64>(lLastX - lFirstX + 1) + static_cast<Int64>(lLastY - lFirstY + 1);
         if (lCount <= 0 || lCount > static_cast<Int64>(m_GridMaxLines))

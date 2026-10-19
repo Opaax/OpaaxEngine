@@ -1,7 +1,5 @@
 #include "UI/UIBinding.h"
 
-#include <cstdio>   // std::snprintf
-
 namespace Opaax
 {
     OpaaxString UIBoundValue::ToText() const
@@ -12,9 +10,7 @@ namespace Opaax
             case EKind::Integer: return OpaaxString::FromInt(static_cast<Int64>(Number));
             case EKind::Number:
             {
-                char lBuffer[32];
-                const int lWritten = std::snprintf(lBuffer, sizeof(lBuffer), "%g", Number);
-                return lWritten > 0 ? OpaaxString(lBuffer) : OpaaxString();
+                return OpaaxString::Format("{:g}", Number);
             }
             case EKind::Text:    return Text;
             case EKind::None:    break;
@@ -53,9 +49,9 @@ namespace Opaax
             // Match the ticket, not the name: an entry re-added under this name belongs to someone else.
             if (m_Names[lIndex] == InHandle.Name && m_Tickets[lIndex] == InHandle.Ticket)
             {
-                m_Names.erase(m_Names.begin() + static_cast<std::ptrdiff_t>(lIndex));
-                m_Readers.erase(m_Readers.begin() + static_cast<std::ptrdiff_t>(lIndex));
-                m_Tickets.erase(m_Tickets.begin() + static_cast<std::ptrdiff_t>(lIndex));
+                m_Names.erase(m_Names.begin() + static_cast<PtrDiff>(lIndex));
+                m_Readers.erase(m_Readers.begin() + static_cast<PtrDiff>(lIndex));
+                m_Tickets.erase(m_Tickets.begin() + static_cast<PtrDiff>(lIndex));
                 return;
             }
         }

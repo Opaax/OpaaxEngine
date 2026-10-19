@@ -1,8 +1,6 @@
 // IEditorUndoable.h
 #pragma once
 
-#include <utility>
-
 #include "Core/OpaaxTypes.h"
 #include "Editor/Undo/EditorUndoableConcept.h"
 
@@ -31,7 +29,7 @@ namespace Opaax::Editor
         template<EditorUndoable<EditorContext> T>
         struct Model final : Concept
         {
-            explicit Model(T InStep) : m_Step(std::move(InStep)) {}
+            explicit Model(T InStep) : m_Step(Move(InStep)) {}
 
             void        Undo(EditorContext& Context) override { m_Step.Undo(Context); }
             void        Redo(EditorContext& Context) override { m_Step.Redo(Context); }
@@ -43,7 +41,7 @@ namespace Opaax::Editor
     public:
         template<EditorUndoable<EditorContext> T>
         explicit IEditorUndoable(T InStep)
-            : m_Self(MakeUnique<Model<T>>(std::move(InStep)))
+            : m_Self(MakeUnique<Model<T>>(Move(InStep)))
         {
         }
 

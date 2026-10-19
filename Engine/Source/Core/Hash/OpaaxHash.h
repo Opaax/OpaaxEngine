@@ -1,6 +1,4 @@
 ﻿#pragma once
- 
-#include <string_view>
 
 #include "Core/EngineAPI.h"
 #include "Core/String/OpaaxString.hpp"
@@ -45,7 +43,7 @@ namespace Opaax
         static constexpr Uint64 FNV1a_OffsetBasis64 = 14695981039346656037ull;
 
         // 64-bit hash for stable identities (e.g. ResourceTypeID).
-        static constexpr Uint64 Hash64(std::string_view Str, Uint64 HashValue = FNV1a_OffsetBasis64) noexcept
+        static constexpr Uint64 Hash64(OpaaxStringView Str, Uint64 HashValue = FNV1a_OffsetBasis64) noexcept
         {
             for (const char lChar : Str)
             {
@@ -55,30 +53,29 @@ namespace Opaax
             return HashValue;
         }
 
-        // operator() overloads required by std::unordered_map / std::unordered_set
+        // operator() overloads, so it can be the hasher of a TUnorderedMap / TUnorderedSet
         Uint32 operator()(const OpaaxString& String) const noexcept { return Hash(String.CStr()); }
         Uint32 operator()(const char*        Str)    const noexcept { return Hash(Str); }
     };
 
+    // THash<OpaaxString>, so TUnorderedMap<OpaaxString, T> works with the default hasher.
+    // Lives here because OpaaxString.hpp cannot include this header.
+    template<>
+    struct THash<OpaaxString>
+    {
+        size_t operator()(const OpaaxString& String) const noexcept
+        {
+            return static_cast<size_t>(OpaaxHash::Hash(String.CStr()));
+        }
+    };
+
+    // Same hash as OpaaxString, so a view can look up a string key.
+    template<>
+    struct THash<OpaaxStringView>
+    {
+        size_t operator()(OpaaxStringView View) const noexcept
+        {
+            return static_cast<size_t>(OpaaxHash::Hash(View));
+        }
+    };
 } // namespace Opaax
-
-// std::hash<OpaaxString>, so TUnorderedMap<OpaaxString, T> works with the default hasher.
-// Lives here because OpaaxString.hpp cannot include this header.
-template<>
-struct std::hash<Opaax::OpaaxString>
-{
-    size_t operator()(const Opaax::OpaaxString& String) const noexcept
-    {
-        return static_cast<size_t>(Opaax::OpaaxHash::Hash(String.CStr()));
-    }
-};
-
-// Same hash as OpaaxString, so a view can look up a string key.
-template<>
-struct std::hash<Opaax::OpaaxStringView>
-{
-    size_t operator()(Opaax::OpaaxStringView View) const noexcept
-    {
-        return static_cast<size_t>(Opaax::OpaaxHash::Hash(View));
-    }
-};

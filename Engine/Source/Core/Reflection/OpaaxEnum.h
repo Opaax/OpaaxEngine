@@ -1,7 +1,6 @@
 #pragma once
 
-#include <iterator>
-#include <type_traits>
+#include "Core/Templates/TypeTraits.h"
 
 #include "Core/OpaaxTypes.h"
 
@@ -18,15 +17,15 @@ namespace Opaax
      * An enum with declared values and a ToString(E).
      */
     template<typename T>
-    concept CEnumWithValues = std::is_enum_v<T>
+    concept CEnumWithValues = TIsEnum<T>
         && requires { TEnumValues<T>::Values; }
-        && requires(T InValue) { { ToString(InValue) } -> std::convertible_to<const char*>; };
+        && requires(T InValue) { { ToString(InValue) } -> CConvertibleTo<const char*>; };
 
     /** How many enumerators E declared. */
     template<CEnumWithValues T>
     constexpr Uint64 EnumValueCount() noexcept
     {
-        return static_cast<Uint64>(std::size(TEnumValues<T>::Values));
+        return static_cast<Uint64>(ArraySize(TEnumValues<T>::Values));
     }
 }
 

@@ -7,11 +7,14 @@
 #include <fstream>
 #include <string>
 
+#include "../TestTempDir.h"
 #include "Core/String/OpaaxUtf8.h"
 #include "Core/IO/FileIO.h"
 #include "Application/Services/IPaths.h"
+#include "Platform/NativeFileSystem.h"
 #include "Resources/ResourceManager.h"   // before BinaryResource (completes LoadContext)
 #include "Resources/BinaryResource.hpp"
+#include "World/Serialization/MapFile.h"
 
 using namespace Opaax;
 
@@ -277,11 +280,83 @@ TEST_CASE("BinaryResource: loads a file from a non-ASCII directory")
     ResourceDependencyGraph lDeps;
     LoadContext             lCtx(lManager, lDeps);
 
-    const std::optional<BinaryResource> lRes =
+    const TOptional<BinaryResource> lRes =
         BinaryResource::Load(lDir.Utf8File("blob.bin").CStr(), lCtx);
 
     REQUIRE(lRes.has_value());
     CHECK(lRes->Bytes.size() == 5);
+}
+
+TEST_CASE("MapFile: a map saves and loads under a NON-ASCII path")
+{
+    const ScopedUnicodeDir lDir("mapfile");
+    const OpaaxString      lPath = lDir.Utf8File("Main.opaaxmap");
+
+    MapData    lData;
+    EntityData lEntity;
+    lEntity.Id   = Guid::New();
+    lEntity.Name = OpaaxString("Accented");
+    lData.Entities.push_back(Move(lEntity));
+
+    REQUIRE(MapFile::Save(lPath, lData));
+
+    // Verified through std::filesystem — a different mechanism than the one under test.
+    CHECK(fs::exists(lDir.Native() / "Main.opaaxmap"));
+
+    MapData lLoaded;
+    REQUIRE(MapFile::Load(lPath, lLoaded));
+    REQUIRE(lLoaded.EntityCount() == 1);
+    CHECK(lLoaded.Entities[0].Name == OpaaxString("Accented"));
+}
+
+// =============================================================================
+// NativeFileSystem
+// =============================================================================
+// The platform emits UTF-8, so the file system must read UTF-8 too (MSVC's
+// std::filesystem::path(const char*) uses the ANSI code page). The directory is created from a u8
+// literal, which std::filesystem always reads as UTF-8, so the name on disk is really Unicode.
+// =============================================================================
+TEST_CASE("NativeFileSystem: non-ASCII paths round-trip as UTF-8, not as the ANSI code page")
+{
+    const TestTempDir      lTemp("Utf8RoundTrip");
+    const NativeFileSystem lFS{};
+
+    // \u escapes, not literal characters: this file has no BOM and there is no /utf-8, so MSVC would
+    // read literal bytes with the ANSI code page.
+    const fs::path lDir = fs::path(lTemp.Path().CStr()) / fs::path(u8"\u00C9clair_\u00DCnicode");
+    std::error_code lError;
+    fs::create_directories(lDir, lError);
+    REQUIRE_FALSE(lError);
+
+    // The same name as UTF-8 BYTES — what the engine carries in an OpaaxString. Split escapes so the
+    // hex does not swallow the following letter.
+    const OpaaxString lUtf8Name("\xC3\x89" "clair_" "\xC3\x9C" "nicode");
+    const OpaaxString lUtf8Dir(lTemp.Path() + OpaaxString("/") + lUtf8Name);
+
+    CHECK(lFS.IsPathExist(lUtf8Dir));
+
+    TDynArray<IFileSystem::Entry> lEntries;
+    REQUIRE(lFS.ListDirectory(lTemp.Path(), lEntries));
+    REQUIRE(lEntries.size() == 1);
+    CHECK(lEntries[0].Name == lUtf8Name);
+    CHECK(lEntries[0].bIsDirectory);
+
+    // The listed path must be usable as an input — the round trip closes.
+    CHECK(lFS.IsPathExist(lEntries[0].AbsPath));
+}
+
+TEST_CASE("NativeFileSystem: CreateDirectories accepts a non-ASCII name and the OS agrees it is there")
+{
+    const TestTempDir      lTemp("Utf8Create");
+    const NativeFileSystem lFS{};
+
+    const OpaaxString lUtf8Dir(lTemp.Path() + OpaaxString("/\xE6\x97\xA5\xE6\x9C\xAC" "_Waves"));
+    REQUIRE(lFS.CreateDirectories(lUtf8Dir));
+
+    // Ask the OS through the WIDE API, so a self-consistent mis-encoding cannot fake this.
+    // U+65E5 U+672C — outside CP-1252 entirely, so this one cannot survive an ANSI round trip at all.
+    const fs::path lExpected = fs::path(lTemp.Path().CStr()) / fs::path(u8"\u65E5\u672C_Waves");
+    CHECK(fs::is_directory(lExpected));
 }
 
 // =============================================================================

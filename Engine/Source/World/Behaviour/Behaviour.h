@@ -1,7 +1,6 @@
 #pragma once
 
-#include <concepts>
-#include <type_traits>
+#include "Core/Templates/TypeTraits.h"
 
 #include <nlohmann/json.hpp>
 
@@ -73,7 +72,7 @@ namespace Opaax
      * StopPropagation(). Opt in with `static constexpr bool Bubbles = true;` in the event struct.
      */
     template<typename E>
-    concept CBubblingEvent = requires { { E::Bubbles } -> std::convertible_to<bool>; } && E::Bubbles;
+    concept CBubblingEvent = requires { { E::Bubbles } -> CConvertibleTo<bool>; } && E::Bubbles;
 
     /** Identifies a timer, for ClearTimer. Zero is no timer. */
     struct TimerHandle
@@ -222,8 +221,8 @@ namespace Opaax
         template<typename T>
         void Remove()
         {
-            if constexpr (std::derived_from<T, Behaviour>) { RemoveBehaviourLater(TypeIdOf<T>()); }
-            else                                           { m_World->GetRegistry().remove<T>(m_Entity); }
+            if constexpr (CDerivedFrom<T, Behaviour>) { RemoveBehaviourLater(TypeIdOf<T>()); }
+            else                                      { m_World->GetRegistry().remove<T>(m_Entity); }
         }
 
         // =============================================================================
@@ -322,7 +321,7 @@ namespace Opaax
             using Traits = BehaviourDetail::TEventMethodTraits<decltype(Method)>;
             using Class  = typename Traits::Class;
             using Event  = typename Traits::Event;
-            static_assert(std::derived_from<Class, Behaviour>, "Listen: the handler must be a behaviour's member.");
+            static_assert(CDerivedFrom<Class, Behaviour>, "Listen: the handler must be a behaviour's member.");
 
             ListenErased(TypeIdOf<Event>(), TypeIdOf<Class>(), &BehaviourDetail::CallEventHandler<Class, Event, Method>);
         }
@@ -338,7 +337,7 @@ namespace Opaax
         template<typename E>
         void Broadcast(const E& InEvent) const
         {
-            static_assert(std::is_trivially_copyable_v<E>, "EventBus payloads must be trivially-copyable structs");
+            static_assert(TIsTriviallyCopyable<E>, "EventBus payloads must be trivially-copyable structs");
             BroadcastErased(Detail::EventTypeKey<E>(), &InEvent);
         }
 
@@ -352,8 +351,8 @@ namespace Opaax
             using Traits = BehaviourDetail::TEventMethodTraits<decltype(Method)>;
             using Class  = typename Traits::Class;
             using Event  = typename Traits::Event;
-            static_assert(std::derived_from<Class, Behaviour>, "Subscribe: the handler must be a behaviour's member.");
-            static_assert(std::is_trivially_copyable_v<Event>, "EventBus payloads must be trivially-copyable structs");
+            static_assert(CDerivedFrom<Class, Behaviour>, "Subscribe: the handler must be a behaviour's member.");
+            static_assert(TIsTriviallyCopyable<Event>, "EventBus payloads must be trivially-copyable structs");
 
             SubscribeErased(Detail::EventTypeKey<Event>(), TypeIdOf<Class>(),
                             &BehaviourDetail::CallEventHandler<Class, Event, Method>);
@@ -368,7 +367,7 @@ namespace Opaax
         TimerHandle SetTimer(float InSeconds, bool bInRepeat = false)
         {
             using Class = typename BehaviourDetail::TTimerMethodTraits<decltype(Method)>::Class;
-            static_assert(std::derived_from<Class, Behaviour>, "SetTimer: the handler must be a behaviour's member.");
+            static_assert(CDerivedFrom<Class, Behaviour>, "SetTimer: the handler must be a behaviour's member.");
 
             return SetTimerErased(InSeconds, bInRepeat, TypeIdOf<Class>(),
                                   &BehaviourDetail::CallTimerHandler<Class, Method>, {});
@@ -495,8 +494,8 @@ namespace Opaax
         {
             using Traits = BehaviourDetail::TEventMethodTraits<decltype(Method)>;
             using Class  = typename Traits::Class;
-            static_assert(std::derived_from<Class, Behaviour>, "BindAction: the handler must be a behaviour's member.");
-            static_assert(std::is_same_v<typename Traits::Event, InputActionValue>,
+            static_assert(CDerivedFrom<Class, Behaviour>, "BindAction: the handler must be a behaviour's member.");
+            static_assert(TIsSame<typename Traits::Event, InputActionValue>,
                           "BindAction: the handler takes a const InputActionValue&.");
 
             BindActionErased(InAction, InTrigger, TypeIdOf<Class>(),
@@ -585,14 +584,14 @@ namespace Opaax
      * A type that can be registered as a behaviour.
      */
     template<typename T>
-    concept CBehaviour = std::derived_from<T, Behaviour> && std::default_initializable<T>;
+    concept CBehaviour = CDerivedFrom<T, Behaviour> && CDefaultInitializable<T>;
 
     // =============================================================================
     // JSON — found for any behaviour type (its base is in Opaax). Written from its property list;
     //   a behaviour with no OPAAX_PROPERTIES saves as an empty object.
     // =============================================================================
     template<typename T>
-    requires std::derived_from<T, Behaviour>
+    requires CDerivedFrom<T, Behaviour>
     void to_json(nlohmann::json& OutJson, const T& InBehaviour)
     {
         if constexpr (CReflected<T>) { OutJson = PropertiesToJson(InBehaviour); }
@@ -604,7 +603,7 @@ namespace Opaax
      * Throws if InJson is not an object (the map loader then skips the behaviour, with a warning).
      */
     template<typename T>
-    requires std::derived_from<T, Behaviour>
+    requires CDerivedFrom<T, Behaviour>
     void from_json(const nlohmann::json& InJson, T& OutBehaviour)
     {
         if (!InJson.is_object())

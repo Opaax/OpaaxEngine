@@ -11,6 +11,7 @@
 #include <cstring>
 #include <exception>
 #include <filesystem>
+#include <string>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -153,7 +154,16 @@ namespace Opaax
         return *s_Instance;
     }
 
-    CrashHandler::CrashHandler() = default;
+    struct CrashHandler::NativePaths
+    {
+        std::wstring DumpDir;
+        std::wstring LogFile;
+    };
+
+    CrashHandler::CrashHandler()
+        : m_Native(MakeUnique<NativePaths>())
+    {
+    }
 
     CrashHandler::~CrashHandler()
     {
@@ -176,12 +186,12 @@ namespace Opaax
 
     void CrashHandler::Configure(const CrashHandlerSettings& InSettings)
     {
-        m_Settings    = InSettings;
-        m_DumpDirNative = Utf8::ToWide(InSettings.DumpDir);
-        m_LogFileNative = Utf8::ToWide(InSettings.LogFile);
+        m_Settings        = InSettings;
+        m_Native->DumpDir = Utf8::ToWide(InSettings.DumpDir);
+        m_Native->LogFile = Utf8::ToWide(InSettings.LogFile);
 
         std::error_code lError;
-        std::filesystem::create_directories(std::filesystem::path(m_DumpDirNative), lError);
+        std::filesystem::create_directories(std::filesystem::path(m_Native->DumpDir), lError);
 
         if (!m_bSymbolsReady)
         {
@@ -238,7 +248,7 @@ namespace Opaax
         wchar_t lStamp[32];
         FormatStamp(lStamp);
 
-        const std::wstring lDumpPath = m_DumpDirNative + L"/" + lStamp + L".dmp";
+        const std::wstring lDumpPath = m_Native->DumpDir + L"/" + lStamp + L".dmp";
 
         // 1. The dump (survives a corrupted heap).
         bool lbDumped = false;
@@ -298,10 +308,10 @@ namespace Opaax
 
         // 3. The log next to the dump (the next launch overwrites the original).
         Logger::Get().Flush();
-        if (!m_LogFileNative.empty())
+        if (!m_Native->LogFile.empty())
         {
-            const std::wstring lLogCopy = m_DumpDirNative + L"/" + lStamp + L".log";
-            CopyFileW(m_LogFileNative.c_str(), lLogCopy.c_str(), FALSE);
+            const std::wstring lLogCopy = m_Native->DumpDir + L"/" + lStamp + L".log";
+            CopyFileW(m_Native->LogFile.c_str(), lLogCopy.c_str(), FALSE);
         }
 
         return lDumpPathUtf8;

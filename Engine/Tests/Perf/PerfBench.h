@@ -4,11 +4,10 @@
 //   Run in Release (build.bat bench): Debug numbers are meaningless.
 #pragma once
 
-#include <algorithm>
-#include <chrono>
-#include <cstdint>
-#include <cstdio>
-#include <vector>
+#include "Core/Algo/Algo.h"
+#include "Core/Time/Clock.h"
+#include "Core/OpaaxTypes.h"
+#include "Core/IO/Console.h"
 
 #include <doctest.h>
 
@@ -23,26 +22,24 @@ namespace Opaax::Perf
     // InOps: how many operations the lambda performs per call. InEpochs: timed repetitions
     // (use an ODD count so the median is a single sample). Returns the median ns-per-op.
     template<typename TFn>
-    Result Measure(std::uint64_t InOps, int InEpochs, TFn&& InFn)
+    Result Measure(Uint64 InOps, int InEpochs, TFn&& InFn)
     {
-        using Clock = std::chrono::steady_clock;
-
         InFn(); // warmup — not timed
 
-        std::vector<double> lNsPerOp;
-        lNsPerOp.reserve(static_cast<std::size_t>(InEpochs));
+        TDynArray<double> lNsPerOp;
+        lNsPerOp.reserve(static_cast<size_t>(InEpochs));
 
         for (int lEpoch = 0; lEpoch < InEpochs; ++lEpoch)
         {
-            const auto lStart = Clock::now();
+            const Uint64 lStart = Clock::NowNanoseconds();
             InFn();
-            const auto lEnd = Clock::now();
+            const Uint64 lEnd = Clock::NowNanoseconds();
 
-            const double lNs = std::chrono::duration<double, std::nano>(lEnd - lStart).count();
+            const double lNs = static_cast<double>(lEnd - lStart);
             lNsPerOp.push_back(lNs / static_cast<double>(InOps));
         }
 
-        std::sort(lNsPerOp.begin(), lNsPerOp.end());
+        Algo::Sort(lNsPerOp);
         const double lMedian = lNsPerOp[lNsPerOp.size() / 2];
 
         return { lMedian, lMedian > 0.0 ? 1000.0 / lMedian : 0.0 }; // ns/op -> Mops/s
@@ -54,13 +51,11 @@ namespace Opaax::Perf
     // hardware. It is NOT a tight bound.
     inline void ReportAndGate(const char* InLabel, const Result& InResult, double InBudgetNsPerOp)
     {
-        std::printf("  [perf] %-38s %9.1f ns/op %8.1f Mops/s  (budget %.0f ns/op)\n",
-                    InLabel, InResult.MedianNsPerOp, InResult.MOpsPerSec, InBudgetNsPerOp);
-        std::fflush(stdout);
+        Console::WriteLine(OpaaxString::Format("  [perf] {:<38} {:9.1f} ns/op {:8.1f} Mops/s  (budget {:.0f} ns/op)",
+                                               InLabel, InResult.MedianNsPerOp, InResult.MOpsPerSec, InBudgetNsPerOp));
 
-        char lMsg[192];
-        std::snprintf(lMsg, sizeof(lMsg), "%s: %.1f ns/op exceeded budget %.0f ns/op",
-                      InLabel, InResult.MedianNsPerOp, InBudgetNsPerOp);
+        const OpaaxString lMsg = OpaaxString::Format("{}: {:.1f} ns/op exceeded budget {:.0f} ns/op",
+                                                     InLabel, InResult.MedianNsPerOp, InBudgetNsPerOp);
         CHECK_MESSAGE(InResult.MedianNsPerOp <= InBudgetNsPerOp, lMsg);
     }
 }

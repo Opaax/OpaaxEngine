@@ -5,8 +5,8 @@
 // measured.
 #include <doctest.h>
 
-#include <algorithm>
-#include <cmath>
+#include "Core/Memory/Memory.h"
+#include "Core/Maths/Maths.h"
 
 #include "Audio/AudioTypes.h"
 #include "Audio/IAudioDecoder.h"
@@ -34,7 +34,7 @@ namespace
 
         for (Uint32 lFrame = 0; lFrame < lFrames; ++lFrame)
         {
-            const float lSample = InAmplitude * static_cast<float>(std::sin(2.0 * 3.14159265358979 * InHz * lFrame / InRate));
+            const float lSample = InAmplitude * static_cast<float>(Maths::Sin(2.0 * 3.14159265358979 * InHz * lFrame / InRate));
             for (Uint32 lChannel = 0; lChannel < InChannels; ++lChannel)
             {
                 lOut.push_back(lSample);
@@ -60,8 +60,9 @@ namespace
 
         Uint64 Read(float* OutFrames, const Uint64 InFrameCount) override
         {
-            const Uint64 lCount = std::min({ InFrameCount, m_MaxRead, m_Format.FrameCount - m_Position });
-            std::copy_n(m_Frames.data() + m_Position * m_Format.Channels, lCount * m_Format.Channels, OutFrames);
+            const Uint64 lCount = Maths::Min({ InFrameCount, m_MaxRead, m_Format.FrameCount - m_Position });
+            Memory::Copy(OutFrames, m_Frames.data() + m_Position * m_Format.Channels,
+                         sizeof(float) * lCount * m_Format.Channels);
             m_Position += lCount;
             return lCount;
         }
@@ -85,7 +86,7 @@ namespace
         float Right = 0.f;
         float Jump  = 0.f;   // largest change between two frames on one side: a click when large
 
-        float Max() const { return std::max(Left, Right); }
+        float Max() const { return Maths::Max(Left, Right); }
     };
 
     AudioMixer::Desc ThreeBuses()
@@ -171,7 +172,7 @@ namespace
 
         Peaks Render(const float InSeconds)
         {
-            return RenderFrames(static_cast<Uint32>(std::lround(InSeconds * MIX_RATE)));
+            return RenderFrames(static_cast<Uint32>(Maths::RoundHalfFromZero(InSeconds * MIX_RATE)));
         }
 
         Peaks RenderFrames(const Uint32 InFrames)
@@ -186,9 +187,9 @@ namespace
             {
                 const float lLeft  = lBuffer[lFrame * 2];
                 const float lRight = lBuffer[lFrame * 2 + 1];
-                lPeaks.Left  = std::max(lPeaks.Left, std::abs(lLeft));
-                lPeaks.Right = std::max(lPeaks.Right, std::abs(lRight));
-                lPeaks.Jump  = std::max({ lPeaks.Jump, std::abs(lLeft - LastLeft), std::abs(lRight - LastRight) });
+                lPeaks.Left  = Maths::Max(lPeaks.Left, Maths::Abs(lLeft));
+                lPeaks.Right = Maths::Max(lPeaks.Right, Maths::Abs(lRight));
+                lPeaks.Jump  = Maths::Max({ lPeaks.Jump, Maths::Abs(lLeft - LastLeft), Maths::Abs(lRight - LastRight) });
 
                 LastLeft  = lLeft;
                 LastRight = lRight;

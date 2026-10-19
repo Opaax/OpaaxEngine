@@ -43,7 +43,7 @@ namespace Opaax::Editor
         {
             if (!InId.IsValid() || InDraw == nullptr) { return; }
 
-            m_Items.emplace_back(InId, std::move(InDraw), false);
+            m_Items.emplace_back(InId, Move(InDraw), false);
         }
 
         /** A vertical separator between groups. Skipped if it would lead or repeat. */

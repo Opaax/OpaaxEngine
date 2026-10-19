@@ -1,6 +1,6 @@
 #include "RHI/OpenGL/OpenGLRHIDevice.h"
 
-#include <algorithm>
+#include "Core/Memory/Memory.h"
 
 #include "Core/Log/Logger.h"
 
@@ -182,7 +182,7 @@ namespace Opaax
         {
             const Uint8* lSource = lBottomUp.data() + (InHeight - 1 - lRow) * lRowBytes;
             Uint8*       lTarget = OutRGBA.data() + lRow * lRowBytes;
-            std::copy(lSource, lSource + lRowBytes, lTarget);
+            Memory::Copy(lTarget, lSource, lRowBytes);
 
             for (size_t lAlpha = 3; lAlpha < lRowBytes; lAlpha += 4)
             {

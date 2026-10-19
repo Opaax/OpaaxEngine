@@ -1,7 +1,7 @@
 #include "Editor/Panels/AnimationClipPanel.h"
 
-#include <cmath>    // fmod
-#include <cstdio>   // snprintf
+#include "Core/Maths/Maths.h"
+#include "Core/String/CString.h"
 
 #include "Editor/Resources/Types/Animation/EditorAnimationClipDocument.h"
 #include "Editor/EditorContext.h"
@@ -199,7 +199,7 @@ namespace Opaax::Editor
 
         if (lLength > 0.f)
         {
-            float lScrub = (m_PreviewTime > lLength) ? std::fmod(m_PreviewTime, lLength) : m_PreviewTime;
+            float lScrub = (m_PreviewTime > lLength) ? Maths::FMod(m_PreviewTime, lLength) : m_PreviewTime;
 
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 8.f);
             if (ImGui::SliderFloat("##scrub", &lScrub, 0.f, lLength, "%.2fs"))
@@ -317,8 +317,7 @@ namespace Opaax::Editor
                                     : (lStep.Frame.IsValid() ? lStep.Frame.CStr() : "(unnamed frame)");
 
             char lLabel[192];
-            std::snprintf(lLabel, sizeof(lLabel), "%u  %s  x%u##step%u",
-                          lIndex, lWhat, lStep.EffectiveHold(), lIndex);
+            CString::Format(lLabel, "{}  {}  x{}##step{}", lIndex, lWhat, lStep.EffectiveHold(), lIndex);
 
             if (ImGui::Selectable(lLabel, m_Selected == static_cast<Int32>(lIndex)))
             {

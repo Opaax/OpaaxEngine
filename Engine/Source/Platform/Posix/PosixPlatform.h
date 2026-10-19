@@ -2,7 +2,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Platform/IPlatform.h"
-#include "Platform/StdFileSystem.h"
+#include "Platform/NativeFileSystem.h"
 
 #ifdef OPAAX_PLATFORM_POSIX
 
@@ -29,7 +29,7 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        StdFileSystem m_FileSystem;
+        NativeFileSystem m_FileSystem;
     };
 }
 

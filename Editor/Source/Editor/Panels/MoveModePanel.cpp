@@ -11,8 +11,8 @@
 
 #include <imgui.h>
 
-#include <cstring>   // strcmp
-#include <tuple>     // std::apply
+#include "Core/String/CString.h"
+#include "Core/OpaaxTypes.h"
 
 using namespace Opaax;
 
@@ -28,8 +28,8 @@ namespace Opaax::Editor
             // Flight has no ground: gravity, friction, jumping and slopes do not apply.
             if (InMode == OPAAX_ID("FlyMove"))
             {
-                return std::strcmp(InField, "MaxSpeed") == 0
-                    || std::strcmp(InField, "Acceleration") == 0;
+                return CString::Equals(InField, "MaxSpeed")
+                    || CString::Equals(InField, "Acceleration");
             }
 
             return true;
@@ -80,7 +80,7 @@ namespace Opaax::Editor
         const OpaaxStringID lMode = InData.Mode;
 
         // DrawProperties' fold, done by hand so fields the mode ignores can be skipped.
-        std::apply([this, lMode, &InData](const auto&... lProperties)
+        TupleApply([this, lMode, &InData](const auto&... lProperties)
                    {
                        ([&]
                         {

@@ -29,8 +29,8 @@ TEST_SUITE("perf" * doctest::skip())
         REQUIRE(lAudio.Startup());
 
         // The music: decoded while it plays, resampled from 44.1 kHz.
-        std::optional<AudioClipResource> lMusic = AudioClipResource::FromMemory(AudioTest::MakeWav(44100, 180.f, 220.f),
-                                                                                "Music", AudioClipResource::EResidency::Streamed);
+        TOptional<AudioClipResource> lMusic = AudioClipResource::FromMemory(AudioTest::MakeWav(44100, 180.f, 220.f),
+                                                                            "Music", AudioClipResource::EResidency::Streamed);
         REQUIRE(lMusic.has_value());
 
         PlaySoundParams lMusicParams;
@@ -39,7 +39,7 @@ TEST_SUITE("perf" * doctest::skip())
         REQUIRE(lAudio.Play(*lMusic, lMusicParams).IsValid());
 
         // Thirty spatial effects around the listener, each at its own pitch (each resampled).
-        std::optional<AudioClipResource> lEffect = AudioClipResource::FromMemory(AudioTest::MakeWav(44100, 0.5f, 660.f), "Effect");
+        TOptional<AudioClipResource> lEffect = AudioClipResource::FromMemory(AudioTest::MakeWav(44100, 0.5f, 660.f), "Effect");
         REQUIRE(lEffect.has_value());
         for (Uint32 lIndex = 0; lIndex < 30; ++lIndex)
         {

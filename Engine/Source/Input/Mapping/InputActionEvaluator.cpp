@@ -1,6 +1,6 @@
 #include "Input/Mapping/InputActionEvaluator.h"
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 
 #include "Input/Mapping/InputModifiers.h"
 #include "Input/InputManager.h"
@@ -127,7 +127,7 @@ namespace Opaax
         m_Contexts.emplace_back(Move(lAccepted));
 
         // Highest priority first; stable_sort keeps insertion order for equal priorities.
-        std::stable_sort(m_Contexts.begin(), m_Contexts.end(),
+        Algo::StableSort(m_Contexts,
                          [](const InputMappingContext& InLeft, const InputMappingContext& InRight)
                          {
                              return InLeft.Priority > InRight.Priority;

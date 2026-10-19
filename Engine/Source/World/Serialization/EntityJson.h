@@ -2,8 +2,8 @@
 
 #include <nlohmann/json.hpp>
 
-#include <algorithm>
-#include <type_traits>
+#include "Core/Algo/Algo.h"
+#include "Core/Templates/TypeTraits.h"
 
 #include "Core/EngineAPI.h"
 #include "Core/Log/Logger.h"
@@ -103,8 +103,8 @@ namespace Opaax
         template<typename TEntities>
         nlohmann::json EntitiesToJson(TEntities&& InEntities)
         {
-            constexpr bool k_Consume = !std::is_lvalue_reference_v<TEntities>;
-            using TEntity = std::conditional_t<k_Consume, EntityData, const EntityData>;
+            constexpr bool k_Consume = !TIsLValueReference<TEntities>;
+            using TEntity = TConditional<k_Consume, EntityData, const EntityData>;
 
             // Sort a copy of the pointers: the input order is untouched.
             TDynArray<TEntity*> lOrdered;
@@ -114,7 +114,7 @@ namespace Opaax
                 lOrdered.emplace_back(&lEntity);
             }
 
-            std::sort(lOrdered.begin(), lOrdered.end(),
+            Algo::Sort(lOrdered,
                 [](const EntityData* InLeft, const EntityData* InRight)
                 {
                     // High then Low, like Guid::ToString.

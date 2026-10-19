@@ -2,7 +2,7 @@
 
 #include "Engine/Registries/AutoRegistration.h"
 
-#include <algorithm>   // std::min / std::max
+#include "Core/Maths/Maths.h"
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"          // RequestOpenLevel
@@ -93,9 +93,9 @@ namespace Sandbox
             lLabel->SetSize(InTextSize);
             lLabel->SetAlign(ETextAlign::Center, EUIVAlign::Middle);
             lLabel->SetText(InLabel);
-            lButton->AddChild(std::move(lLabel));
+            lButton->AddChild(Move(lLabel));
 
-            return static_cast<UIButton*>(InParent.AddChild(std::move(lButton)));
+            return static_cast<UIButton*>(InParent.AddChild(Move(lButton)));
         }
     }
 
@@ -127,7 +127,7 @@ namespace Sandbox
         lMenu->Opacity  = 0.f;   // so the first Open fades in too
         lMenu->SetRect(Stretched());
         lMenu->OnEscape = [this]() { Close(); };
-        m_Menu = lCanvas.Root().AddChild(std::move(lMenu));
+        m_Menu = lCanvas.Root().AddChild(Move(lMenu));
 
         UIButton* lResume = nullptr;
         UIButton* lNext   = nullptr;
@@ -171,8 +171,8 @@ namespace Sandbox
         const float lStep   = static_cast<float>(InDeltaTime) / kFadeSeconds;
         const float lTarget = m_bOpen ? 1.f : 0.f;
 
-        m_Menu->Opacity = m_Menu->Opacity < lTarget ? std::min(m_Menu->Opacity + lStep, lTarget)
-                                                    : std::max(m_Menu->Opacity - lStep, lTarget);
+        m_Menu->Opacity = m_Menu->Opacity < lTarget ? Maths::Min(m_Menu->Opacity + lStep, lTarget)
+                                                    : Maths::Max(m_Menu->Opacity - lStep, lTarget);
 
         if (!m_bOpen && m_Menu->Opacity <= 0.f)
         {

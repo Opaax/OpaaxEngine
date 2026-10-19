@@ -138,12 +138,12 @@ TEST_CASE("OpaaxTag: json is a plain string, and a malformed one reads back inva
     const nlohmann::json lJson = lTag;
 
     CHECK(lJson.is_string());
-    CHECK(lJson.get<std::string>() == "Damage.Fire.Burn");
+    CHECK(lJson.get<OpaaxString>() == "Damage.Fire.Burn");
     CHECK(lJson.get<OpaaxTag>() == lTag);
 
     // An invalid tag writes "" and comes back invalid — never as a tag named "None".
     const nlohmann::json lNoneJson = OpaaxTag();
-    CHECK(lNoneJson.get<std::string>().empty());
+    CHECK(lNoneJson.get<OpaaxString>().IsEmpty());
     CHECK_FALSE(lNoneJson.get<OpaaxTag>().IsValid());
 
     // Hand-edited text is untrusted: from_json refuses it quietly instead of asserting.

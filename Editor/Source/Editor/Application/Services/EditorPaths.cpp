@@ -1,19 +1,12 @@
 #include "Editor/Application/Services/EditorPaths.h"
 
 #include "Core/Log/Logger.h"   // OPAAX_APP_LOG
-#include "Core/String/OpaaxUtf8.h"
-
-#include <filesystem>
+#include "Core/String/OpaaxPathString.h"
 
 using namespace Opaax;
 
 namespace Opaax::Editor
 {
-    namespace
-    {
-        namespace fs = std::filesystem;
-    }
-
     // =========================================================================
     // Editor space — <ProjectRoot>/Editor/* (built with Paths::ProjectToAbsolute, recomputed on call)
     // =========================================================================
@@ -26,12 +19,12 @@ namespace Opaax::Editor
 
     OpaaxString EditorPaths::EditorToAbsolute(const OpaaxString& InEditorRel) const
     {
-        return Utf8::FromFsPath(Utf8::ToFsPath(EditorDir()) / Utf8::ToFsPath(InEditorRel));
+        return PathString::Join(EditorDir(), InEditorRel);
     }
 
     OpaaxString EditorPaths::EditorAssetToAbsolute(const OpaaxString& InAssetRel) const
     {
-        return Utf8::FromFsPath(Utf8::ToFsPath(EditorAssetsDir()) / Utf8::ToFsPath(InAssetRel));
+        return PathString::Join(EditorAssetsDir(), InAssetRel);
     }
 
     // =========================================================================
@@ -39,16 +32,16 @@ namespace Opaax::Editor
     // =========================================================================
     OpaaxString EditorPaths::ToolDir() const
     {
-        return Utf8::FromFsPath(Utf8::ToFsPath(WorkspaceRoot()) / "Editor");
+        return PathString::Join(WorkspaceRoot(), "Editor");
     }
 
     OpaaxString EditorPaths::ToolAssetsDir() const
     {
-        return Utf8::FromFsPath(Utf8::ToFsPath(ToolDir()) / "Assets");
+        return PathString::Join(ToolDir(), "Assets");
     }
 
     OpaaxString EditorPaths::ToolAssetToAbsolute(const OpaaxString& InAssetRel) const
     {
-        return Utf8::FromFsPath(Utf8::ToFsPath(ToolAssetsDir()) / Utf8::ToFsPath(InAssetRel));
+        return PathString::Join(ToolAssetsDir(), InAssetRel);
     }
 }

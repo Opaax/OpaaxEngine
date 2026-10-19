@@ -1,5 +1,6 @@
 #include "World/Serialization/HardReferences.h"
 
+#include "Core/String/OpaaxStringJson.h"
 #include "World/Components/ComponentRegistry.h"
 #include "World/Serialization/MapData.h"
 
@@ -31,7 +32,7 @@ namespace Opaax::HardReferences
                     const auto lIt = lComponent.Payload.find(lField.Name.CStr());
                     if (lIt == lComponent.Payload.end() || !lIt->is_string()) { continue; }
 
-                    const OpaaxString lPath(lIt->get<std::string>().c_str());
+                    const OpaaxString lPath = lIt->get<OpaaxString>();
                     if (lPath.IsEmpty() || lAlreadyFound(lField.TypeId, lPath)) { continue; }
 
                     lFound.emplace_back(lField.TypeId, lPath);

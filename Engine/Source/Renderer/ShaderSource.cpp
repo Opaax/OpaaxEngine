@@ -2,9 +2,6 @@
 
 #include "Core/Log/Logger.h"
 
-#include <sstream>
-#include <string>
-
 namespace Opaax
 {
     inline constexpr LogCategory LogShaderSource{"ShaderSource"};
@@ -14,24 +11,32 @@ namespace Opaax
         ShaderDesc lDesc;
         lDesc.DebugName = InDebugName;
 
-        std::istringstream lStream(InSource.CStr());
-        std::string        lLine;
-        std::string        lVert;
-        std::string        lFrag;
-        int                lStage = -1; // 0 = vertex, 1 = fragment, -1 = none
+        const OpaaxStringView lSource(InSource);
+        OpaaxString           lVert;
+        OpaaxString           lFrag;
+        int                   lStage = -1; // 0 = vertex, 1 = fragment, -1 = none
 
-        while (std::getline(lStream, lLine))
+        // Line by line; a last line without a line break counts, an empty one after it does not.
+        for (Uint32 lLineStart = 0; lLineStart < lSource.GetLength();)
         {
-            if (!lLine.empty() && lLine.back() == '\r') { lLine.pop_back(); } // CRLF
+            const Int32  lBreak   = lSource.Find('\n', lLineStart);
+            const Uint32 lLineEnd = (lBreak < 0) ? lSource.GetLength() : static_cast<Uint32>(lBreak);
 
-            const size_t lFirst = lLine.find_first_not_of(" \t");
-            if (lFirst != std::string::npos && lLine.compare(lFirst, 5, "#type") == 0)
+            OpaaxStringView lLine = lSource.SubString(lLineStart, lLineEnd - lLineStart);
+            lLineStart = lLineEnd + 1;
+
+            if (lLine.EndsWith("\r")) { lLine.RemoveSuffix(1); } // CRLF
+
+            Uint32 lFirst = 0;
+            while (lFirst < lLine.GetLength() && (lLine[lFirst] == ' ' || lLine[lFirst] == '\t')) { ++lFirst; }
+
+            if (lLine.SubString(lFirst).StartsWith("#type"))
             {
-                const std::string lRest = lLine.substr(lFirst + 5);
-                if      (lRest.find("vertex")   != std::string::npos) { lStage = 0; }
-                else if (lRest.find("fragment") != std::string::npos ||
-                         lRest.find("pixel")    != std::string::npos) { lStage = 1; }
-                else                                                  { lStage = -1; }
+                const OpaaxStringView lRest = lLine.SubString(lFirst + 5);
+                if      (lRest.Contains("vertex"))   { lStage = 0; }
+                else if (lRest.Contains("fragment") ||
+                         lRest.Contains("pixel"))    { lStage = 1; }
+                else                                 { lStage = -1; }
                 continue;
             }
 
@@ -39,8 +44,8 @@ namespace Opaax
             else if (lStage == 1) { lFrag += lLine; lFrag += '\n'; }
         }
 
-        lDesc.VertexSrc   = OpaaxString(lVert.c_str());
-        lDesc.FragmentSrc = OpaaxString(lFrag.c_str());
+        lDesc.VertexSrc   = Move(lVert);
+        lDesc.FragmentSrc = Move(lFrag);
         return lDesc;
     }
 

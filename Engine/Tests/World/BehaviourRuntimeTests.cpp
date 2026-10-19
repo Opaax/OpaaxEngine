@@ -4,11 +4,11 @@
 // journal ("<entity name>:<what>") that the case reads back.
 #include <doctest.h>
 
-#include <algorithm>
-#include <filesystem>
-#include <functional>
-#include <string>
-#include <vector>
+#include "../TestTempDir.h"
+#include "Core/Algo/Algo.h"
+#include "Core/IO/FileSystem.h"
+#include "Core/OpaaxTypes.h"
+#include "Core/String/OpaaxPathString.h"
 
 #include "Application/Services/IPaths.h"
 #include "Core/Events/EventBus.h"
@@ -46,26 +46,26 @@ using namespace Opaax;
 
 namespace
 {
-    std::vector<std::string>& Journal()
+    TDynArray<OpaaxString>& Journal()
     {
-        static std::vector<std::string> s_Journal;
+        static TDynArray<OpaaxString> s_Journal;
         return s_Journal;
     }
 
     void Note(const Behaviour& InSelf, const char* InWhat)
     {
-        Journal().push_back(std::string(InSelf.GetEntityName().CStr()) + ":" + InWhat);
+        Journal().push_back(InSelf.GetEntityName() + ":" + InWhat);
     }
 
     Uint64 CountOf(const char* InEntry)
     {
-        return static_cast<Uint64>(std::count(Journal().begin(), Journal().end(), std::string(InEntry)));
+        return Algo::Count(Journal(), OpaaxString(InEntry));
     }
 
     /** Position of the first InEntry in the journal, or -1. */
     Int64 IndexOf(const char* InEntry)
     {
-        const auto lFound = std::find(Journal().begin(), Journal().end(), std::string(InEntry));
+        const auto lFound = Algo::Find(Journal(), OpaaxString(InEntry));
         return (lFound == Journal().end()) ? -1 : static_cast<Int64>(lFound - Journal().begin());
     }
 }
@@ -499,7 +499,6 @@ namespace RuntimeProbes
 
 namespace
 {
-    namespace fs = std::filesystem;
     using namespace RuntimeProbes;
 
     void RegisterTypes(ComponentRegistry& InRegistry)
@@ -624,10 +623,10 @@ namespace
                                                /*Audio*/ nullptr, Game.get() });
 
             WorldSubsystemMgr& lSubsystems = TheWorld->GetSubsystems();
-            lSubsystems.RegisterSubsystem<BehaviourSubsystem>(std::ref(*TheWorld->GetContext()));
+            lSubsystems.RegisterSubsystem<BehaviourSubsystem>(Ref(*TheWorld->GetContext()));
             if (InOptions.bPhysics)
             {
-                lSubsystems.RegisterSubsystem<PhysicsSubsystem>(std::ref(*TheWorld->GetContext()));
+                lSubsystems.RegisterSubsystem<PhysicsSubsystem>(Ref(*TheWorld->GetContext()));
             }
 
             if (InOptions.bStartNow)
@@ -674,16 +673,16 @@ namespace
     class TempPaths final : public IPaths
     {
     public:
-        explicit TempPaths(const fs::path& InRoot) : m_Root(InRoot) {}
+        explicit TempPaths(const OpaaxString& InRoot) : m_Root(InRoot) {}
 
         OpaaxString AssetToAbsolute(const OpaaxString& InAssetRel) const override
         {
-            return OpaaxString((m_Root / InAssetRel.CStr()).generic_string().c_str());
+            return PathString::Join(m_Root, InAssetRel);
         }
 
         OpaaxString AbsoluteToAsset(const OpaaxString& InAbsPath) const override
         {
-            return OpaaxString(fs::path(InAbsPath.CStr()).lexically_relative(m_Root).generic_string().c_str());
+            return PathString::RelativeTo(InAbsPath, m_Root);
         }
 
         void        LogPaths()      const override {}
@@ -701,35 +700,25 @@ namespace
         OpaaxString ProjectToAbsolute(const OpaaxString& InRel) const override { return AssetToAbsolute(InRel); }
 
     private:
-        OpaaxString Root() const { return OpaaxString(m_Root.generic_string().c_str()); }
+        OpaaxString Root() const { return m_Root; }
 
-        fs::path m_Root;
+        OpaaxString m_Root;
     };
 
+    /** The assets of a case: a temp directory with a Prefabs folder. */
     class ScopedTempDir
     {
     public:
         explicit ScopedTempDir(const char* InTag)
-            : m_Path(fs::temp_directory_path() / ("OpaaxBehaviourRuntimeTests_" + std::string(InTag)))
+            : m_Dir(InTag)
         {
-            std::error_code lError;
-            fs::remove_all(m_Path, lError);
-            fs::create_directories(m_Path / "Prefabs", lError);
+            FileSystem::CreateDirectories(m_Dir.Sub("Prefabs"));
         }
 
-        ~ScopedTempDir()
-        {
-            std::error_code lError;
-            fs::remove_all(m_Path, lError);
-        }
-
-        ScopedTempDir(const ScopedTempDir&)            = delete;
-        ScopedTempDir& operator=(const ScopedTempDir&) = delete;
-
-        const fs::path& Root() const { return m_Path; }
+        const OpaaxString& Root() const { return m_Dir.Path(); }
 
     private:
-        fs::path m_Path;
+        TestTempDir m_Dir;
     };
 
     /** Prefabs/Bullet.opaaxprefab: a root "Bullet" with a HitCounter, and a child "Trail" with a Probe. */
@@ -790,7 +779,7 @@ TEST_CASE("Behaviours: OnStart runs once, before the first update and the first 
     CHECK(lFix.Runtime->GetPendingCount() == 1);
 
     lFix.Frame();
-    CHECK(Journal() == std::vector<std::string>{ "A:Start", "A:Update", "A:Fixed" });
+    CHECK(Journal() == TDynArray<OpaaxString>{ "A:Start", "A:Update", "A:Fixed" });
 
     lFix.Frame();
     CHECK(CountOf("A:Start") == 1);
@@ -809,7 +798,7 @@ TEST_CASE("Behaviours: a behaviour already in the world when it starts is starte
     CHECK(Journal().empty());
 
     lFix.Frame();
-    CHECK(Journal() == std::vector<std::string>{ "Early:Start", "Early:Update", "Early:Fixed" });
+    CHECK(Journal() == TDynArray<OpaaxString>{ "Early:Start", "Early:Update", "Early:Fixed" });
 }
 
 TEST_CASE("Behaviours: one added during a pass starts in that pass and is first updated in the next")
@@ -899,7 +888,7 @@ TEST_CASE("Behaviours: a behaviour destroying its own entity finishes its update
 
     lFix.Worlds.Update(1.0 / 60.0);
 
-    CHECK(Journal() == std::vector<std::string>{ "Self:Start", "Self:Update", "Self:Destroy" });
+    CHECK(Journal() == TDynArray<OpaaxString>{ "Self:Start", "Self:Update", "Self:Destroy" });
     CHECK_FALSE(lSelf.IsValid());
 }
 
@@ -1477,7 +1466,7 @@ TEST_CASE("Behaviours: OverlapBox lists the entities whose colliders are in the 
     const TDynArray<Entity>& lAround = lSeeker.Get<Seeker>().Around;
     const auto lHas = [&lAround](const Entity InEntity)
     {
-        return std::any_of(lAround.begin(), lAround.end(),
+        return Algo::AnyOf(lAround,
                            [InEntity](const Entity InFound) { return InFound.GetHandle() == InEntity.GetHandle(); });
     };
 

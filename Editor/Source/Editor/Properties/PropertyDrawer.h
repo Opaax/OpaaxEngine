@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tuple>
+#include "Core/OpaaxTypes.h"
 
 #include "Editor/UI/IEditorWidgets.h"
 
@@ -90,7 +90,7 @@ namespace Opaax::Editor
     template<CReflected TOwner>
     void DrawProperties(IEditorWidgets& InWidgets, TOwner& InOwner, const PropertyMeta& InInherited)
     {
-        std::apply([&InWidgets, &InOwner, &InInherited](const auto&... lProperties)
+        TupleApply([&InWidgets, &InOwner, &InInherited](const auto&... lProperties)
                    {
                        (DrawProperty(InWidgets, lProperties, InOwner, InInherited), ...);
                    },
@@ -101,6 +101,6 @@ namespace Opaax::Editor
     template<CReflected T>
     constexpr Uint64 PropertyCount() noexcept
     {
-        return static_cast<Uint64>(std::tuple_size_v<decltype(T::GetProperties())>);
+        return static_cast<Uint64>(TTupleSize<decltype(T::GetProperties())>);
     }
 }

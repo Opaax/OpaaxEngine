@@ -1,7 +1,7 @@
 #include "Automation/AutomationRunner.h"
 
-#include <algorithm>
-#include <cmath>
+#include "Core/Algo/Algo.h"
+#include "Core/Maths/Maths.h"
 
 namespace Opaax
 {
@@ -16,26 +16,27 @@ namespace Opaax
             }
             catch (const nlohmann::json::exception& lError)
             {
-                return AutomationResult::Fail(std::string("bad params: ") + lError.what());
+                return AutomationResult::Fail(OpaaxString("bad params: ") + lError.what());
             }
         }
 
         /** MatchesExpected below a path: InPath names where InActual is ("" for the whole answer). */
-        bool MatchesAt(const nlohmann::json& InExpected, const nlohmann::json& InActual, const std::string& InPath,
-                       std::string& OutWhy)
+        bool MatchesAt(const nlohmann::json& InExpected, const nlohmann::json& InActual, const OpaaxString& InPath,
+                       OpaaxString& OutWhy)
         {
-            const auto lWhere = [&InPath]() { return InPath.empty() ? std::string("the answer") : InPath; };
+            const auto lWhere = [&InPath]() { return InPath.IsEmpty() ? OpaaxString("the answer") : InPath; };
 
             if (InExpected.is_object())
             {
                 if (!InActual.is_object())
                 {
-                    OutWhy = lWhere() + " is " + InActual.dump() + ", expected an object";
+                    OutWhy = lWhere() + " is " + ToJsonText(InActual) + ", expected an object";
                     return false;
                 }
                 for (const auto& [lKey, lValue] : InExpected.items())
                 {
-                    const std::string lPath = InPath.empty() ? lKey : InPath + "/" + lKey;
+                    const OpaaxString lKeyText = FromJsonString(lKey);
+                    const OpaaxString lPath = InPath.IsEmpty() ? lKeyText : InPath + "/" + lKeyText;
                     const auto        lIt   = InActual.find(lKey);
                     if (lIt == InActual.end())
                     {
@@ -54,13 +55,14 @@ namespace Opaax
             {
                 if (!InActual.is_array() || InActual.size() != InExpected.size())
                 {
-                    OutWhy = lWhere() + " is " + InActual.dump() + ", expected " + std::to_string(InExpected.size())
-                           + " item(s)";
+                    OutWhy = lWhere() + " is " + ToJsonText(InActual) + ", expected "
+                           + OpaaxString::FromUInt(InExpected.size()) + " item(s)";
                     return false;
                 }
                 for (Uint64 lIndex = 0; lIndex < InExpected.size(); ++lIndex)
                 {
-                    const std::string lPath = InPath.empty() ? std::to_string(lIndex) : InPath + "/" + std::to_string(lIndex);
+                    const OpaaxString lPath = InPath.IsEmpty() ? OpaaxString::FromUInt(lIndex)
+                                                               : InPath + "/" + OpaaxString::FromUInt(lIndex);
                     if (!MatchesAt(InExpected[lIndex], InActual[lIndex], lPath, OutWhy))
                     {
                         return false;
@@ -70,11 +72,11 @@ namespace Opaax
             }
 
             const bool bSame = (InExpected.is_number() && InActual.is_number())
-                                   ? std::abs(InExpected.get<double>() - InActual.get<double>()) <= 1e-4
+                                   ? Maths::Abs(InExpected.get<double>() - InActual.get<double>()) <= 1e-4
                                    : InExpected == InActual;
             if (!bSame)
             {
-                OutWhy = lWhere() + " is " + InActual.dump() + ", expected " + InExpected.dump();
+                OutWhy = lWhere() + " is " + ToJsonText(InActual) + ", expected " + ToJsonText(InExpected);
             }
             return bSame;
         }
@@ -104,7 +106,7 @@ namespace Opaax
                 return lResponse;
             }
 
-            std::string lWhy;
+            OpaaxString lWhy;
             if (InResult.bOk && !InRequest.Expect.is_null() && !MatchesExpected(InRequest.Expect, InResult.Value, lWhy))
             {
                 lResponse.Error = "the answer differs: " + lWhy;
@@ -118,7 +120,7 @@ namespace Opaax
         }
 
         /** A request whose command never answered (unknown, or the app closed): a failure, expected or not. */
-        AutomationResponse MakeFailure(const AutomationRequest& InRequest, std::string InError)
+        AutomationResponse MakeFailure(const AutomationRequest& InRequest, OpaaxString InError)
         {
             AutomationResponse lResponse;
             lResponse.Id      = InRequest.Id;
@@ -138,7 +140,7 @@ namespace Opaax
         return lResult;
     }
 
-    AutomationResult AutomationResult::Fail(std::string InError)
+    AutomationResult AutomationResult::Fail(OpaaxString InError)
     {
         AutomationResult lResult;
         lResult.bOk   = false;
@@ -161,33 +163,33 @@ namespace Opaax
                  [](const nlohmann::json& InParams)
                  {
                      AutomationResult lResult;
-                     lResult.WaitFrames = std::max(InParams.value("count", 1u), 1u);
+                     lResult.WaitFrames = Maths::Max(InParams.value("count", 1u), 1u);
                      return lResult;
                  });
     }
 
-    void AutomationRunner::Register(const std::string& InName, const std::string& InHelp, AutomationHandler InHandler)
+    void AutomationRunner::Register(const OpaaxString& InName, const OpaaxString& InHelp, AutomationHandler InHandler)
     {
         m_Commands[InName] = Command{ InHelp, Move(InHandler) };
     }
 
-    bool AutomationRunner::Has(const std::string& InName) const
+    bool AutomationRunner::Has(const OpaaxString& InName) const
     {
         return m_Commands.find(InName) != m_Commands.end();
     }
 
     nlohmann::json AutomationRunner::Describe() const
     {
-        TDynArray<std::string> lNames;
+        TDynArray<OpaaxString> lNames;
         lNames.reserve(m_Commands.size());
         for (const auto& [lName, lCommand] : m_Commands)
         {
             lNames.push_back(lName);
         }
-        std::sort(lNames.begin(), lNames.end());
+        Algo::Sort(lNames);
 
         nlohmann::json lList = nlohmann::json::array();
-        for (const std::string& lName : lNames)
+        for (const OpaaxString& lName : lNames)
         {
             lList.push_back(nlohmann::json{ { "name", lName }, { "help", m_Commands.at(lName).Help } });
         }
@@ -346,15 +348,15 @@ namespace Opaax
     // =========================================================================
     // Answers
     // =========================================================================
-    bool MatchesExpected(const nlohmann::json& InExpected, const nlohmann::json& InActual, std::string& OutWhy)
+    bool MatchesExpected(const nlohmann::json& InExpected, const nlohmann::json& InActual, OpaaxString& OutWhy)
     {
-        return MatchesAt(InExpected, InActual, std::string(), OutWhy);
+        return MatchesAt(InExpected, InActual, OpaaxString(), OutWhy);
     }
 
     // =========================================================================
     // Parsing
     // =========================================================================
-    bool ParseAutomationRequest(const nlohmann::json& InJson, AutomationRequest& OutRequest, std::string& OutError)
+    bool ParseAutomationRequest(const nlohmann::json& InJson, AutomationRequest& OutRequest, OpaaxString& OutError)
     {
         if (!InJson.is_object())
         {
@@ -363,18 +365,18 @@ namespace Opaax
         }
 
         const auto lCommand = InJson.find("command");
-        if (lCommand == InJson.end() || !lCommand->is_string() || lCommand->get<std::string>().empty())
+        if (lCommand == InJson.end() || !lCommand->is_string() || lCommand->get<OpaaxString>().IsEmpty())
         {
             OutError = "a request needs a \"command\" string";
             return false;
         }
 
-        OutRequest.Command = lCommand->get<std::string>();
+        OutRequest.Command = lCommand->get<OpaaxString>();
 
         const auto lId = InJson.find("id");
         if (lId != InJson.end())
         {
-            OutRequest.Id = lId->is_string() ? lId->get<std::string>() : lId->dump();
+            OutRequest.Id = lId->is_string() ? lId->get<OpaaxString>() : ToJsonText(*lId);
         }
 
         const auto lParams = InJson.find("params");
@@ -413,11 +415,12 @@ namespace Opaax
         return true;
     }
 
-    bool ParseAutomationScript(const std::string& InText, TDynArray<AutomationRequest>& OutRequests, std::string& OutError)
+    bool ParseAutomationScript(const OpaaxString& InText, TDynArray<AutomationRequest>& OutRequests, OpaaxString& OutError)
     {
         OutRequests.clear();
 
-        const nlohmann::json lJson = nlohmann::json::parse(InText, nullptr, /*allow_exceptions*/ false);
+        const nlohmann::json lJson = nlohmann::json::parse(InText.begin(), InText.end(), nullptr,
+                                                           /*allow_exceptions*/ false);
         if (lJson.is_discarded())
         {
             OutError = "not valid JSON";
@@ -445,17 +448,17 @@ namespace Opaax
         for (Uint64 lIndex = 0; lIndex < lList->size(); ++lIndex)
         {
             AutomationRequest lRequest;
-            std::string       lError;
+            OpaaxString       lError;
             if (!ParseAutomationRequest((*lList)[lIndex], lRequest, lError))
             {
-                OutError = "request " + std::to_string(lIndex) + ": " + lError;
+                OutError = OpaaxString::Format("request {}: {}", lIndex, lError);
                 OutRequests.clear();
                 return false;
             }
 
-            if (lRequest.Id.empty())
+            if (lRequest.Id.IsEmpty())
             {
-                lRequest.Id = std::to_string(lIndex);
+                lRequest.Id = OpaaxString::FromUInt(lIndex);
             }
             OutRequests.push_back(Move(lRequest));
         }

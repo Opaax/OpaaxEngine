@@ -3,18 +3,16 @@
 // The codec throws; TConfig::Load catches.
 #include <doctest.h>
 
-#include <cstring>
-#include <filesystem>
+#include "../../TestTempDir.h"
+#include "Core/String/CString.h"
 
 #include "Core/Config/TConfig.hpp"
 #include "Core/IO/FileIO.h"
-#include "Core/String/OpaaxUtf8.h"
+#include "Core/IO/FileSystem.h"
 #include "Engine/Config/EngineConfigData.h"
 #include "Renderer/Config/RendererConfigData.h"
 
 using namespace Opaax;
-
-namespace fs = std::filesystem;
 
 namespace
 {
@@ -106,46 +104,43 @@ TEST_CASE("TConfig::Load: a file it cannot parse keeps the defaults and answers 
     CHECK_THROWS(Parse(R"({"Window":{"Width":"not a number"}})"));
 
     // Load turns it into policy: an unreadable config must not stop the boot (ConfigSystem warns).
-    const fs::path lPath = fs::temp_directory_path() / "OpaaxConfigTolerance.config";
-    FileIO::WriteAllText(OpaaxString(lPath.string().c_str()), OpaaxString("{ not json at all"));
+    const TestTempDir lDir("ConfigTolerance");
+    const OpaaxString lPath = lDir.Sub("Probe.config");
+    FileIO::WriteAllText(lPath, OpaaxString("{ not json at all"));
 
     ProbeConfig lProbe;
-    REQUIRE_FALSE(lProbe.Load(OpaaxString(lPath.string().c_str())));
+    REQUIRE_FALSE(lProbe.Load(lPath));
 
     // Defaults intact — a half-applied config would be worse than none.
     CHECK(lProbe.GetData().Window.Width == 1280u);
     CHECK(lProbe.GetData().Render.Backend == EBackend::OpenGL);
-
-    fs::remove(lPath);
 }
 
 TEST_CASE("TConfig::Load: a file it CAN parse answers true")
 {
-    const fs::path lPath = fs::temp_directory_path() / "OpaaxConfigGood.config";
-    FileIO::WriteAllText(OpaaxString(lPath.string().c_str()), OpaaxString(R"({"Window":{"Width":900}})"));
+    const TestTempDir lDir("ConfigGood");
+    const OpaaxString lPath = lDir.Sub("Probe.config");
+    FileIO::WriteAllText(lPath, OpaaxString(R"({"Window":{"Width":900}})"));
 
     ProbeConfig lProbe;
-    CHECK(lProbe.Load(OpaaxString(lPath.string().c_str())));
+    CHECK(lProbe.Load(lPath));
     CHECK(lProbe.GetData().Window.Width == 900u);
-
-    fs::remove(lPath);
 }
 
 TEST_CASE("TConfig::Load: a misspelled ENUMERATOR is refused like any other unreadable value")
 {
     // A typo in an enum value is refused like any unreadable value (ConfigSystem warns).
-    const fs::path lPath = fs::temp_directory_path() / "OpaaxConfigBadEnum.config";
-    FileIO::WriteAllText(OpaaxString(lPath.string().c_str()),
+    const TestTempDir lDir("ConfigBadEnum");
+    const OpaaxString lPath = lDir.Sub("Probe.config");
+    FileIO::WriteAllText(lPath,
                          OpaaxString(R"({"Window":{"Width":900,"Mode":"Borderles"}})"));
 
     ProbeConfig lProbe;
-    CHECK_FALSE(lProbe.Load(OpaaxString(lPath.string().c_str())));
+    CHECK_FALSE(lProbe.Load(lPath));
 
     // Nothing half-applied: the good Width beside the bad Mode did not land either.
     CHECK(lProbe.GetData().Window.Width == 1280u);
     CHECK(lProbe.GetData().Window.Mode  == EWindowMode::Windowed);
-
-    fs::remove(lPath);
 }
 
 // =============================================================================
@@ -159,11 +154,6 @@ namespace
         int Calls = 0;
         void OnChanged() { ++Calls; }
     };
-
-    OpaaxString TempConfigPath(const char* InName)
-    {
-        return Utf8::FromFsPath(fs::temp_directory_path() / InName);
-    }
 }
 
 TEST_CASE("IConfig::NotifyChanged: every subscriber is called exactly once")
@@ -198,7 +188,8 @@ TEST_CASE("IConfig::OnChanged: after RemoveAll(owner) the subscriber is no longe
 
 TEST_CASE("TConfig::Load: a successful read notifies once")
 {
-    const OpaaxString lPath = TempConfigPath("OpaaxConfigNotifyGood.config");
+    const TestTempDir lDir("ConfigNotifyGood");
+    const OpaaxString lPath = lDir.Sub("Probe.config");
     FileIO::WriteAllText(lPath, OpaaxString(R"({"Window":{"Width":900}})"));
 
     ProbeConfig   lProbe;
@@ -209,13 +200,12 @@ TEST_CASE("TConfig::Load: a successful read notifies once")
 
     CHECK(lMember.Calls == 1);
     CHECK(lProbe.GetData().Window.Width == 900u);   // the values ARE in place when it fires
-
-    fs::remove(Utf8::ToFsPath(lPath));
 }
 
 TEST_CASE("TConfig::Load: an unreadable file resets to defaults, and that is a change too")
 {
-    const OpaaxString lPath = TempConfigPath("OpaaxConfigNotifyBad.config");
+    const TestTempDir lDir("ConfigNotifyBad");
+    const OpaaxString lPath = lDir.Sub("Probe.config");
     FileIO::WriteAllText(lPath, OpaaxString("{ not json at all"));
 
     ProbeConfig lProbe;
@@ -228,15 +218,13 @@ TEST_CASE("TConfig::Load: an unreadable file resets to defaults, and that is a c
 
     CHECK(lMember.Calls == 1);
     CHECK(lProbe.GetData().Window.Width == 1280u);
-
-    fs::remove(Utf8::ToFsPath(lPath));
 }
 
 TEST_CASE("TConfig::Load: a MISSING file writes the defaults and does NOT notify")
 {
     // Nothing in memory changed — the file was generated FROM memory.
-    const OpaaxString lPath = TempConfigPath("OpaaxConfigNotifyMissing.config");
-    fs::remove(Utf8::ToFsPath(lPath));
+    const TestTempDir lDir("ConfigNotifyMissing");
+    const OpaaxString lPath = lDir.Sub("Probe.config");
 
     ProbeConfig   lProbe;
     ChangeCounter lMember;
@@ -245,9 +233,7 @@ TEST_CASE("TConfig::Load: a MISSING file writes the defaults and does NOT notify
     REQUIRE(lProbe.Load(lPath));
 
     CHECK(lMember.Calls == 0);
-    CHECK(fs::exists(Utf8::ToFsPath(lPath)));   // proves the branch taken was the generate one
-
-    fs::remove(Utf8::ToFsPath(lPath));
+    CHECK(FileSystem::Exists(lPath));   // proves the branch taken was the generate one
 }
 
 // =============================================================================
@@ -265,13 +251,13 @@ namespace
 
         const auto lVisit = [&](const auto& InProperty)
         {
-            if (std::strcmp(InProperty.Name, InName) == 0)
+            if (CString::Equals(InProperty.Name, InName))
             {
                 lFlags = InProperty.Meta.Flags;
                 bFound = true;
             }
         };
-        std::apply([&](const auto&... InEach) { (lVisit(InEach), ...); }, InProperties);
+        TupleApply([&](const auto&... InEach) { (lVisit(InEach), ...); }, InProperties);
 
         REQUIRE_MESSAGE(bFound, "no property named " << InName);
         return lFlags;

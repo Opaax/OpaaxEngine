@@ -1,7 +1,5 @@
 #include "Editor/Properties/WidgetPropertyVisitor.h"
 
-#include <string>
-
 #include "Editor/Properties/PropertyDrawers.h"
 
 namespace Opaax::Editor
@@ -65,11 +63,11 @@ namespace Opaax::Editor
         m_Widgets.EndTreeNode();
     }
 
-    void WidgetPropertyVisitor::VisitUnsupported(const char* InName, const std::string_view InTypeName)
+    void WidgetPropertyVisitor::VisitUnsupported(const char* InName, const OpaaxStringView InTypeName)
     {
         // Shown, not hidden: a field that silently vanished is how the old blank-Inspector bug looked.
-        const std::string lText = std::string(InName) + ": " + std::string(InTypeName) + " (no editor for this type)";
-        m_Widgets.TextDisabled(lText.c_str());
+        const OpaaxString lText = OpaaxString(InName) + ": " + InTypeName.ToString() + " (no editor for this type)";
+        m_Widgets.TextDisabled(lText.CStr());
     }
 
     void WidgetPropertyVisitor::VisitList(const char* InName, IPropertyList& InList, const PropertyMeta& InMeta)

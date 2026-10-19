@@ -9,7 +9,7 @@ namespace Opaax
     {
     }
 
-    void LogHistory::Push(const ELogLevel InLevel, const OpaaxStringID InCategory, const std::string_view InMessage)
+    void LogHistory::Push(const ELogLevel InLevel, const OpaaxStringID InCategory, const OpaaxStringView InMessage)
     {
         if (m_Capacity == 0) { return; }
 
@@ -18,7 +18,7 @@ namespace Opaax
             m_Entries.pop_front();
         }
 
-        m_Entries.push_back({ ++m_LastSequence, std::chrono::system_clock::now(), InLevel, InCategory,
+        m_Entries.push_back({ ++m_LastSequence, DateTime::Now(), InLevel, InCategory,
                               OpaaxString(InMessage) });
     }
 
@@ -30,7 +30,7 @@ namespace Opaax
 
         if (lSkip < m_Entries.size())
         {
-            OutEntries.insert(OutEntries.end(), m_Entries.begin() + static_cast<std::ptrdiff_t>(lSkip), m_Entries.end());
+            OutEntries.insert(OutEntries.end(), m_Entries.begin() + static_cast<PtrDiff>(lSkip), m_Entries.end());
         }
 
         return m_LastSequence;

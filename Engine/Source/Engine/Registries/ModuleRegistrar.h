@@ -33,7 +33,7 @@ namespace Opaax
         template<CComponent T>
         bool Register(OpaaxStringID InName = {})
         {
-            static_assert(!std::derived_from<T, Behaviour>, "A behaviour is registered with Behaviours().Register<T>().");
+            static_assert(!CDerivedFrom<T, Behaviour>, "A behaviour is registered with Behaviours().Register<T>().");
 
             ++m_Count;
 
@@ -165,7 +165,7 @@ namespace Opaax
          * @return True if registered
          */
         template<typename T>
-        requires std::is_base_of_v<IWorldSubsystem, T>
+        requires TIsBaseOf<IWorldSubsystem, T>
         bool Register(OpaaxStringID InName = {})
         {
             ++m_Count;
@@ -214,7 +214,7 @@ namespace Opaax
          * @return True if registered
          */
         template<typename T>
-        requires std::is_base_of_v<IMoverMode, T>
+        requires TIsBaseOf<IMoverMode, T>
         bool Register(const OpaaxStringID InName)
         {
             ++m_Count;
@@ -342,7 +342,7 @@ namespace Opaax
          * @return True if registered
          */
         template<typename T>
-        requires std::is_base_of_v<IGameInstanceSubsystem, T>
+        requires TIsBaseOf<IGameInstanceSubsystem, T>
         bool Register(OpaaxStringID InName = {})
         {
             ++m_Count;
@@ -380,7 +380,7 @@ namespace Opaax
          * @return True if registered
          */
         template<typename T>
-        requires std::is_base_of_v<UIWidget, T>
+        requires TIsBaseOf<UIWidget, T>
         bool Register(OpaaxStringID InName = {})
         {
             ++m_Count;

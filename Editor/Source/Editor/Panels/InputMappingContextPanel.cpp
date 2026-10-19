@@ -13,9 +13,8 @@
 
 #include <imgui.h>
 
-#include <cstdio>
-#include <cstring>
-#include <tuple>
+#include "Core/String/CString.h"
+#include "Core/OpaaxTypes.h"
 
 using namespace Opaax;
 
@@ -137,9 +136,9 @@ namespace Opaax::Editor
 
             // The key first (what you look for when rebinding), then the action's file name.
             char lLabel[160];
-            std::snprintf(lLabel, sizeof(lLabel), "%-14s  %s",
-                          ToString(lEntry.Key),
-                          lEntry.Action.IsEmpty() ? "(no action)" : lEntry.Action.Path.CStr());
+            CString::Format(lLabel, "{:<14}  {}",
+                            ToString(lEntry.Key),
+                            lEntry.Action.IsEmpty() ? "(no action)" : lEntry.Action.Path.CStr());
 
             if (ImGui::Selectable(lLabel, m_Selected == static_cast<Int32>(lIndex)))
             {
@@ -197,11 +196,11 @@ namespace Opaax::Editor
         ImGui::PushID(static_cast<int>(lIndex));
 
         // DrawProperties' fold, done by hand so Key can be skipped (drawn below by a filtered combo).
-        std::apply([this, &lEntry](const auto&... lProperties)
+        TupleApply([this, &lEntry](const auto&... lProperties)
                    {
                        ([&]
                         {
-                            if (std::strcmp(lProperties.Name, "Key") != 0)
+                            if (!CString::Equals(lProperties.Name, "Key"))
                             {
                                 DrawProperty(m_Context.Widgets, lProperties, lEntry);
                             }
@@ -236,7 +235,7 @@ namespace Opaax::Editor
             ImGui::PushID(static_cast<int>(1000 + lMod));
 
             char lLabel[64];
-            std::snprintf(lLabel, sizeof(lLabel), "%u. %s", lMod, ToString(lEntry.Modifiers[lMod].Type));
+            CString::Format(lLabel, "{}. {}", lMod, ToString(lEntry.Modifiers[lMod].Type));
 
             if (ImGui::Selectable(lLabel, m_SelectedModifier == static_cast<Int32>(lMod)))
             {

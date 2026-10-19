@@ -4,9 +4,8 @@
 // Uses a unique directory under the OS temp dir, created and removed per case.
 #include <doctest.h>
 
-#include <filesystem>
-#include <string>
-#include <unordered_set>
+#include "../TestTempDir.h"
+#include "Core/OpaaxTypes.h"
 
 #include "Resources/ResourceManager.h"   // before PrefabResource — completes LoadContext
 #include "World/Components/ComponentRegistry.h"
@@ -32,38 +31,6 @@ using namespace Opaax;
 
 namespace
 {
-    namespace fs = std::filesystem;
-
-    // One temp directory per case, removed on scope exit — MapFileTests' shape.
-    class ScopedTempDir
-    {
-    public:
-        explicit ScopedTempDir(const char* InTag)
-        {
-            m_Path = fs::temp_directory_path() / ("OpaaxPrefabTests_" + std::string(InTag));
-
-            std::error_code lError;
-            fs::remove_all(m_Path, lError);          // a previous crashed run must not poison this one
-            fs::create_directories(m_Path, lError);
-        }
-
-        ~ScopedTempDir()
-        {
-            std::error_code lError;
-            fs::remove_all(m_Path, lError);
-        }
-
-        ScopedTempDir(const ScopedTempDir&)            = delete;
-        ScopedTempDir& operator=(const ScopedTempDir&) = delete;
-
-        OpaaxString Sub(const char* InRel) const
-        {
-            return OpaaxString((m_Path / InRel).generic_string().c_str());
-        }
-
-    private:
-        fs::path m_Path;
-    };
 
     void FillRegistry(ComponentRegistry& InRegistry)
     {
@@ -148,7 +115,7 @@ TEST_CASE("Prefab: one prefab instantiated TWICE into one world gives two live i
     CHECK(lWorld.GetEntityCount() == 4);
 
     // Every identity distinct.
-    std::unordered_set<Guid> lIds;
+    TUnorderedSet<Guid> lIds;
     for (const EntityData& lEntity : lFirst.Entities)  { lIds.insert(lEntity.Id); }
     for (const EntityData& lEntity : lSecond.Entities) { lIds.insert(lEntity.Id); }
     CHECK(lIds.size() == 4);
@@ -291,8 +258,8 @@ TEST_CASE("Prefab: a marker already in the FILE is replaced, never doubled")
     }
 
     CHECK(lMarkers == 1);
-    CHECK(lInstance.Entities[0].Components.back().Payload.at("Prefab").get<std::string>()
-          == std::string("Prefabs/Gun.opaaxprefab"));
+    CHECK(lInstance.Entities[0].Components.back().Payload.at("Prefab").get<OpaaxString>()
+          == "Prefabs/Gun.opaaxprefab");
 }
 
 // =============================================================================
@@ -321,7 +288,7 @@ TEST_CASE("Prefab: BuildPrefab clears OwnerMap and KEEPS the guids")
 
     // The guids become the file's TEMPLATE ids, so they must survive: BuildInstance derives from
     // them and an override record will key by them.
-    std::unordered_set<Guid> lKept;
+    TUnorderedSet<Guid> lKept;
     for (const EntityData& lEntity : lPrefab.Entities) { lKept.insert(lEntity.Id); }
     CHECK(lKept.count(lA.GetGuid()) == 1);
     CHECK(lKept.count(lB.GetGuid()) == 1);
@@ -367,7 +334,7 @@ TEST_CASE("Prefab: the FULL round trip — world entities -> prefab -> file -> t
 {
     // What "Create Prefab from Selection" is, end to end and headless. The two placements at the
     // end are what make it a prefab rather than an export.
-    const ScopedTempDir lTemp("full_round_trip");
+    const TestTempDir   lTemp("full_round_trip");
     const OpaaxString   lPath = lTemp.Sub("Made.opaaxprefab");
 
     ComponentRegistry lRegistry;
@@ -496,7 +463,7 @@ TEST_CASE("PrefabFold: Fold -> Expand reproduces the entities, guids included")
     MapData lCaptured = PlaceAndCapture(lWorld, lPrefab, lRegistry, "Prefabs/Gun.opaaxprefab",
                                         Guid::New(), lMap);
 
-    std::unordered_set<Guid> lBefore;
+    TUnorderedSet<Guid> lBefore;
     for (const EntityData& lEntity : lCaptured.Entities) { lBefore.insert(lEntity.Id); }
 
     REQUIRE(PrefabFold::Fold(lCaptured, lResolver, lRegistry) == 1);
@@ -507,7 +474,7 @@ TEST_CASE("PrefabFold: Fold -> Expand reproduces the entities, guids included")
 
     // The guids came back IDENTICAL, which is what an inter-entity reference survives on
     // — and it works because Expand re-derives rather than re-mints.
-    std::unordered_set<Guid> lAfter;
+    TUnorderedSet<Guid> lAfter;
     for (const EntityData& lEntity : lCaptured.Entities) { lAfter.insert(lEntity.Id); }
     CHECK(lAfter == lBefore);
 }
@@ -744,7 +711,7 @@ TEST_CASE("PrefabJson: an empty prefab is a real document, not a broken one")
 
 TEST_CASE("PrefabFile + PrefabResource: prefab -> file -> resource -> instance")
 {
-    const ScopedTempDir lTemp("resource");
+    const TestTempDir   lTemp("resource");
     const OpaaxString   lPath = lTemp.Sub("Gun.opaaxprefab");
 
     ComponentRegistry lRegistry;
@@ -898,7 +865,7 @@ TEST_CASE("PrefabFold: a barrel DETACHED in one placement is one `parent` overri
     const nlohmann::json& lPatch = lCaptured.Instances[0].Overrides[0].Patch;
     CHECK(lCaptured.Instances[0].Overrides[0].TemplateGuid == lBarrelTmpl);
     REQUIRE(lPatch.contains(PrefabOverrides::KEY_PARENT));
-    CHECK(lPatch[PrefabOverrides::KEY_PARENT].get<std::string>().empty());
+    CHECK(lPatch[PrefabOverrides::KEY_PARENT].get<OpaaxString>().IsEmpty());
     CHECK(lPatch.contains(PrefabOverrides::KEY_COMPONENTS));   // the local moved when it was detached
 
     REQUIRE(PrefabFold::Expand(lCaptured, lResolver, lRegistry) == 1);
@@ -936,7 +903,7 @@ TEST_CASE("Prefab — THE GATE: a turret file placed twice, one ROOT moved, save
     // Through real files, both formats. Two records; the untouched placement bare; the moved one
     // carrying ONE Transform override on its root and nothing on its barrel — which rides along
     // because it is a child, not because anything was written about it.
-    const ScopedTempDir lTemp("hr_gate");
+    const TestTempDir   lTemp("hr_gate");
     const OpaaxString   lPrefabPath = lTemp.Sub("Turret.opaaxprefab");
     const OpaaxString   lMapPath    = lTemp.Sub("Level.opaaxmap");
 

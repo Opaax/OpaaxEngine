@@ -1,18 +1,9 @@
 #include "Core/Profiling/Profiler.h"
 
-#include <chrono>
+#include "Core/Time/Clock.h"
 
 namespace Opaax
 {
-    namespace
-    {
-        double NowSeconds()
-        {
-            using namespace std::chrono;
-            return duration<double>(steady_clock::now().time_since_epoch()).count();
-        }
-    }
-
     Profiler& Profiler::Get()
     {
         // Never destroyed.
@@ -21,7 +12,7 @@ namespace Opaax
     }
 
     Profiler::Profiler()
-        : m_RecordingThread(std::this_thread::get_id())
+        : m_RecordingThread(ThisThread::GetId())
     {
     }
 
@@ -29,7 +20,7 @@ namespace Opaax
 
     void Profiler::Init(const bool bInEnabled)
     {
-        m_RecordingThread = std::this_thread::get_id();
+        m_RecordingThread = ThisThread::GetId();
         m_bEnabled        = bInEnabled;
     }
 
@@ -42,7 +33,7 @@ namespace Opaax
     {
         if (!m_bEnabled) { return; }
 
-        const double lNow = NowSeconds();
+        const double lNow = Clock::NowSeconds();
 
         // The frame that just ended becomes readable (including its Present).
         m_Stats.Profiler.Publish();

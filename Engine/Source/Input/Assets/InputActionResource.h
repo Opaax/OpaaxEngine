@@ -1,6 +1,6 @@
 #pragma once
 
-#include <optional>
+#include "Core/OpaaxTypes.h"
 
 #include "Resources/ResourceFormat.h"
 #include "Input/Assets/InputActionData.h"
@@ -22,12 +22,12 @@ namespace Opaax
 
         static constexpr EFailPolicy FailPolicy = EFailPolicy::Placeholder;
 
-        static std::optional<InputActionResource> Load(const char* InPath, LoadContext& /*InCtx*/)
+        static TOptional<InputActionResource> Load(const char* InPath, LoadContext& /*InCtx*/)
         {
             InputActionResource lResource;
             if (!InputActionFile::Load(OpaaxString(InPath), lResource.Data))
             {
-                return std::nullopt;   // InputActionFile already logged why
+                return NullOpt;   // InputActionFile already logged why
             }
 
             return lResource;

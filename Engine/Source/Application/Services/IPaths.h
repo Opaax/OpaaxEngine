@@ -5,6 +5,7 @@
 
 namespace Opaax
 {
+    class CommandLine;
     class IPlatform;
 
     // =============================================================================
@@ -109,7 +110,7 @@ namespace Opaax
         // CTOR
         // =============================================================================
     public:
-        Paths(const IPlatform& InPlatform, int InArgc, char** InArgv,
+        Paths(const IPlatform& InPlatform, const CommandLine& InCommandLine,
               const OpaaxString& InProjectOverride = OpaaxString());
 
         // =============================================================================

@@ -7,10 +7,6 @@
 
 #include <spdlog/spdlog.h>
 
-#include <deque>
-#include <iterator>
-#include <mutex>
-
 namespace Opaax
 {
     enum class ELogLevel : Uint8
@@ -88,10 +84,10 @@ namespace Opaax
                   spdlog::format_string_t<TArgs...> InFormat, TArgs&&... InArgs)
         {
             fmt::memory_buffer lLine;
-            fmt::format_to(std::back_inserter(lLine), "[{}] ", InCategory.Name);
-            const size_t lMessageStart = lLine.size();
-            fmt::format_to(std::back_inserter(lLine), InFormat, std::forward<TArgs>(InArgs)...);
-            WriteLine(InLevel, InCategory, std::string_view(lLine.data(), lLine.size()), lMessageStart);
+            fmt::format_to(fmt::appender(lLine), "[{}] ", InCategory.Name);
+            const Uint32 lMessageStart = static_cast<Uint32>(lLine.size());
+            fmt::format_to(fmt::appender(lLine), InFormat, Forward<TArgs>(InArgs)...);
+            WriteLine(InLevel, InCategory, OpaaxStringView(lLine.data(), static_cast<Uint32>(lLine.size())), lMessageStart);
         }
 
         /**
@@ -111,7 +107,7 @@ namespace Opaax
 
     private:
         /** InLine is "[Category] message"; the message starts at InMessageStart. */
-        void WriteLine(ELogLevel InLevel, const LogCategory& InCategory, std::string_view InLine, size_t InMessageStart);
+        void WriteLine(ELogLevel InLevel, const LogCategory& InCategory, OpaaxStringView InLine, Uint32 InMessageStart);
 
         // =============================================================================
         // Members
@@ -121,15 +117,15 @@ namespace Opaax
         {
             spdlog::log_clock::time_point Time;
             spdlog::level::level_enum     Level;
-            std::string                   Text;
+            OpaaxString                   Text;
         };
 
         // Guards the sinks and the pending lines.
-        mutable std::mutex              m_Mutex;
-        std::shared_ptr<spdlog::logger> m_Logger;
-        std::deque<PendingLine>         m_Pending;
-        Uint32                          m_DroppedPending = 0;
-        LogHistory                      m_History;
+        mutable Mutex              m_Mutex;
+        TSharedPtr<spdlog::logger> m_Logger;
+        TDeque<PendingLine>        m_Pending;
+        Uint32                     m_DroppedPending = 0;
+        LogHistory                 m_History;
     };
 }
 

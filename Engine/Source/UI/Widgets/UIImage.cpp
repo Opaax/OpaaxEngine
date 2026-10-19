@@ -1,6 +1,6 @@
 #include "UI/Widgets/UIImage.h"
 
-#include <algorithm>
+#include "Core/Maths/Maths.h"
 
 #include "Core/Reflection/OpaaxEnumJson.h"
 #include "UI/UIBinding.h"
@@ -127,7 +127,7 @@ namespace Opaax
 
     void UIImage::Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
     {
-        const float lAmount = Fill == EUIFill::None ? 1.f : std::clamp(FillAmount, 0.f, 1.f);
+        const float lAmount = Fill == EUIFill::None ? 1.f : Maths::Clamp(FillAmount, 0.f, 1.f);
         if (lAmount <= 0.f)
         {
             return;

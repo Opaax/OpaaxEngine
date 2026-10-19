@@ -1,7 +1,5 @@
 #pragma once
 
-#include <functional>
-
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
@@ -62,19 +60,19 @@ namespace Opaax
          */
         static bool FromString(const OpaaxString& InText, Guid& OutGuid) noexcept;
     };
-}
 
-// =============================================================================
-// std::hash<Guid>, for use as an unordered container key.
-// =============================================================================
-template<>
-struct std::hash<Opaax::Guid>
-{
-    std::size_t operator()(const Opaax::Guid& InGuid) const noexcept
+    // =============================================================================
+    // THash<Guid>, for use as an unordered container key.
+    // =============================================================================
+    template<>
+    struct THash<Guid>
     {
-        // Mix both halves (hash_combine with the 64-bit golden-ratio constant).
-        Opaax::Uint64 lSeed = InGuid.High;
-        lSeed ^= InGuid.Low + 0x9e3779b97f4a7c15ULL + (lSeed << 6) + (lSeed >> 2);
-        return static_cast<std::size_t>(lSeed);
-    }
-};
+        size_t operator()(const Guid& InGuid) const noexcept
+        {
+            // Mix both halves (hash_combine with the 64-bit golden-ratio constant).
+            Uint64 lSeed = InGuid.High;
+            lSeed ^= InGuid.Low + 0x9e3779b97f4a7c15ULL + (lSeed << 6) + (lSeed >> 2);
+            return static_cast<size_t>(lSeed);
+        }
+    };
+}

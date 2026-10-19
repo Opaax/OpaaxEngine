@@ -1,10 +1,8 @@
 #include "Resources/ResourceTypeID.hpp"
 
-#include <cstdlib>
-#include <string>
-
 #include "Core/EngineAPI.h"
 #include "Core/Hash/OpaaxHash.h"
+#include "Platform/Process.h"
 
 namespace Opaax
 {
@@ -21,7 +19,7 @@ namespace Opaax
         struct TypeEntry
         {
             Uint64      Hash;
-            std::string Name;   // full type signature
+            OpaaxString Name;   // full type signature
         };
 
         struct TypeRegistry
@@ -38,7 +36,7 @@ namespace Opaax
         }
     }
 
-    Uint32 InternResourceType(Uint64 InHash, std::string_view InName)
+    Uint32 InternResourceType(Uint64 InHash, OpaaxStringView InName)
     {
         TypeRegistry&    lReg = GetRegistry();
         TLockGuard<Mutex> lGuard(lReg.Lock);
@@ -46,18 +44,18 @@ namespace Opaax
         if (const auto lIt = lReg.HashToIndex.find(InHash); lIt != lReg.HashToIndex.end())
         {
             const TypeEntry& lExisting = lReg.Entries[lIt->second];
-            if (lExisting.Name != InName)
+            if (OpaaxStringView(lExisting.Name) != InName)
             {
                 // Two type signatures with the same hash would share a pool: fatal in every build.
-                OPAAX_LOG(LogResourceType, Critical, "ResourceTypeID hash collision (hash {}): '{}' vs '{}' — aborting", InHash, lExisting.Name, std::string(InName));
+                OPAAX_LOG(LogResourceType, Critical, "ResourceTypeID hash collision (hash {}): '{}' vs '{}' — aborting", InHash, lExisting.Name, InName);
                 OPAAX_DEBUGBREAK();
-                std::abort();
+                Process::Abort();
             }
             return lIt->second;
         }
 
         const Uint32 lIndex = static_cast<Uint32>(lReg.Entries.size());
-        lReg.Entries.emplace_back(InHash, std::string(InName));
+        lReg.Entries.emplace_back(InHash, InName.ToString());
         lReg.HashToIndex.emplace(InHash, lIndex);
         return lIndex;
     }

@@ -9,7 +9,7 @@
 #include "Core/String/OpaaxStringIDJson.h"
 #include "Renderer/RenderLayer.h"
 
-#include <cstring>
+#include "Core/String/CString.h"
 
 using namespace Opaax;
 
@@ -83,9 +83,9 @@ TEST_CASE("OpaaxStringID: CStr answers the same bytes as ToString, without the c
 {
     const OpaaxStringID lId = OPAAX_ID("OpaaxStringIDTests_CStr");
 
-    CHECK(std::strcmp(lId.CStr(), "OpaaxStringIDTests_CStr") == 0);
-    CHECK(std::strcmp(lId.CStr(), lId.ToString().CStr()) == 0);
-    CHECK(std::strcmp(OpaaxStringID().CStr(), "None") == 0);
+    CHECK(CString::Equals(lId.CStr(), "OpaaxStringIDTests_CStr"));
+    CHECK(CString::Equals(lId.CStr(), lId.ToString().CStr()));
+    CHECK(CString::Equals(OpaaxStringID().CStr(), "None"));
 
     // The pointer is INTO the pool, so it stays valid — and stays the same — across calls.
     CHECK(lId.CStr() == lId.CStr());
@@ -116,7 +116,7 @@ TEST_CASE("OpaaxStringID: Find resolves an existing name and does NOT add a miss
 // =============================================================================
 // Hashing
 // =============================================================================
-TEST_CASE("OpaaxStringID: std::hash makes the handle itself a map key")
+TEST_CASE("OpaaxStringID: THash makes the handle itself a map key")
 {
     TUnorderedMap<OpaaxStringID, int> lMap;
     lMap[OPAAX_ID("OpaaxStringIDTests_Key_A")] = 1;
@@ -151,8 +151,8 @@ TEST_CASE("OpaaxStringID: interned text keeps its ADDRESS while the pool grows")
     // A long name's heap pointer would survive a move and hide the bug.
     CHECK(lShort.CStr() == lShortText);
     CHECK(lLong.CStr()  == lLongText);
-    CHECK(std::strcmp(lShortText, "zAddr") == 0);
-    CHECK(std::strcmp(lLongText,  "zAddr_well_past_the_sso_boundary") == 0);
+    CHECK(CString::Equals(lShortText, "zAddr"));
+    CHECK(CString::Equals(lLongText,  "zAddr_well_past_the_sso_boundary"));
 }
 
 // =============================================================================
@@ -214,13 +214,13 @@ TEST_CASE("OpaaxStringID: concurrent interning and reading stay consistent")
     {
         lThreads.emplace_back([&]
         {
-            while (!lStop.load(std::memory_order_relaxed))
+            while (!lStop.load(EMemoryOrder::Relaxed))
             {
                 for (size_t i = 0; i < lSeedIds.size(); ++i)
                 {
                     // Both read paths: CStr returns a pointer into the entry; ToString copies from it after the
                     // lock is dropped.
-                    if (std::strcmp(lSeedIds[i].CStr(), lSeedText[i].CStr()) != 0) { ++lMismatches; }
+                    if (!CString::Equals(lSeedIds[i].CStr(), lSeedText[i].CStr())) { ++lMismatches; }
                     if (lSeedIds[i].ToString() != lSeedText[i])                    { ++lMismatches; }
                 }
             }
@@ -268,7 +268,7 @@ TEST_CASE("OpaaxStringID json: a round trip COMPARES EQUAL, and writes the text"
     // The text, not the index. A pool index is built in whatever order a process happened to
     // intern things, so a number written today names a different string tomorrow.
     CHECK(lJson.is_string());
-    CHECK(lJson.get<std::string>() == "Idle_0");
+    CHECK(lJson.get<OpaaxString>() == "Idle_0");
 
     // The assertion that actually matters: equality survives, which is the whole point of interning.
     CHECK(lJson.get<OpaaxStringID>() == lId);
@@ -279,14 +279,14 @@ TEST_CASE("OpaaxStringID json: an invalid id writes EMPTY and reads back invalid
     // Not "None": CStr() answers "None" for an invalid id, which would read back as a real name.
     const nlohmann::json lJson = OpaaxStringID();
 
-    CHECK(lJson.get<std::string>().empty());
+    CHECK(lJson.get<OpaaxString>().IsEmpty());
     CHECK_FALSE(lJson.get<OpaaxStringID>().IsValid());
 }
 
 TEST_CASE("OpaaxStringID json: reading a name does not depend on it being interned first")
 {
     // The file is the writer here — nothing in this process has ever said "Attack_Windup_3".
-    const nlohmann::json lJson = std::string("Attack_Windup_3");
+    const nlohmann::json lJson = "Attack_Windup_3";
 
     const OpaaxStringID lRead = lJson.get<OpaaxStringID>();
 

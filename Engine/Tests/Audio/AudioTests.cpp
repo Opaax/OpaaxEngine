@@ -5,14 +5,11 @@
 // heard is rendered into a buffer and measured. The sounds are generated WAV files.
 #include <doctest.h>
 
-#include <algorithm>
-#include <chrono>
-#include <cmath>
-#include <filesystem>
-#include <fstream>
-#include <functional>
-#include <string>
-#include <thread>
+#include "../TestTempDir.h"
+#include "Core/Algo/Algo.h"
+#include "Core/IO/FileIO.h"
+#include "Core/Maths/Maths.h"
+#include "Core/OpaaxTypes.h"
 
 #include "Application/Services/IPaths.h"
 #include "Audio/AudioClipResource.h"
@@ -44,14 +41,12 @@ using AudioTest::TempPaths;
 
 namespace
 {
-    namespace fs = std::filesystem;
-
     constexpr Uint32 MIX_RATE = 48000;
 
     AudioClipResource MakeClip(const float InSeconds, const float InAmplitude = 0.5f,
                                const AudioClipResource::EResidency InResidency = AudioClipResource::EResidency::Auto)
     {
-        std::optional<AudioClipResource> lClip = AudioClipResource::FromMemory(MakeWav(44100, InSeconds, 440.f, InAmplitude),
+        TOptional<AudioClipResource> lClip = AudioClipResource::FromMemory(MakeWav(44100, InSeconds, 440.f, InAmplitude),
                                                                                 "Test", InResidency);
         REQUIRE(lClip.has_value());
         return *lClip;
@@ -71,7 +66,7 @@ namespace
         float Left  = 0.f;
         float Right = 0.f;
 
-        float Max() const { return std::max(Left, Right); }
+        float Max() const { return Maths::Max(Left, Right); }
     };
 
     /** Renders InSeconds of the mix and measures the loudest sample of each channel. */
@@ -84,8 +79,8 @@ namespace
         Peaks lPeaks;
         for (Uint64 lFrame = 0; lFrame < lFrames; ++lFrame)
         {
-            lPeaks.Left  = std::max(lPeaks.Left,  std::abs(lBuffer[static_cast<size_t>(lFrame * 2)]));
-            lPeaks.Right = std::max(lPeaks.Right, std::abs(lBuffer[static_cast<size_t>(lFrame * 2 + 1)]));
+            lPeaks.Left  = Maths::Max(lPeaks.Left,  Maths::Abs(lBuffer[static_cast<size_t>(lFrame * 2)]));
+            lPeaks.Right = Maths::Max(lPeaks.Right, Maths::Abs(lBuffer[static_cast<size_t>(lFrame * 2 + 1)]));
         }
         return lPeaks;
     }
@@ -101,31 +96,19 @@ namespace
     {
     public:
         explicit AudioAssets(const char* InTag)
-            : m_Root(fs::temp_directory_path() / ("OpaaxAudioTests_" + std::string(InTag)))
+            : m_Dir(InTag)
         {
-            std::error_code lError;
-            fs::remove_all(m_Root, lError);
-            fs::create_directories(m_Root / "Audio", lError);
-
-            const TDynArray<Uint8> lBeep = MakeWav(44100, 0.25f);
-            std::ofstream(m_Root / "Audio" / "Beep.wav", std::ios::binary)
-                .write(reinterpret_cast<const char*>(lBeep.data()), static_cast<std::streamsize>(lBeep.size()));
-            std::ofstream(m_Root / "Audio" / "NotASound.wav", std::ios::binary) << "this is not audio";
+            AudioTest::WriteFile(m_Dir.Sub("Audio/Beep.wav"), MakeWav(44100, 0.25f));
+            FileIO::WriteAllText(m_Dir.Sub("Audio/NotASound.wav"), "this is not audio");
         }
 
-        ~AudioAssets()
-        {
-            std::error_code lError;
-            fs::remove_all(m_Root, lError);
-        }
+        const OpaaxString& Root() const { return m_Dir.Path(); }
 
-        AudioAssets(const AudioAssets&)            = delete;
-        AudioAssets& operator=(const AudioAssets&) = delete;
-
-        const fs::path& Root() const { return m_Root; }
+        /** InRelative under the folder: Sub("Audio/Beep.wav"). */
+        OpaaxString Sub(const OpaaxStringView InRelative) const { return m_Dir.Sub(InRelative); }
 
     private:
-        fs::path m_Root;
+        TestTempDir m_Dir;
     };
 }
 
@@ -167,15 +150,15 @@ TEST_CASE("AudioClip: bytes that are not a sound are refused; a missing file loa
     const AudioAssets lAssets("clips");
     ResourceManager   lResources;
 
-    const ResourceRef<AudioClipResource> lGood = lResources.Load<AudioClipResource>((lAssets.Root() / "Audio" / "Beep.wav").generic_string().c_str());
+    const ResourceRef<AudioClipResource> lGood = lResources.Load<AudioClipResource>(lAssets.Sub("Audio/Beep.wav").CStr());
     REQUIRE(lGood.Get() != nullptr);
     CHECK(lGood->FrameCount == 11025);
 
-    const ResourceRef<AudioClipResource> lBad = lResources.Load<AudioClipResource>((lAssets.Root() / "Audio" / "NotASound.wav").generic_string().c_str());
+    const ResourceRef<AudioClipResource> lBad = lResources.Load<AudioClipResource>(lAssets.Sub("Audio/NotASound.wav").CStr());
     REQUIRE(lBad.Get() != nullptr);
     CHECK(lBad->IsSilent());
 
-    const ResourceRef<AudioClipResource> lMissing = lResources.Load<AudioClipResource>((lAssets.Root() / "Audio" / "Nope.wav").generic_string().c_str());
+    const ResourceRef<AudioClipResource> lMissing = lResources.Load<AudioClipResource>(lAssets.Sub("Audio/Nope.wav").CStr());
     REQUIRE(lMissing.Get() != nullptr);
     CHECK(lMissing->IsSilent());
 }
@@ -477,7 +460,7 @@ TEST_CASE("AudioManager: a streamed clip sounds exactly like the same clip decod
     const TDynArray<float> lDecoded  = lRender(MakeClip(0.3f, 0.5f, AudioClipResource::EResidency::Decoded));
     const TDynArray<float> lStreamed = lRender(MakeClip(0.3f, 0.5f, AudioClipResource::EResidency::Streamed));
     CHECK(lDecoded == lStreamed);
-    CHECK(*std::max_element(lDecoded.begin(), lDecoded.end()) > 0.4f);
+    CHECK(*Algo::MaxElement(lDecoded) > 0.4f);
 }
 
 TEST_CASE("AudioManager: when every voice plays, a new sound replaces the least important one")
@@ -569,7 +552,7 @@ namespace
             float lPeak = 0.f;
             for (size_t lIndex = lStart; lIndex < Frames.size(); ++lIndex)
             {
-                lPeak = std::max(lPeak, std::abs(Frames[lIndex]));
+                lPeak = Maths::Max(lPeak, Maths::Abs(Frames[lIndex]));
             }
             return lPeak;
         }
@@ -596,7 +579,7 @@ namespace
                         m_Recording->Frames.insert(m_Recording->Frames.end(), lPeriod.begin(), lPeriod.end());
                     }
                     ++m_Recording->Calls;
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    ThisThread::SleepFor(Milliseconds(1));
                 }
             });
             return true;
@@ -631,7 +614,7 @@ namespace
             {
                 return true;
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            ThisThread::SleepFor(Milliseconds(1));
         }
         return InCondition();
     }
@@ -713,8 +696,8 @@ namespace
                                                /*Actions*/ nullptr, /*UI*/ nullptr, Debug, &Components, &Audio });
 
             WorldSubsystemMgr& lSubsystems = TheWorld->GetSubsystems();
-            lSubsystems.RegisterSubsystem<BehaviourSubsystem>(std::ref(*TheWorld->GetContext()));
-            lSubsystems.RegisterSubsystem<AudioSubsystem>(std::ref(*TheWorld->GetContext()));
+            lSubsystems.RegisterSubsystem<BehaviourSubsystem>(Ref(*TheWorld->GetContext()));
+            lSubsystems.RegisterSubsystem<AudioSubsystem>(Ref(*TheWorld->GetContext()));
             lSubsystems.StartupAll();
 
             Sounds = lSubsystems.GetSubsystem<AudioSubsystem>();

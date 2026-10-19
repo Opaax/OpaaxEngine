@@ -14,11 +14,10 @@
 #include "Renderer/RenderView.h"
 #include "Renderer/RenderSystemDesc.h"
 #include "Core/EngineAPI.h"
+#include "Core/Maths/Maths.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <algorithm>
-#include "Core/Maths/Maths.h"
 
 namespace Opaax
 {
@@ -176,8 +175,8 @@ namespace Opaax
         QuadBatchLimits ResolveLimits(const RenderLimits& InLimits)
         {
             QuadBatchLimits lOut;
-            lOut.MaxQuads        = std::clamp(InLimits.MaxQuads, 1u, MAX_BATCH_QUADS);
-            lOut.MaxTextureSlots = std::clamp(InLimits.MaxTextureSlots, 2u, SHADER_TEXTURE_SLOTS);
+            lOut.MaxQuads        = Maths::Clamp(InLimits.MaxQuads, 1u, MAX_BATCH_QUADS);
+            lOut.MaxTextureSlots = Maths::Clamp(InLimits.MaxTextureSlots, 2u, SHADER_TEXTURE_SLOTS);
 
             if (lOut.MaxQuads != InLimits.MaxQuads || lOut.MaxTextureSlots != InLimits.MaxTextureSlots)
             {
@@ -321,7 +320,7 @@ namespace Opaax
         QuadBatchLimits lLimits = m_Data->Limits;
         if (m_Data->ShadowMap != nullptr || m_Data->AmbientOcclusionMap != nullptr)
         {
-            lLimits.MaxTextureSlots = std::min(lLimits.MaxTextureSlots, AO_MAP_SLOT);
+            lLimits.MaxTextureSlots = Maths::Min(lLimits.MaxTextureSlots, AO_MAP_SLOT);
         }
 
         PlanQuadBatches(m_Data->PassKeys, m_Data->PassTexIds, m_Data->PassMaskIds, m_Data->PassNormalIds,
@@ -365,18 +364,18 @@ namespace Opaax
             }
 
             m_Data->SlotTextures[lPlacement.Slot] = m_Data->PassTextures[m_Data->PassTexIds[lPlacement.QuadIndex]];
-            lSlotCount = std::max(lSlotCount, lPlacement.Slot + 1u);
+            lSlotCount = Maths::Max(lSlotCount, lPlacement.Slot + 1u);
 
             if (lMaskId != 0)
             {
                 m_Data->SlotTextures[lPlacement.MaskSlot] = m_Data->PassTextures[lMaskId];
-                lSlotCount = std::max(lSlotCount, lPlacement.MaskSlot + 1u);
+                lSlotCount = Maths::Max(lSlotCount, lPlacement.MaskSlot + 1u);
             }
 
             if (lNormalId != 0)
             {
                 m_Data->SlotTextures[lPlacement.NormalSlot] = m_Data->PassTextures[lNormalId];
-                lSlotCount = std::max(lSlotCount, lPlacement.NormalSlot + 1u);
+                lSlotCount = Maths::Max(lSlotCount, lPlacement.NormalSlot + 1u);
             }
             ++lQuadCount;
         }

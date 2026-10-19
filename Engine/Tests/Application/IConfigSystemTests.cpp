@@ -4,7 +4,7 @@
 // null system staying in-memory.
 #include <doctest.h>
 
-#include <utility>
+#include "Core/OpaaxTypes.h"
 
 #include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IPaths.h"
@@ -76,7 +76,7 @@ namespace
     class StubPaths final : public IPaths
     {
     public:
-        explicit StubPaths(OpaaxString InConfigsDir) : m_ConfigsDir(std::move(InConfigsDir)) {}
+        explicit StubPaths(OpaaxString InConfigsDir) : m_ConfigsDir(Move(InConfigsDir)) {}
         OpaaxString ConfigsDir()   const override { return m_ConfigsDir; }
         void        LogPaths()     const override {}   // stub
 

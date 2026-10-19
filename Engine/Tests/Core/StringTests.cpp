@@ -4,12 +4,11 @@
 #include <doctest.h>
 
 #include "Core/String/OpaaxString.hpp"
-#include "Core/Hash/OpaaxHash.h"   // std::hash<OpaaxString>
+#include "Core/String/OpaaxStringJson.h"
+#include "Core/Hash/OpaaxHash.h"   // THash<OpaaxString>
 
-#include <cstdint>
-#include <cstring>
-#include <string_view>
-#include <utility>
+#include "Core/OpaaxTypes.h"
+#include "Core/String/CString.h"
 
 using namespace Opaax;
 
@@ -29,7 +28,7 @@ TEST_CASE("OpaaxString: short string stays in SSO")
     CHECK(lStr.GetLength() == 5u);
     CHECK_FALSE(lStr.IsUsingHeap());
     CHECK(lStr == "hello");
-    CHECK(std::strcmp(lStr.CStr(), "hello") == 0);
+    CHECK(CString::Equals(lStr.CStr(), "hello"));
 }
 
 TEST_CASE("OpaaxString: SSO capacity boundary is 15 chars")
@@ -61,7 +60,7 @@ TEST_CASE("OpaaxString: move transfers ownership and empties the source")
     REQUIRE(lA.IsUsingHeap());
     const Uint32 lLen = lA.GetLength();
 
-    OpaaxString lB(std::move(lA));
+    OpaaxString lB(Move(lA));
     CHECK(lB.GetLength() == lLen);
     CHECK(lB.IsUsingHeap());
     CHECK(lA.IsEmpty());            // moved-from -> valid empty SSO state
@@ -76,7 +75,7 @@ TEST_CASE("OpaaxString: append transitions SSO -> heap and preserves content")
     lStr.Append("-now this is much longer than fifteen characters");
     CHECK(lStr.IsUsingHeap());
     CHECK(lStr == "short-now this is much longer than fifteen characters");
-    CHECK(lStr.GetLength() == static_cast<Uint32>(std::strlen(lStr.CStr())));
+    CHECK(lStr.GetLength() == static_cast<Uint32>(CString::Length(lStr.CStr())));
 }
 
 TEST_CASE("OpaaxString: CStr stays valid + null-terminated across copy assignment")
@@ -84,7 +83,7 @@ TEST_CASE("OpaaxString: CStr stays valid + null-terminated across copy assignmen
     OpaaxString lA("first value that lives on the heap for sure");
     OpaaxString lB("tiny");
     lB = lA;
-    CHECK(std::strlen(lB.CStr()) == lB.GetLength());
+    CHECK(CString::Length(lB.CStr()) == lB.GetLength());
     CHECK(lB == lA);
 }
 
@@ -100,7 +99,7 @@ TEST_CASE("OpaaxString: counted Append copies exactly Count bytes and stops ther
     lStr.Append(lSource, 3);
     CHECK(lStr == "abc");
     CHECK(lStr.GetLength() == 3u);
-    CHECK(std::strlen(lStr.CStr()) == 3u);   // terminator written at Count
+    CHECK(CString::Length(lStr.CStr()) == 3u);   // terminator written at Count
 
     lStr.Append(lSource + 3, 2);
     CHECK(lStr == "abcde");
@@ -116,7 +115,7 @@ TEST_CASE("OpaaxString: counted Append crosses the SSO boundary correctly")
     lStr.Append(lLong, 30);
     CHECK(lStr.IsUsingHeap());
     CHECK(lStr.GetLength() == 35u);
-    CHECK(std::strlen(lStr.CStr()) == 35u);
+    CHECK(CString::Length(lStr.CStr()) == 35u);
 }
 
 TEST_CASE("OpaaxString: Append(nullptr) and zero-count are no-ops")
@@ -154,7 +153,7 @@ TEST_CASE("OpaaxString: appending a string TO ITSELF does not read freed memory"
         lStr.Append(lStr);
 
         CHECK(lStr.GetLength() == lLen * 2u);
-        CHECK(std::strlen(lStr.CStr()) == lLen * 2u);
+        CHECK(CString::Length(lStr.CStr()) == lLen * 2u);
         CHECK(lStr.SubString(0, lLen) == lStr.SubString(lLen, lLen));
     }
 
@@ -193,7 +192,7 @@ TEST_CASE("OpaaxString: the counted ctor stops at Count and never needs a termin
 
     CHECK(OpaaxString(lSource, 3) == "abc");
     CHECK(OpaaxString(lSource, 3).GetLength() == 3u);
-    CHECK(std::strlen(OpaaxString(lSource, 3).CStr()) == 3u);
+    CHECK(CString::Length(OpaaxString(lSource, 3).CStr()) == 3u);
     CHECK(OpaaxString(lSource, 0).IsEmpty());
     CHECK(OpaaxString(nullptr, 4).IsEmpty());
 
@@ -203,19 +202,10 @@ TEST_CASE("OpaaxString: the counted ctor stops at Count and never needs a termin
     CHECK(lLong.GetLength() == 26u);
 }
 
-TEST_CASE("OpaaxString: the string_view ctor copies exactly the view")
-{
-    const std::string_view lView("hello brave new world");
-
-    CHECK(OpaaxString(lView) == "hello brave new world");
-    CHECK(OpaaxString(lView.substr(6, 5)) == "brave");   // substr view is NOT null-terminated
-    CHECK(OpaaxString(std::string_view{}).IsEmpty());
-}
-
 // =============================================================================
 // Hashing — TUnorderedMap<OpaaxString, T> with the DEFAULT hasher
 // =============================================================================
-TEST_CASE("OpaaxString: std::hash makes it a key without naming OpaaxHash at the call site")
+TEST_CASE("OpaaxString: THash makes it a key without naming OpaaxHash at the call site")
 {
     TUnorderedMap<OpaaxString, int> lMap;
     lMap[OpaaxString("alpha")] = 1;
@@ -228,7 +218,7 @@ TEST_CASE("OpaaxString: std::hash makes it a key without naming OpaaxHash at the
     // Equal values hash equally whichever storage they use — the map would lose entries otherwise.
     lMap[OpaaxString("alpha")] = 3;
     CHECK(lMap.size() == 2u);
-    CHECK(std::hash<OpaaxString>{}(OpaaxString("alpha")) == std::hash<OpaaxString>{}(OpaaxString("alpha")));
+    CHECK(THash<OpaaxString>{}(OpaaxString("alpha")) == THash<OpaaxString>{}(OpaaxString("alpha")));
 }
 
 // =============================================================================
@@ -281,4 +271,106 @@ TEST_CASE("OpaaxString: FromUInt composes with operator+ the way call sites use 
 {
     const OpaaxString lName = OpaaxString("SpawnedQuad_") + OpaaxString::FromUInt(7);
     CHECK(lName == "SpawnedQuad_7");
+}
+
+// =============================================================================
+// Building and searching
+// =============================================================================
+TEST_CASE("OpaaxString: Append and + take a string, a view, a literal or a character, on either side")
+{
+    OpaaxString lText("ab");
+    lText.Append(OpaaxStringView("cdef").SubString(0, 2));
+    lText.Append('e');
+    lText += 'f';
+    lText += OpaaxStringView("gh");
+    CHECK(lText == "abcdefgh");
+
+    const OpaaxString lName("Ann");
+    CHECK("'" + lName + "'" == "'Ann'");
+    CHECK(OpaaxStringView("Hello ") + lName == "Hello Ann");
+    CHECK(lName + '!' == "Ann!");
+    CHECK(lName + OpaaxStringView("ie") == "Annie");
+
+    // Past the inline buffer, a character at a time.
+    OpaaxString lLong;
+    for (Int32 lIndex = 0; lIndex < 40; ++lIndex) { lLong += 'x'; }
+    CHECK(lLong.GetLength() == 40u);
+    CHECK(lLong.IsUsingHeap());
+}
+
+TEST_CASE("OpaaxString: the view searches, Back, PopBack and range-for")
+{
+    const OpaaxString lPath("Maps/Arena.opaaxmap");
+
+    CHECK(lPath.View() == "Maps/Arena.opaaxmap");
+    CHECK(lPath.StartsWith("Maps/"));
+    CHECK(lPath.EndsWith(".opaaxmap"));
+    CHECK(lPath.Contains("Arena"));
+    CHECK_FALSE(lPath.Contains("arena"));
+    CHECK(lPath.Find('/') == 4);
+    CHECK(lPath.Find('a', 6) == 9);
+    CHECK(lPath.FindLast('a') == 17);
+    CHECK(lPath.FindLast("a") == 17);
+    CHECK(lPath.FindFirstOf("./") == 4);
+    CHECK(lPath.FindLastOf("./") == 10);
+
+    OpaaxString lText("abc");
+    CHECK(lText.Back() == 'c');
+    lText.PopBack();
+    CHECK(lText == "ab");
+    lText.PopBack();
+    lText.PopBack();
+    lText.PopBack();   // empty: nothing happens
+    CHECK(lText.IsEmpty());
+    CHECK(lText.Back() == '\0');
+
+    Uint32 lDots = 0;
+    for (const char lChar : lPath) { if (lChar == '.') { ++lDots; } }
+    CHECK(lDots == 1u);
+}
+
+TEST_CASE("OpaaxString: Replace makes a copy, ReplaceCharInline changes in place")
+{
+    const OpaaxString lText("a.b.c");
+    CHECK(lText.Replace(".", "::") == "a::b::c");
+    CHECK(lText.Replace("x", "y") == "a.b.c");
+    CHECK(lText.Replace("", "y") == "a.b.c");
+    CHECK(lText.Replace("a.b.c", "") == "");
+    CHECK(OpaaxString("aaa").Replace("aa", "b") == "ba");   // left to right, no overlap
+    CHECK(lText == "a.b.c");                                // the original is untouched
+
+    OpaaxString lLines("one\ntwo\nthree");
+    lLines.ReplaceCharInline('\n', ' ');
+    CHECK(lLines == "one two three");
+}
+
+TEST_CASE("OpaaxString: operator< is byte order, so strings sort")
+{
+    CHECK(OpaaxString("a") < OpaaxString("b"));
+    CHECK(OpaaxString("B") < OpaaxString("a"));
+    CHECK(OpaaxString("ab") < OpaaxString("abc"));
+    CHECK_FALSE(OpaaxString("abc") < OpaaxString("abc"));
+    CHECK(OpaaxString("") < OpaaxString("a"));
+
+    // A byte above 127 sorts after ASCII, as unsigned.
+    CHECK(OpaaxString("z") < OpaaxString("\xC3\xA9"));
+}
+
+// =============================================================================
+// JSON — the string, a key, and dumped text
+// =============================================================================
+TEST_CASE("OpaaxString json: values and keys come across whole, an embedded NUL included")
+{
+    const nlohmann::json lValue = OpaaxString("Hero");
+    CHECK(lValue.is_string());
+    CHECK(lValue.get<OpaaxString>() == "Hero");
+
+    const char     lRaw[] = { 'k', '\0', 'y' };
+    nlohmann::json lObject = nlohmann::json::object();
+    lObject[ToJsonString(OpaaxStringView(lRaw, 3))] = 1;
+    REQUIRE(lObject.size() == 1u);
+    CHECK(FromJsonString(lObject.begin().key()).GetLength() == 3u);
+
+    CHECK(ToJsonText(nlohmann::json{ { "a", 1 } }) == R"({"a":1})");
+    CHECK(ToJsonText(nlohmann::json{ { "a", 1 } }, 2).Contains(R"(  "a": 1)"));
 }

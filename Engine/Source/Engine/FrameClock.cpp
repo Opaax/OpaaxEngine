@@ -1,13 +1,13 @@
 #include "Engine/FrameClock.h"
 
-#include <algorithm>
+#include "Core/Maths/Maths.h"
 
 namespace Opaax
 {
     double FrameClock::BeginFrame(const double InNow) noexcept
     {
         // A clock running backwards (or the first frame) gives a zero delta.
-        m_Delta    = m_bStarted ? std::clamp(InNow - m_LastTime, 0.0, MAX_FRAME_DELTA) : 0.0;
+        m_Delta    = m_bStarted ? Maths::Clamp(InNow - m_LastTime, 0.0, MAX_FRAME_DELTA) : 0.0;
         m_LastTime = InNow;
         m_bStarted = true;
         m_Owed    += m_Delta;

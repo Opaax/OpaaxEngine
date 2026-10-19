@@ -4,8 +4,10 @@
 // sounds are never loaded again, a level's are let go each time.
 #include <doctest.h>
 
-#include <functional>
-#include <string>
+#include "../TestTempDir.h"
+#include "Core/IO/FileSystem.h"
+#include "Core/OpaaxTypes.h"
+#include "Core/String/OpaaxPathString.h"
 
 #include "Audio/AudioBank.h"
 #include "Audio/AudioBankHold.h"
@@ -41,12 +43,10 @@ using AudioTest::TempPaths;
 
 namespace
 {
-    namespace fs = std::filesystem;
-
-    void SaveData(const fs::path& InPath, const OpaaxStringID InType, const nlohmann::json& InData)
+    void SaveData(const OpaaxString& InPath, const OpaaxStringID InType, const nlohmann::json& InData)
     {
-        fs::create_directories(InPath.parent_path());
-        REQUIRE(DataAssetFile::Save(OpaaxString(InPath.generic_string().c_str()), InType, InData));
+        FileSystem::CreateDirectories(PathString::Parent(InPath));
+        REQUIRE(DataAssetFile::Save(InPath, InType, InData));
     }
 
     /**
@@ -55,24 +55,21 @@ namespace
      */
     struct BankAssets
     {
-        fs::path  Root = fs::temp_directory_path() / "OpaaxAudioBankTests";
-        TempPaths Paths{ Root };
+        TestTempDir Dir{ "AudioBanks" };
+        TempPaths   Paths{ Dir.Path() };
 
         BankAssets()
         {
-            std::error_code lError;
-            fs::remove_all(Root, lError);
-
             for (const char* lName : { "A", "B", "C", "D", "G", "L" })
             {
-                AudioTest::WriteFile(Root / "Audio" / (std::string(lName) + ".wav"), MakeWav(44100, 0.2f));
+                AudioTest::WriteFile(Dir.Sub(OpaaxString::Format("Audio/{}.wav", lName)), MakeWav(44100, 0.2f));
             }
 
             AudioClipDef lSteps;
             lSteps.Clips.resize(2);
             lSteps.Clips[0].Clip.Path = OpaaxString("Audio/A.wav");
             lSteps.Clips[1].Clip.Path = OpaaxString("Audio/B.wav");
-            SaveData(Root / "Audio" / "Steps.opaaxdata", DataAssetTypeName<AudioClipDef>(), nlohmann::json(lSteps));
+            SaveData(Dir.Sub("Audio/Steps.opaaxdata"), DataAssetTypeName<AudioClipDef>(), nlohmann::json(lSteps));
 
             AudioBank lBank;
             lBank.ClipDefs.resize(1);
@@ -80,23 +77,17 @@ namespace
             lBank.Clips.resize(2);
             lBank.Clips[0].Path = OpaaxString("Audio/C.wav");
             lBank.Clips[1].Path = OpaaxString("Audio/A.wav");
-            SaveData(Root / "Audio" / "Bank.opaaxdata", DataAssetTypeName<AudioBank>(), nlohmann::json(lBank));
+            SaveData(Dir.Sub("Audio/Bank.opaaxdata"), DataAssetTypeName<AudioBank>(), nlohmann::json(lBank));
 
             AudioBank lGlobal;
             lGlobal.Clips.resize(1);
             lGlobal.Clips[0].Path = OpaaxString("Audio/G.wav");
-            SaveData(Root / "Audio" / "Global.opaaxdata", DataAssetTypeName<AudioBank>(), nlohmann::json(lGlobal));
+            SaveData(Dir.Sub("Audio/Global.opaaxdata"), DataAssetTypeName<AudioBank>(), nlohmann::json(lGlobal));
 
             AudioBank lLevel;
             lLevel.Clips.resize(1);
             lLevel.Clips[0].Path = OpaaxString("Audio/L.wav");
-            SaveData(Root / "Audio" / "Level.opaaxdata", DataAssetTypeName<AudioBank>(), nlohmann::json(lLevel));
-        }
-
-        ~BankAssets()
-        {
-            std::error_code lError;
-            fs::remove_all(Root, lError);
+            SaveData(Dir.Sub("Audio/Level.opaaxdata"), DataAssetTypeName<AudioBank>(), nlohmann::json(lLevel));
         }
 
         OpaaxString Absolute(const char* InAsset) const { return Paths.AssetToAbsolute(OpaaxString(InAsset)); }
@@ -126,7 +117,7 @@ namespace
             Uint32 lCount = 0;
             for (const LogEntry& lEntry : lEntries)
             {
-                if (std::string(lEntry.Message.CStr()).find(InText) != std::string::npos) { ++lCount; }
+                if (lEntry.Message.Contains(InText)) { ++lCount; }
             }
             return lCount;
         }
@@ -174,8 +165,8 @@ namespace
                                              /*Actions*/ nullptr, /*UI*/ nullptr, Debug, &Components, &Audio });
 
             WorldSubsystemMgr& lSubsystems = lWorld->GetSubsystems();
-            lSubsystems.RegisterSubsystem<BehaviourSubsystem>(std::ref(*lWorld->GetContext()));
-            lSubsystems.RegisterSubsystem<AudioSubsystem>(std::ref(*lWorld->GetContext()));
+            lSubsystems.RegisterSubsystem<BehaviourSubsystem>(Ref(*lWorld->GetContext()));
+            lSubsystems.RegisterSubsystem<AudioSubsystem>(Ref(*lWorld->GetContext()));
             lSubsystems.StartupAll();
             REQUIRE(Worlds.SetActiveWorld(lWorld));
 
@@ -305,7 +296,7 @@ TEST_CASE("AudioGlobalBank: across worlds that come and go, its sounds are never
     bool bLevelGone   = true;
     for (int lRound = 0; lRound < 5; ++lRound)
     {
-        World* lWorld = lFix.MakeWorld(("Level" + std::to_string(lRound)).c_str(), "Audio/Level.opaaxdata");
+        World* lWorld = lFix.MakeWorld(OpaaxString::Format("Level{}", lRound).CStr(), "Audio/Level.opaaxdata");
         lFix.Frame();
         lFix.Jobs.RunAll();
         lFix.Frame();

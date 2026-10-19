@@ -1,9 +1,9 @@
 #include "Audio/AudioManager.h"
 
-#include <algorithm>
-#include <chrono>
-#include <cmath>
-#include <cstring>
+#include "Core/Algo/Algo.h"
+#include "Core/OpaaxTypes.h"
+#include "Core/Maths/Maths.h"
+#include "Core/Memory/Memory.h"
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IConfigSystem.h"
@@ -34,7 +34,7 @@ namespace Opaax
         constexpr Uint32 RING_CAPACITY_FRAMES = 16384;
 
         /** The audio thread wakes at least this often, should a device wake-up be missed. */
-        constexpr auto MIX_THREAD_WAIT = std::chrono::milliseconds(2);
+        constexpr auto MIX_THREAD_WAIT = Milliseconds(2);
 
         constexpr Uint32 INVALID_SLOT = ~0u;
 
@@ -43,7 +43,7 @@ namespace Opaax
 
         Uint32 SecondsToFrames(const float InSeconds, const Uint32 InSampleRate) noexcept
         {
-            return InSeconds > 0.f ? static_cast<Uint32>(std::lround(static_cast<double>(InSeconds) * InSampleRate)) : 0u;
+            return InSeconds > 0.f ? static_cast<Uint32>(Maths::RoundHalfFromZero(static_cast<double>(InSeconds) * InSampleRate)) : 0u;
         }
     }
 
@@ -207,9 +207,7 @@ namespace Opaax
                 }
 
                 // A voice that was replaced: its sources were set apart.
-                RetiredSources.erase(std::remove_if(RetiredSources.begin(), RetiredSources.end(),
-                                                    [&lEvent](const Retired& InRetired) { return InRetired.Handle == lEvent.Handle; }),
-                                     RetiredSources.end());
+                Algo::RemoveIf(RetiredSources, [&lEvent](const Retired& InRetired) { return InRetired.Handle == lEvent.Handle; });
             }
         }
 
@@ -234,9 +232,7 @@ namespace Opaax
         /** Forgets a sound still waiting for its clip: the mixer never had it. */
         void CancelPending(const SoundHandle InSound)
         {
-            Pending.erase(std::remove_if(Pending.begin(), Pending.end(),
-                                         [InSound](const PendingPlay& InPending) { return InPending.Handle == InSound; }),
-                          Pending.end());
+            Algo::RemoveIf(Pending, [InSound](const PendingPlay& InPending) { return InPending.Handle == InSound; });
 
             if (Slot* lSlot = Find(InSound))
             {
@@ -259,7 +255,7 @@ namespace Opaax
 
                 // Moved out first: starting may log, and nothing else touches the list meanwhile.
                 PendingPlay lReady = Move(lPending);
-                Pending.erase(Pending.begin() + static_cast<std::ptrdiff_t>(lIndex));
+                Pending.erase(Pending.begin() + static_cast<PtrDiff>(lIndex));
 
                 Slot* lSlot = Find(lReady.Handle);
                 if (lSlot == nullptr)
@@ -295,7 +291,7 @@ namespace Opaax
 
             while (InFrames > 0)
             {
-                const Uint32 lFrames = static_cast<Uint32>(std::min<Uint64>(InFrames, lBlock));
+                const Uint32 lFrames = static_cast<Uint32>(Maths::Min<Uint64>(InFrames, lBlock));
                 Mixer->Mix(Discard.data(), lFrames);
                 InFrames -= lFrames;
             }
@@ -310,7 +306,7 @@ namespace Opaax
         {
             const Uint32 lBlock = Mixer->GetBlockFrames();
 
-            while (bRunning.load(std::memory_order_acquire))
+            while (bRunning.load(EMemoryOrder::Acquire))
             {
                 AudioCommand lCommand;
                 while (Commands->Pop(lCommand))
@@ -318,7 +314,7 @@ namespace Opaax
                     Mixer->Apply(lCommand);
                 }
 
-                while (Ring->GetReadableFrames() < FramesAhead.load(std::memory_order_relaxed) && Ring->GetFreeFrames() >= lBlock)
+                while (Ring->GetReadableFrames() < FramesAhead.load(EMemoryOrder::Relaxed) && Ring->GetFreeFrames() >= lBlock)
                 {
                     Mixer->Mix(ThreadBlock.data(), lBlock);
                     Ring->Write(ThreadBlock.data(), lBlock);
@@ -330,11 +326,11 @@ namespace Opaax
                 }
 
                 // Paced by the device: it wakes this thread each time it takes frames.
-                std::unique_lock<Mutex> lLock(WakeMutex);
+                TUniqueLock<Mutex> lLock(WakeMutex);
                 Wake.wait_for(lLock, MIX_THREAD_WAIT, [this]()
                 {
-                    return !bRunning.load(std::memory_order_acquire)
-                        || Ring->GetReadableFrames() < FramesAhead.load(std::memory_order_relaxed);
+                    return !bRunning.load(EMemoryOrder::Acquire)
+                        || Ring->GetReadableFrames() < FramesAhead.load(EMemoryOrder::Relaxed);
                 });
             }
         }
@@ -347,9 +343,9 @@ namespace Opaax
             const Uint32 lRead = lSelf.Ring->Read(OutFrames, InFrameCount);
             if (lRead < InFrameCount)
             {
-                std::memset(OutFrames + static_cast<size_t>(lRead) * AUDIO_OUTPUT_CHANNELS, 0,
-                            sizeof(float) * (InFrameCount - lRead) * AUDIO_OUTPUT_CHANNELS);
-                lSelf.Underruns.fetch_add(1, std::memory_order_relaxed);
+                Memory::Zero(OutFrames + static_cast<size_t>(lRead) * AUDIO_OUTPUT_CHANNELS,
+                             sizeof(float) * (InFrameCount - lRead) * AUDIO_OUTPUT_CHANNELS);
+                lSelf.Underruns.fetch_add(1, EMemoryOrder::Relaxed);
             }
 
             lSelf.Wake.notify_one();
@@ -373,7 +369,7 @@ namespace Opaax
 
             // The thread first, so the device finds frames ready.
             bHeadless = false;
-            bRunning.store(true, std::memory_order_release);
+            bRunning.store(true, EMemoryOrder::Release);
             MixThread = Thread([this]() { ThreadLoop(); });
 
             AudioDeviceDesc lDesc;
@@ -393,8 +389,8 @@ namespace Opaax
 
             // Ahead by the device's period and two blocks more, so a late wake-up is not a gap.
             const Uint32 lPeriod = Device->GetPeriodFrames();
-            const Uint32 lAhead  = std::max(lBlock * MIN_BLOCKS_AHEAD, ((lPeriod + 2 * lBlock + lBlock - 1) / lBlock) * lBlock);
-            FramesAhead.store(std::min(lAhead, RING_CAPACITY_FRAMES - lBlock));
+            const Uint32 lAhead  = Maths::Max(lBlock * MIN_BLOCKS_AHEAD, ((lPeriod + 2 * lBlock + lBlock - 1) / lBlock) * lBlock);
+            FramesAhead.store(Maths::Min(lAhead, RING_CAPACITY_FRAMES - lBlock));
             Wake.notify_one();
             return true;
         }
@@ -406,7 +402,7 @@ namespace Opaax
                 return;
             }
 
-            bRunning.store(false, std::memory_order_release);
+            bRunning.store(false, EMemoryOrder::Release);
             Wake.notify_all();
             MixThread.join();
         }
@@ -500,7 +496,7 @@ namespace Opaax
         void AddBus(const AudioBusSettings& InBus, const Uint16 InParent)
         {
             BusIndices.emplace(InBus.Name, static_cast<Uint16>(Buses.size()));
-            Buses.push_back(BusView{ InBus.Name, InParent, std::max(InBus.Volume, 0.f) });
+            Buses.push_back(BusView{ InBus.Name, InParent, Maths::Max(InBus.Volume, 0.f) });
         }
 
         /** A bus by name, or -1. Unknown names are logged once. */
@@ -568,7 +564,7 @@ namespace Opaax
             if (InSlot.bSpatial)
             {
                 const Vector2F lOffset = InSlot.Position - Listener;
-                lGain *= AudioSpatial::Attenuate(InSlot.Attenuation, std::sqrt(lOffset.x * lOffset.x + lOffset.y * lOffset.y),
+                lGain *= AudioSpatial::Attenuate(InSlot.Attenuation, Maths::Sqrt(lOffset.x * lOffset.x + lOffset.y * lOffset.y),
                                                  InSlot.MinDistance, InSlot.MaxDistance);
             }
             return lGain;
@@ -657,7 +653,7 @@ namespace Opaax
             lSlot.bPending    = false;
             lSlot.Priority    = InParams.Priority;
             lSlot.StartOrder  = NextStartOrder++;
-            lSlot.Volume      = std::max(InParams.Volume, 0.f);
+            lSlot.Volume      = Maths::Max(InParams.Volume, 0.f);
             lSlot.Fade        = 1.f;
             lSlot.Bus         = ResolveBus(InParams.Bus);
             lSlot.bSpatial    = InParams.bSpatial;
@@ -783,9 +779,9 @@ namespace Opaax
             lImpl.Settings.Buses     = lSettings->Buses;
         }
 
-        lImpl.Settings.SampleRate  = std::clamp(lImpl.Settings.SampleRate, 8000u, 192000u);
-        lImpl.Settings.MaxVoices   = std::max(lImpl.Settings.MaxVoices, 1u);
-        lImpl.Settings.BlockFrames = std::clamp(lImpl.Settings.BlockFrames, 32u, 4096u);
+        lImpl.Settings.SampleRate  = Maths::Clamp(lImpl.Settings.SampleRate, 8000u, 192000u);
+        lImpl.Settings.MaxVoices   = Maths::Max(lImpl.Settings.MaxVoices, 1u);
+        lImpl.Settings.BlockFrames = Maths::Clamp(lImpl.Settings.BlockFrames, 32u, 4096u);
         AudioAPI::SetBackend(lImpl.Settings.Backend);
 
         AudioMixer::Desc lMix;
@@ -853,7 +849,7 @@ namespace Opaax
         lImpl.DrainEvents();
         lImpl.UpdatePending();
 
-        const Uint32 lUnderruns = lImpl.Underruns.load(std::memory_order_relaxed);
+        const Uint32 lUnderruns = lImpl.Underruns.load(EMemoryOrder::Relaxed);
         if (lImpl.ReportedUnderruns == 0 && lUnderruns > 0)
         {
             OPAAX_LOG(LogAudio, Warn, "The audio device ran out of mixed sound (a gap was heard); later gaps are "
@@ -1013,7 +1009,7 @@ namespace Opaax
     {
         if (Impl::Slot* lSlot = m_Impl->Find(InSound))
         {
-            lSlot->Volume = std::max(InVolume, 0.f);
+            lSlot->Volume = Maths::Max(InVolume, 0.f);
             if (!lSlot->bPending)
             {
                 m_Impl->Send(EAudioCommand::SetVolume, InSound, lSlot->Volume);
@@ -1025,7 +1021,7 @@ namespace Opaax
     {
         if (Impl::Slot* lSlot = m_Impl->FindPlaying(InSound))
         {
-            lSlot->Fade = std::max(InVolume, 0.f);
+            lSlot->Fade = Maths::Max(InVolume, 0.f);
             const Uint32 lFrames = SecondsToFrames(InSeconds, m_Impl->Settings.SampleRate);
 
             if (Impl::PendingPlay* lPending = m_Impl->FindPending(InSound))
@@ -1094,7 +1090,7 @@ namespace Opaax
         const Int32 lBus = m_Impl->FindBus(InBus);
         if (lBus >= 0)
         {
-            m_Impl->Buses[lBus].Volume = std::max(InVolume, 0.f);
+            m_Impl->Buses[lBus].Volume = Maths::Max(InVolume, 0.f);
             m_Impl->SendBus(EAudioCommand::SetBusVolume, static_cast<Uint16>(lBus), m_Impl->Buses[lBus].Volume);
         }
     }
@@ -1110,7 +1106,7 @@ namespace Opaax
         const Int32 lBus = m_Impl->FindBus(InBus);
         if (lBus >= 0)
         {
-            m_Impl->Buses[lBus].Fade = std::max(InVolume, 0.f);
+            m_Impl->Buses[lBus].Fade = Maths::Max(InVolume, 0.f);
             m_Impl->SendBus(EAudioCommand::FadeBus, static_cast<Uint16>(lBus), m_Impl->Buses[lBus].Fade,
                             SecondsToFrames(InSeconds, m_Impl->Settings.SampleRate));
         }
@@ -1199,7 +1195,7 @@ namespace Opaax
 
     Uint64 AudioManager::GetVoiceCount() const noexcept
     {
-        return static_cast<Uint64>(std::count_if(m_Impl->Slots.begin(), m_Impl->Slots.end(),
+        return static_cast<Uint64>(Algo::CountIf(m_Impl->Slots,
                                                  [](const Impl::Slot& InSlot) { return InSlot.bActive && !InSlot.bStopping; }));
     }
 
@@ -1214,7 +1210,7 @@ namespace Opaax
         Uint64 lDone = 0;
         while (lDone < InFrameCount)
         {
-            const Uint32 lFrames = static_cast<Uint32>(std::min<Uint64>(InFrameCount - lDone, 1u << 20));
+            const Uint32 lFrames = static_cast<Uint32>(Maths::Min<Uint64>(InFrameCount - lDone, 1u << 20));
             lImpl.Mixer->Mix(OutFrames + lDone * AUDIO_OUTPUT_CHANNELS, lFrames);
             lDone += lFrames;
         }
@@ -1235,6 +1231,6 @@ namespace Opaax
 
     Uint32 AudioManager::GetUnderrunCount() const noexcept
     {
-        return m_Impl->Underruns.load(std::memory_order_relaxed);
+        return m_Impl->Underruns.load(EMemoryOrder::Relaxed);
     }
 }

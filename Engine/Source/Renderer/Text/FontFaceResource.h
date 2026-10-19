@@ -1,7 +1,5 @@
 #pragma once
 
-#include <optional>
-
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Log/Logger.h"
@@ -51,7 +49,7 @@ namespace Opaax
          * @param InPath Absolute UTF-8 path
          * @return The face, or nullopt if the file is unreadable or not a font
          */
-        static std::optional<FontFaceResource> Load(const char* InPath, LoadContext& InCtx);
+        static TOptional<FontFaceResource> Load(const char* InPath, LoadContext& InCtx);
 
         /**
          * Main thread, once: uploads the atlas (R8) and frees the CPU copy. Safe to call twice.

@@ -1,5 +1,7 @@
 #include "World/Serialization/EntityJson.h"
 
+#include "Core/String/OpaaxStringJson.h"
+
 namespace Opaax
 {
     const char* EntityJson::IdToText(OpaaxStringID InId)
@@ -20,16 +22,12 @@ namespace Opaax
             return OpaaxString();
         }
 
-        const std::string lText = lIt->get<std::string>();
-
-        return OpaaxString(lText.c_str(), static_cast<Uint32>(lText.size()));
+        return lIt->get<OpaaxString>();
     }
 
     OpaaxString EntityJson::DumpToString(const nlohmann::json& InJson, int InIndent)
     {
-        const std::string lText = InJson.dump(InIndent);
-
-        return OpaaxString(lText.c_str(), static_cast<Uint32>(lText.size()));
+        return ToJsonText(InJson, InIndent);
     }
 
     Uint64 EntityJson::EntitiesFromJson(const nlohmann::json& InEntities, TDynArray<EntityData>& OutEntities)
@@ -67,7 +65,7 @@ namespace Opaax
                 {
                     if (lTypeName.empty()) { continue; }   // no name to look up
 
-                    lEntity.Components.emplace_back(OpaaxStringID(lTypeName), lPayload);
+                    lEntity.Components.emplace_back(OpaaxStringID(FromJsonString(lTypeName)), lPayload);
                 }
             }
 
@@ -92,7 +90,7 @@ namespace Opaax
             lOrdered.emplace_back(&lRecord);
         }
 
-        std::sort(lOrdered.begin(), lOrdered.end(),
+        Algo::Sort(lOrdered,
             [](const PrefabInstanceRecord* InLeft, const PrefabInstanceRecord* InRight)
             {
                 return InLeft->InstanceId.High != InRight->InstanceId.High
@@ -149,8 +147,7 @@ namespace Opaax
                 for (const auto& [lGuidText, lPatch] : lOverridesIt->items())
                 {
                     PrefabOverrideEntry lEntry;
-                    if (!Guid::FromString(OpaaxString(lGuidText.c_str(), static_cast<Uint32>(lGuidText.size())),
-                                          lEntry.TemplateGuid))
+                    if (!Guid::FromString(FromJsonString(lGuidText), lEntry.TemplateGuid))
                     {
                         // An override naming no entity of the prefab cannot be applied: dropped.
                         continue;

@@ -2,11 +2,12 @@
 
 #ifdef OPAAX_PLATFORM_POSIX
 
-#include <chrono>
 #include <climits>
 #include <cstdlib>
 #include <string>
-#include <thread>
+
+#include "Core/OpaaxTypes.h"
+#include "Core/Time/Clock.h"
 
 #include <unistd.h>
 
@@ -24,8 +25,7 @@ namespace Opaax
 
     double PosixPlatform::GetTimeSeconds() const
     {
-        using namespace std::chrono;
-        return duration<double>(steady_clock::now().time_since_epoch()).count();
+        return Clock::NowSeconds();
     }
 
     OpaaxString PosixPlatform::GetExecutablePath() const

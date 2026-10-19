@@ -3,8 +3,6 @@
 // the render check in CI (Mesa, software OpenGL) and by captures.
 #include <doctest.h>
 
-#include <string>
-
 #include <nlohmann/json.hpp>
 
 #include "Renderer/Components/EnvironmentComponent.h"
@@ -103,5 +101,5 @@ TEST_CASE("Environment: a view's post settings come from it")
     CHECK(lPost.ExposureStops == doctest::Approx(-1.f));
     CHECK(lPost.Tonemapper == ETonemapper::None);
 
-    CHECK(std::string(ToString(ETonemapper::ACES)) == "ACES");
+    CHECK(OpaaxString(ToString(ETonemapper::ACES)) == "ACES");
 }

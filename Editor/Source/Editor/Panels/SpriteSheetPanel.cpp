@@ -1,6 +1,6 @@
 #include "Editor/Panels/SpriteSheetPanel.h"
 
-#include <cstdio>   // snprintf
+#include "Core/String/CString.h"
 
 #include "Editor/EditorContext.h"
 #include "Editor/EditorSpriteSheetDocument.h"
@@ -330,11 +330,11 @@ namespace Opaax::Editor
             char lLabel[160];
             if (lFrame.Name.IsValid())
             {
-                std::snprintf(lLabel, sizeof(lLabel), "%u  %s", i, lFrame.Name.CStr());
+                CString::Format(lLabel, "{}  {}", i, lFrame.Name);
             }
             else
             {
-                std::snprintf(lLabel, sizeof(lLabel), "%u", i);
+                CString::Format(lLabel, "{}", i);
             }
 
             ImGui::PushID(static_cast<int>(i));

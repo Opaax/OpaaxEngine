@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cmath>
+#include "Core/Maths/Maths.h"
 
 #include "Core/Maths/MathTypes.h"
 
@@ -23,7 +23,7 @@ namespace Opaax
          */
         static Bounds2D FromCenterSize(const Vector2F& InCenter, const Vector2F& InSize) noexcept
         {
-            return Bounds2D{ InCenter, { std::fabs(InSize.x) * 0.5f, std::fabs(InSize.y) * 0.5f } };
+            return Bounds2D{ InCenter, { Maths::Abs(InSize.x) * 0.5f, Maths::Abs(InSize.y) * 0.5f } };
         }
 
         /**
@@ -32,10 +32,10 @@ namespace Opaax
         static Bounds2D FromCenterSizeRotated(const Vector2F& InCenter, const Vector2F& InSize,
                                               float InRotationRad) noexcept
         {
-            const float lCos = std::fabs(std::cos(InRotationRad));
-            const float lSin = std::fabs(std::sin(InRotationRad));
-            const float lHx  = std::fabs(InSize.x) * 0.5f;
-            const float lHy  = std::fabs(InSize.y) * 0.5f;
+            const float lCos = Maths::Abs(Maths::Cos(InRotationRad));
+            const float lSin = Maths::Abs(Maths::Sin(InRotationRad));
+            const float lHx  = Maths::Abs(InSize.x) * 0.5f;
+            const float lHy  = Maths::Abs(InSize.y) * 0.5f;
 
             return Bounds2D{ InCenter, { lHx * lCos + lHy * lSin, lHx * lSin + lHy * lCos } };
         }
@@ -63,15 +63,15 @@ namespace Opaax
         /** Inclusive: a point on the edge is inside. */
         bool Contains(const Vector2F& InPoint) const noexcept
         {
-            return std::fabs(InPoint.x - Center.x) <= HalfExtent.x
-                && std::fabs(InPoint.y - Center.y) <= HalfExtent.y;
+            return Maths::Abs(InPoint.x - Center.x) <= HalfExtent.x
+                && Maths::Abs(InPoint.y - Center.y) <= HalfExtent.y;
         }
 
         /** Inclusive: touching counts. */
         bool Intersects(const Bounds2D& InOther) const noexcept
         {
-            return std::fabs(InOther.Center.x - Center.x) <= HalfExtent.x + InOther.HalfExtent.x
-                && std::fabs(InOther.Center.y - Center.y) <= HalfExtent.y + InOther.HalfExtent.y;
+            return Maths::Abs(InOther.Center.x - Center.x) <= HalfExtent.x + InOther.HalfExtent.x
+                && Maths::Abs(InOther.Center.y - Center.y) <= HalfExtent.y + InOther.HalfExtent.y;
         }
 
         /** Grows to also cover InOther. */

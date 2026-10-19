@@ -1,10 +1,8 @@
 #pragma once
 
-#include <atomic>
-#include <string>
-
 #include "Core/Log/Logger.h"
 #include "Core/OpaaxTypes.h"
+#include "Core/String/OpaaxString.hpp"
 #include "Editor/Export/GameExportPlan.hpp"
 
 namespace Opaax::Editor
@@ -40,18 +38,18 @@ namespace Opaax::Editor
          * to InLog (emptied first).
          * @return False (logged) when an export is running, or the name or a path is refused
          */
-        bool Start(const std::string& InWorkspace, const std::string& InGame, const std::string& InDestination,
-                   const std::string& InLog);
+        bool Start(const OpaaxString& InWorkspace, const OpaaxString& InGame, const OpaaxString& InDestination,
+                   const OpaaxString& InLog);
 
         EState GetState() const noexcept { return m_State.load(); }
         bool   IsRunning() const noexcept { return GetState() == EState::Running; }
 
         /** The last export's settings. Stable while it runs. */
-        const std::string& GetDestination() const noexcept { return m_Destination; }
-        const std::string& GetLog() const noexcept { return m_Log; }
+        const OpaaxString& GetDestination() const noexcept { return m_Destination; }
+        const OpaaxString& GetLog() const noexcept { return m_Log; }
 
         /** The step a failed export stopped at, or empty. */
-        std::string GetFailedStep() const;
+        OpaaxString GetFailedStep() const;
 
     private:
         /** The worker: the steps in order, stopping at the first that fails. */
@@ -59,13 +57,13 @@ namespace Opaax::Editor
 
     private:
         Thread                 m_Worker;
-        std::atomic<EState>    m_State{ EState::Idle };
-        std::atomic<Int32>     m_FailedStep{ -1 };
+        TAtomic<EState>        m_State{ EState::Idle };
+        TAtomic<Int32>         m_FailedStep{ -1 };
 
         // Written by Start before the worker starts, read-only while it runs.
         TDynArray<ExportStep> m_Steps;
-        std::string           m_Workspace;
-        std::string           m_Destination;
-        std::string           m_Log;
+        OpaaxString           m_Workspace;
+        OpaaxString           m_Destination;
+        OpaaxString           m_Log;
     };
 }

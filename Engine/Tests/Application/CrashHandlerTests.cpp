@@ -2,33 +2,24 @@
 // process-wide). A real crash is tested with the dev-only --crash-test run.
 #include <doctest.h>
 
+#include "../TestTempDir.h"
+#include "Core/IO/FileIO.h"
+#include "Core/IO/FileSystem.h"
+#include "Core/String/OpaaxPathString.h"
 #include "Platform/CrashHandler.h"
-#include "Core/String/OpaaxUtf8.h"
-
-#include <filesystem>
-#include <fstream>
-#include <string>
 
 using namespace Opaax;
 
 TEST_CASE("CrashHandler: WriteReport writes a report and a copy of the log, without installing")
 {
-    namespace fs = std::filesystem;
+    const TestTempDir lRoot("CrashHandler");
 
-    const fs::path lRoot = fs::temp_directory_path() / "OpaaxCrashHandlerTests";
-    std::error_code lError;
-    fs::remove_all(lRoot, lError);
-    fs::create_directories(lRoot, lError);
-
-    const fs::path lLog = lRoot / "live.log";
-    {
-        std::ofstream lFile(lLog);
-        lFile << "the session so far";
-    }
+    const OpaaxString lLog = lRoot.Sub("live.log");
+    FileIO::WriteAllText(lLog, "the session so far");
 
     {
         CrashHandler lHandler;
-        lHandler.Configure({ Utf8::FromFsPath(lRoot / "Crashes"), Utf8::FromFsPath(lLog), false });
+        lHandler.Configure({ lRoot.Sub("Crashes"), lLog, false });
 
         const OpaaxString lReport = lHandler.WriteReport(nullptr);
 
@@ -36,23 +27,17 @@ TEST_CASE("CrashHandler: WriteReport writes a report and a copy of the log, with
         REQUIRE_FALSE(lReport.IsEmpty());
 
         // A minidump on Windows, a text stack trace elsewhere.
-        const fs::path lReportPath = Utf8::ToFsPath(lReport);
-        CHECK(fs::exists(lReportPath));
-        CHECK(fs::file_size(lReportPath) > 0);
+        TDynArray<Uint8> lReportBytes;
+        CHECK(FileIO::ReadAllBytes(lReport, lReportBytes));
+        CHECK_FALSE(lReportBytes.empty());
 #ifdef OPAAX_PLATFORM_WINDOWS
-        CHECK(lReportPath.extension() == ".dmp");
+        CHECK(PathString::Extension(lReport) == ".dmp");
 #else
-        CHECK(lReportPath.extension() == ".txt");
+        CHECK(PathString::Extension(lReport) == ".txt");
 #endif
 
-        fs::path lLogCopy = lReportPath;
-        lLogCopy.replace_extension(".log");
-        REQUIRE(fs::exists(lLogCopy));
-
-        std::ifstream lCopy(lLogCopy);
-        const std::string lText((std::istreambuf_iterator<char>(lCopy)), std::istreambuf_iterator<char>());
-        CHECK(lText == "the session so far");
+        const OpaaxString lLogCopy = PathString::ReplaceExtension(lReport, ".log");
+        REQUIRE(FileSystem::IsFile(lLogCopy));
+        CHECK(FileIO::ReadAllText(lLogCopy) == "the session so far");
     }
-
-    fs::remove_all(lRoot, lError);
 }

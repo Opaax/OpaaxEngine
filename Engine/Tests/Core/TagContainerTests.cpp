@@ -115,7 +115,7 @@ TEST_CASE("OpaaxTagContainer: json is an array of strings and round-trips")
 
     CHECK(lJson.is_array());
     CHECK(lJson.size() == 2u);
-    CHECK(lJson[0].get<std::string>() == "Damage.Fire.Burn");
+    CHECK(lJson[0].get<OpaaxString>() == "Damage.Fire.Burn");
     CHECK(lJson.get<OpaaxTagContainer>() == lTags);
 
     // Malformed entries drop rather than poisoning the whole component.

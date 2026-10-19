@@ -6,8 +6,8 @@
 // stops fitting in a frame.
 //
 // Skipped by default. Run in Release with: build.bat bench
-#include <cstdio>
-#include <string>
+#include "Core/IO/Console.h"
+#include "Core/String/OpaaxStringJson.h"
 
 #include <doctest.h>
 
@@ -33,12 +33,11 @@ namespace
         NLOHMANN_DEFINE_TYPE_INTRUSIVE(BenchTransform, X, Y, Rotation, ScaleX, ScaleY)
     };
 
-    // std::string, not OpaaxString: the engine has no json bridge for the latter (real components
-    // carry math types — see QuadComponent). The point here is that ONE component allocates a
-    // string per capture, which the sprite slice will make the common case.
+    // A text field, as a sprite's texture path: ONE component allocates a string per capture,
+    // which the sprite slice will make the common case.
     struct BenchSprite
     {
-        std::string Texture = "Textures/Bench.png";
+        OpaaxString Texture = "Textures/Bench.png";
         int         Layer   = 2;
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE(BenchSprite, Texture, Layer)
@@ -68,9 +67,9 @@ namespace
     }
 
     // One authored map's worth of entities, all claiming InMapId so the filtered capture keeps them.
-    void FillWorld(World& InWorld, MapId InMapId, std::uint64_t InCount)
+    void FillWorld(World& InWorld, MapId InMapId, Uint64 InCount)
     {
-        for (std::uint64_t lIndex = 0; lIndex < InCount; ++lIndex)
+        for (Uint64 lIndex = 0; lIndex < InCount; ++lIndex)
         {
             Entity lEntity = InWorld.CreateEntity("BenchEntity", InMapId);
             lEntity.Add<BenchTransform>();
@@ -80,13 +79,12 @@ namespace
 
     // ns/op is per ENTITY; a frame budget is per PASS. Print both — the second is the one that
     // answers "how big can a level get before the check is visible?".
-    void ReportPass(const char* InLabel, const Perf::Result& InResult, std::uint64_t InEntities,
+    void ReportPass(const char* InLabel, const Perf::Result& InResult, Uint64 InEntities,
                     double InBudgetNsPerEntity)
     {
-        std::printf("  [perf] %-38s %9.3f ms/pass  (%llu entities)\n", InLabel,
-                    InResult.MedianNsPerOp * static_cast<double>(InEntities) / 1'000'000.0,
-                    static_cast<unsigned long long>(InEntities));
-        std::fflush(stdout);
+        Console::WriteLine(OpaaxString::Format("  [perf] {:<38} {:9.3f} ms/pass  ({} entities)", InLabel,
+                                               InResult.MedianNsPerOp * static_cast<double>(InEntities) / 1'000'000.0,
+                                               InEntities));
 
         Perf::ReportAndGate(InLabel, InResult, InBudgetNsPerEntity);
     }
@@ -100,7 +98,7 @@ namespace
         CloneCapture  // CaptureWorld, no text          (WorldManager::CloneWorld)
     };
 
-    void RunCase(const char* InLabel, EPath InPath, std::uint64_t InCount, int InEpochs,
+    void RunCase(const char* InLabel, EPath InPath, Uint64 InCount, int InEpochs,
                  double InBudgetNsPerEntity)
     {
         const MapId lMapId("BenchMap");

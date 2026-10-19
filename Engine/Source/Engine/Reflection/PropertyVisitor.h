@@ -1,11 +1,6 @@
 #pragma once
 
-#include <array>
-#include <iterator>
-#include <string_view>
-#include <tuple>
-#include <type_traits>
-#include <utility>
+#include "Core/Templates/TypeTraits.h"
 
 #include "Core/Color/LinearColor.h"
 #include "Core/Maths/MathTypes.h"
@@ -118,7 +113,7 @@ namespace Opaax
         virtual void EndGroup() = 0;
 
         /** A field of a type no visit exists for. It is reported, not dropped. */
-        virtual void VisitUnsupported(const char* InName, std::string_view InTypeName) = 0;
+        virtual void VisitUnsupported(const char* InName, OpaaxStringView InTypeName) = 0;
 
         /** A list. By default each element is visited, named by its index ("[0]"). */
         virtual void VisitList(const char* /*InName*/, IPropertyList& InList, const PropertyMeta& InMeta)
@@ -144,7 +139,7 @@ namespace Opaax
         {
             typename T::DataType;
             requires T::k_IsDataAssetRef;
-            { InValue.Path } -> std::convertible_to<OpaaxString&>;
+            { InValue.Path } -> CConvertibleTo<OpaaxString&>;
         };
 
         template<typename T>
@@ -155,10 +150,10 @@ namespace Opaax
 
         template<typename T>
         inline constexpr bool k_IsPlainVisit =
-            std::is_same_v<T, bool> || std::is_same_v<T, Int16> || std::is_same_v<T, Int32> ||
-            std::is_same_v<T, Uint32> || std::is_same_v<T, float> || std::is_same_v<T, Vector2F> ||
-            std::is_same_v<T, Vector3F> || std::is_same_v<T, Vector4F> || std::is_same_v<T, LinearColor> ||
-            std::is_same_v<T, OpaaxString> || std::is_same_v<T, OpaaxStringID>;
+            TIsSame<T, bool> || TIsSame<T, Int16> || TIsSame<T, Int32> ||
+            TIsSame<T, Uint32> || TIsSame<T, float> || TIsSame<T, Vector2F> ||
+            TIsSame<T, Vector3F> || TIsSame<T, Vector4F> || TIsSame<T, LinearColor> ||
+            TIsSame<T, OpaaxString> || TIsSame<T, OpaaxStringID>;
 
         /** The labels of E, built once. */
         template<CEnumWithValues E>
@@ -166,7 +161,7 @@ namespace Opaax
         {
             static const auto s_Labels = []
             {
-                std::array<const char*, std::size(TEnumValues<E>::Values)> lLabels{};
+                TFixedArray<const char*, ArraySize(TEnumValues<E>::Values)> lLabels{};
                 for (Uint64 i = 0; i < lLabels.size(); ++i) { lLabels[i] = ToString(TEnumValues<E>::Values[i]); }
                 return lLabels;
             }();
@@ -205,7 +200,7 @@ namespace Opaax
         {
             if (InFirst < m_Values.size() && InSecond < m_Values.size())
             {
-                std::swap(m_Values[InFirst], m_Values[InSecond]);
+                Opaax::Swap(m_Values[InFirst], m_Values[InSecond]);
             }
         }
 
@@ -244,7 +239,7 @@ namespace Opaax
         }
         else if constexpr (CEnumWithValues<TValue>)
         {
-            constexpr Uint32 lCount = static_cast<Uint32>(std::size(TEnumValues<TValue>::Values));
+            constexpr Uint32 lCount = static_cast<Uint32>(ArraySize(TEnumValues<TValue>::Values));
 
             Uint32 lIndex = 0;
             for (Uint32 i = 0; i < lCount; ++i)
@@ -266,7 +261,7 @@ namespace Opaax
         {
             InVisitor.VisitDataAssetRef(InName, InValue.Path, DeriveTypeLeafName<typename TValue::DataType>(), InMeta);
         }
-        else if constexpr (k_IsList<TValue> && !std::is_same_v<TValue, TDynArray<bool>>)
+        else if constexpr (k_IsList<TValue> && !TIsSame<TValue, TDynArray<bool>>)
         {
             TPropertyList<typename TValue::value_type> lList(InValue);
             InVisitor.VisitList(InName, lList, InMeta);
@@ -283,7 +278,7 @@ namespace Opaax
     template<CReflected TOwner>
     void VisitProperties(TOwner& InOwner, IPropertyVisitor& InVisitor, const PropertyMeta& InInherited)
     {
-        std::apply([&InOwner, &InVisitor, &InInherited](const auto&... lProperties)
+        TupleApply([&InOwner, &InVisitor, &InInherited](const auto&... lProperties)
                    {
                        (VisitValue(InVisitor, lProperties.Name, InOwner.*(lProperties.Member),
                                    InheritMeta(lProperties.Meta, InInherited)), ...);

@@ -7,6 +7,7 @@
 set(OPAAX_TEST_SOURCES
     Main.cpp
     SmokeTest.cpp
+    TestTempDir.cpp
 
     # Audio
     Audio/AudioBankTests.cpp
@@ -18,28 +19,37 @@ set(OPAAX_TEST_SOURCES
     Automation/AutomationTests.cpp
 
     # Core
+    Core/AlgoTests.cpp
     Core/ColorTests.cpp
+    Core/CStringTests.cpp
     Core/Config/EngineConfigDataTests.cpp
     Core/GuidTests.cpp
     Core/Image/PngWriterTests.cpp
+    Core/IO/FileSystemTests.cpp
     Core/Log/LogHistoryTests.cpp
     Core/Log/LoggerTests.cpp
     Core/Maths/AngleTests.cpp
     Core/Maths/Bounds2DTests.cpp
+    Core/Maths/MathsTests.cpp
     Core/PathStringTests.cpp
     Core/Profiling/StatsTests.cpp
     Core/Reflection/EnumTests.cpp
     Core/Reflection/PropertyJsonTests.cpp
     Core/Reflection/PropertyTests.cpp
     Core/Reflection/PropertyVisitorTests.cpp
+    Core/StdInteropTests.cpp
     Core/StringIDTests.cpp
     Core/StringTests.cpp
     Core/StringViewTests.cpp
     Core/TagContainerTests.cpp
     Core/TagTests.cpp
+    Core/TimeTests.cpp
+    Core/TypesTests.cpp
+    Core/TypeTraitsTests.cpp
 
     # Application services and platform
     Application/AppServiceLocatorTests.cpp
+    Application/CommandLineTests.cpp
     Application/CrashHandlerTests.cpp
     Application/FileSystemTests.cpp
     Application/IConfigSystemTests.cpp
@@ -180,3 +190,6 @@ target_compile_definitions(OpaaxTests PRIVATE DOCTEST_CONFIG_USE_STD_HEADERS)
 target_compile_definitions(OpaaxTests PRIVATE OPAAX_TEST_ENGINE_ASSETS="${CMAKE_CURRENT_SOURCE_DIR}/../Assets")
 
 add_test(NAME OpaaxTests COMMAND OpaaxTests)
+
+# std stays behind the core types: lists any use outside the files that wrap it (AGENTS.md).
+add_test(NAME StdUse COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/../../CMake/CheckStdUse.cmake)

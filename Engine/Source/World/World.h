@@ -200,10 +200,10 @@ namespace Opaax
         // Iteration
     public:
         template<typename T, typename TFunc>
-        void Each(TFunc&& InFunc) { m_Registry.view<T>().each(std::forward<TFunc>(InFunc)); }
+        void Each(TFunc&& InFunc) { m_Registry.view<T>().each(Forward<TFunc>(InFunc)); }
 
         template<typename A, typename B, typename TFunc>
-        void Each(TFunc&& InFunc) { m_Registry.view<A, B>().each(std::forward<TFunc>(InFunc)); }
+        void Each(TFunc&& InFunc) { m_Registry.view<A, B>().each(Forward<TFunc>(InFunc)); }
         
         // End Iteration
         // =========================================================================

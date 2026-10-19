@@ -3,8 +3,7 @@
 // File cases use a unique temp directory, created and removed per case.
 #include <doctest.h>
 
-#include <filesystem>
-#include <string>
+#include "../TestTempDir.h"
 
 #include "Core/IO/FileIO.h"
 #include "Resources/ResourceManager.h"        // completes LoadContext
@@ -19,37 +18,6 @@ using namespace Opaax;
 
 namespace
 {
-    namespace fs = std::filesystem;
-
-    class ScopedTempDir
-    {
-    public:
-        explicit ScopedTempDir(const char* InTag)
-        {
-            m_Path = fs::temp_directory_path() / ("OpaaxAnimTests_" + std::string(InTag));
-
-            std::error_code lError;
-            fs::remove_all(m_Path, lError);          // a previous crashed run must not poison this one
-            fs::create_directories(m_Path, lError);
-        }
-
-        ~ScopedTempDir()
-        {
-            std::error_code lError;
-            fs::remove_all(m_Path, lError);
-        }
-
-        ScopedTempDir(const ScopedTempDir&)            = delete;
-        ScopedTempDir& operator=(const ScopedTempDir&) = delete;
-
-        OpaaxString Sub(const char* InRel) const
-        {
-            return OpaaxString((m_Path / InRel).generic_string().c_str());
-        }
-
-    private:
-        fs::path m_Path;
-    };
 
     /** A sheet-based clip of InStepCount steps, one tick each, at 1 fps. */
     AnimationClipData MakeProbeClip(const Uint32 InStepCount, const EAnimPlayMode InMode)
@@ -251,7 +219,7 @@ TEST_CASE("StepAt: out of range answers NULL rather than clamping")
 // =============================================================================
 TEST_CASE("AnimationClipFile: save then load round-trips every field")
 {
-    const ScopedTempDir lDir("roundtrip");
+    const TestTempDir   lDir("roundtrip");
     const OpaaxString   lPath = lDir.Sub("Hero_Idle.opaaxclip");
 
     AnimationClipData lSaved = MakeProbeClip(3u, EAnimPlayMode::PingPong);
@@ -287,7 +255,7 @@ TEST_CASE("AnimationClipFile: the text a save writes is the text a save writes a
 
     CHECK(AnimationClipFile::Serialize(lData) == AnimationClipFile::Serialize(lData));
 
-    const ScopedTempDir lDir("stable");
+    const TestTempDir   lDir("stable");
     const OpaaxString   lPath = lDir.Sub("Stable.opaaxclip");
     REQUIRE(AnimationClipFile::Save(lPath, lData));
 
@@ -299,7 +267,7 @@ TEST_CASE("AnimationClipFile: the text a save writes is the text a save writes a
 
 TEST_CASE("AnimationClipFile: a missing or malformed file leaves the caller's data untouched")
 {
-    const ScopedTempDir lDir("bad");
+    const TestTempDir lDir("bad");
 
     AnimationClipData lExisting = MakeProbeClip(3u, EAnimPlayMode::Loop);
 
@@ -316,7 +284,7 @@ TEST_CASE("AnimationClipFile: a missing or malformed file leaves the caller's da
 
 TEST_CASE("AnimationClipFile: a file missing keys keeps the defaults (_WITH_DEFAULT)")
 {
-    const ScopedTempDir lDir("partial");
+    const TestTempDir lDir("partial");
 
     // Adding a field must not break clips saved before it.
     const OpaaxString lPartial = lDir.Sub("Partial.opaaxclip");
@@ -332,7 +300,7 @@ TEST_CASE("AnimationClipFile: a file missing keys keeps the defaults (_WITH_DEFA
 
 TEST_CASE("AnimationClipFile: a wrong TYPE and an unknown PlayMode label are both refused")
 {
-    const ScopedTempDir lDir("wrong");
+    const TestTempDir lDir("wrong");
 
     const OpaaxString lWrongType = lDir.Sub("WrongType.opaaxclip");
     REQUIRE(FileIO::WriteAllText(lWrongType, OpaaxString("{\n    \"Fps\": \"fast\"\n}")));
@@ -363,7 +331,7 @@ TEST_SUITE("AnimationClipResource")
 
     TEST_CASE("loads a real .opaaxclip off disk")
     {
-        const ScopedTempDir lDir("res_load");
+        const TestTempDir   lDir("res_load");
         const OpaaxString   lPath = lDir.Sub("Hero_Run.opaaxclip");
 
         AnimationClipData lAuthored = MakeProbeClip(4u, EAnimPlayMode::Loop);
@@ -371,7 +339,7 @@ TEST_SUITE("AnimationClipResource")
         REQUIRE(AnimationClipFile::Save(lPath, lAuthored));
 
         LoadFixture lFixture;
-        std::optional<AnimationClipResource> lClip = AnimationClipResource::Load(lPath.CStr(), lFixture.Ctx);
+        TOptional<AnimationClipResource> lClip = AnimationClipResource::Load(lPath.CStr(), lFixture.Ctx);
 
         REQUIRE(lClip.has_value());
         CHECK(lClip->Data.StepCount() == 4u);
@@ -385,7 +353,7 @@ TEST_SUITE("AnimationClipResource")
 
     TEST_CASE("a missing or malformed clip is REFUSED, not half-loaded")
     {
-        const ScopedTempDir lDir("res_bad");
+        const TestTempDir lDir("res_bad");
 
         LoadFixture lFixture;
 
@@ -414,7 +382,7 @@ TEST_SUITE("AnimationClipResource")
     {
         // A failed claim: IsValid() is false, but Get() still returns the placeholder.
         // Check IsValid(), not Get() != nullptr.
-        const ScopedTempDir lDir("res_degrade");
+        const TestTempDir   lDir("res_degrade");
         const OpaaxString   lPath = lDir.Sub("Broken.opaaxclip");
         REQUIRE(FileIO::WriteAllText(lPath, OpaaxString("[]")));
 
@@ -522,7 +490,7 @@ TEST_SUITE("AnimationLibrary")
 
     TEST_CASE("AnimationLibraryFile: save then load round-trips the names and the default")
     {
-        const ScopedTempDir lDir("lib_roundtrip");
+        const TestTempDir   lDir("lib_roundtrip");
         const OpaaxString   lPath = lDir.Sub("Hero.opaaxanim");
 
         const AnimationLibraryData lSaved = MakeProbeLibrary();
@@ -543,7 +511,7 @@ TEST_SUITE("AnimationLibrary")
 
     TEST_CASE("AnimationLibraryFile: a malformed file leaves the caller's data untouched")
     {
-        const ScopedTempDir lDir("lib_bad");
+        const TestTempDir lDir("lib_bad");
 
         AnimationLibraryData lExisting = MakeProbeLibrary();
 

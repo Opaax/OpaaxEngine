@@ -1,12 +1,12 @@
 #include "Editor/Automation/EditorAutomationCommands.h"
 
-#include <filesystem>
-#include <string>
-
 #include "Application/Services/IEngine.h"
 #include "Application/Services/IPaths.h"
 #include "Automation/AutomationRunner.h"
 #include "Automation/EngineAutomationCommands.h"
+#include "Core/IO/FileSystem.h"
+#include "Core/String/OpaaxPathString.h"
+#include "Core/String/OpaaxStringJson.h"
 #include "Core/Tag/OpaaxTag.h"
 #include "Editor/Commands/EditorNativeCommands.h"
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
@@ -39,7 +39,7 @@ namespace Opaax::Editor::EditorAutomation
 {
     namespace
     {
-        World* ActiveWorld(EditorContext& InContext, std::string& OutError)
+        World* ActiveWorld(EditorContext& InContext, OpaaxString& OutError)
         {
             World* const lWorld = InContext.Worlds.GetActiveWorld();
             if (lWorld == nullptr)
@@ -64,25 +64,24 @@ namespace Opaax::Editor::EditorAutomation
         {
             if (!InContext.Extensions.Commands().Execute(InTag, InContext))
             {
-                return AutomationResult::Fail("the command '" + std::string(InTag.ToString().CStr())
+                return AutomationResult::Fail("the command '" + InTag.ToString()
                                               + "' does not exist or takes arguments (see the log)");
             }
             return WorldState(InContext);
         }
 
         /** InPath made absolute: kept when absolute, else under the project's assets. */
-        OpaaxString ToAbsolute(EditorContext& InContext, const std::string& InPath)
+        OpaaxString ToAbsolute(EditorContext& InContext, const OpaaxString& InPath)
         {
-            const std::filesystem::path lAsPath(InPath);
-            return lAsPath.is_absolute() ? OpaaxString(lAsPath.generic_string().c_str())
-                                         : InContext.Paths.AssetToAbsolute(OpaaxString(InPath.c_str()));
+            return PathString::IsAbsolute(InPath) ? PathString::Generic(InPath)
+                                                  : InContext.Paths.AssetToAbsolute(InPath);
         }
 
         /** An absolute path from InParams["path"]: kept when absolute, else under the project's assets. */
-        bool AssetPath(EditorContext& InContext, const nlohmann::json& InParams, OpaaxString& OutPath, std::string& OutError)
+        bool AssetPath(EditorContext& InContext, const nlohmann::json& InParams, OpaaxString& OutPath, OpaaxString& OutError)
         {
-            const std::string lPath = InParams.value("path", std::string());
-            if (lPath.empty())
+            const OpaaxString lPath = InParams.value("path", OpaaxString());
+            if (lPath.IsEmpty())
             {
                 OutError = "\"path\" names the file (absolute, or relative to the project's assets)";
                 return false;
@@ -97,29 +96,29 @@ namespace Opaax::Editor::EditorAutomation
          * (with OutError, naming InKey) otherwise.
          */
         bool NewFilePath(EditorContext& InContext, const OpaaxString& InPath, const char* InKey, const char* InExtension,
-                         std::string& OutError)
+                         OpaaxString& OutError)
         {
             const OpaaxString lAssetRel = InContext.Paths.AbsoluteToAsset(InPath);
             if (lAssetRel.IsEmpty())
             {
-                OutError = "\"" + std::string(InKey) + "\" is outside the project's assets: '" + InPath.CStr() + "'";
+                OutError = OpaaxString::Format("\"{}\" is outside the project's assets: '{}'", InKey, InPath);
                 return false;
             }
             if (!NewLevelPlan::HasExtension(lAssetRel, InExtension))
             {
-                OutError = "\"" + std::string(InKey) + "\" names a " + InExtension + " file: '" + lAssetRel.CStr() + "'";
+                OutError = OpaaxString::Format("\"{}\" names a {} file: '{}'", InKey, InExtension, lAssetRel);
                 return false;
             }
             if (InContext.FileSystem.IsPathExist(InPath))
             {
-                OutError = "'" + std::string(lAssetRel.CStr()) + "' already exists: open it, or name another \"" + InKey + "\"";
+                OutError = OpaaxString::Format("'{}' already exists: open it, or name another \"{}\"", lAssetRel, InKey);
                 return false;
             }
             return true;
         }
 
         /** Fails a request that only makes sense while editing. */
-        bool IsEditing(EditorContext& InContext, std::string& OutError)
+        bool IsEditing(EditorContext& InContext, OpaaxString& OutError)
         {
             const World* const lWorld = InContext.Worlds.GetActiveWorld();
             if (lWorld == nullptr || lWorld->GetMode() != EWorldMode::Edit)
@@ -135,7 +134,7 @@ namespace Opaax::Editor::EditorAutomation
          * OutError) when it did not open: refused, Play running, or a file that is not a level.
          */
         bool OpenLevel(EditorContext& InContext, const OpaaxString& InPath, const nlohmann::json& InParams,
-                       std::string& OutError)
+                       OpaaxString& OutError)
         {
             if (!IsEditing(InContext, OutError))
             {
@@ -143,7 +142,7 @@ namespace Opaax::Editor::EditorAutomation
             }
             if (!InContext.FileSystem.IsPathExist(InPath))
             {
-                OutError = "no file at '" + std::string(InPath.CStr()) + "'";
+                OutError = "no file at '" + InPath + "'";
                 return false;
             }
 
@@ -158,7 +157,7 @@ namespace Opaax::Editor::EditorAutomation
         }
 
         /** InParams["entity"] in the active world. */
-        Entity FindEntity(EditorContext& InContext, const nlohmann::json& InParams, std::string& OutError)
+        Entity FindEntity(EditorContext& InContext, const nlohmann::json& InParams, OpaaxString& OutError)
         {
             World* const lWorld = ActiveWorld(InContext, OutError);
             return (lWorld != nullptr) ? EngineAutomation::FindEntity(*lWorld, InParams, OutError) : Entity{};
@@ -168,7 +167,7 @@ namespace Opaax::Editor::EditorAutomation
          * Changes the component InParams describes. In the edit world it is an undo step, as an
          * Inspector edit; in Play the clone is changed directly.
          */
-        bool EditComponent(EditorContext& InContext, Entity InEntity, const nlohmann::json& InParams, std::string& OutError)
+        bool EditComponent(EditorContext& InContext, Entity InEntity, const nlohmann::json& InParams, OpaaxString& OutError)
         {
             const ComponentRegistry& lTypes = InContext.Engine.GetRegistries().Components();
 
@@ -251,7 +250,7 @@ namespace Opaax::Editor::EditorAutomation
                         {
                             return lResult;
                         }
-                        return AutomationResult::Fail("the editor asked \"" + std::string(lAsked.front().CStr())
+                        return AutomationResult::Fail("the editor asked \"" + lAsked.front()
                                                       + "\", which a script cannot answer, so nothing was done: "
                                                       + InInstead);
                     });
@@ -286,12 +285,12 @@ namespace Opaax::Editor::EditorAutomation
                 "Runs an editor command that takes no arguments by its {tag} (\"Editor.Command.FocusSelected\"...).",
                 [&InContext](const nlohmann::json& InParams)
                 {
-                    const std::string lTag = InParams.value("tag", std::string());
-                    if (!OpaaxTag::IsValidTagText(OpaaxStringView(lTag.c_str())))
+                    const OpaaxString lTag = InParams.value("tag", OpaaxString());
+                    if (!OpaaxTag::IsValidTagText(lTag))
                     {
                         return AutomationResult::Fail("\"tag\" is a command tag, like Editor.Command.Undo");
                     }
-                    return Dispatch(InContext, OpaaxTag(lTag.c_str()));
+                    return Dispatch(InContext, OpaaxTag(lTag));
                 });
         }
 
@@ -305,8 +304,8 @@ namespace Opaax::Editor::EditorAutomation
                 "elsewhere. Answered when done (it takes minutes), with the output's log.",
                 [&InContext](const nlohmann::json& InParams)
                 {
-                    const std::string lPath = InParams.value("path", std::string());
-                    if (lPath.empty() || !ExportOps::Start(InContext, std::filesystem::absolute(lPath).generic_string()))
+                    const OpaaxString lPath = InParams.value("path", OpaaxString());
+                    if (lPath.IsEmpty() || !ExportOps::Start(InContext, FileSystem::MakeAbsolute(lPath)))
                     {
                         return AutomationResult::Fail("the export did not start (see the log): a folder is needed, and "
                                                       "one export at a time");
@@ -334,7 +333,7 @@ namespace Opaax::Editor::EditorAutomation
                 [&InContext](const nlohmann::json& InParams)
                 {
                     OpaaxString lPath;
-                    std::string lError;
+                    OpaaxString lError;
                     if (!AssetPath(InContext, InParams, lPath, lError) || !OpenLevel(InContext, lPath, InParams, lError))
                     {
                         return AutomationResult::Fail(lError);
@@ -350,7 +349,7 @@ namespace Opaax::Editor::EditorAutomation
                 [&InContext](const nlohmann::json& InParams)
                 {
                     OpaaxString lPath;
-                    std::string lError;
+                    OpaaxString lError;
                     if (!AssetPath(InContext, InParams, lPath, lError) || !OpenLevel(InContext, lPath, InParams, lError))
                     {
                         return AutomationResult::Fail(lError);
@@ -368,7 +367,7 @@ namespace Opaax::Editor::EditorAutomation
                 [&InContext](const nlohmann::json& InParams)
                 {
                     OpaaxString lPath;
-                    std::string lError;
+                    OpaaxString lError;
                     if (!AssetPath(InContext, InParams, lPath, lError))
                     {
                         return AutomationResult::Fail(lError);
@@ -386,15 +385,15 @@ namespace Opaax::Editor::EditorAutomation
                 [&InContext](const nlohmann::json& InParams)
                 {
                     OpaaxString lLevel;
-                    std::string lError;
+                    OpaaxString lError;
                     if (!AssetPath(InContext, InParams, lLevel, lError) || !IsEditing(InContext, lError)
                         || !NewFilePath(InContext, lLevel, "path", LevelFile::LEVEL_EXTENSION, lError))
                     {
                         return AutomationResult::Fail(lError);
                     }
 
-                    const std::string lMapParam = InParams.value("map", std::string());
-                    const OpaaxString lMap      = lMapParam.empty()
+                    const OpaaxString lMapParam = InParams.value("map", OpaaxString());
+                    const OpaaxString lMap      = lMapParam.IsEmpty()
                         ? InContext.Paths.AssetToAbsolute(NewLevelPlan::DefaultMap(InContext.Paths.AbsoluteToAsset(lLevel)))
                         : ToAbsolute(InContext, lMapParam);
                     if (!NewFilePath(InContext, lMap, "map", MapFile::MAP_EXTENSION, lError))
@@ -422,7 +421,7 @@ namespace Opaax::Editor::EditorAutomation
                 [&InContext](const nlohmann::json& InParams)
                 {
                     OpaaxString lPath;
-                    std::string lError;
+                    OpaaxString lError;
                     if (!AssetPath(InContext, InParams, lPath, lError) || !IsEditing(InContext, lError)
                         || !NewFilePath(InContext, lPath, "path", MapFile::MAP_EXTENSION, lError))
                     {
@@ -448,7 +447,7 @@ namespace Opaax::Editor::EditorAutomation
                 "focused map.",
                 [&InContext](const nlohmann::json&)
                 {
-                    std::string lError;
+                    OpaaxString lError;
                     if (!IsEditing(InContext, lError))
                     {
                         return AutomationResult::Fail(lError);
@@ -509,7 +508,7 @@ namespace Opaax::Editor::EditorAutomation
                     }
 
                     OpaaxString lPath;
-                    std::string lError;
+                    OpaaxString lError;
                     if (!AssetPath(InContext, InParams, lPath, lError) || !IsEditing(InContext, lError)
                         || !NewFilePath(InContext, lPath, "path", MapFile::MAP_EXTENSION, lError))
                     {
@@ -531,7 +530,7 @@ namespace Opaax::Editor::EditorAutomation
                 [&InContext](const nlohmann::json& InParams)
                 {
                     OpaaxString lPath;
-                    std::string lError;
+                    OpaaxString lError;
                     if (!AssetPath(InContext, InParams, lPath, lError) || !IsEditing(InContext, lError))
                     {
                         return AutomationResult::Fail(lError);
@@ -543,13 +542,12 @@ namespace Opaax::Editor::EditorAutomation
                     }
                     if (!InContext.FileSystem.IsPathExist(lPath))
                     {
-                        return AutomationResult::Fail("no file at '" + std::string(lPath.CStr())
-                                                      + "': map.new creates a map");
+                        return AutomationResult::Fail("no file at '" + lPath + "': map.new creates a map");
                     }
 
-                    const std::string  lAssetRel = InContext.Paths.AbsoluteToAsset(lPath).CStr();
+                    const OpaaxString  lAssetRel = InContext.Paths.AbsoluteToAsset(lPath);
                     const Level* const lLevel    = MapOps::ActiveLevel(InContext);
-                    if (lAssetRel.empty())
+                    if (lAssetRel.IsEmpty())
                     {
                         return AutomationResult::Fail("a level only names maps of the project's assets");
                     }
@@ -561,7 +559,7 @@ namespace Opaax::Editor::EditorAutomation
                     // Each reason a level refuses the map, said before trying.
                     for (const OpaaxString& lListed : lLevel->GetData().Maps)
                     {
-                        if (lListed == OpaaxString(lAssetRel.c_str()))
+                        if (lListed == lAssetRel)
                         {
                             return AutomationResult::Fail("'" + lAssetRel + "' is in the level already");
                         }
@@ -603,11 +601,11 @@ namespace Opaax::Editor::EditorAutomation
                 "{type: values}. Undoable; returns the entity.",
                 [&InContext](const nlohmann::json& InParams)
                 {
-                    const std::string lName = InParams.value("name", std::string("Entity"));
-                    const std::string lMap  = InParams.value("map", std::string());
-                    const MapId       lOwner = lMap.empty() ? InContext.MapDocument.GetMapId() : MapId(lMap.c_str());
+                    const OpaaxString lName = InParams.value("name", OpaaxString("Entity"));
+                    const OpaaxString lMap  = InParams.value("map", OpaaxString());
+                    const MapId       lOwner = lMap.IsEmpty() ? InContext.MapDocument.GetMapId() : MapId(lMap);
 
-                    Entity lEntity = EntityOps::Create(InContext, lOwner, OpaaxString(lName.c_str()));
+                    Entity lEntity = EntityOps::Create(InContext, lOwner, lName);
                     if (!lEntity.IsValid())
                     {
                         return AutomationResult::Fail("the entity was not created (Play running, or no map: see the log)");
@@ -618,7 +616,7 @@ namespace Opaax::Editor::EditorAutomation
                     {
                         for (const auto& [lType, lValue] : lComponents->items())
                         {
-                            std::string lError;
+                            OpaaxString lError;
                             if (!EditComponent(InContext, lEntity, nlohmann::json{ { "type", lType }, { "value", lValue } }, lError))
                             {
                                 return AutomationResult::Fail(lError);
@@ -632,7 +630,7 @@ namespace Opaax::Editor::EditorAutomation
             InCommands.Register("entity.destroy", "Destroys {entity} (id or name), as Delete would. Undoable.",
                 [&InContext](const nlohmann::json& InParams)
                 {
-                    std::string  lError;
+                    OpaaxString  lError;
                     const Entity lEntity = FindEntity(InContext, InParams, lError);
                     if (!lEntity.IsValid())
                     {
@@ -652,7 +650,7 @@ namespace Opaax::Editor::EditorAutomation
                     nlohmann::json lSelected = nlohmann::json::array();
                     for (const nlohmann::json& lRef : InParams.value("entities", nlohmann::json::array()))
                     {
-                        std::string  lError;
+                        OpaaxString  lError;
                         const Entity lEntity = FindEntity(InContext, nlohmann::json{ { "entity", lRef } }, lError);
                         if (!lEntity.IsValid())
                         {
@@ -667,15 +665,15 @@ namespace Opaax::Editor::EditorAutomation
             InCommands.Register("component.add", "Adds the component {type} to {entity}, with its defaults. Undoable.",
                 [&InContext](const nlohmann::json& InParams)
                 {
-                    std::string  lError;
+                    OpaaxString  lError;
                     const Entity lEntity = FindEntity(InContext, InParams, lError);
                     if (!lEntity.IsValid())
                     {
                         return AutomationResult::Fail(lError);
                     }
 
-                    const std::string lType = InParams.value("type", std::string());
-                    if (!EntityOps::AddComponent(InContext, lEntity, OpaaxStringID(lType.c_str())))
+                    const OpaaxString lType = InParams.value("type", OpaaxString());
+                    if (!EntityOps::AddComponent(InContext, lEntity, OpaaxStringID(lType)))
                     {
                         return AutomationResult::Fail("'" + lType + "' was not added (unknown, or already there)");
                     }
@@ -685,15 +683,15 @@ namespace Opaax::Editor::EditorAutomation
             InCommands.Register("component.remove", "Removes the component {type} from {entity}. Undoable.",
                 [&InContext](const nlohmann::json& InParams)
                 {
-                    std::string  lError;
+                    OpaaxString  lError;
                     const Entity lEntity = FindEntity(InContext, InParams, lError);
                     if (!lEntity.IsValid())
                     {
                         return AutomationResult::Fail(lError);
                     }
 
-                    const std::string lType = InParams.value("type", std::string());
-                    if (!EntityOps::RemoveComponent(InContext, lEntity, OpaaxStringID(lType.c_str())))
+                    const OpaaxString lType = InParams.value("type", OpaaxString());
+                    if (!EntityOps::RemoveComponent(InContext, lEntity, OpaaxStringID(lType)))
                     {
                         return AutomationResult::Fail("'" + lType + "' was not removed (absent, or every entity needs it)");
                     }
@@ -705,7 +703,7 @@ namespace Opaax::Editor::EditorAutomation
                 "keeping where it is in the world. Undoable.",
                 [&InContext](const nlohmann::json& InParams)
                 {
-                    std::string  lError;
+                    OpaaxString  lError;
                     const Entity lChild = FindEntity(InContext, InParams, lError);
                     if (!lChild.IsValid())
                     {
@@ -713,7 +711,7 @@ namespace Opaax::Editor::EditorAutomation
                     }
 
                     EntityID lParent = ENTITY_NONE;
-                    if (const std::string lRef = InParams.value("parent", std::string()); !lRef.empty())
+                    if (const OpaaxString lRef = InParams.value("parent", OpaaxString()); !lRef.IsEmpty())
                     {
                         const Entity lFound = FindEntity(InContext, nlohmann::json{ { "entity", lRef } }, lError);
                         if (!lFound.IsValid())
@@ -734,15 +732,15 @@ namespace Opaax::Editor::EditorAutomation
             InCommands.Register("entity.rename", "Renames {entity} to {name}. Undoable.",
                 [&InContext](const nlohmann::json& InParams)
                 {
-                    std::string  lError;
+                    OpaaxString  lError;
                     const Entity lEntity = FindEntity(InContext, InParams, lError);
-                    const std::string lName = InParams.value("name", std::string());
-                    if (!lEntity.IsValid() || lName.empty())
+                    const OpaaxString lName = InParams.value("name", OpaaxString());
+                    if (!lEntity.IsValid() || lName.IsEmpty())
                     {
                         return AutomationResult::Fail(lEntity.IsValid() ? "\"name\" is the new name" : lError);
                     }
 
-                    EntityOps::Rename(InContext, lEntity, OpaaxString(lName.c_str()));
+                    EntityOps::Rename(InContext, lEntity, lName);
                     return AutomationResult::Ok(Describe(InContext, lEntity));
                 });
 
@@ -752,7 +750,7 @@ namespace Opaax::Editor::EditorAutomation
                 "Undoable in the edit world.",
                 [&InContext](const nlohmann::json& InParams)
                 {
-                    std::string  lError;
+                    OpaaxString  lError;
                     const Entity lEntity = FindEntity(InContext, InParams, lError);
                     if (!lEntity.IsValid() || !EditComponent(InContext, lEntity, InParams, lError))
                     {
@@ -773,7 +771,7 @@ namespace Opaax::Editor::EditorAutomation
                 [&InContext](const nlohmann::json& InParams)
                 {
                     OpaaxString lPath;
-                    std::string lError;
+                    OpaaxString lError;
                     if (!AssetPath(InContext, InParams, lPath, lError))
                     {
                         return AutomationResult::Fail(lError);
@@ -808,7 +806,7 @@ namespace Opaax::Editor::EditorAutomation
                 [&InContext](const nlohmann::json& InParams)
                 {
                     OpaaxString lPath;
-                    std::string lError;
+                    OpaaxString lError;
                     if (!AssetPath(InContext, InParams, lPath, lError))
                     {
                         return AutomationResult::Fail(lError);
@@ -846,15 +844,15 @@ namespace Opaax::Editor::EditorAutomation
                 "refuses a file that exists.",
                 [&InContext](const nlohmann::json& InParams)
                 {
-                    const std::string lBaseParam = InParams.value("prefab", std::string());
-                    if (lBaseParam.empty())
+                    const OpaaxString lBaseParam = InParams.value("prefab", OpaaxString());
+                    if (lBaseParam.IsEmpty())
                     {
                         return AutomationResult::Fail("\"prefab\" names the prefab the variant is made from");
                     }
 
                     const OpaaxString lBase = ToAbsolute(InContext, lBaseParam);
                     OpaaxString       lPath;
-                    std::string       lError;
+                    OpaaxString       lError;
                     if (!AssetPath(InContext, InParams, lPath, lError)
                         || !NewFilePath(InContext, lPath, "path", PrefabFile::PREFAB_EXTENSION, lError))
                     {
@@ -862,7 +860,7 @@ namespace Opaax::Editor::EditorAutomation
                     }
                     if (!InContext.FileSystem.IsPathExist(lBase))
                     {
-                        return AutomationResult::Fail("no prefab at '" + std::string(lBase.CStr()) + "'");
+                        return AutomationResult::Fail("no prefab at '" + lBase + "'");
                     }
 
                     EditorPrefabDocument& lDocument = InContext.PrefabDocument;
@@ -916,7 +914,7 @@ namespace Opaax::Editor::EditorAutomation
                 [&InContext](const nlohmann::json& InParams)
                 {
                     OpaaxString lPath;
-                    std::string lError;
+                    OpaaxString lError;
                     if (!AssetPath(InContext, InParams, lPath, lError)
                         || !NewFilePath(InContext, lPath, "path", UICanvasFile::UI_EXTENSION, lError))
                     {

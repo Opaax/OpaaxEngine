@@ -51,7 +51,7 @@ namespace Opaax::Editor
         void OnProvideServices(AppServiceLocator& InServices) override;
         void TickFrame() override;
         void OnModulesRegistered() override;
-        TUniquePtr<IPaths> CreatePaths(const IPlatform& InPlatform, int InArgc, char** InArgv) override;
+        TUniquePtr<IPaths> CreatePaths(const IPlatform& InPlatform, const CommandLine& InCommandLine) override;
         WorldSpec GetStartupWorldSpec() const override;
         void PreRegisterConfig(IConfigSystem& ConfigSystem) override;
     public:

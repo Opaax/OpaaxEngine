@@ -1,8 +1,7 @@
 #pragma once
 
-#include <cstring>       // std::strcmp
-#include <tuple>
-#include <type_traits>
+#include "Core/String/CString.h"
+#include "Core/Templates/TypeTraits.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/EngineAPI.h"
@@ -53,29 +52,29 @@ namespace Opaax
     {
         bool lFound = false;
 
-        std::apply([&](const auto&... lProperties)
+        TupleApply([&](const auto&... lProperties)
         {
             const auto lTry = [&](const auto& InProp)
             {
-                using ValueType = typename std::remove_cvref_t<decltype(InProp)>::ValueType;
+                using ValueType = typename TRemoveCVRef<decltype(InProp)>::ValueType;
 
-                if (lFound || std::strcmp(InProp.Name, InProperty) != 0) { return; }
+                if (lFound || !CString::Equals(InProp.Name, InProperty)) { return; }
 
                 const ValueType& lValue = InSource.*(InProp.Member);
 
-                if constexpr (std::is_same_v<ValueType, bool>)
+                if constexpr (TIsSame<ValueType, bool>)
                 {
                     OutValue.Kind = UIBoundValue::EKind::Bool;   OutValue.Number = lValue ? 1.0 : 0.0; lFound = true;
                 }
-                else if constexpr (std::is_integral_v<ValueType>)
+                else if constexpr (TIsIntegral<ValueType>)
                 {
                     OutValue.Kind = UIBoundValue::EKind::Integer; OutValue.Number = static_cast<double>(lValue); lFound = true;
                 }
-                else if constexpr (std::is_floating_point_v<ValueType>)
+                else if constexpr (TIsFloatingPoint<ValueType>)
                 {
                     OutValue.Kind = UIBoundValue::EKind::Number;  OutValue.Number = static_cast<double>(lValue); lFound = true;
                 }
-                else if constexpr (std::is_same_v<ValueType, OpaaxString>)
+                else if constexpr (TIsSame<ValueType, OpaaxString>)
                 {
                     OutValue.Kind = UIBoundValue::EKind::Text;    OutValue.Text = lValue;   lFound = true;
                 }

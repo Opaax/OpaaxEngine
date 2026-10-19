@@ -1,6 +1,6 @@
 #include "Renderer/Text/FontBake.h"
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 
 #include "Renderer/Text/FontFaceData.h"
 
@@ -113,12 +113,12 @@ namespace Opaax::FontBake
                 }
             }
 
-            std::sort(OutData.Kerning.begin(), OutData.Kerning.end(),
-                      [](const FontKerningPair& InLeft, const FontKerningPair& InRight)
-                      {
-                          return FontFaceData::PackKey(InLeft.First,  InLeft.Second)
-                               < FontFaceData::PackKey(InRight.First, InRight.Second);
-                      });
+            Algo::Sort(OutData.Kerning,
+                       [](const FontKerningPair& InLeft, const FontKerningPair& InRight)
+                       {
+                           return FontFaceData::PackKey(InLeft.First,  InLeft.Second)
+                                < FontFaceData::PackKey(InRight.First, InRight.Second);
+                       });
 
             OutData.Kerning.shrink_to_fit();
         }

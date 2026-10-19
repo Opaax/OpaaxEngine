@@ -1,6 +1,6 @@
 #include "Audio/AudioSubsystem.h"
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 
 #include "Application/Services/IPaths.h"
 #include "Audio/AudioClipResource.h"
@@ -101,14 +101,8 @@ namespace Opaax
         UpdateSources(lWorld, *lAudio);
 
         // Forget the sounds that ended.
-        m_OneShots.erase(std::remove_if(m_OneShots.begin(), m_OneShots.end(),
-                                        [lAudio](const SoundHandle InSound) { return !lAudio->IsPlaying(InSound); }),
-                         m_OneShots.end());
-
-        for (auto lIt = m_SourceSounds.begin(); lIt != m_SourceSounds.end();)
-        {
-            lIt = lAudio->IsPlaying(lIt->second.Sound) ? std::next(lIt) : m_SourceSounds.erase(lIt);
-        }
+        Algo::RemoveIf(m_OneShots, [lAudio](const SoundHandle InSound) { return !lAudio->IsPlaying(InSound); });
+        Algo::RemoveIf(m_SourceSounds, [lAudio](const auto& InSource) { return !lAudio->IsPlaying(InSource.second.Sound); });
     }
 
     void AudioSubsystem::Shutdown()
@@ -351,7 +345,7 @@ namespace Opaax
 
     void AudioSubsystem::HoldBanks()
     {
-        TDynArray<std::pair<Uint32, const AudioBanksComponent*>> lNew;
+        TDynArray<TPair<Uint32, const AudioBanksComponent*>> lNew;
         m_Context->OwningWorld.Each<AudioBanksComponent>([this, &lNew](const EntityID InEntity, const AudioBanksComponent& InBanks)
         {
             if (!m_Banks.contains(EntityKey(InEntity)))

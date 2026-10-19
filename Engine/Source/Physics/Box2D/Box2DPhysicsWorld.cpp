@@ -1,9 +1,9 @@
 #include "Physics/Box2D/Box2DPhysicsWorld.h"
 
 #include <box2d/box2d.h>
-#include <cfloat>
 
 #include "Core/Log/Logger.h"
+#include "Core/Templates/TypeTraits.h"
 
 namespace Opaax
 {
@@ -60,7 +60,7 @@ namespace Opaax
             Uint64           IgnoreUserData          = 0;
         };
 
-        // FLT_MAX pushLimit = a hard surface; clipVelocity = true so b2SolvePlanes clips against it.
+        // The largest pushLimit = a hard surface; clipVelocity = true so b2SolvePlanes clips against it.
         bool MoverPlaneFcn(b2ShapeId InShape, const b2PlaneResult* InPlane, void* InContext)
         {
             if (!InPlane->hit) { return true; }
@@ -75,7 +75,7 @@ namespace Opaax
 
             if (lCtx->Count < kMaxMoverPlanes)
             {
-                lCtx->Planes[lCtx->Count] = { InPlane->plane, FLT_MAX, 0.f, true };
+                lCtx->Planes[lCtx->Count] = { InPlane->plane, TNumericLimits<float>::max(), 0.f, true };
                 lCtx->Count += 1;
             }
             return true;

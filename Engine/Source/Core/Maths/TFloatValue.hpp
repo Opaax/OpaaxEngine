@@ -1,11 +1,11 @@
 ﻿#pragma once
 
-#include "Core/OpaaxTRequire.hpp"
-#include <compare>
+#include "Core/OpaaxTypes.h"
+#include "Core/Templates/TypeTraits.h"
 
 namespace Opaax
 {
-    template <CONCEPT_TIsFloat T>
+    template <CFloatingPoint T>
     struct TFloatValue
     {
         using ValueType = T;

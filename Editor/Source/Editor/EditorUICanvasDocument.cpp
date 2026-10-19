@@ -1,6 +1,6 @@
 #include "Editor/EditorUICanvasDocument.h"
 
-#include <algorithm>   // std::reverse
+#include "Core/Algo/Algo.h"
 
 #include "Core/String/OpaaxPathString.h"
 #include "UI/UICanvasFile.h"
@@ -148,7 +148,7 @@ namespace Opaax::Editor
         }
 
         // Built leaf to root; a path reads root to leaf.
-        std::reverse(lPath.begin(), lPath.end());
+        Algo::Reverse(lPath);
         return lPath;
     }
 

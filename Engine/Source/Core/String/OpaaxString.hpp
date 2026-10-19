@@ -1,11 +1,14 @@
 ﻿#pragma once
 
-#include <cstdio>
-#include <cstring>
 #include <ostream>
 #include <string_view>
-#include "Core/OpaaxTypes.h"
+
+#include <spdlog/fmt/fmt.h>
+
 #include "Core/EngineAPI.h"
+#include "Core/Memory/Memory.h"
+#include "Core/OpaaxTypes.h"
+#include "Core/String/CString.h"
 #include "Core/String/OpaaxStringView.hpp"
 
 namespace Opaax
@@ -17,7 +20,7 @@ namespace Opaax
      * 24 bytes. Same thread safety as std::string.
      *
      * @see OpaaxStringID for interned strings.
-     * @see Core/Hash/OpaaxHash.h for std::hash<OpaaxString>.
+     * @see Core/Hash/OpaaxHash.h for THash<OpaaxString>.
      */
     class OpaaxString final
     {
@@ -52,16 +55,26 @@ namespace Opaax
          */
         static OpaaxString FromInt(Int64 InValue)
         {
-            char lBuffer[24];   // Int64 min is 20 chars + sign + null
-            const int lWritten = std::snprintf(lBuffer, sizeof(lBuffer), "%lld", static_cast<long long>(InValue));
-            return (lWritten > 0) ? OpaaxString(lBuffer) : OpaaxString();
+            const fmt::format_int lText(InValue);
+            return OpaaxString(lText.data(), static_cast<Uint32>(lText.size()));
         }
 
         static OpaaxString FromUInt(Uint64 InValue)
         {
-            char lBuffer[24];
-            const int lWritten = std::snprintf(lBuffer, sizeof(lBuffer), "%llu", static_cast<unsigned long long>(InValue));
-            return (lWritten > 0) ? OpaaxString(lBuffer) : OpaaxString();
+            const fmt::format_int lText(InValue);
+            return OpaaxString(lText.data(), static_cast<Uint32>(lText.size()));
+        }
+
+        /**
+         * Text formatted like OPAAX_LOG: OpaaxString::Format("{} of {}", lDone, lTotal).
+         * The format string is checked at compile time.
+         */
+        template<typename... TArgs>
+        static OpaaxString Format(fmt::format_string<TArgs...> InFormat, TArgs&&... InArgs)
+        {
+            fmt::memory_buffer lBuffer;
+            fmt::format_to(fmt::appender(lBuffer), InFormat, Forward<TArgs>(InArgs)...);
+            return OpaaxString(lBuffer.data(), static_cast<Uint32>(lBuffer.size()));
         }
 
         // =============================================================================
@@ -76,12 +89,12 @@ namespace Opaax
         {
             if (!Str) { return; }
 
-            const Uint32 lLength = static_cast<Uint32>(std::strlen(Str));
+            const Uint32 lLength = static_cast<Uint32>(CString::Length(Str));
             Length = lLength;
 
             if (lLength <= SSOCapacity)
             {
-                std::memcpy(SSOBuffer, Str, lLength);
+                Memory::Copy(SSOBuffer, Str, lLength);
                 SSOBuffer[lLength] = OpaaxString_InvalidCharacter;
             }
             else
@@ -109,7 +122,7 @@ namespace Opaax
             }
             else
             {
-                std::memcpy(SSOBuffer, Other.SSOBuffer, Other.Length + 1);
+                Memory::Copy(SSOBuffer, Other.SSOBuffer, Other.Length + 1);
             }
         }
 
@@ -126,7 +139,7 @@ namespace Opaax
             }
             else
             {
-                std::memcpy(SSOBuffer, Other.SSOBuffer, Other.Length + 1);
+                Memory::Copy(SSOBuffer, Other.SSOBuffer, Other.Length + 1);
             }
 
             Other.Length = 0;
@@ -150,7 +163,7 @@ namespace Opaax
                 else
                 {
                     bUsingHeap = false;
-                    std::memcpy(SSOBuffer, Other.SSOBuffer, Other.Length + 1);
+                    Memory::Copy(SSOBuffer, Other.SSOBuffer, Other.Length + 1);
                 }
             }
             return *this;
@@ -173,7 +186,7 @@ namespace Opaax
                 }
                 else
                 {
-                    std::memcpy(SSOBuffer, Other.SSOBuffer, Other.Length + 1);
+                    Memory::Copy(SSOBuffer, Other.SSOBuffer, Other.Length + 1);
                 }
 
                 Other.Length = 0;
@@ -193,7 +206,7 @@ namespace Opaax
         {
             const Uint32 lCapacity = (InCapacity >= InLength) ? InCapacity : InLength;
             HeapData = new char[lCapacity + 1];
-            std::memcpy(HeapData, Str, InLength);
+            Memory::Copy(HeapData, Str, InLength);
             HeapData[InLength] = '\0';
             Capacity = lCapacity;
             bUsingHeap = true;
@@ -221,12 +234,12 @@ namespace Opaax
 
             if (bUsingHeap)
             {
-                std::memcpy(lNewHeap, HeapData, Length);
+                Memory::Copy(lNewHeap, HeapData, Length);
                 delete[] HeapData;
             }
             else
             {
-                std::memcpy(lNewHeap, SSOBuffer, Length);
+                Memory::Copy(lNewHeap, SSOBuffer, Length);
             }
 
             HeapData = lNewHeap;
@@ -270,7 +283,7 @@ namespace Opaax
             if (!bUsingHeap && lNewLength <= SSOCapacity)
             {
                 // Fast path: still fits in SSO
-                std::memcpy(SSOBuffer + Length, Str, Count);
+                Memory::Copy(SSOBuffer + Length, Str, Count);
                 Length = lNewLength;
                 SSOBuffer[Length] = OpaaxString_InvalidCharacter;
                 return;
@@ -289,7 +302,7 @@ namespace Opaax
                 if (lAliases) { Str = HeapData + lOffset; }
             }
 
-            std::memcpy(HeapData + Length, Str, Count);
+            Memory::Copy(HeapData + Length, Str, Count);
             Length = lNewLength;
             HeapData[Length] = OpaaxString_InvalidCharacter;
         }
@@ -297,10 +310,51 @@ namespace Opaax
         void Append(const char* Str)
         {
             if (!Str) { return; }
-            Append(Str, static_cast<Uint32>(std::strlen(Str)));
+            Append(Str, static_cast<Uint32>(CString::Length(Str)));
         }
 
         void Append(const OpaaxString& Other) { Append(Other.CStr(), Other.Length); }
+
+        void Append(const OpaaxStringView InView) { Append(InView.Data(), InView.GetLength()); }
+
+        void Append(const char InChar) { Append(&InChar, 1); }
+
+        /** Removes the last character; nothing when empty. */
+        void PopBack() noexcept
+        {
+            if (Length == 0) { return; }
+
+            --Length;
+            Data()[Length] = OpaaxString_InvalidCharacter;
+        }
+
+        /** A copy with every InFrom replaced by InTo, left to right. An empty InFrom changes nothing. */
+        OpaaxString Replace(const OpaaxStringView InFrom, const OpaaxStringView InTo) const
+        {
+            if (InFrom.IsEmpty()) { return *this; }
+
+            const OpaaxStringView lSelf(CStr(), Length);
+            OpaaxString           lResult;
+            Uint32                lAt = 0;
+            for (Int32 lFound = lSelf.Find(InFrom); lFound >= 0; lFound = lSelf.Find(InFrom, lAt))
+            {
+                lResult.Append(lSelf.SubString(lAt, static_cast<Uint32>(lFound) - lAt));
+                lResult.Append(InTo);
+                lAt = static_cast<Uint32>(lFound) + InFrom.GetLength();
+            }
+            lResult.Append(lSelf.SubString(lAt));
+            return lResult;
+        }
+
+        /** Replaces every InFrom character with InTo, in place. */
+        void ReplaceCharInline(const char InFrom, const char InTo) noexcept
+        {
+            char* lData = Data();
+            for (Uint32 i = 0; i < Length; ++i)
+            {
+                if (lData[i] == InFrom) { lData[i] = InTo; }
+            }
+        }
 
         /**
          * Reserves capacity without changing the length.
@@ -325,9 +379,20 @@ namespace Opaax
             // StartPos == Length is allowed; past it strstr would read beyond the terminator.
             if (!Str || StartPos > Length) { return -1; }
 
-            const char* lResult = std::strstr(CStr() + StartPos, Str);
+            const char* lResult = CString::Find(CStr() + StartPos, Str);
             return lResult ? static_cast<Int32>(lResult - CStr()) : -1;
         }
+
+        // The searches of OpaaxStringView, on the whole string: an index, or -1.
+        Int32 Find(const char InChar, const Uint32 InStartPos = 0) const noexcept { return View().Find(InChar, InStartPos); }
+        Int32 FindLast(const OpaaxStringView InNeedle) const noexcept { return View().FindLast(InNeedle); }
+        Int32 FindLast(const char InChar) const noexcept { return View().FindLast(InChar); }
+        Int32 FindFirstOf(const OpaaxStringView InChars, const Uint32 InStartPos = 0) const noexcept { return View().FindFirstOf(InChars, InStartPos); }
+        Int32 FindLastOf(const OpaaxStringView InChars) const noexcept { return View().FindLastOf(InChars); }
+
+        bool Contains(const OpaaxStringView InNeedle) const noexcept { return View().Contains(InNeedle); }
+        bool StartsWith(const OpaaxStringView InPrefix) const noexcept { return View().StartsWith(InPrefix); }
+        bool EndsWith(const OpaaxStringView InSuffix) const noexcept { return View().EndsWith(InSuffix); }
 
         static constexpr char ToUpperChar(char Char) noexcept
         {
@@ -367,9 +432,21 @@ namespace Opaax
         const char* CStr() const noexcept   { return bUsingHeap ? HeapData : SSOBuffer; }
         char*       Data() noexcept         { return bUsingHeap ? HeapData : SSOBuffer; }
 
+        /** The bytes as a view; it borrows them, so it must not outlive this string. */
+        OpaaxStringView View() const noexcept { return OpaaxStringView(CStr(), Length); }
+
         Uint32  GetLength()     const noexcept { return Length; }
         bool    IsUsingHeap()   const noexcept { return bUsingHeap; }
         bool    IsEmpty()       const noexcept { return Length == 0; }
+
+        /** The last character, or '\0' when empty. */
+        char Back() const noexcept { return Length > 0 ? CStr()[Length - 1] : OpaaxString_InvalidCharacter; }
+
+        // For range-for over the characters.
+        const char* begin() const noexcept { return CStr(); }
+        const char* end()   const noexcept { return CStr() + Length; }
+        char*       begin() noexcept       { return Data(); }
+        char*       end()   noexcept       { return Data() + Length; }
 
         bool IsValidIndex(Uint32 Index) const
         {
@@ -414,10 +491,30 @@ namespace Opaax
             return *this;
         }
 
-        bool operator==(const OpaaxString& Other)   const noexcept { return std::strcmp(CStr(), Other.CStr()) == 0; }
-        bool operator==(const char* Str)            const noexcept { return std::strcmp(CStr(), Str) == 0; }
+        OpaaxString& operator+=(const OpaaxStringView Other)
+        {
+            Append(Other);
+            return *this;
+        }
+
+        OpaaxString& operator+=(const char InChar)
+        {
+            Append(InChar);
+            return *this;
+        }
+
+        bool operator==(const OpaaxString& Other)   const noexcept { return CString::Equals(CStr(), Other.CStr()); }
+        bool operator==(const char* Str)            const noexcept { return CString::Equals(CStr(), Str); }
         bool operator!=(const OpaaxString& Other)   const noexcept { return !(*this == Other); }
         bool operator!=(const char* Str)            const noexcept { return !(*this == Str); }
+
+        /** Byte order, like a dictionary for ASCII: "B" < "a" < "ab" < "b". */
+        bool operator<(const OpaaxString& Other) const noexcept
+        {
+            const Uint32 lCommon  = Length < Other.Length ? Length : Other.Length;
+            const Int32  lCompare = lCommon > 0 ? Memory::Compare(CStr(), Other.CStr(), lCommon) : 0;
+            return lCompare != 0 ? lCompare < 0 : Length < Other.Length;
+        }
 
         OpaaxString operator+(const char* RHS) const
         {
@@ -429,6 +526,34 @@ namespace Opaax
         OpaaxString operator+(const OpaaxString& RHS) const
         {
             OpaaxString lR(*this);
+            lR += RHS;
+            return lR;
+        }
+
+        OpaaxString operator+(const OpaaxStringView RHS) const
+        {
+            OpaaxString lR(*this);
+            lR += RHS;
+            return lR;
+        }
+
+        OpaaxString operator+(const char RHS) const
+        {
+            OpaaxString lR(*this);
+            lR += RHS;
+            return lR;
+        }
+
+        friend OpaaxString operator+(const char* LHS, const OpaaxString& RHS)
+        {
+            OpaaxString lR(LHS);
+            lR += RHS;
+            return lR;
+        }
+
+        friend OpaaxString operator+(const OpaaxStringView LHS, const OpaaxString& RHS)
+        {
+            OpaaxString lR(LHS);
             lR += RHS;
             return lR;
         }
@@ -456,10 +581,8 @@ namespace Opaax
 } // namespace Opaax
 
 // Formatter for spdlog / fmtlib. Formats a view (no copy, no strlen).
-#include <spdlog/fmt/fmt.h>
-
 template <typename T>
-struct fmt::formatter<T, std::enable_if_t<std::is_base_of<Opaax::OpaaxString, T>::value, char>>
+struct fmt::formatter<T, Opaax::TEnableIf<Opaax::TIsBaseOf<Opaax::OpaaxString, T>, char>>
     : fmt::formatter<fmt::string_view>
 {
     auto format(const T& String, format_context& CTX) const

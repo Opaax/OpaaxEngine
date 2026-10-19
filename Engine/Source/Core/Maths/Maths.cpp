@@ -4,10 +4,9 @@
 
 using namespace Opaax;
 
-float Maths::Atan2(float Y, float X)
+float Maths::FastAtan2(float Y, float X)
 {
-    // Minimax approximation of atan2f (max relative error 7.15e-7): atan2f can return NaN
-    // on valid input, and this is about 2x faster.
+    // Minimax approximation of atan2f (max relative error 7.15e-7), about 2x faster.
 
     const float lAbsX = Abs(X);
     const float lAbsY = Abs(Y);
@@ -48,16 +47,6 @@ float Maths::Atan2(float Y, float X)
     lT3 = (Y < FZERO) ?           -lT3 : lT3;
 
     return lT3;
-}
-
-double Maths::Atan2(double Y, double X)
-{
-    if (X == DZERO && Y == DZERO)
-    {
-        return DZERO;
-    }
-
-    return std::atan2(Y,X);
 }
 
 float Maths::QuakeInvSqrt(float InValue)

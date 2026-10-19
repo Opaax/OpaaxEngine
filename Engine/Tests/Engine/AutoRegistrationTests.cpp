@@ -2,8 +2,8 @@
 // from every translation unit (the engine's and this test's), sorted and de-duplicated.
 #include <doctest.h>
 
-#include <algorithm>
-#include <cstring>
+#include "Core/Algo/Algo.h"
+#include "Core/String/CString.h"
 
 #include <nlohmann/json.hpp>
 
@@ -63,7 +63,7 @@ namespace
     {
         for (Uint64 lIndex = 0; lIndex < InList.size(); ++lIndex)
         {
-            if (std::strcmp(InList[lIndex]->Name, InName) == 0)
+            if (CString::Equals(InList[lIndex]->Name, InName))
             {
                 return static_cast<Int64>(lIndex);
             }
@@ -97,7 +97,7 @@ TEST_CASE("AutoRegistration: the list is sorted by kind, then order, then name")
         const bool bOrdered = lPrevious.Kind < lCurrent.Kind
                            || (lPrevious.Kind == lCurrent.Kind && lPrevious.Order < lCurrent.Order)
                            || (lPrevious.Kind == lCurrent.Kind && lPrevious.Order == lCurrent.Order
-                               && std::strcmp(lPrevious.Name, lCurrent.Name) <= 0);
+                               && CString::Compare(lPrevious.Name, lCurrent.Name) <= 0);
         CHECK(bOrdered);
     }
 }
@@ -106,7 +106,7 @@ TEST_CASE("AutoRegistration: a type registered twice appears once")
 {
     const TDynArray<const AutoRegistration*> lList = CollectAutoRegistrations();
 
-    const auto lCount = std::count_if(lList.begin(), lList.end(), [](const AutoRegistration* InEntry)
+    const auto lCount = Algo::CountIf(lList, [](const AutoRegistration* InEntry)
     {
         return InEntry->Kind == EAutoRegistrationKind::Component && InEntry->Type == TypeIdOf<ProbeHealth>();
     });
@@ -194,8 +194,8 @@ TEST_CASE("AutoRegistration: game instance subsystems are created UI first, then
         lNames.push_back(InEntry.GetName());
     });
 
-    const auto lUI    = std::find(lNames.begin(), lNames.end(), OpaaxStringID("UI"));
-    const auto lInput = std::find(lNames.begin(), lNames.end(), OpaaxStringID("InputMapping"));
+    const auto lUI    = Algo::Find(lNames, OpaaxStringID("UI"));
+    const auto lInput = Algo::Find(lNames, OpaaxStringID("InputMapping"));
     REQUIRE(lUI != lNames.end());
     REQUIRE(lInput != lNames.end());
     CHECK(lUI < lInput);

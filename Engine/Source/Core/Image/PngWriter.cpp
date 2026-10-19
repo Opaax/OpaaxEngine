@@ -1,6 +1,6 @@
 #include "Core/Image/PngWriter.h"
 
-#include <algorithm>
+#include "Core/Maths/Maths.h"
 
 #include "Core/IO/FileIO.h"
 
@@ -84,7 +84,7 @@ namespace Opaax::PngWriter
         Uint64 lOffset = 0;
         do
         {
-            const Uint64 lLength = std::min<Uint64>(lRaw.size() - lOffset, STORED_BLOCK_MAX);
+            const Uint64 lLength = Maths::Min<Uint64>(lRaw.size() - lOffset, STORED_BLOCK_MAX);
             const bool   bLast   = (lOffset + lLength == lRaw.size());
 
             lZlib.push_back(bLast ? 1 : 0);
@@ -92,8 +92,8 @@ namespace Opaax::PngWriter
             lZlib.push_back(static_cast<Uint8>(lLength >> 8));
             lZlib.push_back(static_cast<Uint8>(~lLength & 0xFF));
             lZlib.push_back(static_cast<Uint8>((~lLength >> 8) & 0xFF));
-            lZlib.insert(lZlib.end(), lRaw.begin() + static_cast<std::ptrdiff_t>(lOffset),
-                         lRaw.begin() + static_cast<std::ptrdiff_t>(lOffset + lLength));
+            lZlib.insert(lZlib.end(), lRaw.begin() + static_cast<PtrDiff>(lOffset),
+                         lRaw.begin() + static_cast<PtrDiff>(lOffset + lLength));
 
             lOffset += lLength;
         }

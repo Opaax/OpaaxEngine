@@ -1,30 +1,15 @@
 #include "Application/Services/IPaths.h"
+
+#include "Core/IO/FileSystem.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/OpaaxPathString.h"
+#include "Platform/CommandLine.h"
 #include "Platform/IPlatform.h"
-
-#include "Core/String/OpaaxUtf8.h"
-
-#include <cstring>
-#include <filesystem>
 
 namespace Opaax
 {
     namespace
     {
-        namespace fs = std::filesystem;
-
-        OpaaxString FindProjectArg(int InArgc, char** InArgv)
-        {
-            for (int i = 1; i + 1 < InArgc; ++i)
-            {
-                if (std::strcmp(InArgv[i], "--project") == 0)
-                {
-                    return OpaaxString(InArgv[i + 1]);
-                }
-            }
-            return OpaaxString();
-        }
-
         // =====================================================================
         // NullPaths — every path empty.
         // =====================================================================
@@ -57,24 +42,23 @@ namespace Opaax
                 return OpaaxString();
             }
 
-            std::error_code lError;
-            const fs::path lAbs  = fs::weakly_canonical(Utf8::ToFsPath(InAbsPath), lError);
-            const fs::path lRoot = fs::weakly_canonical(Utf8::ToFsPath(InRoot), lError);
+            const OpaaxString lAbs  = FileSystem::MakeCanonical(InAbsPath);
+            const OpaaxString lRoot = FileSystem::MakeCanonical(InRoot);
 
-            if (lError)
+            if (lAbs.IsEmpty() || lRoot.IsEmpty())
             {
                 return OpaaxString();
             }
 
-            const fs::path lRelative = lAbs.lexically_relative(lRoot);
+            const OpaaxString lRelative = PathString::RelativeTo(lAbs, lRoot);
 
             // Empty or starting with "..": not under the root.
-            if (lRelative.empty() || *lRelative.begin() == "..")
+            if (lRelative.IsEmpty() || lRelative == ".." || lRelative.StartsWith("../"))
             {
                 return OpaaxString();
             }
 
-            return Utf8::FromFsPath(lRelative);
+            return lRelative;
         }
     }
 
@@ -85,51 +69,39 @@ namespace Opaax
                                        const OpaaxString& InWorkspaceDir,
                                        const OpaaxString& InProjectArg)
     {
-        const fs::path lExe     = Utf8::ToFsPath(InExePath);
-        const fs::path lExeDir  = lExe.parent_path();
-
-        // Kept as fs::path: .string() would break non-ASCII names.
-        const fs::path lAppName = lExe.stem();
+        const OpaaxString lAppName = PathString::Stem(InExePath).ToString();
 
         // No workspace (release): use the exe directory.
-        const fs::path lWorkspace = InWorkspaceDir.IsEmpty()
-                                        ? lExeDir
-                                        : Utf8::ToFsPath(InWorkspaceDir);
+        const OpaaxString lWorkspace = InWorkspaceDir.IsEmpty()
+                                           ? PathString::Parent(InExePath)
+                                           : PathString::Generic(InWorkspaceDir);
 
         // --project (relative to the workspace), else <workspace>/<AppName>/<AppName>.opaaxproj in a
         // dev build and <exe dir>/<AppName>_Data/<AppName>.opaaxproj in a ship build.
-        fs::path lProjFile;
+        OpaaxString lProjFile;
         if (!InProjectArg.IsEmpty())
         {
-            const fs::path lArg = Utf8::ToFsPath(InProjectArg);
-            lProjFile = lArg.is_absolute() ? lArg : (lWorkspace / lArg);
+            lProjFile = PathString::IsAbsolute(InProjectArg) ? InProjectArg : PathString::Join(lWorkspace, InProjectArg);
         }
         else
         {
-            fs::path lProjDir = lAppName;
-            if (InWorkspaceDir.IsEmpty())
-            {
-                lProjDir += SHIPPED_PROJECT_DIR_SUFFIX;
-            }
-
-            fs::path lLeaf = lAppName;
-            lLeaf += ".opaaxproj";
-            lProjFile = lWorkspace / lProjDir / lLeaf;
+            const OpaaxString lProjDir = InWorkspaceDir.IsEmpty() ? lAppName + SHIPPED_PROJECT_DIR_SUFFIX : lAppName;
+            lProjFile = PathString::Join(PathString::Join(lWorkspace, lProjDir), lAppName + ".opaaxproj");
         }
-        lProjFile = lProjFile.lexically_normal();
+        lProjFile = PathString::Normalize(lProjFile);
 
-        const fs::path lProjRoot = lProjFile.parent_path();
+        const OpaaxString lProjRoot = PathString::Parent(lProjFile);
 
         ProjectLayout lOut;
-        lOut.WorkspaceRoot = Utf8::FromFsPath(lWorkspace);
-        lOut.EngineRoot    = Utf8::FromFsPath(lWorkspace / "Engine");
-        lOut.ProjectRoot   = Utf8::FromFsPath(lProjRoot);
-        lOut.ProjectFile   = Utf8::FromFsPath(lProjFile);
-        lOut.AssetsDir     = Utf8::FromFsPath(lProjRoot / "Assets");
-        lOut.ConfigsDir    = Utf8::FromFsPath(lProjRoot / "Configs");
-        lOut.SourceDir     = Utf8::FromFsPath(lProjRoot / "Source");
-        lOut.SaveDir       = Utf8::FromFsPath(lProjRoot / "Save");
-        lOut.TempDir       = Utf8::FromFsPath(lProjRoot / "Temp");
+        lOut.WorkspaceRoot = lWorkspace;
+        lOut.EngineRoot    = PathString::Join(lWorkspace, "Engine");
+        lOut.ProjectRoot   = lProjRoot;
+        lOut.ProjectFile   = lProjFile;
+        lOut.AssetsDir     = PathString::Join(lProjRoot, "Assets");
+        lOut.ConfigsDir    = PathString::Join(lProjRoot, "Configs");
+        lOut.SourceDir     = PathString::Join(lProjRoot, "Source");
+        lOut.SaveDir       = PathString::Join(lProjRoot, "Save");
+        lOut.TempDir       = PathString::Join(lProjRoot, "Temp");
         return lOut;
     }
 
@@ -156,7 +128,7 @@ namespace Opaax
     // =========================================================================
     // Paths
     // =========================================================================
-    Paths::Paths(const IPlatform& InPlatform, int InArgc, char** InArgv,
+    Paths::Paths(const IPlatform& InPlatform, const CommandLine& InCommandLine,
                  const OpaaxString& InProjectOverride)
     {
         OpaaxString lWorkspace;
@@ -167,7 +139,7 @@ namespace Opaax
         const OpaaxString lExe = InPlatform.GetExecutablePath();
 
         // --project first, then the host's project, else the default from the exe name.
-        OpaaxString lProjArg = FindProjectArg(InArgc, InArgv);
+        OpaaxString lProjArg = InCommandLine.GetValue("--project");
         if (lProjArg.IsEmpty())
         {
             lProjArg = InProjectOverride;
@@ -183,12 +155,12 @@ namespace Opaax
 
     OpaaxString Paths::EngineToAbsolute(const OpaaxString& InEngineRel) const
     {
-        return Utf8::FromFsPath(Utf8::ToFsPath(m_Layout.EngineRoot) / Utf8::ToFsPath(InEngineRel));
+        return PathString::Join(m_Layout.EngineRoot, InEngineRel);
     }
 
     OpaaxString Paths::ProjectToAbsolute(const OpaaxString& InProjectRel) const
     {
-        return Utf8::FromFsPath(Utf8::ToFsPath(m_Layout.ProjectRoot) / Utf8::ToFsPath(InProjectRel));
+        return PathString::Join(m_Layout.ProjectRoot, InProjectRel);
     }
 
     OpaaxString Paths::AssetToAbsolute(const OpaaxString& InAssetRel) const
@@ -197,10 +169,10 @@ namespace Opaax
         if (lRef.StartsWith(ENGINE_MOUNT))
         {
             const OpaaxString lEngineRel = lRef.SubString(OpaaxStringView(ENGINE_MOUNT).GetLength()).ToString();
-            return Utf8::FromFsPath(Utf8::ToFsPath(EngineAssetsDir()) / Utf8::ToFsPath(lEngineRel));
+            return PathString::Join(EngineAssetsDir(), lEngineRel);
         }
 
-        return Utf8::FromFsPath(Utf8::ToFsPath(m_Layout.AssetsDir) / Utf8::ToFsPath(InAssetRel));
+        return PathString::Join(m_Layout.AssetsDir, InAssetRel);
     }
 
     OpaaxString Paths::AbsoluteToAsset(const OpaaxString& InAbsPath) const

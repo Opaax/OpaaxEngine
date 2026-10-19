@@ -1,6 +1,6 @@
 #pragma once
 
-#include <optional>
+#include "Core/OpaaxTypes.h"
 
 #include "Resources/ResourceFormat.h"
 #include "Renderer/Textures/SpriteSheetData.h"
@@ -22,12 +22,12 @@ namespace Opaax
 
         static constexpr EFailPolicy FailPolicy = EFailPolicy::Placeholder;
 
-        static std::optional<SpriteSheetResource> Load(const char* InPath, LoadContext& /*InCtx*/)
+        static TOptional<SpriteSheetResource> Load(const char* InPath, LoadContext& /*InCtx*/)
         {
             SpriteSheetResource lResource;
             if (!SpriteSheetFile::Load(OpaaxString(InPath), lResource.Data))
             {
-                return std::nullopt;   // SpriteSheetFile already logged why
+                return NullOpt;   // SpriteSheetFile already logged why
             }
 
             return lResource;

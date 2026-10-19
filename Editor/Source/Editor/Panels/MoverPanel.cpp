@@ -1,6 +1,6 @@
 #include "Editor/Panels/MoverPanel.h"
 
-#include <cstdio>   // snprintf
+#include "Core/String/CString.h"
 
 #include "Editor/Commands/EditorCommandRegistry.h"
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
@@ -130,11 +130,11 @@ namespace Opaax::Editor
             const bool bIsDefault  = InData.DefaultMode.IsValid() && lEntry.Name == InData.DefaultMode;
 
             char lLabel[224];
-            std::snprintf(lLabel, sizeof(lLabel), "%s%s  ->  %s##entry%u",
-                          lEntry.Name.IsValid() ? lEntry.Name.CStr() : "(unnamed)",
-                          (bIsDefault || bIsFallback) ? "  [default]" : "",
-                          lEntry.ModeAsset.IsEmpty() ? "(no tuning)" : lEntry.ModeAsset.Path.CStr(),
-                          lIndex);
+            CString::Format(lLabel, "{}{}  ->  {}##entry{}",
+                            lEntry.Name.IsValid() ? lEntry.Name.CStr() : "(unnamed)",
+                            (bIsDefault || bIsFallback) ? "  [default]" : "",
+                            lEntry.ModeAsset.IsEmpty() ? "(no tuning)" : lEntry.ModeAsset.Path.CStr(),
+                            lIndex);
 
             if (ImGui::Selectable(lLabel, m_Selected == static_cast<Int32>(lIndex)))
             {

@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 
 #include "Core/IO/FileIO.h"
+#include "Core/String/OpaaxStringJson.h"
 #include "UI/UIWidget.h"
 #include "UI/UIWidgetRegistry.h"
 #include "UI/Widgets/UIPanel.h"
@@ -45,7 +46,7 @@ namespace Opaax
         {
             if (!InJson.is_object()) { ++InOutSkipped; return nullptr; }
 
-            const OpaaxString   lType = OpaaxString(InJson.value(KEY_TYPE, std::string()).c_str());
+            const OpaaxString   lType = InJson.value(KEY_TYPE, OpaaxString());
             TUniquePtr<UIWidget> lWidget = InRegistry.Create(OpaaxStringID(lType));
 
             if (!lWidget)

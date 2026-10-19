@@ -1,7 +1,6 @@
 #pragma once
 
-#include <string>
-#include <type_traits>
+#include "Core/Templates/TypeTraits.h"
 
 #include <nlohmann/json.hpp>
 
@@ -75,7 +74,7 @@ namespace Opaax
             {
                 return PropertiesToJson(InValue);
             }
-            else if constexpr (k_IsList<TValue> && !std::is_same_v<TValue, TDynArray<bool>>)
+            else if constexpr (k_IsList<TValue> && !TIsSame<TValue, TDynArray<bool>>)
             {
                 nlohmann::json lArray = nlohmann::json::array();
                 for (const auto& lElement : InValue)
@@ -115,7 +114,7 @@ namespace Opaax
                     OutBadFields->push_back(InPath);
                 }
             }
-            else if constexpr (k_IsList<TValue> && !std::is_same_v<TValue, TDynArray<bool>>)
+            else if constexpr (k_IsList<TValue> && !TIsSame<TValue, TDynArray<bool>>)
             {
                 if (!InJson.is_array())
                 {
@@ -129,7 +128,7 @@ namespace Opaax
                 {
                     OpaaxString lElementPath = InPath;
                     lElementPath += "[";
-                    lElementPath += std::to_string(lIndex).c_str();
+                    lElementPath += OpaaxString::FromUInt(lIndex);
                     lElementPath += "]";
                     ReadValue(InJson[lIndex], lList[lIndex], lElementPath, OutBadFields);
                 }
@@ -162,7 +161,7 @@ namespace Opaax
                 return false;
             }
 
-            std::apply([&](const auto&... lProperties)
+            TupleApply([&](const auto&... lProperties)
                        {
                            ([&](const auto& InProperty)
                             {
@@ -184,7 +183,7 @@ namespace Opaax
     {
         nlohmann::json lJson = nlohmann::json::object();
 
-        std::apply([&](const auto&... lProperties)
+        TupleApply([&](const auto&... lProperties)
                    {
                        ((lJson[lProperties.Name] = PropertyJsonDetail::ValueToJson(InValue.*(lProperties.Member))), ...);
                    },

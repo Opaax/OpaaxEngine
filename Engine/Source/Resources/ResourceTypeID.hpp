@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string_view>
-
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Hash/OpaaxHash.h"
@@ -20,7 +18,7 @@ namespace Opaax
     // Registry functions (the registry lives in ResourceTypeID.cpp).
     //   InternResourceType: same hash but different name is fatal.
     // -------------------------------------------------------------------------
-    Uint32 InternResourceType(Uint64 InHash, std::string_view InName);
+    Uint32 InternResourceType(Uint64 InHash, OpaaxStringView InName);
     Uint32 GetResourceTypeCount();
 
     // =============================================================================
@@ -34,9 +32,9 @@ namespace Opaax
         {
             // Cached per module, but the value comes from the shared registry.
             // The signature is unique per type, so it also serves the collision check.
-            constexpr std::string_view lName = TypeSignature<T>();
-            constexpr Uint64           lHash = OpaaxHash::Hash64(lName);
-            static const Uint32        s_Index = InternResourceType(lHash, lName);
+            constexpr OpaaxStringView lName = TypeSignature<T>();
+            constexpr Uint64          lHash = OpaaxHash::Hash64(lName);
+            static const Uint32       s_Index = InternResourceType(lHash, lName);
             return s_Index;
         }
     };

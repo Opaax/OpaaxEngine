@@ -12,7 +12,7 @@ namespace Opaax
     // =========================================================================
     World::World(OpaaxString InName, EWorldMode InMode)
         : m_Id(Guid::New())
-        , m_Name(std::move(InName))
+        , m_Name(Move(InName))
         , m_Mode(InMode)
     {
         // Log the mode: Edit and Play worlds differ only by their subsystems.

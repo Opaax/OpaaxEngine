@@ -1,7 +1,6 @@
 #pragma once
 
-#include <functional>   // std::ref
-#include <type_traits>
+#include "Core/Templates/TypeTraits.h"
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
@@ -38,7 +37,7 @@ namespace Opaax
     //   can register their own types.
     // =============================================================================
     template<typename T>
-    requires std::is_base_of_v<IGameInstanceSubsystem, T>
+    requires TIsBaseOf<IGameInstanceSubsystem, T>
     class TGameInstanceSubsystemEntry final : public IGameInstanceSubsystemEntry
     {
     public:
@@ -49,9 +48,9 @@ namespace Opaax
         void CreateInto(GameInstanceSubsystemMgr& InManager, GameInstanceContext& InContext) const override
         {
             // T must be constructible from GameInstanceContext&.
-            // std::ref: the factory captures its arguments by value, and a copy would leave
+            // Ref: the factory captures its arguments by value, and a copy would leave
             // subsystems with dangling references.
-            InManager.RegisterSubsystem<T>(std::ref(InContext));
+            InManager.RegisterSubsystem<T>(Ref(InContext));
         }
 
     private:
@@ -91,7 +90,7 @@ namespace Opaax
          * @return True if registered
          */
         template<typename T>
-        requires std::is_base_of_v<IGameInstanceSubsystem, T>
+        requires TIsBaseOf<IGameInstanceSubsystem, T>
         bool Register(OpaaxStringID InName)
         {
             // Built here (T is known), stored by an out-of-line function.

@@ -59,7 +59,7 @@ namespace
         {
             if (InData.Components[lIndex].TypeName == InTypeName)
             {
-                InData.Components.erase(InData.Components.begin() + static_cast<std::ptrdiff_t>(lIndex));
+                InData.Components.erase(InData.Components.begin() + static_cast<PtrDiff>(lIndex));
                 return;
             }
         }

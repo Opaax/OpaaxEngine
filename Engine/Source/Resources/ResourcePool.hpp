@@ -1,7 +1,6 @@
 #pragma once
 
-#include <concepts>
-#include <optional>
+#include "Core/Templates/TypeTraits.h"
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
@@ -44,7 +43,7 @@ namespace Opaax
         // This keeps Resolve()'s pointer valid for the frame.
         // -------------------------------------------------------------------------
         static constexpr Uint32 ChunkSize = 64;
-        using Chunk = TFixedArray<std::optional<T>, ChunkSize>;
+        using Chunk = TFixedArray<TOptional<T>, ChunkSize>;
 
         /**
          * Generation: bumped on unload, so stale handles resolve safely.
@@ -144,7 +143,7 @@ namespace Opaax
         // Runs T::Load. Called outside the lock (dependency loads go through the manager).
         bool FillSlot(HandleType InHandle, const char* InPath, LoadContext& InCtx)
         {
-            std::optional<T> lLoaded = T::Load(InPath, InCtx);
+            TOptional<T> lLoaded = T::Load(InPath, InCtx);
             if (!lLoaded.has_value())
             {
                 OPAAX_LOG(LogResourcePool, Error, "Load failed: '{}'", InPath);
@@ -343,7 +342,7 @@ namespace Opaax
         // Internal
         // =============================================================================
     private:
-        std::optional<T>& PayloadRef(Uint32 InSlot) noexcept
+        TOptional<T>& PayloadRef(Uint32 InSlot) noexcept
         {
             return (*m_Chunks[InSlot / ChunkSize])[InSlot % ChunkSize];
         }
@@ -460,7 +459,7 @@ namespace Opaax
         static Uint64 ComputeBytes(const T& InValue) noexcept
         {
             // Use ByteSize() if the type has it, else the struct size.
-            if constexpr (requires(const T& v) { { v.ByteSize() } -> std::convertible_to<Uint64>; })
+            if constexpr (requires(const T& v) { { v.ByteSize() } -> CConvertibleTo<Uint64>; })
             {
                 return InValue.ByteSize();
             }
@@ -480,7 +479,7 @@ namespace Opaax
         TDynArray<Uint32>               m_FreeSlots;   // reusable slots
         TDynArray<GraveEntry>           m_Graveyard;   // released slots, destroyed next Update
         TUnorderedMap<Uint32, Uint32>    m_PathToSlot;  // path id -> slot
-        std::optional<T>                m_Placeholder; // built on first use
+        TOptional<T>                    m_Placeholder; // built on first use
         Uint32                          m_LoadedCount  = 0;
         Uint32                          m_LoadingCount = 0; // async slots in flight
         Uint64                          m_TotalBytes   = 0;

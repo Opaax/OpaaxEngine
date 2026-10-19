@@ -1,11 +1,12 @@
 #pragma once
 
-#include <string>
-
 #include <nlohmann/json.hpp>
 
+#include "Core/Hash/OpaaxHash.h"
 #include "Core/Log/Logger.h"
 #include "Core/OpaaxTypes.h"
+#include "Core/String/OpaaxString.hpp"
+#include "Core/String/OpaaxStringJson.h"
 
 namespace Opaax
 {
@@ -14,8 +15,8 @@ namespace Opaax
     /** One command for the runner: what to do, with what, and the id its answer carries. */
     struct AutomationRequest
     {
-        std::string    Id;
-        std::string    Command;
+        OpaaxString    Id;
+        OpaaxString    Command;
         nlohmann::json Params = nlohmann::json::object();
 
         /** The command should refuse: the request passes when it fails, and fails when it does not. */
@@ -28,11 +29,11 @@ namespace Opaax
     /** A request's answer. */
     struct AutomationResponse
     {
-        std::string    Id;
-        std::string    Command;
+        OpaaxString    Id;
+        OpaaxString    Command;
         bool           bOk = false;
         nlohmann::json Result = nlohmann::json::object();   // when ok: what the command returned
-        std::string    Error;                               // when not: why
+        OpaaxString    Error;                               // when not: why
     };
 
     /** What a command returns. */
@@ -40,7 +41,7 @@ namespace Opaax
     {
         bool           bOk   = true;
         nlohmann::json Value = nlohmann::json::object();
-        std::string    Error;
+        OpaaxString    Error;
 
         /** Frames to let run before the next request (a screenshot taken, a key held, a wait). */
         Uint32 WaitFrames = 0;
@@ -61,7 +62,7 @@ namespace Opaax
         TFunction<AutomationResult()> OnClose;
 
         static AutomationResult Ok(nlohmann::json InValue = nlohmann::json::object());
-        static AutomationResult Fail(std::string InError);
+        static AutomationResult Fail(OpaaxString InError);
     };
 
     using AutomationHandler = TFunction<AutomationResult(const nlohmann::json& InParams)>;
@@ -89,9 +90,9 @@ namespace Opaax
         // =============================================================================
     public:
         /** Adds the command InName, or replaces it (the editor refines some of the engine's). */
-        void Register(const std::string& InName, const std::string& InHelp, AutomationHandler InHandler);
+        void Register(const OpaaxString& InName, const OpaaxString& InHelp, AutomationHandler InHandler);
 
-        bool Has(const std::string& InName) const;
+        bool Has(const OpaaxString& InName) const;
 
         /** Every command and its help, sorted by name: [{"name", "help"}]. */
         nlohmann::json Describe() const;
@@ -141,11 +142,11 @@ namespace Opaax
     private:
         struct Command
         {
-            std::string       Help;
+            OpaaxString       Help;
             AutomationHandler Handler;
         };
 
-        TUnorderedMap<std::string, Command> m_Commands;
+        TUnorderedMap<OpaaxString, Command> m_Commands;
         TQueue<AutomationRequest>           m_Queue;
 
         Uint32            m_WaitFrames = 0;
@@ -168,20 +169,20 @@ namespace Opaax
      * item by item (same length), numbers within 1e-4, anything else equal. OutWhy says where they
      * differ ("maps/1/focused is false, expected true").
      */
-    bool MatchesExpected(const nlohmann::json& InExpected, const nlohmann::json& InActual, std::string& OutWhy);
+    bool MatchesExpected(const nlohmann::json& InExpected, const nlohmann::json& InActual, OpaaxString& OutWhy);
 
     /**
      * A request from its JSON, {"id", "command", "params", "expectFailure", "expect"}. False (with
      * OutError) when malformed.
      */
-    bool ParseAutomationRequest(const nlohmann::json& InJson, AutomationRequest& OutRequest, std::string& OutError);
+    bool ParseAutomationRequest(const nlohmann::json& InJson, AutomationRequest& OutRequest, OpaaxString& OutError);
 
     /**
      * The requests of a script: a JSON array of requests, or {"requests": [...]}. A request without
      * an id gets its position. False (with OutError) when malformed.
      */
-    bool ParseAutomationScript(const std::string& InText, TDynArray<AutomationRequest>& OutRequests,
-                               std::string& OutError);
+    bool ParseAutomationScript(const OpaaxString& InText, TDynArray<AutomationRequest>& OutRequests,
+                               OpaaxString& OutError);
 
     nlohmann::json ToJson(const AutomationResponse& InResponse);
 }

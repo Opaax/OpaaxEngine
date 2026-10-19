@@ -3,14 +3,9 @@
 // dependency release, cycles, fail policies, byte counts, Pin and TypeID.
 #include <doctest.h>
 
-#include <atomic>
-#include <chrono>
-#include <filesystem>
-#include <fstream>
-#include <optional>
-#include <string>
-#include <thread>
-
+#include "../TestTempDir.h"
+#include "Core/IO/FileIO.h"
+#include "Core/IO/FileSystem.h"
 #include "Core/OpaaxTypes.h"
 #include "Application/Services/IJobSystem.h"
 #include "Resources/ResourceManager.h"
@@ -23,46 +18,28 @@ namespace
 {
     // -------------------------------------------------------------------------
     // Per-test temp workspace: a unique dir under the OS temp path, removed on
-    // destruction. Files are written + referenced by their native path string, so
-    // the string passed to Load matches the string interned for dedup / cycles.
+    // destruction. Files are written and loaded by the same path string, so the
+    // string passed to Load matches the string interned for dedup / cycles.
     // -------------------------------------------------------------------------
     struct TempWorkspace
     {
-        std::filesystem::path Dir;
+        TestTempDir Dir{ "Resources" };
 
-        TempWorkspace()
+        OpaaxString PathOf(const OpaaxStringView InName) const { return Dir.Sub(InName); }
+
+        OpaaxString Write(const OpaaxStringView InName, const OpaaxString& InContents) const
         {
-            static std::atomic<Uint64> s_Counter{0};
-            const Uint64 lTick = static_cast<Uint64>(std::chrono::steady_clock::now().time_since_epoch().count());
-            Dir = std::filesystem::temp_directory_path() /
-                  ("opaax_res_" + std::to_string(lTick) + "_" + std::to_string(s_Counter.fetch_add(1)));
-            std::filesystem::create_directories(Dir);
-        }
-
-        ~TempWorkspace()
-        {
-            std::error_code lEc;
-            std::filesystem::remove_all(Dir, lEc);
-        }
-
-        std::string PathOf(const std::string& InName) const { return (Dir / InName).string(); }
-
-        std::string Write(const std::string& InName, const std::string& InContents) const
-        {
-            const std::filesystem::path lPath = Dir / InName;
-            std::ofstream lOut(lPath, std::ios::binary);
-            lOut.write(InContents.data(), static_cast<std::streamsize>(InContents.size()));
-            return lPath.string();
+            const OpaaxString lPath = Dir.Sub(InName);
+            FileIO::WriteAllText(lPath, InContents);
+            return lPath;
         }
     };
 
-    std::string Trim(const std::string& InStr)
+    /** A binary resource's bytes as text, without the spaces around it. */
+    OpaaxString TrimmedText(const TDynArray<Uint8>& InBytes)
     {
-        const char* lWs = " \t\r\n";
-        const size_t lBeg = InStr.find_first_not_of(lWs);
-        if (lBeg == std::string::npos) { return {}; }
-        const size_t lEnd = InStr.find_last_not_of(lWs);
-        return InStr.substr(lBeg, lEnd - lBeg + 1);
+        const OpaaxStringView lText(reinterpret_cast<const char*>(InBytes.data()), static_cast<Uint32>(InBytes.size()));
+        return lText.Trim().ToString();
     }
 
     // -------------------------------------------------------------------------
@@ -76,20 +53,25 @@ namespace
 
         static constexpr EFailPolicy FailPolicy = EFailPolicy::FailFast;
 
-        static std::optional<ManifestResource> Load(const char* InPath, LoadContext& InCtx)
+        static TOptional<ManifestResource> Load(const char* InPath, LoadContext& InCtx)
         {
-            std::ifstream lFile(InPath, std::ios::binary);
-            if (!lFile.is_open()) { return std::nullopt; }
+            TDynArray<Uint8> lBytes;
+            if (!FileIO::ReadAllBytes(InPath, lBytes)) { return NullOpt; }
 
-            ManifestResource lManifest;
-            std::string      lLine;
-            while (std::getline(lFile, lLine))
+            // One child path per line.
+            const OpaaxStringView lText(reinterpret_cast<const char*>(lBytes.data()),
+                                        static_cast<Uint32>(lBytes.size()));
+            ManifestResource      lManifest;
+            for (Uint32 lStart = 0; lStart < lText.GetLength();)
             {
-                const std::string lChildPath = Trim(lLine);
-                if (lChildPath.empty()) { continue; }
+                const Int32       lBreak     = lText.Find('\n', lStart);
+                const Uint32      lEnd       = (lBreak < 0) ? lText.GetLength() : static_cast<Uint32>(lBreak);
+                const OpaaxString lChildPath = lText.SubString(lStart, lEnd - lStart).Trim().ToString();
+                lStart = lEnd + 1;
+                if (lChildPath.IsEmpty()) { continue; }
 
-                ResourceRef<ManifestResource> lChild = InCtx.Acquire<ManifestResource>(lChildPath.c_str());
-                if (!lChild) { return std::nullopt; } // FailFast: cycle / missing child fails us
+                ResourceRef<ManifestResource> lChild = InCtx.Acquire<ManifestResource>(lChildPath.CStr());
+                if (!lChild) { return NullOpt; } // FailFast: cycle / missing child fails us
                 lManifest.Children.push_back(Move(lChild));
             }
             return lManifest;
@@ -103,17 +85,16 @@ namespace
     // -------------------------------------------------------------------------
     struct GpuLikeResource
     {
-        std::thread::id LoadThread{};
+        ThreadId        LoadThread{};
         int             InitCount = 0;
 
         static constexpr EFailPolicy FailPolicy = EFailPolicy::Placeholder;
 
-        static std::optional<GpuLikeResource> Load(const char* InPath, LoadContext& /*InCtx*/)
+        static TOptional<GpuLikeResource> Load(const char* InPath, LoadContext& /*InCtx*/)
         {
-            std::ifstream lFile(InPath, std::ios::binary);
-            if (!lFile.is_open()) { return std::nullopt; }
+            if (!FileSystem::IsFile(InPath)) { return NullOpt; }
             GpuLikeResource lRes;
-            lRes.LoadThread = std::this_thread::get_id();
+            lRes.LoadThread = ThisThread::GetId();
             return lRes;
         }
 
@@ -129,7 +110,7 @@ namespace
         {
             InJobs.DrainCompletions();
             InMgr.Update(0.0);
-            std::this_thread::yield();
+            ThisThread::YieldNow();
         }
     }
 }
@@ -141,10 +122,10 @@ TEST_CASE("Resources: same path dedups to one slot; refcount tracks claims")
     ResourceManager lMgr;
     REQUIRE(lMgr.Startup());
 
-    const std::string lFile = lWs.Write("a.bin", "hello"); // 5 bytes
+    const OpaaxString lFile = lWs.Write("a.bin", "hello"); // 5 bytes
 
-    ResourceRef<BinaryResource> lRefA = lMgr.Load<BinaryResource>(lFile.c_str());
-    ResourceRef<BinaryResource> lRefB = lMgr.Load<BinaryResource>(lFile.c_str());
+    ResourceRef<BinaryResource> lRefA = lMgr.Load<BinaryResource>(lFile.CStr());
+    ResourceRef<BinaryResource> lRefB = lMgr.Load<BinaryResource>(lFile.CStr());
 
     CHECK(lRefA.IsValid());
     CHECK(lRefA.GetHandle() == lRefB.GetHandle());       // one copy per unique path
@@ -160,11 +141,11 @@ TEST_CASE("Resources: releasing the last ref unloads; stale handle resolves safe
     ResourceManager lMgr;
     REQUIRE(lMgr.Startup());
 
-    const std::string              lFile = lWs.Write("a.bin", "hello");
+    const OpaaxString              lFile = lWs.Write("a.bin", "hello");
     ResourceHandle<BinaryResource> lStale;
 
     {
-        ResourceRef<BinaryResource> lRef = lMgr.Load<BinaryResource>(lFile.c_str());
+        ResourceRef<BinaryResource> lRef = lMgr.Load<BinaryResource>(lFile.CStr());
         lStale = lRef.GetHandle();
         CHECK(lMgr.GetLoadedCount<BinaryResource>() == 1);
     } // last ref dropped -> deferred unload (graveyard)
@@ -184,7 +165,7 @@ TEST_CASE("Resources: releasing the last ref unloads; stale handle resolves safe
     CHECK(lResolved->Bytes.empty());
 
     // Reload reuses the slot with a bumped generation, so the stale handle stays stale.
-    ResourceRef<BinaryResource> lFresh = lMgr.Load<BinaryResource>(lFile.c_str());
+    ResourceRef<BinaryResource> lFresh = lMgr.Load<BinaryResource>(lFile.CStr());
     CHECK(lFresh.GetHandle().Slot == lStale.Slot);
     CHECK(lFresh.GetHandle().Generation != lStale.Generation);
     CHECK(lMgr.Resolve(lStale)->Bytes.empty());          // still placeholder for the old gen
@@ -198,17 +179,17 @@ TEST_CASE("Resources: a dedup Load during the grace window resurrects the slot")
     ResourceManager lMgr;
     REQUIRE(lMgr.Startup());
 
-    const std::string              lFile = lWs.Write("g.bin", "grace");
+    const OpaaxString              lFile = lWs.Write("g.bin", "grace");
     ResourceHandle<BinaryResource> lHandle;
 
     {
-        ResourceRef<BinaryResource> lRef = lMgr.Load<BinaryResource>(lFile.c_str());
+        ResourceRef<BinaryResource> lRef = lMgr.Load<BinaryResource>(lFile.CStr());
         lHandle = lRef.GetHandle();
     } // released -> graveyard, still Loaded until the next pump
 
     // Load before the pump dedups onto the still-live slot: same slot AND generation
     // (no reload, no generation bump) — the pending grave entry will simply no-op.
-    ResourceRef<BinaryResource> lRevived = lMgr.Load<BinaryResource>(lFile.c_str());
+    ResourceRef<BinaryResource> lRevived = lMgr.Load<BinaryResource>(lFile.CStr());
     CHECK(lRevived.GetHandle() == lHandle);
     CHECK(lMgr.GetLoadedCount<BinaryResource>() == 1);
 
@@ -225,12 +206,12 @@ TEST_CASE("Resources: a composite loads its dependencies; release cascades")
     ResourceManager lMgr;
     REQUIRE(lMgr.Startup());
 
-    const std::string lChild1 = lWs.Write("c1.man", "");   // leaf manifests
-    const std::string lChild2 = lWs.Write("c2.man", "");
-    const std::string lParent = lWs.Write("p.man", lChild1 + "\n" + lChild2 + "\n");
+    const OpaaxString lChild1 = lWs.Write("c1.man", "");   // leaf manifests
+    const OpaaxString lChild2 = lWs.Write("c2.man", "");
+    const OpaaxString lParent = lWs.Write("p.man", lChild1 + "\n" + lChild2 + "\n");
 
     {
-        ResourceRef<ManifestResource> lRoot = lMgr.Load<ManifestResource>(lParent.c_str());
+        ResourceRef<ManifestResource> lRoot = lMgr.Load<ManifestResource>(lParent.CStr());
         CHECK(lRoot.IsValid());
         CHECK(lMgr.GetLoadedCount<ManifestResource>() == 3); // parent + 2 children
     } // dropping the root enqueues it for deferred unload
@@ -253,22 +234,22 @@ TEST_CASE("Resources: a hard dependency cycle fails loudly, does not hang")
 
     SUBCASE("self cycle")
     {
-        const std::string lSelf = lWs.PathOf("self.man");
+        const OpaaxString lSelf = lWs.PathOf("self.man");
         lWs.Write("self.man", lSelf + "\n");             // lists itself
 
-        ResourceRef<ManifestResource> lRoot = lMgr.Load<ManifestResource>(lSelf.c_str());
+        ResourceRef<ManifestResource> lRoot = lMgr.Load<ManifestResource>(lSelf.CStr());
         CHECK_FALSE(lRoot.IsValid());
         CHECK(lMgr.GetLoadedCount<ManifestResource>() == 0);
     }
 
     SUBCASE("two-node cycle A -> B -> A")
     {
-        const std::string lA = lWs.PathOf("a.man");
-        const std::string lB = lWs.PathOf("b.man");
+        const OpaaxString lA = lWs.PathOf("a.man");
+        const OpaaxString lB = lWs.PathOf("b.man");
         lWs.Write("a.man", lB + "\n");
         lWs.Write("b.man", lA + "\n");
 
-        ResourceRef<ManifestResource> lRoot = lMgr.Load<ManifestResource>(lA.c_str());
+        ResourceRef<ManifestResource> lRoot = lMgr.Load<ManifestResource>(lA.CStr());
         CHECK_FALSE(lRoot.IsValid());
         CHECK(lMgr.GetLoadedCount<ManifestResource>() == 0);
     }
@@ -298,7 +279,7 @@ TEST_CASE("Resources: a failed load applies the fail policy (Placeholder vs Fail
 
     SUBCASE("Placeholder leaf: missing file -> invalid handle but Get yields placeholder")
     {
-        ResourceRef<BinaryResource> lRef = lMgr.Load<BinaryResource>(lWs.PathOf("missing.bin").c_str());
+        ResourceRef<BinaryResource> lRef = lMgr.Load<BinaryResource>(lWs.PathOf("missing.bin").CStr());
         CHECK_FALSE(lRef.IsValid());                     // the load failed
         CHECK(lRef.Get() != nullptr);                    // ...but a texture-like type still renders
         CHECK(lRef.Get()->Bytes.empty());
@@ -307,8 +288,8 @@ TEST_CASE("Resources: a failed load applies the fail policy (Placeholder vs Fail
 
     SUBCASE("FailFast composite: a missing child fails the parent")
     {
-        const std::string lParent = lWs.Write("p.man", lWs.PathOf("missing.man") + "\n");
-        ResourceRef<ManifestResource> lRoot = lMgr.Load<ManifestResource>(lParent.c_str());
+        const OpaaxString lParent = lWs.Write("p.man", lWs.PathOf("missing.man") + "\n");
+        ResourceRef<ManifestResource> lRoot = lMgr.Load<ManifestResource>(lParent.CStr());
         CHECK_FALSE(lRoot.IsValid());
         CHECK(lMgr.GetLoadedCount<ManifestResource>() == 0);
     }
@@ -321,10 +302,12 @@ TEST_CASE("Resources: bytes accounting reflects loaded payloads")
     ResourceManager lMgr;
     REQUIRE(lMgr.Startup());
 
-    const std::string lFile = lWs.Write("big.bin", std::string(1234, 'x'));
+    OpaaxString lBig;
+    for (Uint32 i = 0; i < 1234; ++i) { lBig += 'x'; }
+    const OpaaxString lFile = lWs.Write("big.bin", lBig);
 
     {
-        ResourceRef<BinaryResource> lRef = lMgr.Load<BinaryResource>(lFile.c_str());
+        ResourceRef<BinaryResource> lRef = lMgr.Load<BinaryResource>(lFile.CStr());
         CHECK(lMgr.GetBytes<BinaryResource>() == 1234);
     }
     CHECK(lMgr.GetBytes<BinaryResource>() == 1234); // grace: accounted until the pump
@@ -339,9 +322,9 @@ TEST_CASE("Resources: Pin bridges a data handle to a lifetime claim")
     ResourceManager lMgr;
     REQUIRE(lMgr.Startup());
 
-    const std::string lFile = lWs.Write("pin.bin", "data");
+    const OpaaxString lFile = lWs.Write("pin.bin", "data");
 
-    ResourceRef<BinaryResource>    lRef    = lMgr.Load<BinaryResource>(lFile.c_str());
+    ResourceRef<BinaryResource>    lRef    = lMgr.Load<BinaryResource>(lFile.CStr());
     ResourceHandle<BinaryResource> lHandle = lRef.GetHandle();
 
     {
@@ -354,7 +337,7 @@ TEST_CASE("Resources: Pin bridges a data handle to a lifetime claim")
     // Pin cannot resurrect a dead handle.
     ResourceHandle<BinaryResource> lDead;
     {
-        ResourceRef<BinaryResource> lTmp = lMgr.Load<BinaryResource>(lWs.Write("t.bin", "z").c_str());
+        ResourceRef<BinaryResource> lTmp = lMgr.Load<BinaryResource>(lWs.Write("t.bin", "z").CStr());
         lDead = lTmp.GetHandle();
     }
     lMgr.Update(0.0); // pump past the grace so the slot is actually destroyed
@@ -379,9 +362,9 @@ TEST_CASE("Resources: LoadAsync loads off the main thread and publishes at the p
     lMgr.SetJobSystem(lJobs);
     REQUIRE(lMgr.Startup());
 
-    const std::string lFile = lWs.Write("g.bin", "x");
+    const OpaaxString lFile = lWs.Write("g.bin", "x");
 
-    ResourceRef<GpuLikeResource> lRef = lMgr.LoadAsync<GpuLikeResource>(lFile.c_str());
+    ResourceRef<GpuLikeResource> lRef = lMgr.LoadAsync<GpuLikeResource>(lFile.CStr());
     CHECK(lRef.IsValid());                                       // a Loading claim, returned immediately
     CHECK(lMgr.GetLoadingCount<GpuLikeResource>() == 1);
     CHECK(lMgr.GetLoadedCount<GpuLikeResource>() == 0);
@@ -399,7 +382,7 @@ TEST_CASE("Resources: LoadAsync loads off the main thread and publishes at the p
     // (both have the same fields, and the placeholder is initialized too).
     CHECK(lLoaded != lWhileLoading);
     CHECK(lLoaded->InitCount == 1);                              // Initialize ran exactly once...
-    CHECK(lLoaded->LoadThread != std::this_thread::get_id());    // ...and Load ran on a worker thread
+    CHECK(lLoaded->LoadThread != ThisThread::GetId());    // ...and Load ran on a worker thread
 }
 
 // =============================================================================
@@ -427,10 +410,10 @@ TEST_CASE("Resources: an async Ref dropped while still Loading is abandoned, not
     lMgr.SetJobSystem(lJobs);
     REQUIRE(lMgr.Startup());
 
-    const std::string lFile = lWs.Write("d.bin", "drop");
+    const OpaaxString lFile = lWs.Write("d.bin", "drop");
 
     {
-        ResourceRef<BinaryResource> lRef = lMgr.LoadAsync<BinaryResource>(lFile.c_str());
+        ResourceRef<BinaryResource> lRef = lMgr.LoadAsync<BinaryResource>(lFile.CStr());
         CHECK(lMgr.GetLoadingCount<BinaryResource>() == 1);
     } // ref dropped WHILE the slot is still Loading -> refcount must decrement to 0
 
@@ -450,14 +433,14 @@ TEST_CASE("Resources: LoadAsync completion callback fires Loaded and can retain 
     lMgr.SetJobSystem(lJobs);
     REQUIRE(lMgr.Startup());
 
-    const std::string lFile = lWs.Write("cb.bin", "hello"); // 5 bytes
+    const OpaaxString lFile = lWs.Write("cb.bin", "hello"); // 5 bytes
 
     int                         lFired  = 0;
     bool                        lFailed = true;
     ResourceRef<BinaryResource> lKept;
 
     // Fire-and-forget: we do NOT keep the returned Ref — the internal claim keeps it alive.
-    lMgr.LoadAsync<BinaryResource>(lFile.c_str(),
+    lMgr.LoadAsync<BinaryResource>(lFile.CStr(),
         [&](LoadAsyncResult<BinaryResource> InResult)
         {
             ++lFired;
@@ -471,7 +454,7 @@ TEST_CASE("Resources: LoadAsync completion callback fires Loaded and can retain 
     {
         lJobs.DrainCompletions();
         lMgr.Update(0.0);
-        std::this_thread::yield();
+        ThisThread::YieldNow();
     }
 
     CHECK(lFired == 1);
@@ -494,7 +477,7 @@ TEST_CASE("Resources: LoadAsync completion callback reports failure for a missin
     bool lFailed = false;
     bool lRefValid = true;
 
-    lMgr.LoadAsync<BinaryResource>(lWs.PathOf("nope.bin").c_str(),
+    lMgr.LoadAsync<BinaryResource>(lWs.PathOf("nope.bin").CStr(),
         [&](LoadAsyncResult<BinaryResource> InResult)
         {
             ++lFired;
@@ -506,7 +489,7 @@ TEST_CASE("Resources: LoadAsync completion callback reports failure for a missin
     {
         lJobs.DrainCompletions();
         lMgr.Update(0.0);
-        std::this_thread::yield();
+        ThisThread::YieldNow();
     }
 
     CHECK(lFired == 1);
@@ -525,17 +508,17 @@ TEST_CASE("Resources: a callback that drops the result lets the resource unload"
     lMgr.SetJobSystem(lJobs);
     REQUIRE(lMgr.Startup());
 
-    const std::string lFile = lWs.Write("ff.bin", "bye");
+    const OpaaxString lFile = lWs.Write("ff.bin", "bye");
 
     int lFired = 0;
-    lMgr.LoadAsync<BinaryResource>(lFile.c_str(),
+    lMgr.LoadAsync<BinaryResource>(lFile.CStr(),
         [&](LoadAsyncResult<BinaryResource> InResult) { ++lFired; /* drop InResult.Ref */ });
 
     for (int i = 0; i < 100000 && lFired == 0; ++i)
     {
         lJobs.DrainCompletions();
         lMgr.Update(0.0);
-        std::this_thread::yield();
+        ThisThread::YieldNow();
     }
 
     CHECK(lFired == 1);
@@ -553,11 +536,11 @@ TEST_CASE("Resources: LoadAsync loads a composite subtree on the worker")
     lMgr.SetJobSystem(lJobs);
     REQUIRE(lMgr.Startup());
 
-    const std::string lChild1 = lWs.Write("c1.man", "");
-    const std::string lChild2 = lWs.Write("c2.man", "");
-    const std::string lParent = lWs.Write("p.man", lChild1 + "\n" + lChild2 + "\n");
+    const OpaaxString lChild1 = lWs.Write("c1.man", "");
+    const OpaaxString lChild2 = lWs.Write("c2.man", "");
+    const OpaaxString lParent = lWs.Write("p.man", lChild1 + "\n" + lChild2 + "\n");
 
-    ResourceRef<ManifestResource> lRoot = lMgr.LoadAsync<ManifestResource>(lParent.c_str());
+    ResourceRef<ManifestResource> lRoot = lMgr.LoadAsync<ManifestResource>(lParent.CStr());
     CHECK(lRoot.IsValid());
 
     PumpUntilIdle<ManifestResource>(lMgr, lJobs);
@@ -581,8 +564,8 @@ TEST_CASE("Resources: CheckedView flags a Resolve pointer held across a pump")
     ResourceManager lMgr;
     REQUIRE(lMgr.Startup());
 
-    const std::string lFile = lWs.Write("v.bin", "view");
-    ResourceRef<BinaryResource> lRef = lMgr.Load<BinaryResource>(lFile.c_str());
+    const OpaaxString lFile = lWs.Write("v.bin", "view");
+    ResourceRef<BinaryResource> lRef = lMgr.Load<BinaryResource>(lFile.CStr());
 
     CheckedView<BinaryResource> lView = CheckedResolve(lMgr, lRef.GetHandle());
     CHECK_FALSE(lView.IsStale());
@@ -600,24 +583,22 @@ TEST_CASE("Resources: CheckedView flags a Resolve pointer held across a pump")
 TEST_CASE("ResourceManager::Reload: a ref taken BEFORE the reload sees the new payload")
 {
     TempWorkspace lWs;
-    const std::string lPath = lWs.Write("hot.bin", "before");
+    const OpaaxString lPath = lWs.Write("hot.bin", "before");
 
     ResourceManager lMgr;
     REQUIRE(lMgr.Startup());
 
-    ResourceRef<BinaryResource> lHeld = lMgr.Load<BinaryResource>(lPath.c_str());
+    ResourceRef<BinaryResource> lHeld = lMgr.Load<BinaryResource>(lPath.CStr());
     REQUIRE(lHeld.IsValid());
-    REQUIRE(Trim(std::string(reinterpret_cast<const char*>(lHeld.Get()->Bytes.data()),
-                             lHeld.Get()->Bytes.size())) == "before");
+    REQUIRE(TrimmedText(lHeld.Get()->Bytes) == "before");
 
     lWs.Write("hot.bin", "after!");
 
-    CHECK(lMgr.Reload<BinaryResource>(lPath.c_str()));
+    CHECK(lMgr.Reload<BinaryResource>(lPath.CStr()));
 
     // The same claim, never taken again.
     CHECK(lHeld.IsValid());
-    CHECK(Trim(std::string(reinterpret_cast<const char*>(lHeld.Get()->Bytes.data()),
-                           lHeld.Get()->Bytes.size())) == "after!");
+    CHECK(TrimmedText(lHeld.Get()->Bytes) == "after!");
 
     lMgr.Shutdown();
 }
@@ -625,13 +606,13 @@ TEST_CASE("ResourceManager::Reload: a ref taken BEFORE the reload sees the new p
 TEST_CASE("ResourceManager::Reload: a path nobody holds is FALSE, and is not a failure")
 {
     TempWorkspace lWs;
-    const std::string lPath = lWs.Write("cold.bin", "x");
+    const OpaaxString lPath = lWs.Write("cold.bin", "x");
 
     ResourceManager lMgr;
     REQUIRE(lMgr.Startup());
 
     // Not loaded: nothing to update, and no load either.
-    CHECK_FALSE(lMgr.Reload<BinaryResource>(lPath.c_str()));
+    CHECK_FALSE(lMgr.Reload<BinaryResource>(lPath.CStr()));
     CHECK(lMgr.GetLoadedCount<BinaryResource>() == 0u);
 
     lMgr.Shutdown();
@@ -640,22 +621,20 @@ TEST_CASE("ResourceManager::Reload: a path nobody holds is FALSE, and is not a f
 TEST_CASE("ResourceManager::Reload: a failed re-read KEEPS the resident payload")
 {
     TempWorkspace lWs;
-    const std::string lPath = lWs.Write("vanish.bin", "original");
+    const OpaaxString lPath = lWs.Write("vanish.bin", "original");
 
     ResourceManager lMgr;
     REQUIRE(lMgr.Startup());
 
-    ResourceRef<BinaryResource> lHeld = lMgr.Load<BinaryResource>(lPath.c_str());
+    ResourceRef<BinaryResource> lHeld = lMgr.Load<BinaryResource>(lPath.CStr());
     REQUIRE(lHeld.IsValid());
 
-    std::error_code lEc;
-    std::filesystem::remove(lWs.Dir / "vanish.bin", lEc);
+    FileSystem::Remove(lPath);
 
     // Blanking a live resource because a re-read failed is worse than keeping something stale.
-    CHECK_FALSE(lMgr.Reload<BinaryResource>(lPath.c_str()));
+    CHECK_FALSE(lMgr.Reload<BinaryResource>(lPath.CStr()));
     CHECK(lHeld.IsValid());
-    CHECK(Trim(std::string(reinterpret_cast<const char*>(lHeld.Get()->Bytes.data()),
-                           lHeld.Get()->Bytes.size())) == "original");
+    CHECK(TrimmedText(lHeld.Get()->Bytes) == "original");
 
     lMgr.Shutdown();
 }

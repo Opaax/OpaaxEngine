@@ -1,6 +1,6 @@
 #pragma once
 
-#include <type_traits>
+#include "Core/Templates/TypeTraits.h"
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
@@ -56,7 +56,7 @@ namespace Opaax
         template<typename TEvent>
         DelegateHandle Subscribe(TFunction<void(const TEvent&)> InHandler)
         {
-            static_assert(std::is_trivially_copyable_v<TEvent>,
+            static_assert(TIsTriviallyCopyable<TEvent>,
                 "EventBus payloads must be trivially-copyable POD structs");
 
             return SubscribeImpl(Detail::EventTypeKey<TEvent>(), nullptr,
@@ -70,7 +70,7 @@ namespace Opaax
         template<typename TEvent, typename T>
         DelegateHandle Subscribe(T* InObj, void (T::*InMember)(const TEvent&))
         {
-            static_assert(std::is_trivially_copyable_v<TEvent>,
+            static_assert(TIsTriviallyCopyable<TEvent>,
                 "EventBus payloads must be trivially-copyable POD structs");
 
             return SubscribeImpl(Detail::EventTypeKey<TEvent>(), InObj,
@@ -103,7 +103,7 @@ namespace Opaax
         template<typename TEvent>
         void Publish(const TEvent& InEvent)
         {
-            static_assert(std::is_trivially_copyable_v<TEvent>,
+            static_assert(TIsTriviallyCopyable<TEvent>,
                 "EventBus payloads must be trivially-copyable POD structs");
 
             PublishImpl(Detail::EventTypeKey<TEvent>(), &InEvent);
@@ -121,7 +121,7 @@ namespace Opaax
         template<typename TEvent>
         void Enqueue(const TEvent& InEvent)
         {
-            static_assert(std::is_trivially_copyable_v<TEvent>,
+            static_assert(TIsTriviallyCopyable<TEvent>,
                 "EventBus payloads must be trivially-copyable POD structs");
 
             EnqueueImpl([this, lPayload = InEvent]() { PublishImpl(Detail::EventTypeKey<TEvent>(), &lPayload); });

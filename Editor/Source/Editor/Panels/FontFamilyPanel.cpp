@@ -265,7 +265,7 @@ namespace Opaax::Editor
 
     void FontFamilyPanel::DrawMatrix(const FontFamilyData& InData)
     {
-        constexpr Uint32 SUBSET_COUNT = static_cast<Uint32>(std::size(TEnumValues<EFontSubset>::Values));
+        constexpr Uint32 SUBSET_COUNT = static_cast<Uint32>(ArraySize(TEnumValues<EFontSubset>::Values));
 
         // +1 for the weight labels.
         if (!ImGui::BeginTable("FamilyMatrix", static_cast<int>(SUBSET_COUNT) + 1,

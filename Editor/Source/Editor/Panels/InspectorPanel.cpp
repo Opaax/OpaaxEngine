@@ -1,6 +1,6 @@
 #include "Editor/Panels/InspectorPanel.h"
 
-#include <cstring>   // memcpy
+#include "Core/Memory/Memory.h"
 
 #include "Editor/EditorContext.h"
 #include "Editor/Commands/EditorNativeCommands.h"
@@ -114,7 +114,7 @@ namespace Opaax::Editor
                                      ? lName.GetLength()
                                      : static_cast<Uint32>(sizeof(m_NameBuffer) - 1);
 
-            std::memcpy(m_NameBuffer, lName.CStr(), lLen);
+            Memory::Copy(m_NameBuffer, lName.CStr(), lLen);
             m_NameBuffer[lLen] = '\0';
         }
 

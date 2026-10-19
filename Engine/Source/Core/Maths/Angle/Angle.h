@@ -10,7 +10,7 @@ namespace Opaax
     /**
      * An angle, stored as float or double.
      */
-    template<CONCEPT_TIsFloat T>
+    template<CFloatingPoint T>
     class TAngle
     {
     public:

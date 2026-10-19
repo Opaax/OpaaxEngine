@@ -403,7 +403,7 @@ namespace Opaax
 
             // The lights that reach this view.
             const float    lHalfHeight = InView.OrthoSize;
-            const float    lHalfWidth  = lHalfHeight * (static_cast<float>(lWidth) / static_cast<float>(std::max(lHeight, 1u)));
+            const float    lHalfWidth  = lHalfHeight * (static_cast<float>(lWidth) / static_cast<float>(Maths::Max(lHeight, 1u)));
             const Bounds2D lViewBounds{ InView.Position, { lHalfWidth, lHalfHeight } };
             const Vector3F lAmbient{ lEnvironment->AmbientColor.r, lEnvironment->AmbientColor.g, lEnvironment->AmbientColor.b };
 
@@ -411,7 +411,7 @@ namespace Opaax
             PackLights2D(CollectLights(*InWorld), lViewBounds, lAmbient, lEnvironment->AmbientIntensity, lLights);
 
             // Shadows and ambient occlusion first: they are drawn from passes of their own.
-            const float        lPixelsPerUnit = static_cast<float>(lHeight) / std::max(2.f * InView.OrthoSize, 1e-3f);
+            const float        lPixelsPerUnit = static_cast<float>(lHeight) / Maths::Max(2.f * InView.OrthoSize, 1e-3f);
             const LightingMaps lMaps          = RenderLightingMaps(*InWorld, lRenderer, lViewBounds, lPixelsPerUnit,
                                                                    *lEnvironment, lLights);
 
@@ -511,7 +511,7 @@ namespace Opaax
         lLighting.bLit      = lMaterial->bLit;
         lLighting.NormalMap = ResolveTexture(lMaterial->NormalMap);
 
-        const float lStrength = std::max(lMaterial->EmissiveStrength, 0.f);
+        const float lStrength = Maths::Max(lMaterial->EmissiveStrength, 0.f);
         lLighting.Emissive = Vector3F{ ScreenToLinear(lMaterial->EmissiveColor.r) * lStrength,
                                        ScreenToLinear(lMaterial->EmissiveColor.g) * lStrength,
                                        ScreenToLinear(lMaterial->EmissiveColor.b) * lStrength };

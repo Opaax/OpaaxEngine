@@ -1,7 +1,6 @@
 #include "Editor/Properties/PropertyDrawers.h"
 
-#include <cstring>   // memcpy
-#include <string>
+#include "Core/Memory/Memory.h"
 
 #include "Editor/Properties/WidgetPropertyVisitor.h"
 #include "Resources/DataAsset/DataAssetResource.h"
@@ -98,7 +97,7 @@ namespace Opaax::Editor
         }
 
         char lBuffer[k_BlockSize];
-        std::memcpy(lBuffer, InValue.CStr(), InValue.GetLength());
+        Memory::Copy(lBuffer, InValue.CStr(), InValue.GetLength());
         lBuffer[InValue.GetLength()] = '\0';
 
         const bool bEdited = bMultiline
@@ -126,7 +125,7 @@ namespace Opaax::Editor
             const Uint32          lLen  = lText.GetLength() < k_BufferSize - 1
                                               ? lText.GetLength() : k_BufferSize - 1;
 
-            std::memcpy(lBuffer, lText.Data(), lLen);
+            Memory::Copy(lBuffer, lText.Data(), lLen);
             lBuffer[lLen] = '\0';
         }
 
@@ -173,11 +172,11 @@ namespace Opaax::Editor
     void DrawDataAssetRefField(IEditorWidgets& InWidgets, const char* InLabel, OpaaxString& InPath,
                                const OpaaxStringID InDataType)
     {
-        const std::string lEmpty = std::string("(drop a ") + (InDataType.IsValid() ? InDataType.CStr() : "data asset")
-                                 + " here)";
+        const OpaaxString lEmpty = OpaaxString::Format("(drop a {} here)",
+                                                       InDataType.IsValid() ? InDataType.CStr() : "data asset");
 
         DrawDropPathField(InWidgets, InLabel, InPath, ResourceTypeID::Get<DataAssetResource>(), InDataType.GetId(),
-                          lEmpty.c_str());
+                          lEmpty.CStr());
     }
 
     void DrawResourcePathField(IEditorWidgets& InWidgets, const char* InLabel, OpaaxString& InPath,
@@ -219,7 +218,7 @@ namespace Opaax::Editor
 
         const bool bOpen = InWidgets.BeginTreeNode(InLabel);
         InWidgets.SameLine();
-        InWidgets.TextDisabled(("(" + std::to_string(InList.Count()) + ")").c_str());
+        InWidgets.TextDisabled(OpaaxString::Format("({})", InList.Count()).CStr());
         DrawPropertyNote(InWidgets, InMeta);
 
         if (bOpen)

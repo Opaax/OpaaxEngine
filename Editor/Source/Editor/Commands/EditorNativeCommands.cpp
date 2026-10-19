@@ -231,7 +231,7 @@ namespace Opaax::Editor
 
         InContext.Dialogs.PickFolder(lRequest, [&InContext](const OpaaxString& InFolder)
         {
-            ExportOps::Start(InContext, std::string(InFolder.CStr()));
+            ExportOps::Start(InContext, InFolder);
         });
     }
 

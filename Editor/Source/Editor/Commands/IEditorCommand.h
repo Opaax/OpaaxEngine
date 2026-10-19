@@ -1,9 +1,6 @@
 // IEditorCommand.h
 #pragma once
 
-#include <memory>
-#include <utility>
-
 #include "Core/OpaaxTypes.h"
 #include "Editor/EditorContext.h"
 #include "Editor/Commands/EditorCommandConcept.h"
@@ -27,7 +24,7 @@ namespace Opaax::Editor
         template<EditorCommand<EditorContext> T>
         struct Model final : Concept
         {
-            explicit Model(T InCommand) : m_Command(std::move(InCommand)) {}
+            explicit Model(T InCommand) : m_Command(Move(InCommand)) {}
 
             void Execute(EditorContext& Context, const void* RawParams) override
             {
@@ -43,7 +40,7 @@ namespace Opaax::Editor
     public:
         template<EditorCommand<EditorContext> T>
         explicit IEditorCommand(T Command)
-            : m_Self(MakeUnique<Model<T>>(std::move(Command)))
+            : m_Self(MakeUnique<Model<T>>(Move(Command)))
         {
         }
 

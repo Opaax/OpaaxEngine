@@ -1,6 +1,6 @@
 #pragma once
 
-#include <concepts>
+#include "Core/Templates/TypeTraits.h"
 
 #include <nlohmann/json.hpp>
 
@@ -17,7 +17,7 @@ namespace Opaax
     //   default). Its saved type name is its C++ name, without namespace.
     // =============================================================================
     template<typename T>
-    concept CDataAsset = CReflected<T> && std::default_initializable<T>
+    concept CDataAsset = CReflected<T> && CDefaultInitializable<T>
         && requires(const T& InConst, T& InMutable, nlohmann::json& InJson)
         {
             InJson = InConst;

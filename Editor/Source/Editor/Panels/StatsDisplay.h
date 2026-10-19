@@ -2,7 +2,7 @@
 
 #include "Core/Profiling/FrameStats.h"
 
-#include <cstring>   // strcmp
+#include "Core/String/CString.h"
 
 namespace Opaax::Editor
 {
@@ -79,7 +79,7 @@ namespace Opaax::Editor
             if (InA.Name == InB.Name)           { return true; }
             if (InA.Name == nullptr || InB.Name == nullptr) { return false; }
 
-            return std::strcmp(InA.Name, InB.Name) == 0;
+            return CString::Equals(InA.Name, InB.Name);
         }
 
         /**
@@ -143,7 +143,7 @@ namespace Opaax::Editor
             if (InA == InB)                       { return true; }
             if (InA == nullptr || InB == nullptr) { return false; }
 
-            return std::strcmp(InA, InB) == 0;
+            return CString::Equals(InA, InB);
         }
 
         // =============================================================================

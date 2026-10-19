@@ -2,7 +2,7 @@
 // defined in the test exe, like a game module; the registries live in the engine library.
 #include <doctest.h>
 
-#include <optional>
+#include "Core/OpaaxTypes.h"
 
 #include "Engine/Registries/ModuleRegistrar.h"
 #include "Engine/Registries/EngineRegistries.h"
@@ -72,8 +72,8 @@ namespace TestGame
 
         static constexpr Opaax::EFailPolicy FailPolicy = Opaax::EFailPolicy::Placeholder;
 
-        static std::optional<PickupResource> Load(const char*, Opaax::LoadContext&) { return PickupResource{}; }
-        static PickupResource                Placeholder() { return PickupResource{}; }
+        static TOptional<PickupResource> Load(const char*, Opaax::LoadContext&) { return PickupResource{}; }
+        static PickupResource            Placeholder() { return PickupResource{}; }
     };
 }
 

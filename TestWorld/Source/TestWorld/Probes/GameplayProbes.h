@@ -1,10 +1,11 @@
 #pragma once
 
-#include <algorithm>
+#include "Core/Algo/Algo.h"
 
 #include "Audio/AudioGlobalBank.h"
 #include "Audio/AudioManager.h"
 #include "Audio/AudioSubsystem.h"
+#include "Core/Maths/Maths.h"
 #include "Core/String/OpaaxStringJson.h"
 #include "Input/InputManager.h"
 #include "Input/Mapping/InputMappingSubsystem.h"
@@ -151,7 +152,7 @@ namespace TestWorld
             SetVelocity(Opaax::Vector2F{ 0.f, LaunchSpeed });
         }
 
-        void OnUpdate(float) override { PeakY = std::max(PeakY, GetTransform().Position.y); }
+        void OnUpdate(float) override { PeakY = Opaax::Maths::Max(PeakY, GetTransform().Position.y); }
     };
 
     // =============================================================================
@@ -275,7 +276,7 @@ namespace TestWorld
                 }
             }
 
-            Distinct = static_cast<Opaax::Int32>(std::count(lHeard.begin(), lHeard.end(), true));
+            Distinct = static_cast<Opaax::Int32>(Opaax::Algo::Count(lHeard, true));
         }
     };
 

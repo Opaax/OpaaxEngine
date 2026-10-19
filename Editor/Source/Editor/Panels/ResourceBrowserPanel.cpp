@@ -20,8 +20,7 @@
 
 #include <imgui.h>
 
-#include <cstdio>
-#include <cstring>
+#include "Core/String/CString.h"
 
 using namespace Opaax;
 
@@ -121,7 +120,7 @@ namespace Opaax::Editor
         if (ImguiWidgets::ToggleButton("List",  m_View == EBrowserView::List))  { m_View = EBrowserView::List; }
 
         char lBuffer[128];
-        std::snprintf(lBuffer, sizeof(lBuffer), "%s", m_Filter.CStr());
+        CString::Format(lBuffer, "{}", m_Filter);
         ImGui::SetNextItemWidth(-1.f);
         if (ImGui::InputTextWithHint("##ResourceFilter", "Filter by name...", lBuffer, sizeof(lBuffer)))
         {
@@ -384,7 +383,7 @@ namespace Opaax::Editor
         // The icon is painted over the indent, so the Selectable stays the last submitted item
         // (ApplyFileBehavior's hover, click and drag still apply to the whole row).
         char lLabel[512];
-        snprintf(lLabel, sizeof(lLabel), "      %s", InDisplayName);
+        CString::Format(lLabel, "      {}", InDisplayName);
 
         ImGui::PushID(InFile.RelPath.CStr());
 

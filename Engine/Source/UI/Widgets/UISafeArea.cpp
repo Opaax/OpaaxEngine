@@ -1,6 +1,6 @@
 #include "UI/Widgets/UISafeArea.h"
 
-#include <algorithm>
+#include "Core/Maths/Maths.h"
 
 namespace Opaax
 {
@@ -9,8 +9,8 @@ namespace Opaax
         /** Sanitized per-edge fractions: never negative, never more than the rect. */
         void FitInsets(float& InOutLow, float& InOutHigh) noexcept
         {
-            InOutLow  = std::max(0.f, InOutLow);
-            InOutHigh = std::max(0.f, InOutHigh);
+            InOutLow  = Maths::Max(0.f, InOutLow);
+            InOutHigh = Maths::Max(0.f, InOutHigh);
 
             // At 1.0 the rect would vanish: keep a sliver so a typo stays visible.
             constexpr float lMaxSum = 0.9f;

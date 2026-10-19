@@ -1,6 +1,6 @@
 #include "UI/UICanvas.h"
 
-#include <limits>
+#include "Core/Templates/TypeTraits.h"
 
 #include "Core/Log/Logger.h"
 #include "Renderer/Renderer2D.h"
@@ -13,7 +13,7 @@ namespace Opaax
 
     namespace
     {
-        constexpr Int32 MAX_ORDER = std::numeric_limits<Int16>::max();
+        constexpr Int32 MAX_ORDER = TNumericLimits<Int16>::max();
 
         /**
          * Tree order, parents first. InMask is the nearest ancestor mask (a UIMask replaces it);

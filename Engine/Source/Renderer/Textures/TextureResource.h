@@ -1,7 +1,5 @@
 #pragma once
 
-#include <optional>
-
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Log/Logger.h"
@@ -51,7 +49,7 @@ namespace Opaax
          * @param InPath Absolute UTF-8 path
          * @return The image, or nullopt if the file is unreadable or not an image
          */
-        static std::optional<TextureResource> Load(const char* InPath, LoadContext& InCtx);
+        static TOptional<TextureResource> Load(const char* InPath, LoadContext& InCtx);
 
         /**
          * Main thread, once: uploads the pixels and frees them. Safe to call twice.

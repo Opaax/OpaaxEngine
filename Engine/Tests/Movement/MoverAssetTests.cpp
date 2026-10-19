@@ -3,8 +3,7 @@
 // File cases use a unique temp directory, created and removed per case.
 #include <doctest.h>
 
-#include <filesystem>
-#include <string>
+#include "../TestTempDir.h"
 
 #include "Core/IO/FileIO.h"
 #include "Movement/Assets/MoveModeData.h"
@@ -16,34 +15,6 @@ using namespace Opaax;
 
 namespace
 {
-    namespace fs = std::filesystem;
-
-    class ScopedTempDir
-    {
-    public:
-        explicit ScopedTempDir(const char* InTag)
-        {
-            m_Path = fs::temp_directory_path() / ("OpaaxMoverTests_" + std::string(InTag));
-
-            std::error_code lError;
-            fs::remove_all(m_Path, lError);   // a previous crashed run must not poison this one
-            fs::create_directories(m_Path, lError);
-        }
-
-        ~ScopedTempDir()
-        {
-            std::error_code lError;
-            fs::remove_all(m_Path, lError);
-        }
-
-        OpaaxString File(const char* InName) const
-        {
-            return OpaaxString((m_Path / InName).string().c_str());
-        }
-
-    private:
-        fs::path m_Path;
-    };
 
     MoveModeData MakeGround()
     {
@@ -93,8 +64,8 @@ TEST_CASE("MoveModeData: GroundNormalY is the COSINE of the slope limit")
 
 TEST_CASE("MoveModeFile: a tuning round-trips through disk unchanged")
 {
-    const ScopedTempDir lDir("modeRoundTrip");
-    const OpaaxString   lPath = lDir.File("Hero_Ground.opaaxmovemode");
+    const TestTempDir   lDir("modeRoundTrip");
+    const OpaaxString   lPath = lDir.Sub("Hero_Ground.opaaxmovemode");
 
     const MoveModeData lSaved = MakeGround();
     REQUIRE(MoveModeFile::Save(lPath, lSaved));
@@ -110,8 +81,8 @@ TEST_CASE("MoveModeFile: a tuning round-trips through disk unchanged")
 
 TEST_CASE("MoveModeFile: a file missing a key keeps that field's DEFAULT")
 {
-    const ScopedTempDir lDir("modePartial");
-    const OpaaxString   lPath = lDir.File("Partial.opaaxmovemode");
+    const TestTempDir   lDir("modePartial");
+    const OpaaxString   lPath = lDir.Sub("Partial.opaaxmovemode");
 
     // The _WITH_DEFAULT contract, which is what makes "add a field" backward compatible: an asset
     // authored before JumpSpeed existed must still load.
@@ -127,20 +98,20 @@ TEST_CASE("MoveModeFile: a file missing a key keeps that field's DEFAULT")
 
 TEST_CASE("MoveModeFile: a missing or malformed file FAILS and leaves the output untouched")
 {
-    const ScopedTempDir lDir("modeBad");
+    const TestTempDir lDir("modeBad");
 
     MoveModeData lData = MakeGround();
 
-    CHECK_FALSE(MoveModeFile::Load(lDir.File("NoSuchFile.opaaxmovemode"), lData));
+    CHECK_FALSE(MoveModeFile::Load(lDir.Sub("NoSuchFile.opaaxmovemode"), lData));
     CHECK(lData.MaxSpeed == doctest::Approx(375.f));   // untouched, not half-written
 
-    const OpaaxString lNotJson = lDir.File("Broken.opaaxmovemode");
+    const OpaaxString lNotJson = lDir.Sub("Broken.opaaxmovemode");
     REQUIRE(FileIO::WriteAllText(lNotJson, OpaaxString("this is not json")));
     CHECK_FALSE(MoveModeFile::Load(lNotJson, lData));
     CHECK(lData.MaxSpeed == doctest::Approx(375.f));
 
     // Valid json that is not an OBJECT — the case a bare array or number would hit.
-    const OpaaxString lArray = lDir.File("Array.opaaxmovemode");
+    const OpaaxString lArray = lDir.Sub("Array.opaaxmovemode");
     REQUIRE(FileIO::WriteAllText(lArray, OpaaxString("[1, 2, 3]")));
     CHECK_FALSE(MoveModeFile::Load(lArray, lData));
     CHECK(lData.MaxSpeed == doctest::Approx(375.f));
@@ -193,8 +164,8 @@ TEST_CASE("MoverData: an EMPTY bag resolves nothing, both ways")
 
 TEST_CASE("MoverFile: a bag round-trips, entries and default alike")
 {
-    const ScopedTempDir lDir("moverRoundTrip");
-    const OpaaxString   lPath = lDir.File("Hero.opaaxmover");
+    const TestTempDir   lDir("moverRoundTrip");
+    const OpaaxString   lPath = lDir.Sub("Hero.opaaxmover");
 
     MoverData lSaved;
     lSaved.Entries.emplace_back(MoverEntry{ OPAAX_ID("Ground"), {} });
@@ -222,8 +193,8 @@ TEST_CASE("MoverFile: a bag round-trips, entries and default alike")
 
 TEST_CASE("MoverFile: an EMPTY bag saves and loads — it is what a freshly created one is")
 {
-    const ScopedTempDir lDir("moverEmpty");
-    const OpaaxString   lPath = lDir.File("Empty.opaaxmover");
+    const TestTempDir   lDir("moverEmpty");
+    const OpaaxString   lPath = lDir.Sub("Empty.opaaxmover");
 
     const MoverData lSaved{};
     REQUIRE(MoverFile::Save(lPath, lSaved));
@@ -237,15 +208,15 @@ TEST_CASE("MoverFile: an EMPTY bag saves and loads — it is what a freshly crea
 
 TEST_CASE("MoverFile: a malformed bag FAILS and leaves the output untouched")
 {
-    const ScopedTempDir lDir("moverBad");
+    const TestTempDir lDir("moverBad");
 
     MoverData lData;
     lData.Entries.emplace_back(MoverEntry{ OPAAX_ID("Ground"), {} });
 
-    CHECK_FALSE(MoverFile::Load(lDir.File("NoSuchFile.opaaxmover"), lData));
+    CHECK_FALSE(MoverFile::Load(lDir.Sub("NoSuchFile.opaaxmover"), lData));
     CHECK(lData.EntryCount() == 1u);
 
-    const OpaaxString lNotJson = lDir.File("Broken.opaaxmover");
+    const OpaaxString lNotJson = lDir.Sub("Broken.opaaxmover");
     REQUIRE(FileIO::WriteAllText(lNotJson, OpaaxString("{{{")));
     CHECK_FALSE(MoverFile::Load(lNotJson, lData));
     CHECK(lData.EntryCount() == 1u);
@@ -253,8 +224,8 @@ TEST_CASE("MoverFile: a malformed bag FAILS and leaves the output untouched")
 
 TEST_CASE("MoverFile: Serialize is EXACTLY what Save writes — the editor's dirty check depends on it")
 {
-    const ScopedTempDir lDir("moverSerialize");
-    const OpaaxString   lPath = lDir.File("Dirty.opaaxmover");
+    const TestTempDir   lDir("moverSerialize");
+    const OpaaxString   lPath = lDir.Sub("Dirty.opaaxmover");
 
     MoverData lData;
     lData.Entries.emplace_back(MoverEntry{ OPAAX_ID("Ground"), {} });

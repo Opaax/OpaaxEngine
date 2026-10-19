@@ -3,11 +3,11 @@
 // Uses a unique directory under the OS temp dir, created and removed per case.
 #include <doctest.h>
 
-#include <filesystem>
-#include <fstream>
-#include <string>
-
+#include "../TestTempDir.h"
 #include "Application/Services/IPaths.h"
+#include "Core/IO/FileIO.h"
+#include "Core/IO/FileSystem.h"
+#include "Core/String/OpaaxPathString.h"
 #include "Resources/ResourceFormatRegistry.h"
 #include "Resources/ResourceManager.h"
 #include "Resources/ResourcePathJson.h"
@@ -25,25 +25,22 @@ using namespace Opaax;
 
 namespace
 {
-    namespace fs = std::filesystem;
-
     // Every asset lives under one temp root, so AssetToAbsolute is a concatenation. The rest of
     // IPaths answers the root: Level reaches for that ONE resolver and nothing else, and a stub
     // that lied about the others would still never be caught at it.
     class TempPaths final : public IPaths
     {
     public:
-        explicit TempPaths(const fs::path& InRoot) : m_Root(InRoot) {}
+        explicit TempPaths(const OpaaxString& InRoot) : m_Root(InRoot) {}
 
         OpaaxString AssetToAbsolute(const OpaaxString& InAssetRel) const override
         {
-            return OpaaxString((m_Root / InAssetRel.CStr()).generic_string().c_str());
+            return PathString::Join(m_Root, InAssetRel);
         }
 
         OpaaxString AbsoluteToAsset(const OpaaxString& InAbsPath) const override
         {
-            const fs::path lRelative = fs::path(InAbsPath.CStr()).lexically_relative(m_Root);
-            return OpaaxString(lRelative.generic_string().c_str());
+            return PathString::RelativeTo(InAbsPath, m_Root);
         }
 
         void        LogPaths()      const override {}
@@ -61,49 +58,37 @@ namespace
         OpaaxString ProjectToAbsolute(const OpaaxString& InRel) const override { return AssetToAbsolute(InRel); }
 
     private:
-        OpaaxString Root() const { return OpaaxString(m_Root.generic_string().c_str()); }
+        OpaaxString Root() const { return m_Root; }
 
-        fs::path m_Root;
+        OpaaxString m_Root;
     };
 
+    /** The assets of a case: a temp directory with a Maps folder. */
     class ScopedTempDir
     {
     public:
         explicit ScopedTempDir(const char* InTag)
+            : m_Dir(InTag)
         {
-            m_Path = fs::temp_directory_path() / ("OpaaxLevelTests_" + std::string(InTag));
-
-            std::error_code lError;
-            fs::remove_all(m_Path, lError);
-            fs::create_directories(m_Path / "Maps", lError);
+            FileSystem::CreateDirectories(m_Dir.Sub("Maps"));
         }
 
-        ~ScopedTempDir()
+        void Write(const char* InAssetRel, const OpaaxString& InText) const
         {
-            std::error_code lError;
-            fs::remove_all(m_Path, lError);
+            FileIO::WriteAllText(m_Dir.Sub(InAssetRel), InText);
         }
 
-        ScopedTempDir(const ScopedTempDir&)            = delete;
-        ScopedTempDir& operator=(const ScopedTempDir&) = delete;
-
-        void Write(const char* InAssetRel, const std::string& InText) const
-        {
-            std::ofstream lOut(m_Path / InAssetRel, std::ios::binary);
-            lOut << InText;
-        }
-
-        const fs::path& Root() const { return m_Path; }
+        const OpaaxString& Root() const { return m_Dir.Path(); }
 
     private:
-        fs::path m_Path;
+        TestTempDir m_Dir;
     };
 
     // A one-entity map, hand-written: MapFile/MapJson have their own suites, so this only has to
     // be READABLE — no component payloads, which is also why a bare ComponentRegistry serves.
-    std::string MapText(const char* InGuid, const char* InName, const char* InOwnerMap)
+    OpaaxString MapText(const char* InGuid, const char* InName, const char* InOwnerMap)
     {
-        return std::string(R"({"version":1,"entities":[{"guid":")") + InGuid +
+        return OpaaxString(R"({"version":1,"entities":[{"guid":")") + InGuid +
                R"(","name":")" + InName +
                R"(","ownerMap":")" + InOwnerMap +
                R"(","components":{}}]})";
@@ -150,8 +135,7 @@ namespace
         lPiece.Id   = Guid::New();
         lPiece.Name = OpaaxString("Bullet");
         lBullet.Entities.emplace_back(Move(lPiece));
-        std::error_code lError;
-        fs::create_directories(InFix.Dir.Root() / "Prefabs", lError);
+        FileSystem::CreateDirectories(PathString::Join(InFix.Dir.Root(), "Prefabs"));
         REQUIRE(PrefabFile::Save(InFix.Paths.AssetToAbsolute(OpaaxString("Prefabs/Bullet.opaaxprefab")), lBullet));
 
         GunComponent lGun;

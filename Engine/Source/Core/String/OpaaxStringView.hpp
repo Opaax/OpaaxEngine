@@ -5,6 +5,7 @@
 #include <string_view>
 
 #include "Core/OpaaxTypes.h"
+#include "Core/String/Char.h"
 
 namespace Opaax
 {
@@ -16,7 +17,7 @@ namespace Opaax
      * Like std::string_view, do not keep it longer than the bytes it points to.
      *
      * @see OpaaxString for the owning form.
-     * @see Core/Hash/OpaaxHash.h for std::hash<OpaaxStringView>.
+     * @see Core/Hash/OpaaxHash.h for THash<OpaaxStringView>.
      */
     class OpaaxStringView final
     {
@@ -87,6 +88,24 @@ namespace Opaax
             m_Length -= (InCount > m_Length) ? m_Length : InCount;
         }
 
+        /** Without the spaces, tabs and line breaks at its start (Char::IsSpace). */
+        constexpr OpaaxStringView TrimStart() const noexcept
+        {
+            Uint32 lFirst = 0;
+            while (lFirst < m_Length && Char::IsSpace(m_Data[lFirst])) { ++lFirst; }
+            return SubString(lFirst);
+        }
+
+        /** Without the spaces, tabs and line breaks at its end. */
+        constexpr OpaaxStringView TrimEnd() const noexcept
+        {
+            Uint32 lEnd = m_Length;
+            while (lEnd > 0 && Char::IsSpace(m_Data[lEnd - 1])) { --lEnd; }
+            return SubString(0, lEnd);
+        }
+
+        constexpr OpaaxStringView Trim() const noexcept { return TrimStart().TrimEnd(); }
+
         /**
          * @return Index of the first match at or after InStartPos, or -1.
          *   An empty needle returns InStartPos.
@@ -132,6 +151,16 @@ namespace Opaax
             for (Uint32 i = m_Length; i > 0; --i)
             {
                 if (m_Data[i - 1] == InChar) { return static_cast<Int32>(i - 1); }
+            }
+            return -1;
+        }
+
+        /** @return Index of the first byte at or after InStartPos that is any of InChars, or -1. */
+        constexpr Int32 FindFirstOf(OpaaxStringView InChars, Uint32 InStartPos = 0) const noexcept
+        {
+            for (Uint32 i = InStartPos; i < m_Length; ++i)
+            {
+                if (InChars.Find(m_Data[i]) >= 0) { return static_cast<Int32>(i); }
             }
             return -1;
         }

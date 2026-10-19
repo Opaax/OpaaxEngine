@@ -11,7 +11,6 @@
 #include "Editor/Undo/EditorUndo.h"
 #include "Editor/Undo/EntityUndoables.h"
 
-#include <cmath>                 // atan2
 #include <glm/geometric.hpp>     // length
 #include <glm/mat2x2.hpp>        // the delta's linear part
 #include <glm/matrix.hpp>        // transpose
@@ -70,8 +69,8 @@ namespace
     {
         if (InFrameRad == 0.f) { return InLinear; }
 
-        const float lCos = std::cos(InFrameRad);
-        const float lSin = std::sin(InFrameRad);
+        const float lCos = Maths::Cos(InFrameRad);
+        const float lSin = Maths::Sin(InFrameRad);
 
         const glm::mat2 lRotation{ Vector2F{ lCos, lSin }, Vector2F{ -lSin, lCos } };
 
@@ -842,7 +841,7 @@ namespace Opaax::Editor
 
         const glm::mat2 lLinear = ToGizmoFrame(lWorldLinear, InDelta.FrameRad);
 
-        const float    lDeltaDegrees = Maths::RadiansToDegrees(std::atan2(lLinear[0][1], lLinear[0][0]));
+        const float    lDeltaDegrees = Maths::RadiansToDegrees(Maths::Atan2(lLinear[0][1], lLinear[0][0]));
         const Vector2F lDeltaScale{ glm::length(lLinear[0]), glm::length(lLinear[1]) };
 
         // Not logged per call (one per frame during a drag).

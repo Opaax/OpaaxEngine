@@ -3,8 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/String/OpaaxString.hpp"
 
-#include <atomic>
-#include <filesystem>
+#include "Core/OpaaxTypes.h"
 
 namespace Opaax
 {
@@ -84,14 +83,16 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
+        /** The paths in the OS's own form (UTF-16 on Windows). Each platform's source defines it. */
+        struct NativePaths;
+
         CrashHandlerSettings m_Settings;
 
-        // Native path strings (UTF-16 on Windows), prepared at Configure so a crash does not convert.
-        std::filesystem::path::string_type m_DumpDirNative;
-        std::filesystem::path::string_type m_LogFileNative;
+        // Prepared at Configure, so a crash does not convert.
+        TUniquePtr<NativePaths> m_Native;
 
         void*            m_PreviousFilter   = nullptr;
-        std::atomic_flag m_bHandling        = ATOMIC_FLAG_INIT;
+        AtomicFlag       m_bHandling        = ATOMIC_FLAG_INIT;
         bool             m_bInstalled       = false;
         bool             m_bSymbolsReady    = false;
     };

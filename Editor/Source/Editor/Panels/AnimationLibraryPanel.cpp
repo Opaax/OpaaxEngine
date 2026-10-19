@@ -1,6 +1,6 @@
 #include "Editor/Panels/AnimationLibraryPanel.h"
 
-#include <cstdio>   // snprintf
+#include "Core/String/CString.h"
 
 #include "Editor/Resources/Types/Animation/EditorAnimationLibraryDocument.h"
 #include "Editor/EditorContext.h"
@@ -130,11 +130,11 @@ namespace Opaax::Editor
             const bool bIsDefault  = InData.DefaultClip.IsValid() && lEntry.Name == InData.DefaultClip;
 
             char lLabel[224];
-            std::snprintf(lLabel, sizeof(lLabel), "%s%s  ->  %s##entry%u",
-                          lEntry.Name.IsValid() ? lEntry.Name.CStr() : "(unnamed)",
-                          (bIsDefault || bIsFallback) ? "  [default]" : "",
-                          lEntry.Clip.IsEmpty() ? "(no clip)" : lEntry.Clip.Path.CStr(),
-                          lIndex);
+            CString::Format(lLabel, "{}{}  ->  {}##entry{}",
+                            lEntry.Name.IsValid() ? lEntry.Name.CStr() : "(unnamed)",
+                            (bIsDefault || bIsFallback) ? "  [default]" : "",
+                            lEntry.Clip.IsEmpty() ? "(no clip)" : lEntry.Clip.Path.CStr(),
+                            lIndex);
 
             if (ImGui::Selectable(lLabel, m_Selected == static_cast<Int32>(lIndex)))
             {

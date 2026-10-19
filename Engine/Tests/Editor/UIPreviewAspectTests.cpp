@@ -5,7 +5,7 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Editor/UI/UIPreviewAspect.h"
 
-#include <iterator>   // std::size
+#include "Core/OpaaxTypes.h"
 
 using namespace Opaax;
 using namespace Opaax::Editor;
@@ -24,7 +24,7 @@ TEST_CASE("UIPreviewAspect: a named aspect lays out at exactly that ratio; Free 
     CHECK(PreviewLayoutSize(EUIPreviewAspect::P9x16,  1u, 1u) == Vector2u32{ 1080u, 1920u });
 
     // Every entry of the combo's list has a name, and the list holds every enumerator once.
-    CHECK(std::size(kUIPreviewAspects) == 6u);
+    CHECK(ArraySize(kUIPreviewAspects) == 6u);
     for (const EUIPreviewAspect lAspect : kUIPreviewAspects)
     {
         CHECK(ToString(lAspect) != nullptr);

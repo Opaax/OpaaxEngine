@@ -2,10 +2,9 @@
 
 #include "Core/Log/Logger.h"   // ELogLevel, LogEntry
 
-#include <array>
-#include <cctype>
-#include <string>
-#include <string_view>
+#include "Core/OpaaxTypes.h"
+#include "Core/String/Char.h"
+#include "Core/String/OpaaxString.hpp"
 
 namespace Opaax::Editor
 {
@@ -44,20 +43,20 @@ namespace Opaax::Editor
     }
 
     /** ASCII case-insensitive substring. An empty needle always matches. */
-    inline bool ContainsNoCase(const std::string_view InText, const std::string_view InNeedle) noexcept
+    inline bool ContainsNoCase(const OpaaxStringView InText, const OpaaxStringView InNeedle) noexcept
     {
-        if (InNeedle.size() > InText.size()) { return false; }
+        if (InNeedle.GetLength() > InText.GetLength()) { return false; }
 
-        const auto lLower = [](const char InChar) { return std::tolower(static_cast<unsigned char>(InChar)); };
+        const auto lLower = [](const char InChar) { return Char::ToLower(InChar); };
 
-        for (size_t lStart = 0; lStart + InNeedle.size() <= InText.size(); ++lStart)
+        for (Uint32 lStart = 0; lStart + InNeedle.GetLength() <= InText.GetLength(); ++lStart)
         {
-            size_t lMatched = 0;
-            while (lMatched < InNeedle.size() && lLower(InText[lStart + lMatched]) == lLower(InNeedle[lMatched]))
+            Uint32 lMatched = 0;
+            while (lMatched < InNeedle.GetLength() && lLower(InText[lStart + lMatched]) == lLower(InNeedle[lMatched]))
             {
                 ++lMatched;
             }
-            if (lMatched == InNeedle.size()) { return true; }
+            if (lMatched == InNeedle.GetLength()) { return true; }
         }
         return false;
     }
@@ -67,10 +66,10 @@ namespace Opaax::Editor
     // =============================================================================
     struct LogFilter
     {
-        std::array<bool, static_cast<size_t>(ELogLevelFilter::Count)> ShowLevel{ true, true, true, true };
+        TFixedArray<bool, static_cast<size_t>(ELogLevelFilter::Count)> ShowLevel{ true, true, true, true };
 
         /** Matched against the message, case-insensitively. Empty = every message. */
-        std::string Search;
+        OpaaxString Search;
 
         /**
          * Hidden categories (a set of hidden ones, so a new category is shown by default).
@@ -84,7 +83,7 @@ namespace Opaax::Editor
         bool Passes(const LogEntry& InEntry) const
         {
             return IsShown(ToLevelFilter(InEntry.Level)) && IsShown(InEntry.Category)
-                && ContainsNoCase(InEntry.Message.CStr(), Search);
+                && ContainsNoCase(InEntry.Message, Search);
         }
     };
 }

@@ -1,6 +1,6 @@
 // Suite: input mapping — modifiers, evaluation, priority/consumption and binding.
 //   All pure (no window, world or GL). Uses a real InputManager through its own feed.
-#include <cmath>
+#include "Core/Maths/Maths.h"
 
 #include <doctest.h>
 
@@ -110,7 +110,7 @@ TEST_SUITE("InputModifiers")
     {
         // The WASD diagonal: without this, moving up-right is 1.41x as fast as moving right.
         const Vector2F lDiagonal = InputModifiers::Apply(Vector2F{1.f, 1.f}, Norm());
-        const float    lLength   = std::sqrt(lDiagonal.x * lDiagonal.x + lDiagonal.y * lDiagonal.y);
+        const float    lLength   = Maths::Sqrt(lDiagonal.x * lDiagonal.x + lDiagonal.y * lDiagonal.y);
         CHECK(lLength == doctest::Approx(1.f));
 
         // Shrink ONLY. Growing a half-pressed stick to full would be the opposite of the point.
@@ -480,7 +480,7 @@ TEST_SUITE("InputActionEvaluator — composites, priority and consumption")
         // would change nothing — only the action-level modifier can clamp the sum. Without it
         // this reads (1, 1), magnitude 1.41, and the player moves faster diagonally.
         const Vector2F lDiagonal = lEval.GetValue(Name("Move")).AsAxis2D();
-        const float    lLength   = std::sqrt(lDiagonal.x * lDiagonal.x + lDiagonal.y * lDiagonal.y);
+        const float    lLength   = Maths::Sqrt(lDiagonal.x * lDiagonal.x + lDiagonal.y * lDiagonal.y);
         CHECK(lLength == doctest::Approx(1.f));
         CHECK(lDiagonal.x == doctest::Approx(lDiagonal.y));
 
