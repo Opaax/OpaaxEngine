@@ -1,28 +1,28 @@
 #pragma once
 
-#include <nlohmann/json.hpp>
-
 #include "Core/Color/LinearColor.h"
 #include "Core/Color/LinearColorJson.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Engine/Registries/AutoRegistration.h"
+#include "Resources/Asset/Asset.h"
 
 namespace Sandbox
 {
     // =============================================================================
-    // EnemyStats — an example data asset: one .opaaxdata per kind of enemy (Data/Grunt.opaaxdata).
-    //   A plain struct registered with DataAssets().Register<EnemyStats>() — that is the whole setup.
+    // EnemyStats — an example asset class: one .opaaxasset per kind of enemy (Data/Grunt.opaaxasset).
+    //   A class with fields and one registration line — that is the whole setup.
     // =============================================================================
-    struct EnemyStats
+    class EnemyStats final : public Opaax::Asset
     {
+        OPAAX_OBJECT(EnemyStats, Opaax::Asset)
+
+    public:
         Opaax::Int32       MaxHealth    = 30;
         float              Speed        = 120.f;
         float              FireInterval = 1.5f;
         bool               bFlying      = false;
         Opaax::LinearColor Tint         = { 1.f, 1.f, 1.f, 1.f };
-
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(EnemyStats, MaxHealth, Speed, FireInterval, bFlying, Tint)
 
         OPAAX_PROPERTIES(EnemyStats,
                          OPAAX_PROP(MaxHealth).SetRange(1.f, 10000.f),
@@ -33,6 +33,6 @@ namespace Sandbox
                          OPAAX_PROP(Tint))
     };
 
-    // This line is all it takes to get .opaaxdata files of it, editable in the editor.
-    OPAAX_REGISTER_DATA_ASSET(EnemyStats);
+    // This line is all it takes to get .opaaxasset files of it, made and edited in the editor.
+    OPAAX_REGISTER_OBJECT(EnemyStats);
 }

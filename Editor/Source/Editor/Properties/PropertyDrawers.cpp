@@ -5,7 +5,6 @@
 #include "Editor/Properties/WidgetPropertyVisitor.h"
 #include "Object/ObjectClass.h"
 #include "Resources/Asset/AssetResource.h"
-#include "Resources/DataAsset/DataAssetResource.h"
 
 #include <glm/gtc/type_ptr.hpp>   // value_ptr
 
@@ -169,16 +168,6 @@ namespace Opaax::Editor
 
             InWidgets.PopId();
         }
-    }
-
-    void DrawDataAssetRefField(IEditorWidgets& InWidgets, const char* InLabel, OpaaxString& InPath,
-                               const OpaaxStringID InDataType)
-    {
-        const OpaaxString lEmpty = OpaaxString::Format("(drop a {} here)",
-                                                       InDataType.IsValid() ? InDataType.CStr() : "data asset");
-
-        DrawDropPathField(InWidgets, InLabel, InPath, ResourceTypeID::Get<DataAssetResource>(), InDataType.GetId(),
-                          lEmpty.CStr());
     }
 
     void DrawAssetRefField(IEditorWidgets& InWidgets, const char* InLabel, OpaaxString& InPath,

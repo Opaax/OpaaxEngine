@@ -21,7 +21,7 @@ namespace Opaax::Editor
      * @param InAssetPath Asset-relative path. Empty sets no payload (a file outside the project's
      *   assets cannot be dropped into a field)
      * @param InKinds What the file holds, for a type that holds many: an asset's class name id, then its
-     *   parents' (a .opaaxdata's data type id). Empty for none
+     *   parents'. Empty for none
      */
     void SetResourceDragPayload(Uint32 InTypeId, const OpaaxString& InAssetPath, const TDynArray<Uint32>& InKinds = {});
 

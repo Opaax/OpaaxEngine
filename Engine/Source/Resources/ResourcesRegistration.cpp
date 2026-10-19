@@ -2,14 +2,10 @@
 #include "Engine/Registries/AutoRegistration.h"
 #include "Resources/Asset/Asset.h"
 #include "Resources/Asset/AssetResource.h"
-#include "Resources/DataAsset/DataAssetResource.h"
 
 namespace Opaax
 {
     // Every asset class: one extension, the class is in the file.
     OPAAX_REGISTER_NAMED_RESOURCE(AssetResource, "Asset");
     OPAAX_REGISTER_OBJECT(Asset);
-
-    // Any struct registered with OPAAX_REGISTER_DATA_ASSET: one extension, the type is in the file.
-    OPAAX_REGISTER_NAMED_RESOURCE(DataAssetResource, "DataAsset");
 }

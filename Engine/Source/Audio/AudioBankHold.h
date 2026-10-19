@@ -4,7 +4,7 @@
 #include "Audio/AudioClipResource.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
-#include "Resources/DataAsset/DataAssetHandle.h"
+#include "Resources/Asset/AssetHandle.h"
 #include "Resources/ResourceRef.hpp"
 
 namespace Opaax
@@ -37,8 +37,8 @@ namespace Opaax
     private:
         void HoldClip(const OpaaxString& InPath, ResourceManager& InResources, const IPaths& InPaths);
 
-        TDynArray<TDataAssetHandle<AudioBank>>                     m_Banks;
-        TDynArray<TDataAssetHandle<AudioClipDef>>                  m_Defs;
+        TDynArray<TAssetHandle<AudioBank>>                         m_Banks;
+        TDynArray<TAssetHandle<AudioClipDef>>                      m_Defs;
         TUnorderedMap<OpaaxString, ResourceRef<AudioClipResource>> m_Clips;
     };
 }

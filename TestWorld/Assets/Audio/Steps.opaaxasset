@@ -1,6 +1,7 @@
 {
-    "Type": "AudioClipDef",
-    "Data": {
+    "Class": "AudioClipDef",
+    "Properties": {
+        "Bus": "SFX",
         "Clips": [
             {
                 "Clip": "Audio/Step0.wav"
@@ -18,9 +19,9 @@
                 "Clip": "Audio/Step4.wav"
             }
         ],
+        "PitchSpread": 0.05,
         "Selection": "RandomNoRepeat",
-        "Bus": "SFX",
-        "Volume": 0.6,
-        "PitchSpread": 0.05
-    }
+        "Volume": 0.6
+    },
+    "Version": 1
 }

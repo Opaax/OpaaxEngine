@@ -12,7 +12,7 @@
 #include "Renderer/Lighting/Lighting2D.h"
 #include "Renderer/Materials/Material2D.h"
 #include "Renderer/Renderer2D.h"           // QuadLighting
-#include "Resources/DataAsset/DataAssetHandle.h"
+#include "Resources/Asset/AssetHandle.h"
 #include "UI/UIAssetProvider.h"
 #include "World/Entity/EntityTypes.h"   // EntityID
 
@@ -132,7 +132,7 @@ namespace Opaax
         TDynArray<Light2DInstance> CollectLights(World& InWorld);
 
         /** How a sprite with InMaterial takes light (cached per material path). */
-        QuadLighting ResolveLighting(const TDataAssetRef<Material2D>& InMaterial);
+        QuadLighting ResolveLighting(const TAssetRef<Material2D>& InMaterial);
 
         /** The maps a lit pass reads, drawn from the shadow casters. Null: none this frame. */
         struct LightingMaps
@@ -374,7 +374,7 @@ namespace Opaax
         TUnorderedMap<Uint32, ResourceRef<SpriteSheetResource>> m_SheetCache;
 
         /** Materials by path, kept for the session (a saved material reloads in place). */
-        TUnorderedMap<Uint32, TDataAssetHandle<Material2D>> m_MaterialCache;
+        TUnorderedMap<Uint32, TAssetHandle<Material2D>> m_MaterialCache;
 
         /** Sheets already warned about for a missing frame. */
         TUnorderedSet<Uint32> m_WarnedFrameRange;

@@ -1,0 +1,9 @@
+{
+    "Class": "AudioBank",
+    "Properties": {
+        "ClipDefs": [
+            "Audio/Steps.opaaxasset"
+        ]
+    },
+    "Version": 1
+}

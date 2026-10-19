@@ -8,7 +8,7 @@
 #include "Core/Reflection/OpaaxEnumJson.h"
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxStringIDJson.h"
-#include "Resources/DataAsset/DataAssetRef.h"
+#include "Resources/Asset/AssetRef.h"
 #include "Resources/ResourcePath.h"
 #include "Resources/ResourcePathJson.h"
 
@@ -27,7 +27,7 @@ namespace Opaax
     struct AudioSourceComponent
     {
         /** A clip definition. When set, Clip and the settings below it are not used. */
-        TDataAssetRef<AudioClipDef> Sound;
+        TAssetRef<AudioClipDef> Sound;
 
         TResourcePath<AudioClipResource> Clip;
 
@@ -51,7 +51,7 @@ namespace Opaax
                                                     Attenuation)
 
         OPAAX_PROPERTIES(AudioSourceComponent,
-                         OPAAX_PROP(Sound).SetTooltip("A clip definition (.opaaxdata): its clips, bus, volume, spread, "
+                         OPAAX_PROP(Sound).SetTooltip("A clip definition: its clips, bus, volume, spread, "
                                                       "loop and space.\nWhen set, the fields below Clip are not used."),
                          OPAAX_PROP(Clip).SetTooltip("A sound file (.wav, .mp3, .flac), played with the settings below."),
                          OPAAX_PROP(Bus).SetTooltip("The bus it plays in (\"Music\", \"SFX\"...): Audio.Buses in Engine.config."),

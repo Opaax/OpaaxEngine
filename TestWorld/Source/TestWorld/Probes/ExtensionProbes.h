@@ -5,8 +5,9 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxStringJson.h"
-#include "Resources/DataAsset/DataAssetHandle.h"
-#include "Resources/DataAsset/DataAssetRef.h"
+#include "Resources/Asset/Asset.h"
+#include "Resources/Asset/AssetHandle.h"
+#include "Resources/Asset/AssetRef.h"
 #include "World/Behaviour/Behaviour.h"
 #include "World/Systems/WorldContext.h"
 #include "World/Systems/WorldSubsystem.h"
@@ -16,15 +17,16 @@
 namespace TestWorld
 {
     // =============================================================================
-    // ProbeTuning — a data asset type of the game (Data/Tuning.opaaxdata).
+    // ProbeTuning — an asset class of the game (Data/Tuning.opaaxasset).
     // =============================================================================
-    struct ProbeTuning
+    class ProbeTuning final : public Opaax::Asset
     {
+        OPAAX_OBJECT(ProbeTuning, Opaax::Asset)
+
+    public:
         float              Speed = 1.f;
         Opaax::Int32       Lives = 3;
         Opaax::OpaaxString Title;
-
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(ProbeTuning, Speed, Lives, Title)
 
         OPAAX_PROPERTIES(ProbeTuning, OPAAX_PROP(Speed), OPAAX_PROP(Lives), OPAAX_PROP(Title))
     };
@@ -34,7 +36,7 @@ namespace TestWorld
     // =============================================================================
     struct TunedComponent
     {
-        Opaax::TDataAssetRef<ProbeTuning> Tuning;
+        Opaax::TAssetRef<ProbeTuning> Tuning;
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(TunedComponent, Tuning)
 
@@ -103,7 +105,7 @@ namespace TestWorld
                 return;
             }
 
-            m_Tuning = Opaax::LoadDataAsset(GetContext().Resources, GetContext().Paths, lTuned->Tuning);
+            m_Tuning = Opaax::LoadAsset(GetContext().Resources, GetContext().Paths, lTuned->Tuning);
             if (const ProbeTuning* lValue = m_Tuning.Get())
             {
                 bLoaded = true;
@@ -125,6 +127,6 @@ namespace TestWorld
         }
 
     private:
-        Opaax::TDataAssetHandle<ProbeTuning> m_Tuning;   // keeps the asset loaded
+        Opaax::TAssetHandle<ProbeTuning> m_Tuning;   // keeps the asset loaded
     };
 }

@@ -1,0 +1,9 @@
+{
+    "Class": "ProbeTuning",
+    "Properties": {
+        "Lives": 5,
+        "Speed": 2.5,
+        "Title": "Hard"
+    },
+    "Version": 1
+}

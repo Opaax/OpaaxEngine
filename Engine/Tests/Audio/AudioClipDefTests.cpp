@@ -1,5 +1,5 @@
 // Suite: clip definitions — the seeded random, each way of choosing a variation (never twice in a
-// row, weights, in order, shuffled), the volume and pitch spread, the .opaaxdata format, a sound
+// row, weights, in order, shuffled), the volume and pitch spread, the asset's format, a sound
 // whose clip is still loading (it starts once loaded), and a Play world playing definitions by path
 // and from sources.
 #include <doctest.h>
@@ -26,8 +26,6 @@
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/InputManager.h"
 #include "Renderer/DebugDraw.h"
-#include "Resources/DataAsset/DataAsset.h"
-#include "Resources/DataAsset/DataAssetFile.h"
 #include "Resources/ResourceManager.h"
 #include "World/Behaviour/BehaviourSubsystem.h"
 #include "World/Components/ComponentRegistry.h"
@@ -46,15 +44,15 @@ using AudioTest::TempPaths;
 
 namespace
 {
-    AudioClipDef MakeDef(const EAudioSelection InSelection, const Uint32 InCount)
+    TStrongObjectPtr<AudioClipDef> MakeDef(const EAudioSelection InSelection, const Uint32 InCount)
     {
-        AudioClipDef lDef;
-        lDef.Selection = InSelection;
+        TStrongObjectPtr<AudioClipDef> lDef = NewObject<AudioClipDef>();
+        lDef->Selection = InSelection;
         for (Uint32 lIndex = 0; lIndex < InCount; ++lIndex)
         {
             AudioClipEntry lEntry;
             lEntry.Clip.Path = OpaaxString::Format("Audio/Step{}.wav", lIndex);
-            lDef.Clips.push_back(lEntry);
+            lDef->Clips.push_back(lEntry);
         }
         return lDef;
     }
@@ -125,7 +123,7 @@ TEST_CASE("AudioRandom: the same seed gives the same numbers; ranges hold")
 
 TEST_CASE("AudioClipDef: five footsteps in RandomNoRepeat never play the same one twice in a row")
 {
-    const TDynArray<Int32> lPicks = Picks(MakeDef(EAudioSelection::RandomNoRepeat, 5), 1000);
+    const TDynArray<Int32> lPicks = Picks(*MakeDef(EAudioSelection::RandomNoRepeat, 5), 1000);
 
     bool bRepeat = false;
     TDynArray<Uint32> lCounts(5, 0);
@@ -143,16 +141,17 @@ TEST_CASE("AudioClipDef: five footsteps in RandomNoRepeat never play the same on
     }
 
     // Seeded: the same seed, the same footsteps.
-    CHECK(Picks(MakeDef(EAudioSelection::RandomNoRepeat, 5), 50, 3) == Picks(MakeDef(EAudioSelection::RandomNoRepeat, 5), 50, 3));
-    CHECK(Picks(MakeDef(EAudioSelection::RandomNoRepeat, 5), 50, 3) != Picks(MakeDef(EAudioSelection::RandomNoRepeat, 5), 50, 4));
+    CHECK(Picks(*MakeDef(EAudioSelection::RandomNoRepeat, 5), 50, 3) == Picks(*MakeDef(EAudioSelection::RandomNoRepeat, 5), 50, 3));
+    CHECK(Picks(*MakeDef(EAudioSelection::RandomNoRepeat, 5), 50, 3) != Picks(*MakeDef(EAudioSelection::RandomNoRepeat, 5), 50, 4));
 
     // One clip: it plays every time rather than nothing.
-    CHECK(Picks(MakeDef(EAudioSelection::RandomNoRepeat, 1), 3) == TDynArray<Int32>{ 0, 0, 0 });
+    CHECK(Picks(*MakeDef(EAudioSelection::RandomNoRepeat, 1), 3) == TDynArray<Int32>{ 0, 0, 0 });
 }
 
 TEST_CASE("AudioClipDef: Random follows the weights; a weight of 0 never plays")
 {
-    AudioClipDef lDef = MakeDef(EAudioSelection::Random, 3);
+    const TStrongObjectPtr<AudioClipDef> lOwner = MakeDef(EAudioSelection::Random, 3);
+    AudioClipDef&                        lDef   = *lOwner;
     lDef.Clips[0].Weight = 1.f;
     lDef.Clips[1].Weight = 0.f;
     lDef.Clips[2].Weight = 3.f;
@@ -173,12 +172,12 @@ TEST_CASE("AudioClipDef: Random follows the weights; a weight of 0 never plays")
 
 TEST_CASE("AudioClipDef: Single, Sequential and Shuffle; no clips plays nothing")
 {
-    CHECK(Picks(MakeDef(EAudioSelection::Single, 3), 4) == TDynArray<Int32>{ 0, 0, 0, 0 });
-    CHECK(Picks(MakeDef(EAudioSelection::Sequential, 3), 7) == TDynArray<Int32>{ 0, 1, 2, 0, 1, 2, 0 });
-    CHECK(Picks(MakeDef(EAudioSelection::Random, 0), 2) == TDynArray<Int32>{ -1, -1 });
+    CHECK(Picks(*MakeDef(EAudioSelection::Single, 3), 4) == TDynArray<Int32>{ 0, 0, 0, 0 });
+    CHECK(Picks(*MakeDef(EAudioSelection::Sequential, 3), 7) == TDynArray<Int32>{ 0, 1, 2, 0, 1, 2, 0 });
+    CHECK(Picks(*MakeDef(EAudioSelection::Random, 0), 2) == TDynArray<Int32>{ -1, -1 });
 
     // Shuffle: every round plays each clip once, and a round never starts with the last one played.
-    const TDynArray<Int32> lShuffled = Picks(MakeDef(EAudioSelection::Shuffle, 4), 40);
+    const TDynArray<Int32> lShuffled = Picks(*MakeDef(EAudioSelection::Shuffle, 4), 40);
     for (size_t lRound = 0; lRound < lShuffled.size(); lRound += 4)
     {
         TDynArray<Int32> lOne(lShuffled.begin() + static_cast<PtrDiff>(lRound),
@@ -195,7 +194,8 @@ TEST_CASE("AudioClipDef: Single, Sequential and Shuffle; no clips plays nothing"
 
 TEST_CASE("AudioClipDef: each play takes the definition's settings, the clip's scales and a spread within its bounds")
 {
-    AudioClipDef lDef = MakeDef(EAudioSelection::Single, 1);
+    const TStrongObjectPtr<AudioClipDef> lOwner = MakeDef(EAudioSelection::Single, 1);
+    AudioClipDef&                        lDef   = *lOwner;
     lDef.Bus                  = OPAAX_ID("Dialogue");
     lDef.Volume               = 0.8f;
     lDef.Pitch                = 1.f;
@@ -232,32 +232,33 @@ TEST_CASE("AudioClipDef: each play takes the definition's settings, the clip's s
     CHECK(lParams.Priority == 255);
 }
 
-TEST_CASE("AudioClipDef: the data asset round-trips; a file missing fields keeps their defaults")
+TEST_CASE("AudioClipDef: the asset round-trips; a file missing fields keeps their defaults")
 {
-    AudioClipDef lDef = MakeDef(EAudioSelection::Shuffle, 2);
-    lDef.Clips[1].Weight = 2.5f;
-    lDef.PitchSpread     = 0.05f;
-    lDef.Bus             = OPAAX_ID("Music");
+    const TStrongObjectPtr<AudioClipDef> lDef = MakeDef(EAudioSelection::Shuffle, 2);
+    lDef->Clips[1].Weight = 2.5f;
+    lDef->PitchSpread     = 0.05f;
+    lDef->Bus             = OPAAX_ID("Music");
 
-    const nlohmann::json lJson = lDef;
+    const ObjectClass&   lClass = AudioClipDef::StaticClass();
+    const nlohmann::json lJson  = lClass.WriteProperties(*lDef);
     CHECK(lJson.at("Selection") == "Shuffle");
     CHECK(lJson.at("Attenuation") == "Linear");   // enums by label, so reordering one is safe
     CHECK(lJson.at("Clips").at(1).at("Clip") == "Audio/Step1.wav");
 
-    const TUniquePtr<TDataAssetObject<AudioClipDef>> lRead = ReadDataAsset<AudioClipDef>(lJson);
-    REQUIRE(lRead != nullptr);
-    CHECK(lRead->Value.Clips.size() == 2);
-    CHECK(lRead->Value.Clips[1].Weight == 2.5f);
-    CHECK(lRead->Value.Bus == OPAAX_ID("Music"));
+    AudioClipDef lRead;
+    REQUIRE(lClass.ReadProperties(lRead, lJson));
+    CHECK(lRead.Clips.size() == 2);
+    CHECK(lRead.Clips[1].Weight == 2.5f);
+    CHECK(lRead.Bus == OPAAX_ID("Music"));
 
-    const TUniquePtr<TDataAssetObject<AudioClipDef>> lOld = ReadDataAsset<AudioClipDef>(nlohmann::json{ { "Volume", 0.5f } });
-    REQUIRE(lOld != nullptr);
-    CHECK(lOld->Value.Volume == 0.5f);
-    CHECK(lOld->Value.Selection == EAudioSelection::Random);
-    CHECK(lOld->Value.Bus == OPAAX_ID("SFX"));
-    CHECK(lOld->Value.Clips.empty());
+    AudioClipDef lOld;
+    REQUIRE(lClass.ReadProperties(lOld, nlohmann::json{ { "Volume", 0.5f } }));
+    CHECK(lOld.Volume == 0.5f);
+    CHECK(lOld.Selection == EAudioSelection::Random);
+    CHECK(lOld.Bus == OPAAX_ID("SFX"));
+    CHECK(lOld.Clips.empty());
 
-    CHECK(DataAssetTypeName<AudioClipDef>() == OPAAX_ID("AudioClipDef"));
+    CHECK(lClass.GetName() == OPAAX_ID("AudioClipDef"));
 }
 
 namespace
@@ -282,7 +283,7 @@ namespace
         void Visit(const char*, OpaaxStringID&, const PropertyMeta&) override {}
         void VisitEnum(const char*, const char* const*, Uint32, Uint32&, const PropertyMeta&) override {}
         void VisitResourcePath(const char*, OpaaxString&, Uint32, const PropertyMeta&) override {}
-        void VisitDataAssetRef(const char*, OpaaxString&, OpaaxStringID, const PropertyMeta&) override {}
+
         void VisitAssetRef(const char*, OpaaxString&, const ObjectClass&, const PropertyMeta&) override {}
         void VisitObjectRef(const char*, ObjectHandle&, const ObjectClass&, const PropertyMeta&) override {}
         bool BeginGroup(const char*, const PropertyMeta&) override { return true; }
@@ -395,7 +396,7 @@ TEST_CASE("AudioManager: a sound whose clip is loading plays once it is loaded; 
 // =============================================================================
 namespace
 {
-    /** Audio/Step0..2.wav, Audio/Steps.opaaxdata (RandomNoRepeat over them) and Audio/Empty.opaaxdata. */
+    /** Audio/Step0..2.wav, Audio/Steps.opaaxasset (RandomNoRepeat over them) and Audio/Empty.opaaxasset. */
     struct DefWorldFixture
     {
         TestTempDir       Dir{ "AudioDefs" };
@@ -416,19 +417,18 @@ namespace
         {
             FileSystem::CreateDirectories(Dir.Sub("Audio"));
 
-            AudioClipDef lSteps = MakeDef(EAudioSelection::RandomNoRepeat, 3);
+            const TStrongObjectPtr<AudioClipDef> lSteps = MakeDef(EAudioSelection::RandomNoRepeat, 3);
             for (Uint32 lIndex = 0; lIndex < 3; ++lIndex)
             {
                 const TDynArray<Uint8> lWav = MakeWav(44100, 0.2f, 300.f + 100.f * lIndex);
                 AudioTest::WriteFile(Dir.Sub(OpaaxString::Format("Audio/Step{}.wav", lIndex)), lWav);
             }
-            lSteps.Volume = 0.5f;
+            lSteps->Volume = 0.5f;
 
-            REQUIRE(DataAssetFile::Save(Dir.Sub("Audio/Steps.opaaxdata"),
-                                        DataAssetTypeName<AudioClipDef>(), nlohmann::json(lSteps)));
-            REQUIRE(DataAssetFile::Save(Dir.Sub("Audio/Empty.opaaxdata"),
-                                        DataAssetTypeName<AudioClipDef>(), nlohmann::json(AudioClipDef{})));
+            REQUIRE(AudioTest::SaveAsset(Dir.Sub("Audio/Steps.opaaxasset"), *lSteps));
+            REQUIRE(AudioTest::SaveAsset(Dir.Sub("Audio/Empty.opaaxasset"), AudioClipDef{}));
 
+            Resources.SetObjectClasses(&AudioTest::AudioClasses());
             REQUIRE(Audio.Startup());
             REQUIRE(Components.Register<TransformComponent>(OpaaxStringID("Transform"), /*bEssential*/true));
 
@@ -465,7 +465,7 @@ TEST_CASE("AudioSubsystem: a clip definition plays by path, one of its clips at 
 {
     DefWorldFixture lFix;
 
-    const SoundHandle lSound = lFix.Sounds->PlaySound(OpaaxString("Audio/Steps.opaaxdata"));
+    const SoundHandle lSound = lFix.Sounds->PlaySound(OpaaxString("Audio/Steps.opaaxasset"));
     REQUIRE(lSound.IsValid());
     CHECK(lFix.Audio.IsPlaying(lSound));
     CHECK(Peak(lFix.Audio) == doctest::Approx(0.25f).epsilon(0.05));   // 0.5 x the definition's 0.5
@@ -475,12 +475,12 @@ TEST_CASE("AudioSubsystem: a clip definition plays by path, one of its clips at 
     lQuiet.Volume = 0.5f;
     lFix.Audio.Stop(lSound);
     lFix.Frame();
-    lFix.Sounds->PlaySound(OpaaxString("Audio/Steps.opaaxdata"), lQuiet);
+    lFix.Sounds->PlaySound(OpaaxString("Audio/Steps.opaaxasset"), lQuiet);
     CHECK(Peak(lFix.Audio) == doctest::Approx(0.125f).epsilon(0.05));
 
     // A definition with no clips, or that is not there: nothing plays, nothing breaks.
-    CHECK_FALSE(lFix.Sounds->PlaySound(OpaaxString("Audio/Empty.opaaxdata")).IsValid());
-    CHECK_FALSE(lFix.Sounds->PlaySound(OpaaxString("Audio/Nope.opaaxdata")).IsValid());
+    CHECK_FALSE(lFix.Sounds->PlaySound(OpaaxString("Audio/Empty.opaaxasset")).IsValid());
+    CHECK_FALSE(lFix.Sounds->PlaySound(OpaaxString("Audio/Nope.opaaxasset")).IsValid());
 }
 
 TEST_CASE("AudioSubsystem: a source plays its definition; with bStopOnDestroy off it outlives its entity")
@@ -489,7 +489,7 @@ TEST_CASE("AudioSubsystem: a source plays its definition; with bStopOnDestroy of
 
     Entity lSpeaker = lFix.TheWorld->CreateEntity("Speaker");
     AudioSourceComponent lSource;
-    lSource.Sound.Path = OpaaxString("Audio/Steps.opaaxdata");
+    lSource.Sound.Path = OpaaxString("Audio/Steps.opaaxasset");
     lSource.bSpatial   = false;
     lSpeaker.AddOrReplace<AudioSourceComponent>(lSource);
 

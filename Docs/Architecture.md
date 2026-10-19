@@ -50,7 +50,7 @@ ended.
 ### Types register themselves
 
 A type is added with one line beside its definition (`OPAAX_REGISTER_COMPONENT(Health)`); the engine
-runs the registrations when it starts, kind by kind (resource formats, data assets, components,
+runs the registrations when it starts, kind by kind (object classes, resource formats, components,
 behaviours, subsystems...).
 
 - **For:** no central list or registrar function to edit, for the engine and a game alike. A type

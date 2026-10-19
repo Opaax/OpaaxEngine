@@ -18,7 +18,6 @@
 //   OPAAX_REGISTER_WORLD_SUBSYSTEM_ORDERED(CameraFollow, WorldSubsystemOrder::Presentation);
 //   OPAAX_REGISTER_GAME_INSTANCE_SUBSYSTEM(ScoreKeeper);
 //   OPAAX_REGISTER_RESOURCE(WaveResource);
-//   OPAAX_REGISTER_DATA_ASSET(EnemyStats);
 //   OPAAX_REGISTER_UI_WIDGET(UIHealthBar);
 //   OPAAX_REGISTER_MOVER_MODE(SwimMoveMode, "Swim");
 //   OPAAX_REGISTER_OBJECT(EnemyStats);
@@ -43,7 +42,6 @@ namespace Opaax
         ObjectClass,
         ObjectClassAlias,
         ResourceFormat,
-        DataAsset,
         Component,
         ComponentAlias,
         Behaviour,
@@ -185,11 +183,6 @@ namespace Opaax
     OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::ResourceFormat,                 \
         ::Opaax::TypeIdOf<Type>(), 0, Name,                                                        \
         InRegistrar.Resources().Register<Type>(::Opaax::OpaaxStringID(Name)))
-
-/** Registers a struct a .opaaxdata file can hold. */
-#define OPAAX_REGISTER_DATA_ASSET(Type)                                                              \
-    OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::DataAsset,                      \
-        ::Opaax::TypeIdOf<Type>(), 0, #Type, InRegistrar.DataAssets().Register<Type>())
 
 /** Registers a widget type for .opaaxui files, saved under its type name. */
 #define OPAAX_REGISTER_UI_WIDGET(Type)                                                               \

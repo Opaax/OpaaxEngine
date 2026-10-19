@@ -13,7 +13,7 @@
 #include "Resources/ResourcePathJson.h"
 #include "Renderer/Materials/Material2D.h"
 #include "Renderer/RenderLayer.h"
-#include "Resources/DataAsset/DataAssetRef.h"
+#include "Resources/Asset/AssetRef.h"
 
 namespace Opaax
 {
@@ -47,8 +47,8 @@ namespace Opaax
         ERenderLayer Layer        = ERenderLayer::Default;
         Int16        OrderInLayer = 0;
 
-        /** How it takes light (.opaaxdata). Empty: lit, flat, no glow. Needs an Environment in the level. */
-        TDataAssetRef<Material2D> Material;
+        /** How it takes light (a Material2D asset). Empty: lit, flat, no glow. Needs an Environment in the level. */
+        TAssetRef<Material2D> Material;
 
         // _WITH_DEFAULT: a missing key keeps its default, so maps saved before a new field still load.
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(SpriteComponent,

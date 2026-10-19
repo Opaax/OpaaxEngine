@@ -61,6 +61,12 @@ namespace Opaax
          * Creates the Paths service. Editor and standalone use different paths.
          */
         virtual TUniquePtr<IPaths> CreatePaths(const IPlatform& InPlatform, const CommandLine& InCommandLine);
+
+        /**
+         * The paths are known and the log is up; nothing has read the project's files yet (configs, the
+         * project, levels). The editor upgrades old asset files here.
+         */
+        virtual void OnPathsResolved(const IPaths& /*InPaths*/, const CommandLine& /*InCommandLine*/) {}
     private:
         IConfigSystem&      BootConfigSystem(const IPaths& Paths);
         IProjectManager&    BootProjectManager(const IPaths& Paths);

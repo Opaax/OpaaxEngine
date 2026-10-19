@@ -30,7 +30,7 @@ namespace Opaax
     OPAAX_REGISTER_NAMED_COMPONENT(ShadowCaster2DComponent, "ShadowCaster2D");
 
     // How a sprite takes light, shared by the sprites that point at it.
-    OPAAX_REGISTER_DATA_ASSET(Material2D);
+    OPAAX_REGISTER_OBJECT(Material2D);
 
     OPAAX_REGISTER_NAMED_RESOURCE(TextureResource, "Texture");
     OPAAX_REGISTER_NAMED_RESOURCE(SpriteSheetResource, "SpriteSheet");

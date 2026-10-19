@@ -12,8 +12,8 @@
 namespace Opaax
 {
     OPAAX_REGISTER_NAMED_RESOURCE(AudioClipResource, "AudioClip");
-    OPAAX_REGISTER_DATA_ASSET(AudioClipDef);
-    OPAAX_REGISTER_DATA_ASSET(AudioBank);
+    OPAAX_REGISTER_OBJECT(AudioClipDef);
+    OPAAX_REGISTER_OBJECT(AudioBank);
 
     OPAAX_REGISTER_NAMED_COMPONENT(AudioSourceComponent, "AudioSource");
     OPAAX_REGISTER_NAMED_COMPONENT(AudioListenerComponent, "AudioListener");

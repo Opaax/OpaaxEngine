@@ -1,0 +1,224 @@
+[
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 10
+        }
+    },
+    {
+        "id": "classes",
+        "command": "asset.classes"
+    },
+    {
+        "id": "new",
+        "command": "asset.new",
+        "params": {
+            "path": "Scratch/Tuning.opaaxasset",
+            "class": "ProbeTuning",
+            "properties": {
+                "Speed": 4.0,
+                "Title": "Made by a script"
+            }
+        },
+        "expect": {
+            "path": "Scratch/Tuning.opaaxasset",
+            "class": "ProbeTuning",
+            "open": true,
+            "unsaved": false,
+            "properties": {
+                "Speed": 4.0,
+                "Lives": 3,
+                "Title": "Made by a script"
+            }
+        }
+    },
+    {
+        "id": "set",
+        "command": "asset.set",
+        "params": {
+            "path": "Scratch/Tuning.opaaxasset",
+            "properties": {
+                "Lives": 7
+            }
+        },
+        "expect": {
+            "unsaved": true,
+            "canUndo": true,
+            "properties": {
+                "Lives": 7,
+                "Speed": 4.0
+            }
+        }
+    },
+    {
+        "id": "set-wrong-type-refused",
+        "command": "asset.set",
+        "params": {
+            "path": "Scratch/Tuning.opaaxasset",
+            "properties": {
+                "Lives": "many"
+            }
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "undo",
+        "command": "asset.undo",
+        "params": {
+            "path": "Scratch/Tuning.opaaxasset"
+        },
+        "expect": {
+            "unsaved": false,
+            "canRedo": true,
+            "properties": {
+                "Lives": 3
+            }
+        }
+    },
+    {
+        "id": "redo",
+        "command": "asset.redo",
+        "params": {
+            "path": "Scratch/Tuning.opaaxasset"
+        },
+        "expect": {
+            "unsaved": true,
+            "properties": {
+                "Lives": 7
+            }
+        }
+    },
+    {
+        "id": "close-unsaved-refused",
+        "command": "asset.close",
+        "params": {
+            "path": "Scratch/Tuning.opaaxasset"
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "list-open",
+        "command": "asset.list",
+        "expect": {
+            "assets": [
+                {
+                    "path": "Scratch/Tuning.opaaxasset",
+                    "class": "ProbeTuning",
+                    "unsaved": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "Assets.png"
+        }
+    },
+    {
+        "id": "save",
+        "command": "asset.save",
+        "params": {
+            "path": "Scratch/Tuning.opaaxasset"
+        },
+        "expect": {
+            "unsaved": false
+        }
+    },
+    {
+        "id": "close",
+        "command": "asset.close",
+        "params": {
+            "path": "Scratch/Tuning.opaaxasset"
+        }
+    },
+    {
+        "id": "read-file",
+        "command": "asset.get",
+        "params": {
+            "path": "Scratch/Tuning.opaaxasset"
+        },
+        "expect": {
+            "class": "ProbeTuning",
+            "open": false,
+            "properties": {
+                "Speed": 4.0,
+                "Lives": 7,
+                "Title": "Made by a script"
+            }
+        }
+    },
+    {
+        "id": "new-over-existing-refused",
+        "command": "asset.new",
+        "params": {
+            "path": "Scratch/Tuning.opaaxasset",
+            "class": "ProbeTuning"
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "new-unknown-class-refused",
+        "command": "asset.new",
+        "params": {
+            "path": "Scratch/Nobody.opaaxasset",
+            "class": "NoSuchClass"
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "open-project-asset",
+        "command": "asset.open",
+        "params": {
+            "path": "Data/Tuning.opaaxasset"
+        },
+        "expect": {
+            "class": "ProbeTuning",
+            "unsaved": false,
+            "properties": {
+                "Lives": 5,
+                "Speed": 2.5,
+                "Title": "Hard"
+            }
+        }
+    },
+    {
+        "id": "discard-edit",
+        "command": "asset.set",
+        "params": {
+            "path": "Data/Tuning.opaaxasset",
+            "properties": {
+                "Lives": 99
+            }
+        }
+    },
+    {
+        "id": "close-discarding",
+        "command": "asset.close",
+        "params": {
+            "path": "Data/Tuning.opaaxasset",
+            "discard": true
+        }
+    },
+    {
+        "id": "project-asset-untouched",
+        "command": "asset.get",
+        "params": {
+            "path": "Data/Tuning.opaaxasset"
+        },
+        "expect": {
+            "open": false,
+            "properties": {
+                "Lives": 5
+            }
+        }
+    },
+    {
+        "id": "nothing-open",
+        "command": "asset.list",
+        "expect": {
+            "assets": []
+        }
+    }
+]

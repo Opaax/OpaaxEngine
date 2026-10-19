@@ -13,7 +13,7 @@
 #include "Core/String/OpaaxPathString.h"
 #include "Engine/GameInstance/GameInstance.h"
 #include "Engine/Subsystems/EngineEventBus.h"
-#include "Resources/DataAsset/DataAssetFile.h"
+#include "Resources/Asset/AssetFile.h"
 #include "Resources/ResourceManager.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
@@ -55,7 +55,7 @@ namespace Opaax
         /** A clip definition is a data asset; anything else is a sound file. */
         bool IsClipDefPath(const OpaaxString& InPath)
         {
-            return PathString::Extension(OpaaxStringView(InPath.CStr(), InPath.GetLength())) == OpaaxStringView(DataAssetFile::DATA_ASSET_EXTENSION);
+            return PathString::Extension(OpaaxStringView(InPath.CStr(), InPath.GetLength())) == OpaaxStringView(AssetFile::ASSET_EXTENSION);
         }
     }
 
@@ -335,9 +335,9 @@ namespace Opaax
         auto lFound = m_Defs.find(InPath);
         if (lFound == m_Defs.end())
         {
-            TDataAssetRef<AudioClipDef> lRef;
+            TAssetRef<AudioClipDef> lRef;
             lRef.Path = InPath;
-            lFound = m_Defs.emplace(InPath, LoadDataAsset(m_Context->Resources, m_Context->Paths, lRef)).first;
+            lFound = m_Defs.emplace(InPath, LoadAsset(m_Context->Resources, m_Context->Paths, lRef)).first;
         }
 
         return lFound->second.Get();
@@ -358,7 +358,7 @@ namespace Opaax
         for (const auto& [lKey, lComponent] : lNew)
         {
             AudioBankHold& lHold = m_Banks[lKey];
-            for (const TDataAssetRef<AudioBank>& lBank : lComponent->Banks)
+            for (const TAssetRef<AudioBank>& lBank : lComponent->Banks)
             {
                 if (!lBank.IsEmpty())
                 {

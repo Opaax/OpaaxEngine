@@ -2,7 +2,8 @@
 #include <doctest.h>
 
 #include "Engine/Reflection/PropertyVisitor.h"
-#include "Resources/DataAsset/DataAssetRef.h"
+#include "Resources/Asset/Asset.h"
+#include "Resources/Asset/AssetRef.h"
 
 using namespace Opaax;
 
@@ -38,11 +39,12 @@ namespace
                          OPAAX_PROP(Bounded).SetRange(-1.f, 1.f))
     };
 
-    struct VisitorTestData
+    class VisitorTestData final : public Asset
     {
-        float Value = 0.f;
+        OPAAX_OBJECT(VisitorTestData, Asset)
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(VisitorTestData, Value)
+    public:
+        float Value = 0.f;
         OPAAX_PROPERTIES(VisitorTestData, OPAAX_PROP(Value))
     };
 
@@ -55,7 +57,7 @@ namespace
         OpaaxString                        Label    = OpaaxString("hello");
         EVisitorTestMode                   Mode     = EVisitorTestMode::Walk;
         TResourcePath<VisitorTestResource> Asset;
-        TDataAssetRef<VisitorTestData>     Stats;
+        TAssetRef<VisitorTestData>         Stats;
         VisitorTestInner                   Inner;
         TDynArray<Int32>                   Numbers  = { 5, 6 };
         TDynArray<VisitorTestInner>        Items    = { VisitorTestInner{} };
@@ -117,16 +119,10 @@ namespace
             LastResourceTypeId = InResourceTypeId;
         }
 
-        void VisitDataAssetRef(const char* InName, OpaaxString&, const OpaaxStringID InDataType,
-                               const PropertyMeta&) override
-        {
-            Add("dataasset", InName);
-            Lines.back() += OpaaxString::Format(" {}", InDataType.CStr());
-        }
-
-        void VisitAssetRef(const char* InName, OpaaxString&, const ObjectClass&, const PropertyMeta&) override
+        void VisitAssetRef(const char* InName, OpaaxString&, const ObjectClass& InClass, const PropertyMeta&) override
         {
             Add("asset", InName);
+            Lines.back() += OpaaxString::Format(" {}", InClass.GetName().CStr());
         }
 
         void VisitObjectRef(const char* InName, ObjectHandle&, const ObjectClass&, const PropertyMeta&) override
@@ -182,7 +178,7 @@ TEST_CASE("PropertyVisitor: every field is visited once, in declaration order, b
         "string Label",
         "enum Mode 3 Walk",
         "resource Asset",
-        "dataasset Stats VisitorTestData",   // the data type it accepts, by its saved name
+        "asset Stats VisitorTestData",       // the class it accepts, by its saved name
         "group Inner",
         "float Amount [0,10]",     // inherits the group's range
         "float Bounded [-1,1]",    // its own range wins

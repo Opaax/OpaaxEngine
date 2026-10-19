@@ -2,7 +2,8 @@
 #include <doctest.h>
 
 #include "Engine/Reflection/PropertyJson.h"
-#include "Resources/DataAsset/DataAssetRef.h"
+#include "Resources/Asset/Asset.h"
+#include "Resources/Asset/AssetRef.h"
 #include "Renderer/Components/QuadComponent.h"
 
 using namespace Opaax;
@@ -30,11 +31,12 @@ OPAAX_ENUM_VALUES(EJsonTestMode, Idle, Walk, Run)
 
 namespace
 {
-    struct JsonTestData
+    class JsonTestData final : public Asset
     {
-        float Value = 0.f;
+        OPAAX_OBJECT(JsonTestData, Asset)
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(JsonTestData, Value)
+    public:
+        float Value = 0.f;
         OPAAX_PROPERTIES(JsonTestData, OPAAX_PROP(Value))
     };
 
@@ -59,7 +61,7 @@ namespace
         OpaaxTag                        Team;
         EJsonTestMode                   Mode     = EJsonTestMode::Walk;
         TResourcePath<JsonTestResource> Asset;
-        TDataAssetRef<JsonTestData>     Stats;
+        TAssetRef<JsonTestData>         Stats;
         JsonTestInner                   Inner;
         TDynArray<Int32>                Numbers;
         TDynArray<JsonTestInner>        Items;
@@ -95,7 +97,7 @@ namespace
         lSubject.Team         = OpaaxTag("Team.Red");
         lSubject.Mode         = EJsonTestMode::Run;
         lSubject.Asset.Path   = OpaaxString("Textures/Hero.png");
-        lSubject.Stats.Path   = OpaaxString("Data/Grunt.opaaxdata");
+        lSubject.Stats.Path   = OpaaxString("Data/Grunt.opaaxasset");
         lSubject.Inner.Amount = 4.5f;
         lSubject.Inner.Level  = 9;
         lSubject.Numbers      = { 1, 2, 3 };
@@ -121,7 +123,7 @@ TEST_CASE("PropertyJson: every listed field round-trips, with no NLOHMANN macro"
     CHECK(lRead.Mode == EJsonTestMode::Run);
     CHECK(lRead.Team == OpaaxTag("Team.Red"));
     CHECK(lRead.Asset.Path == "Textures/Hero.png");
-    CHECK(lRead.Stats.Path == "Data/Grunt.opaaxdata");
+    CHECK(lRead.Stats.Path == "Data/Grunt.opaaxasset");
     CHECK(lRead.Inner.Level == 9);
     CHECK(lRead.Numbers == TDynArray<Int32>{ 1, 2, 3 });
     REQUIRE(lRead.Items.size() == 2);

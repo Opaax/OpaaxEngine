@@ -72,8 +72,8 @@ set(OPAAX_TEST_SOURCES
     Object/ObjectTests.cpp
 
     # Resources
+    Resources/AssetMigrationTests.cpp
     Resources/AssetTests.cpp
-    Resources/DataAssetTests.cpp
     Resources/ResourceFormatRegistryTests.cpp
     Resources/ResourceSystemTests.cpp
 

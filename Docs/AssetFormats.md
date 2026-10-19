@@ -18,7 +18,7 @@ engine content with `/Engine/` (`/Engine/Textures/T_Square_256_White.png`).
 | `.opaaxaction`, `.opaaxinputmap` | Input actions, and the keys that drive them | Input panels |
 | `.opaaxsheet` | A texture cut into named frames | Sprite Sheet panel |
 | `.opaaxclip`, `.opaaxanim` | An animation clip, a library of clips | Animation panels |
-| `.opaaxdata` | A data asset (a `Material2D`, an `AudioClipDef` or `AudioBank`, a game's own structs) | Data Asset panel |
+| `.opaaxasset` | An asset of any registered class (a `Material2D`, an `AudioClipDef` or `AudioBank`, a game's own classes) | Its own window: double-click it |
 | `.opaaxmover`, `.opaaxmovemode` | A Mover's modes, and one mode's tuning | Mover panels |
 | `.opaaxfont` | A font family: faces by style | Font Family panel |
 | `Configs/*.config` | Engine, renderer and editor settings | Config panel |
@@ -246,24 +246,29 @@ A clip plays frames of a sheet (or whole textures) in order; `PlayMode` is `Once
 A library names clips for a `SpriteAnimator` to switch between:
 `{ "DefaultClip": "Run", "Entries": [ { "Name": "Run", "Clip": "Anims/Run.opaaxclip" } ] }`.
 
-## Data assets (`.opaaxdata`)
+## Assets (`.opaaxasset`)
 
-A registered struct (`OPAAX_REGISTER_DATA_ASSET`) by type name, with its fields:
+One format for every asset class (`OPAAX_REGISTER_OBJECT` of an `Asset` subclass): the class's name,
+its properties by field name, and the format's version:
 
 ```json
-{ "Type": "Material2D", "Data": { "bLit": true, "NormalMap": "Textures/Bricks_N.png",
-                                  "EmissiveColor": { "x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0 }, "EmissiveStrength": 1.0 } }
+{ "Class": "Material2D",
+  "Properties": { "bLit": true, "NormalMap": "Textures/Bricks_N.png",
+                  "EmissiveColor": { "x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0 }, "EmissiveStrength": 1.0 },
+  "Version": 1 }
 ```
 
-A sprite uses a material through its `Material` field.
+A missing property keeps its default, so `{ "Class": "Material2D" }` is a whole asset. A value of the
+wrong type makes the file fail to load (the log names the field). A sprite uses a material through its
+`Material` field. Files written by an older engine (`.opaaxdata`) are converted once by starting the
+editor with `--upgrade-assets`.
 
 ## Sound (`AudioClipDef`, `AudioBank`)
 
-Both are data assets. A clip definition says how a sound plays; one of its `Clips` is chosen each
-time:
+Both are assets. A clip definition says how a sound plays; one of its `Clips` is chosen each time:
 
 ```json
-{ "Type": "AudioClipDef", "Data": {
+{ "Class": "AudioClipDef", "Properties": {
     "Clips": [ { "Clip": "Audio/Step0.wav" }, { "Clip": "Audio/Step1.wav", "Weight": 2.0, "VolumeScale": 0.8 } ],
     "Selection": "RandomNoRepeat", "Bus": "SFX", "Volume": 0.6, "Pitch": 1.0,
     "VolumeSpread": 0.1, "PitchSpread": 0.05, "bLoop": false,
@@ -275,9 +280,9 @@ time:
 that much, up or down. `Attenuation`: `Linear` or `InverseSquare`, full within `MinDistance`, silent
 from `MaxDistance`. When every voice plays, the lowest `Priority` is replaced first.
 
-A bank lists what to load before it plays: `{ "Type": "AudioBank", "Data": { "ClipDefs":
-["Audio/Steps.opaaxdata"], "Clips": ["Audio/Jump.wav"] } }`. A level holds its banks with an
-`AudioBanks` component (`{ "Banks": ["Audio/Level1.opaaxdata"] }`) on any entity of its map;
+A bank lists what to load before it plays: `{ "Class": "AudioBank", "Properties": { "ClipDefs":
+["Audio/Steps.opaaxasset"], "Clips": ["Audio/Jump.wav"] } }`. A level holds its banks with an
+`AudioBanks` component (`{ "Banks": ["Audio/Level1.opaaxasset"] }`) on any entity of its map;
 `Audio.GlobalBank` in `Engine.config` names the bank held for the whole game.
 
 An `AudioSource` plays either `Sound` (a clip definition: its `Volume` and `Pitch` then scale the
@@ -320,6 +325,6 @@ and the global bank:
 
 ```json
 "Audio": { "bEnabled": true, "Backend": "Miniaudio", "MasterVolume": 1.0, "MaxVoices": 64,
-           "GlobalBank": "Audio/Global.opaaxdata",
+           "GlobalBank": "Audio/Global.opaaxasset",
            "Buses": [ { "Name": "Music" }, { "Name": "SFX" }, { "Name": "Footsteps", "Parent": "SFX", "Volume": 0.8 } ] }
 ```

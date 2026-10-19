@@ -25,8 +25,6 @@
 #include "Renderer/Textures/TextureResource.h"
 #include "Resources/Asset/AssetFile.h"
 #include "Resources/Asset/AssetResource.h"
-#include "Resources/DataAsset/DataAssetFile.h"
-#include "Resources/DataAsset/DataAssetResource.h"
 
 #include <imgui.h>
 
@@ -479,13 +477,7 @@ namespace Opaax::Editor
         if (lType.Format != nullptr && ImGui::BeginDragDropSource())
         {
             // An asset also says which class it holds, so a typed field can refuse the others.
-            if (m_DragKindsPath != InFile.AbsPath)
-            {
-                m_DragKindsPath = InFile.AbsPath;
-                m_DragKinds     = ReadKinds(InFile, lType);
-            }
-
-            SetResourceDragPayload(lType.Format->TypeId, m_Context.Paths.AbsoluteToAsset(InFile.AbsPath), m_DragKinds);
+            SetResourceDragPayload(lType.Format->TypeId, m_Context.Paths.AbsoluteToAsset(InFile.AbsPath), KindsOf(InFile));
 
             const float lIconSize = RowIconSize();
             ImguiWidgets::Image(TileImageOf(InFile, lType), ImVec2(lIconSize, lIconSize));
@@ -551,36 +543,20 @@ namespace Opaax::Editor
         return lType;
     }
 
-    TDynArray<Uint32> ResourceBrowserPanel::ReadKinds(const ResourceFile& InFile, const FileType& InType) const
+    TDynArray<Uint32> ResourceBrowserPanel::KindsOf(const ResourceFile& InFile) const
     {
         TDynArray<Uint32> lKinds;
 
-        if (InType.Format == nullptr)
+        if (!InFile.AssetClass.IsValid())
         {
             return lKinds;
         }
 
-        if (InType.Format->TypeId == ResourceTypeID::Get<AssetResource>())
+        // The class, then each parent: a field for a base class accepts its subclasses.
+        for (const ObjectClass* lClass = m_Context.Engine.GetRegistries().ObjectClasses().FindByName(InFile.AssetClass);
+             lClass != nullptr; lClass = lClass->GetSuper())
         {
-            // The class, then each parent: a field for a base class accepts its subclasses.
-            AssetFile::Contents lContents;
-            if (AssetFile::Load(InFile.AbsPath, lContents))
-            {
-                const ObjectClass* lClass = m_Context.Engine.GetRegistries().ObjectClasses().FindByName(lContents.Class);
-
-                for (; lClass != nullptr; lClass = lClass->GetSuper())
-                {
-                    lKinds.emplace_back(lClass->GetName().GetId());
-                }
-            }
-        }
-        else if (InType.Format->TypeId == ResourceTypeID::Get<DataAssetResource>())
-        {
-            DataAssetFile::Contents lContents;
-            if (DataAssetFile::Load(InFile.AbsPath, lContents))
-            {
-                lKinds.emplace_back(lContents.Type.GetId());
-            }
+            lKinds.emplace_back(lClass->GetName().GetId());
         }
 
         return lKinds;

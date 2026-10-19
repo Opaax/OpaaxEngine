@@ -1,6 +1,6 @@
 ---
 name: opaax-add-gameplay-type
-description: Add a component, behaviour, world or game instance subsystem, data asset or resource type to the Opaax engine or to a game, with its registration, editor support, tests and a TestWorld check. Use when the task adds gameplay data or logic.
+description: Add a component, behaviour, world or game instance subsystem, asset class or resource type to the Opaax engine or to a game, with its registration, editor support, tests and a TestWorld check. Use when the task adds gameplay data or logic.
 ---
 
 # Add a gameplay type
@@ -13,7 +13,7 @@ description: Add a component, behaviour, world or game instance subsystem, data 
 | Logic on an entity (update, events, timers) | behaviour (derives from `Opaax::Behaviour`) | `OPAAX_REGISTER_BEHAVIOUR(T)` |
 | Logic for a whole world | world subsystem (`WorldSubsystemBase`) | `OPAAX_REGISTER_WORLD_SUBSYSTEM_ORDERED(T, WorldSubsystemOrder::X)` |
 | Logic across levels | game instance subsystem | `OPAAX_REGISTER_GAME_INSTANCE_SUBSYSTEM(T)` |
-| Shared tuning data in a file | data asset (`.opaaxdata`) | `OPAAX_REGISTER_DATA_ASSET(T)` |
+| Shared tuning data in a file | asset class (`Opaax::Asset` + `OPAAX_OBJECT`, `.opaaxasset` files) | `OPAAX_REGISTER_OBJECT(T)` |
 | A file format of its own | resource | `OPAAX_REGISTER_RESOURCE(T)` |
 
 Engine types go in their module (`Engine/Source/<Module>/`) and register in the module's

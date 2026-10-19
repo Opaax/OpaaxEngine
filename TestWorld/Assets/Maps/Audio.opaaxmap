@@ -41,7 +41,7 @@
                     "MaxDistance": 1500.0,
                     "MinDistance": 100.0,
                     "Pitch": 1.0,
-                    "Sound": "Audio/Steps.opaaxdata",
+                    "Sound": "Audio/Steps.opaaxasset",
                     "Volume": 1.0,
                     "bLoop": false,
                     "bPlayOnStart": true,
@@ -68,7 +68,7 @@
             "components": {
                 "StepsProbe": {
                     "Distinct": 0,
-                    "Steps": "Audio/Steps.opaaxdata",
+                    "Steps": "Audio/Steps.opaaxasset",
                     "bNeverTwice": false,
                     "bPlayed": false
                 },
@@ -114,7 +114,7 @@
             "components": {
                 "AudioBanks": {
                     "Banks": [
-                        "Audio/Level.opaaxdata"
+                        "Audio/Level.opaaxasset"
                     ]
                 },
                 "BankProbe": {

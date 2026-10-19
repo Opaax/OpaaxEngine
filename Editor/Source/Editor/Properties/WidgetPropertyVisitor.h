@@ -34,9 +34,6 @@ namespace Opaax::Editor
         void VisitResourcePath(const char* InName, OpaaxString& InPath, Uint32 InResourceTypeId,
                                const PropertyMeta& InMeta) override;
 
-        void VisitDataAssetRef(const char* InName, OpaaxString& InPath, OpaaxStringID InDataType,
-                               const PropertyMeta& InMeta) override;
-
         void VisitAssetRef(const char* InName, OpaaxString& InPath, const ObjectClass& InClass,
                            const PropertyMeta& InMeta) override;
 

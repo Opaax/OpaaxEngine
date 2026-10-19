@@ -44,12 +44,6 @@ namespace Opaax::Editor
                 if (Shows(InName)) { m_Target.VisitResourcePath(InName, InPath, InResourceTypeId, InMeta); }
             }
 
-            void VisitDataAssetRef(const char* InName, OpaaxString& InPath, const OpaaxStringID InDataType,
-                                   const PropertyMeta& InMeta) override
-            {
-                if (Shows(InName)) { m_Target.VisitDataAssetRef(InName, InPath, InDataType, InMeta); }
-            }
-
             void VisitAssetRef(const char* InName, OpaaxString& InPath, const ObjectClass& InClass,
                                const PropertyMeta& InMeta) override
             {

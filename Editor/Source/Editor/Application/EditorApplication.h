@@ -52,6 +52,9 @@ namespace Opaax::Editor
         void TickFrame() override;
         void OnModulesRegistered() override;
         TUniquePtr<IPaths> CreatePaths(const IPlatform& InPlatform, const CommandLine& InCommandLine) override;
+
+        /** --upgrade-assets converts old asset files to .opaaxasset; without it, finding some is logged. */
+        void OnPathsResolved(const IPaths& InPaths, const CommandLine& InCommandLine) override;
         WorldSpec GetStartupWorldSpec() const override;
         void PreRegisterConfig(IConfigSystem& ConfigSystem) override;
     public:

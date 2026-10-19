@@ -150,7 +150,7 @@ namespace Opaax
         Uint32 MaxVoices = 64;
 
         /** An audio bank held for the whole game (menus, the player, UI). */
-        TDataAssetRef<AudioBank> GlobalBank;
+        TAssetRef<AudioBank> GlobalBank;
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(AudioSettings, bEnabled, Backend, MasterVolume, Buses, MaxVoices,
                                                     GlobalBank)

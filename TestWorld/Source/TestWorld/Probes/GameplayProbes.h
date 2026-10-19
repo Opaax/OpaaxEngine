@@ -239,7 +239,7 @@ namespace TestWorld
     class StepsProbe : public Opaax::Behaviour
     {
     public:
-        Opaax::TDataAssetRef<Opaax::AudioClipDef> Steps;
+        Opaax::TAssetRef<Opaax::AudioClipDef> Steps;
 
         bool         bPlayed     = false;
         bool         bNeverTwice = false;
@@ -251,8 +251,8 @@ namespace TestWorld
         {
             bPlayed = PlaySound(Steps.Path).IsValid();
 
-            const Opaax::TDataAssetHandle<Opaax::AudioClipDef> lSteps = Opaax::LoadDataAsset(GetContext().Resources,
-                                                                                               GetContext().Paths, Steps);
+            const Opaax::TAssetHandle<Opaax::AudioClipDef> lSteps = Opaax::LoadAsset(GetContext().Resources,
+                                                                                     GetContext().Paths, Steps);
             const Opaax::AudioSubsystem* lAudio = GetSubsystem<Opaax::AudioSubsystem>();
             if (lSteps.Get() == nullptr || lAudio == nullptr || lAudio->GetAudio() == nullptr)
             {

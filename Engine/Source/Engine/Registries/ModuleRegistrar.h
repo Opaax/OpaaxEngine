@@ -292,44 +292,6 @@ namespace Opaax
     };
 
     // =============================================================================
-    // DataAssetRoute — registers the struct types a .opaaxdata can hold. The saved name is the
-    //   C++ type name (no namespace).
-    // =============================================================================
-    class DataAssetRoute
-    {
-    public:
-        /**
-         * Registers T as a data asset type: it can then be created, edited and loaded as a .opaaxdata.
-         * @tparam T A struct with OPAAX_PROPERTIES and NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT
-         * @return True if registered
-         */
-        template<CDataAsset T>
-        bool Register()
-        {
-            ++m_Count;
-
-            if (m_Registry == nullptr)
-            {
-                OPAAX_LOG(LogModuleRegistrar, Error,
-                          "DataAssets().Register — route is not bound to a DataAssetTypeRegistry; registration dropped.");
-                return false;
-            }
-
-            return m_Registry->Register<T>();
-        }
-
-        /** Connects this route to the registry. Called once, before any module registers. */
-        void Bind(DataAssetTypeRegistry* InRegistry) noexcept { m_Registry = InRegistry; }
-
-        /** Number of registration requests, including refused ones. */
-        Uint64 Count() const noexcept { return m_Count; }
-
-    private:
-        DataAssetTypeRegistry* m_Registry = nullptr; // owned by the engine
-        Uint64                 m_Count    = 0;
-    };
-
-    // =============================================================================
     // ObjectClassRoute — registers the Object classes files can name. The saved name is the C++ class
     //   name (no namespace).
     // =============================================================================
@@ -467,7 +429,6 @@ namespace Opaax
     //     GameInstanceSubsystems() -> GameInstanceSubsystemRegistry
     //     Resources()              -> ResourceFormatRegistry
     //     MoverModes()             -> MoverModeRegistry
-    //     DataAssets()             -> DataAssetTypeRegistry
     //     UIWidgets()              -> UIWidgetRegistry
     //     ObjectClasses()          -> ObjectClassRegistry
     //   Most types register themselves with the OPAAX_REGISTER_* macros (AutoRegistration.h).
@@ -481,7 +442,6 @@ namespace Opaax
         GameInstanceSubsystemRoute& GameInstanceSubsystems() noexcept { return m_GameInstanceSubsystems; }
         ResourceFormatRoute&        Resources()              noexcept { return m_ResourceFormats; }
         MoverModeRoute&             MoverModes()             noexcept { return m_MoverModes; }
-        DataAssetRoute&             DataAssets()             noexcept { return m_DataAssets; }
         UIWidgetRoute&              UIWidgets()              noexcept { return m_UIWidgets; }
         ObjectClassRoute&           ObjectClasses()          noexcept { return m_ObjectClasses; }
 
@@ -491,7 +451,6 @@ namespace Opaax
         const GameInstanceSubsystemRoute& GameInstanceSubsystems() const noexcept { return m_GameInstanceSubsystems; }
         const ResourceFormatRoute&        Resources()              const noexcept { return m_ResourceFormats; }
         const MoverModeRoute&             MoverModes()             const noexcept { return m_MoverModes; }
-        const DataAssetRoute&             DataAssets()             const noexcept { return m_DataAssets; }
         const UIWidgetRoute&              UIWidgets()              const noexcept { return m_UIWidgets; }
         const ObjectClassRoute&           ObjectClasses()          const noexcept { return m_ObjectClasses; }
 
@@ -506,7 +465,6 @@ namespace Opaax
             m_GameInstanceSubsystems.Bind(&InRegistries.GameInstanceSubsystems());
             m_ResourceFormats.Bind(&InRegistries.Resources());
             m_MoverModes.Bind(&InRegistries.MoverModes());
-            m_DataAssets.Bind(&InRegistries.DataAssets());
             m_UIWidgets.Bind(&InRegistries.UIWidgets());
             m_ObjectClasses.Bind(&InRegistries.ObjectClasses());
         }
@@ -518,7 +476,6 @@ namespace Opaax
         GameInstanceSubsystemRoute m_GameInstanceSubsystems;
         ResourceFormatRoute        m_ResourceFormats;
         MoverModeRoute             m_MoverModes;
-        DataAssetRoute             m_DataAssets;
         UIWidgetRoute              m_UIWidgets;
         ObjectClassRoute           m_ObjectClasses;
     };

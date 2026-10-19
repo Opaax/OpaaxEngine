@@ -1,0 +1,9 @@
+{
+    "Class": "AudioBank",
+    "Properties": {
+        "Clips": [
+            "Audio/Beep.wav"
+        ]
+    },
+    "Version": 1
+}

@@ -34,7 +34,7 @@
 #include "Renderer/Components/Light2DComponent.h"
 #include "Renderer/Components/ShadowCaster2DComponent.h"
 #include "Renderer/Lighting/Lighting2D.h"
-#include "Resources/DataAsset/DataAssetHandle.h"
+#include "Resources/Asset/AssetHandle.h"
 #include "Renderer/Components/QuadComponent.h"
 #include "Renderer/Post/ScenePipeline2D.h"
 #include "Renderer/Components/SpriteComponent.h"
@@ -484,7 +484,7 @@ namespace Opaax
         return lLights;
     }
 
-    QuadLighting RendererManager::ResolveLighting(const TDataAssetRef<Material2D>& InMaterial)
+    QuadLighting RendererManager::ResolveLighting(const TAssetRef<Material2D>& InMaterial)
     {
         QuadLighting lLighting;
         if (InMaterial.IsEmpty())
@@ -498,8 +498,8 @@ namespace Opaax
         {
             // Kept even when it fails to load, so a missing file is not retried every frame.
             lIt = m_MaterialCache.emplace(lKey.GetId(),
-                                          LoadDataAsset(OpaaxApplication::GetAppService<IEngine>().GetResources(),
-                                                        OpaaxApplication::GetAppService<IPaths>(), InMaterial)).first;
+                                          LoadAsset(OpaaxApplication::GetAppService<IEngine>().GetResources(),
+                                                    OpaaxApplication::GetAppService<IPaths>(), InMaterial)).first;
         }
 
         const Material2D* lMaterial = lIt->second.Get();

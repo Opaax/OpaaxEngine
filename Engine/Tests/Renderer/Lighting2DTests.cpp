@@ -454,7 +454,7 @@ TEST_CASE("ShadowCaster2D and a light's shadow settings round-trip; older lights
     CHECK(lOld.Radius == doctest::Approx(123.f));
 }
 
-TEST_CASE("Material2D: a data asset round-trips; a sprite saved before materials still loads")
+TEST_CASE("Material2D: an asset round-trips; a sprite saved before materials still loads")
 {
     Material2D lMaterial;
     lMaterial.bLit             = false;
@@ -462,7 +462,8 @@ TEST_CASE("Material2D: a data asset round-trips; a sprite saved before materials
     lMaterial.EmissiveColor    = LinearColor{ 1.f, 0.2f, 0.f, 1.f };
     lMaterial.EmissiveStrength = 4.f;
 
-    const Material2D lBack = nlohmann::json(lMaterial).get<Material2D>();
+    Material2D lBack;
+    REQUIRE(Material2D::StaticClass().ReadProperties(lBack, Material2D::StaticClass().WriteProperties(lMaterial)));
     CHECK_FALSE(lBack.bLit);
     CHECK(lBack.NormalMap.Path == "Textures/Hero_N.png");
     CHECK(lBack.EmissiveColor.g == doctest::Approx(0.2f));
@@ -473,6 +474,6 @@ TEST_CASE("Material2D: a data asset round-trips; a sprite saved before materials
     CHECK(lOld.Size.x == doctest::Approx(10.f));
 
     SpriteComponent lSprite;
-    lSprite.Material.Path = OpaaxString("Materials/Glow.opaaxdata");
-    CHECK(nlohmann::json(lSprite).get<SpriteComponent>().Material.Path == "Materials/Glow.opaaxdata");
+    lSprite.Material.Path = OpaaxString("Materials/Glow.opaaxasset");
+    CHECK(nlohmann::json(lSprite).get<SpriteComponent>().Material.Path == "Materials/Glow.opaaxasset");
 }
