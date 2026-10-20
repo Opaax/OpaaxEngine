@@ -22,7 +22,7 @@ namespace Opaax::Editor
         /** Every frame the window is open and not collapsed. InDocument's asset is never null here. */
         virtual void DrawContents(AssetDocument& InDocument) = 0;
 
-        /** The window's size the first time it opens. */
-        virtual Vector2F GetDefaultSize() const { return { 420.f, 480.f }; }
+        /** The window's size the first time it opens. Wide enough for a list of structs' labels. */
+        virtual Vector2F GetDefaultSize() const { return { 480.f, 540.f }; }
     };
 }

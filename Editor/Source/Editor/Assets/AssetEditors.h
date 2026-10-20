@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 
 #include "Core/Log/Logger.h"
+#include "Core/Maths/MathTypes.h"   // Vector2F
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Editor/Assets/AssetDocument.hpp"
@@ -126,9 +127,11 @@ namespace Opaax::Editor
             /** The values as of the last recorded change: what a new change is compared against. */
             nlohmann::json            Recorded;
 
-            /** "Hero.opaaxasset###Asset:<path>": the label shows the name, the id stays the path. */
-            OpaaxString               WindowLabel;
+            /** The window's corner and dock node (0: floating) as last drawn: a new window opens from them. */
+            Vector2F                  WindowPos;
+            Uint32                    DockId = 0;
 
+            bool                      bPlaced    = false;
             bool                      bFocusNext = true;
             bool                      bWantClose = false;
         };
@@ -141,14 +144,17 @@ namespace Opaax::Editor
         /** Records what changed in InOpen since the last recorded step, once no widget is active. */
         void RecordChanges(OpenAsset& InOpen);
 
+        /**
+         * Places InNew's window before its first frame: a tab of the newest docked asset window, else below
+         * and right of the newest floating one, else centred. A window with saved settings keeps them.
+         */
+        void PlaceNewWindow(const OpenAsset& InNew, Vector2F InSize) const;
+
         void DrawWindow(IEditorGui& InGui, OpenAsset& InOpen);
         void DrawHeader(OpenAsset& InOpen);
 
         TDynArray<TUniquePtr<OpenAsset>> m_Open;
         OpaaxString                      m_FocusedPath;
         EditorContext*                   m_Context = nullptr;
-
-        /** The dock node of the last docked asset window: where a new one opens, as a tab. */
-        Uint32                           m_LastDockId = 0;
     };
 }

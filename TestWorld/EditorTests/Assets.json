@@ -110,6 +110,12 @@
         }
     },
     {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
         "id": "screenshot",
         "command": "screenshot",
         "params": {

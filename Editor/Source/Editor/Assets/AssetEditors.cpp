@@ -6,6 +6,7 @@
 #include "Application/Services/IPaths.h"
 #include "Core/String/OpaaxStringJson.h"
 #include "Editor/Assets/AssetEdit.h"
+#include "Editor/Assets/AssetWindowPlacement.h"
 #include "Editor/Assets/PropertyAssetEditor.h"
 #include "Editor/EditorContext.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
@@ -368,6 +369,37 @@ namespace Opaax::Editor
         }
     }
 
+    void AssetEditors::PlaceNewWindow(const OpenAsset& InNew, const Vector2F InSize) const
+    {
+        // m_Open is in opening order, and the windows before InNew were drawn this frame.
+        const OpenAsset* lNewestDocked   = nullptr;
+        const OpenAsset* lNewestFloating = nullptr;
+
+        for (const TUniquePtr<OpenAsset>& lOther : m_Open)
+        {
+            if (lOther.get() == &InNew || !lOther->bPlaced) { continue; }
+
+            if (lOther->DockId != 0) { lNewestDocked = lOther.get(); }
+            else                     { lNewestFloating = lOther.get(); }
+        }
+
+        if (lNewestDocked != nullptr)
+        {
+            ImGui::SetNextWindowDockID(static_cast<ImGuiID>(lNewestDocked->DockId), ImGuiCond_FirstUseEver);
+            return;
+        }
+
+        const ImGuiViewport* lViewport = ImGui::GetMainViewport();
+        const Vector2F       lWorkPos  = { lViewport->WorkPos.x, lViewport->WorkPos.y };
+        const Vector2F       lWorkSize = { lViewport->WorkSize.x, lViewport->WorkSize.y };
+
+        const Vector2F lPos = (lNewestFloating != nullptr)
+            ? CascadedWindowPos(lNewestFloating->WindowPos, ImGui::GetFrameHeight(), InSize, lWorkPos, lWorkSize)
+            : CenteredWindowPos(lWorkPos, lWorkSize, InSize);
+
+        ImGui::SetNextWindowPos(ImVec2(lPos.x, lPos.y), ImGuiCond_FirstUseEver);
+    }
+
     void AssetEditors::DrawWindow(IEditorGui& InGui, OpenAsset& InOpen)
     {
         AssetDocument& lDocument = *InOpen.Document;
@@ -381,10 +413,10 @@ namespace Opaax::Editor
             InOpen.bFocusNext = false;
         }
 
-        // A new asset window joins the dock node of the last one, as a tab.
-        if (m_LastDockId != 0)
+        if (!InOpen.bPlaced)
         {
-            ImGui::SetNextWindowDockID(static_cast<ImGuiID>(m_LastDockId), ImGuiCond_FirstUseEver);
+            PlaceNewWindow(InOpen, lStyle.DefaultSize);
+            InOpen.bPlaced = true;
         }
 
         // The label shows the name and the dirty mark; the id after ### stays the path.
@@ -399,10 +431,9 @@ namespace Opaax::Editor
             m_FocusedPath = lDocument.GetAbsPath();
         }
 
-        if (ImGui::GetWindowDockID() != 0)
-        {
-            m_LastDockId = ImGui::GetWindowDockID();
-        }
+        const ImVec2 lWindowPos = ImGui::GetWindowPos();
+        InOpen.WindowPos = { lWindowPos.x, lWindowPos.y };
+        InOpen.DockId    = ImGui::GetWindowDockID();
 
         if (bVisible)
         {
