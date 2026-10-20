@@ -9,6 +9,7 @@ test, or by an AI agent. The commands are the same everywhere; the editor adds i
 |---|---|
 | `--exec <script.json>` | Runs the script's requests in order, then closes the app. Each answer is written to `<script>.out.json` as it comes (`--exec-out <file>` to choose). The exit code is 1 when a request failed, or never ran because the app closed first. |
 | `--automation <folder>` | Keeps the app open and runs every `<name>.request.json` dropped in the folder (in name order), answering in `<name>.response.json`. `app.quit` closes it. |
+| `--upgrade-assets` | The editor only: before it opens, converts the asset files of older formats (`.opaaxsheet`, `.opaaxclip`...) in the project and the engine's content into `.opaaxasset` files, and rewrites the paths that named them. The log lists what changed. With `--exec` and a script that sends `app.quit`, it converts and closes ([Objects.md](Objects.md)). |
 
 The two can be combined. For the inbox, write a request under another name first and rename it to
 `.request.json`, so the app never reads half a file; number the names (`001`, `002`...) to keep the
@@ -109,6 +110,17 @@ The editor adds:
 | `prefab.place` | `path`, `position` | Places an instance of a prefab in the focused map, its first entity at `position` |
 | `prefab.variant` | `prefab`, `path`, `entity`, `components` | Writes a variant of a prefab: it inherits everything, except `components` changed on its `entity` |
 | `ui.new` | `path` | Creates an empty UI canvas (a root panel at the project's reference height); its widgets are written in the file |
+| `asset.classes` | | The asset classes a project can make: name, label, category, and properties at their defaults |
+| `asset.new` | `path`, `class`, `properties` | Creates an asset of a class, every field at its default, then sets `properties`, saves and opens it; refuses a file that exists |
+| `asset.open` | `path` | Opens an asset in its window: `path`, `class`, `properties`, `unsaved`, `canUndo`, `canRedo` |
+| `asset.get` | `path` | An asset's class and values: its window's when open (unsaved changes included), else its file's |
+| `asset.set` | `path`, `properties` | Merges values into an asset (opened first if needed) as one undo step, then its class's fixes apply; not saved. A value of the wrong type changes nothing |
+| `asset.undo`, `asset.redo` | `path` | Steps an open asset's own history |
+| `asset.save` | `path` | Writes an open asset and reloads it, so a playing game reads the new values |
+| `asset.close` | `path`, `discard` | Closes an asset's window; unsaved changes are refused unless `discard` is true |
+| `asset.list` | | The open assets, in the order they were opened: `path`, `class`, `unsaved` |
+
+An asset `path` is relative to the project's assets, `/Engine/...` for the engine's, or absolute.
 
 Edits made by the editor's commands are the same as a user's: undoable, and saved only when asked.
 

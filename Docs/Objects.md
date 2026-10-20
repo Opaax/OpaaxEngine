@@ -1,0 +1,188 @@
+# Objects and assets
+
+Every asset type of the engine (a material, a sprite sheet, an animation clip, a mover, a font family,
+an input action) and of a game is a class derived from `Opaax::Asset`, itself an `Opaax::Object`. A
+class with fields is enough: the file format, the loading, the sharing, the editor window, undo,
+automation and the conversion of old files come from the base. It is the idea of Unreal's `UObject`
+and `UDataAsset`, and of Godot's `Resource`.
+
+Components, levels, maps, prefabs and UI canvases are not objects: they keep their own formats
+([AssetFormats.md](AssetFormats.md)).
+
+## An asset class
+
+```cpp
+#include "Engine/Registries/AutoRegistration.h"
+#include "Resources/Asset/Asset.h"
+
+class EnemyStats final : public Opaax::Asset
+{
+    OPAAX_OBJECT(EnemyStats, Opaax::Asset)
+
+public:
+    Opaax::Int32 MaxHealth = 30;
+    float        Speed     = 120.f;
+
+    OPAAX_PROPERTIES(EnemyStats,
+                     OPAAX_PROP(MaxHealth).SetRange(1.f, 10000.f),
+                     OPAAX_PROP(Speed).SetRange(0.f, 2000.f).SetTooltip("World units per second."))
+};
+
+OPAAX_REGISTER_OBJECT(EnemyStats);
+```
+
+- `OPAAX_OBJECT(Class, Parent)` gives the class its `ObjectClass`: its name in files (the C++ name
+  without namespace), its parent, a default object holding every field's default.
+- `OPAAX_PROPERTIES` lists the fields that are saved, drawn in the editor and set by automation:
+  numbers, `bool`, strings, names (`OpaaxStringID`), enums declared with `OPAAX_ENUM_VALUES` (saved by
+  name), vectors and colours, a file (`TResourcePath<TextureResource>`), another asset
+  (`TAssetRef<Material2D>`), and lists of structs that have `OPAAX_PROPERTIES` and
+  `NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT`. Give every field a default: a file written before a
+  field existed still loads.
+- `OPAAX_REGISTER_OBJECT(Class)` is the only registration. After renaming a class,
+  `OPAAX_REGISTER_OBJECT_ALIAS("OldName", "NewName")` keeps its old files loading.
+
+`Sandbox/Source/Sandbox/Data/EnemyStats.h` is this class; the engine's are next to the code that uses
+them (`Renderer/Materials/Material2D.h`, `Renderer/Textures/SpriteSheet.h`, `Movement/Assets`...).
+
+## The file
+
+One format for every class, `.opaaxasset`: the class's name, its properties by field name, and the
+format's version.
+
+```json
+{ "Class": "EnemyStats", "Properties": { "MaxHealth": 50, "Speed": 90.0 }, "Version": 1 }
+```
+
+A missing property keeps its default. A value of the wrong type, or an unknown class, makes the file
+fail to load, and the log names the field. The asset is named after its file
+(`Data/Grunt.opaaxasset` is `Grunt`).
+
+## Using an asset from code
+
+A component, a behaviour or another asset names one with a field:
+
+```cpp
+Opaax::TAssetRef<EnemyStats> Stats;   // saved as its path: "Data/Grunt.opaaxasset"
+```
+
+and loads it with `LoadAsset`, which shares one copy between every user:
+
+```cpp
+const Opaax::TAssetHandle<EnemyStats> lStats = Opaax::LoadAsset(Resources, Paths, Stats);
+if (const EnemyStats* lData = lStats.Get())   // null when the file is missing or holds another class
+{
+    Speed = lData->Speed;
+}
+```
+
+Keep the handle, not the pointer: saving the file in the editor reloads it in place, and the handle
+reads the new values. `GetOrDefault()` answers the class's defaults when the file is missing, for a
+class whose defaults make sense (a `MoveMode` walks). A path written in code works too:
+`LoadAsset<EnemyStats>(Resources, Paths, Opaax::OpaaxString("Data/Grunt.opaaxasset"))`.
+
+## Hooks
+
+An asset can react to what happens to it by overriding:
+
+| Hook | When | Example |
+|---|---|---|
+| `PostLoad()` | Its properties were just read (a file, an undo). It may run on a loading thread: touch nothing but the object. | derived values |
+| `PostEditChange()` | An editor or a script changed it. Fix or refuse the values here; the window records the fixed ones. | `Mover`, `AnimationLibrary`: a repeated name is cleared; `SpriteSheet`: a default past the last frame goes back to 0 |
+| `IsPropertyVisible(name)` | The editor asks whether to show a field | `MoveMode` shows only the fields of its mode |
+
+`Resources/Asset/NamedAssetEntries.h` has the lookups and fix-ups of a list that gives other assets
+short names (a Mover's modes, a library's clips), for a class of the same kind.
+
+## In the editor
+
+- **Make one:** right-click a folder in the Resource Browser > **New Asset** > its category > its
+  class. Scripts use `asset.new`.
+- **Edit one:** double-click it. Each asset opens in a window of its own, docked or floating; several
+  opened together cascade. The window's header has the class, Save, Undo and Redo, and its title an
+  asterisk while it has unsaved changes. Ctrl+S, Ctrl+Z and Ctrl+Y act on the focused window. Each
+  asset has its own undo history: a change is one step once the widget being dragged or typed in is
+  released.
+- **How a class looks:** with no registration, it is offered in New Asset itself (below the
+  categories), named from its class name (`EnemyStats` is "Enemy Stats"), and its window lists its
+  properties. An editor module can give it a label, a glyph or an icon, a New Asset category, and an
+  editor of its own:
+
+```cpp
+void MyGameEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& InRegistrar)
+{
+    InRegistrar.AssetTypes().Register<EnemyStats>()
+        .SetLabel(Opaax::OpaaxString("Enemy"))
+        .SetCategory(Opaax::OpaaxString("Gameplay"))
+        .SetGlyph(Opaax::OpaaxString("[E]"))
+        .SetEditor<EnemyStatsEditor>();   // optional
+}
+```
+
+### A custom editor
+
+A class whose fields need more than a list (a picture, a matrix, a preview) gets an `IAssetEditor`:
+built from the `EditorContext`, it draws below the window's header and edits the asset directly.
+
+```cpp
+class EnemyStatsEditor final : public Opaax::Editor::IAssetEditor
+{
+public:
+    explicit EnemyStatsEditor(Opaax::Editor::EditorContext& InContext) : m_Context(InContext) {}
+
+    void DrawContents(Opaax::Editor::AssetDocument& InDocument) override
+    {
+        EnemyStats* lStats = Opaax::Cast<EnemyStats>(InDocument.GetAsset());
+        // ImGui and the property drawers (DrawProperty, DrawProperties): change lStats's fields.
+    }
+
+private:
+    Opaax::Editor::EditorContext& m_Context;
+};
+```
+
+The window records each change as one undo step when no widget is active any more, after running the
+asset's `PostEditChange`: the editor writes no undo code. Something edited by dragging (a frame over
+an image) must keep an ImGui item active for the whole drag, an `InvisibleButton` over the area,
+or each frame becomes a step. The engine's own are in `Editor/Source/Editor/Assets/Editors`: the
+mapping context (a key table, the 2D composite buttons), the clip (a playing preview, the frame
+picker), the font family (a style matrix, a text sample) and the sprite sheet (frames over the image).
+Keep what they compute in pure functions beside them (`AnimationClipEditing.h`), so tests reach it
+without a window.
+
+## Automation
+
+`asset.classes`, `asset.new`, `asset.open`, `asset.get`, `asset.set`, `asset.undo`, `asset.redo`,
+`asset.save`, `asset.close` and `asset.list` do in a script what the windows do, for every class
+([Automation.md](Automation.md)). `asset.set` goes through the same undo and the same
+`PostEditChange` as a person's edit; a value of the wrong type is refused.
+
+## Old files
+
+Before this model, each asset type had its own extension (`.opaaxsheet`, `.opaaxclip`...). Starting
+the editor with `--upgrade-assets` converts every such file of the project and of the engine's content
+into an `.opaaxasset` of the same name, and rewrites the paths that named it in levels, maps, prefabs,
+canvases, assets and configs. A path written in game code is not rewritten: one that still names an
+old file loads the converted one and logs a warning saying where to change it. When a class of yours
+replaces a format of your own, add one line to the table in `AssetMigration::GetLegacyFormats`.
+
+## Lifetime and the garbage collector to come
+
+Every object has a slot in one table (`ObjectTable`), with a generation that changes when the slot is
+reused. Handles resolve through it, so a handle to a destroyed object reads null instead of pointing
+at freed memory. Three pointer kinds, as in Unreal:
+
+| Pointer | Does |
+|---|---|
+| `TStrongObjectPtr<T>` | Owns: the object lives while one exists. `NewObject<T>()` returns one. |
+| `TObjectPtr<T>` | A reference held in a property: reads null once the object is gone, and `ObjectClass::CollectReferences` finds it. |
+| `TWeakObjectPtr<T>` | Never keeps the object alive; reads null once it is gone. |
+
+Assets loaded from files are owned by the resource manager, which releases one that nothing holds.
+There is no garbage collector yet; what one needs is in place: the table, the object flags (managed,
+class default, being destroyed), and references found through the properties. A mark-and-sweep would
+start from the strong pointers and the resource manager, follow `TObjectPtr` properties, and destroy
+the managed objects it did not reach, without changing the three pointers' API.
+
+Objects are not copyable (an object is an identity, not a value): build one in place, or make one
+with `NewObject`.

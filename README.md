@@ -10,8 +10,12 @@ A 2D game engine in C++20 for Windows, Linux and macOS, with its editor. Games a
   loop, events, timers, spawning and destruction.
 - **Physics** (Box2D), **audio** (the engine's own mixer: buses, fades, variations, banks; miniaudio
   plays it), **input** with actions and mapping contexts.
-- **Editor:** inspector, hierarchy, viewport with gizmos, play in editor, undo, asset editors, and
-  export of a game into a folder that runs on another machine.
+- **Assets as objects:** every asset type, the engine's and a game's, is a class with reflected
+  fields; it gets one file format, sharing, references, an editor window with its own undo, and
+  automation, with no other code (like Unreal's `UObject`).
+- **Editor:** inspector, hierarchy, viewport with gizmos, play in editor, undo, a window per asset
+  (custom ones for sprite sheets, clips, font families, input mappings), and export of a game into a
+  folder that runs on another machine.
 - **Automation:** a game or the editor can be driven by JSON requests (scripts in CI, AI agents):
   see [Docs/Automation.md](Docs/Automation.md).
 - **Tests:** over a thousand unit tests, and TestWorld, a project whose levels exercise every
@@ -37,6 +41,8 @@ X11/Wayland/GL development packages listed in `.github/workflows/build.yml`.
 
 - [Docs/QuickStart.md](Docs/QuickStart.md): a first game, from a new project to an exported build.
 - [Docs/Customizing.md](Docs/Customizing.md): extending the engine and the editor.
+- [Docs/Objects.md](Docs/Objects.md): asset classes, their files and windows, custom asset editors,
+  converting old asset files.
 - [Docs/Automation.md](Docs/Automation.md): driving a game or the editor from scripts.
 - [Docs/AssetFormats.md](Docs/AssetFormats.md): the asset files (levels, maps, prefabs, UI, input,
   sprites, data), to write them by hand or from a tool.

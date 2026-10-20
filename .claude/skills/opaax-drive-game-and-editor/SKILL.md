@@ -33,7 +33,9 @@ Same flag on `SandboxEditor` / `TestWorldEditor`, plus the editor's commands: `e
 (with `components`), `entity.select`, `entity.parent`, `entity.rename`, `component.set` (undoable),
 `component.add`/`remove`, `prefab.create`/`place`/`variant`, `editor.undo`/`redo`, `editor.play`/`stop`,
 `level.new`, `map.new`, `map.add`, `level.open`, `level.play`, `level.save`, `map.save` (with `path`: Save
-As), `ui.new`, `project.export`. A game
+As), `ui.new`, `project.export`, and for assets (`.opaaxasset`: sheets, clips, input actions, a game's
+data) `asset.classes`, `asset.new`, `asset.open`, `asset.get`, `asset.set`, `asset.undo`/`redo`,
+`asset.save`, `asset.close`, `asset.list`; an engine asset is named `/Engine/...`. A game
 starts from `level.new` (a level and its first map), entities, then `level.save`. A screenshot shows the
 whole editor window. Nothing is saved unless asked, so a script can edit freely; the editor closes at
 the end of the script.
@@ -52,8 +54,8 @@ The order that works for a game made without help (a Tetris was made this way):
    actions, prefabs it spawns, sounds, the HUD's bindings). Make its randomness seedable from a field,
    and keep what a test must read in fields (`expect.value` reads `<Behaviour>/<Field>`).
 3. Content from the editor (`level.open`, `entity.create` with components, `prefab.create`, `ui.new`,
-   `level.save`); input actions, key maps and the HUD's widgets are written as files
-   (Docs/AssetFormats.md).
+   `level.save`); input actions, mapping contexts and other assets with `asset.new` then `asset.set`
+   and `asset.save`; the HUD's widgets written in the canvas file (Docs/AssetFormats.md).
 4. A test script in `<Game>/Tests/`: play the level, set the seed with `component.set`, start a new
    game from the game's own input, press keys, check fields, `ui.list` for what the HUD shows, and open
    the screenshots.
@@ -76,5 +78,9 @@ another name then renamed), wait for `001.response.json`, repeat; send `app.quit
   request checks a refusal: it passes when the command fails. `"expect": {...}` checks any answer
   (`{"command": "world.info", "expect": {"mode": "Play"}}`).
 - Open every screenshot you take before saying what it shows.
+- Requests cannot click inside an editor window (`input.*` feeds the game, not ImGui): check an
+  asset's values with `asset.get`, and a custom editor's selected view with a local build that starts
+  with a selection, reverted afterwards. A window restored from `imgui.ini` draws on its second frame:
+  `frames.wait` before a screenshot.
 - A level made for a check can go in TestWorld (`TestWorld/Assets/Maps`, `Levels`) with its script in
   `TestWorld/Tests` (`TestWorld/EditorTests` for an editor script): it then runs in CTest and CI.

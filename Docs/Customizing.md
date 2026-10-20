@@ -28,6 +28,30 @@ it. `OPAAX_REGISTER_NAMED_COMPONENT(Type, "Name")` keeps a stable name, and
 Fields listed in `OPAAX_PROPERTIES` are saved and drawn by the Inspector with no other code;
 `SetRange`, `SetDragStep` and `SetTooltip` shape the editing.
 
+### An asset class
+
+Data shared by many entities (a kind of enemy, a weapon, a tuning) is an asset class:
+
+```cpp
+class EnemyStats final : public Opaax::Asset
+{
+    OPAAX_OBJECT(EnemyStats, Opaax::Asset)
+
+public:
+    float Speed = 120.f;
+
+    OPAAX_PROPERTIES(EnemyStats, OPAAX_PROP(Speed).SetRange(0.f, 2000.f))
+};
+
+OPAAX_REGISTER_OBJECT(EnemyStats);
+```
+
+Its `.opaaxasset` files are made in the editor (New Asset in the Resource Browser), by `asset.new`, or
+by hand. A component or another asset names one with a `TAssetRef<EnemyStats>` field; `LoadAsset`
+loads it, shared, and the `TAssetHandle` it returns reads the new values when the file is saved.
+`PostEditChange` fixes values after an edit, `IsPropertyVisible` hides fields that do not apply.
+[Objects.md](Objects.md) covers the file, the hooks, custom editors and old files.
+
 ### A world subsystem
 
 ```cpp
@@ -154,8 +178,19 @@ void MyGameEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& InR
 
     // A file type of the game in the Resource Browser (the runtime module registers the resource).
     InRegistrar.ResourceTypes().Register<WaveResource>().SetGlyph(Opaax::OpaaxString("[W]"));
+
+    // How an asset class shows: its New Asset category, its glyph, and an editor of its own (optional:
+    // without one, its window lists its properties).
+    InRegistrar.AssetTypes().Register<EnemyStats>()
+        .SetCategory(Opaax::OpaaxString("Gameplay"))
+        .SetGlyph(Opaax::OpaaxString("[E]"))
+        .SetEditor<EnemyStatsEditor>();
 }
 ```
+
+An asset editor derives from `IAssetEditor` and edits the asset directly in `DrawContents`; the
+asset's window around it records each change as an undo step and has the Save button
+([Objects.md](Objects.md)).
 
 Also available: `ViewportTools()` (buttons over the viewport), `EditWorldSystems()` (subsystems for
 edit worlds only), `ConfigDrawers()` and `UIWidgetDrawers()`. `Sandbox/Editor/Source/SandboxEditor`
