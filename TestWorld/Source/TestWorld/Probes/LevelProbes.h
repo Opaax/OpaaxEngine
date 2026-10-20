@@ -2,7 +2,7 @@
 
 #include "Core/String/OpaaxStringJson.h"
 #include "Engine/GameInstance/GameInstanceContext.h"
-#include "Engine/GameInstance/IGameInstanceSubsystem.h"
+#include "Engine/GameInstance/GameInstanceSubsystem.h"
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Probes/LifecycleProbes.h"
 #include "World/Behaviour/Behaviour.h"
@@ -13,20 +13,17 @@ namespace TestWorld
     // ProbeLedger — the game's record, kept across levels: how many LedgerProbes started (one per
     //   level that has one), and the EndProbes that ended (and how many because their world ended).
     // =============================================================================
-    class ProbeLedger final : public Opaax::GameInstanceSubsystemBase
+    class ProbeLedger final : public Opaax::GameInstanceSubsystem
     {
-    public:
-        OPAAX_SUBSYSTEM_TYPE(ProbeLedger)
-
-        explicit ProbeLedger(Opaax::GameInstanceContext& InContext) : m_Context(&InContext) {}
+        OPAAX_OBJECT(ProbeLedger, Opaax::GameInstanceSubsystem)
 
         bool Startup() override
         {
-            m_Context->Events.GetEventBus().Subscribe(this, &ProbeLedger::OnEnded);
+            GetContext().Events.GetEventBus().Subscribe(this, &ProbeLedger::OnEnded);
             return true;
         }
 
-        void Shutdown() override { m_Context->Events.GetEventBus().UnsubscribeAll(this); }
+        void Shutdown() override { GetContext().Events.GetEventBus().UnsubscribeAll(this); }
 
         Opaax::Int32 LedgersStarted = 0;
         Opaax::Int32 Ended          = 0;
@@ -41,8 +38,6 @@ namespace TestWorld
                 ++WorldEndings;
             }
         }
-
-        Opaax::GameInstanceContext* m_Context = nullptr;
     };
 
     // =============================================================================

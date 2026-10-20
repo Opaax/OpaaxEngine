@@ -253,29 +253,30 @@ namespace Opaax
         InWorld.SetContext(WorldContext{InWorld, *m_Resources, *m_Paths, *m_Events, *m_Input, *m_Config,
                                         lActions, lUI, *m_Debug, &m_Registries->Components(), m_Audio, lGame});
 
-        WorldContext* lContext = InWorld.GetContext();
-        OPAAX_ASSERT(lContext != nullptr);
+        OPAAX_ASSERT(InWorld.GetContext() != nullptr);
 
-        // Take the types this world qualifies for (ShouldCreate); rejected ones are never built.
+        // Take the classes this world qualifies for (ShouldCreate); refused ones are never made.
+        const TDynArray<const ObjectClass*> lClasses =
+            CollectSubsystemClasses(m_Registries->ObjectClasses(), WorldSubsystem::StaticClass());
+
         Uint64 lCreated = 0;
 
-        m_Registries->WorldSubsystems().ForEach([&](const IWorldSubsystemEntry& InEntry)
+        for (const ObjectClass* lClass : lClasses)
         {
-            if (!InEntry.ShouldCreate(InWorld))
-            {
-                return;
-            }
+            const WorldSubsystem* lDefault = Cast<WorldSubsystem>(lClass->GetDefaultObject());
 
-            InEntry.CreateInto(InWorld.GetSubsystems(), *lContext);
-            ++lCreated;
-        });
+            if (lDefault != nullptr && lDefault->ShouldCreate(InWorld) && InWorld.GetSubsystems().Add(*lClass))
+            {
+                ++lCreated;
+            }
+        }
 
         // Create all, then start all, so a subsystem can find another during its Startup.
         InWorld.GetSubsystems().StartupAll();
 
-        OPAAX_LOG(LogWorldManager, Trace, "World '{}' ({}) — {} of {} subsystem candidate(s) created",
+        OPAAX_LOG(LogWorldManager, Trace, "World '{}' ({}) — {} of {} subsystem class(es) created",
                   InWorld.GetName().CStr(), ToString(InWorld.GetMode()),
-                  lCreated, m_Registries->WorldSubsystems().Count());
+                  lCreated, static_cast<Uint64>(lClasses.size()));
     }
 
     void WorldManager::DestroyWorld(World* InWorld)

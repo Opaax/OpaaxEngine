@@ -6,7 +6,6 @@
 #include "Application/Services/IPaths.h"
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/GameInstance/GameInstance.h"
-#include "Engine/GameInstance/GameInstanceSubsystemRegistry.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Input/InputManager.h"
 #include "World/WorldManager.h"
@@ -63,11 +62,10 @@ namespace Opaax
                                                                       *m_Events, *m_Input, *m_Config});
         ++m_SessionsStarted;
 
-        const Uint64 lCreated = m_GameInstance->StartSubsystems(m_Registries->GameInstanceSubsystems());
+        const Uint64 lCreated = m_GameInstance->StartSubsystems(m_Registries->ObjectClasses());
 
-        OPAAX_LOG(LogGameInstanceManager, Info,
-                  "GAME STARTED (session #{}) — {} of {} session subsystem(s) created",
-                  m_SessionsStarted, lCreated, m_Registries->GameInstanceSubsystems().Count());
+        OPAAX_LOG(LogGameInstanceManager, Info, "GAME STARTED (session #{}) — {} session subsystem(s) created",
+                  m_SessionsStarted, lCreated);
         return true;
     }
 

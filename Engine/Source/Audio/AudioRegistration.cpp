@@ -19,8 +19,8 @@ namespace Opaax
     OPAAX_REGISTER_NAMED_COMPONENT(AudioListenerComponent, "AudioListener");
     OPAAX_REGISTER_NAMED_COMPONENT(AudioBanksComponent, "AudioBanks");
 
-    OPAAX_REGISTER_NAMED_GAME_INSTANCE_SUBSYSTEM(AudioGlobalBank, "AudioGlobalBank", 0);
+    OPAAX_REGISTER_OBJECT(AudioGlobalBank);
 
     // After gameplay and physics, so sounds follow where the entities ended up this frame.
-    OPAAX_REGISTER_NAMED_WORLD_SUBSYSTEM(AudioSubsystem, "Audio", WorldSubsystemOrder::Presentation);
+    OPAAX_REGISTER_OBJECT(AudioSubsystem);
 }

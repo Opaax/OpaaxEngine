@@ -961,9 +961,6 @@ namespace Opaax::Editor
         // After the commands: the mode buttons dispatch by tag.
         RegisterNativeViewportTools();
 
-        m_Extensions.EditWorldSystems().Bind(
-            &OpaaxApplication::GetAppService<IEngine>().GetRegistries().WorldSubsystems());
-
         if (InCollect)
         {
             InCollect(m_Extensions);
@@ -978,11 +975,10 @@ namespace Opaax::Editor
         m_Extensions.Seal();
 
         OPAAX_LOG(LogEditorService, Info,
-                  "Editor extensions sealed (before first world): drawers={}, configDrawers={}, panels={}, resourceTypes={}, titleBar={}, editWorldSystems={}, commands={}",
+                  "Editor extensions sealed (before first world): drawers={}, configDrawers={}, panels={}, resourceTypes={}, titleBar={}, commands={}",
                   m_Extensions.Drawers().Count(), m_Extensions.ConfigDrawers().Count(),
                   m_Extensions.Panels().Count(), m_Extensions.ResourceTypes().Count(),
-                  m_Extensions.TitleBar().Count(), m_Extensions.EditWorldSystems().Count(),
-                  m_Extensions.Commands().Count());
+                  m_Extensions.TitleBar().Count(), m_Extensions.Commands().Count());
     }
 
     void EditorService::Initialize()

@@ -20,5 +20,5 @@ namespace Opaax
     OPAAX_REGISTER_MOVER_MODE(FlyMoveMode, "FlyMove");
 
     // After Physics: the mover must see this step's poses.
-    OPAAX_REGISTER_NAMED_WORLD_SUBSYSTEM(MoverSubsystem, "Mover", WorldSubsystemOrder::PostPhysics);
+    OPAAX_REGISTER_OBJECT(MoverSubsystem);
 }

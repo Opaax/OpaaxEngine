@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Core/OpaaxTypes.h"                       
-#include "Engine/Registries/ModuleRegistrar.h"        
 #include "Editor/Extensions/PanelRegistry.h"       
 #include "Editor/Extensions/DrawerRegistry.h"      
 #include "Editor/Extensions/ResourceTypeRegistry.h"
@@ -15,9 +14,8 @@ namespace Opaax::Editor
     // =============================================================================
     // EditorExtensionRegistrar — what an IEditorModule registers into. Owned by EditorService, given
     //   to editor modules before it seals (before the first world). One route per extension kind.
-    //   Mirrors the game-side ModuleRegistrar.
-    //   EditWorldSystems() is the game-side WorldSubsystemRoute: editor modules add Edit-world systems
-    //   to the same WorldSubsystemRegistry the game module uses.
+    //   Mirrors the game-side ModuleRegistrar. An Edit-world subsystem is an Object class like any
+    //   other: it registers with OPAAX_REGISTER_OBJECT and its ShouldCreate picks Edit worlds.
     // =============================================================================
     class EditorExtensionRegistrar
     {
@@ -29,7 +27,6 @@ namespace Opaax::Editor
         ResourceTypeRegistry&      ResourceTypes()    noexcept { return m_ResourceTypes; }
         AssetTypeRegistry&         AssetTypes()       noexcept { return m_AssetTypes; }
         TitleBarRegistry&          TitleBar()         noexcept { return m_TitleBar; }
-        WorldSubsystemRoute&       EditWorldSystems() noexcept { return m_EditWorldSystems; }
         EditorCommandRegistry&     Commands()         noexcept { return m_EditorCommands; }
         ViewportToolbarRegistry&   ViewportTools()    noexcept { return m_ViewportTools; }
 
@@ -40,7 +37,6 @@ namespace Opaax::Editor
         const ResourceTypeRegistry&  ResourceTypes()   const noexcept { return m_ResourceTypes; }
         const AssetTypeRegistry&     AssetTypes()      const noexcept { return m_AssetTypes; }
         const TitleBarRegistry&      TitleBar()        const noexcept { return m_TitleBar; }
-        const WorldSubsystemRoute&   EditWorldSystems() const noexcept { return m_EditWorldSystems; }
         const EditorCommandRegistry& Commands()        const noexcept { return m_EditorCommands; }
         const ViewportToolbarRegistry& ViewportTools() const noexcept { return m_ViewportTools; }
 
@@ -62,7 +58,6 @@ namespace Opaax::Editor
 
         TitleBarRegistry     m_TitleBar;
 
-        WorldSubsystemRoute  m_EditWorldSystems;
         EditorCommandRegistry m_EditorCommands;
 
         // The strip over the viewport. An item is a closure (a widget), not a command tag like a menu node.

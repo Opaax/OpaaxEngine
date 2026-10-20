@@ -36,13 +36,9 @@ namespace Opaax
     //   Priority wins (among equals, the first found, with a warning). Edit worlds use the editor's
     //   camera instead.
     // =============================================================================
-    class CameraManager final : public EngineSubsystemBase
+    class CameraManager final : public EngineSubsystem
     {
-        // =============================================================================
-        // Base Implementation
-        // =============================================================================
-    public:
-        OPAAX_SUBSYSTEM_TYPE(CameraManager)
+        OPAAX_OBJECT(CameraManager, EngineSubsystem)
 
         // =============================================================================
         // Copy - Move Delete
@@ -72,12 +68,12 @@ namespace Opaax
         // =============================================================================
         // Override
         // =============================================================================
-        //~Begin EngineSubsystemBase Interface
+        //~Begin Subsystem interface
     public:
         bool Startup()                override;
         void Shutdown()               override;
         void Update(double DeltaTime) override;
-        //~End EngineSubsystemBase Interface
+        //~End Subsystem interface
 
         // =============================================================================
         // Members

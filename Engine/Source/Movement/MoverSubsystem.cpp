@@ -33,7 +33,7 @@ namespace Opaax
     // =========================================================================
     // Base implementation
     // =========================================================================
-    bool MoverSubsystem::ShouldCreate(const World& InWorld)
+    bool MoverSubsystem::ShouldCreate(const World& InWorld) const
     {
         return InWorld.GetMode() == EWorldMode::Play;
     }
@@ -64,7 +64,7 @@ namespace Opaax
     {
         OPAAX_STAT_SCOPE("Mover");
 
-        World& lWorld = m_Context->OwningWorld;
+        World& lWorld = GetContext().OwningWorld;
 
         // No physics world: nothing to sweep against, nothing moves. Not an error.
         PhysicsSubsystem* lPhysics = lWorld.GetSubsystems().GetSubsystem<PhysicsSubsystem>();
@@ -109,7 +109,7 @@ namespace Opaax
                                  TransformComponent& InTransform, IPhysicsWorld& InWorld,
                                  const float InDelta)
     {
-        const Entity lOwner{ InEntity, &m_Context->OwningWorld };
+        const Entity lOwner{ InEntity, &GetContext().OwningWorld };
 
         // ---- pending mode switch, applied between steps ---------------------------------------
         if (InMover.PendingMode.IsValid() && InMover.PendingMode != InMover.ModeName)
@@ -189,7 +189,7 @@ namespace Opaax
         if (lMoverIt == m_MoverCache.end())
         {
             lMoverIt = m_MoverCache.emplace(lMoverKey.GetId(),
-                                            LoadAsset(m_Context->Resources, m_Context->Paths, InMover.Mover)).first;
+                                            LoadAsset(GetContext().Resources, GetContext().Paths, InMover.Mover)).first;
 
             if (lMoverIt->second.Get() == nullptr)
             {
@@ -232,7 +232,7 @@ namespace Opaax
         if (lModeIt == m_ModeCache.end())
         {
             lModeIt = m_ModeCache.emplace(lModeKey.GetId(),
-                                          LoadAsset(m_Context->Resources, m_Context->Paths, lEntry->ModeAsset)).first;
+                                          LoadAsset(GetContext().Resources, GetContext().Paths, lEntry->ModeAsset)).first;
 
             if (lModeIt->second.Get() == nullptr)
             {

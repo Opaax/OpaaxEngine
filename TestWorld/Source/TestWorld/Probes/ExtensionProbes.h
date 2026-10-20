@@ -47,23 +47,17 @@ namespace TestWorld
     // ProbeCounterSubsystem — a world subsystem of the game, in Play worlds: counts its updates and
     //   fixed steps, and the entities with a TunedComponent it finds each frame.
     // =============================================================================
-    class ProbeCounterSubsystem final : public Opaax::WorldSubsystemBase
+    class ProbeCounterSubsystem final : public Opaax::WorldSubsystem
     {
-    public:
-        OPAAX_SUBSYSTEM_TYPE(ProbeCounterSubsystem)
+        OPAAX_OBJECT(ProbeCounterSubsystem, Opaax::WorldSubsystem)
 
-        static bool ShouldCreate(const Opaax::World& InWorld) { return InWorld.GetMode() == Opaax::EWorldMode::Play; }
-
-        explicit ProbeCounterSubsystem(Opaax::WorldContext& InContext) : m_Context(&InContext) {}
-
-        bool Startup() override { return true; }
-        void Shutdown() override {}
+        bool ShouldCreate(const Opaax::World& InWorld) const override { return InWorld.GetMode() == Opaax::EWorldMode::Play; }
 
         void Update(double) override
         {
             ++Updates;
             Tuned = 0;
-            m_Context->OwningWorld.Each<TunedComponent>([this](Opaax::EntityID, const TunedComponent&) { ++Tuned; });
+            GetContext().OwningWorld.Each<TunedComponent>([this](Opaax::EntityID, const TunedComponent&) { ++Tuned; });
         }
 
         void FixedUpdate(double) override { ++FixedSteps; }
@@ -71,9 +65,6 @@ namespace TestWorld
         Opaax::Int32 Updates    = 0;
         Opaax::Int32 FixedSteps = 0;
         Opaax::Int32 Tuned      = 0;
-
-    private:
-        Opaax::WorldContext* m_Context = nullptr;
     };
 
     // =============================================================================

@@ -34,14 +34,14 @@ namespace Sandbox
         constexpr const char* kGameplayMapAsset = "Input/Gameplay.opaaxasset";
     }
 
-    bool PlayerControlSubsystem::ShouldCreate(const World& InWorld)
+    bool PlayerControlSubsystem::ShouldCreate(const World& InWorld) const
     {
         return InWorld.GetMode() == EWorldMode::Play;
     }
 
     bool PlayerControlSubsystem::Startup()
     {
-        InputMappingSubsystem* lActions = m_Context->Actions;
+        InputMappingSubsystem* lActions = GetContext().Actions;
 
         if (lActions == nullptr)
         {
@@ -66,9 +66,9 @@ namespace Sandbox
 
     void PlayerControlSubsystem::Shutdown()
     {
-        if (m_Context->Actions != nullptr)
+        if (GetContext().Actions != nullptr)
         {
-            const Uint64 lRemoved = m_Context->Actions->UnbindAll(this);
+            const Uint64 lRemoved = GetContext().Actions->UnbindAll(this);
 
             OPAAX_LOG(LogPlayerControl, Info, "Player control shutdown ({} mover(s) driven, {} binding(s) removed)",
                       m_LastDriven, lRemoved);
@@ -83,7 +83,7 @@ namespace Sandbox
     // =========================================================================
     bool PlayerControlSubsystem::IsOwningWorldActive() const
     {
-        return m_Context->OwningWorld.IsActive();
+        return GetContext().OwningWorld.IsActive();
     }
 
     void PlayerControlSubsystem::OnMove(const InputActionValue& InValue)
@@ -122,7 +122,7 @@ namespace Sandbox
     {
         Uint64 lDriven = 0;
 
-        m_Context->OwningWorld.Each<MoverComponent, TransformComponent>(
+        GetContext().OwningWorld.Each<MoverComponent, TransformComponent>(
             [&](EntityID, MoverComponent& InMover, TransformComponent&)
             {
                 InMover.Input.MoveDir = m_MoveDir;
@@ -153,5 +153,5 @@ namespace Sandbox
     }
 
     // The game's side of the mover: input actions in, MoverInput out. Ticks before the movers.
-    OPAAX_REGISTER_WORLD_SUBSYSTEM_ORDERED(PlayerControlSubsystem, Opaax::WorldSubsystemOrder::Input);
+    OPAAX_REGISTER_OBJECT(PlayerControlSubsystem);
 }

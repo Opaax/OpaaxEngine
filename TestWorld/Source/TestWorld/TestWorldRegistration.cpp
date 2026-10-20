@@ -57,10 +57,10 @@ namespace TestWorld
     OPAAX_REGISTER_BEHAVIOUR(AnimProbe);
     OPAAX_REGISTER_BEHAVIOUR(TuningProbe);
 
-    OPAAX_REGISTER_GAME_INSTANCE_SUBSYSTEM(ProbeLedger);
+    OPAAX_REGISTER_OBJECT(ProbeLedger);
 
     // The game's own types beside the probes: a component, a data asset and a world subsystem.
     OPAAX_REGISTER_COMPONENT(TunedComponent);
     OPAAX_REGISTER_OBJECT(ProbeTuning);
-    OPAAX_REGISTER_WORLD_SUBSYSTEM(ProbeCounterSubsystem);
+    OPAAX_REGISTER_OBJECT(ProbeCounterSubsystem);
 }

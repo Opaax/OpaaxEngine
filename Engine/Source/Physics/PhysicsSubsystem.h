@@ -14,7 +14,6 @@ namespace Opaax
     OPAAX_LOG_CATEGORY(Physics);
 
     class World;
-    struct WorldContext;
     struct ColliderComponent;
     struct RigidbodyComponent;
     struct TransformComponent;
@@ -30,32 +29,23 @@ namespace Opaax
     //   meets); a dynamic body writes its Transform after each step, and a Transform moved by
     //   gameplay in between teleports it. Static bodies do not move.
     // =============================================================================
-    class PhysicsSubsystem final : public WorldSubsystemBase
+    class PhysicsSubsystem final : public WorldSubsystem
     {
-        // =============================================================================
-        // Base implementation
-        // =============================================================================
-    public:
-        OPAAX_SUBSYSTEM_TYPE(PhysicsSubsystem)
-
-        /** Play worlds only (it moves authored data). */
-        static bool ShouldCreate(const World& InWorld);
-
-        // =============================================================================
-        // CTORS
-        // =============================================================================
-    public:
-        explicit PhysicsSubsystem(WorldContext& InContext) : m_Context(&InContext) {}
+        OPAAX_OBJECT(PhysicsSubsystem, WorldSubsystem)
 
         // =============================================================================
         // Override
         // =============================================================================
     public:
-        //~Begin ISubsystem interface
+        //~Begin WorldSubsystem interface
+        /** Play worlds only (it moves authored data). */
+        bool  ShouldCreate(const World& InWorld) const override;
+        Int32 GetTickOrder() const override { return WorldSubsystemOrder::Physics; }
+
         bool Startup() override;
         void FixedUpdate(double InFixedDeltaTime) override;
         void Shutdown() override;
-        //~End ISubsystem interface
+        //~End WorldSubsystem interface
 
         // =============================================================================
         // Queries (results as entities)
@@ -187,8 +177,6 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        WorldContext* m_Context = nullptr;   // owned by the World
-
         TUniquePtr<IPhysicsWorld> m_World;
         int                       m_SubStepCount = 4;
 

@@ -11,7 +11,6 @@ namespace Opaax
     OPAAX_LOG_CATEGORY(ColliderDebug);
 
     class World;
-    struct WorldContext;
     struct ColliderComponent;
     struct TransformComponent;
 
@@ -20,29 +19,21 @@ namespace Opaax
     //   Runs in Edit and Play worlds (colliders must be visible while editing) and reads the components.
     //   Drawn on DebugChannels::Physics, which can be toggled.
     // =============================================================================
-    class ColliderDebugSubsystem final : public WorldSubsystemBase
+    class ColliderDebugSubsystem final : public WorldSubsystem
     {
-        // =============================================================================
-        // Base implementation
-        // =============================================================================
-    public:
-        OPAAX_SUBSYSTEM_TYPE(ColliderDebugSubsystem)
-
-        // =============================================================================
-        // CTORS
-        // =============================================================================
-    public:
-        explicit ColliderDebugSubsystem(WorldContext& InContext) : m_Context(&InContext) {}
+        OPAAX_OBJECT(ColliderDebugSubsystem, WorldSubsystem)
 
         // =============================================================================
         // Override
         // =============================================================================
     public:
-        //~Begin ISubsystem interface
+        //~Begin WorldSubsystem interface
+        Int32 GetTickOrder() const override { return WorldSubsystemOrder::Debug; }
+
         bool Startup() override;
         void Update(double InDeltaTime) override;
         void Shutdown() override;
-        //~End ISubsystem interface
+        //~End WorldSubsystem interface
 
         // =============================================================================
         // Get
@@ -65,8 +56,6 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        WorldContext* m_Context = nullptr;   // owned by the World
-
         Uint64 m_LastDrawn = 0;
     };
 }

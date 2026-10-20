@@ -62,7 +62,7 @@ TEST_CASE("Types: Ref keeps a reference through a by-value capture")
 {
     Int32 lCounter = 0;
 
-    // The factory pattern of RegisterSubsystem: arguments are captured by value.
+    // A factory that captures its arguments by value.
     auto lMakeIncrement = [](auto InArgument)
     {
         return [InArgument]() mutable { Int32& lTarget = InArgument; ++lTarget; };

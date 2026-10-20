@@ -32,5 +32,5 @@ namespace Opaax
     OPAAX_REGISTER_NAMED_RESOURCE(UICanvasResource, "UICanvas");
 
     // Created first: it routes raw input and consumes what the UI used, before input mapping runs.
-    OPAAX_REGISTER_NAMED_GAME_INSTANCE_SUBSYSTEM(UISubsystem, "UI", 100);
+    OPAAX_REGISTER_OBJECT(UISubsystem);
 }

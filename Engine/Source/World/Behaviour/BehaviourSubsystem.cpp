@@ -33,33 +33,29 @@ namespace Opaax
     // =========================================================================
     // CTORS - DTORS
     // =========================================================================
-    bool BehaviourSubsystem::ShouldCreate(const World& InWorld)
+    BehaviourSubsystem::BehaviourSubsystem()  = default;
+    BehaviourSubsystem::~BehaviourSubsystem() = default;
+
+    // =========================================================================
+    // WorldSubsystem
+    // =========================================================================
+    bool BehaviourSubsystem::ShouldCreate(const World& InWorld) const
     {
         return InWorld.GetMode() == EWorldMode::Play;
     }
 
-    BehaviourSubsystem::BehaviourSubsystem(WorldContext& InContext)
-        : m_Context(&InContext)
-    {
-    }
-
-    BehaviourSubsystem::~BehaviourSubsystem() = default;
-
-    // =========================================================================
-    // ISubsystem
-    // =========================================================================
     bool BehaviourSubsystem::Startup()
     {
-        if (m_Context->Components == nullptr)
+        if (GetContext().Components == nullptr)
         {
             OPAAX_LOG(LogBehaviour, Error, "World '{}' has no component registry: its behaviours will not run.",
-                      m_Context->OwningWorld.GetName().CStr());
+                      GetContext().OwningWorld.GetName().CStr());
             return true;
         }
 
-        EntityRegistry& lRegistry = m_Context->OwningWorld.GetRegistry();
+        EntityRegistry& lRegistry = GetContext().OwningWorld.GetRegistry();
 
-        m_Context->Components->ForEach([&](const IComponentEntry& InEntry)
+        GetContext().Components->ForEach([&](const IComponentEntry& InEntry)
         {
             if (!InEntry.IsBehaviour())
             {
@@ -80,11 +76,11 @@ namespace Opaax
         m_bSignalsConnected = true;
         BindPhysicsEvents();
 
-        m_EntityDestroyingHandle = m_Context->OwningWorld.OnEntityDestroying()
+        m_EntityDestroyingHandle = GetContext().OwningWorld.OnEntityDestroying()
                                        .AddMember(this, &BehaviourSubsystem::OnEntityDestroying);
 
         OPAAX_LOG(LogBehaviour, Trace, "Behaviours ready in world '{}' — {} behaviour type(s)",
-                  m_Context->OwningWorld.GetName().CStr(), m_Buckets.size());
+                  GetContext().OwningWorld.GetName().CStr(), m_Buckets.size());
         return true;
     }
 
@@ -129,19 +125,19 @@ namespace Opaax
 
         if (m_EntityDestroyingHandle.IsValid())
         {
-            m_Context->OwningWorld.OnEntityDestroying().Remove(m_EntityDestroyingHandle);
+            GetContext().OwningWorld.OnEntityDestroying().Remove(m_EntityDestroyingHandle);
             m_EntityDestroyingHandle = DelegateHandle();
         }
 
-        m_Context->Events.GetEventBus().UnsubscribeAll(this);
+        GetContext().Events.GetEventBus().UnsubscribeAll(this);
         m_Subscriptions.clear();
 
         // The input mapping belongs to the game, which outlives this world.
-        if (m_Context->Actions != nullptr)
+        if (GetContext().Actions != nullptr)
         {
             for (const ActionBinding& lBinding : m_ActionBindings)
             {
-                m_Context->Actions->Unbind(lBinding.Action, lBinding.Trigger, lBinding.Handle);
+                GetContext().Actions->Unbind(lBinding.Action, lBinding.Trigger, lBinding.Handle);
             }
         }
         m_ActionBindings.clear();
@@ -154,7 +150,7 @@ namespace Opaax
 
         if (m_bSignalsConnected)
         {
-            EntityRegistry& lRegistry = m_Context->OwningWorld.GetRegistry();
+            EntityRegistry& lRegistry = GetContext().OwningWorld.GetRegistry();
             for (const TypeBucket& lBucket : m_Buckets)
             {
                 lBucket.Entry->DisconnectBehaviourSignals(lRegistry, *this);
@@ -166,7 +162,7 @@ namespace Opaax
         m_PrefabResolver.reset();
 
         OPAAX_LOG(LogBehaviour, Trace, "Behaviours stopped in world '{}' — {} ended",
-                  m_Context->OwningWorld.GetName().CStr(), lEnded);
+                  GetContext().OwningWorld.GetName().CStr(), lEnded);
     }
 
     // =========================================================================
@@ -220,14 +216,14 @@ namespace Opaax
             return;
         }
 
-        Behaviour* lBehaviour = lBucket->Entry->TryGetBehaviour(m_Context->OwningWorld.GetRegistry(), InPending.Entity);
+        Behaviour* lBehaviour = lBucket->Entry->TryGetBehaviour(GetContext().OwningWorld.GetRegistry(), InPending.Entity);
         if (lBehaviour == nullptr || lBehaviour->m_bStarted)
         {
             return;
         }
 
         lBehaviour->m_Entity   = InPending.Entity;
-        lBehaviour->m_World    = &m_Context->OwningWorld;
+        lBehaviour->m_World    = &GetContext().OwningWorld;
         lBehaviour->m_Runtime  = this;
         lBehaviour->m_Type     = InPending.Type;
         lBehaviour->m_bStarted = true;
@@ -281,7 +277,7 @@ namespace Opaax
 
     void BehaviourSubsystem::DestroyLater(const EntityID InEntity)
     {
-        if (!m_Context->OwningWorld.IsValid(InEntity))
+        if (!GetContext().OwningWorld.IsValid(InEntity))
         {
             return;
         }
@@ -304,7 +300,7 @@ namespace Opaax
 
     void BehaviourSubsystem::FlushDestroyed()
     {
-        World&          lWorld    = m_Context->OwningWorld;
+        World&          lWorld    = GetContext().OwningWorld;
         EntityRegistry& lRegistry = lWorld.GetRegistry();
 
         // An OnDestroy may queue more: loop until nothing is left.
@@ -358,7 +354,7 @@ namespace Opaax
 
     void BehaviourSubsystem::EndIfStarted(const EntityID InEntity, const TypeBucket& InBucket)
     {
-        Behaviour* lBehaviour = InBucket.Entry->TryGetBehaviour(m_Context->OwningWorld.GetRegistry(), InEntity);
+        Behaviour* lBehaviour = InBucket.Entry->TryGetBehaviour(GetContext().OwningWorld.GetRegistry(), InEntity);
         if (lBehaviour != nullptr && lBehaviour->m_bStarted && !lBehaviour->m_bEnded)
         {
             EndBehaviour(InEntity, InBucket.Type, *lBehaviour);
@@ -401,7 +397,7 @@ namespace Opaax
             }
         }
 
-        EventBus& lBus = m_Context->Events.GetEventBus();
+        EventBus& lBus = GetContext().Events.GetEventBus();
         for (auto lIt = m_Subscriptions.begin(); lIt != m_Subscriptions.end();)
         {
             if (lIt->Entity == InEntity && lIt->BehaviourType == InType)
@@ -419,9 +415,9 @@ namespace Opaax
         {
             if (lIt->Entity == InEntity && lIt->BehaviourType == InType)
             {
-                if (m_Context->Actions != nullptr)
+                if (GetContext().Actions != nullptr)
                 {
-                    m_Context->Actions->Unbind(lIt->Action, lIt->Trigger, lIt->Handle);
+                    GetContext().Actions->Unbind(lIt->Action, lIt->Trigger, lIt->Handle);
                 }
                 lIt = m_ActionBindings.erase(lIt);
             }
@@ -462,7 +458,7 @@ namespace Opaax
             return Entity{};
         }
 
-        if (m_Context->Components == nullptr)
+        if (GetContext().Components == nullptr)
         {
             OPAAX_LOG(LogBehaviour, Error, "Spawn '{}' refused: the world has no component registry.", InPrefabPath.CStr());
             return Entity{};
@@ -470,8 +466,8 @@ namespace Opaax
 
         if (m_PrefabResolver == nullptr)
         {
-            m_PrefabResolver = MakeUnique<ResourcePrefabResolver>(m_Context->Paths, m_Context->Resources,
-                                                                  *m_Context->Components);
+            m_PrefabResolver = MakeUnique<ResourcePrefabResolver>(GetContext().Paths, GetContext().Resources,
+                                                                  *GetContext().Components);
         }
 
         const PrefabData* lPrefab = m_PrefabResolver->Resolve(InPrefabPath);
@@ -483,7 +479,7 @@ namespace Opaax
 
         // BuildInstance stamps a map; a runtime spawn belongs to none, so it is never saved.
         MapData lInstance = PrefabFactory::BuildInstance(*lPrefab, InPrefabPath, Guid::New(), MapId("Runtime"),
-                                                         *m_Context->Components);
+                                                         *GetContext().Components);
         if (lInstance.Entities.empty())
         {
             OPAAX_LOG(LogBehaviour, Error, "Spawn: prefab '{}' has no entity.", InPrefabPath.CStr());
@@ -495,8 +491,8 @@ namespace Opaax
             lEntity.OwnerMap = MapId();
         }
 
-        World& lWorld = m_Context->OwningWorld;
-        MapFactory::Instantiate(lInstance, lWorld, *m_Context->Components);
+        World& lWorld = GetContext().OwningWorld;
+        MapFactory::Instantiate(lInstance, lWorld, *GetContext().Components);
 
         // The root: the entity whose parent is not part of the instance.
         Entity lRoot;
@@ -565,7 +561,7 @@ namespace Opaax
         // A behaviour still waiting for its start must not miss its first event.
         StartPending();
 
-        World& lWorld = m_Context->OwningWorld;
+        World& lWorld = GetContext().OwningWorld;
 
         ++m_SendDepth;
         const bool bOuterStop = m_bStopPropagation;
@@ -640,7 +636,7 @@ namespace Opaax
     void BehaviourSubsystem::AddBusSubscription(const EntityID InEntity, const TypeId InBehaviourType,
                                                 const Uint64 InEventKey, const FBehaviourEventThunk InThunk)
     {
-        EventBus& lBus = m_Context->Events.GetEventBus();
+        EventBus& lBus = GetContext().Events.GetEventBus();
 
         const DelegateHandle lHandle = lBus.SubscribeErased(InEventKey, this,
             [this, InEntity, InBehaviourType, InThunk](const void* InPayload)
@@ -658,13 +654,13 @@ namespace Opaax
                                               const OpaaxStringID InAction, const EInputTrigger InTrigger,
                                               const FBehaviourEventThunk InThunk)
     {
-        if (m_Context->Actions == nullptr || m_bShutdown)
+        if (GetContext().Actions == nullptr || m_bShutdown)
         {
             return false;
         }
 
         // Resolved when it fires, like every other handler: an ended behaviour is skipped.
-        const DelegateHandle lHandle = m_Context->Actions->Bind(InAction, InTrigger,
+        const DelegateHandle lHandle = GetContext().Actions->Bind(InAction, InTrigger,
             [this, InEntity, InBehaviourType, InThunk](const InputActionValue& InValue)
             {
                 if (Behaviour* lBehaviour = Resolve(InEntity, InBehaviourType))
@@ -785,12 +781,12 @@ namespace Opaax
     Behaviour* BehaviourSubsystem::Resolve(const EntityID InEntity, const TypeId InBehaviourType) const
     {
         const TypeBucket* lBucket = FindBucket(InBehaviourType);
-        if (lBucket == nullptr || !m_Context->OwningWorld.IsValid(InEntity))
+        if (lBucket == nullptr || !GetContext().OwningWorld.IsValid(InEntity))
         {
             return nullptr;
         }
 
-        Behaviour* lBehaviour = lBucket->Entry->TryGetBehaviour(m_Context->OwningWorld.GetRegistry(), InEntity);
+        Behaviour* lBehaviour = lBucket->Entry->TryGetBehaviour(GetContext().OwningWorld.GetRegistry(), InEntity);
         return (lBehaviour != nullptr && lBehaviour->IsStarted()) ? lBehaviour : nullptr;
     }
 
@@ -818,7 +814,7 @@ namespace Opaax
     // =========================================================================
     void BehaviourSubsystem::BindPhysicsEvents()
     {
-        EventBus& lBus = m_Context->Events.GetEventBus();
+        EventBus& lBus = GetContext().Events.GetEventBus();
         lBus.Subscribe<PhysicsCollisionBegan>(this, &BehaviourSubsystem::OnPhysicsCollisionBegan);
         lBus.Subscribe<PhysicsCollisionEnded>(this, &BehaviourSubsystem::OnPhysicsCollisionEnded);
         lBus.Subscribe<PhysicsOverlapBegan>(this, &BehaviourSubsystem::OnPhysicsOverlapBegan);
@@ -828,43 +824,43 @@ namespace Opaax
 
     void BehaviourSubsystem::OnPhysicsCollisionBegan(const PhysicsCollisionBegan& InEvent)
     {
-        if (InEvent.SourceWorld != &m_Context->OwningWorld) { return; }
+        if (InEvent.SourceWorld != &GetContext().OwningWorld) { return; }
 
-        World& lWorld = m_Context->OwningWorld;
+        World& lWorld = GetContext().OwningWorld;
         Send(InEvent.EntityA, CollisionBegan{ Entity(InEvent.EntityB, &lWorld) });
         Send(InEvent.EntityB, CollisionBegan{ Entity(InEvent.EntityA, &lWorld) });
     }
 
     void BehaviourSubsystem::OnPhysicsCollisionEnded(const PhysicsCollisionEnded& InEvent)
     {
-        if (InEvent.SourceWorld != &m_Context->OwningWorld) { return; }
+        if (InEvent.SourceWorld != &GetContext().OwningWorld) { return; }
 
-        World& lWorld = m_Context->OwningWorld;
+        World& lWorld = GetContext().OwningWorld;
         Send(InEvent.EntityA, CollisionEnded{ Entity(InEvent.EntityB, &lWorld) });
         Send(InEvent.EntityB, CollisionEnded{ Entity(InEvent.EntityA, &lWorld) });
     }
 
     void BehaviourSubsystem::OnPhysicsOverlapBegan(const PhysicsOverlapBegan& InEvent)
     {
-        if (InEvent.SourceWorld != &m_Context->OwningWorld) { return; }
+        if (InEvent.SourceWorld != &GetContext().OwningWorld) { return; }
 
-        World& lWorld = m_Context->OwningWorld;
+        World& lWorld = GetContext().OwningWorld;
         Send(InEvent.OverlapEntity, OverlapBegan{ Entity(InEvent.OtherEntity, &lWorld), /*bIsSensor*/true });
         Send(InEvent.OtherEntity, OverlapBegan{ Entity(InEvent.OverlapEntity, &lWorld), /*bIsSensor*/false });
     }
 
     void BehaviourSubsystem::OnPhysicsOverlapEnded(const PhysicsOverlapEnded& InEvent)
     {
-        if (InEvent.SourceWorld != &m_Context->OwningWorld) { return; }
+        if (InEvent.SourceWorld != &GetContext().OwningWorld) { return; }
 
-        World& lWorld = m_Context->OwningWorld;
+        World& lWorld = GetContext().OwningWorld;
         Send(InEvent.OverlapEntity, OverlapEnded{ Entity(InEvent.OtherEntity, &lWorld), /*bIsSensor*/true });
         Send(InEvent.OtherEntity, OverlapEnded{ Entity(InEvent.OverlapEntity, &lWorld), /*bIsSensor*/false });
     }
 
     void BehaviourSubsystem::OnPhysicsExitedWorldBounds(const PhysicsExitedWorldBounds& InEvent)
     {
-        if (InEvent.SourceWorld != &m_Context->OwningWorld) { return; }
+        if (InEvent.SourceWorld != &GetContext().OwningWorld) { return; }
 
         Send(InEvent.Entity, ExitedWorldBounds{ InEvent.LastPosition });
     }

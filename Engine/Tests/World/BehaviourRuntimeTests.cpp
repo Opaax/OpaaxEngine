@@ -16,7 +16,7 @@
 #include "Engine/EngineEvents.h"
 #include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceContext.h"
-#include "Engine/GameInstance/IGameInstanceSubsystem.h"
+#include "Engine/GameInstance/GameInstanceSubsystem.h"
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/InputManager.h"
 #include "Input/Mapping/InputMappingSubsystem.h"
@@ -457,14 +457,11 @@ namespace RuntimeProbes
     };
 
     /** A game-wide subsystem: it outlives the worlds. */
-    class Tally final : public GameInstanceSubsystemBase
+    class Tally final : public GameInstanceSubsystem
     {
+        OPAAX_OBJECT(Tally, GameInstanceSubsystem)
+
     public:
-        OPAAX_SUBSYSTEM_TYPE(Tally)
-
-        bool Startup() override { return true; }
-        void Shutdown() override {}
-
         Int32 Count = 0;
     };
 
@@ -580,9 +577,10 @@ namespace
 
         // The game's input mapping and the game, when asked for. Declared before Worlds: as in the
         // engine, the game outlives its worlds.
-        TUniquePtr<GameInstanceContext>   GameContext;
-        TUniquePtr<InputMappingSubsystem> Actions;
-        TUniquePtr<GameInstance>          Game;
+        TUniquePtr<GameInstanceContext> GameContext;
+        GameInstanceSubsystemMgr        ActionSubsystems;
+        InputMappingSubsystem*          Actions = nullptr;
+        TUniquePtr<GameInstance>        Game;
 
         WorldManager Worlds;   // last: its worlds end before the services they use
 
@@ -604,14 +602,19 @@ namespace
 
             if (InOptions.bActions)
             {
-                Actions = MakeUnique<InputMappingSubsystem>(*GameContext);
+                ActionSubsystems.SetContext(GameContext.get());
+                ActionSubsystems.Add<InputMappingSubsystem>();
+                ActionSubsystems.StartupAll();
+
+                Actions = ActionSubsystems.GetSubsystem<InputMappingSubsystem>();
+                REQUIRE(Actions != nullptr);
                 AddTestActions(*Actions);
             }
 
             if (InOptions.bGame)
             {
                 Game = MakeUnique<GameInstance>(*GameContext);
-                Game->GetSubsystems().RegisterSubsystem<Tally>();
+                Game->GetSubsystems().Add<Tally>();
                 Game->GetSubsystems().StartupAll();
             }
 
@@ -619,14 +622,14 @@ namespace
             REQUIRE(TheWorld != nullptr);
 
             TheWorld->SetContext(WorldContext{ *TheWorld, Resources, lPaths, Events, Input, Config,
-                                               Actions.get(), /*UI*/ nullptr, Debug, &Components,
+                                               Actions, /*UI*/ nullptr, Debug, &Components,
                                                /*Audio*/ nullptr, Game.get() });
 
             WorldSubsystemMgr& lSubsystems = TheWorld->GetSubsystems();
-            lSubsystems.RegisterSubsystem<BehaviourSubsystem>(Ref(*TheWorld->GetContext()));
+            lSubsystems.Add<BehaviourSubsystem>();
             if (InOptions.bPhysics)
             {
-                lSubsystems.RegisterSubsystem<PhysicsSubsystem>(Ref(*TheWorld->GetContext()));
+                lSubsystems.Add<PhysicsSubsystem>();
             }
 
             if (InOptions.bStartNow)
@@ -856,8 +859,11 @@ TEST_CASE("Behaviours: Edit worlds run no behaviours")
     const World lEdit(OpaaxString("Edit"), EWorldMode::Edit);
     const World lPlay(OpaaxString("Play"), EWorldMode::Play);
 
-    CHECK_FALSE(BehaviourSubsystem::ShouldCreate(lEdit));
-    CHECK(BehaviourSubsystem::ShouldCreate(lPlay));
+    // Asked on the class default object, as a world asks it.
+    const WorldSubsystem* lDefault = Cast<WorldSubsystem>(BehaviourSubsystem::StaticClass().GetDefaultObject());
+    REQUIRE(lDefault != nullptr);
+    CHECK_FALSE(lDefault->ShouldCreate(lEdit));
+    CHECK(lDefault->ShouldCreate(lPlay));
 }
 
 // =============================================================================

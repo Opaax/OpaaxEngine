@@ -4,11 +4,11 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/Log/Logger.h"
 #include "Engine/GameInstance/GameInstanceContext.h"
-#include "Engine/GameInstance/IGameInstanceSubsystem.h"
+#include "Engine/GameInstance/GameInstanceSubsystem.h"
 
 namespace Opaax
 {
-    class GameInstanceSubsystemRegistry;
+    class ObjectClassRegistry;
 
     inline constexpr LogCategory LogGameInstance{"GameInstance"};
 
@@ -42,10 +42,11 @@ namespace Opaax
         // =========================================================================
     public:
         /**
-         * Creates every registered subsystem in order, then starts them all.
-         * @return Number of subsystems created
+         * Makes one subsystem of each concrete GameInstanceSubsystem class InClasses holds, in tick order,
+         * then starts them all.
+         * @return Number of subsystems made
          */
-        Uint64 StartSubsystems(const GameInstanceSubsystemRegistry& InRegistry);
+        Uint64 StartSubsystems(const ObjectClassRegistry& InClasses);
 
         /**
          * First shutdown step, in reverse order. Safe to call twice.

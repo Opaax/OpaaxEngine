@@ -8,14 +8,16 @@ extension points. The engine itself is written the same way, so its sources are 
 
 Every type registers itself with one line next to its definition, in a header or a `.cpp`
 (`Engine/Registries/AutoRegistration.h`). The engine runs the registrations at startup, before any
-world exists; a game module is linked whole, so nothing else is needed.
+world exists; a game module is linked whole, so nothing else is needed. An Object class (an asset, a
+subsystem) always registers with `OPAAX_REGISTER_OBJECT`: what the engine does with it follows from
+the class it derives from ([Objects.md](Objects.md)).
 
 | Line | Adds | Example |
 |---|---|---|
 | `OPAAX_REGISTER_COMPONENT(Health)` | Data on an entity, saved in maps, edited in the Inspector | QuickStart step 2 |
 | `OPAAX_REGISTER_BEHAVIOUR(Spinner)` | Gameplay code on an entity | QuickStart step 2, `TestWorld/Source` |
-| `OPAAX_REGISTER_WORLD_SUBSYSTEM(Score)` | Code that lives as long as a world and ticks with it | below |
-| `OPAAX_REGISTER_GAME_INSTANCE_SUBSYSTEM(Save)` | Code that lives as long as a game session (across levels) | |
+| `OPAAX_REGISTER_OBJECT(ScoreSubsystem)` | A world subsystem (`Opaax::WorldSubsystem`): code that lives as long as a world and ticks with it | below |
+| `OPAAX_REGISTER_OBJECT(SaveSubsystem)` | A game instance subsystem (`Opaax::GameInstanceSubsystem`): lives as long as a game session, across levels | below |
 | `OPAAX_REGISTER_OBJECT(EnemyStats)` | An asset class (an `Opaax::Asset` with `OPAAX_OBJECT`): `.opaaxasset` files, made and edited in the editor | `Renderer/Materials/Material2D.h`, `Sandbox/Source/Sandbox/Data` |
 | `OPAAX_REGISTER_RESOURCE(WaveResource)` | A file type of the game, loaded and cached | `Sandbox/Source/Sandbox/Resources` |
 | `OPAAX_REGISTER_UI_WIDGET(HealthBar)` | A UI widget for `.opaaxui` canvases | `UI/Widgets` |
@@ -52,39 +54,40 @@ loads it, shared, and the `TAssetHandle` it returns reads the new values when th
 `PostEditChange` fixes values after an edit, `IsPropertyVisible` hides fields that do not apply.
 [Objects.md](Objects.md) covers the file, the hooks, custom editors and old files.
 
-### A world subsystem
+### A subsystem
 
 ```cpp
-class ScoreSubsystem final : public Opaax::WorldSubsystemBase
+class ScoreSubsystem final : public Opaax::WorldSubsystem
 {
+    OPAAX_OBJECT(ScoreSubsystem, Opaax::WorldSubsystem)
+
 public:
-    OPAAX_SUBSYSTEM_TYPE(ScoreSubsystem)
-
     // Optional: without it, every world gets one (the editor's edit worlds too).
-    static bool ShouldCreate(const Opaax::World& InWorld) { return InWorld.GetMode() == Opaax::EWorldMode::Play; }
+    bool ShouldCreate(const Opaax::World& InWorld) const override { return InWorld.GetMode() == Opaax::EWorldMode::Play; }
 
-    explicit ScoreSubsystem(Opaax::WorldContext& InContext) : m_Context(&InContext) {}
+    // Optional: Default otherwise.
+    Opaax::Int32 GetTickOrder() const override { return Opaax::WorldSubsystemOrder::Gameplay; }
 
-    bool Startup() override { return true; }
+    bool Startup() override { return true; }   // GetContext() is valid from here to Shutdown
     void Update(double InDeltaTime) override { /* the world's frame */ }
-    void Shutdown() override {}
-
-private:
-    Opaax::WorldContext* m_Context = nullptr;
 };
 
-OPAAX_REGISTER_WORLD_SUBSYSTEM_ORDERED(ScoreSubsystem, Opaax::WorldSubsystemOrder::Gameplay);
+OPAAX_REGISTER_OBJECT(ScoreSubsystem);
 ```
 
-Subsystems tick in `WorldSubsystemOrder` order: Input, Gameplay (before physics), Physics,
-PostPhysics, Default, Presentation (camera, animation, HUD), Debug. A behaviour finds one with
-`GetSubsystem<ScoreSubsystem>()`. The `WorldContext` holds the world's services: its events, input
-actions, audio, resources, and the running game (`Game`).
+Every world makes one of each registered `WorldSubsystem` class whose `ShouldCreate` accepts it
+(asked on the class's default object), then starts them all: a `Startup` can find a sibling that has
+not started yet. They tick in `GetTickOrder()` order (`WorldSubsystemOrder`: Input, Gameplay before
+physics, Physics, PostPhysics, Default, Presentation for camera, animation and HUD, Debug), equal
+orders by class name. The constructor makes nothing: the default object is built with it, outside any
+world. `GetContext()` gives the world's services (its events, input actions, audio, resources, the
+running game), and a behaviour finds the subsystem with `GetSubsystem<ScoreSubsystem>()`.
 
-A game instance subsystem derives from `Opaax::GameInstanceSubsystemBase`, takes a
-`GameInstanceContext&`, and lives from the start of a game to its end, across level changes (a
-score, a save). A behaviour finds it with `GetGameSubsystem<Save>()`, null while no game runs (in the
-editor outside Play). `TestWorld/Source/TestWorld/Probes/LevelProbes.h` has one.
+A game instance subsystem derives from `Opaax::GameInstanceSubsystem` and registers the same way.
+Every game makes one of each class, in `GetTickOrder()` order, and it lives from the start of the game
+to its end, across level changes (a score, a save); `GetContext()` gives the game's services. A
+behaviour finds it with `GetGameSubsystem<Save>()`, null while no game runs (in the editor outside
+Play). `TestWorld/Source/TestWorld/Probes/LevelProbes.h` has one.
 
 ### Events, input and sound
 
@@ -192,8 +195,9 @@ An asset editor derives from `IAssetEditor` and edits the asset directly in `Dra
 asset's window around it records each change as an undo step and has the Save button
 ([Objects.md](Objects.md)).
 
-Also available: `ViewportTools()` (buttons over the viewport), `EditWorldSystems()` (subsystems for
-edit worlds only), `ConfigDrawers()` and `UIWidgetDrawers()`. `Sandbox/Editor/Source/SandboxEditor`
+Also available: `ViewportTools()` (buttons over the viewport), `ConfigDrawers()` and
+`UIWidgetDrawers()`. A subsystem for edit worlds only is a `WorldSubsystem` like any other, registered
+with `OPAAX_REGISTER_OBJECT`, whose `ShouldCreate` accepts edit worlds. `Sandbox/Editor/Source/SandboxEditor`
 has a working command, drawer and resource type.
 
 A command receives the `EditorContext`: the worlds, the selection, undo, the open documents, the

@@ -19,6 +19,7 @@
 #include "Audio/Components/AudioBanksComponent.h"
 #include "Core/Log/Logger.h"
 #include "Engine/Config/EngineConfigData.h"
+#include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceContext.h"
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/InputManager.h"
@@ -159,8 +160,8 @@ namespace
                                              /*Actions*/ nullptr, /*UI*/ nullptr, Debug, &Components, &Audio });
 
             WorldSubsystemMgr& lSubsystems = lWorld->GetSubsystems();
-            lSubsystems.RegisterSubsystem<BehaviourSubsystem>(Ref(*lWorld->GetContext()));
-            lSubsystems.RegisterSubsystem<AudioSubsystem>(Ref(*lWorld->GetContext()));
+            lSubsystems.Add<BehaviourSubsystem>();
+            lSubsystems.Add<AudioSubsystem>();
             lSubsystems.StartupAll();
             REQUIRE(Worlds.SetActiveWorld(lWorld));
 
@@ -278,9 +279,11 @@ TEST_CASE("AudioGlobalBank: across worlds that come and go, its sounds are never
     BankWorlds lFix;
     lFix.Config.Audio.GlobalBank.Path = OpaaxString("Audio/Global.opaaxasset");
 
-    GameInstanceContext lGameContext{ lFix.Worlds, lFix.Resources, lFix.Assets.Paths, lFix.Events, lFix.Input, lFix.Config };
-    AudioGlobalBank     lGlobal(lGameContext);
-    REQUIRE(lGlobal.Startup());
+    // The game holds the bank, as StartGame makes it.
+    GameInstance lGame(GameInstanceContext{ lFix.Worlds, lFix.Resources, lFix.Assets.Paths, lFix.Events, lFix.Input, lFix.Config });
+    lGame.GetSubsystems().Add<AudioGlobalBank>();
+    lGame.GetSubsystems().StartupAll();
+    REQUIRE(lGame.GetSubsystems().GetSubsystem<AudioGlobalBank>() != nullptr);
     lFix.Jobs.RunAll();
 
     const ResourceRef<AudioClipResource> lFirst = lFix.Resources.Find<AudioClipResource>(lFix.Assets.Absolute("Audio/G.wav").CStr());
@@ -312,5 +315,5 @@ TEST_CASE("AudioGlobalBank: across worlds that come and go, its sounds are never
     CHECK(bGlobalKept);
     CHECK(lFix.Resources.GetLoadedCount<AudioClipResource>() == lLoadedBefore);
 
-    lGlobal.Shutdown();
+    lGame.ShutdownSubsystems();
 }

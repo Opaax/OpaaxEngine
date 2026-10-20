@@ -41,6 +41,7 @@ namespace Opaax
     void World::SetContext(const WorldContext& InContext)
     {
         m_Context = MakeUnique<WorldContext>(InContext);
+        m_Subsystems.SetContext(m_Context.get());
     }
 
     void World::ShutdownSubsystems()

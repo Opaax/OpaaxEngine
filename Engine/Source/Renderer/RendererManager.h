@@ -54,13 +54,9 @@ namespace Opaax
     //   config, services and paths, builds a RenderSystemDesc, owns the RenderSystem and
     //   drives its frame. The RenderSystem itself knows nothing about the engine.
     // =============================================================================
-    class RendererManager final : public EngineSubsystemBase, public IUIAssetProvider
+    class RendererManager final : public EngineSubsystem, public IUIAssetProvider
     {
-        // =============================================================================
-        // Base Implementation
-        // =============================================================================
-    public:
-        OPAAX_SUBSYSTEM_TYPE(RendererManager)
+        OPAAX_OBJECT(RendererManager, EngineSubsystem)
 
         // =============================================================================
         // CTORS - DTORS
@@ -280,12 +276,12 @@ namespace Opaax
         // =============================================================================
         // Override
         // =============================================================================
-        //~Begin EngineSubsystemBase Interface
+        //~Begin Subsystem interface
     public:
         bool Startup()             override;
         void Shutdown()            override;
         void Render(double InAlpha) override;
-        //~End EngineSubsystemBase Interface
+        //~End Subsystem interface
 
         // =============================================================================
         // Types

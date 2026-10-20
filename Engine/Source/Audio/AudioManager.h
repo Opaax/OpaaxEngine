@@ -28,13 +28,9 @@ namespace Opaax
     //   Without an audio device (a server, CI, Audio.bEnabled off) it runs headless: no thread, the
     //   game thread mixes as time passes (Update), so sounds still end on time.
     // =============================================================================
-    class AudioManager final : public EngineSubsystemBase
+    class AudioManager final : public EngineSubsystem
     {
-        // =============================================================================
-        // Base implementation
-        // =============================================================================
-    public:
-        OPAAX_SUBSYSTEM_TYPE(AudioManager)
+        OPAAX_OBJECT(AudioManager, EngineSubsystem)
 
         /** How a manager built outside the engine (tests, tools) mixes. */
         struct Desc
@@ -68,14 +64,14 @@ namespace Opaax
         // Override
         // =============================================================================
     public:
-        //~Begin ISubsystem interface
+        //~Begin Subsystem interface
         bool Startup() override;
 
         /** Frees the voices that ended; a headless mix advances by InDeltaTime. */
         void Update(double InDeltaTime) override;
 
         void Shutdown() override;
-        //~End ISubsystem interface
+        //~End Subsystem interface
 
         // =============================================================================
         // Sounds

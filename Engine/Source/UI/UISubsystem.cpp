@@ -19,10 +19,8 @@
 
 namespace Opaax
 {
-    UISubsystem::UISubsystem(GameInstanceContext& InContext) noexcept
-        : m_Context(&InContext)
-    {
-    }
+    UISubsystem::UISubsystem()  = default;
+    UISubsystem::~UISubsystem() = default;
 
     bool UISubsystem::Startup()
     {
@@ -38,17 +36,17 @@ namespace Opaax
 
         BuildLoadingCover();
 
-        m_Context->Events.GetEventBus().Subscribe<LevelLoadRequested>(this, &UISubsystem::OnLevelLoadRequested);
-        m_Context->Events.GetEventBus().Subscribe<LevelLoadFinished>(this, &UISubsystem::OnLevelLoadFinished);
+        GetContext().Events.GetEventBus().Subscribe<LevelLoadRequested>(this, &UISubsystem::OnLevelLoadRequested);
+        GetContext().Events.GetEventBus().Subscribe<LevelLoadFinished>(this, &UISubsystem::OnLevelLoadFinished);
 
         return true;
     }
 
     TUniquePtr<UIWidget> UISubsystem::LoadTree(const OpaaxString& InAssetPath, float& OutAuthoredHeight) const
     {
-        const OpaaxString lAbsPath = m_Context->Paths.AssetToAbsolute(InAssetPath);
+        const OpaaxString lAbsPath = GetContext().Paths.AssetToAbsolute(InAssetPath);
 
-        const ResourceRef<UICanvasResource> lRef      = m_Context->Resources.Load<UICanvasResource>(lAbsPath.CStr());
+        const ResourceRef<UICanvasResource> lRef      = GetContext().Resources.Load<UICanvasResource>(lAbsPath.CStr());
         const UICanvasResource* const       lResource = lRef.IsValid() ? lRef.Get() : nullptr;
 
         if (lResource == nullptr)
@@ -168,7 +166,7 @@ namespace Opaax
 
         // Route the input to the canvas and report what the UI used, before input mapping runs.
         InputKeyMask lConsumed{};
-        UIInputRouter::Route(m_Context->Input, m_Canvas, m_InputMode, lConsumed);
+        UIInputRouter::Route(GetContext().Input, m_Canvas, m_InputMode, lConsumed);
 
         if (m_Mapping != nullptr)
         {
@@ -183,6 +181,6 @@ namespace Opaax
 
     void UISubsystem::Shutdown()
     {
-        m_Context->Events.GetEventBus().UnsubscribeAll(this);
+        GetContext().Events.GetEventBus().UnsubscribeAll(this);
     }
 }

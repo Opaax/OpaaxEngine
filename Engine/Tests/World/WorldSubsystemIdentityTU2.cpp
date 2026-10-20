@@ -1,24 +1,24 @@
 // Second translation unit of the world subsystem identity test. No test cases: it instantiates
-// StaticTypeID, RegisterSubsystem<T> and GetSubsystem<T> in another TU, so the test can tell
-// "one tag per type" from "one tag per TU".
+// StaticClass, Add<T> and GetSubsystem<T> in another TU, so the test can tell "one class per type"
+// from "one class per TU".
 
 #include "WorldSubsystemProbes.h"
 
 namespace Opaax::WorldSubsystemProbe
 {
-    SubsystemTypeID ProbeTagFromOtherTU()
+    const ObjectClass& ProbeClassFromOtherTU()
     {
-        return ProbeWorldSubsystem::StaticTypeID();
+        return ProbeWorldSubsystem::StaticClass();
     }
 
-    SubsystemTypeID SecondProbeTagFromOtherTU()
+    const ObjectClass& SecondProbeClassFromOtherTU()
     {
-        return SecondProbeWorldSubsystem::StaticTypeID();
+        return SecondProbeWorldSubsystem::StaticClass();
     }
 
-    void RegisterProbeFromOtherTU(WorldSubsystemMgr& InManager)
+    void AddProbeFromOtherTU(WorldSubsystemMgr& InManager)
     {
-        InManager.RegisterSubsystem<ProbeWorldSubsystem>();
+        InManager.Add<ProbeWorldSubsystem>();
     }
 
     ProbeWorldSubsystem* ResolveProbeFromOtherTU(WorldSubsystemMgr& InManager)

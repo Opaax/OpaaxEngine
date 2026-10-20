@@ -14,13 +14,10 @@
 //
 //   OPAAX_REGISTER_COMPONENT(Health);
 //   OPAAX_REGISTER_BEHAVIOUR(Coin);
-//   OPAAX_REGISTER_WORLD_SUBSYSTEM(WaveSpawner);
-//   OPAAX_REGISTER_WORLD_SUBSYSTEM_ORDERED(CameraFollow, WorldSubsystemOrder::Presentation);
-//   OPAAX_REGISTER_GAME_INSTANCE_SUBSYSTEM(ScoreKeeper);
 //   OPAAX_REGISTER_RESOURCE(WaveResource);
 //   OPAAX_REGISTER_UI_WIDGET(UIHealthBar);
 //   OPAAX_REGISTER_MOVER_MODE(SwimMoveMode, "Swim");
-//   OPAAX_REGISTER_OBJECT(EnemyStats);
+//   OPAAX_REGISTER_OBJECT(EnemyStats);      // any Object class: assets, subsystems...
 //
 // The engine runs every registration when it is constructed, before any world exists. Game
 // modules are linked whole (see opaax_add_game), so a registration in any of their files is
@@ -35,7 +32,7 @@ namespace Opaax
 {
     // =============================================================================
     // What a registration adds. Kinds run in this order, so a type can rely on an earlier kind
-    // (a component alias on its component, a subsystem on a resource format).
+    // (a class alias on its class, a component alias on its component).
     // =============================================================================
     enum class EAutoRegistrationKind : Uint8
     {
@@ -46,31 +43,8 @@ namespace Opaax
         ComponentAlias,
         Behaviour,
         MoverMode,
-        UIWidget,
-        GameInstanceSubsystem,
-        WorldSubsystem
+        UIWidget
     };
-
-    // =============================================================================
-    // Tick order of world subsystems: lower ticks first, equal orders tick by name.
-    // =============================================================================
-    namespace WorldSubsystemOrder
-    {
-        /** Turns input into intent. */
-        inline constexpr Int32 Input        = 100;
-        /** Behaviours and game rules: before physics, so what they apply is simulated this step. */
-        inline constexpr Int32 Gameplay     = 200;
-        /** The physics step. */
-        inline constexpr Int32 Physics      = 300;
-        /** Reacts to this step's poses (the mover). */
-        inline constexpr Int32 PostPhysics  = 400;
-        /** Anything that does not care. */
-        inline constexpr Int32 Default      = 500;
-        /** Animation, camera, HUD: reads the final state of the frame. */
-        inline constexpr Int32 Presentation = 600;
-        /** Debug drawing, last. */
-        inline constexpr Int32 Debug        = 700;
-    }
 
     // =============================================================================
     // AutoRegistration — one self-registering type. Each instance links itself into a
@@ -146,32 +120,6 @@ namespace Opaax
 #define OPAAX_REGISTER_BEHAVIOUR(Type)                                                               \
     OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::Behaviour,                      \
         ::Opaax::TypeIdOf<Type>(), 0, #Type, InRegistrar.Behaviours().Register<Type>())
-
-/** Registers a world subsystem at the Default tick order. */
-#define OPAAX_REGISTER_WORLD_SUBSYSTEM(Type)                                                         \
-    OPAAX_REGISTER_WORLD_SUBSYSTEM_ORDERED(Type, ::Opaax::WorldSubsystemOrder::Default)
-
-/** Registers a world subsystem at a tick order (WorldSubsystemOrder). */
-#define OPAAX_REGISTER_WORLD_SUBSYSTEM_ORDERED(Type, Order)                                          \
-    OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::WorldSubsystem,                 \
-        ::Opaax::TypeIdOf<Type>(), Order, #Type, InRegistrar.WorldSubsystems().Register<Type>())
-
-/** Registers a world subsystem under a display name, at a tick order. */
-#define OPAAX_REGISTER_NAMED_WORLD_SUBSYSTEM(Type, Name, Order)                                      \
-    OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::WorldSubsystem,                 \
-        ::Opaax::TypeIdOf<Type>(), Order, Name,                                                    \
-        InRegistrar.WorldSubsystems().Register<Type>(::Opaax::OpaaxStringID(Name)))
-
-/** Registers a game instance subsystem (one per game session). */
-#define OPAAX_REGISTER_GAME_INSTANCE_SUBSYSTEM(Type)                                                 \
-    OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::GameInstanceSubsystem,          \
-        ::Opaax::TypeIdOf<Type>(), 0, #Type, InRegistrar.GameInstanceSubsystems().Register<Type>())
-
-/** Registers a game instance subsystem under a display name; lower Order is created first. */
-#define OPAAX_REGISTER_NAMED_GAME_INSTANCE_SUBSYSTEM(Type, Name, Order)                              \
-    OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::GameInstanceSubsystem,          \
-        ::Opaax::TypeIdOf<Type>(), Order, Name,                                                    \
-        InRegistrar.GameInstanceSubsystems().Register<Type>(::Opaax::OpaaxStringID(Name)))
 
 /** Registers a resource type for the extensions its OPAAX_RESOURCE_FORMAT lists. */
 #define OPAAX_REGISTER_RESOURCE(Type)                                                                \

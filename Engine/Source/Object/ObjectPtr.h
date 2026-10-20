@@ -235,15 +235,17 @@ namespace Opaax
     /**
      * A new T on the heap, owned by the returned pointer.
      * @param InName Its name. Invalid gives "<Class>_<slot>"
+     * @param InArgs For T's constructor, when it takes some (a class only code makes, like an engine
+     *   subsystem built with its settings)
      */
-    template<typename T>
+    template<typename T, typename... TArgs>
     requires CObject<T>
-    TStrongObjectPtr<T> NewObject(const OpaaxStringID InName = {})
+    TStrongObjectPtr<T> NewObject(const OpaaxStringID InName = {}, TArgs&&... InArgs)
     {
-        static_assert(!TIsAbstract<T> && CDefaultInitializable<T>,
-                      "NewObject: the class must be concrete and default-constructible.");
+        static_assert(!TIsAbstract<T> && CConstructibleFrom<T, TArgs...>,
+                      "NewObject: the class must be concrete and constructible from the arguments.");
 
-        T* lObject = new T();
+        T* lObject = new T(Forward<TArgs>(InArgs)...);
 
         const ObjectHandle lHandle = lObject->GetHandle();
         ObjectTable::Get().AddFlags(lHandle, EObjectFlags::Managed);

@@ -72,28 +72,28 @@ namespace Opaax
 
         const Uint64 lCount = RunAutoRegistrations(lRegistrar);
 
-        OPAAX_ENGINE_LOG(Trace, "Registered {} type(s): {} component(s), {} world subsystem(s), {} resource format(s)",
-                         lCount, m_Registries.Components().Count(), m_Registries.WorldSubsystems().Count(),
+        OPAAX_ENGINE_LOG(Trace, "Registered {} type(s): {} object class(es), {} component(s), {} resource format(s)",
+                         lCount, m_Registries.ObjectClasses().Count(), m_Registries.Components().Count(),
                          m_Registries.Resources().Count());
     }
 
     void Engine::RegisterNativeSubsystems()
     {
-        m_Subsystems.RegisterSubsystem<EngineEventBus>();
-        m_Subsystems.RegisterSubsystem<ResourceManager>();
-        m_Subsystems.RegisterSubsystem<InputManager>();
+        m_Subsystems.Add<EngineEventBus>();
+        m_Subsystems.Add<ResourceManager>();
+        m_Subsystems.Add<InputManager>();
 
         // Before the worlds: they stop their sounds when they end, so audio shuts down after them.
-        m_Subsystems.RegisterSubsystem<AudioManager>();
+        m_Subsystems.Add<AudioManager>();
 
-        // Before WorldManager: updates run in registration order (session before worlds)
+        // Before WorldManager: updates run in the order added (session before worlds)
         // and teardown in reverse (worlds destroyed before the session).
-        m_Subsystems.RegisterSubsystem<GameInstanceManager>(&m_Registries);
-        m_Subsystems.RegisterSubsystem<WorldManager>(&m_Registries);
+        m_Subsystems.Add<GameInstanceManager>(&m_Registries);
+        m_Subsystems.Add<WorldManager>(&m_Registries);
 
         // Order does not matter: Loop runs UpdateAll and RenderAll as separate passes.
-        m_Subsystems.RegisterSubsystem<CameraManager>();
-        m_Subsystems.RegisterSubsystem<RendererManager>();
+        m_Subsystems.Add<CameraManager>();
+        m_Subsystems.Add<RendererManager>();
     }
     
     void Engine::CacheSubsystems()

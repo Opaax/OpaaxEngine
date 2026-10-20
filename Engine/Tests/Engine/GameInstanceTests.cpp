@@ -1,4 +1,4 @@
-// Suite: the game lifecycle — StartGame / EndGame, the GameInstance and its registry.
+// Suite: the game lifecycle — StartGame / EndGame, the GameInstance and its subsystem classes.
 //   StartGame -> GameInstance -> first world -> ... -> EndGame -> destroy Play worlds -> destroy
 //   the GameInstance. The game must exist before the first world (world contexts are built at
 //   creation). Where the hosts call these is checked by their boot log, not here.
@@ -10,12 +10,13 @@
 #include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceContext.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
-#include "Engine/GameInstance/GameInstanceSubsystemRegistry.h"
-#include "Engine/GameInstance/IGameInstanceSubsystem.h"
+#include "Engine/GameInstance/GameInstanceSubsystem.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/InputManager.h"
+#include "Object/ObjectClassRegistry.h"
 #include "Resources/ResourceManager.h"
+#include "World/Systems/WorldSubsystem.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
 
@@ -23,19 +24,31 @@ using namespace Opaax;
 
 namespace
 {
-    OpaaxStringID Name(const char* InText) { return OpaaxStringID(OpaaxString(InText)); }
-
-    // -------------------------------------------------------------------------
-    // Records the context address it was given (comparing a field could pass against freed memory).
-    // -------------------------------------------------------------------------
-    class ProbeSubsystem : public GameInstanceSubsystemBase
+    /** The classes of the subsystems started, in start order. */
+    TDynArray<OpaaxStringID>& StartOrder()
     {
+        static TDynArray<OpaaxStringID> s_Order;
+        return s_Order;
+    }
+
+    // -------------------------------------------------------------------------
+    // Records the context address it was given at Startup (comparing a field could pass against
+    // freed memory).
+    // -------------------------------------------------------------------------
+    class ProbeSubsystem : public GameInstanceSubsystem
+    {
+        OPAAX_OBJECT(ProbeSubsystem, GameInstanceSubsystem)
+
     public:
-        OPAAX_SUBSYSTEM_TYPE(ProbeSubsystem)
+        bool Startup() override
+        {
+            m_Context  = &GetContext();
+            m_bStarted = true;
+            ++s_StartCount;
+            StartOrder().push_back(GetClass().GetName());
+            return true;
+        }
 
-        explicit ProbeSubsystem(GameInstanceContext& InContext) : m_Context(&InContext) {}
-
-        bool Startup() override  { m_bStarted = true;  ++s_StartCount; return true; }
         void Shutdown() override { m_bStarted = false; ++s_ShutdownCount; }
         void TearDown() override { ++s_TearDownCount; }
 
@@ -45,7 +58,7 @@ namespace
         double               Accumulated() const noexcept { return m_Accumulated; }
         GameInstanceContext* Context()     const noexcept { return m_Context; }
 
-        static void Reset() { s_StartCount = 0; s_ShutdownCount = 0; s_TearDownCount = 0; }
+        static void Reset() { s_StartCount = 0; s_ShutdownCount = 0; s_TearDownCount = 0; StartOrder().clear(); }
 
         static int s_StartCount;
         static int s_ShutdownCount;
@@ -61,22 +74,47 @@ namespace
     int ProbeSubsystem::s_ShutdownCount = 0;
     int ProbeSubsystem::s_TearDownCount = 0;
 
-    /** A second type, so "created in registration order" is a statement about more than one. */
-    class SecondSubsystem : public GameInstanceSubsystemBase
+    /** A second class with a lower tick order: made and started before the probe. */
+    class SecondSubsystem : public GameInstanceSubsystem
     {
+        OPAAX_OBJECT(SecondSubsystem, GameInstanceSubsystem)
+
     public:
-        OPAAX_SUBSYSTEM_TYPE(SecondSubsystem)
+        Int32 GetTickOrder() const override { return -10; }
 
-        explicit SecondSubsystem(GameInstanceContext& InContext) : m_Context(&InContext) {}
-
-        bool Startup() override  { return true; }
-        void Shutdown() override {}
+        bool Startup() override
+        {
+            m_Context = &GetContext();
+            StartOrder().push_back(GetClass().GetName());
+            return true;
+        }
 
         GameInstanceContext* Context() const noexcept { return m_Context; }
 
     private:
         GameInstanceContext* m_Context = nullptr;
     };
+
+    /** A base no game makes by itself. */
+    class AbstractGameSubsystem : public GameInstanceSubsystem
+    {
+        OPAAX_ABSTRACT_OBJECT(AbstractGameSubsystem, GameInstanceSubsystem)
+    };
+
+    /** A world's subsystem: a game never makes it. */
+    class OtherKindSubsystem : public WorldSubsystem
+    {
+        OPAAX_OBJECT(OtherKindSubsystem, WorldSubsystem)
+    };
+
+    /** The classes a game finds: the two probes, and the two it must leave out. */
+    void RegisterClasses(ObjectClassRegistry& OutClasses)
+    {
+        OutClasses.Register<ProbeSubsystem>();
+        OutClasses.Register<AbstractGameSubsystem>();
+        OutClasses.Register<OtherKindSubsystem>();
+        OutClasses.Register<SecondSubsystem>();
+    }
 
     // -------------------------------------------------------------------------
     // The engine-side half of a context, owned by the fixture so a GameInstance can
@@ -98,66 +136,52 @@ namespace
 }
 
 // =============================================================================
-TEST_SUITE("GameInstanceSubsystemRegistry")
+TEST_SUITE("GameInstanceSubsystem classes")
 {
-    TEST_CASE("Registers candidates and counts them in order")
+    TEST_CASE("A game takes every concrete GameInstanceSubsystem class, by tick order then name")
     {
-        GameInstanceSubsystemRegistry lRegistry;
+        ObjectClassRegistry lClasses;
+        RegisterClasses(lClasses);
 
-        CHECK(lRegistry.Count() == 0);
-        CHECK(lRegistry.Register<ProbeSubsystem>(Name("Probe")));
-        CHECK(lRegistry.Register<SecondSubsystem>(Name("Second")));
-        CHECK(lRegistry.Count() == 2);
+        const TDynArray<const ObjectClass*> lFound =
+            CollectSubsystemClasses(lClasses, GameInstanceSubsystem::StaticClass());
 
-        CHECK(lRegistry.FindByName(Name("Probe")) != nullptr);
-        CHECK(lRegistry.FindByName(Name("Second")) != nullptr);
-        CHECK(lRegistry.FindByName(Name("Absent")) == nullptr);
+        // The abstract base and the world's subsystem are left out; Second's lower order puts it first.
+        REQUIRE(lFound.size() == 2);
+        CHECK(lFound[0] == &SecondSubsystem::StaticClass());
+        CHECK(lFound[1] == &ProbeSubsystem::StaticClass());
     }
 
-    TEST_CASE("Refuses an empty name and a duplicate name")
+    TEST_CASE("Classes of another base are ordered by their own tick order")
     {
-        GameInstanceSubsystemRegistry lRegistry;
+        ObjectClassRegistry lClasses;
+        lClasses.Register<OtherKindSubsystem>();
+        lClasses.Register<ProbeSubsystem>();
 
-        CHECK_FALSE(lRegistry.Register<ProbeSubsystem>(OpaaxStringID{}));
-        CHECK(lRegistry.Count() == 0);
+        // Asked for every subsystem: a game subsystem's default order (0) is lower than a world
+        // subsystem's (Default), whatever the registration order.
+        const TDynArray<const ObjectClass*> lFound = CollectSubsystemClasses(lClasses, Subsystem::StaticClass());
 
-        CHECK(lRegistry.Register<ProbeSubsystem>(Name("Probe")));
-        CHECK_FALSE(lRegistry.Register<SecondSubsystem>(Name("Probe")));
-        CHECK(lRegistry.Count() == 1);
-    }
-
-    TEST_CASE("Sealing closes registration, and is idempotent")
-    {
-        GameInstanceSubsystemRegistry lRegistry;
-
-        CHECK(lRegistry.Register<ProbeSubsystem>(Name("Probe")));
-        CHECK_FALSE(lRegistry.IsSealed());
-
-        lRegistry.Seal();
-        lRegistry.Seal();
-        CHECK(lRegistry.IsSealed());
-
-        // A candidate accepted now would simply be absent from a game that already exists.
-        CHECK_FALSE(lRegistry.Register<SecondSubsystem>(Name("Second")));
-        CHECK(lRegistry.Count() == 1);
+        REQUIRE(lFound.size() == 2);
+        CHECK(lFound[0] == &ProbeSubsystem::StaticClass());
+        CHECK(lFound[1] == &OtherKindSubsystem::StaticClass());
     }
 }
 
 // =============================================================================
 TEST_SUITE("GameInstance")
 {
-    TEST_CASE("Creates every candidate, starts them, and hands each the SAME context")
+    TEST_CASE("Makes one subsystem per class, starts them in tick order, and hands each the SAME context")
     {
         ProbeSubsystem::Reset();
 
-        GameInstanceSubsystemRegistry lRegistry;
-        lRegistry.Register<ProbeSubsystem>(Name("Probe"));
-        lRegistry.Register<SecondSubsystem>(Name("Second"));
+        ObjectClassRegistry lClasses;
+        RegisterClasses(lClasses);
 
         ContextFixture lFixture;
         GameInstance   lGame(lFixture.Make());
 
-        CHECK(lGame.StartSubsystems(lRegistry) == 2);
+        CHECK(lGame.StartSubsystems(lClasses) == 2);
         CHECK(lGame.GetSubsystemCount() == 2);
 
         ProbeSubsystem*  lProbe  = lGame.GetSubsystems().GetSubsystem<ProbeSubsystem>();
@@ -171,16 +195,23 @@ TEST_SUITE("GameInstance")
         // Same address: the context is the GameInstance's own stable slot.
         CHECK(lProbe->Context() == &lGame.GetContext());
         CHECK(lSecond->Context() == &lGame.GetContext());
+
+        REQUIRE(StartOrder().size() == 2);
+        CHECK(StartOrder()[0] == SecondSubsystem::StaticClass().GetName());
+        CHECK(StartOrder()[1] == ProbeSubsystem::StaticClass().GetName());
+
+        // Named after its class, for logs.
+        CHECK(lProbe->GetName() == ProbeSubsystem::StaticClass().GetName());
     }
 
     TEST_CASE("Update reaches the subsystems")
     {
-        GameInstanceSubsystemRegistry lRegistry;
-        lRegistry.Register<ProbeSubsystem>(Name("Probe"));
+        ObjectClassRegistry lClasses;
+        lClasses.Register<ProbeSubsystem>();
 
         ContextFixture lFixture;
         GameInstance   lGame(lFixture.Make());
-        lGame.StartSubsystems(lRegistry);
+        lGame.StartSubsystems(lClasses);
 
         ProbeSubsystem* lProbe = lGame.GetSubsystems().GetSubsystem<ProbeSubsystem>();
         REQUIRE(lProbe != nullptr);
@@ -194,13 +225,13 @@ TEST_SUITE("GameInstance")
     {
         ProbeSubsystem::Reset();
 
-        GameInstanceSubsystemRegistry lRegistry;
-        lRegistry.Register<ProbeSubsystem>(Name("Probe"));
+        ObjectClassRegistry lClasses;
+        lClasses.Register<ProbeSubsystem>();
 
         ContextFixture lFixture;
         {
             GameInstance lGame(lFixture.Make());
-            lGame.StartSubsystems(lRegistry);
+            lGame.StartSubsystems(lClasses);
 
             lGame.TearDownSubsystems();
             lGame.TearDownSubsystems();
@@ -242,7 +273,7 @@ TEST_SUITE("GameInstanceManager")
         ProbeSubsystem::Reset();
 
         EngineRegistries lRegistries;
-        lRegistries.GameInstanceSubsystems().Register<ProbeSubsystem>(Name("Probe"));
+        lRegistries.ObjectClasses().Register<ProbeSubsystem>();
 
         GameInstanceManager lManager(&lRegistries);
         REQUIRE(lManager.Startup());
@@ -272,7 +303,7 @@ TEST_SUITE("GameInstanceManager")
         ProbeSubsystem::Reset();
 
         EngineRegistries lRegistries;
-        lRegistries.GameInstanceSubsystems().Register<ProbeSubsystem>(Name("Probe"));
+        lRegistries.ObjectClasses().Register<ProbeSubsystem>();
 
         GameInstanceManager lManager(&lRegistries);
         REQUIRE(lManager.Startup());

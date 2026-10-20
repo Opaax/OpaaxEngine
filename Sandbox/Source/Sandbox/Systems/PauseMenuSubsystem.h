@@ -8,7 +8,6 @@ namespace Opaax
     class World;
     class UIWidget;
     class UIButton;
-    struct WorldContext;
     struct InputActionValue;
 }
 
@@ -20,17 +19,14 @@ namespace Sandbox
      * The modal's content is UI/PauseMenu.opaaxui, under a code-built root that handles Escape; the
      * buttons are found by name.
      */
-    class PauseMenuSubsystem final : public Opaax::WorldSubsystemBase
+    class PauseMenuSubsystem final : public Opaax::WorldSubsystem
     {
-    public:
-        OPAAX_SUBSYSTEM_TYPE(PauseMenuSubsystem)
-
-        static bool ShouldCreate(const Opaax::World& InWorld);
+        OPAAX_OBJECT(PauseMenuSubsystem, Opaax::WorldSubsystem)
 
     public:
-        explicit PauseMenuSubsystem(Opaax::WorldContext& InContext) : m_Context(&InContext) {}
+        bool         ShouldCreate(const Opaax::World& InWorld) const override;
+        Opaax::Int32 GetTickOrder() const override { return Opaax::WorldSubsystemOrder::Presentation; }
 
-    public:
         bool Startup() override;
 
         /** The fade: Opacity moves toward 1 while open and 0 while closing; the panel hides at 0. */
@@ -49,8 +45,6 @@ namespace Sandbox
         void NextLevel();
 
     private:
-        Opaax::WorldContext* m_Context = nullptr;   // borrowed; the World owns it
-
         Opaax::UIButton* m_MenuButton = nullptr;   // owned by the canvas until Shutdown
         Opaax::UIWidget* m_Menu       = nullptr;   // the modal, hidden while closed
         bool             m_bOpen      = false;

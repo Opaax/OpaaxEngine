@@ -696,8 +696,8 @@ namespace
                                                /*Actions*/ nullptr, /*UI*/ nullptr, Debug, &Components, &Audio });
 
             WorldSubsystemMgr& lSubsystems = TheWorld->GetSubsystems();
-            lSubsystems.RegisterSubsystem<BehaviourSubsystem>(Ref(*TheWorld->GetContext()));
-            lSubsystems.RegisterSubsystem<AudioSubsystem>(Ref(*TheWorld->GetContext()));
+            lSubsystems.Add<BehaviourSubsystem>();
+            lSubsystems.Add<AudioSubsystem>();
             lSubsystems.StartupAll();
 
             Sounds = lSubsystems.GetSubsystem<AudioSubsystem>();

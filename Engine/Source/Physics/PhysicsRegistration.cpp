@@ -12,8 +12,8 @@ namespace Opaax
     OPAAX_REGISTER_NAMED_COMPONENT(RigidbodyComponent, "Rigidbody");
 
     // Play worlds only: it moves transforms.
-    OPAAX_REGISTER_NAMED_WORLD_SUBSYSTEM(PhysicsSubsystem, "Physics", WorldSubsystemOrder::Physics);
+    OPAAX_REGISTER_OBJECT(PhysicsSubsystem);
 
     // No ShouldCreate: colliders must be visible while editing. The debug channel toggles it.
-    OPAAX_REGISTER_NAMED_WORLD_SUBSYSTEM(ColliderDebugSubsystem, "ColliderDebug", WorldSubsystemOrder::Debug);
+    OPAAX_REGISTER_OBJECT(ColliderDebugSubsystem);
 }

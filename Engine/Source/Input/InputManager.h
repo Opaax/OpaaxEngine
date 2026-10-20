@@ -20,13 +20,9 @@ namespace Opaax
     //   Physical keys only; named actions are in InputMappingSubsystem.
     //   Keyboard and mouse only (gamepad codes are refused).
     // =============================================================================
-    class InputManager final : public EngineSubsystemBase
+    class InputManager final : public EngineSubsystem
     {
-        // =============================================================================
-        // Base Implementation
-        // =============================================================================
-    public:
-        OPAAX_SUBSYSTEM_TYPE(InputManager)
+        OPAAX_OBJECT(InputManager, EngineSubsystem)
 
         /**
          * Every keyboard and mouse code is below this (gamepad starts at 10000).
@@ -112,11 +108,11 @@ namespace Opaax
         // =============================================================================
         // Override
         // =============================================================================
-        //~Begin EngineSubsystemBase Interface
+        //~Begin Subsystem interface
     public:
         bool Startup() override;
         void Shutdown() override;
-        //~End EngineSubsystemBase Interface
+        //~End Subsystem interface
 
         // =============================================================================
         // Functions

@@ -13,7 +13,6 @@ namespace Opaax
     OPAAX_LOG_CATEGORY(SpriteAnimation);
 
     class World;
-    struct WorldContext;
     struct SpriteComponent;
     struct SpriteAnimatorComponent;
     class AnimationClip;
@@ -26,32 +25,23 @@ namespace Opaax
     //   into its SpriteComponent. Play worlds only (it changes components; the Play copy is
     //   thrown away, so the authored map is untouched).
     // =============================================================================
-    class SpriteAnimationSubsystem final : public WorldSubsystemBase
+    class SpriteAnimationSubsystem final : public WorldSubsystem
     {
-        // =============================================================================
-        // Base implementation
-        // =============================================================================
-    public:
-        OPAAX_SUBSYSTEM_TYPE(SpriteAnimationSubsystem)
-
-        /** Play worlds only. */
-        static bool ShouldCreate(const World& InWorld);
-
-        // =============================================================================
-        // CTORS
-        // =============================================================================
-    public:
-        explicit SpriteAnimationSubsystem(WorldContext& InContext) : m_Context(&InContext) {}
+        OPAAX_OBJECT(SpriteAnimationSubsystem, WorldSubsystem)
 
         // =============================================================================
         // Override
         // =============================================================================
     public:
-        //~Begin ISubsystem interface
+        //~Begin WorldSubsystem interface
+        /** Play worlds only. */
+        bool  ShouldCreate(const World& InWorld) const override;
+        Int32 GetTickOrder() const override { return WorldSubsystemOrder::Presentation; }
+
         bool Startup()  override;
         void Update(double InDeltaTime) override;
         void Shutdown() override;
-        //~End ISubsystem interface
+        //~End WorldSubsystem interface
 
         // =============================================================================
         // Functions
@@ -88,8 +78,6 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        WorldContext* m_Context = nullptr;   // owned by the World
-
         TUnorderedMap<Uint32, TAssetHandle<AnimationLibrary>> m_LibraryCache;
         TUnorderedMap<Uint32, TAssetHandle<AnimationClip>>    m_ClipCache;
         TUnorderedMap<Uint32, TAssetHandle<SpriteSheet>>      m_SheetCache;

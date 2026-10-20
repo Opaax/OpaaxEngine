@@ -52,16 +52,10 @@ namespace TestGame
         InJson.at("Strength").get_to(InValue.Strength);
     }
 
-    // A module world subsystem: defined here like a game type, built from the WorldContext.
-    class PatrolSubsystem : public Opaax::WorldSubsystemBase
+    // A module world subsystem: an Object class defined here like a game type.
+    class PatrolSubsystem : public Opaax::WorldSubsystem
     {
-    public:
-        OPAAX_SUBSYSTEM_TYPE(PatrolSubsystem)
-
-        explicit PatrolSubsystem(Opaax::WorldContext&) {}
-
-        bool Startup() override  { return true; }
-        void Shutdown() override {}
+        OPAAX_OBJECT(PatrolSubsystem, Opaax::WorldSubsystem)
     };
 
     // A module's resource type: it names the extension it claims, and the engine's table is what
@@ -93,15 +87,9 @@ inline void from_json(const nlohmann::json& InJson, GlobalScopeComponent& InValu
     InJson.at("Value").get_to(InValue.Value);
 }
 
-class GlobalScopeSubsystem : public Opaax::WorldSubsystemBase
+class GlobalScopeSubsystem : public Opaax::WorldSubsystem
 {
-public:
-    OPAAX_SUBSYSTEM_TYPE(GlobalScopeSubsystem)
-
-    explicit GlobalScopeSubsystem(Opaax::WorldContext&) {}
-
-    bool Startup() override  { return true; }
-    void Shutdown() override {}
+    OPAAX_OBJECT(GlobalScopeSubsystem, Opaax::WorldSubsystem)
 };
 
 // =============================================================================
@@ -167,17 +155,17 @@ TEST_CASE("ComponentRoute: a GLOBAL-namespace type derives a bare name, with no 
     CHECK(lRegistries.Components().FindByName(OpaaxStringID("struct GlobalScopeComponent")) == nullptr);
 }
 
-TEST_CASE("WorldSubsystemRoute: a GLOBAL-namespace subsystem derives a bare name too")
+TEST_CASE("ObjectClassRoute: a GLOBAL-namespace subsystem class is named bare too")
 {
     EngineRegistries lRegistries;
     ModuleRegistrar  lRegistrar;
     lRegistrar.BindEngineRegistries(lRegistries);
 
-    // The exact shape the editor module registers: a class, at global scope, through a route.
-    REQUIRE(lRegistrar.WorldSubsystems().Register<GlobalScopeSubsystem>());
+    // The shape an editor module registers: a class, at global scope, through a route.
+    REQUIRE(lRegistrar.ObjectClasses().Register<GlobalScopeSubsystem>());
 
-    CHECK(lRegistries.WorldSubsystems().FindByName(OpaaxStringID("GlobalScopeSubsystem")) != nullptr);
-    CHECK(lRegistries.WorldSubsystems().FindByName(OpaaxStringID("class GlobalScopeSubsystem")) == nullptr);
+    CHECK(lRegistries.ObjectClasses().FindByName(OpaaxStringID("GlobalScopeSubsystem")) != nullptr);
+    CHECK(lRegistries.ObjectClasses().FindByName(OpaaxStringID("class GlobalScopeSubsystem")) == nullptr);
 }
 
 TEST_CASE("ComponentRoute: an explicit name overrides the derived one")
@@ -210,28 +198,32 @@ TEST_CASE("ComponentRoute: Count records refusals too")
     CHECK(lRegistry.Count() == 1u);               // accepted once
 }
 
-TEST_CASE("WorldSubsystemRoute: an unbound route refuses rather than dropping silently")
+TEST_CASE("ObjectClassRoute: an unbound route refuses rather than dropping silently")
 {
     ModuleRegistrar lRegistrar; // deliberately NOT bound
 
-    CHECK_FALSE(lRegistrar.WorldSubsystems().Register<TestGame::PatrolSubsystem>());
+    CHECK_FALSE(lRegistrar.ObjectClasses().Register<TestGame::PatrolSubsystem>());
 
     // Asked once, accepted never — the count is what makes a dropped registration visible.
-    CHECK(lRegistrar.WorldSubsystems().Count() == 1u);
+    CHECK(lRegistrar.ObjectClasses().Count() == 1u);
 }
 
-TEST_CASE("WorldSubsystemRoute: a bound route forwards into the engine registry")
+TEST_CASE("ObjectClassRoute: a module's subsystem class reaches the engine registry, found as a WorldSubsystem")
 {
     EngineRegistries lRegistries;
     ModuleRegistrar  lRegistrar;
     lRegistrar.BindEngineRegistries(lRegistries);
 
-    REQUIRE(lRegistrar.WorldSubsystems().Register<TestGame::PatrolSubsystem>());
+    REQUIRE(lRegistrar.ObjectClasses().Register<TestGame::PatrolSubsystem>());
 
-    CHECK(lRegistries.WorldSubsystems().Count() == 1u);
+    // Named after the leaf type, and found where every world looks for its subsystems.
+    const ObjectClass* lClass = lRegistries.ObjectClasses().FindByName(OpaaxStringID(OpaaxString("PatrolSubsystem")));
+    REQUIRE(lClass != nullptr);
 
-    // The name is derived from the type when omitted, like Components().
-    CHECK(lRegistries.WorldSubsystems().FindByName(OpaaxStringID(OpaaxString("PatrolSubsystem"))) != nullptr);
+    const TDynArray<const ObjectClass*> lFound =
+        CollectSubsystemClasses(lRegistries.ObjectClasses(), WorldSubsystem::StaticClass());
+    REQUIRE(lFound.size() == 1u);
+    CHECK(lFound[0] == lClass);
 }
 
 TEST_CASE("ResourceFormatRoute: an unbound route refuses rather than dropping silently")

@@ -11,8 +11,8 @@ description: Add a component, behaviour, world or game instance subsystem, asset
 |---|---|---|
 | Data on entities, saved in maps | component | `OPAAX_REGISTER_COMPONENT(T)` |
 | Logic on an entity (update, events, timers) | behaviour (derives from `Opaax::Behaviour`) | `OPAAX_REGISTER_BEHAVIOUR(T)` |
-| Logic for a whole world | world subsystem (`WorldSubsystemBase`) | `OPAAX_REGISTER_WORLD_SUBSYSTEM_ORDERED(T, WorldSubsystemOrder::X)` |
-| Logic across levels | game instance subsystem | `OPAAX_REGISTER_GAME_INSTANCE_SUBSYSTEM(T)` |
+| Logic for a whole world | world subsystem (`Opaax::WorldSubsystem` + `OPAAX_OBJECT`) | `OPAAX_REGISTER_OBJECT(T)` |
+| Logic across levels | game instance subsystem (`Opaax::GameInstanceSubsystem` + `OPAAX_OBJECT`) | `OPAAX_REGISTER_OBJECT(T)` |
 | Shared tuning data in a file | asset class (`Opaax::Asset` + `OPAAX_OBJECT`, `.opaaxasset` files) | `OPAAX_REGISTER_OBJECT(T)` |
 | A file format of its own | resource | `OPAAX_REGISTER_RESOURCE(T)` |
 
@@ -28,8 +28,11 @@ Engine types go in their module (`Engine/Source/<Module>/`) and register in the 
 - Behaviours use the behaviour API (`World/Behaviour/Behaviour.h`): `GetTransform`, `SetPosition`,
   `Spawn`, `Destroy`, `Send`/`Listen`, `Broadcast`/`Subscribe`, `SetTimer`, `BindAction`, `PlaySound`,
   `SetVelocity`/`AddImpulse`, `RayCast`/`OverlapBox`. Never the EnTT registry.
-- Subsystems: `OPAAX_SUBSYSTEM_TYPE(T)`, a constructor taking `WorldContext&`, `Startup`/`Shutdown`,
-  optional `static bool ShouldCreate(const World&)` (Play-only systems check the world's mode).
+- Subsystems: `OPAAX_OBJECT(T, WorldSubsystem)` (or `GameInstanceSubsystem`), no constructor work
+  (the class default object is built with it), `GetContext()` from `Startup` to `Shutdown`; optional
+  overrides `bool ShouldCreate(const World&) const` (Play-only systems check the world's mode) and
+  `Int32 GetTickOrder() const` (`WorldSubsystemOrder::X`). Tests add one to a world with
+  `World::GetSubsystems().Add<T>()` after `SetContext`, then `StartupAll()`.
 - Asset classes (Docs/Objects.md): `class T final : public Opaax::Asset` with `OPAAX_OBJECT(T, Asset)`
   and `OPAAX_PROPERTIES`. A list field holds structs with `OPAAX_PROPERTIES` and
   `NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT`. Another asset is a `TAssetRef<U>` field: include

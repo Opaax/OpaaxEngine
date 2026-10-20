@@ -9,6 +9,7 @@
 #include "Application/Services/IPaths.h"
 #include "Core/String/OpaaxPathString.h"
 #include "Engine/Config/EngineConfigData.h"
+#include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceContext.h"
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/Assets/InputActionAsset.h"
@@ -97,6 +98,15 @@ namespace
 
         GameInstanceContext Make() { return GameInstanceContext{Worlds, Resources, Paths, Events, Input, Config}; }
 
+        /** The game's input mapping, made and started the way a game makes it, with this context. */
+        InputMappingSubsystem& StartMapping()
+        {
+            Game = MakeUnique<GameInstance>(Make());
+            Game->GetSubsystems().Add<InputMappingSubsystem>();
+            Game->GetSubsystems().StartupAll();
+            return *Game->GetSubsystems().GetSubsystem<InputMappingSubsystem>();
+        }
+
         /** Presses InKey and runs one frame of InMapping. */
         void Press(InputMappingSubsystem& InMapping, const EKeyCode InKey)
         {
@@ -111,6 +121,9 @@ namespace
         EngineEventBus   Events;
         InputManager     Input;
         EngineConfigData Config;
+
+        // Last: the game ends before the services its context names.
+        TUniquePtr<GameInstance> Game;
     };
 }
 
@@ -239,8 +252,7 @@ TEST_CASE("AddContextAsset: the context's keys drive the actions its files descr
     REQUIRE(AssetFile::Save(lDir.Sub("Input/Gameplay.opaaxasset"), lMap));
 
     ContextFixture        lFixture(lDir.Path(), lClasses);
-    GameInstanceContext   lContext = lFixture.Make();
-    InputMappingSubsystem lInput(lContext);
+    InputMappingSubsystem& lInput = lFixture.StartMapping();
 
     REQUIRE(lInput.AddContextAsset(OPAAX_ID("Gameplay"), OpaaxString("Input/Gameplay.opaaxasset")));
     CHECK(lInput.GetContextCount() == 1u);
@@ -270,8 +282,7 @@ TEST_CASE("AddContextAsset: a path written before the files were converted loads
     REQUIRE(AssetFile::Save(lDir.Sub("Input/Test.opaaxasset"), lMap));
 
     ContextFixture        lFixture(lDir.Path(), lClasses);
-    GameInstanceContext   lContext = lFixture.Make();
-    InputMappingSubsystem lInput(lContext);
+    InputMappingSubsystem& lInput = lFixture.StartMapping();
 
     // Game code still naming the old file: --upgrade-assets rewrote the data, not this string.
     REQUIRE(lInput.AddContextAsset(OPAAX_ID("Test"), OpaaxString("Input/Test.opaaxinputmap")));

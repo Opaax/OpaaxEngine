@@ -1,12 +1,13 @@
 #include "Engine/GameInstance/GameInstance.h"
 
-#include "Engine/GameInstance/GameInstanceSubsystemRegistry.h"
+#include "Object/ObjectClassRegistry.h"
 
 namespace Opaax
 {
     GameInstance::GameInstance(const GameInstanceContext& InContext)
         : m_Context(MakeUnique<GameInstanceContext>(InContext))
     {
+        m_Subsystems.SetContext(m_Context.get());
     }
 
     GameInstance::~GameInstance()
@@ -15,15 +16,17 @@ namespace Opaax
         ShutdownSubsystems();
     }
 
-    Uint64 GameInstance::StartSubsystems(const GameInstanceSubsystemRegistry& InRegistry)
+    Uint64 GameInstance::StartSubsystems(const ObjectClassRegistry& InClasses)
     {
         Uint64 lCreated = 0;
 
-        InRegistry.ForEach([&](const IGameInstanceSubsystemEntry& InEntry)
+        for (const ObjectClass* lClass : CollectSubsystemClasses(InClasses, GameInstanceSubsystem::StaticClass()))
         {
-            InEntry.CreateInto(m_Subsystems, *m_Context);
-            ++lCreated;
-        });
+            if (m_Subsystems.Add(*lClass))
+            {
+                ++lCreated;
+            }
+        }
 
         m_Subsystems.StartupAll();
 

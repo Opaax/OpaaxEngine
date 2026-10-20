@@ -1,10 +1,10 @@
-// Suite: type identity of a world subsystem the engine never sees (a game module's).
-//   GetSubsystem<T>() compares GetTypeID() with T::StaticTypeID() (the address of a function-local
-//   static in an inline function, so one per type for the whole program). These tests go red if
-//   that changes.
+// Suite: class identity of a world subsystem the engine never sees (a game module's).
+//   GetSubsystem<T>() asks each subsystem IsA(T::StaticClass()), and StaticClass() is a
+//   function-local static in an inline function, so one class per type for the whole program.
+//   These tests go red if that changes.
 //
 //   The test exe links the engine library like a game. The probes (WorldSubsystemProbes.h) are
-//   used from two TUs with external linkage, to tell "one tag per type" from "one tag per TU".
+//   used from two TUs with external linkage, to tell "one class per type" from "one per TU".
 #include <doctest.h>
 
 #include "WorldSubsystemProbes.h"
@@ -16,73 +16,71 @@ using namespace Opaax;
 using namespace Opaax::WorldSubsystemProbe;
 
 // =============================================================================
-// The mechanism: one tag per TYPE, not one per translation unit
+// The mechanism: one class per TYPE, not one per translation unit
 // =============================================================================
-TEST_CASE("world subsystem identity: a non-exported tag is one instance across translation units")
+TEST_CASE("world subsystem identity: a class is one instance across translation units")
 {
-    // LHS instantiated here, RHS instantiated in WorldSubsystemIdentityTU2.cpp. Two COMDATs
-    // for the same inline function; the exe linker must fold them to one address.
-    CHECK(ProbeWorldSubsystem::StaticTypeID() == ProbeTagFromOtherTU());
-    CHECK(SecondProbeWorldSubsystem::StaticTypeID() == SecondProbeTagFromOtherTU());
+    // LHS instantiated here, RHS instantiated in WorldSubsystemIdentityTU2.cpp. Two COMDATs for the
+    // same inline function; the exe linker must fold them to one address.
+    CHECK(&ProbeWorldSubsystem::StaticClass() == &ProbeClassFromOtherTU());
+    CHECK(&SecondProbeWorldSubsystem::StaticClass() == &SecondProbeClassFromOtherTU());
 }
 
 // =============================================================================
 // Distinctness — what makes a non-null resolve MEAN anything
 // =============================================================================
-TEST_CASE("world subsystem identity: structurally identical types get distinct tags")
+TEST_CASE("world subsystem identity: structurally identical types get distinct classes")
 {
-    // The two probes have the same base, layout and member bodies. Only per-type identity
-    // separates them, so equality here would mean every module subsystem resolved to
-    // whichever one happened to be registered first.
-    CHECK(ProbeWorldSubsystem::StaticTypeID() != SecondProbeWorldSubsystem::StaticTypeID());
-    CHECK(ProbeTagFromOtherTU() != SecondProbeTagFromOtherTU());
+    // The two probes have the same base, layout and member bodies. Only per-type identity separates
+    // them, so equality here would mean every module subsystem resolved to whichever one was made
+    // first.
+    CHECK(&ProbeWorldSubsystem::StaticClass() != &SecondProbeWorldSubsystem::StaticClass());
+    CHECK_FALSE(ProbeWorldSubsystem::StaticClass().IsChildOf(SecondProbeWorldSubsystem::StaticClass()));
+    CHECK(ProbeWorldSubsystem::StaticClass().GetTypeId() != SecondProbeWorldSubsystem::StaticClass().GetTypeId());
 }
 
-TEST_CASE("world subsystem identity: a game-side tag does not collide with an engine one")
+TEST_CASE("world subsystem identity: a game-side class does not collide with an engine one")
 {
-    // WorldManager is stamped with the same macro, so its tag comes from the engine's inline
-    // definition while the probe's comes from this test. The tag space is shared
-    // (SubsystemTypeID is a plain uintptr_t), so this asserts the two statics do not land on
-    // one address.
-    CHECK(ProbeWorldSubsystem::StaticTypeID() != WorldManager::StaticTypeID());
+    // WorldManager's class comes from the engine's inline definition, the probe's from this test.
+    CHECK(&ProbeWorldSubsystem::StaticClass() != &WorldManager::StaticClass());
+    CHECK(ProbeWorldSubsystem::StaticClass().GetTypeId() != WorldManager::StaticClass().GetTypeId());
 }
 
 // =============================================================================
 // The behavioural statement — how the failure would actually bite
 // =============================================================================
-TEST_CASE("world subsystem identity: an instance registered in another TU resolves through the engine's manager")
+TEST_CASE("world subsystem identity: an instance added in another TU resolves through the engine's manager")
 {
-    // WorldSubsystemMgr is the engine's type — the same one World owns as m_Subsystems. The registration happens from the module's factory and the lookup
-    // from wherever game code asks, so the two halves are deliberately split across TUs.
+    // WorldSubsystemMgr is the engine's type — the one World owns. The adding happens in one TU and
+    // the lookup wherever game code asks, so the two halves are deliberately split across TUs.
     WorldSubsystemMgr lManager;
 
-    RegisterProbeFromOtherTU(lManager);
+    AddProbeFromOtherTU(lManager);
     lManager.StartupAll();
 
     // Instantiated HERE, against an instance whose type this TU shares only through a header.
     ProbeWorldSubsystem* lResolvedHere = lManager.GetSubsystem<ProbeWorldSubsystem>();
 
-    // Null would be the failure. It cannot be an "empty manager"
-    // false negative: the startup count below proves the instance exists and ran.
+    // Null would be the failure. It cannot be an "empty manager" false negative: the startup count
+    // below proves the instance exists and ran.
     REQUIRE(lResolvedHere != nullptr);
     CHECK(lResolvedHere->GetStartupCount() == 1);
 
     // Both TUs' instantiations must find the SAME object, not merely a non-null one.
     CHECK(lResolvedHere == ResolveProbeFromOtherTU(lManager));
 
-    // The raw comparison GetSubsystem performs, asserted directly: the LHS was written into
-    // the vtable by the module that compiled the class, the RHS is computed in this TU.
-    CHECK(lResolvedHere->GetTypeID() == ProbeWorldSubsystem::StaticTypeID());
+    // The class the object reports was written into the vtable by the TU that made it.
+    CHECK(&lResolvedHere->GetClass() == &ProbeWorldSubsystem::StaticClass());
 }
 
-TEST_CASE("world subsystem identity: resolution refuses a type that was never registered")
+TEST_CASE("world subsystem identity: resolution refuses a type that was never added")
 {
     WorldSubsystemMgr lManager;
 
-    RegisterProbeFromOtherTU(lManager);
+    AddProbeFromOtherTU(lManager);
     lManager.StartupAll();
 
-    // Without this, the case above would pass just as happily under a colliding tag.
+    // Without this, the case above would pass just as happily under a colliding class.
     CHECK(lManager.GetSubsystem<SecondProbeWorldSubsystem>() == nullptr);
 }
 
@@ -93,7 +91,7 @@ TEST_CASE("world subsystem identity: the engine's manager drives a game subsyste
 {
     WorldSubsystemMgr lManager;
 
-    RegisterProbeFromOtherTU(lManager);
+    AddProbeFromOtherTU(lManager);
     lManager.StartupAll();
 
     ProbeWorldSubsystem* lProbe = lManager.GetSubsystem<ProbeWorldSubsystem>();
@@ -101,9 +99,8 @@ TEST_CASE("world subsystem identity: the engine's manager drives a game subsyste
 
     lManager.ShutdownAll();
 
-    // Virtual dispatch from the manager's list into an override the engine cannot name. This is
-    // the half that tag identity does not cover: the instance is allocated by the module's
-    // factory and stored in a container whose type belongs to the engine.
+    // Virtual dispatch from the manager's list into an override the engine cannot name: the
+    // instance is made in the module's TU and stored in a container whose type is the engine's.
     CHECK(lProbe->GetStartupCount() == 1);
     CHECK(lProbe->GetShutdownCount() == 1);
 }

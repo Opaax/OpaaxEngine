@@ -1,46 +1,23 @@
 #pragma once
 
-#include "Core/Systems/Subsystem.h"
+#include "Engine/Subsystems/Subsystem.h"
 
 namespace Opaax
 {
     // =============================================================================
-    // IEngineSubsystem — interface for engine subsystems. Live from engine start to engine stop.
+    // EngineSubsystem — a subsystem that lives from engine start to engine stop: the engine's own
+    //   services (resources, worlds, rendering...), which the engine makes in code, in order.
     // =============================================================================
-    class IEngineSubsystem : public Opaax::ISubsystem
+    class EngineSubsystem : public Subsystem
     {
+        OPAAX_ABSTRACT_OBJECT(EngineSubsystem, Subsystem)
     };
 
     // =============================================================================
-    // EngineSubsystemBase — base for concrete engine subsystems.
-    //   Add OPAAX_SUBSYSTEM_TYPE(ClassName) to the concrete class.
+    // EngineSubsystemMgr — owns and ticks the engine subsystems (added order; reverse order for
+    //   shutdown).
     // =============================================================================
-    class EngineSubsystemBase : public Opaax::IEngineSubsystem
+    class EngineSubsystemMgr final : public TSubsystemCollection<EngineSubsystem>
     {
-        // =============================================================================
-        // CTORS - DTORS
-        // =============================================================================
-    public:
-        EngineSubsystemBase()          = default;
-        ~EngineSubsystemBase() override = default;
-
-        // Owned by the manager, never copied or moved.
-        EngineSubsystemBase(const EngineSubsystemBase&)            = delete;
-        EngineSubsystemBase& operator=(const EngineSubsystemBase&) = delete;
-        EngineSubsystemBase(EngineSubsystemBase&&)                 = delete;
-        EngineSubsystemBase& operator=(EngineSubsystemBase&&)      = delete;
-    };
-
-    // =============================================================================
-    // EngineSubsystemMgr — owns and ticks the engine subsystems (registration order;
-    //   reverse order for shutdown).
-    // =============================================================================
-    class EngineSubsystemMgr : public ISubsystemManager<IEngineSubsystem>
-    {
-        // =============================================================================
-        // CTORS - DTORS
-        // =============================================================================
-    public:
-        ~EngineSubsystemMgr() override = default;
     };
 }

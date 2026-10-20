@@ -10,8 +10,8 @@ namespace Opaax
     struct EngineConfigData;
 
     // =============================================================================
-    // GameInstanceContext — references given to each game-instance subsystem at construction.
-    //   One per game; a subsystem may keep a reference to it for the whole game.
+    // GameInstanceContext — what a game gives each of its subsystems (GameInstanceSubsystem::GetContext).
+    //   One per game, valid for the whole game.
     // =============================================================================
     struct GameInstanceContext
     {

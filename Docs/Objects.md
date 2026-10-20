@@ -4,10 +4,10 @@ Every asset type of the engine (a material, a sprite sheet, an animation clip, a
 an input action) and of a game is a class derived from `Opaax::Asset`, itself an `Opaax::Object`. A
 class with fields is enough: the file format, the loading, the sharing, the editor window, undo,
 automation and the conversion of old files come from the base. It is the idea of Unreal's `UObject`
-and `UDataAsset`, and of Godot's `Resource`.
+and `UDataAsset`, and of Godot's `Resource`. Subsystems are objects too ([Subsystems](#subsystems)).
 
-Components, levels, maps, prefabs and UI canvases are not objects: they keep their own formats
-([AssetFormats.md](AssetFormats.md)).
+Components are plain structs, not objects. Levels, maps, prefabs and UI canvases keep their own
+formats ([AssetFormats.md](AssetFormats.md)).
 
 ## An asset class
 
@@ -166,6 +166,23 @@ canvases, assets and configs. A path written in game code is not rewritten: one 
 old file loads the converted one and logs a warning saying where to change it. When a class of yours
 replaces a format of your own, add one line to the table in `AssetMigration::GetLegacyFormats`.
 
+## Subsystems
+
+The engine's services, a game's and a world's derive from `Opaax::Subsystem`, an abstract object
+class, through one of three bases:
+
+| Base | Lives | Made by |
+|---|---|---|
+| `EngineSubsystem` | from engine start to stop (resources, worlds, rendering, audio, input) | the engine, in code |
+| `GameInstanceSubsystem` | one game, across level changes | every game: one of each registered class |
+| `WorldSubsystem` | one world | every world: one of each registered class its `ShouldCreate` accepts |
+
+A game or world subsystem registers with `OPAAX_REGISTER_OBJECT` like any class: its owner finds it in
+the class registry, asks the class's default object whether to make one (`ShouldCreate`) and where it
+ticks (`GetTickOrder`), makes them all, gives each its context (`GetContext()`), then starts them in
+order. The constructor makes nothing, since the default object is built with it outside any owner.
+How to write one: [Customizing.md](Customizing.md#a-subsystem).
+
 ## Lifetime and the garbage collector to come
 
 Every object has a slot in one table (`ObjectTable`), with a generation that changes when the slot is
@@ -178,7 +195,8 @@ at freed memory. Three pointer kinds, as in Unreal:
 | `TObjectPtr<T>` | A reference held in a property: reads null once the object is gone, and `ObjectClass::CollectReferences` finds it. |
 | `TWeakObjectPtr<T>` | Never keeps the object alive; reads null once it is gone. |
 
-Assets loaded from files are owned by the resource manager, which releases one that nothing holds.
+Assets loaded from files are owned by the resource manager, which releases one that nothing holds;
+subsystems by their owner's collection, which holds each through a `TStrongObjectPtr`.
 There is no garbage collector yet; what one needs is in place: the table, the object flags (managed,
 class default, being destroyed), and references found through the properties. A mark-and-sweep would
 start from the strong pointers and the resource manager, follow `TObjectPtr` properties, and destroy

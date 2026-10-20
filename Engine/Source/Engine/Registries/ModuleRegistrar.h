@@ -148,56 +148,6 @@ namespace Opaax
     };
 
     // =============================================================================
-    // WorldSubsystemRoute — registers world subsystems into the WorldSubsystemRegistry.
-    //   The name is optional (defaults to the type name); it is only used in logs and the editor.
-    // =============================================================================
-    class WorldSubsystemRoute
-    {
-        // =========================================================================
-        // Registration
-        // =========================================================================
-    public:
-        /**
-         * Registers T as a world subsystem. Each new world creates it unless T::ShouldCreate(const World&)
-         * returns false.
-         * @tparam T Derives IWorldSubsystem, constructible from WorldContext&
-         * @param InName Optional. Defaults to the type name.
-         * @return True if registered
-         */
-        template<typename T>
-        requires TIsBaseOf<IWorldSubsystem, T>
-        bool Register(OpaaxStringID InName = {})
-        {
-            ++m_Count;
-
-            if (m_Registry == nullptr)
-            {
-                // Not bound: BindEngineRegistries was never called.
-                OPAAX_LOG(LogModuleRegistrar, Error,
-                          "WorldSubsystems().Register — route is not bound to a WorldSubsystemRegistry; registration dropped.");
-                return false;
-            }
-
-            return m_Registry->Register<T>(InName.IsValid() ? InName : DeriveTypeLeafName<T>());
-        }
-
-        /** Connects this route to the registry. Called once, before any module registers. */
-        void Bind(WorldSubsystemRegistry* InRegistry) noexcept { m_Registry = InRegistry; }
-
-        /**
-         * Number of registration requests, including refused ones.
-         */
-        Uint64 Count() const noexcept { return m_Count; }
-
-        // =========================================================================
-        // Members
-        // =========================================================================
-    private:
-        WorldSubsystemRegistry* m_Registry = nullptr; // owned by the engine
-        Uint64                  m_Count    = 0;
-    };
-
-    // =============================================================================
     // MoverModeRoute — registers mover modes into the MoverModeRegistry.
     //   The name is required: MoveMode assets store it.
     // =============================================================================
@@ -346,45 +296,6 @@ namespace Opaax
     };
 
     // =============================================================================
-    // GameInstanceSubsystemRoute — registers subsystems every game session creates.
-    //   The name is optional (defaults to the type name); it is only used in logs.
-    // =============================================================================
-    class GameInstanceSubsystemRoute
-    {
-    public:
-        /**
-         * Registers T as a game instance subsystem (one per game session, created in registration order).
-         * @tparam T Derives IGameInstanceSubsystem, constructible from GameInstanceContext&
-         * @return True if registered
-         */
-        template<typename T>
-        requires TIsBaseOf<IGameInstanceSubsystem, T>
-        bool Register(OpaaxStringID InName = {})
-        {
-            ++m_Count;
-
-            if (m_Registry == nullptr)
-            {
-                OPAAX_LOG(LogModuleRegistrar, Error,
-                          "GameInstanceSubsystems().Register — route is not bound; registration dropped.");
-                return false;
-            }
-
-            return m_Registry->Register<T>(InName.IsValid() ? InName : DeriveTypeLeafName<T>());
-        }
-
-        /** Connects this route to the registry. Called once, before any module registers. */
-        void Bind(GameInstanceSubsystemRegistry* InRegistry) noexcept { m_Registry = InRegistry; }
-
-        /** Number of registration requests, including refused ones. */
-        Uint64 Count() const noexcept { return m_Count; }
-
-    private:
-        GameInstanceSubsystemRegistry* m_Registry = nullptr; // owned by the engine
-        Uint64                         m_Count    = 0;
-    };
-
-    // =============================================================================
     // UIWidgetRoute — registers the widget types a .opaaxui can use. The name is saved in the file.
     // =============================================================================
     class UIWidgetRoute
@@ -425,12 +336,10 @@ namespace Opaax
     // ModuleRegistrar — what engine and game code register into, before any world exists.
     //     Components()             -> ComponentRegistry
     //     Behaviours()             -> ComponentRegistry (stored like components)
-    //     WorldSubsystems()        -> WorldSubsystemRegistry
-    //     GameInstanceSubsystems() -> GameInstanceSubsystemRegistry
     //     Resources()              -> ResourceFormatRegistry
     //     MoverModes()             -> MoverModeRegistry
     //     UIWidgets()              -> UIWidgetRegistry
-    //     ObjectClasses()          -> ObjectClassRegistry
+    //     ObjectClasses()          -> ObjectClassRegistry (assets, subsystems, any Object class)
     //   Most types register themselves with the OPAAX_REGISTER_* macros (AutoRegistration.h).
     // =============================================================================
     class ModuleRegistrar
@@ -438,8 +347,6 @@ namespace Opaax
     public:
         ComponentRoute&             Components()             noexcept { return m_Components; }
         BehaviourRoute&             Behaviours()             noexcept { return m_Behaviours; }
-        WorldSubsystemRoute&        WorldSubsystems()        noexcept { return m_WorldSubsystems; }
-        GameInstanceSubsystemRoute& GameInstanceSubsystems() noexcept { return m_GameInstanceSubsystems; }
         ResourceFormatRoute&        Resources()              noexcept { return m_ResourceFormats; }
         MoverModeRoute&             MoverModes()             noexcept { return m_MoverModes; }
         UIWidgetRoute&              UIWidgets()              noexcept { return m_UIWidgets; }
@@ -447,8 +354,6 @@ namespace Opaax
 
         const ComponentRoute&             Components()             const noexcept { return m_Components; }
         const BehaviourRoute&             Behaviours()             const noexcept { return m_Behaviours; }
-        const WorldSubsystemRoute&        WorldSubsystems()        const noexcept { return m_WorldSubsystems; }
-        const GameInstanceSubsystemRoute& GameInstanceSubsystems() const noexcept { return m_GameInstanceSubsystems; }
         const ResourceFormatRoute&        Resources()              const noexcept { return m_ResourceFormats; }
         const MoverModeRoute&             MoverModes()             const noexcept { return m_MoverModes; }
         const UIWidgetRoute&              UIWidgets()              const noexcept { return m_UIWidgets; }
@@ -461,8 +366,6 @@ namespace Opaax
         {
             m_Components.Bind(&InRegistries.Components());
             m_Behaviours.Bind(&InRegistries.Components());
-            m_WorldSubsystems.Bind(&InRegistries.WorldSubsystems());
-            m_GameInstanceSubsystems.Bind(&InRegistries.GameInstanceSubsystems());
             m_ResourceFormats.Bind(&InRegistries.Resources());
             m_MoverModes.Bind(&InRegistries.MoverModes());
             m_UIWidgets.Bind(&InRegistries.UIWidgets());
@@ -472,8 +375,6 @@ namespace Opaax
     private:
         ComponentRoute             m_Components;
         BehaviourRoute             m_Behaviours;
-        WorldSubsystemRoute        m_WorldSubsystems;
-        GameInstanceSubsystemRoute m_GameInstanceSubsystems;
         ResourceFormatRoute        m_ResourceFormats;
         MoverModeRoute             m_MoverModes;
         UIWidgetRoute              m_UIWidgets;

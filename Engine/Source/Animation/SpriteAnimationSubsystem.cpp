@@ -13,7 +13,7 @@
 
 namespace Opaax
 {
-    bool SpriteAnimationSubsystem::ShouldCreate(const World& InWorld)
+    bool SpriteAnimationSubsystem::ShouldCreate(const World& InWorld) const
     {
         return InWorld.GetMode() == EWorldMode::Play;
     }
@@ -31,7 +31,7 @@ namespace Opaax
         const float lDelta    = static_cast<float>(InDeltaTime);
         Uint64      lAdvanced = 0;
 
-        m_Context->OwningWorld.Each<SpriteComponent, SpriteAnimatorComponent>(
+        GetContext().OwningWorld.Each<SpriteComponent, SpriteAnimatorComponent>(
             [this, lDelta, &lAdvanced](EntityID, SpriteComponent& InSprite, SpriteAnimatorComponent& InAnim)
             {
                 Advance(InSprite, InAnim, lDelta);
@@ -215,7 +215,7 @@ namespace Opaax
         if (lIt == m_LibraryCache.end())
         {
             // Cached even when loading failed, so a missing file is not retried every frame.
-            lIt = m_LibraryCache.emplace(lKey.GetId(), LoadAsset(m_Context->Resources, m_Context->Paths, InRef)).first;
+            lIt = m_LibraryCache.emplace(lKey.GetId(), LoadAsset(GetContext().Resources, GetContext().Paths, InRef)).first;
 
             if (const AnimationLibrary* lLibrary = lIt->second.Get())
             {
@@ -239,7 +239,7 @@ namespace Opaax
 
         if (lIt == m_ClipCache.end())
         {
-            lIt = m_ClipCache.emplace(InKey.GetId(), LoadAsset(m_Context->Resources, m_Context->Paths, InRef)).first;
+            lIt = m_ClipCache.emplace(InKey.GetId(), LoadAsset(GetContext().Resources, GetContext().Paths, InRef)).first;
 
             if (lIt->second.Get() == nullptr)
             {
@@ -264,7 +264,7 @@ namespace Opaax
 
         if (lIt == m_SheetCache.end())
         {
-            lIt = m_SheetCache.emplace(lKey.GetId(), LoadAsset(m_Context->Resources, m_Context->Paths, InRef)).first;
+            lIt = m_SheetCache.emplace(lKey.GetId(), LoadAsset(GetContext().Resources, GetContext().Paths, InRef)).first;
 
             if (lIt->second.Get() == nullptr)
             {

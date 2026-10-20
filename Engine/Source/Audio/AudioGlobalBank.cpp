@@ -6,15 +6,10 @@
 
 namespace Opaax
 {
-    AudioGlobalBank::AudioGlobalBank(GameInstanceContext& InContext)
-        : m_Context(&InContext)
-    {
-    }
-
     bool AudioGlobalBank::Startup()
     {
-        const TAssetRef<AudioBank>& lBank = m_Context->Config.Audio.GlobalBank;
-        if (!lBank.IsEmpty() && m_Hold.Hold(lBank.Path, m_Context->Resources, m_Context->Paths))
+        const TAssetRef<AudioBank>& lBank = GetContext().Config.Audio.GlobalBank;
+        if (!lBank.IsEmpty() && m_Hold.Hold(lBank.Path, GetContext().Resources, GetContext().Paths))
         {
             OPAAX_LOG(LogAudio, Info, "Global audio bank '{}': {} sound(s) held for the game", lBank.Path.CStr(),
                       m_Hold.GetClipCount());

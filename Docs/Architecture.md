@@ -52,7 +52,8 @@ ended.
 
 A type is added with one line beside its definition (`OPAAX_REGISTER_COMPONENT(Health)`); the engine
 runs the registrations when it starts, kind by kind (object classes, resource formats, components,
-behaviours, subsystems...).
+behaviours...). Object classes include the game and world subsystems: an owner finds them in the
+class registry, so no subsystem list exists either.
 
 - **For:** no central list or registrar function to edit, for the engine and a game alike. A type
   registered from several files is registered once.
@@ -115,8 +116,10 @@ sharing through the resource manager, references between assets (`TAssetRef`), a
 the editor drawn from its properties (or its own editor), automation (`asset.*`). Objects live in one
 table by slot and generation, so a handle to a destroyed object reads null, and the three pointer
 kinds (owning, reflected, weak) are those a garbage collector needs. Unreal's `UObject` and
-`UDataAsset`, Godot's `Resource`. Components, levels, maps, prefabs and canvases stay out of it: they
-are entity or widget data with formats of their own.
+`UDataAsset`, Godot's `Resource`. Subsystems are object classes as well: a world or a game makes one of
+each registered class, asking its default object whether to and where it ticks (Unreal's subsystem
+collections). Components stay plain structs; levels, maps, prefabs and canvases keep formats of their
+own.
 
 - **For:** a new asset type is a class and a line, with no file format, loader, document, panel, undo
   steps or save command to write (the sheet, clip, library, font family, input and movement types each

@@ -23,13 +23,9 @@ namespace Opaax
     //   Registered before WorldManager: sessions update before worlds, and worlds are
     //   destroyed before the session. The host decides when a game starts and ends.
     // =============================================================================
-    class GameInstanceManager final : public EngineSubsystemBase
+    class GameInstanceManager final : public EngineSubsystem
     {
-        // =========================================================================
-        // Base Implementation
-        // =========================================================================
-    public:
-        OPAAX_SUBSYSTEM_TYPE(GameInstanceManager)
+        OPAAX_OBJECT(GameInstanceManager, EngineSubsystem)
 
         // =========================================================================
         // CTORS - DTORS
@@ -76,7 +72,7 @@ namespace Opaax
         // =========================================================================
         // Override
         // =========================================================================
-        //~Begin EngineSubsystemBase interface
+        //~Begin Subsystem interface
     public:
         bool Startup() override;
 
@@ -87,7 +83,7 @@ namespace Opaax
         void TearDown() override;
 
         void Shutdown() override;
-        //~End EngineSubsystemBase interface
+        //~End Subsystem interface
 
         // =========================================================================
         // Members

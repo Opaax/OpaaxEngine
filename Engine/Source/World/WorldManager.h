@@ -28,13 +28,9 @@ namespace Opaax
     //   CloneWorld makes the Play copy; the source is untouched, so Stop just re-activates it.
     //   Creates no world itself: Engine::FinishStartup creates the startup world.
     // =============================================================================
-    class WorldManager final : public EngineSubsystemBase
+    class WorldManager final : public EngineSubsystem
     {
-        // =========================================================================
-        // Base Implementation
-        // =========================================================================
-    public:
-        OPAAX_SUBSYSTEM_TYPE(WorldManager)
+        OPAAX_OBJECT(WorldManager, EngineSubsystem)
 
         // =========================================================================
         // CTORS - DTORS
@@ -119,7 +115,7 @@ namespace Opaax
         // =========================================================================
         // Override
         // =========================================================================
-        //~Begin EngineSubsystemBase interface
+        //~Begin Subsystem interface
     public:
         bool Startup()  override;
 
@@ -137,7 +133,7 @@ namespace Opaax
         void TearDown() override;
 
         void Shutdown() override;
-        //~End EngineSubsystemBase interface
+        //~End Subsystem interface
 
         // =========================================================================
         // Functions

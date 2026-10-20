@@ -8,7 +8,6 @@
 namespace Opaax
 {
     class World;
-    struct WorldContext;
     struct InputActionValue;
 }
 
@@ -22,27 +21,17 @@ namespace Sandbox
     //   The handlers run before this subsystem ticks (input lives on the GameInstance, registered
     //   before WorldManager). Play worlds only.
     // =============================================================================
-    class PlayerControlSubsystem final : public Opaax::WorldSubsystemBase
+    class PlayerControlSubsystem final : public Opaax::WorldSubsystem
     {
-        // =============================================================================
-        // Base implementation
-        // =============================================================================
-    public:
-        OPAAX_SUBSYSTEM_TYPE(PlayerControlSubsystem)
-
-        static bool ShouldCreate(const Opaax::World& InWorld);
-
-        // =============================================================================
-        // CTORS
-        // =============================================================================
-    public:
-        explicit PlayerControlSubsystem(Opaax::WorldContext& InContext) : m_Context(&InContext) {}
+        OPAAX_OBJECT(PlayerControlSubsystem, Opaax::WorldSubsystem)
 
         // =============================================================================
         // Override
         // =============================================================================
     public:
-        //~Begin ISubsystem interface
+        //~Begin WorldSubsystem interface
+        bool         ShouldCreate(const Opaax::World& InWorld) const override;
+        Opaax::Int32 GetTickOrder() const override { return Opaax::WorldSubsystemOrder::Input; }
 
         /** Adds the gameplay mapping context and binds its three actions. */
         bool Startup() override;
@@ -58,7 +47,7 @@ namespace Sandbox
          * so a leftover binding would call into a dead object.
          */
         void Shutdown() override;
-        //~End ISubsystem interface
+        //~End WorldSubsystem interface
 
         // =============================================================================
         // Action handlers
@@ -88,8 +77,6 @@ namespace Sandbox
         // Members
         // =============================================================================
     private:
-        Opaax::WorldContext* m_Context = nullptr;   // borrowed; the World owns it
-
         // This frame's intent, written by the handlers and used in Update. The two bools are latches: a
         // press between ticks is not lost.
         Opaax::Vector2F m_MoveDir{0.f, 0.f};

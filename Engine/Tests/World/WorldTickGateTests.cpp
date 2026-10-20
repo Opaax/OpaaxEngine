@@ -22,16 +22,11 @@ namespace
 {
     // Counts what actually reached the world, so "did not tick" is a measurement rather than the
     // absence of a log line.
-    class CounterSubsystem : public WorldSubsystemBase
+    class CounterSubsystem : public WorldSubsystem
     {
+        OPAAX_OBJECT(CounterSubsystem, WorldSubsystem)
+
     public:
-        OPAAX_SUBSYSTEM_TYPE(CounterSubsystem)
-
-        explicit CounterSubsystem(WorldContext&) {}
-
-        bool Startup() override  { return true; }
-        void Shutdown() override {}
-
         void Update(double)      override { ++Updates; }
         void FixedUpdate(double) override { ++FixedUpdates; }
 
@@ -40,8 +35,8 @@ namespace
     };
 
     // A bare manager creates worlds with no subsystems (it has no engine to build a context from),
-    // so the counter is injected the way CreateSubsystemsFor would have: context first, then
-    // register, then StartupAll. Ref is load-bearing.
+    // so the counter is added the way CreateSubsystemsFor would have: context first, then the class,
+    // then StartupAll.
     struct GatedWorld
     {
         ResourceManager  Resources;
@@ -59,7 +54,7 @@ namespace
             REQUIRE(TheWorld != nullptr);
 
             TheWorld->SetContext(WorldContext{*TheWorld, Resources, IPaths::Null(), Events, Input, Config, /*Actions*/ nullptr, /*UI*/ nullptr, Debug});
-            TheWorld->GetSubsystems().RegisterSubsystem<CounterSubsystem>(Ref(*TheWorld->GetContext()));
+            TheWorld->GetSubsystems().Add<CounterSubsystem>();
             TheWorld->GetSubsystems().StartupAll();
 
             Counter = TheWorld->GetSubsystems().GetSubsystem<CounterSubsystem>();

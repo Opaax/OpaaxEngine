@@ -103,6 +103,11 @@ Match the code around you. In short:
 - **Component or behaviour:** the type with `OPAAX_PROPERTIES` (and the JSON macro for a component),
   one `OPAAX_REGISTER_*` line, unit tests for its logic, a TestWorld probe or level when a game can
   see it. Old maps must still load: new fields have defaults (`NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT`).
+- **Subsystem:** a `WorldSubsystem` or `GameInstanceSubsystem` subclass with `OPAAX_OBJECT` and one
+  `OPAAX_REGISTER_OBJECT` line: its owner finds the class. Nothing in its constructor (the class
+  default object is built with it); its services from `GetContext()`, valid from `Startup`; which
+  worlds and when it ticks by overriding `ShouldCreate` and `GetTickOrder`. A unit test adds it to a
+  world after `SetContext` (`GetSubsystems().Add<T>()`, then `StartupAll()`).
 - **Asset class:** an `Asset` subclass with `OPAAX_OBJECT` and `OPAAX_PROPERTIES` (a default on every
   field), one `OPAAX_REGISTER_OBJECT` line, unit tests for its file round trip and its hooks
   (`PostEditChange`). In the editor, an `AssetTypes()` entry for its label, category and glyph; an

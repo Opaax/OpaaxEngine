@@ -16,8 +16,8 @@ namespace Opaax
     struct EngineConfigData;
 
     // =============================================================================
-    // WorldContext — references given to each world subsystem at construction (no service locator).
-    //   One per world, owned by it: a subsystem may keep a reference for the world's lifetime.
+    // WorldContext — what a world gives each of its subsystems (WorldSubsystem::GetContext), instead
+    //   of a service locator. One per world, owned by it: valid for the world's lifetime.
     //   Add a member when a subsystem needs it (and add it to WorldManager::CreateSubsystemsFor's
     //   null check).
     // =============================================================================

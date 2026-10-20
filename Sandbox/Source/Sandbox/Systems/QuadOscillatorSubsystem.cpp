@@ -21,7 +21,7 @@ namespace
 
 namespace Sandbox
 {
-    bool QuadOscillatorSubsystem::ShouldCreate(const World& InWorld)
+    bool QuadOscillatorSubsystem::ShouldCreate(const World& InWorld) const
     {
         return InWorld.GetMode() == EWorldMode::Play;
     }
@@ -34,7 +34,7 @@ namespace Sandbox
 
     void QuadOscillatorSubsystem::CaptureBaselines()
     {
-        World& lWorld = m_Context->OwningWorld;
+        World& lWorld = GetContext().OwningWorld;
 
         // QuadComponent is the filter; the position moved is the entity's transform.
         lWorld.Each<TransformComponent, QuadComponent>(
@@ -60,7 +60,7 @@ namespace Sandbox
 
         m_Elapsed += InDeltaTime;
 
-        World&          lWorld    = m_Context->OwningWorld;
+        World&          lWorld    = GetContext().OwningWorld;
         EntityRegistry& lRegistry = lWorld.GetRegistry();
 
         // Driven from the stored baselines, so each quad keeps its own origin and phase even if entities
@@ -91,7 +91,7 @@ namespace Sandbox
     void QuadOscillatorSubsystem::Shutdown()
     {
         // Put the quads back where they started (keeps the subsystem clean about what it changed).
-        World&          lWorld    = m_Context->OwningWorld;
+        World&          lWorld    = GetContext().OwningWorld;
         EntityRegistry& lRegistry = lWorld.GetRegistry();
 
         for (const Baseline& lBaseline : m_Baselines)

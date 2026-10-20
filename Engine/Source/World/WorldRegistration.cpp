@@ -22,5 +22,5 @@ namespace Opaax
     OPAAX_REGISTER_NAMED_RESOURCE(PrefabResource, "Prefab");
 
     // Runs gameplay behaviours in Play worlds, before physics so what they apply is simulated this step.
-    OPAAX_REGISTER_NAMED_WORLD_SUBSYSTEM(BehaviourSubsystem, "Behaviours", WorldSubsystemOrder::Gameplay);
+    OPAAX_REGISTER_OBJECT(BehaviourSubsystem);
 }

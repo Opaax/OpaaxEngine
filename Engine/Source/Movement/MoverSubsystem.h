@@ -16,7 +16,6 @@ namespace Opaax
     class World;
     class IPhysicsWorld;
     class MoverModeRegistry;
-    struct WorldContext;
     struct MoverComponent;
     struct TransformComponent;
     class Mover;
@@ -24,35 +23,26 @@ namespace Opaax
 
     // =============================================================================
     // MoverSubsystem — advances every MoverComponent with the mode its Mover asset names.
-    //   Play worlds only. Runs in FixedUpdate after physics (registration order), so it sees
+    //   Play worlds only. Runs in FixedUpdate after physics (its tick order), so it sees
     //   this step's poses. Loads the tuning assets through its own caches.
     // =============================================================================
-    class MoverSubsystem final : public WorldSubsystemBase
+    class MoverSubsystem final : public WorldSubsystem
     {
-        // =============================================================================
-        // Base implementation
-        // =============================================================================
-    public:
-        OPAAX_SUBSYSTEM_TYPE(MoverSubsystem)
-
-        /** Play worlds only. */
-        static bool ShouldCreate(const World& InWorld);
-
-        // =============================================================================
-        // CTORS
-        // =============================================================================
-    public:
-        explicit MoverSubsystem(WorldContext& InContext) : m_Context(&InContext) {}
+        OPAAX_OBJECT(MoverSubsystem, WorldSubsystem)
 
         // =============================================================================
         // Override
         // =============================================================================
     public:
-        //~Begin ISubsystem interface
+        //~Begin WorldSubsystem interface
+        /** Play worlds only. */
+        bool  ShouldCreate(const World& InWorld) const override;
+        Int32 GetTickOrder() const override { return WorldSubsystemOrder::PostPhysics; }
+
         bool Startup() override;
         void FixedUpdate(double InFixedDeltaTime) override;
         void Shutdown() override;
-        //~End ISubsystem interface
+        //~End WorldSubsystem interface
 
         // =============================================================================
         // Get
@@ -81,8 +71,6 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        WorldContext* m_Context = nullptr;   // owned by the World
-
         /** Resolved in Startup. */
         const MoverModeRegistry* m_Modes = nullptr;
 

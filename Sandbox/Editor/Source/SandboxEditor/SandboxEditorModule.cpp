@@ -17,9 +17,6 @@ namespace
 
 void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& InRegistrar)
 {
-    // No Edit-only world subsystem is registered at the moment (QuadBoundsSubsystem was removed), so
-    // EditWorldSystems() has no caller. Re-adding one is a single Register call.
-
     // The game's own action, registered as a command, then added to the menu by tag.
     InRegistrar.Commands().Register<SandboxEditor::ValidateSandboxCommand>(
         SandboxEditor::Tags::SANDBOX_COMMAND_VALIDATE);

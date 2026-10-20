@@ -7,13 +7,9 @@ namespace Opaax
 {
     inline constexpr LogCategory LogEngineEventBus{"EngineEventBus"};
 
-    class EngineEventBus final : public EngineSubsystemBase
+    class EngineEventBus final : public EngineSubsystem
     {
-        // =============================================================================
-        // Base Implementation
-        // =============================================================================
-    public:
-        OPAAX_SUBSYSTEM_TYPE(EngineEventBus)
+        OPAAX_OBJECT(EngineEventBus, EngineSubsystem)
         
         // =============================================================================
         // CTORS - DTORS
@@ -37,10 +33,10 @@ namespace Opaax
         // =============================================================================
         // Override
         // =============================================================================
-        //~Begin EngineSubsystemBase Interface
+        //~Begin Subsystem interface
         bool Startup() override;
         void Shutdown() override;
-        //~End EngineSubsystemBase Interface
+        //~End Subsystem interface
         
         // =============================================================================
         // Members
