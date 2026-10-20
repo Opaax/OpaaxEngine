@@ -16,6 +16,7 @@
 #include "Editor/Imgui/ImGuiEditorGui.h"        // the concrete IEditorGui
 #include "Editor/UI/TinyFdEditorDialogs.h"      // the concrete IEditorDialogs
 #include "Editor/Toolbar/EditorNativeViewportTools.h"
+#include "Editor/Assets/Editors/InputMappingContextEditor.h"
 
 #include "Editor/Operation/EditorGizmo.hpp"
 #include "Editor/Operation/EditorViewport.hpp"   // grid toggle
@@ -31,8 +32,6 @@
 #include "Editor/Panels/AnimationClipPanel.h"
 #include "Editor/Panels/AnimationLibraryPanel.h"
 #include "Resources/Asset/AssetResource.h"
-#include "Editor/Panels/InputActionPanel.h"
-#include "Editor/Panels/InputMappingContextPanel.h"
 #include "Editor/Panels/FontFamilyPanel.h"
 #include "Editor/EditorFontFamilyDocument.h"
 #include "Editor/Panels/UICanvasPanel.h"
@@ -69,11 +68,11 @@
 #include "Animation/AnimationLibraryResource.h"
 #include "Audio/AudioBank.h"
 #include "Audio/AudioClipDef.h"
+#include "Input/Assets/InputActionAsset.h"
+#include "Input/Assets/InputMappingContextAsset.h"
 #include "Movement/Assets/MoveMode.h"
 #include "Movement/Assets/Mover.h"
 #include "Renderer/Materials/Material2D.h"
-#include "Input/Assets/InputActionResource.h"
-#include "Input/Assets/InputMappingContextResource.h"
 #include "Renderer/Text/FontFaceResource.h"
 #include "Renderer/Text/FontFamilyResource.h"
 #include "Editor/Resources/ResourcePreviewDrawers.h"   // what a preview draws (no ImGui here)
@@ -165,10 +164,8 @@ namespace Opaax::Editor
         m_LibraryDocument   = MakeUnique<EditorAnimationLibraryDocument>();
         m_FamilyDocument    = MakeUnique<EditorFontFamilyDocument>();
         m_UICanvasDocument  = MakeUnique<EditorUICanvasDocument>();
-        m_InputActionDocument = MakeUnique<EditorInputActionDocument>();
-        m_InputMapDocument    = MakeUnique<EditorInputMappingContextDocument>();
-        m_Export              = MakeUnique<GameExport>();
-        m_AssetEditors        = MakeUnique<AssetEditors>();
+        m_Export            = MakeUnique<GameExport>();
+        m_AssetEditors      = MakeUnique<AssetEditors>();
     }
 
     void EditorService::ClearEditorSystems()
@@ -215,8 +212,6 @@ namespace Opaax::Editor
             *m_LibraryDocument,
             *m_FamilyDocument,
             *m_UICanvasDocument,
-            *m_InputActionDocument,
-            *m_InputMapDocument,
             m_Extensions,
             m_Gui->Panels(),
             *m_Preview,
@@ -381,8 +376,6 @@ namespace Opaax::Editor
         lPanelsRegistry.Register<PrefabPanel>(PanelDesc         {.Id = PrefabPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_PREFAB, .UndoCommand = Tags::EDITOR_COMMAND_UNDO_PREFAB, .RedoCommand = Tags::EDITOR_COMMAND_REDO_PREFAB, .DeleteCommand = Tags::EDITOR_COMMAND_DELETE_PREFAB_SELECTION});
         lPanelsRegistry.Register<AnimationClipPanel>(PanelDesc  {.Id = AnimationClipPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_CLIP});
         lPanelsRegistry.Register<AnimationLibraryPanel>(PanelDesc{.Id = AnimationLibraryPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_LIBRARY});
-        lPanelsRegistry.Register<InputActionPanel>(PanelDesc{.Id = InputActionPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_INPUT_ACTION});
-        lPanelsRegistry.Register<InputMappingContextPanel>(PanelDesc{.Id = InputMappingContextPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_INPUT_MAP});
         lPanelsRegistry.Register<FontFamilyPanel>(PanelDesc{.Id = FontFamilyPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_FAMILY});
         lPanelsRegistry.Register<UICanvasPanel>(PanelDesc{.Id = UICanvasPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_UI, .DeleteCommand = Tags::EDITOR_COMMAND_DELETE_UI_WIDGET});
         lPanelsRegistry.Register<ConfigPanel>(PanelDesc         {.Id = ConfigPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden});
@@ -439,8 +432,6 @@ namespace Opaax::Editor
         lCommands.Register<SaveSheetCommand>(Tags::EDITOR_COMMAND_SAVE_SHEET);
         lCommands.Register<SaveClipCommand>(Tags::EDITOR_COMMAND_SAVE_CLIP);
         lCommands.Register<SaveLibraryCommand>(Tags::EDITOR_COMMAND_SAVE_LIBRARY);
-        lCommands.Register<SaveInputActionCommand>(Tags::EDITOR_COMMAND_SAVE_INPUT_ACTION);
-        lCommands.Register<SaveInputMapCommand>(Tags::EDITOR_COMMAND_SAVE_INPUT_MAP);
         lCommands.Register<SaveFamilyCommand>(Tags::EDITOR_COMMAND_SAVE_FAMILY);
 
         // A document type gets its own New, like maps and levels.
@@ -607,6 +598,17 @@ namespace Opaax::Editor
         lTypes.Register<AudioBank>().SetCategory(OpaaxString("Audio"));
         lTypes.Register<MoveMode>().SetCategory(OpaaxString("Movement"));
         lTypes.Register<Mover>().SetCategory(OpaaxString("Movement")).SetGlyph(OpaaxString("[MV]"));
+
+        // An action is what gameplay binds; a context is which keys reach it (what a rebind edits).
+        lTypes.Register<InputActionAsset>()
+            .SetLabel(OpaaxString("Input Action"))
+            .SetCategory(OpaaxString("Input"))
+            .SetGlyph(OpaaxString("[IA]"));
+        lTypes.Register<InputMappingContextAsset>()
+            .SetLabel(OpaaxString("Input Mapping Context"))
+            .SetCategory(OpaaxString("Input"))
+            .SetGlyph(OpaaxString("[IM]"))
+            .SetEditor<InputMappingContextEditor>();
     }
 
     void EditorService::RegisterNativeResourceTypes()
@@ -715,28 +717,6 @@ namespace Opaax::Editor
                 if (InContext.LibraryDocument.Open(InFile.AbsPath))
                 {
                     InContext.Panels.SetVisible(AnimationLibraryPanel::PanelID(), true);
-                }
-            });
-
-        // Two types, two editors: an action is what gameplay binds, a context is which keys reach it
-        // (a rebind only opens the context).
-        m_Extensions.ResourceTypes().Register<InputActionResource>()
-            .SetGlyph(OpaaxString("[IA]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                if (InContext.InputActionDocument.Open(InFile.AbsPath))
-                {
-                    InContext.Panels.SetVisible(InputActionPanel::PanelID(), true);
-                }
-            });
-
-        m_Extensions.ResourceTypes().Register<InputMappingContextResource>()
-            .SetGlyph(OpaaxString("[IM]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                if (InContext.InputMapDocument.Open(InFile.AbsPath))
-                {
-                    InContext.Panels.SetVisible(InputMappingContextPanel::PanelID(), true);
                 }
             });
 

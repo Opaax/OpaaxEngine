@@ -140,9 +140,11 @@ namespace Opaax
     {
         // One line per format, added when its type became an Asset class.
         static const TDynArray<LegacyFormat> s_Formats = {
-            { ".opaaxdata",     nullptr },
-            { ".opaaxmovemode", "MoveMode" },
-            { ".opaaxmover",    "Mover" },
+            { ".opaaxdata",      nullptr },
+            { ".opaaxmovemode",  "MoveMode" },
+            { ".opaaxmover",     "Mover" },
+            { ".opaaxaction",    "InputActionAsset" },
+            { ".opaaxinputmap",  "InputMappingContextAsset" },
         };
 
         return s_Formats;
@@ -158,6 +160,16 @@ namespace Opaax
         }
 
         return nullptr;
+    }
+
+    OpaaxString AssetMigration::ConvertedPath(const OpaaxStringView InPath)
+    {
+        if (FindLegacyFormat(InPath) == nullptr)
+        {
+            return OpaaxString();
+        }
+
+        return PathString::ReplaceExtension(InPath, AssetFile::ASSET_EXTENSION);
     }
 
     bool AssetMigration::ConvertText(const OpaaxString& InLegacyText, const LegacyFormat& InFormat,

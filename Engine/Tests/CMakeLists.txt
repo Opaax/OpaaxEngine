@@ -107,6 +107,7 @@ set(OPAAX_TEST_SOURCES
     World/WorldTickGateTests.cpp
 
     # Input
+    Input/InputAssetTests.cpp
     Input/InputManagerTests.cpp
     Input/InputMappingTests.cpp
 

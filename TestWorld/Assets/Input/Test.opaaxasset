@@ -1,0 +1,15 @@
+{
+    "Class": "InputMappingContextAsset",
+    "Properties": {
+        "Mappings": [
+            {
+                "Action": "Input/Fire.opaaxasset",
+                "Key": "F",
+                "Modifiers": [],
+                "bConsume": true
+            }
+        ],
+        "Priority": 0
+    },
+    "Version": 1
+}

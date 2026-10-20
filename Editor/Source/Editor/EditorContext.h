@@ -32,8 +32,6 @@ namespace Opaax
         class EditorAnimationLibraryDocument; // the open .opaaxanim and its data
         class EditorFontFamilyDocument;       // the open .opaaxfont and its data
         class EditorUICanvasDocument;         // the open .opaaxui and its canvas
-        class EditorInputActionDocument;      // the open .opaaxaction and its data
-        class EditorInputMappingContextDocument; // the open .opaaxinputmap and its data
         class EditorExtensionRegistrar; // the sealed extension routes
         class EditorPaths;              // IPaths subclass: the editor directories
         class EditorPanels;             // live panels and visibility
@@ -116,12 +114,6 @@ namespace Opaax
 
             // The open .opaaxui. Owns a real UICanvas: the panel previews it by rendering it.
             EditorUICanvasDocument& UICanvasDocument;
-
-            // The open input action. It names no keys (mapping contexts do).
-            EditorInputActionDocument& InputActionDocument;
-
-            // The open mapping context: which keys reach which actions (what a rebind edits).
-            EditorInputMappingContextDocument& InputMapDocument;
 
             // The sealed extension routes (Inspector: Drawers(), Resource Browser: ResourceTypes()).
             // Const: registration is closed before this context is built.

@@ -66,8 +66,8 @@ editor outside Play). `TestWorld/Source/TestWorld/Probes/LevelProbes.h` has one.
 
 From a behaviour: `Send(entity, event)` / `Listen<&Class::OnEvent>()` for an entity's events,
 `Broadcast(event)` / `Subscribe<&Class::OnEvent>()` for everyone's, `SetTimer<&Class::OnTimer>(seconds)`,
-`BindAction<&Class::OnJump>("Jump", EInputTrigger::Started)` for input actions (declared in
-`.opaaxaction` files, bound to keys in `.opaaxinputmap` files), `PlaySound("Audio/Coin.wav")`. Handlers
+`BindAction<&Class::OnJump>("Jump", EInputTrigger::Started)` for input actions (`InputActionAsset`
+assets, bound to keys by `InputMappingContextAsset` assets), `PlaySound("Audio/Coin.wav")`. Handlers
 can be `const` members.
 
 ### Sound

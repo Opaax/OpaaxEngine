@@ -1,0 +1,21 @@
+{
+    "Class": "InputMappingContextAsset",
+    "Properties": {
+        "Mappings": [
+            {
+                "Action": "Input/MenuToggle.opaaxasset",
+                "Key": "Escape",
+                "Modifiers": [],
+                "bConsume": true
+            },
+            {
+                "Action": "Input/MenuAccept.opaaxasset",
+                "Key": "Space",
+                "Modifiers": [],
+                "bConsume": true
+            }
+        ],
+        "Priority": 100
+    },
+    "Version": 1
+}

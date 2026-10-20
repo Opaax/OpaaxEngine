@@ -468,7 +468,7 @@ namespace Opaax
         bool WasKeyReleased(EKeyCode InKey) const;
 
         // =============================================================================
-        // Input actions — the game's named actions (.opaaxinputmap). They read as zero, and
+        // Input actions — the game's named actions (input mapping contexts). They read as zero, and
         //   BindAction does nothing, when no game is running (no input mapping).
         // =============================================================================
     public:

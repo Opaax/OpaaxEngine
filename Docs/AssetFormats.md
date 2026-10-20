@@ -15,10 +15,9 @@ engine content with `/Engine/` (`/Engine/Textures/T_Square_256_White.png`).
 | `.opaaxmap` | A map: entities and placed prefabs | Hierarchy, Inspector |
 | `.opaaxprefab` | A prefab, a nested prefab or a variant | Create Prefab, Prefab panel |
 | `.opaaxui` | A UI canvas | UI editor |
-| `.opaaxaction`, `.opaaxinputmap` | Input actions, and the keys that drive them | Input panels |
 | `.opaaxsheet` | A texture cut into named frames | Sprite Sheet panel |
 | `.opaaxclip`, `.opaaxanim` | An animation clip, a library of clips | Animation panels |
-| `.opaaxasset` | An asset of any registered class (a `Material2D`, an `AudioClipDef` or `AudioBank`, a `Mover` or `MoveMode`, a game's own classes) | Its own window: double-click it |
+| `.opaaxasset` | An asset of any registered class (a `Material2D`, an `AudioClipDef` or `AudioBank`, a `Mover` or `MoveMode`, an `InputActionAsset` or `InputMappingContextAsset`, a game's own classes) | Its own window: double-click it |
 | `.opaaxfont` | A font family: faces by style | Font Family panel |
 | `Configs/*.config` | Engine, renderer and editor settings | Config panel |
 
@@ -191,32 +190,37 @@ A binding (`"Hud.Score"`) reads a property of a source the game registers on the
 the value. A game mounts a canvas with `GetContext().UI->MountAsset("UI/Hud.opaaxui")` and finds a
 widget with `FindByName`.
 
-## Input (`.opaaxaction`, `.opaaxinputmap`)
+## Input (`InputActionAsset`, `InputMappingContextAsset`)
 
-An action is what the game reads (`GetAction`, `BindAction`); a map binds keys to actions.
+Both are assets. An action is what the game reads (`GetAction`, `BindAction`); a mapping context
+binds keys to actions.
 
 ```json
-{ "Name": "Move", "ValueType": "Axis2D", "HoldSeconds": 0.5, "Description": "Walk and climb",
-  "Modifiers": [ { "Type": "Normalize" } ] }
+{ "Class": "InputActionAsset", "Properties": {
+    "Name": "Move", "ValueType": "Axis2D", "HoldSeconds": 0.5, "Description": "Walk and climb",
+    "Modifiers": [ { "Type": "Normalize" } ] } }
 ```
 
 ```json
-{
+{ "Class": "InputMappingContextAsset", "Properties": {
     "Priority": 0,
     "Mappings": [
-        { "Action": "Input/Move.opaaxaction", "Key": "D", "Modifiers": [], "bConsume": true },
-        { "Action": "Input/Move.opaaxaction", "Key": "A", "Modifiers": [ { "Type": "Negate" } ], "bConsume": true },
-        { "Action": "Input/Move.opaaxaction", "Key": "W", "Modifiers": [ { "Type": "Swizzle" } ], "bConsume": true },
-        { "Action": "Input/Move.opaaxaction", "Key": "S", "Modifiers": [ { "Type": "Swizzle" }, { "Type": "Negate" } ], "bConsume": true },
-        { "Action": "Input/Jump.opaaxaction", "Key": "Space", "Modifiers": [], "bConsume": true }
-    ]
-}
+        { "Action": "Input/Move.opaaxasset", "Key": "D", "Modifiers": [], "bConsume": true },
+        { "Action": "Input/Move.opaaxasset", "Key": "A", "Modifiers": [ { "Type": "Negate" } ], "bConsume": true },
+        { "Action": "Input/Move.opaaxasset", "Key": "W", "Modifiers": [ { "Type": "Swizzle" } ], "bConsume": true },
+        { "Action": "Input/Move.opaaxasset", "Key": "S", "Modifiers": [ { "Type": "Swizzle" }, { "Type": "Negate" } ], "bConsume": true },
+        { "Action": "Input/Jump.opaaxasset", "Key": "Space", "Modifiers": [], "bConsume": true }
+    ] } }
 ```
 
-`ValueType` is `Bool`, `Axis1D` or `Axis2D`. Modifiers apply in order: `Negate`, `Swizzle` (x and y
-swapped), `DeadZone` (`DeadZoneLower`, `DeadZoneUpper`), `Scalar` (`Scale`), `Normalize`. Keys are
-named as in `EKeyCode` (`A`...`Z`, `Space`, `Escape`, `Left`, `Mouse_Left`...). A game adds a map with
-`GetContext().Actions->AddContextAsset(OPAAX_ID("Gameplay"), "Input/Gameplay.opaaxinputmap")`.
+`Name` is what gameplay binds (`OPAAX_ID("Move")`); left empty, it is the file's name. `ValueType` is
+`Bool`, `Axis1D` or `Axis2D`. Modifiers apply in order: `Negate`, `Swizzle` (x and y swapped),
+`DeadZone` (`DeadZoneLower`, `DeadZoneUpper`), `Scalar` (`Scale`), `Normalize`. Keys are named as in
+`EKeyCode` (`A`...`Z`, `Space`, `Escape`, `Left`, `Mouse_Left`...). A game adds a context with
+`GetContext().Actions->AddContextAsset(OPAAX_ID("Gameplay"), "Input/Gameplay.opaaxasset")`; a mapping
+whose action does not load is skipped, with a warning. A context's window lists its mappings, key
+first; **2D Composite (WASD)** and **Arrows** replace the selected one with the four that make an
+`Axis2D` of its action.
 
 ## Sprites and animation (`.opaaxsheet`, `.opaaxclip`, `.opaaxanim`)
 
@@ -259,8 +263,12 @@ its properties by field name, and the format's version:
 
 A missing property keeps its default, so `{ "Class": "Material2D" }` is a whole asset. A value of the
 wrong type makes the file fail to load (the log names the field). A sprite uses a material through its
-`Material` field. Files written by an older engine (`.opaaxdata`, `.opaaxmover`, `.opaaxmovemode`) are
-converted once by starting the editor with `--upgrade-assets`.
+`Material` field. Files written by an older engine (`.opaaxdata`, `.opaaxmover`, `.opaaxmovemode`,
+`.opaaxaction`, `.opaaxinputmap`) are converted once by starting the editor with `--upgrade-assets`:
+each becomes an `.opaaxasset` of the same name (its class appended when that name is taken), and the
+paths that named it in levels, maps, prefabs, canvases, assets and configs are rewritten. Paths
+written in game code are not: one that still names an old file loads the converted one, with a
+warning to update it.
 
 ## Sound (`AudioClipDef`, `AudioBank`)
 

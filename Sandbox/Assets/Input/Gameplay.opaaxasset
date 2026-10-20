@@ -1,0 +1,153 @@
+{
+    "Class": "InputMappingContextAsset",
+    "Properties": {
+        "Mappings": [
+            {
+                "Action": "Input/Move.opaaxasset",
+                "Key": "D",
+                "Modifiers": [],
+                "bConsume": true
+            },
+            {
+                "Action": "Input/Move.opaaxasset",
+                "Key": "Right",
+                "Modifiers": [],
+                "bConsume": true
+            },
+            {
+                "Action": "Input/Move.opaaxasset",
+                "Key": "A",
+                "Modifiers": [
+                    {
+                        "DeadZoneLower": 0.25,
+                        "DeadZoneUpper": 1.0,
+                        "Scale": {
+                            "x": 1.0,
+                            "y": 1.0
+                        },
+                        "Type": "Negate"
+                    }
+                ],
+                "bConsume": true
+            },
+            {
+                "Action": "Input/Move.opaaxasset",
+                "Key": "Left",
+                "Modifiers": [
+                    {
+                        "DeadZoneLower": 0.25,
+                        "DeadZoneUpper": 1.0,
+                        "Scale": {
+                            "x": 1.0,
+                            "y": 1.0
+                        },
+                        "Type": "Negate"
+                    }
+                ],
+                "bConsume": true
+            },
+            {
+                "Action": "Input/Move.opaaxasset",
+                "Key": "W",
+                "Modifiers": [
+                    {
+                        "DeadZoneLower": 0.25,
+                        "DeadZoneUpper": 1.0,
+                        "Scale": {
+                            "x": 1.0,
+                            "y": 1.0
+                        },
+                        "Type": "Swizzle"
+                    }
+                ],
+                "bConsume": true
+            },
+            {
+                "Action": "Input/Move.opaaxasset",
+                "Key": "Up",
+                "Modifiers": [
+                    {
+                        "DeadZoneLower": 0.25,
+                        "DeadZoneUpper": 1.0,
+                        "Scale": {
+                            "x": 1.0,
+                            "y": 1.0
+                        },
+                        "Type": "Swizzle"
+                    }
+                ],
+                "bConsume": true
+            },
+            {
+                "Action": "Input/Move.opaaxasset",
+                "Key": "S",
+                "Modifiers": [
+                    {
+                        "DeadZoneLower": 0.25,
+                        "DeadZoneUpper": 1.0,
+                        "Scale": {
+                            "x": 1.0,
+                            "y": 1.0
+                        },
+                        "Type": "Negate"
+                    },
+                    {
+                        "DeadZoneLower": 0.25,
+                        "DeadZoneUpper": 1.0,
+                        "Scale": {
+                            "x": 1.0,
+                            "y": 1.0
+                        },
+                        "Type": "Swizzle"
+                    }
+                ],
+                "bConsume": true
+            },
+            {
+                "Action": "Input/Move.opaaxasset",
+                "Key": "Down",
+                "Modifiers": [
+                    {
+                        "DeadZoneLower": 0.25,
+                        "DeadZoneUpper": 1.0,
+                        "Scale": {
+                            "x": 1.0,
+                            "y": 1.0
+                        },
+                        "Type": "Negate"
+                    },
+                    {
+                        "DeadZoneLower": 0.25,
+                        "DeadZoneUpper": 1.0,
+                        "Scale": {
+                            "x": 1.0,
+                            "y": 1.0
+                        },
+                        "Type": "Swizzle"
+                    }
+                ],
+                "bConsume": true
+            },
+            {
+                "Action": "Input/Jump.opaaxasset",
+                "Key": "Space",
+                "Modifiers": [],
+                "bConsume": true
+            },
+            {
+                "Action": "Input/SwitchMode.opaaxasset",
+                "Key": "Tab",
+                "Modifiers": [],
+                "bConsume": true
+            },
+            {
+                "Action": "Input/MenuToggle.opaaxasset",
+                "Key": "Escape",
+                "Modifiers": [],
+                "bConsume": true
+            }
+        ],
+        "Priority": 0
+    },
+    "Version": 1
+}

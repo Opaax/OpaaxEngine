@@ -331,6 +331,113 @@
         }
     },
     {
+        "id": "open-input-context",
+        "command": "asset.open",
+        "params": {
+            "path": "Input/Controls.opaaxasset"
+        },
+        "expect": {
+            "class": "InputMappingContextAsset",
+            "unsaved": false,
+            "properties": {
+                "Priority": 0,
+                "Mappings": [
+                    {
+                        "Action": "Input/Move.opaaxasset",
+                        "Key": "D"
+                    },
+                    {
+                        "Action": "Input/Move.opaaxasset",
+                        "Key": "A"
+                    },
+                    {
+                        "Action": "Input/Move.opaaxasset",
+                        "Key": "W"
+                    },
+                    {
+                        "Action": "Input/Move.opaaxasset",
+                        "Key": "S"
+                    },
+                    {
+                        "Action": "Input/Charge.opaaxasset",
+                        "Key": "Space"
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "id": "input-unknown-key-refused",
+        "command": "asset.set",
+        "params": {
+            "path": "Input/Controls.opaaxasset",
+            "properties": {
+                "Mappings": [
+                    {
+                        "Action": "Input/Charge.opaaxasset",
+                        "Key": "NoSuchKey"
+                    }
+                ]
+            }
+        },
+        "expectFailure": true
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot-input-context",
+        "command": "screenshot",
+        "params": {
+            "path": "AssetsInputContext.png"
+        }
+    },
+    {
+        "id": "open-input-action",
+        "command": "asset.open",
+        "params": {
+            "path": "Input/Charge.opaaxasset"
+        },
+        "expect": {
+            "class": "InputActionAsset",
+            "properties": {
+                "Name": "Charge",
+                "ValueType": "Bool",
+                "HoldSeconds": 0.5
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot-input-action",
+        "command": "screenshot",
+        "params": {
+            "path": "AssetsInputAction.png"
+        }
+    },
+    {
+        "id": "close-input-context-unchanged",
+        "command": "asset.close",
+        "params": {
+            "path": "Input/Controls.opaaxasset"
+        }
+    },
+    {
+        "id": "close-input-action",
+        "command": "asset.close",
+        "params": {
+            "path": "Input/Charge.opaaxasset"
+        }
+    },
+    {
         "id": "nothing-open",
         "command": "asset.list",
         "expect": {

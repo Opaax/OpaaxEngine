@@ -634,22 +634,6 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params&);
     };
 
-    /** Writes the open .opaaxaction and reloads it. */
-    struct SaveInputActionCommand
-    {
-        using Params = NoParams;
-
-        void Execute(EditorContext& InContext, const Params&);
-    };
-
-    /** Writes the open .opaaxinputmap and reloads it (saves a rebind). */
-    struct SaveInputMapCommand
-    {
-        using Params = NoParams;
-
-        void Execute(EditorContext& InContext, const Params&);
-    };
-
     /**
      * Add Map to Level: asks for a map file, then runs AddMapToLevelAtCommand. (Removing a map and choosing
      * the persistent one are on the Hierarchy's map headers.)

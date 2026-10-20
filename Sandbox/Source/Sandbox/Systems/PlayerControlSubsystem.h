@@ -17,7 +17,7 @@ namespace Sandbox
     // =============================================================================
     // PlayerControlSubsystem — turns input actions into a MoverComponent's intent (MoverInput). The
     //   modes decide how to move; an AI or a replay could write the same intent.
-    //   Names no keys: it adds Input/Gameplay.opaaxinputmap and binds Move, Jump and SwitchMode; the
+    //   Names no keys: it adds Input/Gameplay.opaaxasset and binds Move, Jump and SwitchMode; the
     //   asset decides the keys, so rebinding needs no recompile.
     //   The handlers run before this subsystem ticks (input lives on the GameInstance, registered
     //   before WorldManager). Play worlds only.

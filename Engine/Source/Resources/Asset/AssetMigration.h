@@ -35,6 +35,13 @@ namespace Opaax
         const LegacyFormat* FindLegacyFormat(OpaaxStringView InPath);
 
         /**
+         * The path an old file has once converted, when it kept its name ("Input/Jump.opaaxaction" ->
+         * "Input/Jump.opaaxasset"); empty when InPath has no old extension. For paths written in code,
+         * which Migrate does not rewrite.
+         */
+        OpaaxString ConvertedPath(OpaaxStringView InPath);
+
+        /**
          * An old file's text as an .opaaxasset's: the class and the properties it holds.
          * @param OutError Why it failed (optional)
          * @return False when the text is not a JSON object, or a .opaaxdata lacks its "Type" or "Data"

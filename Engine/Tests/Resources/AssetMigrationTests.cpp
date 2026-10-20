@@ -55,6 +55,17 @@ TEST_CASE("AssetMigration: an old format is found by its extension, in any case"
     }
 }
 
+TEST_CASE("AssetMigration: a path written in code finds the file its old one was converted to")
+{
+    CHECK(AssetMigration::ConvertedPath(OpaaxStringView("Input/Gameplay.opaaxinputmap")) == "Input/Gameplay.opaaxasset");
+    CHECK(AssetMigration::ConvertedPath(OpaaxStringView("/Engine/Data/Grunt.OpaaxData")) == "/Engine/Data/Grunt.opaaxasset");
+
+    // Not an old format: nothing to redirect.
+    CHECK(AssetMigration::ConvertedPath(OpaaxStringView("Input/Gameplay.opaaxasset")).IsEmpty());
+    CHECK(AssetMigration::ConvertedPath(OpaaxStringView("Maps/Main.opaaxmap")).IsEmpty());
+    CHECK(AssetMigration::ConvertedPath(OpaaxStringView("")).IsEmpty());
+}
+
 TEST_CASE("AssetMigration: a data asset's type becomes the class, its data the properties")
 {
     OpaaxString lAssetText;

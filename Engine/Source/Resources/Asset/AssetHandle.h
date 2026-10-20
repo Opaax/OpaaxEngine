@@ -3,6 +3,7 @@
 #include "Application/Services/IPaths.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/OpaaxString.hpp"
+#include "Resources/Asset/AssetMigration.h"
 #include "Resources/Asset/AssetRef.h"
 #include "Resources/Asset/AssetResource.h"
 #include "Resources/ResourceManager.h"
@@ -69,7 +70,8 @@ namespace Opaax
     };
 
     /**
-     * Loads the asset at InAssetPath (asset-relative or a mount), or shares it if already loaded.
+     * Loads the asset at InAssetPath (asset-relative or a mount), or shares it if already loaded. A path
+     * to an old format's file loads the file it was converted to, with a warning.
      * @return An empty handle for an empty path
      */
     template<typename T>
@@ -80,8 +82,20 @@ namespace Opaax
             return {};
         }
 
-        const OpaaxString lAbsolute = InPaths.AssetToAbsolute(InAssetPath);
-        return TAssetHandle<T>(InResources.Load<AssetResource>(lAbsolute.CStr()), InAssetPath);
+        // Converting the files rewrites the paths in data, not in code.
+        OpaaxString lPath = AssetMigration::ConvertedPath(InAssetPath);
+        if (lPath.IsEmpty())
+        {
+            lPath = InAssetPath;
+        }
+        else
+        {
+            OPAAX_LOG(LogAsset, Warn, "'{}' names a file of an old format: loading '{}', what --upgrade-assets "
+                      "converts it to. Update the path where it is written.", InAssetPath.CStr(), lPath.CStr());
+        }
+
+        const OpaaxString lAbsolute = InPaths.AssetToAbsolute(lPath);
+        return TAssetHandle<T>(InResources.Load<AssetResource>(lAbsolute.CStr()), lPath);
     }
 
     /** Loads the asset InRef names. */

@@ -21,8 +21,6 @@
 #include "Editor/Resources/Types/Animation/EditorAnimationLibraryDocument.h"
 #include "Editor/EditorFontFamilyDocument.h"
 #include "Editor/EditorUICanvasDocument.h"
-#include "Editor/Resources/Types/Input/EditorInputActionDocument.h"
-#include "Editor/Resources/Types/Input/EditorInputMappingContextDocument.h"
 #include "Editor/Export/GameExport.h"
 #include "Editor/PIE/PlayInEditor.h"
 #include "Editor/UI/IEditorGui.h"
@@ -330,13 +328,11 @@ namespace Opaax::Editor
         /** The open .opaaxui and its canvas. */
         TUniquePtr<EditorUICanvasDocument>         m_UICanvasDocument;
 
-        /** The open input action and mapping context. */
-        TUniquePtr<EditorInputActionDocument>      m_InputActionDocument;
-        TUniquePtr<EditorInputMappingContextDocument> m_InputMapDocument;
-        TUniquePtr<GameExport>                        m_Export;
+        /** Exporting the edited game into a folder that runs elsewhere. */
+        TUniquePtr<GameExport>                     m_Export;
 
         /** The open .opaaxasset files, a window each. */
-        TUniquePtr<AssetEditors>                      m_AssetEditors;
+        TUniquePtr<AssetEditors>                   m_AssetEditors;
         
         TUniquePtr<EditorContext>       m_Context;
         

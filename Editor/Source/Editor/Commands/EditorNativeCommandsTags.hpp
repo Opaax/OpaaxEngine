@@ -102,10 +102,6 @@ namespace Opaax::Editor::Tags
     inline const OpaaxTag EDITOR_COMMAND_SAVE_UI          = OpaaxTag("Editor.Command.SaveUI");
     inline const OpaaxTag EDITOR_COMMAND_DELETE_UI_WIDGET = OpaaxTag("Editor.Command.DeleteUIWidget");
 
-    // Input: an action and its mapping context are separate assets, saved separately.
-    inline const OpaaxTag EDITOR_COMMAND_SAVE_INPUT_ACTION = OpaaxTag("Editor.Command.SaveInputAction");
-    inline const OpaaxTag EDITOR_COMMAND_SAVE_INPUT_MAP    = OpaaxTag("Editor.Command.SaveInputMap");
-
     // Assets: every .opaaxasset, whatever its class, in a window of its own. The asset is the
     // AssetPathParams payload; an empty path means the focused asset window.
     inline const OpaaxTag EDITOR_COMMAND_OPEN_ASSET      = OpaaxTag("Editor.Command.OpenAsset");

@@ -16,7 +16,7 @@
 #include "Input/InputManager.h"
 #include "Resources/ResourceManager.h"
 #include "World/WorldManager.h"
-#include "Editor/Operation/InputOperations.h"   // MakeComposite2D, header-only
+#include "Editor/Assets/Editors/InputMappingComposite.h"   // MakeComposite2D, header-only
 
 using namespace Opaax;
 
@@ -630,7 +630,7 @@ TEST_SUITE("MakeComposite2D — the editor's 2D composite verb")
     {
         // Which direction gets which modifier: a swapped pair would move sideways on up.
         InputMappingEntry lTemplate;
-        lTemplate.Action.Path = "Input/Move.opaaxaction";
+        lTemplate.Action.Path = "Input/Move.opaaxasset";
         lTemplate.bConsume    = true;
 
         const TDynArray<InputMappingEntry> lRows =
@@ -691,6 +691,39 @@ TEST_SUITE("MakeComposite2D — the editor's 2D composite verb")
             lInput.OnKeyReleased(lCase.Key);
             Step(lEval, lInput);
         }
+    }
+
+    TEST_CASE("The selected row is REPLACED by the four, in place; a row without an action is refused")
+    {
+        InputMappingEntry lJump;
+        lJump.Action.Path = "Input/Jump.opaaxasset";
+        lJump.Key         = EKeyCode::Space;
+
+        InputMappingEntry lMove;
+        lMove.Action.Path = "Input/Move.opaaxasset";
+        lMove.bConsume    = false;
+
+        TDynArray<InputMappingEntry> lMappings = { lJump, lMove, lJump };
+
+        REQUIRE(Editor::ReplaceWithComposite2D(lMappings, 1, EKeyCode::Up, EKeyCode::Down,
+                                               EKeyCode::Left, EKeyCode::Right));
+
+        // A fifth key would be the template row left behind.
+        REQUIRE(lMappings.size() == 6);
+        CHECK(lMappings[0].Key == EKeyCode::Space);
+        CHECK(lMappings[1].Key == EKeyCode::Right);
+        CHECK(lMappings[2].Key == EKeyCode::Left);
+        CHECK(lMappings[3].Key == EKeyCode::Up);
+        CHECK(lMappings[4].Key == EKeyCode::Down);
+        CHECK(lMappings[5].Key == EKeyCode::Space);
+        CHECK(lMappings[3].Action.Path == "Input/Move.opaaxasset");
+        CHECK_FALSE(lMappings[4].bConsume);
+
+        // Nothing to bind four keys to, or no such row: the list is left alone.
+        lMappings.emplace_back();
+        CHECK_FALSE(Editor::ReplaceWithComposite2D(lMappings, 6, EKeyCode::W, EKeyCode::S, EKeyCode::A, EKeyCode::D));
+        CHECK_FALSE(Editor::ReplaceWithComposite2D(lMappings, 42, EKeyCode::W, EKeyCode::S, EKeyCode::A, EKeyCode::D));
+        CHECK(lMappings.size() == 7);
     }
 }
 
