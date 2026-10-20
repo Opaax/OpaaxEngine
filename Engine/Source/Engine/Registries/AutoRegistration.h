@@ -206,7 +206,7 @@ namespace Opaax
         ::Opaax::OpaaxHash::Hash64(OldName), 0, OldName,                                           \
         InRegistrar.ObjectClasses().AddAlias(::Opaax::OpaaxStringID(OldName), ::Opaax::OpaaxStringID(Name)))
 
-/** Registers a movement mode under the name .opaaxmovemode files use. */
+/** Registers a movement mode under the name MoveMode assets use. */
 #define OPAAX_REGISTER_MOVER_MODE(Type, Name)                                                        \
     OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::MoverMode,                      \
         ::Opaax::TypeIdOf<Type>(), 0, Name,                                                        \

@@ -1,7 +1,7 @@
 #include "Movement/Modes/GroundMoveMode.h"
 
 #include "Core/Maths/Maths.h"
-#include "Movement/Assets/MoveModeData.h"
+#include "Movement/Assets/MoveMode.h"
 #include "Physics/IPhysicsWorld.h"
 #include "Movement/MoverComponent.h"
 #include "World/Components/TransformComponent.h"
@@ -14,7 +14,7 @@ namespace Opaax
          * Quake-style ground/air update: friction, acceleration toward the desired speed, jump, gravity.
          * Gravity is the world's vector scaled by the tuning.
          */
-        Vector2F SolveVelocity(const MoveModeData& InParams, Vector2F InVelocity, Vector2F InMoveDir,
+        Vector2F SolveVelocity(const MoveMode& InParams, Vector2F InVelocity, Vector2F InMoveDir,
                                const bool bInGrounded, const bool bInJump, Vector2F InWorldGravity,
                                const float InDelta) noexcept
         {

@@ -14,9 +14,14 @@ namespace Opaax
 {
     namespace
     {
-        /** The files whose text may name an asset: every JSON file a project keeps. */
+        /**
+         * The files whose text may name an asset: every JSON file a project keeps, the old per-type asset
+         * formats included (one not converted yet can name one that was).
+         */
         constexpr const char* k_JsonExtensions[] = {
-            ".opaaxlevel", ".opaaxmap", ".opaaxprefab", ".opaaxui", ".opaaxasset", ".opaaxproj", ".config"
+            ".opaaxlevel", ".opaaxmap", ".opaaxprefab", ".opaaxui", ".opaaxasset", ".opaaxproj", ".config",
+            ".opaaxdata", ".opaaxmovemode", ".opaaxmover", ".opaaxaction", ".opaaxinputmap", ".opaaxclip",
+            ".opaaxanim", ".opaaxsheet", ".opaaxfont"
         };
 
         bool EqualsIgnoreCase(const OpaaxStringView InA, const OpaaxStringView InB)
@@ -135,7 +140,9 @@ namespace Opaax
     {
         // One line per format, added when its type became an Asset class.
         static const TDynArray<LegacyFormat> s_Formats = {
-            { ".opaaxdata", nullptr },
+            { ".opaaxdata",     nullptr },
+            { ".opaaxmovemode", "MoveMode" },
+            { ".opaaxmover",    "Mover" },
         };
 
         return s_Formats;

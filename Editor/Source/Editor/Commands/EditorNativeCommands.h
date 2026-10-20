@@ -634,22 +634,6 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params&);
     };
 
-    /** Writes the open .opaaxmovemode and reloads it. */
-    struct SaveMoveModeCommand
-    {
-        using Params = NoParams;
-
-        void Execute(EditorContext& InContext, const Params&);
-    };
-
-    /** Writes the open .opaaxmover and reloads it. */
-    struct SaveMoverCommand
-    {
-        using Params = NoParams;
-
-        void Execute(EditorContext& InContext, const Params&);
-    };
-
     /** Writes the open .opaaxaction and reloads it. */
     struct SaveInputActionCommand
     {

@@ -1,0 +1,17 @@
+{
+    "Class": "Mover",
+    "Properties": {
+        "DefaultMode": "Ground",
+        "Entries": [
+            {
+                "ModeAsset": "Movers/Walker_Ground.opaaxasset",
+                "Name": "Ground"
+            },
+            {
+                "ModeAsset": "Movers/Walker_Fly.opaaxasset",
+                "Name": "Fly"
+            }
+        ]
+    },
+    "Version": 1
+}

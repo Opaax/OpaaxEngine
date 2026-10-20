@@ -23,8 +23,6 @@
 #include "Editor/EditorUICanvasDocument.h"
 #include "Editor/Resources/Types/Input/EditorInputActionDocument.h"
 #include "Editor/Resources/Types/Input/EditorInputMappingContextDocument.h"
-#include "Editor/Resources/Types/Mover/EditorMoveModeDocument.h"
-#include "Editor/Resources/Types/Mover/EditorMoverDocument.h"
 #include "Editor/Export/GameExport.h"
 #include "Editor/PIE/PlayInEditor.h"
 #include "Editor/UI/IEditorGui.h"
@@ -120,6 +118,12 @@ namespace Opaax::Editor
          * File extensions come from the engine's ResourceFormatRegistry.
          */
         void RegisterNativeResourceTypes();
+
+        /**
+         * Registers how the engine's asset classes look and where New Asset lists them. Before the game
+         * module's, which may override them.
+         */
+        void RegisterNativeAssetTypes();
 
         /**
          * Registers drawers for the engine's own components (all reflected, so the generic drawer).
@@ -326,9 +330,7 @@ namespace Opaax::Editor
         /** The open .opaaxui and its canvas. */
         TUniquePtr<EditorUICanvasDocument>         m_UICanvasDocument;
 
-        /** The mover documents (tuning and mover). */
-        TUniquePtr<EditorMoveModeDocument>         m_MoveModeDocument;
-        TUniquePtr<EditorMoverDocument>            m_MoverDocument;
+        /** The open input action and mapping context. */
         TUniquePtr<EditorInputActionDocument>      m_InputActionDocument;
         TUniquePtr<EditorInputMappingContextDocument> m_InputMapDocument;
         TUniquePtr<GameExport>                        m_Export;

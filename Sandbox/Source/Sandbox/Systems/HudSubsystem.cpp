@@ -30,7 +30,7 @@ namespace Sandbox
         constexpr const char* kHudAsset  = "UI/Hud.opaaxui";
         const OpaaxStringID   kHudSource = OPAAX_ID("Hud");
 
-        /** MoveModeData's default MaxSpeed: the bar is full at it. */
+        /** MoveMode's default MaxSpeed: the bar is full at it. */
         constexpr float kFullSpeed = 400.f;
     }
 

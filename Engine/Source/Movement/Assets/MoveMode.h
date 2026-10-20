@@ -1,22 +1,24 @@
 #pragma once
 
-#include <nlohmann/json.hpp>
-
 #include "Core/Maths/Maths.h"   // Cos, DegreesToRadians
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/String/OpaaxStringIDJson.h"
+#include "Resources/Asset/Asset.h"
 
 namespace Opaax
 {
     // =============================================================================
-    // MoveModeData — one movement tuning (.opaaxmovemode), shared by every entity that moves this way.
-    //   Mode names the behaviour (a registered IMoverMode); the other fields are its settings.
-    //   Each mode reads the fields it needs; the editor shows only those.
+    // MoveMode — one movement tuning, shared by every entity that moves this way. Mode names the
+    //   behaviour (a registered IMoverMode); the other fields are its settings. Each mode reads the
+    //   fields it needs; the editor shows only those.
     // =============================================================================
-    struct MoveModeData
+    class MoveMode final : public Asset
     {
+        OPAAX_OBJECT(MoveMode, Asset)
+
+    public:
         /**
          * The registered IMoverMode to use. An unknown id means the mover does not move.
          */
@@ -49,11 +51,7 @@ namespace Opaax
         /** Steepest slope that still counts as ground, in degrees. */
         float MaxSlopeAngleDeg = 50.f;
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(MoveModeData, Mode, GravityScale, MaxSpeed,
-                                                    Acceleration, GroundDeceleration, StopSpeed,
-                                                    MinSpeed, AirSteer, JumpSpeed, MaxSlopeAngleDeg)
-
-        OPAAX_PROPERTIES(MoveModeData,
+        OPAAX_PROPERTIES(MoveMode,
                          OPAAX_PROP(Mode).SetTooltip("Which registered mover mode reads this tuning."),
                          OPAAX_PROP(GravityScale).SetRange(-5.f, 5.f),
                          OPAAX_PROP(MaxSpeed).SetRange(0.f, 5000.f),
@@ -72,5 +70,22 @@ namespace Opaax
         {
             return Maths::Cos(Maths::DegreesToRadians(MaxSlopeAngleDeg));
         }
+
+        //~Begin Object interface
+        /**
+         * Flight has no ground: gravity, friction, jumping and slopes do not apply. A game's own mode
+         * shows every field.
+         */
+        bool IsPropertyVisible(const OpaaxStringView InName) const override
+        {
+            if (Mode == OPAAX_ID("FlyMove"))
+            {
+                return InName == OpaaxStringView("Mode") || InName == OpaaxStringView("MaxSpeed")
+                    || InName == OpaaxStringView("Acceleration");
+            }
+
+            return true;
+        }
+        //~End Object interface
     };
 }

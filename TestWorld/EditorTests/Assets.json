@@ -215,6 +215,116 @@
         }
     },
     {
+        "id": "open-mover",
+        "command": "asset.open",
+        "params": {
+            "path": "Movers/Walker.opaaxasset"
+        },
+        "expect": {
+            "class": "Mover",
+            "properties": {
+                "DefaultMode": "Ground",
+                "Entries": [
+                    {
+                        "Name": "Ground",
+                        "ModeAsset": "Movers/Walker_Ground.opaaxasset"
+                    },
+                    {
+                        "Name": "Fly",
+                        "ModeAsset": "Movers/Walker_Fly.opaaxasset"
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "id": "mover-repeated-name-renamed",
+        "command": "asset.set",
+        "params": {
+            "path": "Movers/Walker.opaaxasset",
+            "properties": {
+                "Entries": [
+                    {
+                        "Name": "Ground",
+                        "ModeAsset": "Movers/Walker_Ground.opaaxasset"
+                    },
+                    {
+                        "Name": "Ground",
+                        "ModeAsset": "Movers/Walker_Fly.opaaxasset"
+                    }
+                ]
+            }
+        },
+        "expect": {
+            "unsaved": true,
+            "properties": {
+                "Entries": [
+                    {
+                        "Name": "Ground"
+                    },
+                    {
+                        "Name": "Walker_Fly"
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot-mover",
+        "command": "screenshot",
+        "params": {
+            "path": "AssetsMover.png"
+        }
+    },
+    {
+        "id": "open-move-mode",
+        "command": "asset.open",
+        "params": {
+            "path": "Movers/Walker_Fly.opaaxasset"
+        },
+        "expect": {
+            "class": "MoveMode",
+            "properties": {
+                "Mode": "FlyMove",
+                "MaxSpeed": 600.0
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot-move-mode",
+        "command": "screenshot",
+        "params": {
+            "path": "AssetsMoveMode.png"
+        }
+    },
+    {
+        "id": "close-mover-discarding",
+        "command": "asset.close",
+        "params": {
+            "path": "Movers/Walker.opaaxasset",
+            "discard": true
+        }
+    },
+    {
+        "id": "close-move-mode",
+        "command": "asset.close",
+        "params": {
+            "path": "Movers/Walker_Fly.opaaxasset"
+        }
+    },
+    {
         "id": "nothing-open",
         "command": "asset.list",
         "expect": {

@@ -32,8 +32,6 @@ namespace Opaax
         class EditorAnimationLibraryDocument; // the open .opaaxanim and its data
         class EditorFontFamilyDocument;       // the open .opaaxfont and its data
         class EditorUICanvasDocument;         // the open .opaaxui and its canvas
-        class EditorMoveModeDocument;         // the open .opaaxmovemode and its data
-        class EditorMoverDocument;            // the open .opaaxmover and its data
         class EditorInputActionDocument;      // the open .opaaxaction and its data
         class EditorInputMappingContextDocument; // the open .opaaxinputmap and its data
         class EditorExtensionRegistrar; // the sealed extension routes
@@ -118,12 +116,6 @@ namespace Opaax
 
             // The open .opaaxui. Owns a real UICanvas: the panel previews it by rendering it.
             EditorUICanvasDocument& UICanvasDocument;
-
-            // The open movement tuning (.opaaxmovemode).
-            EditorMoveModeDocument& MoveModeDocument;
-
-            // The open mover (short names -> tunings).
-            EditorMoverDocument& MoverDocument;
 
             // The open input action. It names no keys (mapping contexts do).
             EditorInputActionDocument& InputActionDocument;

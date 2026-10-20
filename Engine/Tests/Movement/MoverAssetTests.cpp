@@ -1,4 +1,4 @@
-// Suite: the mover assets — .opaaxmovemode (a tuning) and .opaaxmover (named modes).
+// Suite: the mover assets — MoveMode (a tuning) and Mover (named modes).
 // A named mode that is missing gives nullptr (no silent fallback); only "no opinion" gets the default.
 // File cases use a unique temp directory, created and removed per case.
 #include <doctest.h>
@@ -6,233 +6,210 @@
 #include "../TestTempDir.h"
 
 #include "Core/IO/FileIO.h"
-#include "Movement/Assets/MoveModeData.h"
-#include "Movement/Assets/MoveModeFile.h"
-#include "Movement/Assets/MoverData.h"
-#include "Movement/Assets/MoverFile.h"
+#include "Movement/Assets/MoveMode.h"
+#include "Movement/Assets/Mover.h"
+#include "Object/ObjectClassRegistry.h"
+#include "Resources/Asset/AssetFile.h"
 
 using namespace Opaax;
 
 namespace
 {
-
-    MoveModeData MakeGround()
+    struct MovementClasses final : ObjectClassRegistry
     {
-        MoveModeData lData;
-        lData.Mode             = OPAAX_ID("GroundMove");
-        lData.MaxSpeed         = 375.f;
-        lData.JumpSpeed        = 640.f;
-        lData.MaxSlopeAngleDeg = 60.f;
-        return lData;
+        MovementClasses()
+        {
+            Register<MoveMode>();
+            Register<Mover>();
+        }
+    };
+
+    MoverEntry MakeEntry(const char* InName, const char* InModePath = "")
+    {
+        MoverEntry lEntry;
+        lEntry.Name           = (InName[0] == '\0') ? OpaaxStringID() : OpaaxStringID(InName);
+        lEntry.ModeAsset.Path = OpaaxString(InModePath);
+        return lEntry;
     }
 }
 
 // =============================================================================
-// MoveModeData — the tuning
+// MoveMode — the tuning
 // =============================================================================
 
-TEST_CASE("MoveModeData: the defaults are a walkable ground mode")
+TEST_CASE("MoveMode: the defaults are a walkable ground mode")
 {
-    const MoveModeData lData{};
+    const MoveMode lMode;
 
-    // The placeholder policy leans on this: a missing tuning yields something that MOVES, so a
-    // broken reference degrades rather than freezing the entity.
-    CHECK(lData.Mode == OPAAX_ID("GroundMove"));
-    CHECK(lData.MaxSpeed > 0.f);
-    CHECK(lData.JumpSpeed > 0.f);
+    // A tuning that does not load gives these (TAssetHandle::GetOrDefault): a broken reference
+    // degrades into walking rather than freezing the entity.
+    CHECK(lMode.Mode == OPAAX_ID("GroundMove"));
+    CHECK(lMode.MaxSpeed > 0.f);
+    CHECK(lMode.JumpSpeed > 0.f);
+
+    const MoveMode* lDefault = static_cast<const MoveMode*>(MoveMode::StaticClass().GetDefaultObject());
+    REQUIRE(lDefault != nullptr);
+    CHECK(lDefault->Mode == OPAAX_ID("GroundMove"));
 }
 
-TEST_CASE("MoveModeData: GroundNormalY is the COSINE of the slope limit")
+TEST_CASE("MoveMode: GroundNormalY is the COSINE of the slope limit")
 {
-    MoveModeData lData;
+    MoveMode lMode;
 
     // 0 degrees means only a perfectly flat surface counts as ground, so the threshold is 1.
-    lData.MaxSlopeAngleDeg = 0.f;
-    CHECK(lData.GroundNormalY() == doctest::Approx(1.f));
+    lMode.MaxSlopeAngleDeg = 0.f;
+    CHECK(lMode.GroundNormalY() == doctest::Approx(1.f));
 
     // 60 degrees admits anything whose normal.y >= 0.5 — the value the sweep compares against.
-    lData.MaxSlopeAngleDeg = 60.f;
-    CHECK(lData.GroundNormalY() == doctest::Approx(0.5f).epsilon(0.001));
+    lMode.MaxSlopeAngleDeg = 60.f;
+    CHECK(lMode.GroundNormalY() == doctest::Approx(0.5f).epsilon(0.001));
 
-    // Steeper limit must ADMIT MORE, i.e. a lower threshold. A sign error here would invert the
-    // whole meaning of the field while still producing a plausible number.
-    lData.MaxSlopeAngleDeg = 45.f;
-    const float lAt45 = lData.GroundNormalY();
-    lData.MaxSlopeAngleDeg = 80.f;
-    CHECK(lData.GroundNormalY() < lAt45);
+    // Steeper limit must ADMIT MORE, i.e. a lower threshold.
+    lMode.MaxSlopeAngleDeg = 45.f;
+    const float lAt45 = lMode.GroundNormalY();
+    lMode.MaxSlopeAngleDeg = 80.f;
+    CHECK(lMode.GroundNormalY() < lAt45);
 }
 
-TEST_CASE("MoveModeFile: a tuning round-trips through disk unchanged")
+TEST_CASE("MoveMode: an editor shows only the fields its mode reads")
 {
-    const TestTempDir   lDir("modeRoundTrip");
-    const OpaaxString   lPath = lDir.Sub("Hero_Ground.opaaxmovemode");
+    MoveMode lMode;
+    CHECK(lMode.IsPropertyVisible(OpaaxStringView("JumpSpeed")));
+    CHECK(lMode.IsPropertyVisible(OpaaxStringView("GravityScale")));
 
-    const MoveModeData lSaved = MakeGround();
-    REQUIRE(MoveModeFile::Save(lPath, lSaved));
+    // Flight has no ground; the mode stays editable, so it can be switched back.
+    lMode.Mode = OPAAX_ID("FlyMove");
+    CHECK(lMode.IsPropertyVisible(OpaaxStringView("Mode")));
+    CHECK(lMode.IsPropertyVisible(OpaaxStringView("MaxSpeed")));
+    CHECK(lMode.IsPropertyVisible(OpaaxStringView("Acceleration")));
+    CHECK_FALSE(lMode.IsPropertyVisible(OpaaxStringView("JumpSpeed")));
+    CHECK_FALSE(lMode.IsPropertyVisible(OpaaxStringView("GravityScale")));
 
-    MoveModeData lLoaded;
-    REQUIRE(MoveModeFile::Load(lPath, lLoaded));
-
-    CHECK(lLoaded.Mode == lSaved.Mode);
-    CHECK(lLoaded.MaxSpeed == doctest::Approx(lSaved.MaxSpeed));
-    CHECK(lLoaded.JumpSpeed == doctest::Approx(lSaved.JumpSpeed));
-    CHECK(lLoaded.MaxSlopeAngleDeg == doctest::Approx(lSaved.MaxSlopeAngleDeg));
+    // A game's own mode: nothing is hidden.
+    lMode.Mode = OPAAX_ID("SwimMove");
+    CHECK(lMode.IsPropertyVisible(OpaaxStringView("GravityScale")));
 }
 
-TEST_CASE("MoveModeFile: a file missing a key keeps that field's DEFAULT")
+TEST_CASE("MoveMode: a tuning round-trips through its asset file; a missing key keeps its default")
 {
-    const TestTempDir   lDir("modePartial");
-    const OpaaxString   lPath = lDir.Sub("Partial.opaaxmovemode");
+    const TestTempDir     lDir("modeRoundTrip");
+    const MovementClasses lClasses;
 
-    // The _WITH_DEFAULT contract, which is what makes "add a field" backward compatible: an asset
-    // authored before JumpSpeed existed must still load.
-    REQUIRE(FileIO::WriteAllText(lPath, OpaaxString(R"({ "Mode": "FlyMove", "MaxSpeed": 900.0 })")));
+    MoveMode lSaved;
+    lSaved.MaxSpeed         = 375.f;
+    lSaved.JumpSpeed        = 640.f;
+    lSaved.MaxSlopeAngleDeg = 60.f;
 
-    MoveModeData lLoaded;
-    REQUIRE(MoveModeFile::Load(lPath, lLoaded));
+    const OpaaxString lPath = lDir.Sub("Hero_Ground.opaaxasset");
+    REQUIRE(AssetFile::Save(lPath, lSaved));
 
-    CHECK(lLoaded.Mode == OPAAX_ID("FlyMove"));
-    CHECK(lLoaded.MaxSpeed == doctest::Approx(900.f));
-    CHECK(lLoaded.JumpSpeed == doctest::Approx(MoveModeData{}.JumpSpeed));
-}
+    const TStrongObjectPtr<Asset> lLoaded = AssetFile::LoadAsset(lPath, lClasses);
+    const MoveMode* lMode = Cast<MoveMode>(lLoaded.Get());
+    REQUIRE(lMode != nullptr);
+    CHECK(lMode->MaxSpeed == doctest::Approx(375.f));
+    CHECK(lMode->JumpSpeed == doctest::Approx(640.f));
+    CHECK(lMode->MaxSlopeAngleDeg == doctest::Approx(60.f));
 
-TEST_CASE("MoveModeFile: a missing or malformed file FAILS and leaves the output untouched")
-{
-    const TestTempDir lDir("modeBad");
+    // Written before JumpSpeed existed: it still loads, with that field's default.
+    const OpaaxString lPartial = lDir.Sub("Partial.opaaxasset");
+    REQUIRE(FileIO::WriteAllText(lPartial, OpaaxString(R"({ "Class": "MoveMode", "Properties": { "Mode": "FlyMove", "MaxSpeed": 900.0 } })")));
 
-    MoveModeData lData = MakeGround();
-
-    CHECK_FALSE(MoveModeFile::Load(lDir.Sub("NoSuchFile.opaaxmovemode"), lData));
-    CHECK(lData.MaxSpeed == doctest::Approx(375.f));   // untouched, not half-written
-
-    const OpaaxString lNotJson = lDir.Sub("Broken.opaaxmovemode");
-    REQUIRE(FileIO::WriteAllText(lNotJson, OpaaxString("this is not json")));
-    CHECK_FALSE(MoveModeFile::Load(lNotJson, lData));
-    CHECK(lData.MaxSpeed == doctest::Approx(375.f));
-
-    // Valid json that is not an OBJECT — the case a bare array or number would hit.
-    const OpaaxString lArray = lDir.Sub("Array.opaaxmovemode");
-    REQUIRE(FileIO::WriteAllText(lArray, OpaaxString("[1, 2, 3]")));
-    CHECK_FALSE(MoveModeFile::Load(lArray, lData));
-    CHECK(lData.MaxSpeed == doctest::Approx(375.f));
+    const TStrongObjectPtr<Asset> lOld = AssetFile::LoadAsset(lPartial, lClasses);
+    REQUIRE(Cast<MoveMode>(lOld.Get()) != nullptr);
+    CHECK(Cast<MoveMode>(lOld.Get())->Mode == OPAAX_ID("FlyMove"));
+    CHECK(Cast<MoveMode>(lOld.Get())->JumpSpeed == doctest::Approx(MoveMode{}.JumpSpeed));
 }
 
 // =============================================================================
-// MoverData — the bag, and its resolution rules
+// Mover — the bag, and its resolution rules
 // =============================================================================
 
-TEST_CASE("MoverData: Find is EXACT for a named mode, and a missing name answers nullptr")
+TEST_CASE("Mover: Find is EXACT for a named mode, and a missing name answers nullptr")
 {
-    MoverData lData;
-    lData.Entries.emplace_back(MoverEntry{ OPAAX_ID("Ground"), {} });
-    lData.Entries.emplace_back(MoverEntry{ OPAAX_ID("Fly"), {} });
-    lData.DefaultMode = OPAAX_ID("Ground");
+    Mover lMover;
+    lMover.Entries = { MakeEntry("Ground"), MakeEntry("Fly") };
+    lMover.DefaultMode = OPAAX_ID("Ground");
 
-    REQUIRE(lData.Find(OPAAX_ID("Fly")) != nullptr);
-    CHECK(lData.Find(OPAAX_ID("Fly"))->Name == OPAAX_ID("Fly"));
+    REQUIRE(lMover.Find(OPAAX_ID("Fly")) != nullptr);
+    CHECK(lMover.Find(OPAAX_ID("Fly"))->Name == OPAAX_ID("Fly"));
 
-    // The rule worth pinning: a NAMED mode that is absent does NOT fall back to the default.
-    // Silently moving a different way for a typo is the wrong-answer failure, not a convenience.
-    CHECK(lData.Find(OPAAX_ID("Swim")) == nullptr);
+    // A NAMED mode that is absent does NOT fall back to the default: moving another way for a typo
+    // is the wrong-answer failure.
+    CHECK(lMover.Find(OPAAX_ID("Swim")) == nullptr);
 }
 
-TEST_CASE("MoverData: NO OPINION resolves to the default, then to the first entry")
+TEST_CASE("Mover: NO OPINION resolves to the default, then to the first entry")
 {
-    MoverData lData;
-    lData.Entries.emplace_back(MoverEntry{ OPAAX_ID("Ground"), {} });
-    lData.Entries.emplace_back(MoverEntry{ OPAAX_ID("Fly"), {} });
+    Mover lMover;
+    lMover.Entries = { MakeEntry("Ground"), MakeEntry("Fly") };
 
-    // An invalid id means "I have no opinion" — a different question from a misspelled name.
-    lData.DefaultMode = OPAAX_ID("Fly");
-    REQUIRE(lData.Find(OpaaxStringID{}) != nullptr);
-    CHECK(lData.Find(OpaaxStringID{})->Name == OPAAX_ID("Fly"));
+    lMover.DefaultMode = OPAAX_ID("Fly");
+    REQUIRE(lMover.Find(OpaaxStringID{}) != nullptr);
+    CHECK(lMover.Find(OpaaxStringID{})->Name == OPAAX_ID("Fly"));
 
     // A default naming something absent falls through to the first entry rather than to nothing.
-    lData.DefaultMode = OPAAX_ID("Swim");
-    REQUIRE(lData.Find(OpaaxStringID{}) != nullptr);
-    CHECK(lData.Find(OpaaxStringID{})->Name == OPAAX_ID("Ground"));
+    lMover.DefaultMode = OPAAX_ID("Swim");
+    REQUIRE(lMover.Find(OpaaxStringID{}) != nullptr);
+    CHECK(lMover.Find(OpaaxStringID{})->Name == OPAAX_ID("Ground"));
+
+    const Mover lEmpty;
+    CHECK(lEmpty.EntryCount() == 0u);
+    CHECK(lEmpty.Find(OpaaxStringID{}) == nullptr);
+    CHECK(lEmpty.Find(OPAAX_ID("Ground")) == nullptr);
 }
 
-TEST_CASE("MoverData: an EMPTY bag resolves nothing, both ways")
+TEST_CASE("Mover: an edit keeps the names usable")
 {
-    const MoverData lData{};
+    Mover lMover;
+    lMover.Entries = {
+        MakeEntry("Ground", "Movers/Hero_Ground.opaaxasset"),
+        MakeEntry("Ground", "Movers/Hero_Swim.opaaxasset"),   // a repeated name: could never be reached
+        MakeEntry("", "Movers/Hero_Fly.opaaxasset"),          // a dropped tuning, no name yet
+        MakeEntry("", "Other/Hero_Fly.opaaxasset"),           // its file's name is already taken
+    };
+    lMover.DefaultMode = OPAAX_ID("Walk");                    // names no entry
 
-    CHECK(lData.EntryCount() == 0u);
-    CHECK(lData.Find(OpaaxStringID{}) == nullptr);
-    CHECK(lData.Find(OPAAX_ID("Ground")) == nullptr);
+    lMover.PostEditChange();
+
+    CHECK(lMover.Entries[0].Name == OPAAX_ID("Ground"));
+    CHECK(lMover.Entries[1].Name == OPAAX_ID("Hero_Swim"));   // cleared, then named after its file
+    CHECK(lMover.Entries[2].Name == OPAAX_ID("Hero_Fly"));
+    CHECK_FALSE(lMover.Entries[3].Name.IsValid());
+    CHECK_FALSE(lMover.DefaultMode.IsValid());
+
+    // A valid default stays.
+    lMover.DefaultMode = OPAAX_ID("Hero_Fly");
+    lMover.PostEditChange();
+    CHECK(lMover.DefaultMode == OPAAX_ID("Hero_Fly"));
 }
 
-TEST_CASE("MoverFile: a bag round-trips, entries and default alike")
+TEST_CASE("Mover: a bag round-trips through its asset file, entries and default alike")
 {
-    const TestTempDir   lDir("moverRoundTrip");
-    const OpaaxString   lPath = lDir.Sub("Hero.opaaxmover");
+    const TestTempDir     lDir("moverRoundTrip");
+    const MovementClasses lClasses;
 
-    MoverData lSaved;
-    lSaved.Entries.emplace_back(MoverEntry{ OPAAX_ID("Ground"), {} });
-    lSaved.Entries.back().ModeAsset.Path = "Movers/Hero_Ground.opaaxmovemode";
-    lSaved.Entries.emplace_back(MoverEntry{ OPAAX_ID("Fly"), {} });
-    lSaved.Entries.back().ModeAsset.Path = "Movers/Hero_Fly.opaaxmovemode";
+    Mover lSaved;
+    lSaved.Entries = { MakeEntry("Ground", "Movers/Hero_Ground.opaaxasset"), MakeEntry("Fly", "Movers/Hero_Fly.opaaxasset") };
     lSaved.DefaultMode = OPAAX_ID("Ground");
 
-    REQUIRE(MoverFile::Save(lPath, lSaved));
+    const OpaaxString lPath = lDir.Sub("Hero.opaaxasset");
+    REQUIRE(AssetFile::Save(lPath, lSaved));
 
-    MoverData lLoaded;
-    REQUIRE(MoverFile::Load(lPath, lLoaded));
+    const TStrongObjectPtr<Asset> lAsset = AssetFile::LoadAsset(lPath, lClasses);
+    const Mover* lLoaded = Cast<Mover>(lAsset.Get());
+    REQUIRE(lLoaded != nullptr);
+    REQUIRE(lLoaded->EntryCount() == 2u);
+    CHECK(lLoaded->DefaultMode == OPAAX_ID("Ground"));
+    CHECK(lLoaded->Entries[0].Name == OPAAX_ID("Ground"));
 
-    REQUIRE(lLoaded.EntryCount() == 2u);
-    CHECK(lLoaded.DefaultMode == OPAAX_ID("Ground"));
-    CHECK(lLoaded.Entries[0].Name == OPAAX_ID("Ground"));
+    // And it still resolves after the round trip, path included.
+    REQUIRE(lLoaded->Find(OPAAX_ID("Fly")) != nullptr);
+    CHECK(lLoaded->Find(OPAAX_ID("Fly"))->ModeAsset.Path == OpaaxString("Movers/Hero_Fly.opaaxasset"));
 
-    // The PATH is the half that makes the bag a bag — a name with no asset resolves to nothing.
-    CHECK(lLoaded.Entries[1].ModeAsset.Path == OpaaxString("Movers/Hero_Fly.opaaxmovemode"));
-
-    // And it still resolves after the round trip, which the raw field compare above does not prove.
-    REQUIRE(lLoaded.Find(OPAAX_ID("Fly")) != nullptr);
-    CHECK(lLoaded.Find(OPAAX_ID("Fly"))->ModeAsset.Path == OpaaxString("Movers/Hero_Fly.opaaxmovemode"));
-}
-
-TEST_CASE("MoverFile: an EMPTY bag saves and loads — it is what a freshly created one is")
-{
-    const TestTempDir   lDir("moverEmpty");
-    const OpaaxString   lPath = lDir.Sub("Empty.opaaxmover");
-
-    const MoverData lSaved{};
-    REQUIRE(MoverFile::Save(lPath, lSaved));
-
-    MoverData lLoaded;
-    lLoaded.Entries.emplace_back(MoverEntry{ OPAAX_ID("Stale"), {} });
-
-    REQUIRE(MoverFile::Load(lPath, lLoaded));
-    CHECK(lLoaded.EntryCount() == 0u);   // replaced, not merged
-}
-
-TEST_CASE("MoverFile: a malformed bag FAILS and leaves the output untouched")
-{
-    const TestTempDir lDir("moverBad");
-
-    MoverData lData;
-    lData.Entries.emplace_back(MoverEntry{ OPAAX_ID("Ground"), {} });
-
-    CHECK_FALSE(MoverFile::Load(lDir.Sub("NoSuchFile.opaaxmover"), lData));
-    CHECK(lData.EntryCount() == 1u);
-
-    const OpaaxString lNotJson = lDir.Sub("Broken.opaaxmover");
-    REQUIRE(FileIO::WriteAllText(lNotJson, OpaaxString("{{{")));
-    CHECK_FALSE(MoverFile::Load(lNotJson, lData));
-    CHECK(lData.EntryCount() == 1u);
-}
-
-TEST_CASE("MoverFile: Serialize is EXACTLY what Save writes — the editor's dirty check depends on it")
-{
-    const TestTempDir   lDir("moverSerialize");
-    const OpaaxString   lPath = lDir.Sub("Dirty.opaaxmover");
-
-    MoverData lData;
-    lData.Entries.emplace_back(MoverEntry{ OPAAX_ID("Ground"), {} });
-    lData.DefaultMode = OPAAX_ID("Ground");
-
-    REQUIRE(MoverFile::Save(lPath, lData));
-
-    // If these two ever diverged, an untouched document would report itself dirty forever.
-    CHECK(MoverFile::Serialize(lData) == FileIO::ReadAllText(lPath));
+    // An empty bag is what a new one is.
+    const OpaaxString lEmptyPath = lDir.Sub("Empty.opaaxasset");
+    REQUIRE(AssetFile::Save(lEmptyPath, Mover{}));
+    const TStrongObjectPtr<Asset> lEmpty = AssetFile::LoadAsset(lEmptyPath, lClasses);
+    REQUIRE(Cast<Mover>(lEmpty.Get()) != nullptr);
+    CHECK(Cast<Mover>(lEmpty.Get())->EntryCount() == 0u);
 }

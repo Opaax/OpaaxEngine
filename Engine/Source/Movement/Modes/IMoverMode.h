@@ -7,7 +7,7 @@
 namespace Opaax
 {
     class IPhysicsWorld;
-    struct MoveModeData;
+    class MoveMode;
     struct MoverComponent;
     struct TransformComponent;
 
@@ -19,7 +19,7 @@ namespace Opaax
         IPhysicsWorld&      World;
         MoverComponent&     Mover;
         TransformComponent& Transform;
-        const MoveModeData& Params;
+        const MoveMode&     Params;
 
         float DeltaTime = 0.f;
 

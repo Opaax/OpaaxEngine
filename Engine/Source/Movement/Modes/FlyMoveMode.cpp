@@ -1,6 +1,6 @@
 #include "Movement/Modes/FlyMoveMode.h"
 
-#include "Movement/Assets/MoveModeData.h"
+#include "Movement/Assets/MoveMode.h"
 #include "Physics/Collision/CollisionChannel.h"
 #include "Physics/IPhysicsWorld.h"
 #include "Movement/MoverComponent.h"

@@ -18,8 +18,7 @@ engine content with `/Engine/` (`/Engine/Textures/T_Square_256_White.png`).
 | `.opaaxaction`, `.opaaxinputmap` | Input actions, and the keys that drive them | Input panels |
 | `.opaaxsheet` | A texture cut into named frames | Sprite Sheet panel |
 | `.opaaxclip`, `.opaaxanim` | An animation clip, a library of clips | Animation panels |
-| `.opaaxasset` | An asset of any registered class (a `Material2D`, an `AudioClipDef` or `AudioBank`, a game's own classes) | Its own window: double-click it |
-| `.opaaxmover`, `.opaaxmovemode` | A Mover's modes, and one mode's tuning | Mover panels |
+| `.opaaxasset` | An asset of any registered class (a `Material2D`, an `AudioClipDef` or `AudioBank`, a `Mover` or `MoveMode`, a game's own classes) | Its own window: double-click it |
 | `.opaaxfont` | A font family: faces by style | Font Family panel |
 | `Configs/*.config` | Engine, renderer and editor settings | Config panel |
 
@@ -260,8 +259,8 @@ its properties by field name, and the format's version:
 
 A missing property keeps its default, so `{ "Class": "Material2D" }` is a whole asset. A value of the
 wrong type makes the file fail to load (the log names the field). A sprite uses a material through its
-`Material` field. Files written by an older engine (`.opaaxdata`) are converted once by starting the
-editor with `--upgrade-assets`.
+`Material` field. Files written by an older engine (`.opaaxdata`, `.opaaxmover`, `.opaaxmovemode`) are
+converted once by starting the editor with `--upgrade-assets`.
 
 ## Sound (`AudioClipDef`, `AudioBank`)
 
@@ -290,23 +289,30 @@ definition's) or `Clip` with its own `Bus`, `Volume`, `Pitch`, `bLoop`, `bSpatia
 `Attenuation`. `bPlayOnStart` starts it with its entity; `bStopOnDestroy` off lets it play to its end
 after the entity is gone.
 
-## Movement (`.opaaxmover`, `.opaaxmovemode`)
+## Movement (`Mover`, `MoveMode`)
 
-A mover lists the modes a `Mover` component can switch between; each mode is its own tuning file:
+Both are assets. A `Mover` lists the modes a `Mover` component can switch between; each mode is a
+`MoveMode` asset of its own (a tuning):
 
 ```json
-{ "DefaultMode": "Ground", "Entries": [ { "Name": "Ground", "ModeAsset": "Movers/Hero_Ground.opaaxmovemode" },
-                                        { "Name": "Fly",    "ModeAsset": "Movers/Hero_Fly.opaaxmovemode" } ] }
+{ "Class": "Mover", "Properties": {
+    "DefaultMode": "Ground",
+    "Entries": [ { "Name": "Ground", "ModeAsset": "Movers/Hero_Ground.opaaxasset" },
+                 { "Name": "Fly",    "ModeAsset": "Movers/Hero_Fly.opaaxasset" } ] } }
 ```
 
 ```json
-{ "Mode": "GroundMove", "MaxSpeed": 420.0, "Acceleration": 12.0, "GroundDeceleration": 9.0,
-  "AirSteer": 0.35, "JumpSpeed": 620.0, "GravityScale": 1.0, "MaxSlopeAngleDeg": 50.0,
-  "MinSpeed": 10.0, "StopSpeed": 100.0 }
+{ "Class": "MoveMode", "Properties": {
+    "Mode": "GroundMove", "MaxSpeed": 420.0, "Acceleration": 12.0, "GroundDeceleration": 9.0,
+    "AirSteer": 0.35, "JumpSpeed": 620.0, "GravityScale": 1.0, "MaxSlopeAngleDeg": 50.0,
+    "MinSpeed": 10.0, "StopSpeed": 100.0 } }
 ```
 
-`Mode` names a registered mode (`GroundMove`, `FlyMove`, or a game's `OPAAX_REGISTER_MOVER_MODE`).
-Gameplay drives a mover through its component: `Input.MoveDir`, `Input.bJump`, `PendingMode`.
+`Mode` names a registered mode (`GroundMove`, `FlyMove`, or a game's `OPAAX_REGISTER_MOVER_MODE`); its
+window shows only the fields that mode reads. A tuning that does not load moves with the defaults (a
+walking mode). In a Mover, names resolve by first match: an edit clears a repeated name, names an
+entry after its tuning's file when it has none, and clears a default that names no entry. Gameplay
+drives a mover through its component: `Input.MoveDir`, `Input.bJump`, `PendingMode`.
 
 ## Fonts (`.opaaxfont`)
 

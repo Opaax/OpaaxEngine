@@ -102,10 +102,6 @@ namespace Opaax::Editor::Tags
     inline const OpaaxTag EDITOR_COMMAND_SAVE_UI          = OpaaxTag("Editor.Command.SaveUI");
     inline const OpaaxTag EDITOR_COMMAND_DELETE_UI_WIDGET = OpaaxTag("Editor.Command.DeleteUIWidget");
 
-    //Mover
-    inline const OpaaxTag EDITOR_COMMAND_SAVE_MOVE_MODE = OpaaxTag("Editor.Command.SaveMoveMode");
-    inline const OpaaxTag EDITOR_COMMAND_SAVE_MOVER     = OpaaxTag("Editor.Command.SaveMover");
-
     // Input: an action and its mapping context are separate assets, saved separately.
     inline const OpaaxTag EDITOR_COMMAND_SAVE_INPUT_ACTION = OpaaxTag("Editor.Command.SaveInputAction");
     inline const OpaaxTag EDITOR_COMMAND_SAVE_INPUT_MAP    = OpaaxTag("Editor.Command.SaveInputMap");

@@ -49,7 +49,7 @@ namespace Opaax
         ResourceFormatRegistry&       Resources()       noexcept { return m_ResourceFormats; }
         const ResourceFormatRegistry& Resources() const noexcept { return m_ResourceFormats; }
 
-        // Movement modes a .opaaxmovemode can use.
+        // Movement modes a MoveMode asset can use.
         MoverModeRegistry&       MoverModes()       noexcept { return m_MoverModes; }
         const MoverModeRegistry& MoverModes() const noexcept { return m_MoverModes; }
 

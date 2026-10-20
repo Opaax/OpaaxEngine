@@ -30,11 +30,9 @@
 #include "Editor/Panels/ResourcePreviewPanel.h"
 #include "Editor/Panels/AnimationClipPanel.h"
 #include "Editor/Panels/AnimationLibraryPanel.h"
-#include "Editor/Panels/MoveModePanel.h"
 #include "Resources/Asset/AssetResource.h"
 #include "Editor/Panels/InputActionPanel.h"
 #include "Editor/Panels/InputMappingContextPanel.h"
-#include "Editor/Panels/MoverPanel.h"
 #include "Editor/Panels/FontFamilyPanel.h"
 #include "Editor/EditorFontFamilyDocument.h"
 #include "Editor/Panels/UICanvasPanel.h"
@@ -69,8 +67,11 @@
 #include "Renderer/Textures/SpriteSheetResource.h"
 #include "Animation/AnimationClipResource.h"
 #include "Animation/AnimationLibraryResource.h"
-#include "Movement/Assets/MoveModeResource.h"
-#include "Movement/Assets/MoverResource.h"
+#include "Audio/AudioBank.h"
+#include "Audio/AudioClipDef.h"
+#include "Movement/Assets/MoveMode.h"
+#include "Movement/Assets/Mover.h"
+#include "Renderer/Materials/Material2D.h"
 #include "Input/Assets/InputActionResource.h"
 #include "Input/Assets/InputMappingContextResource.h"
 #include "Renderer/Text/FontFaceResource.h"
@@ -164,8 +165,6 @@ namespace Opaax::Editor
         m_LibraryDocument   = MakeUnique<EditorAnimationLibraryDocument>();
         m_FamilyDocument    = MakeUnique<EditorFontFamilyDocument>();
         m_UICanvasDocument  = MakeUnique<EditorUICanvasDocument>();
-        m_MoveModeDocument  = MakeUnique<EditorMoveModeDocument>();
-        m_MoverDocument     = MakeUnique<EditorMoverDocument>();
         m_InputActionDocument = MakeUnique<EditorInputActionDocument>();
         m_InputMapDocument    = MakeUnique<EditorInputMappingContextDocument>();
         m_Export              = MakeUnique<GameExport>();
@@ -216,8 +215,6 @@ namespace Opaax::Editor
             *m_LibraryDocument,
             *m_FamilyDocument,
             *m_UICanvasDocument,
-            *m_MoveModeDocument,
-            *m_MoverDocument,
             *m_InputActionDocument,
             *m_InputMapDocument,
             m_Extensions,
@@ -384,8 +381,6 @@ namespace Opaax::Editor
         lPanelsRegistry.Register<PrefabPanel>(PanelDesc         {.Id = PrefabPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_PREFAB, .UndoCommand = Tags::EDITOR_COMMAND_UNDO_PREFAB, .RedoCommand = Tags::EDITOR_COMMAND_REDO_PREFAB, .DeleteCommand = Tags::EDITOR_COMMAND_DELETE_PREFAB_SELECTION});
         lPanelsRegistry.Register<AnimationClipPanel>(PanelDesc  {.Id = AnimationClipPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_CLIP});
         lPanelsRegistry.Register<AnimationLibraryPanel>(PanelDesc{.Id = AnimationLibraryPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_LIBRARY});
-        lPanelsRegistry.Register<MoveModePanel>(PanelDesc{.Id = MoveModePanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_MOVE_MODE});
-        lPanelsRegistry.Register<MoverPanel>(PanelDesc{.Id = MoverPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_MOVER});
         lPanelsRegistry.Register<InputActionPanel>(PanelDesc{.Id = InputActionPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_INPUT_ACTION});
         lPanelsRegistry.Register<InputMappingContextPanel>(PanelDesc{.Id = InputMappingContextPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_INPUT_MAP});
         lPanelsRegistry.Register<FontFamilyPanel>(PanelDesc{.Id = FontFamilyPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_FAMILY});
@@ -444,8 +439,6 @@ namespace Opaax::Editor
         lCommands.Register<SaveSheetCommand>(Tags::EDITOR_COMMAND_SAVE_SHEET);
         lCommands.Register<SaveClipCommand>(Tags::EDITOR_COMMAND_SAVE_CLIP);
         lCommands.Register<SaveLibraryCommand>(Tags::EDITOR_COMMAND_SAVE_LIBRARY);
-        lCommands.Register<SaveMoveModeCommand>(Tags::EDITOR_COMMAND_SAVE_MOVE_MODE);
-        lCommands.Register<SaveMoverCommand>(Tags::EDITOR_COMMAND_SAVE_MOVER);
         lCommands.Register<SaveInputActionCommand>(Tags::EDITOR_COMMAND_SAVE_INPUT_ACTION);
         lCommands.Register<SaveInputMapCommand>(Tags::EDITOR_COMMAND_SAVE_INPUT_MAP);
         lCommands.Register<SaveFamilyCommand>(Tags::EDITOR_COMMAND_SAVE_FAMILY);
@@ -603,6 +596,19 @@ namespace Opaax::Editor
         m_Extensions.ConfigDrawers().Register<Config_EditorImgui, EditorImguiConfigDrawer>();
     }
 
+    void EditorService::RegisterNativeAssetTypes()
+    {
+        // The engine's asset classes, by New Asset submenu. A class registered nowhere is offered at the
+        // top level, named and drawn from its class name; a game module registers its own the same way.
+        AssetTypeRegistry& lTypes = m_Extensions.AssetTypes();
+
+        lTypes.Register<Material2D>().SetCategory(OpaaxString("Rendering"));
+        lTypes.Register<AudioClipDef>().SetCategory(OpaaxString("Audio"));
+        lTypes.Register<AudioBank>().SetCategory(OpaaxString("Audio"));
+        lTypes.Register<MoveMode>().SetCategory(OpaaxString("Movement"));
+        lTypes.Register<Mover>().SetCategory(OpaaxString("Movement")).SetGlyph(OpaaxString("[MV]"));
+    }
+
     void EditorService::RegisterNativeResourceTypes()
     {
         // Every asset class opens in a window of its own; how each looks comes from AssetTypes().
@@ -709,27 +715,6 @@ namespace Opaax::Editor
                 if (InContext.LibraryDocument.Open(InFile.AbsPath))
                 {
                     InContext.Panels.SetVisible(AnimationLibraryPanel::PanelID(), true);
-                }
-            });
-
-        // Both open their editor (they are documents).
-        m_Extensions.ResourceTypes().Register<MoveModeResource>()
-            .SetGlyph(OpaaxString("[MM]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                if (InContext.MoveModeDocument.Open(InFile.AbsPath))
-                {
-                    InContext.Panels.SetVisible(MoveModePanel::PanelID(), true);
-                }
-            });
-
-        m_Extensions.ResourceTypes().Register<MoverResource>()
-            .SetGlyph(OpaaxString("[MV]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                if (InContext.MoverDocument.Open(InFile.AbsPath))
-                {
-                    InContext.Panels.SetVisible(MoverPanel::PanelID(), true);
                 }
             });
 
@@ -1028,6 +1013,7 @@ namespace Opaax::Editor
         RegisterNativePanels();
         RegisterNativeMenus();
         RegisterNativeResourceTypes();
+        RegisterNativeAssetTypes();
         RegisterNativeEditorCommand();
         RegisterNativeDrawers();
         RegisterNativeConfigDrawers();

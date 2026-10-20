@@ -199,7 +199,7 @@ namespace Opaax
 
     // =============================================================================
     // MoverModeRoute — registers mover modes into the MoverModeRegistry.
-    //   The name is required: .opaaxmovemode files store it.
+    //   The name is required: MoveMode assets store it.
     // =============================================================================
     class MoverModeRoute
     {
@@ -210,7 +210,7 @@ namespace Opaax
         /**
          * Registers T as a movement mode.
          * @tparam T Derives IMoverMode, default-constructible (stateless)
-         * @param InName The name .opaaxmovemode files use. Required.
+         * @param InName The name MoveMode assets use. Required.
          * @return True if registered
          */
         template<typename T>
