@@ -438,6 +438,125 @@
         }
     },
     {
+        "id": "open-clip",
+        "command": "asset.open",
+        "params": {
+            "path": "Anims/Cycle.opaaxasset"
+        },
+        "expect": {
+            "class": "AnimationClip",
+            "unsaved": false,
+            "properties": {
+                "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxsheet",
+                "Fps": 6.0,
+                "PlayMode": "Loop"
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot-clip",
+        "command": "screenshot",
+        "params": {
+            "path": "AssetsClip.png"
+        }
+    },
+    {
+        "id": "open-library",
+        "command": "asset.open",
+        "params": {
+            "path": "Anims/Library.opaaxasset"
+        },
+        "expect": {
+            "class": "AnimationLibrary",
+            "properties": {
+                "DefaultClip": "Cycle",
+                "Entries": [
+                    {
+                        "Name": "Cycle",
+                        "Clip": "Anims/Cycle.opaaxasset"
+                    },
+                    {
+                        "Name": "Blink",
+                        "Clip": "Anims/Blink.opaaxasset"
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "id": "library-names-fixed",
+        "command": "asset.set",
+        "params": {
+            "path": "Anims/Library.opaaxasset",
+            "properties": {
+                "Entries": [
+                    {
+                        "Name": "Cycle",
+                        "Clip": "Anims/Cycle.opaaxasset"
+                    },
+                    {
+                        "Name": "Cycle",
+                        "Clip": "Anims/Blink.opaaxasset"
+                    },
+                    {
+                        "Name": "",
+                        "Clip": "Anims/Once.opaaxasset"
+                    }
+                ]
+            }
+        },
+        "expect": {
+            "unsaved": true,
+            "properties": {
+                "Entries": [
+                    {
+                        "Name": "Cycle"
+                    },
+                    {
+                        "Name": "Blink"
+                    },
+                    {
+                        "Name": "Once"
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot-library",
+        "command": "screenshot",
+        "params": {
+            "path": "AssetsLibrary.png"
+        }
+    },
+    {
+        "id": "close-library-discarding",
+        "command": "asset.close",
+        "params": {
+            "path": "Anims/Library.opaaxasset",
+            "discard": true
+        }
+    },
+    {
+        "id": "close-clip",
+        "command": "asset.close",
+        "params": {
+            "path": "Anims/Cycle.opaaxasset"
+        }
+    },
+    {
         "id": "nothing-open",
         "command": "asset.list",
         "expect": {

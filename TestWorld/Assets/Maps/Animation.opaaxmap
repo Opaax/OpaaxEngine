@@ -32,7 +32,7 @@
                 },
                 "SpriteAnimator": {
                     "Clip": "",
-                    "ClipAsset": "Anims/Cycle.opaaxclip",
+                    "ClipAsset": "Anims/Cycle.opaaxasset",
                     "Library": "",
                     "Speed": 0.0,
                     "bPlaying": true
@@ -86,7 +86,7 @@
                 "SpriteAnimator": {
                     "Clip": "",
                     "ClipAsset": "",
-                    "Library": "Anims/Library.opaaxanim",
+                    "Library": "Anims/Library.opaaxasset",
                     "Speed": 1.0,
                     "bPlaying": true
                 },
@@ -160,7 +160,7 @@
                 },
                 "SpriteAnimator": {
                     "Clip": "",
-                    "ClipAsset": "Anims/Once.opaaxclip",
+                    "ClipAsset": "Anims/Once.opaaxasset",
                     "Library": "",
                     "Speed": 1.0,
                     "bPlaying": true
@@ -213,7 +213,7 @@
                 },
                 "SpriteAnimator": {
                     "Clip": "",
-                    "ClipAsset": "Anims/Cycle.opaaxclip",
+                    "ClipAsset": "Anims/Cycle.opaaxasset",
                     "Library": "",
                     "Speed": 1.0,
                     "bPlaying": false

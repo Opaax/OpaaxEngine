@@ -17,6 +17,8 @@
 
 #include "Renderer/Camera/CameraComponent.h"
 #include "World/Components/PrefabInstanceComponent.h"
+#include "Animation/Assets/AnimationClip.h"      // completes the animator's asset references
+#include "Animation/Assets/AnimationLibrary.h"
 #include "Animation/SpriteAnimatorComponent.h"
 #include "Renderer/Components/SpriteComponent.h"
 #include "Renderer/Components/TextComponent.h"

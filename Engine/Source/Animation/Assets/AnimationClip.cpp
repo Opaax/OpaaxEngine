@@ -1,8 +1,8 @@
-#include "Animation/AnimationClipData.h"
+#include "Animation/Assets/AnimationClip.h"
 
 namespace Opaax
 {
-    AnimationSample SampleClip(const AnimationClipData& InClip, const float InTimeSeconds)
+    AnimationSample SampleClip(const AnimationClip& InClip, const float InTimeSeconds)
     {
         const Uint32 lTotal = InClip.TotalTicks();
 

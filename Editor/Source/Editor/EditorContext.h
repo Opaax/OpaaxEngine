@@ -28,8 +28,6 @@ namespace Opaax
         class EditorMapDocument;        // the focused map
         class EditorLevelDocument;      // the open level and whether it changed
         class EditorSpriteSheetDocument;// the open .opaaxsheet and its data
-        class EditorAnimationClipDocument; // the open .opaaxclip and its data
-        class EditorAnimationLibraryDocument; // the open .opaaxanim and its data
         class EditorFontFamilyDocument;       // the open .opaaxfont and its data
         class EditorUICanvasDocument;         // the open .opaaxui and its canvas
         class EditorExtensionRegistrar; // the sealed extension routes
@@ -101,13 +99,6 @@ namespace Opaax
             // The open sprite sheet. Owns its data: the ResourceManager's copy is what the renderer draws,
             // so editing it would change the running game.
             EditorSpriteSheetDocument& SheetDocument;
-
-            // The open animation clip. Owns its data (a playing entity uses the ResourceManager's copy).
-            // Save publishes it.
-            EditorAnimationClipDocument& ClipDocument;
-
-            // The open animation library (short names -> clips). Owns its data.
-            EditorAnimationLibraryDocument& LibraryDocument;
 
             // The open font family ((subset, weight, width, slant) -> .ttf). Owns its data.
             EditorFontFamilyDocument& FamilyDocument;

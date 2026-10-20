@@ -573,24 +573,6 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params&);
     };
 
-    /**
-     * Writes the open .opaaxclip and reloads it. Ctrl+S reaches it when the clip panel has focus.
-     */
-    struct SaveClipCommand
-    {
-        using Params = NoParams;
-
-        void Execute(EditorContext& InContext, const Params&);
-    };
-
-    /** Writes the open .opaaxanim and reloads it. */
-    struct SaveLibraryCommand
-    {
-        using Params = NoParams;
-
-        void Execute(EditorContext& InContext, const Params&);
-    };
-
     /** Writes the open .opaaxfont and reloads it. */
     struct SaveFamilyCommand
     {

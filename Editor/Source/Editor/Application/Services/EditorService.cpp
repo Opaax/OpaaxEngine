@@ -16,6 +16,7 @@
 #include "Editor/Imgui/ImGuiEditorGui.h"        // the concrete IEditorGui
 #include "Editor/UI/TinyFdEditorDialogs.h"      // the concrete IEditorDialogs
 #include "Editor/Toolbar/EditorNativeViewportTools.h"
+#include "Editor/Assets/Editors/AnimationClipEditor.h"
 #include "Editor/Assets/Editors/InputMappingContextEditor.h"
 
 #include "Editor/Operation/EditorGizmo.hpp"
@@ -29,8 +30,6 @@
 #include "Editor/Panels/PlayToolbarPanel.h"
 #include "Editor/Panels/ResourceBrowserPanel.h"
 #include "Editor/Panels/ResourcePreviewPanel.h"
-#include "Editor/Panels/AnimationClipPanel.h"
-#include "Editor/Panels/AnimationLibraryPanel.h"
 #include "Resources/Asset/AssetResource.h"
 #include "Editor/Panels/FontFamilyPanel.h"
 #include "Editor/EditorFontFamilyDocument.h"
@@ -64,8 +63,8 @@
 #include "Resources/ResourceTypeID.hpp"
 #include "Renderer/Textures/TextureResource.h"
 #include "Renderer/Textures/SpriteSheetResource.h"
-#include "Animation/AnimationClipResource.h"
-#include "Animation/AnimationLibraryResource.h"
+#include "Animation/Assets/AnimationClip.h"
+#include "Animation/Assets/AnimationLibrary.h"
 #include "Audio/AudioBank.h"
 #include "Audio/AudioClipDef.h"
 #include "Input/Assets/InputActionAsset.h"
@@ -160,8 +159,6 @@ namespace Opaax::Editor
         m_LevelDocument->BindPrefabSources(OpaaxApplication::GetAppService<IPaths>(),
                                            OpaaxApplication::GetAppService<IEngine>().GetResources());
         m_SheetDocument     = MakeUnique<EditorSpriteSheetDocument>();
-        m_ClipDocument      = MakeUnique<EditorAnimationClipDocument>();
-        m_LibraryDocument   = MakeUnique<EditorAnimationLibraryDocument>();
         m_FamilyDocument    = MakeUnique<EditorFontFamilyDocument>();
         m_UICanvasDocument  = MakeUnique<EditorUICanvasDocument>();
         m_Export            = MakeUnique<GameExport>();
@@ -208,8 +205,6 @@ namespace Opaax::Editor
             *m_LevelDocument,
             *m_MapDocument,
             *m_SheetDocument,
-            *m_ClipDocument,
-            *m_LibraryDocument,
             *m_FamilyDocument,
             *m_UICanvasDocument,
             m_Extensions,
@@ -374,8 +369,6 @@ namespace Opaax::Editor
         lPanelsRegistry.Register<SpriteSheetPanel>(PanelDesc    {.Id = SpriteSheetPanel::PanelID(),     .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_SHEET});
         // Hidden until a prefab is opened. Its SaveCommand routes Ctrl+S to the prefab.
         lPanelsRegistry.Register<PrefabPanel>(PanelDesc         {.Id = PrefabPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_PREFAB, .UndoCommand = Tags::EDITOR_COMMAND_UNDO_PREFAB, .RedoCommand = Tags::EDITOR_COMMAND_REDO_PREFAB, .DeleteCommand = Tags::EDITOR_COMMAND_DELETE_PREFAB_SELECTION});
-        lPanelsRegistry.Register<AnimationClipPanel>(PanelDesc  {.Id = AnimationClipPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_CLIP});
-        lPanelsRegistry.Register<AnimationLibraryPanel>(PanelDesc{.Id = AnimationLibraryPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_LIBRARY});
         lPanelsRegistry.Register<FontFamilyPanel>(PanelDesc{.Id = FontFamilyPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_FAMILY});
         lPanelsRegistry.Register<UICanvasPanel>(PanelDesc{.Id = UICanvasPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_UI, .DeleteCommand = Tags::EDITOR_COMMAND_DELETE_UI_WIDGET});
         lPanelsRegistry.Register<ConfigPanel>(PanelDesc         {.Id = ConfigPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden});
@@ -430,8 +423,6 @@ namespace Opaax::Editor
         lCommands.Register<SaveLevelCommand>(Tags::EDITOR_COMMAND_SAVE_LEVEL);
         lCommands.Register<ResaveLevelCommand>(Tags::EDITOR_COMMAND_RESAVE_LEVEL);
         lCommands.Register<SaveSheetCommand>(Tags::EDITOR_COMMAND_SAVE_SHEET);
-        lCommands.Register<SaveClipCommand>(Tags::EDITOR_COMMAND_SAVE_CLIP);
-        lCommands.Register<SaveLibraryCommand>(Tags::EDITOR_COMMAND_SAVE_LIBRARY);
         lCommands.Register<SaveFamilyCommand>(Tags::EDITOR_COMMAND_SAVE_FAMILY);
 
         // A document type gets its own New, like maps and levels.
@@ -609,6 +600,15 @@ namespace Opaax::Editor
             .SetCategory(OpaaxString("Input"))
             .SetGlyph(OpaaxString("[IM]"))
             .SetEditor<InputMappingContextEditor>();
+
+        // A clip is pictures and their timing, edited with a playing preview; a library names clips.
+        lTypes.Register<AnimationClip>()
+            .SetCategory(OpaaxString("Animation"))
+            .SetGlyph(OpaaxString("[AC]"))
+            .SetEditor<AnimationClipEditor>();
+        lTypes.Register<AnimationLibrary>()
+            .SetCategory(OpaaxString("Animation"))
+            .SetGlyph(OpaaxString("[AL]"));
     }
 
     void EditorService::RegisterNativeResourceTypes()
@@ -696,27 +696,6 @@ namespace Opaax::Editor
                 if (InContext.SheetDocument.Open(InFile.AbsPath))
                 {
                     InContext.Panels.SetVisible(SpriteSheetPanel::PanelID(), true);
-                }
-            });
-
-        // A clip opens its editor too.
-        m_Extensions.ResourceTypes().Register<AnimationClipResource>()
-            .SetGlyph(OpaaxString("[C]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                if (InContext.ClipDocument.Open(InFile.AbsPath))
-                {
-                    InContext.Panels.SetVisible(AnimationClipPanel::PanelID(), true);
-                }
-            });
-
-        m_Extensions.ResourceTypes().Register<AnimationLibraryResource>()
-            .SetGlyph(OpaaxString("[A]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                if (InContext.LibraryDocument.Open(InFile.AbsPath))
-                {
-                    InContext.Panels.SetVisible(AnimationLibraryPanel::PanelID(), true);
                 }
             });
 

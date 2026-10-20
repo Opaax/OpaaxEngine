@@ -7,6 +7,7 @@
 set(OPAAX_TEST_SOURCES
     Main.cpp
     SmokeTest.cpp
+    LegacyAssetFile.cpp
     TestTempDir.cpp
 
     # Audio
@@ -158,6 +159,7 @@ set(OPAAX_TEST_SOURCES
     UI/UITextTests.cpp
 
     # Editor logic that needs no ImGui (header-only editor types)
+    Editor/AnimationClipEditingTests.cpp
     Editor/AssetDocumentTests.cpp
     Editor/AssetTypeRegistryTests.cpp
     Editor/AssetWindowPlacementTests.cpp

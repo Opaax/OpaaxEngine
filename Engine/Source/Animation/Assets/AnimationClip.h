@@ -2,13 +2,13 @@
 
 #include <nlohmann/json.hpp>
 
-#include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxEnum.h"
 #include "Core/Reflection/OpaaxEnumJson.h"
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/String/OpaaxStringIDJson.h"
+#include "Resources/Asset/Asset.h"
 #include "Resources/ResourcePath.h"
 #include "Resources/ResourcePathJson.h"
 
@@ -16,11 +16,6 @@ namespace Opaax
 {
     struct TextureResource;
     struct SpriteSheetResource;
-
-    // =============================================================================
-    // AnimationClipData — one animation (.opaaxclip).
-    //   With a Sheet, each step names a sheet frame; without, each step names a texture.
-    // =============================================================================
 
     /** What happens when a clip reaches its end. */
     enum class EAnimPlayMode : Uint8
@@ -75,12 +70,16 @@ namespace Opaax
                                          .SetTooltip("How many ticks this step holds, at the clip's Fps."))
     };
 
-    /**
-     * A clip: which pictures, in which order, and how fast.
-     * Steps are edited by the editor panel (lists are not drawn by the property system).
-     */
-    struct AnimationClipData
+    // =============================================================================
+    // AnimationClip — one animation: which pictures, in which order, and how fast. With a Sheet, each
+    //   step names a sheet frame; without, each step names a texture. A SpriteAnimatorComponent plays
+    //   one directly, or by name from an AnimationLibrary.
+    // =============================================================================
+    class AnimationClip final : public Asset
     {
+        OPAAX_OBJECT(AnimationClip, Asset)
+
+    public:
         /** Asset-relative ("Sheets/Hero.opaaxsheet"). When set, steps name frames. */
         TResourcePath<SpriteSheetResource> Sheet;
 
@@ -91,11 +90,10 @@ namespace Opaax
 
         EAnimPlayMode PlayMode = EAnimPlayMode::Loop;
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(AnimationClipData, Sheet, Steps, Fps, PlayMode)
-
-        OPAAX_PROPERTIES(AnimationClipData,
+        OPAAX_PROPERTIES(AnimationClip,
                          OPAAX_PROP(Sheet).SetTooltip("The sliced image the steps name frames in.\n"
                                                       "Empty means the steps carry their own textures."),
+                         OPAAX_PROP(Steps).SetTooltip("The pictures, in the order they play."),
                          OPAAX_PROP(Fps).SetRange(0.f, 240.f)
                                         .SetTooltip("Ticks per second. A step's Hold counts in these."),
                          OPAAX_PROP(PlayMode).SetTooltip("What happens at the end of the clip."))
@@ -136,5 +134,5 @@ namespace Opaax
      * bFinished: nothing new will be shown (end of a Once clip, or a clip that cannot advance).
      * Loop and PingPong clips never finish. Bad input gives step 0.
      */
-    AnimationSample SampleClip(const AnimationClipData& InClip, float InTimeSeconds);
+    AnimationSample SampleClip(const AnimationClip& InClip, float InTimeSeconds);
 }

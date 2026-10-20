@@ -17,8 +17,6 @@
 #include "Editor/EditorMapDocument.h"
 #include "Editor/EditorLevelDocument.h"
 #include "Editor/EditorSpriteSheetDocument.h"
-#include "Editor/Resources/Types/Animation/EditorAnimationClipDocument.h"
-#include "Editor/Resources/Types/Animation/EditorAnimationLibraryDocument.h"
 #include "Editor/EditorFontFamilyDocument.h"
 #include "Editor/EditorUICanvasDocument.h"
 #include "Editor/Export/GameExport.h"
@@ -317,12 +315,6 @@ namespace Opaax::Editor
         TUniquePtr<EditorMapDocument>   m_MapDocument;
         TUniquePtr<EditorLevelDocument> m_LevelDocument;
         TUniquePtr<EditorSpriteSheetDocument> m_SheetDocument;
-
-        /** The open .opaaxclip and its data. */
-        TUniquePtr<EditorAnimationClipDocument> m_ClipDocument;
-
-        /** The open .opaaxanim and its data. */
-        TUniquePtr<EditorAnimationLibraryDocument> m_LibraryDocument;
         TUniquePtr<EditorFontFamilyDocument>       m_FamilyDocument;
 
         /** The open .opaaxui and its canvas. */

@@ -145,6 +145,8 @@ namespace Opaax
             { ".opaaxmover",     "Mover" },
             { ".opaaxaction",    "InputActionAsset" },
             { ".opaaxinputmap",  "InputMappingContextAsset" },
+            { ".opaaxclip",      "AnimationClip" },
+            { ".opaaxanim",      "AnimationLibrary" },
         };
 
         return s_Formats;

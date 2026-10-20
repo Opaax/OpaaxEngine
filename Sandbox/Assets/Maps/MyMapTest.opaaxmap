@@ -22,7 +22,7 @@
                 },
                 "SpriteAnimator": {
                     "Clip": "",
-                    "ClipAsset": "Anims/Blink.opaaxclip",
+                    "ClipAsset": "Anims/Blink.opaaxasset",
                     "Library": "",
                     "Speed": 1.0,
                     "bPlaying": true
@@ -69,7 +69,7 @@
                 "SpriteAnimator": {
                     "Clip": "",
                     "ClipAsset": "",
-                    "Library": "Anims/Default.opaaxanim",
+                    "Library": "Anims/Default.opaaxasset",
                     "Speed": 1.0,
                     "bPlaying": true
                 },

@@ -3,8 +3,8 @@
 #include "Application/Services/IPaths.h"
 #include "Core/Profiling/Profiler.h"   // OPAAX_STAT_SCOPE
 #include "Resources/ResourceManager.h"
-#include "Animation/AnimationClipResource.h"
-#include "Animation/AnimationLibraryResource.h"
+#include "Animation/Assets/AnimationClip.h"
+#include "Animation/Assets/AnimationLibrary.h"
 #include "Renderer/Textures/SpriteSheetResource.h"
 #include "Animation/SpriteAnimatorComponent.h"
 #include "Renderer/Components/SpriteComponent.h"
@@ -46,7 +46,7 @@ namespace Opaax
     {
         OpaaxStringID lClipPath;
 
-        const AnimationClipData* lClip = ResolveClip(InAnim, lClipPath);
+        const AnimationClip* lClip = ResolveClip(InAnim, lClipPath);
 
         // Nothing set, or nothing loadable: the sprite keeps its authored frame.
         if (lClip == nullptr)
@@ -74,7 +74,7 @@ namespace Opaax
         }
     }
 
-    void SpriteAnimationSubsystem::ApplyStep(SpriteComponent& InSprite, const AnimationClipData& InClip,
+    void SpriteAnimationSubsystem::ApplyStep(SpriteComponent& InSprite, const AnimationClip& InClip,
                                              const AnimationStep& InStep, const Uint32 InStepIndex,
                                              const OpaaxStringID InClipPath)
     {
@@ -121,13 +121,13 @@ namespace Opaax
         }
     }
 
-    const AnimationClipData* SpriteAnimationSubsystem::ResolveClip(const SpriteAnimatorComponent& InAnim,
-                                                                   OpaaxStringID& OutClipPath)
+    const AnimationClip* SpriteAnimationSubsystem::ResolveClip(const SpriteAnimatorComponent& InAnim,
+                                                               OpaaxStringID& OutClipPath)
     {
         // A Library wins when set.
         if (!InAnim.Library.IsEmpty())
         {
-            const AnimationLibraryData* lLibrary = ResolveLibrary(InAnim.Library);
+            const AnimationLibrary* lLibrary = ResolveLibrary(InAnim.Library);
 
             if (lLibrary == nullptr)
             {
@@ -153,7 +153,7 @@ namespace Opaax
             }
 
             OutClipPath = OpaaxStringID(lEntry->Clip.Path);
-            return ResolveClipData(lEntry->Clip.Path, OutClipPath);
+            return ResolveClipAsset(lEntry->Clip, OutClipPath);
         }
 
         if (InAnim.ClipAsset.IsEmpty())
@@ -162,11 +162,11 @@ namespace Opaax
         }
 
         OutClipPath = OpaaxStringID(InAnim.ClipAsset.Path);
-        return ResolveClipData(InAnim.ClipAsset.Path, OutClipPath);
+        return ResolveClipAsset(InAnim.ClipAsset, OutClipPath);
     }
 
     const TDynArray<Int32>* SpriteAnimationSubsystem::BindFrames(const OpaaxStringID InClipPath,
-                                                                 const AnimationClipData& InClip)
+                                                                 const AnimationClip& InClip)
     {
         const auto lFound = m_FrameBindings.find(InClipPath.GetId());
 
@@ -218,60 +218,49 @@ namespace Opaax
         return &m_FrameBindings.emplace(InClipPath.GetId(), Move(lBinding)).first->second;
     }
 
-    const AnimationLibraryData* SpriteAnimationSubsystem::ResolveLibrary(
-        const TResourcePath<AnimationLibraryResource>& InPath)
+    const AnimationLibrary* SpriteAnimationSubsystem::ResolveLibrary(const TAssetRef<AnimationLibrary>& InRef)
     {
-        const OpaaxStringID lKey(InPath.Path);
+        const OpaaxStringID lKey(InRef.Path);
 
         auto lIt = m_LibraryCache.find(lKey.GetId());
 
         if (lIt == m_LibraryCache.end())
         {
-            ResourceRef<AnimationLibraryResource> lRef =
-                m_Context->Resources.Load<AnimationLibraryResource>(ToAbsolute(InPath.Path).CStr());
-
             // Cached even when loading failed, so a missing file is not retried every frame.
-            lIt = m_LibraryCache.emplace(lKey.GetId(), Move(lRef)).first;
+            lIt = m_LibraryCache.emplace(lKey.GetId(), LoadAsset(m_Context->Resources, m_Context->Paths, InRef)).first;
 
-            if (lIt->second.IsValid())
+            if (const AnimationLibrary* lLibrary = lIt->second.Get())
             {
                 OPAAX_LOG(LogSpriteAnimation, Trace, "Library '{}' -> {} clip name(s)",
-                          InPath.Path.CStr(), lIt->second.Get()->Data.EntryCount());
+                          InRef.Path.CStr(), lLibrary->EntryCount());
             }
             else
             {
                 OPAAX_LOG(LogSpriteAnimation, Warn, "Library '{}' did not load — nothing animates from it",
-                          InPath.Path.CStr());
+                          InRef.Path.CStr());
             }
         }
 
-        const AnimationLibraryResource* lResource = lIt->second.Get();
-
-        return (lResource != nullptr) ? &lResource->Data : nullptr;
+        return lIt->second.Get();
     }
 
-    const AnimationClipData* SpriteAnimationSubsystem::ResolveClipData(const OpaaxString& InAssetPath,
-                                                                       const OpaaxStringID InKey)
+    const AnimationClip* SpriteAnimationSubsystem::ResolveClipAsset(const TAssetRef<AnimationClip>& InRef,
+                                                                    const OpaaxStringID InKey)
     {
         auto lIt = m_ClipCache.find(InKey.GetId());
 
         if (lIt == m_ClipCache.end())
         {
-            ResourceRef<AnimationClipResource> lRef =
-                m_Context->Resources.Load<AnimationClipResource>(ToAbsolute(InAssetPath).CStr());
+            lIt = m_ClipCache.emplace(InKey.GetId(), LoadAsset(m_Context->Resources, m_Context->Paths, InRef)).first;
 
-            lIt = m_ClipCache.emplace(InKey.GetId(), Move(lRef)).first;
-
-            if (!lIt->second.IsValid())
+            if (lIt->second.Get() == nullptr)
             {
                 OPAAX_LOG(LogSpriteAnimation, Warn, "Clip '{}' did not load — the sprite keeps its authored frame",
-                          InAssetPath.CStr());
+                          InRef.Path.CStr());
             }
         }
 
-        const AnimationClipResource* lResource = lIt->second.Get();
-
-        return (lResource != nullptr) ? &lResource->Data : nullptr;
+        return lIt->second.Get();
     }
 
     const SpriteSheetData* SpriteAnimationSubsystem::ResolveSheet(const TResourcePath<SpriteSheetResource>& InPath)

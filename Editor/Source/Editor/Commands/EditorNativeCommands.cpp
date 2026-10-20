@@ -16,8 +16,6 @@
 #include "Editor/Export/GameExport.h"
 #include "Editor/Operation/LevelOperations.h"
 #include "Editor/Operation/SheetOperations.h"
-#include "Editor/Operation/ClipOperations.h"
-#include "Editor/Operation/LibraryOperations.h"
 #include "Editor/Operation/FontFamilyOperations.h"
 #include "Editor/Operation/UICanvasOperations.h"
 #include "Editor/EditorFontFamilyDocument.h"
@@ -29,8 +27,6 @@
 #include "UI/UICanvasFile.h"
 #include "UI/UIWidgetRegistry.h"
 #include "Editor/EditorSpriteSheetDocument.h"
-#include "Editor/Resources/Types/Animation/EditorAnimationClipDocument.h"
-#include "Editor/Resources/Types/Animation/EditorAnimationLibraryDocument.h"
 #include "Editor/Operation/MapOperations.h"
 #include "Editor/Operation/NewLevelPlan.hpp"
 #include "Editor/PIE/PlayInEditor.h"
@@ -748,28 +744,6 @@ namespace Opaax::Editor
         }
 
         SheetOps::Save(InContext);   // logs the write, updates the dirty baseline
-    }
-
-    void SaveClipCommand::Execute(EditorContext& InContext, const Params&)
-    {
-        if (!InContext.ClipDocument.IsOpen())
-        {
-            OPAAX_LOG(LogEditorCommands, Warn, "Save Clip ignored — no animation clip is open");
-            return;
-        }
-
-        ClipOps::Save(InContext);   // logs the write, updates the baseline, reloads
-    }
-
-    void SaveLibraryCommand::Execute(EditorContext& InContext, const Params&)
-    {
-        if (!InContext.LibraryDocument.IsOpen())
-        {
-            OPAAX_LOG(LogEditorCommands, Warn, "Save Library ignored — no animation library is open");
-            return;
-        }
-
-        LibraryOps::Save(InContext);
     }
 
     void SaveFamilyCommand::Execute(EditorContext& InContext, const Params&)

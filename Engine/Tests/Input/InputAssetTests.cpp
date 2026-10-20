@@ -3,10 +3,10 @@
 // into the evaluator's actions and bindings. File cases use a temp directory of their own.
 #include <doctest.h>
 
+#include "../LegacyAssetFile.h"
 #include "../TestTempDir.h"
 
 #include "Application/Services/IPaths.h"
-#include "Core/IO/FileIO.h"
 #include "Core/String/OpaaxPathString.h"
 #include "Engine/Config/EngineConfigData.h"
 #include "Engine/GameInstance/GameInstanceContext.h"
@@ -17,7 +17,6 @@
 #include "Input/Mapping/InputMappingSubsystem.h"
 #include "Object/ObjectClassRegistry.h"
 #include "Resources/Asset/AssetFile.h"
-#include "Resources/Asset/AssetMigration.h"
 #include "Resources/ResourceManager.h"
 #include "World/WorldManager.h"
 
@@ -82,21 +81,6 @@ namespace
         lEntry.Action.Path = OpaaxString(InActionPath);
         lEntry.Key         = InKey;
         return lEntry;
-    }
-
-    /** An old file's text converted, then loaded as an asset of its class. */
-    TStrongObjectPtr<Asset> ConvertAndLoad(const TestTempDir& InDir, const char* InOldName, const char* InOldText,
-                                           const ObjectClassRegistry& InClasses)
-    {
-        const AssetMigration::LegacyFormat* lFormat = AssetMigration::FindLegacyFormat(OpaaxStringView(InOldName));
-        REQUIRE(lFormat != nullptr);
-
-        OpaaxString lAssetText;
-        REQUIRE(AssetMigration::ConvertText(OpaaxString(InOldText), *lFormat, lAssetText));
-
-        const OpaaxString lPath = InDir.Sub(AssetMigration::ConvertedPath(OpaaxStringView(InOldName)));
-        REQUIRE(FileIO::WriteAllText(lPath, lAssetText));
-        return AssetFile::LoadAsset(lPath, InClasses);
     }
 
     /** The engine-side half of a GameInstanceContext, its assets under InRoot. */
