@@ -88,9 +88,6 @@ namespace Opaax::Editor::Tags
     inline const OpaaxTag EDITOR_COMMAND_DELETE_PREFAB_SELECTION =
         OpaaxTag("Editor.Command.DeletePrefabSelection");
 
-    //Sprite sheet
-    inline const OpaaxTag EDITOR_COMMAND_SAVE_SHEET  = OpaaxTag("Editor.Command.SaveSheet");
-
     //UI
     inline const OpaaxTag EDITOR_COMMAND_NEW_UI           = OpaaxTag("Editor.Command.NewUI");
     inline const OpaaxTag EDITOR_COMMAND_NEW_UI_AT        = OpaaxTag("Editor.Command.NewUIAt");

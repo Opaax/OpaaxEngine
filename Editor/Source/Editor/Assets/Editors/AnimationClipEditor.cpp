@@ -14,7 +14,7 @@
 #include "Editor/Properties/PropertyDrawers.h"
 #include "Editor/Resources/ResourceDragDrop.h"
 #include "Editor/UI/IEditorWidgets.h"
-#include "Renderer/Textures/SpriteSheetResource.h"
+#include "Renderer/Textures/SpriteSheet.h"
 #include "Renderer/Textures/TextureResource.h"
 #include "Resources/ResourceManager.h"
 #include "Resources/ResourceTypeID.hpp"
@@ -138,12 +138,14 @@ namespace Opaax::Editor
         }
 
         // A sheet clip: the frame's rect, cropped from the sheet's image.
-        const SpriteSheetData* lSheet = ClaimSheet(InClip);
-        const SpriteFrame*     lFrame = (lSheet != nullptr) ? ClipEditing::FindFrame(*lSheet, lStep->Frame) : nullptr;
-        if (lFrame == nullptr)
+        const SpriteSheet* lSheet = ClaimSheet(InClip);
+        const Int32        lIndex = (lSheet != nullptr) ? lSheet->FindFrameIndex(lStep->Frame) : -1;
+        if (lIndex < 0)
         {
             return EditorImage{};
         }
+
+        const SpriteFrame& lFrame = lSheet->Frames[static_cast<Uint32>(lIndex)];
 
         const TextureResource* lTexture = ClaimTexture(lSheet->Texture.Path);
         if (lTexture == nullptr || lTexture->GetTexture() == nullptr)
@@ -151,8 +153,8 @@ namespace Opaax::Editor
             return EditorImage{};
         }
 
-        OutPixelSize = lFrame->Size;
-        return ClipEditing::CropToFrame(m_Context.UIBackend.GetTextureImage(*lTexture->GetTexture()), *lFrame,
+        OutPixelSize = lFrame.Size;
+        return ClipEditing::CropToFrame(m_Context.UIBackend.GetTextureImage(*lTexture->GetTexture()), lFrame,
                                         lTexture->Width, lTexture->Height);
     }
 
@@ -217,7 +219,7 @@ namespace Opaax::Editor
 
     void AnimationClipEditor::DrawFramePicker(const AnimationClip& InClip, AnimationStep& InOutStep)
     {
-        const SpriteSheetData* lSheet = ClaimSheet(InClip);
+        const SpriteSheet* lSheet = ClaimSheet(InClip);
         if (lSheet == nullptr)
         {
             ImGui::TextDisabled("The clip's sheet did not load: no frame to pick.");
@@ -376,30 +378,28 @@ namespace Opaax::Editor
     // =============================================================================
     // Claims
     // =============================================================================
-    const SpriteSheetData* AnimationClipEditor::ClaimSheet(const AnimationClip& InClip)
+    const SpriteSheet* AnimationClipEditor::ClaimSheet(const AnimationClip& InClip)
     {
         if (InClip.Sheet.IsEmpty())
         {
-            m_SheetClaim       = {};
+            m_Sheet            = {};
             m_ClaimedSheetPath = OpaaxString();
             return nullptr;
         }
 
+        // Compared with the path asked for: the handle keeps the converted one when it names an old file.
         if (InClip.Sheet.Path != m_ClaimedSheetPath)
         {
-            const OpaaxString lAbsolute = m_Context.Paths.AssetToAbsolute(InClip.Sheet.Path);
-
-            m_SheetClaim       = m_Context.Resources.Load<SpriteSheetResource>(lAbsolute.CStr());
+            m_Sheet            = LoadAsset(m_Context.Resources, m_Context.Paths, InClip.Sheet);
             m_ClaimedSheetPath = InClip.Sheet.Path;
 
-            if (!m_SheetClaim.IsValid())
+            if (m_Sheet.Get() == nullptr)
             {
-                OPAAX_LOG(LogAnimationClipEditor, Warn, "Clip sheet '{}' did not load", lAbsolute.CStr());
+                OPAAX_LOG(LogAnimationClipEditor, Warn, "Clip sheet '{}' did not load", InClip.Sheet.Path.CStr());
             }
         }
 
-        // IsValid, not Get() != nullptr: a failed claim gives the placeholder.
-        return m_SheetClaim.IsValid() ? &m_SheetClaim.Get()->Data : nullptr;
+        return m_Sheet.Get();
     }
 
     const TextureResource* AnimationClipEditor::ClaimTexture(const OpaaxString& InAssetPath)

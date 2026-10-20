@@ -13,7 +13,7 @@
                     "Layer": "Default",
                     "Material": "",
                     "OrderInLayer": 0,
-                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxsheet",
+                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset",
                     "Size": {
                         "x": 100.0,
                         "y": 100.0
@@ -477,7 +477,7 @@
                     "Layer": "Default",
                     "Material": "",
                     "OrderInLayer": 0,
-                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxsheet",
+                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset",
                     "Size": {
                         "x": 100.0,
                         "y": 100.0

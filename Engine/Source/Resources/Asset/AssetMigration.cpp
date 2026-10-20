@@ -148,6 +148,7 @@ namespace Opaax
             { ".opaaxclip",      "AnimationClip" },
             { ".opaaxanim",      "AnimationLibrary" },
             { ".opaaxfont",      "FontFamily" },
+            { ".opaaxsheet",     "SpriteSheet" },
         };
 
         return s_Formats;

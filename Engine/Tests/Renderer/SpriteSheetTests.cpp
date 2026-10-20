@@ -1,29 +1,32 @@
-// Suite: the sprite sheet asset — data, .opaaxsheet file, MakeFrameUV and SliceGrid.
-// A wrong V flip would draw a plausible but wrong frame, so the UV maths is tested directly.
-// File cases use a unique temp directory, created and removed per case.
+// Suite: the sprite sheet asset — its frames and default, its file and the old .opaaxsheet format,
+// MakeFrameUV and SliceGrid. A wrong V flip would draw a plausible but wrong frame, so the UV maths is
+// tested directly. File cases use a unique temp directory, created and removed per case.
 #include <doctest.h>
 
+#include "../LegacyAssetFile.h"
 #include "../TestTempDir.h"
 
 #include "Core/IO/FileIO.h"
-#include "Renderer/Textures/SpriteSheetData.h"
-#include "Renderer/Textures/SpriteSheetFile.h"
+#include "Object/ObjectClassRegistry.h"
+#include "Renderer/Textures/SpriteSheet.h"
+#include "Resources/Asset/AssetFile.h"
 
 using namespace Opaax;
 
 namespace
 {
-
-    /** A 2x2 sheet over a 64x64 texture: cells of 32, no margin, no spacing. */
-    SpriteSheetData MakeProbeSheet()
+    struct SheetClasses final : ObjectClassRegistry
     {
-        SpriteSheetData lData;
-        lData.Texture.Path  = OpaaxString("Textures/Probe.png");
-        lData.DefaultFrame  = 2;
-        lData.Grid.CellSize = { 32.f, 32.f };
-        lData.Frames        = SliceGrid(lData.Grid, 64u, 64u);
+        SheetClasses() { Register<SpriteSheet>(); }
+    };
 
-        return lData;
+    /** Makes OutSheet a 2x2 sheet over a 64x64 texture: cells of 32, no margin, no spacing. */
+    void FillProbeSheet(SpriteSheet& OutSheet)
+    {
+        OutSheet.Texture.Path  = OpaaxString("Textures/Probe.png");
+        OutSheet.DefaultFrame  = 2;
+        OutSheet.Grid.CellSize = { 32.f, 32.f };
+        OutSheet.Frames        = SliceGrid(OutSheet.Grid, 64u, 64u);
     }
 }
 
@@ -148,12 +151,14 @@ TEST_CASE("SliceGrid: a zero cell or a zero texture slices nothing")
     CHECK(SliceGrid(lGrid, 0u, 64u).empty());
 }
 
+
 // =============================================================================
-// SpriteSheetData::FrameAt — where the -1 sentinel is resolved, once
+// SpriteSheet::FrameAt and FindFrameIndex — where a sprite's index and a clip's name resolve
 // =============================================================================
 TEST_CASE("FrameAt: a negative index means the sheet's own DefaultFrame")
 {
-    const SpriteSheetData lSheet = MakeProbeSheet();   // DefaultFrame = 2
+    SpriteSheet lSheet;
+    FillProbeSheet(lSheet);   // DefaultFrame = 2
 
     REQUIRE(lSheet.FrameAt(-1) != nullptr);
     CHECK(lSheet.FrameAt(-1)->Offset.y == doctest::Approx(32.f));   // frame 2 = second row
@@ -163,95 +168,117 @@ TEST_CASE("FrameAt: a negative index means the sheet's own DefaultFrame")
 TEST_CASE("FrameAt: out of range answers NULL rather than clamping")
 {
     // Null lets RendererManager warn before falling back (no silent wrong frame).
-    const SpriteSheetData lSheet = MakeProbeSheet();
+    SpriteSheet lSheet;
+    FillProbeSheet(lSheet);
 
     CHECK(lSheet.FrameAt(4)   == nullptr);
     CHECK(lSheet.FrameAt(999) == nullptr);
 
-    SpriteSheetData lEmpty;
+    const SpriteSheet lEmpty;
     CHECK(lEmpty.FrameAt(-1) == nullptr);   // no frames, so not even the default resolves
     CHECK(lEmpty.FrameAt(0)  == nullptr);
+}
+
+TEST_CASE("FindFrameIndex: a name finds its first frame; an unknown or empty name finds none")
+{
+    SpriteSheet lSheet;
+    FillProbeSheet(lSheet);
+    lSheet.Frames[1].Name = OPAAX_ID("Run");
+    lSheet.Frames[3].Name = OPAAX_ID("Run");   // clips bind the first of two
+
+    CHECK(lSheet.FindFrameIndex(OPAAX_ID("Run")) == 1);
+    CHECK(lSheet.FindFrameIndex(OPAAX_ID("Jump")) == -1);
+
+    // Not the unnamed frames: an empty name is "no frame", never "frame 0".
+    CHECK(lSheet.FindFrameIndex(OpaaxStringID()) == -1);
+}
+
+TEST_CASE("An edit leaving the default past the last frame sets it back to the first")
+{
+    SpriteSheet lSheet;
+    FillProbeSheet(lSheet);
+
+    lSheet.Frames.resize(2);   // the default, frame 2, is gone
+    lSheet.PostEditChange();
+    CHECK(lSheet.DefaultFrame == 0u);
+
+    // One still in range is kept.
+    lSheet.DefaultFrame = 1u;
+    lSheet.PostEditChange();
+    CHECK(lSheet.DefaultFrame == 1u);
 }
 
 // =============================================================================
 // The file
 // =============================================================================
-TEST_CASE("SpriteSheetFile: save then load round-trips every field")
+TEST_CASE("SpriteSheet: save then load round-trips every field")
 {
-    const TestTempDir     lDir("roundtrip");
-    const OpaaxString     lPath  = lDir.Sub("Hero.opaaxsheet");
-    SpriteSheetData       lSaved = MakeProbeSheet();
+    const TestTempDir  lDir("sheetRoundTrip");
+    const SheetClasses lClasses;
+    const OpaaxString  lPath = lDir.Sub("Hero.opaaxasset");
 
+    SpriteSheet lSaved;
+    FillProbeSheet(lSaved);
     lSaved.Frames[1].Name = OPAAX_ID("Hero_Idle_1");
 
-    REQUIRE(SpriteSheetFile::Save(lPath, lSaved));
+    REQUIRE(AssetFile::Save(lPath, lSaved));
 
-    SpriteSheetData lLoaded;
-    REQUIRE(SpriteSheetFile::Load(lPath, lLoaded));
+    const TStrongObjectPtr<Asset> lAsset  = AssetFile::LoadAsset(lPath, lClasses);
+    const SpriteSheet*            lLoaded = Cast<SpriteSheet>(lAsset.Get());
+    REQUIRE(lLoaded != nullptr);
 
-    CHECK(lLoaded.Texture.Path == lSaved.Texture.Path);
-    CHECK(lLoaded.DefaultFrame == lSaved.DefaultFrame);
-    CHECK(lLoaded.FrameCount() == lSaved.FrameCount());
-    CHECK(lLoaded.Grid.CellSize.x == doctest::Approx(lSaved.Grid.CellSize.x));
+    CHECK(lLoaded->Texture.Path == lSaved.Texture.Path);
+    CHECK(lLoaded->DefaultFrame == lSaved.DefaultFrame);
+    CHECK(lLoaded->FrameCount() == lSaved.FrameCount());
+    CHECK(lLoaded->Grid.CellSize.x == doctest::Approx(lSaved.Grid.CellSize.x));
 
     // The name survives as an ID that COMPARES EQUAL — the interned round trip, not just the text.
-    CHECK(lLoaded.Frames[1].Name == OPAAX_ID("Hero_Idle_1"));
-    CHECK_FALSE(lLoaded.Frames[0].Name.IsValid());
-    CHECK(lLoaded.Frames[3].Offset.x == doctest::Approx(32.f));
+    CHECK(lLoaded->Frames[1].Name == OPAAX_ID("Hero_Idle_1"));
+    CHECK_FALSE(lLoaded->Frames[0].Name.IsValid());
+    CHECK(lLoaded->Frames[3].Offset.x == doctest::Approx(32.f));
+
+    // Saving what was loaded writes the same text: the editor's dirty check compares it.
+    CHECK(AssetFile::Serialize(*lLoaded) == AssetFile::Serialize(lSaved));
 }
 
-TEST_CASE("SpriteSheetFile: the text a save writes is the text a save writes again")
+TEST_CASE("SpriteSheet: a file missing keys keeps the defaults; a wrong type is refused")
 {
-    // The editor's dirty check relies on Serialize being stable.
-    const SpriteSheetData lData = MakeProbeSheet();
-
-    CHECK(SpriteSheetFile::Serialize(lData) == SpriteSheetFile::Serialize(lData));
-
-    const TestTempDir   lDir("stable");
-    const OpaaxString   lPath = lDir.Sub("Stable.opaaxsheet");
-    REQUIRE(SpriteSheetFile::Save(lPath, lData));
-
-    SpriteSheetData lLoaded;
-    REQUIRE(SpriteSheetFile::Load(lPath, lLoaded));
-
-    CHECK(SpriteSheetFile::Serialize(lLoaded) == SpriteSheetFile::Serialize(lData));
-}
-
-TEST_CASE("SpriteSheetFile: a missing or malformed file leaves the caller's data untouched")
-{
-    const TestTempDir lDir("bad");
-
-    SpriteSheetData lExisting = MakeProbeSheet();
-
-    CHECK_FALSE(SpriteSheetFile::Load(lDir.Sub("NoSuchFile.opaaxsheet"), lExisting));
-    CHECK(lExisting.FrameCount() == 4u);   // not half-overwritten
-
-    // Valid json, wrong shape: an array is not a sheet.
-    const OpaaxString lArrayPath = lDir.Sub("Array.opaaxsheet");
-    REQUIRE(FileIO::WriteAllText(lArrayPath, OpaaxString("[1, 2, 3]")));
-
-    CHECK_FALSE(SpriteSheetFile::Load(lArrayPath, lExisting));
-    CHECK(lExisting.FrameCount() == 4u);
-}
-
-TEST_CASE("SpriteSheetFile: a file missing keys keeps the defaults (_WITH_DEFAULT), a wrong TYPE fails")
-{
-    const TestTempDir lDir("partial");
+    const TestTempDir  lDir("sheetPartial");
+    const SheetClasses lClasses;
 
     // Adding a field must not break sheets saved before it.
-    const OpaaxString lPartial = lDir.Sub("Partial.opaaxsheet");
-    REQUIRE(FileIO::WriteAllText(lPartial, OpaaxString("{\n    \"DefaultFrame\": 3\n}")));
+    const OpaaxString lPartial = lDir.Sub("Partial.opaaxasset");
+    REQUIRE(FileIO::WriteAllText(lPartial, OpaaxString(R"({ "Class": "SpriteSheet", "Properties": { "DefaultFrame": 3 } })")));
 
-    SpriteSheetData lLoaded;
-    REQUIRE(SpriteSheetFile::Load(lPartial, lLoaded));
-    CHECK(lLoaded.DefaultFrame == 3u);
-    CHECK(lLoaded.Frames.empty());
-    CHECK(lLoaded.Grid.CellSize.x == doctest::Approx(32.f));   // the struct's own default
+    const TStrongObjectPtr<Asset> lAsset  = AssetFile::LoadAsset(lPartial, lClasses);
+    const SpriteSheet*            lLoaded = Cast<SpriteSheet>(lAsset.Get());
+    REQUIRE(lLoaded != nullptr);
+    CHECK(lLoaded->DefaultFrame == 3u);
+    CHECK(lLoaded->Frames.empty());
+    CHECK(lLoaded->Grid.CellSize.x == doctest::Approx(32.f));   // the struct's own default
 
-    // A hand-edited value of the wrong type is caught rather than thrown at the caller.
-    const OpaaxString lWrongType = lDir.Sub("WrongType.opaaxsheet");
-    REQUIRE(FileIO::WriteAllText(lWrongType, OpaaxString("{\n    \"DefaultFrame\": \"three\"\n}")));
+    const OpaaxString lWrongType = lDir.Sub("WrongType.opaaxasset");
+    REQUIRE(FileIO::WriteAllText(lWrongType, OpaaxString(R"({ "Class": "SpriteSheet", "Properties": { "DefaultFrame": "three" } })")));
+    CHECK(AssetFile::LoadAsset(lWrongType, lClasses).Get() == nullptr);
+}
 
-    SpriteSheetData lUntouched;
-    CHECK_FALSE(SpriteSheetFile::Load(lWrongType, lUntouched));
+TEST_CASE("SpriteSheet: an old .opaaxsheet converts with its texture, frames and grid")
+{
+    const TestTempDir  lDir("sheetConvert");
+    const SheetClasses lClasses;
+
+    const TStrongObjectPtr<Asset> lAsset = ConvertAndLoad(lDir, "Sheets/Hero.opaaxsheet", R"({
+        "Texture": "Textures/Hero.png", "DefaultFrame": 1,
+        "Frames": [ { "Name": "Idle", "Offset": { "x": 0.0, "y": 0.0 }, "Size": { "x": 64.0, "y": 64.0 } },
+                    { "Name": "Run_0", "Offset": { "x": 64.0, "y": 0.0 }, "Size": { "x": 64.0, "y": 64.0 } } ],
+        "Grid": { "CellSize": { "x": 64.0, "y": 64.0 } } })", lClasses);
+
+    const SpriteSheet* lSheet = Cast<SpriteSheet>(lAsset.Get());
+    REQUIRE(lSheet != nullptr);
+    CHECK(lSheet->Texture.Path == "Textures/Hero.png");
+    CHECK(lSheet->DefaultFrame == 1u);
+    REQUIRE(lSheet->FrameCount() == 2u);
+    CHECK(lSheet->Frames[1].Name == OPAAX_ID("Run_0"));
+    CHECK(lSheet->Frames[1].Offset.x == doctest::Approx(64.f));
+    CHECK(lSheet->Grid.CellSize.x == doctest::Approx(64.f));
 }

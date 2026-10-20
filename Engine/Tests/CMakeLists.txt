@@ -173,6 +173,7 @@ set(OPAAX_TEST_SOURCES
     Editor/LogFilterTests.cpp
     Editor/NewLevelPlanTests.cpp
     Editor/ResourceDragPayloadTests.cpp
+    Editor/SpriteSheetEditingTests.cpp
     Editor/UIPreviewAspectTests.cpp
     Editor/UIWidgetDrawerTests.cpp
 

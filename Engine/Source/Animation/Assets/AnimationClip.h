@@ -8,14 +8,15 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/String/OpaaxStringIDJson.h"
+#include "Renderer/Textures/SpriteSheet.h"
 #include "Resources/Asset/Asset.h"
+#include "Resources/Asset/AssetRef.h"
 #include "Resources/ResourcePath.h"
 #include "Resources/ResourcePathJson.h"
 
 namespace Opaax
 {
     struct TextureResource;
-    struct SpriteSheetResource;
 
     /** What happens when a clip reaches its end. */
     enum class EAnimPlayMode : Uint8
@@ -80,8 +81,8 @@ namespace Opaax
         OPAAX_OBJECT(AnimationClip, Asset)
 
     public:
-        /** Asset-relative ("Sheets/Hero.opaaxsheet"). When set, steps name frames. */
-        TResourcePath<SpriteSheetResource> Sheet;
+        /** Asset-relative ("Sheets/Hero.opaaxasset"). When set, steps name frames. */
+        TAssetRef<SpriteSheet> Sheet;
 
         TDynArray<AnimationStep> Steps;
 

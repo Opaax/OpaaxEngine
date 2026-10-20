@@ -5,8 +5,6 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Resources/Asset/AssetHandle.h"
-#include "Resources/ResourceRef.hpp"
-#include "Resources/ResourcePath.h"
 #include "World/Entity/EntityTypes.h"
 #include "World/Systems/WorldSubsystem.h"
 
@@ -21,10 +19,7 @@ namespace Opaax
     class AnimationClip;
     class AnimationLibrary;
     struct AnimationStep;
-    struct SpriteSheetData;
-
-    // Forward-declared for the cache.
-    struct SpriteSheetResource;
+    class SpriteSheet;
 
     // =============================================================================
     // SpriteAnimationSubsystem — advances every SpriteAnimatorComponent and writes the frame
@@ -84,10 +79,7 @@ namespace Opaax
         // ---- caches -------------------------------------------------------------------------
         const AnimationLibrary* ResolveLibrary(const TAssetRef<AnimationLibrary>& InRef);
         const AnimationClip*    ResolveClipAsset(const TAssetRef<AnimationClip>& InRef, OpaaxStringID InKey);
-        const SpriteSheetData*  ResolveSheet(const TResourcePath<SpriteSheetResource>& InPath);
-
-        /** Asset-relative -> absolute. */
-        OpaaxString ToAbsolute(const OpaaxString& InAssetPath) const;
+        const SpriteSheet*      ResolveSheet(const TAssetRef<SpriteSheet>& InRef);
 
         /** True the first time InKey is seen (log once). */
         bool ShouldWarnOnce(Uint32 InKey);
@@ -98,9 +90,9 @@ namespace Opaax
     private:
         WorldContext* m_Context = nullptr;   // owned by the World
 
-        TUnorderedMap<Uint32, TAssetHandle<AnimationLibrary>>   m_LibraryCache;
-        TUnorderedMap<Uint32, TAssetHandle<AnimationClip>>      m_ClipCache;
-        TUnorderedMap<Uint32, ResourceRef<SpriteSheetResource>> m_SheetCache;
+        TUnorderedMap<Uint32, TAssetHandle<AnimationLibrary>> m_LibraryCache;
+        TUnorderedMap<Uint32, TAssetHandle<AnimationClip>>    m_ClipCache;
+        TUnorderedMap<Uint32, TAssetHandle<SpriteSheet>>      m_SheetCache;
 
         /** Clip path id -> frame index per step. */
         TUnorderedMap<Uint32, TDynArray<Int32>> m_FrameBindings;

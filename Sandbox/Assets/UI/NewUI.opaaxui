@@ -43,7 +43,7 @@
                         "y": 100.0
                     }
                 },
-                "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxsheet",
+                "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset",
                 "Texture": "",
                 "Type": "UIImage",
                 "bHitTestable": true,

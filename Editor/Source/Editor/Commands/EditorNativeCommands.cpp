@@ -15,7 +15,6 @@
 #include "Editor/Operation/ExportOperations.h"
 #include "Editor/Export/GameExport.h"
 #include "Editor/Operation/LevelOperations.h"
-#include "Editor/Operation/SheetOperations.h"
 #include "Editor/Operation/UICanvasOperations.h"
 #include "Editor/EditorUICanvasDocument.h"
 #include "Editor/Panels/UICanvasPanel.h"
@@ -24,7 +23,6 @@
 #include "Engine/Registries/EngineRegistries.h"
 #include "UI/UICanvasFile.h"
 #include "UI/UIWidgetRegistry.h"
-#include "Editor/EditorSpriteSheetDocument.h"
 #include "Editor/Operation/MapOperations.h"
 #include "Editor/Operation/NewLevelPlan.hpp"
 #include "Editor/PIE/PlayInEditor.h"
@@ -731,17 +729,6 @@ namespace Opaax::Editor
 
             LevelOps::AdoptOpen(InContext, InParams.AbsPath);
         });
-    }
-
-    void SaveSheetCommand::Execute(EditorContext& InContext, const Params&)
-    {
-        if (!InContext.SheetDocument.IsOpen())
-        {
-            OPAAX_LOG(LogEditorCommands, Warn, "Save Sheet ignored — no sprite sheet is open");
-            return;
-        }
-
-        SheetOps::Save(InContext);   // logs the write, updates the dirty baseline
     }
 
     // =============================================================================

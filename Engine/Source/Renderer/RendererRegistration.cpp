@@ -10,7 +10,7 @@
 #include "Renderer/Components/TextComponent.h"
 #include "Renderer/Text/FontFaceResource.h"
 #include "Renderer/Text/FontFamily.h"
-#include "Renderer/Textures/SpriteSheetResource.h"
+#include "Renderer/Textures/SpriteSheet.h"
 #include "Renderer/Textures/TextureResource.h"
 
 namespace Opaax
@@ -35,7 +35,9 @@ namespace Opaax
     // A typeface's faces by style, which text asks for instead of a .ttf.
     OPAAX_REGISTER_OBJECT(FontFamily);
 
+    // A texture cut into frames, which sprites, UI images and clips show.
+    OPAAX_REGISTER_OBJECT(SpriteSheet);
+
     OPAAX_REGISTER_NAMED_RESOURCE(TextureResource, "Texture");
-    OPAAX_REGISTER_NAMED_RESOURCE(SpriteSheetResource, "SpriteSheet");
     OPAAX_REGISTER_NAMED_RESOURCE(FontFaceResource, "FontFace");
 }

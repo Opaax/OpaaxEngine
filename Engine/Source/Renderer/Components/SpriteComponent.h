@@ -17,9 +17,9 @@
 
 namespace Opaax
 {
-    // Forward-declared: TResourcePath only needs the name.
+    // Forward-declared: a path or an asset reference only needs the name.
     struct TextureResource;
-    struct SpriteSheetResource;
+    class SpriteSheet;
 
     // =============================================================================
     // SpriteComponent — an image drawn in the world, at the entity's Transform.
@@ -30,8 +30,8 @@ namespace Opaax
         /** Asset-relative ("Textures/Hero.png"). Empty draws nothing. */
         TResourcePath<TextureResource> Texture;
 
-        /** Asset-relative ("Sheets/Hero.opaaxsheet"). Wins over Texture. */
-        TResourcePath<SpriteSheetResource> Sheet;
+        /** Asset-relative ("Sheets/Hero.opaaxasset"). Wins over Texture. */
+        TAssetRef<SpriteSheet> Sheet;
 
         /** Sheet frame. Negative = the sheet's DefaultFrame. Ignored without a sheet. */
         Int32        Frame        = -1;

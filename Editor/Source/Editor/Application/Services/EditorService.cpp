@@ -19,6 +19,7 @@
 #include "Editor/Assets/Editors/AnimationClipEditor.h"
 #include "Editor/Assets/Editors/FontFamilyEditor.h"
 #include "Editor/Assets/Editors/InputMappingContextEditor.h"
+#include "Editor/Assets/Editors/SpriteSheetEditor.h"
 
 #include "Editor/Operation/EditorGizmo.hpp"
 #include "Editor/Operation/EditorViewport.hpp"   // grid toggle
@@ -45,7 +46,6 @@
 #include "UI/UICanvasResource.h"
 #include "Editor/Panels/PrefabPanel.h"
 #include "Renderer/RenderTarget.hpp"
-#include "Editor/Panels/SpriteSheetPanel.h"
 #include "Editor/Panels/LogPanel.h"
 #include "Editor/Panels/StatsPanel.h"
 #include "Editor/Panels/ViewportPanel.h"
@@ -61,7 +61,7 @@
 #include "Editor/Operation/ResourceOperations.h"
 #include "Resources/ResourceTypeID.hpp"
 #include "Renderer/Textures/TextureResource.h"
-#include "Renderer/Textures/SpriteSheetResource.h"
+#include "Renderer/Textures/SpriteSheet.h"
 #include "Animation/Assets/AnimationClip.h"
 #include "Animation/Assets/AnimationLibrary.h"
 #include "Audio/AudioBank.h"
@@ -157,7 +157,6 @@ namespace Opaax::Editor
         // What prefab paths are resolved with when a map is folded for saving.
         m_LevelDocument->BindPrefabSources(OpaaxApplication::GetAppService<IPaths>(),
                                            OpaaxApplication::GetAppService<IEngine>().GetResources());
-        m_SheetDocument     = MakeUnique<EditorSpriteSheetDocument>();
         m_UICanvasDocument  = MakeUnique<EditorUICanvasDocument>();
         m_Export            = MakeUnique<GameExport>();
         m_AssetEditors      = MakeUnique<AssetEditors>();
@@ -202,7 +201,6 @@ namespace Opaax::Editor
             *m_InputRoute,
             *m_LevelDocument,
             *m_MapDocument,
-            *m_SheetDocument,
             *m_UICanvasDocument,
             m_Extensions,
             m_Gui->Panels(),
@@ -363,7 +361,6 @@ namespace Opaax::Editor
         // Hidden by default
         lPanelsRegistry.Register<CameraPreviewPanel>(PanelDesc  {.Id = CameraPreviewPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<ResourcePreviewPanel>(PanelDesc{.Id = ResourcePreviewPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden});
-        lPanelsRegistry.Register<SpriteSheetPanel>(PanelDesc    {.Id = SpriteSheetPanel::PanelID(),     .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_SHEET});
         // Hidden until a prefab is opened. Its SaveCommand routes Ctrl+S to the prefab.
         lPanelsRegistry.Register<PrefabPanel>(PanelDesc         {.Id = PrefabPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_PREFAB, .UndoCommand = Tags::EDITOR_COMMAND_UNDO_PREFAB, .RedoCommand = Tags::EDITOR_COMMAND_REDO_PREFAB, .DeleteCommand = Tags::EDITOR_COMMAND_DELETE_PREFAB_SELECTION});
         lPanelsRegistry.Register<UICanvasPanel>(PanelDesc{.Id = UICanvasPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_UI, .DeleteCommand = Tags::EDITOR_COMMAND_DELETE_UI_WIDGET});
@@ -418,7 +415,6 @@ namespace Opaax::Editor
         lCommands.Register<OpenLevelAtCommand>(Tags::EDITOR_COMMAND_OPEN_LEVEL_AT);
         lCommands.Register<SaveLevelCommand>(Tags::EDITOR_COMMAND_SAVE_LEVEL);
         lCommands.Register<ResaveLevelCommand>(Tags::EDITOR_COMMAND_RESAVE_LEVEL);
-        lCommands.Register<SaveSheetCommand>(Tags::EDITOR_COMMAND_SAVE_SHEET);
 
         // A document type gets its own New, like maps and levels.
         lCommands.Register<NewUICommand>(Tags::EDITOR_COMMAND_NEW_UI);
@@ -610,6 +606,13 @@ namespace Opaax::Editor
             .SetCategory(OpaaxString("Text"))
             .SetGlyph(OpaaxString("[FF]"))
             .SetEditor<FontFamilyEditor>();
+
+        // A texture cut into frames, edited over its image.
+        lTypes.Register<SpriteSheet>()
+            .SetCategory(OpaaxString("Rendering"))
+            .SetIcon(OpaaxString("Icons/T_SpriteSheet_Icon.png"))
+            .SetGlyph(OpaaxString("[S]"))
+            .SetEditor<SpriteSheetEditor>();
     }
 
     void EditorService::RegisterNativeResourceTypes()
@@ -674,18 +677,6 @@ namespace Opaax::Editor
                 if (InContext.UICanvasDocument.Open(InFile.AbsPath, lRegistry))
                 {
                     InContext.Panels.SetVisible(UICanvasPanel::PanelID(), true);
-                }
-            });
-
-        // A sheet opens its editor, not the preview (it is a document with its own panel).
-        m_Extensions.ResourceTypes().Register<SpriteSheetResource>()
-            .SetIcon(OpaaxString("Icons/T_SpriteSheet_Icon.png"))
-            .SetGlyph(OpaaxString("[S]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                if (InContext.SheetDocument.Open(InFile.AbsPath))
-                {
-                    InContext.Panels.SetVisible(SpriteSheetPanel::PanelID(), true);
                 }
             });
 

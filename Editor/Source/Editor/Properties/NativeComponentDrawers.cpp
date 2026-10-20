@@ -23,6 +23,7 @@
 #include "Renderer/Components/SpriteComponent.h"
 #include "Renderer/Components/TextComponent.h"
 #include "Renderer/Text/FontFamily.h"           // completes the text's family reference
+#include "Renderer/Textures/SpriteSheet.h"      // completes the sprite's sheet reference
 
 namespace Opaax::Editor::NativeComponentDrawers
 {

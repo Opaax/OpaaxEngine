@@ -1,4 +1,4 @@
-#include "Renderer/Textures/SpriteSheetData.h"
+#include "Renderer/Textures/SpriteSheet.h"
 
 namespace Opaax
 {
@@ -16,6 +16,48 @@ namespace Opaax
         }
     }
 
+    // =============================================================================
+    // SpriteSheet
+    // =============================================================================
+    const SpriteFrame* SpriteSheet::FrameAt(const Int32 InIndex) const noexcept
+    {
+        const Int32 lIndex = (InIndex < 0) ? static_cast<Int32>(DefaultFrame) : InIndex;
+
+        return (lIndex >= 0 && static_cast<Uint32>(lIndex) < FrameCount()) ? &Frames[static_cast<Uint32>(lIndex)] : nullptr;
+    }
+
+    Int32 SpriteSheet::FindFrameIndex(const OpaaxStringID InName) const noexcept
+    {
+        if (!InName.IsValid())
+        {
+            return -1;
+        }
+
+        for (Uint32 lIndex = 0; lIndex < FrameCount(); ++lIndex)
+        {
+            if (Frames[lIndex].Name == InName)
+            {
+                return static_cast<Int32>(lIndex);
+            }
+        }
+
+        return -1;
+    }
+
+    void SpriteSheet::PostEditChange()
+    {
+        // A default past the end would show the whole texture where the author expects a frame.
+        if (DefaultFrame > 0u && DefaultFrame >= FrameCount())
+        {
+            OPAAX_LOG(LogSpriteSheet, Warn, "Sprite sheet '{}': default frame {} is past its {} frame(s) — set to 0",
+                      GetName(), DefaultFrame, FrameCount());
+            DefaultFrame = 0u;
+        }
+    }
+
+    // =============================================================================
+    // Frames and UVs
+    // =============================================================================
     SpriteUVRect MakeFrameUV(const SpriteFrame& InFrame, const Uint32 InTexWidth, const Uint32 InTexHeight)
     {
         const float lWidth  = static_cast<float>(InTexWidth);

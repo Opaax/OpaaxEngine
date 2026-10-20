@@ -447,7 +447,7 @@
             "class": "AnimationClip",
             "unsaved": false,
             "properties": {
-                "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxsheet",
+                "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset",
                 "Fps": 6.0,
                 "PlayMode": "Loop"
             }
@@ -586,6 +586,57 @@
         "command": "asset.close",
         "params": {
             "path": "/Engine/Fonts/Roboto.opaaxasset"
+        }
+    },
+    {
+        "id": "open-engine-sheet",
+        "command": "asset.open",
+        "params": {
+            "path": "/Engine/SpriteSheets/TSS_Default_128.opaaxasset"
+        },
+        "expect": {
+            "class": "SpriteSheet",
+            "unsaved": false,
+            "properties": {
+                "Texture": "/Engine/SpriteSheets/TSS_Default_128.png",
+                "DefaultFrame": 0
+            }
+        }
+    },
+    {
+        "id": "sheet-default-past-the-end-put-back",
+        "command": "asset.set",
+        "params": {
+            "path": "/Engine/SpriteSheets/TSS_Default_128.opaaxasset",
+            "properties": {
+                "DefaultFrame": 9
+            }
+        },
+        "expect": {
+            "unsaved": false,
+            "properties": {
+                "DefaultFrame": 0
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot-sheet",
+        "command": "screenshot",
+        "params": {
+            "path": "AssetsSheet.png"
+        }
+    },
+    {
+        "id": "close-sheet",
+        "command": "asset.close",
+        "params": {
+            "path": "/Engine/SpriteSheets/TSS_Default_128.opaaxasset"
         }
     },
     {

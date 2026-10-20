@@ -4,7 +4,6 @@
 #include "Animation/SpriteAnimationSubsystem.h"
 #include "Animation/SpriteAnimatorComponent.h"
 #include "Engine/Registries/AutoRegistration.h"
-#include "Renderer/Textures/SpriteSheetResource.h"   // completes the clip's sheet reference
 
 namespace Opaax
 {

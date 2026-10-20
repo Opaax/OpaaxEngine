@@ -15,8 +15,7 @@ engine content with `/Engine/` (`/Engine/Textures/T_Square_256_White.png`).
 | `.opaaxmap` | A map: entities and placed prefabs | Hierarchy, Inspector |
 | `.opaaxprefab` | A prefab, a nested prefab or a variant | Create Prefab, Prefab panel |
 | `.opaaxui` | A UI canvas | UI editor |
-| `.opaaxsheet` | A texture cut into named frames | Sprite Sheet panel |
-| `.opaaxasset` | An asset of any registered class (a `Material2D`, an `AudioClipDef` or `AudioBank`, a `Mover` or `MoveMode`, an `InputActionAsset` or `InputMappingContextAsset`, an `AnimationClip` or `AnimationLibrary`, a `FontFamily`, a game's own classes) | Its own window: double-click it |
+| `.opaaxasset` | An asset of any registered class (a `Material2D`, a `SpriteSheet`, an `AudioClipDef` or `AudioBank`, a `Mover` or `MoveMode`, an `InputActionAsset` or `InputMappingContextAsset`, an `AnimationClip` or `AnimationLibrary`, a `FontFamily`, a game's own classes) | Its own window: double-click it |
 | `Configs/*.config` | Engine, renderer and editor settings | Config panel |
 
 Images are `.png`, sounds `.wav`, `.mp3` or `.flac`, fonts `.ttf`: put them under `Assets`. A sound up
@@ -220,28 +219,33 @@ whose action does not load is skipped, with a warning. A context's window lists 
 first; **2D Composite (WASD)** and **Arrows** replace the selected one with the four that make an
 `Axis2D` of its action.
 
-## Sprites and animation (`.opaaxsheet`, `AnimationClip`, `AnimationLibrary`)
+## Sprites and animation (`SpriteSheet`, `AnimationClip`, `AnimationLibrary`)
 
-A sheet cuts a texture into named frames (pixels, from the top-left corner); `Grid` only records how
-the editor sliced it:
+All three are assets. A sheet cuts a texture into named frames (pixels, from the top-left corner);
+`Grid` only records how the editor sliced it:
 
 ```json
-{
+{ "Class": "SpriteSheet", "Properties": {
     "Texture": "Textures/Hero.png",
     "DefaultFrame": 0,
     "Frames": [
         { "Name": "Idle", "Offset": { "x": 0.0, "y": 0.0 }, "Size": { "x": 64.0, "y": 64.0 } },
         { "Name": "Run_0", "Offset": { "x": 64.0, "y": 0.0 }, "Size": { "x": 64.0, "y": 64.0 } }
-    ]
-}
+    ] } }
 ```
 
-Clips and libraries are assets. A clip plays frames of a sheet (or whole textures) in order;
+A sprite, a `UIImage` or a `UIButton` shows a sheet frame by index (`Frame`; -1 is the sheet's
+`DefaultFrame`), a clip by name. A sheet's window draws its frames over the image: a click selects
+one, dragging it moves it, dragging an edge resizes it. **Slice** replaces the frames with the grid's
+cells (a grid that cuts nothing is refused), and **Auto-Name** names the unnamed ones `Frame_<index>`.
+An edit that leaves `DefaultFrame` past the last frame sets it back to 0.
+
+A clip plays frames of a sheet (or whole textures) in order;
 `PlayMode` is `Once`, `Loop` or `PingPong`, and `Hold` keeps a step for that many ticks:
 
 ```json
 { "Class": "AnimationClip", "Properties": {
-    "Sheet": "Sprites/Hero.opaaxsheet", "Fps": 8.0, "PlayMode": "Loop",
+    "Sheet": "Sprites/Hero.opaaxasset", "Fps": 8.0, "PlayMode": "Loop",
     "Steps": [ { "Frame": "Run_0", "Hold": 1 }, { "Frame": "Run_1", "Hold": 1 } ] } }
 ```
 
@@ -275,11 +279,11 @@ its properties by field name, and the format's version:
 A missing property keeps its default, so `{ "Class": "Material2D" }` is a whole asset. A value of the
 wrong type makes the file fail to load (the log names the field). A sprite uses a material through its
 `Material` field. Files written by an older engine (`.opaaxdata`, `.opaaxmover`, `.opaaxmovemode`,
-`.opaaxaction`, `.opaaxinputmap`, `.opaaxclip`, `.opaaxanim`, `.opaaxfont`) are converted once by
-starting the editor with `--upgrade-assets`: each becomes an `.opaaxasset` of the same name (its class
-appended when that name is taken), and the paths that named it in levels, maps, prefabs, canvases,
-assets and configs are rewritten. Paths written in game code are not: one that still names an old
-file loads the converted one, with a warning to update it.
+`.opaaxaction`, `.opaaxinputmap`, `.opaaxclip`, `.opaaxanim`, `.opaaxfont`, `.opaaxsheet`) are
+converted once by starting the editor with `--upgrade-assets`: each becomes an `.opaaxasset` of the
+same name (its class appended when that name is taken), and the paths that named it in levels, maps,
+prefabs, canvases, assets and configs are rewritten. Paths written in game code are not: one that
+still names an old file loads the converted one, with a warning to update it.
 
 ## Sound (`AudioClipDef`, `AudioBank`)
 

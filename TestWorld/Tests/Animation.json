@@ -26,7 +26,7 @@
         "params": {
             "entity": "Library",
             "path": "AnimProbe/LastSheet",
-            "equals": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxsheet"
+            "equals": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset"
         },
         "id": "on-sheet"
     },

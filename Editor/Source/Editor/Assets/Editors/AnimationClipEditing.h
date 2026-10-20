@@ -4,9 +4,8 @@
 #include "Core/Maths/Maths.h"   // Lerp
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
-#include "Core/String/OpaaxStringID.hpp"
 #include "Editor/UI/IEditorUIBackend.h"   // EditorImage
-#include "Renderer/Textures/SpriteSheetData.h"
+#include "Renderer/Textures/SpriteSheet.h"   // SpriteFrame
 
 namespace Opaax::Editor
 {
@@ -39,25 +38,6 @@ namespace Opaax::Editor
 
             InOutSteps.emplace_back(Move(lStep));
             return true;
-        }
-
-        /** The first frame of InSheet named InName (clips name frames, first match), or nullptr. */
-        inline const SpriteFrame* FindFrame(const SpriteSheetData& InSheet, const OpaaxStringID InName)
-        {
-            if (!InName.IsValid())
-            {
-                return nullptr;
-            }
-
-            for (const SpriteFrame& lFrame : InSheet.Frames)
-            {
-                if (lFrame.Name == InName)
-                {
-                    return &lFrame;
-                }
-            }
-
-            return nullptr;
         }
 
         /**

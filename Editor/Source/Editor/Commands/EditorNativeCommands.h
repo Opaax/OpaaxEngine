@@ -562,17 +562,6 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params&);
     };
 
-    /**
-     * Writes the open .opaaxsheet. Used by the panel's button and Ctrl+S (when the sheet panel has
-     * focus; see EditorService::HandleAuthoringShortcuts).
-     */
-    struct SaveSheetCommand
-    {
-        using Params = NoParams;
-
-        void Execute(EditorContext& InContext, const Params&);
-    };
-
     /** Asks where, then runs NewUIAtCommand. */
     struct NewUICommand
     {

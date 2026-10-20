@@ -5,7 +5,7 @@
 #include "Resources/ResourceManager.h"
 #include "Animation/Assets/AnimationClip.h"
 #include "Animation/Assets/AnimationLibrary.h"
-#include "Renderer/Textures/SpriteSheetResource.h"
+#include "Renderer/Textures/SpriteSheet.h"
 #include "Animation/SpriteAnimatorComponent.h"
 #include "Renderer/Components/SpriteComponent.h"
 #include "World/Systems/WorldContext.h"
@@ -175,7 +175,7 @@ namespace Opaax
             return &lFound->second;
         }
 
-        const SpriteSheetData* lSheet = ResolveSheet(InClip.Sheet);
+        const SpriteSheet* lSheet = ResolveSheet(InClip.Sheet);
 
         TDynArray<Int32> lBinding;
         lBinding.reserve(InClip.StepCount());
@@ -184,19 +184,7 @@ namespace Opaax
 
         for (const AnimationStep& lStep : InClip.Steps)
         {
-            Int32 lIndex = -1;
-
-            if (lSheet != nullptr && lStep.Frame.IsValid())
-            {
-                for (Uint32 lFrame = 0; lFrame < lSheet->FrameCount(); ++lFrame)
-                {
-                    if (lSheet->Frames[lFrame].Name == lStep.Frame)
-                    {
-                        lIndex = static_cast<Int32>(lFrame);
-                        break;
-                    }
-                }
-            }
+            const Int32 lIndex = (lSheet != nullptr) ? lSheet->FindFrameIndex(lStep.Frame) : -1;
 
             lResolved += (lIndex >= 0) ? 1u : 0u;
             lBinding.emplace_back(lIndex);
@@ -263,39 +251,29 @@ namespace Opaax
         return lIt->second.Get();
     }
 
-    const SpriteSheetData* SpriteAnimationSubsystem::ResolveSheet(const TResourcePath<SpriteSheetResource>& InPath)
+    const SpriteSheet* SpriteAnimationSubsystem::ResolveSheet(const TAssetRef<SpriteSheet>& InRef)
     {
-        if (InPath.IsEmpty())
+        if (InRef.IsEmpty())
         {
             return nullptr;
         }
 
-        const OpaaxStringID lKey(InPath.Path);
+        const OpaaxStringID lKey(InRef.Path);
 
         auto lIt = m_SheetCache.find(lKey.GetId());
 
         if (lIt == m_SheetCache.end())
         {
-            ResourceRef<SpriteSheetResource> lRef =
-                m_Context->Resources.Load<SpriteSheetResource>(ToAbsolute(InPath.Path).CStr());
+            lIt = m_SheetCache.emplace(lKey.GetId(), LoadAsset(m_Context->Resources, m_Context->Paths, InRef)).first;
 
-            lIt = m_SheetCache.emplace(lKey.GetId(), Move(lRef)).first;
-
-            if (!lIt->second.IsValid())
+            if (lIt->second.Get() == nullptr)
             {
                 OPAAX_LOG(LogSpriteAnimation, Warn, "Sheet '{}' did not load — no frame name can resolve",
-                          InPath.Path.CStr());
+                          InRef.Path.CStr());
             }
         }
 
-        const SpriteSheetResource* lResource = lIt->second.Get();
-
-        return (lResource != nullptr) ? &lResource->Data : nullptr;
-    }
-
-    OpaaxString SpriteAnimationSubsystem::ToAbsolute(const OpaaxString& InAssetPath) const
-    {
-        return m_Context->Paths.AssetToAbsolute(InAssetPath);
+        return lIt->second.Get();
     }
 
     bool SpriteAnimationSubsystem::ShouldWarnOnce(const Uint32 InKey)

@@ -3,7 +3,7 @@
     "Properties": {
         "Fps": 8.0,
         "PlayMode": "Once",
-        "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxsheet",
+        "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset",
         "Steps": [
             {
                 "Frame": "Frame_0",

@@ -2,24 +2,22 @@
 
 #include <nlohmann/json.hpp>
 
-#include "Core/EngineAPI.h"
+#include "Core/Log/Logger.h"
 #include "Core/Maths/MathTypes.h"
 #include "Core/Maths/MathsJson.hpp"
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/String/OpaaxStringIDJson.h"
+#include "Resources/Asset/Asset.h"
 #include "Resources/ResourcePath.h"
 #include "Resources/ResourcePathJson.h"
 
 namespace Opaax
 {
-    struct TextureResource;
+    OPAAX_LOG_CATEGORY(SpriteSheet);
 
-    // =============================================================================
-    // SpriteSheetData — a texture cut into named frames (.opaaxsheet).
-    //   The frame list is the truth; the grid settings only generated it.
-    // =============================================================================
+    struct TextureResource;
 
     /** One frame's rectangle in the sheet's texture. */
     struct SpriteFrame
@@ -65,12 +63,16 @@ namespace Opaax
                          OPAAX_PROP(Rows).SetRange(0.f, 512.f).SetTooltip("0 fits as many as the texture allows."))
     };
 
-    /**
-     * A sheet: its texture, its frames, and the default frame.
-     * Frames are edited by the editor panel (lists are not drawn by the property system).
-     */
-    struct SpriteSheetData
+    // =============================================================================
+    // SpriteSheet — a texture cut into frames: rectangles in pixels from its top-left corner. A sprite
+    //   shows one by index; an animation clip names them. The frame list is the truth; the grid only
+    //   records how the editor last cut the texture.
+    // =============================================================================
+    class SpriteSheet final : public Asset
     {
+        OPAAX_OBJECT(SpriteSheet, Asset)
+
+    public:
         /** Asset-relative ("Textures/Hero.png") or a mount ("/Engine/..."). */
         TResourcePath<TextureResource> Texture;
 
@@ -81,7 +83,11 @@ namespace Opaax
 
         SpriteSheetGrid Grid;
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(SpriteSheetData, Texture, Frames, DefaultFrame, Grid)
+        OPAAX_PROPERTIES(SpriteSheet,
+                         OPAAX_PROP(Texture).SetTooltip("The image the frames are cut from."),
+                         OPAAX_PROP(Frames).SetTooltip("Rectangles of the texture, in pixels from its top-left corner."),
+                         OPAAX_PROP(DefaultFrame).SetTooltip("Shown by a sprite that names no frame."),
+                         OPAAX_PROP(Grid).SetTooltip("How the editor last cut the texture into cells."))
 
         Uint32 FrameCount() const noexcept { return static_cast<Uint32>(Frames.size()); }
 
@@ -89,12 +95,15 @@ namespace Opaax
          * The frame at InIndex, or nullptr. Negative means the DefaultFrame.
          * Out of range gives nullptr (no clamping).
          */
-        const SpriteFrame* FrameAt(Int32 InIndex) const noexcept
-        {
-            const Int32 lIndex = (InIndex < 0) ? static_cast<Int32>(DefaultFrame) : InIndex;
+        const SpriteFrame* FrameAt(Int32 InIndex) const noexcept;
 
-            return (lIndex >= 0 && static_cast<Uint32>(lIndex) < FrameCount()) ? &Frames[lIndex] : nullptr;
-        }
+        /** The index of the first frame named InName (clips name frames), or -1. */
+        Int32 FindFrameIndex(OpaaxStringID InName) const noexcept;
+
+        //~Begin Object interface
+        /** A DefaultFrame past the last frame goes back to the first. */
+        void PostEditChange() override;
+        //~End Object interface
     };
 
     /** A texture sub-rectangle in UV space (for Renderer2D::DrawSprite). */

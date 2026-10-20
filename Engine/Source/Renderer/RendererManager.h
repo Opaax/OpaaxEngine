@@ -34,8 +34,7 @@ namespace Opaax
     class ITexture2D;
     struct FramebufferSpec;
     struct TextureResource;
-    struct SpriteSheetResource;
-    struct SpriteSheetData;
+    class SpriteSheet;
     struct SpriteComponent;
     struct SpriteUVRect;
     struct WindowResize;
@@ -189,9 +188,9 @@ namespace Opaax
         ITexture2D* ResolveTexture(const TResourcePath<TextureResource>& InPath);
 
         /**
-         * The sprite sheet for an asset-relative path. Loaded once and cached. Null for an empty path.
+         * The sprite sheet InRef names. Loaded once and cached. Null for an empty reference.
          */
-        const SpriteSheetData* ResolveSheet(const TResourcePath<SpriteSheetResource>& InPath);
+        const SpriteSheet* ResolveSheet(const TAssetRef<SpriteSheet>& InRef);
 
         /**
          * What a sprite draws: its texture and the region to sample. A sheet wins over a texture.
@@ -368,8 +367,8 @@ namespace Opaax
         // while the GL context is still alive.
         TUnorderedMap<Uint32, ResourceRef<TextureResource>> m_TextureCache;
 
-        /** Same cache for sprite sheets. */
-        TUnorderedMap<Uint32, ResourceRef<SpriteSheetResource>> m_SheetCache;
+        /** Sprite sheets by path, kept for the session (a saved sheet reloads in place). */
+        TUnorderedMap<Uint32, TAssetHandle<SpriteSheet>> m_SheetCache;
 
         /** Materials by path, kept for the session (a saved material reloads in place). */
         TUnorderedMap<Uint32, TAssetHandle<Material2D>> m_MaterialCache;

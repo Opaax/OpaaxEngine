@@ -6,6 +6,7 @@
 #include "Core/Reflection/OpaaxEnum.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
+#include "Resources/Asset/AssetRef.h"
 #include "Resources/ResourcePath.h"
 #include "Resources/ResourcePathJson.h"
 #include "UI/UIMargin.h"
@@ -15,9 +16,9 @@ namespace Opaax
 {
     class ITexture2D;
 
-    // Forward-declared: TResourcePath only needs the name.
+    // Forward-declared: a path or an asset reference only needs the name.
     struct TextureResource;
-    struct SpriteSheetResource;
+    class SpriteSheet;
 
     /** How FillAmount crops the image. None ignores it. */
     enum class EUIFill : Uint8
@@ -59,7 +60,7 @@ namespace Opaax
         TResourcePath<TextureResource> Texture;
 
         /** A sheet path. Wins over Texture. */
-        TResourcePath<SpriteSheetResource> Sheet;
+        TAssetRef<SpriteSheet> Sheet;
 
         /** Sheet frame; -1 = the sheet's default. */
         Int32 Frame = -1;

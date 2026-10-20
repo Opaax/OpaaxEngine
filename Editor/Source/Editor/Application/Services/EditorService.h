@@ -16,7 +16,6 @@
 #include "Editor/Input/InputRoute.h"
 #include "Editor/EditorMapDocument.h"
 #include "Editor/EditorLevelDocument.h"
-#include "Editor/EditorSpriteSheetDocument.h"
 #include "Editor/EditorUICanvasDocument.h"
 #include "Editor/Export/GameExport.h"
 #include "Editor/PIE/PlayInEditor.h"
@@ -313,7 +312,6 @@ namespace Opaax::Editor
         TUniquePtr<InputRoute>          m_InputRoute;  
         TUniquePtr<EditorMapDocument>   m_MapDocument;
         TUniquePtr<EditorLevelDocument> m_LevelDocument;
-        TUniquePtr<EditorSpriteSheetDocument> m_SheetDocument;
 
         /** The open .opaaxui and its canvas. */
         TUniquePtr<EditorUICanvasDocument>         m_UICanvasDocument;

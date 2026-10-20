@@ -29,7 +29,7 @@ namespace
     /** Makes OutClip a sheet-based clip of InStepCount steps, one tick each, at 1 fps. */
     void FillProbeClip(AnimationClip& OutClip, const Uint32 InStepCount, const EAnimPlayMode InMode)
     {
-        OutClip.Sheet.Path = OpaaxString("Sheets/Hero.opaaxsheet");
+        OutClip.Sheet.Path = OpaaxString("Sheets/Hero.opaaxasset");
         OutClip.Fps        = 1.f;
         OutClip.PlayMode   = InMode;
         OutClip.Steps.clear();
