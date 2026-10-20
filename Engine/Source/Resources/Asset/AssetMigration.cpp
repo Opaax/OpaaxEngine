@@ -147,6 +147,7 @@ namespace Opaax
             { ".opaaxinputmap",  "InputMappingContextAsset" },
             { ".opaaxclip",      "AnimationClip" },
             { ".opaaxanim",      "AnimationLibrary" },
+            { ".opaaxfont",      "FontFamily" },
         };
 
         return s_Formats;

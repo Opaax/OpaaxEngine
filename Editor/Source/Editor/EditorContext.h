@@ -28,8 +28,7 @@ namespace Opaax
         class EditorMapDocument;        // the focused map
         class EditorLevelDocument;      // the open level and whether it changed
         class EditorSpriteSheetDocument;// the open .opaaxsheet and its data
-        class EditorFontFamilyDocument;       // the open .opaaxfont and its data
-        class EditorUICanvasDocument;         // the open .opaaxui and its canvas
+        class EditorUICanvasDocument;   // the open .opaaxui and its canvas
         class EditorExtensionRegistrar; // the sealed extension routes
         class EditorPaths;              // IPaths subclass: the editor directories
         class EditorPanels;             // live panels and visibility
@@ -99,9 +98,6 @@ namespace Opaax
             // The open sprite sheet. Owns its data: the ResourceManager's copy is what the renderer draws,
             // so editing it would change the running game.
             EditorSpriteSheetDocument& SheetDocument;
-
-            // The open font family ((subset, weight, width, slant) -> .ttf). Owns its data.
-            EditorFontFamilyDocument& FamilyDocument;
 
             // The open .opaaxui. Owns a real UICanvas: the panel previews it by rendering it.
             EditorUICanvasDocument& UICanvasDocument;

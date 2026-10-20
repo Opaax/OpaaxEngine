@@ -72,20 +72,25 @@ namespace Opaax::Editor::EditorAutomation
             return WorldState(InContext);
         }
 
-        /** InPath made absolute: kept when absolute, else under the project's assets. */
+        /**
+         * InPath made absolute: an engine path ("/Engine/...") under the engine's assets, an absolute one
+         * kept, any other under the project's assets. The mount is tested first: on Linux and macOS
+         * "/Engine/..." is an absolute path too.
+         */
         OpaaxString ToAbsolute(EditorContext& InContext, const OpaaxString& InPath)
         {
-            return PathString::IsAbsolute(InPath) ? PathString::Generic(InPath)
-                                                  : InContext.Paths.AssetToAbsolute(InPath);
+            const bool bEnginePath = InPath.StartsWith(ENGINE_MOUNT);
+            return (!bEnginePath && PathString::IsAbsolute(InPath)) ? PathString::Generic(InPath)
+                                                                    : InContext.Paths.AssetToAbsolute(InPath);
         }
 
-        /** An absolute path from InParams["path"]: kept when absolute, else under the project's assets. */
+        /** An absolute path from InParams["path"], made as ToAbsolute does. */
         bool AssetPath(EditorContext& InContext, const nlohmann::json& InParams, OpaaxString& OutPath, OpaaxString& OutError)
         {
             const OpaaxString lPath = InParams.value("path", OpaaxString());
             if (lPath.IsEmpty())
             {
-                OutError = "\"path\" names the file (absolute, or relative to the project's assets)";
+                OutError = "\"path\" names the file: relative to the project's assets, /Engine/... for the engine's, or absolute";
                 return false;
             }
 

@@ -49,7 +49,7 @@
 #include "Renderer/Textures/TextureResource.h"
 #include "Renderer/Textures/SpriteSheetResource.h"
 #include "Renderer/Text/FontFaceResource.h"
-#include "Renderer/Text/FontFamilyResource.h"
+#include "Renderer/Text/FontFamily.h"
 
 #include "Renderer/Text/Text2D.h"
 #include "Renderer/Components/TextComponent.h"
@@ -1036,41 +1036,36 @@ namespace Opaax
         return lView;
     }
 
-    const FontFamilyData* RendererManager::ResolveFamily(const TResourcePath<FontFamilyResource>& InPath)
+    const FontFamily* RendererManager::ResolveFamily(const TAssetRef<FontFamily>& InRef)
     {
-        if (InPath.IsEmpty())
+        if (InRef.IsEmpty())
         {
             return nullptr;
         }
 
-        const OpaaxStringID lKey(InPath.Path);
+        const OpaaxStringID lKey(InRef.Path);
 
         auto lIt = m_FamilyCache.find(lKey.GetId());
         if (lIt == m_FamilyCache.end())
         {
-            const OpaaxString lAbsolute = OpaaxApplication::GetAppService<IPaths>().AssetToAbsolute(InPath.Path);
+            lIt = m_FamilyCache.emplace(lKey.GetId(),
+                                        LoadAsset(OpaaxApplication::GetAppService<IEngine>().GetResources(),
+                                                  OpaaxApplication::GetAppService<IPaths>(), InRef)).first;
 
-            ResourceRef<FontFamilyResource> lRef =
-                OpaaxApplication::GetAppService<IEngine>().GetResources().Load<FontFamilyResource>(lAbsolute.CStr());
-
-            lIt = m_FamilyCache.emplace(lKey.GetId(), Move(lRef)).first;
-
-            if (!lIt->second.IsValid() || lIt->second.Get() == nullptr)
+            if (lIt->second.Get() == nullptr)
             {
                 OPAAX_LOG(LogRendererManager, Warn, "Family '{}' did not load — the text draws nothing",
-                          InPath.Path.CStr());
+                          InRef.Path.CStr());
             }
         }
 
-        const FontFamilyResource* lResource = lIt->second.Get();
-
-        return (lResource != nullptr) ? &lResource->Data : nullptr;
+        return lIt->second.Get();
     }
 
     FontFaceView RendererManager::ResolveTextDraw(const TextComponent& InText)
     {
         // A family wins over a face. Neither draws nothing.
-        const FontFamilyData* lFamily = ResolveFamily(InText.Font);
+        const FontFamily* lFamily = ResolveFamily(InText.Font);
 
         if (lFamily == nullptr)
         {

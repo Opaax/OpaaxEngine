@@ -9,7 +9,7 @@
 #include "Renderer/Components/SpriteComponent.h"
 #include "Renderer/Components/TextComponent.h"
 #include "Renderer/Text/FontFaceResource.h"
-#include "Renderer/Text/FontFamilyResource.h"
+#include "Renderer/Text/FontFamily.h"
 #include "Renderer/Textures/SpriteSheetResource.h"
 #include "Renderer/Textures/TextureResource.h"
 
@@ -32,8 +32,10 @@ namespace Opaax
     // How a sprite takes light, shared by the sprites that point at it.
     OPAAX_REGISTER_OBJECT(Material2D);
 
+    // A typeface's faces by style, which text asks for instead of a .ttf.
+    OPAAX_REGISTER_OBJECT(FontFamily);
+
     OPAAX_REGISTER_NAMED_RESOURCE(TextureResource, "Texture");
     OPAAX_REGISTER_NAMED_RESOURCE(SpriteSheetResource, "SpriteSheet");
     OPAAX_REGISTER_NAMED_RESOURCE(FontFaceResource, "FontFace");
-    OPAAX_REGISTER_NAMED_RESOURCE(FontFamilyResource, "FontFamily");
 }

@@ -557,6 +557,38 @@
         }
     },
     {
+        "id": "open-engine-font-family",
+        "command": "asset.open",
+        "params": {
+            "path": "/Engine/Fonts/Roboto.opaaxasset"
+        },
+        "expect": {
+            "path": "/Engine/Fonts/Roboto.opaaxasset",
+            "class": "FontFamily",
+            "unsaved": false
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot-font-family",
+        "command": "screenshot",
+        "params": {
+            "path": "AssetsFontFamily.png"
+        }
+    },
+    {
+        "id": "close-font-family",
+        "command": "asset.close",
+        "params": {
+            "path": "/Engine/Fonts/Roboto.opaaxasset"
+        }
+    },
+    {
         "id": "nothing-open",
         "command": "asset.list",
         "expect": {

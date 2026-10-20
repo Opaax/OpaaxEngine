@@ -16,9 +16,7 @@
 #include "Editor/Export/GameExport.h"
 #include "Editor/Operation/LevelOperations.h"
 #include "Editor/Operation/SheetOperations.h"
-#include "Editor/Operation/FontFamilyOperations.h"
 #include "Editor/Operation/UICanvasOperations.h"
-#include "Editor/EditorFontFamilyDocument.h"
 #include "Editor/EditorUICanvasDocument.h"
 #include "Editor/Panels/UICanvasPanel.h"
 #include "Application/OpaaxApplication.h"
@@ -744,17 +742,6 @@ namespace Opaax::Editor
         }
 
         SheetOps::Save(InContext);   // logs the write, updates the dirty baseline
-    }
-
-    void SaveFamilyCommand::Execute(EditorContext& InContext, const Params&)
-    {
-        if (!InContext.FamilyDocument.IsOpen())
-        {
-            OPAAX_LOG(LogEditorCommands, Warn, "Save Family ignored — no font family is open");
-            return;
-        }
-
-        FamilyOps::Save(InContext);
     }
 
     // =============================================================================

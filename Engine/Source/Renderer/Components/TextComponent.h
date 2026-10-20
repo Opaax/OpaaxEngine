@@ -7,6 +7,7 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringJson.h"
+#include "Resources/Asset/AssetRef.h"
 #include "Resources/ResourcePath.h"
 #include "Resources/ResourcePathJson.h"
 #include "Renderer/Text/FontStyle.h"
@@ -14,9 +15,9 @@
 
 namespace Opaax
 {
-    // Forward-declared: TResourcePath only needs the name.
+    // Forward-declared: a path or an asset reference only needs the name.
     struct FontFaceResource;
-    struct FontFamilyResource;
+    class FontFamily;
 
     // =============================================================================
     // TextComponent — text drawn in the world. The Transform is the top-left of the first line.
@@ -28,8 +29,8 @@ namespace Opaax
         /** UTF-8 text. '\n' breaks the line. */
         OpaaxString Text = "Text";
 
-        /** Asset-relative ("/Engine/Fonts/Roboto.opaaxfont"). Wins over Face. */
-        TResourcePath<FontFamilyResource> Font;
+        /** Asset-relative ("/Engine/Fonts/Roboto.opaaxasset"). Wins over Face. */
+        TAssetRef<FontFamily> Font;
 
         /** Style to ask the family for. Ignored without a Font. */
         FontStyleKey Style;

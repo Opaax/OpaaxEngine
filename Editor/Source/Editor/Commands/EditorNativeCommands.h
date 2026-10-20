@@ -573,14 +573,6 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params&);
     };
 
-    /** Writes the open .opaaxfont and reloads it. */
-    struct SaveFamilyCommand
-    {
-        using Params = NoParams;
-
-        void Execute(EditorContext& InContext, const Params&);
-    };
-
     /** Asks where, then runs NewUIAtCommand. */
     struct NewUICommand
     {

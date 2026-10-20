@@ -16,8 +16,7 @@ engine content with `/Engine/` (`/Engine/Textures/T_Square_256_White.png`).
 | `.opaaxprefab` | A prefab, a nested prefab or a variant | Create Prefab, Prefab panel |
 | `.opaaxui` | A UI canvas | UI editor |
 | `.opaaxsheet` | A texture cut into named frames | Sprite Sheet panel |
-| `.opaaxasset` | An asset of any registered class (a `Material2D`, an `AudioClipDef` or `AudioBank`, a `Mover` or `MoveMode`, an `InputActionAsset` or `InputMappingContextAsset`, an `AnimationClip` or `AnimationLibrary`, a game's own classes) | Its own window: double-click it |
-| `.opaaxfont` | A font family: faces by style | Font Family panel |
+| `.opaaxasset` | An asset of any registered class (a `Material2D`, an `AudioClipDef` or `AudioBank`, a `Mover` or `MoveMode`, an `InputActionAsset` or `InputMappingContextAsset`, an `AnimationClip` or `AnimationLibrary`, a `FontFamily`, a game's own classes) | Its own window: double-click it |
 | `Configs/*.config` | Engine, renderer and editor settings | Config panel |
 
 Images are `.png`, sounds `.wav`, `.mp3` or `.flac`, fonts `.ttf`: put them under `Assets`. A sound up
@@ -89,7 +88,7 @@ What is in front: a `Sprite` or a `Text` is drawn by its `Layer` (`Background`, 
 `Debug`, `UI`, back to front), then its `OrderInLayer` (lower is behind). A `Quad` has no order of its
 own: it is drawn in `Default` at order 0. For a plain colour that must sit behind or in front of
 something, use a `Sprite` of the engine's white square (`"Texture": "/Engine/Textures/T_Square_32_White.png"`)
-with a `Color`. Engine content is named from `/Engine/` (`/Engine/Fonts/Roboto.opaaxfont`).
+with a `Color`. Engine content is named from `/Engine/` (`/Engine/Fonts/Roboto.opaaxasset`).
 
 ### Placed prefabs
 
@@ -276,11 +275,11 @@ its properties by field name, and the format's version:
 A missing property keeps its default, so `{ "Class": "Material2D" }` is a whole asset. A value of the
 wrong type makes the file fail to load (the log names the field). A sprite uses a material through its
 `Material` field. Files written by an older engine (`.opaaxdata`, `.opaaxmover`, `.opaaxmovemode`,
-`.opaaxaction`, `.opaaxinputmap`, `.opaaxclip`, `.opaaxanim`) are converted once by starting the
-editor with `--upgrade-assets`: each becomes an `.opaaxasset` of the same name (its class appended
-when that name is taken), and the paths that named it in levels, maps, prefabs, canvases, assets and
-configs are rewritten. Paths written in game code are not: one that still names an old file loads
-the converted one, with a warning to update it.
+`.opaaxaction`, `.opaaxinputmap`, `.opaaxclip`, `.opaaxanim`, `.opaaxfont`) are converted once by
+starting the editor with `--upgrade-assets`: each becomes an `.opaaxasset` of the same name (its class
+appended when that name is taken), and the paths that named it in levels, maps, prefabs, canvases,
+assets and configs are rewritten. Paths written in game code are not: one that still names an old
+file loads the converted one, with a warning to update it.
 
 ## Sound (`AudioClipDef`, `AudioBank`)
 
@@ -334,11 +333,23 @@ walking mode). In a Mover, names resolve by first match: an edit clears a repeat
 entry after its tuning's file when it has none, and clears a default that names no entry. Gameplay
 drives a mover through its component: `Input.MoveDir`, `Input.bJump`, `PendingMode`.
 
-## Fonts (`.opaaxfont`)
+## Fonts (`FontFamily`)
 
-A family maps styles to font files, so text asks for "Bold Italic" rather than a file:
-`{ "Entries": [ { "Face": "Fonts/Title-Bold.ttf", "Style": { "Weight": "Bold", "Slant": "Normal",
-"Width": "Normal", "Subset": "Latin" } } ] }`.
+A family is an asset that maps styles to font files, so text asks for "Bold Italic" rather than a
+file:
+
+```json
+{ "Class": "FontFamily", "Properties": { "Entries": [
+    { "Face": "Fonts/Title-Bold.ttf",
+      "Style": { "Subset": "Latin", "Weight": "Bold", "Width": "Normal", "Slant": "Normal" } } ] } }
+```
+
+A `TextComponent` names a family in `Font` (the engine's is `/Engine/Fonts/Roboto.opaaxasset`) and
+the style it wants in `Style`. The script (`Subset`) never falls back: a family without it draws
+boxes. The other axes do, in CSS's order: width, then slant, then weight (the nearest). Each style is
+written once; of two equal ones the first is drawn, and the editor refuses the second. A family's
+window shows it as a matrix (script across, weight down, for one width and slant), with a sample of
+text in the selected face and what a style request resolves to.
 
 ## Configs (`Configs/*.config`)
 

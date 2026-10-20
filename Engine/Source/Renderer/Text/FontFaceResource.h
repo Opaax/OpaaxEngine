@@ -10,7 +10,7 @@
 // =============================================================================
 // FontFaceResource — one .ttf as a resource: a baked glyph atlas and its metrics.
 //   Load (any thread) reads the file and bakes the atlas; Initialize (main thread) uploads it.
-//   One file = one face; choosing between faces is FontFamilyResource's job.
+//   One file = one face; choosing between faces is FontFamily's job.
 //   Placeholder policy: an empty face, so every character draws as a box.
 // =============================================================================
 namespace Opaax

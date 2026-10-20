@@ -22,6 +22,7 @@
 #include "Animation/SpriteAnimatorComponent.h"
 #include "Renderer/Components/SpriteComponent.h"
 #include "Renderer/Components/TextComponent.h"
+#include "Renderer/Text/FontFamily.h"           // completes the text's family reference
 
 namespace Opaax::Editor::NativeComponentDrawers
 {

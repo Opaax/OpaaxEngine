@@ -40,8 +40,7 @@ namespace Opaax
     struct SpriteUVRect;
     struct WindowResize;
     struct FontFaceResource;
-    struct FontFamilyResource;
-    struct FontFamilyData;
+    class FontFamily;
     struct FontStyleKey;
     struct FontFaceView;
     struct TextComponent;
@@ -212,10 +211,9 @@ namespace Opaax
         UISheetFrameView ResolveSheetFrame(const char* InSheetPath, Int32 InFrame) override;
 
         /**
-         * The font family for an asset-relative .opaaxfont path. Loaded once and cached.
-         * Null for an empty path.
+         * The font family InRef names. Loaded once and cached. Null for an empty reference.
          */
-        const FontFamilyData* ResolveFamily(const TResourcePath<FontFamilyResource>& InPath);
+        const FontFamily* ResolveFamily(const TAssetRef<FontFamily>& InRef);
 
         /**
          * What a text component draws with. A family wins over a face.
@@ -379,9 +377,9 @@ namespace Opaax
         /** Sheets already warned about for a missing frame. */
         TUnorderedSet<Uint32> m_WarnedFrameRange;
 
-        /** Same caches for fonts: .ttf faces and .opaaxfont families. */
-        TUnorderedMap<Uint32, ResourceRef<FontFaceResource>>   m_FaceCache;
-        TUnorderedMap<Uint32, ResourceRef<FontFamilyResource>> m_FamilyCache;
+        /** Same caches for fonts: .ttf faces and font families. */
+        TUnorderedMap<Uint32, ResourceRef<FontFaceResource>> m_FaceCache;
+        TUnorderedMap<Uint32, TAssetHandle<FontFamily>>      m_FamilyCache;
 
         /**
          * (family, style) pairs already warned about. Font path id and packed style in one Uint64.
