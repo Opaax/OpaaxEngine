@@ -148,52 +148,6 @@ namespace Opaax
     };
 
     // =============================================================================
-    // MoverModeRoute — registers mover modes into the MoverModeRegistry.
-    //   The name is required: MoveMode assets store it.
-    // =============================================================================
-    class MoverModeRoute
-    {
-        // =========================================================================
-        // Registration
-        // =========================================================================
-    public:
-        /**
-         * Registers T as a movement mode.
-         * @tparam T Derives IMoverMode, default-constructible (stateless)
-         * @param InName The name MoveMode assets use. Required.
-         * @return True if registered
-         */
-        template<typename T>
-        requires TIsBaseOf<IMoverMode, T>
-        bool Register(const OpaaxStringID InName)
-        {
-            ++m_Count;
-
-            if (m_Registry == nullptr)
-            {
-                OPAAX_LOG(LogModuleRegistrar, Error,
-                          "MoverModes().Register — route is not bound to a MoverModeRegistry; registration dropped.");
-                return false;
-            }
-
-            return m_Registry->Register<T>(InName);
-        }
-
-        /** Connects this route to the registry. Called once, before any module registers. */
-        void Bind(MoverModeRegistry* InRegistry) noexcept { m_Registry = InRegistry; }
-
-        /** Number of registration requests, including refused ones. */
-        Uint64 Count() const noexcept { return m_Count; }
-
-        // =========================================================================
-        // Members
-        // =========================================================================
-    private:
-        MoverModeRegistry* m_Registry = nullptr; // owned by the engine
-        Uint64             m_Count    = 0;
-    };
-
-    // =============================================================================
     // ResourceFormatRoute — registers resource types and their file extensions.
     //   The name is only used in logs and the editor.
     // =============================================================================
@@ -337,7 +291,6 @@ namespace Opaax
     //     Components()             -> ComponentRegistry
     //     Behaviours()             -> ComponentRegistry (stored like components)
     //     Resources()              -> ResourceFormatRegistry
-    //     MoverModes()             -> MoverModeRegistry
     //     UIWidgets()              -> UIWidgetRegistry
     //     ObjectClasses()          -> ObjectClassRegistry (assets, subsystems, any Object class)
     //   Most types register themselves with the OPAAX_REGISTER_* macros (AutoRegistration.h).
@@ -348,14 +301,12 @@ namespace Opaax
         ComponentRoute&             Components()             noexcept { return m_Components; }
         BehaviourRoute&             Behaviours()             noexcept { return m_Behaviours; }
         ResourceFormatRoute&        Resources()              noexcept { return m_ResourceFormats; }
-        MoverModeRoute&             MoverModes()             noexcept { return m_MoverModes; }
         UIWidgetRoute&              UIWidgets()              noexcept { return m_UIWidgets; }
         ObjectClassRoute&           ObjectClasses()          noexcept { return m_ObjectClasses; }
 
         const ComponentRoute&             Components()             const noexcept { return m_Components; }
         const BehaviourRoute&             Behaviours()             const noexcept { return m_Behaviours; }
         const ResourceFormatRoute&        Resources()              const noexcept { return m_ResourceFormats; }
-        const MoverModeRoute&             MoverModes()             const noexcept { return m_MoverModes; }
         const UIWidgetRoute&              UIWidgets()              const noexcept { return m_UIWidgets; }
         const ObjectClassRoute&           ObjectClasses()          const noexcept { return m_ObjectClasses; }
 
@@ -367,7 +318,6 @@ namespace Opaax
             m_Components.Bind(&InRegistries.Components());
             m_Behaviours.Bind(&InRegistries.Components());
             m_ResourceFormats.Bind(&InRegistries.Resources());
-            m_MoverModes.Bind(&InRegistries.MoverModes());
             m_UIWidgets.Bind(&InRegistries.UIWidgets());
             m_ObjectClasses.Bind(&InRegistries.ObjectClasses());
         }
@@ -376,7 +326,6 @@ namespace Opaax
         ComponentRoute             m_Components;
         BehaviourRoute             m_Behaviours;
         ResourceFormatRoute        m_ResourceFormats;
-        MoverModeRoute             m_MoverModes;
         UIWidgetRoute              m_UIWidgets;
         ObjectClassRoute           m_ObjectClasses;
     };

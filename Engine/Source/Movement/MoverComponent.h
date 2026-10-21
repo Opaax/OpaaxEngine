@@ -31,9 +31,9 @@ namespace Opaax
     };
 
     // =============================================================================
-    // MoverComponent — kinematic movement driven by an IMoverMode.
+    // MoverComponent — kinematic movement driven by a MoveMode.
     //   Sweeps a capsule against the world and moves its Transform. Do not add a ColliderComponent too.
-    //   Behaviour lives in the modes; tuning lives in the Mover and MoveMode assets.
+    //   Its Mover asset names its modes; each is a MoveMode asset, its step and its tuning.
     //   This holds the capsule (per entity) and the runtime state.
     // =============================================================================
     struct MoverComponent

@@ -59,7 +59,8 @@ namespace Opaax
         bool Parse(const OpaaxString& InText, Contents& OutContents, OpaaxString* OutError = nullptr);
 
         /**
-         * Reads InAbsPath into OutContents (untouched on failure).
+         * Reads InAbsPath into OutContents (untouched on failure). A file of a class split since it was
+         * written is read as its subclass, with a warning (AssetMigration::UpgradeSplitClass).
          * @return False when the file is missing, or Parse refuses it (logged)
          */
         bool Load(const OpaaxString& InAbsPath, Contents& OutContents);

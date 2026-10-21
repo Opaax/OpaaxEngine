@@ -1,6 +1,5 @@
 #include "Movement/Modes/FlyMoveMode.h"
 
-#include "Movement/Assets/MoveMode.h"
 #include "Physics/Collision/CollisionChannel.h"
 #include "Physics/IPhysicsWorld.h"
 #include "Movement/MoverComponent.h"
@@ -8,19 +7,19 @@
 
 namespace Opaax
 {
-    void FlyMoveMode::OnModeEnter(MoverTickContext& InContext)
+    void FlyMoveMode::OnModeEnter(MoverTickContext& InContext) const
     {
         // Drop the fall speed when switching to flight.
         InContext.Mover.Velocity = { 0.f, 0.f };
     }
 
-    void FlyMoveMode::Tick(MoverTickContext& InContext)
+    void FlyMoveMode::Tick(MoverTickContext& InContext) const
     {
         MoverComponent&     lMover     = InContext.Mover;
         TransformComponent& lTransform = InContext.Transform;
 
         // Input straight to velocity, both axes (no acceleration).
-        const Vector2F lVelocity = lMover.Input.MoveDir * InContext.Params.MaxSpeed;
+        const Vector2F lVelocity = lMover.Input.MoveDir * MaxSpeed;
 
         MoveCapsuleInput lInput;
         lInput.Position       = lTransform.Position;
@@ -29,7 +28,7 @@ namespace Opaax
         lInput.DeltaTime      = InContext.DeltaTime;
         lInput.ChannelMask    = AllChannelsMask();
         lInput.MaxIterations  = 5;
-        lInput.GroundNormalY  = InContext.Params.GroundNormalY();
+        lInput.GroundNormalY  = GroundNormalY();
         lInput.IgnoreUserData = InContext.SelfUserData;
 
         const MoveCapsuleResult lResult = InContext.World.MoveCapsule(lInput);

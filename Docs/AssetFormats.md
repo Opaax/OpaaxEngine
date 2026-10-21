@@ -15,7 +15,7 @@ engine content with `/Engine/` (`/Engine/Textures/T_Square_256_White.png`).
 | `.opaaxmap` | A map: entities and placed prefabs | Hierarchy, Inspector |
 | `.opaaxprefab` | A prefab, a nested prefab or a variant | Create Prefab, Prefab panel |
 | `.opaaxui` | A UI canvas | UI editor |
-| `.opaaxasset` | An asset of any registered class (a `Material2D`, a `SpriteSheet`, an `AudioClipDef` or `AudioBank`, a `Mover` or `MoveMode`, an `InputActionAsset` or `InputMappingContextAsset`, an `AnimationClip` or `AnimationLibrary`, a `FontFamily`, a game's own classes) | Its own window: double-click it |
+| `.opaaxasset` | An asset of any registered class (a `Material2D`, a `SpriteSheet`, an `AudioClipDef` or `AudioBank`, a `Mover` or a move mode (`GroundMoveMode`, `FlyMoveMode`), an `InputActionAsset` or `InputMappingContextAsset`, an `AnimationClip` or `AnimationLibrary`, a `FontFamily`, a game's own classes) | Its own window: double-click it |
 | `Configs/*.config` | Engine, renderer and editor settings | Config panel |
 
 Images are `.png`, sounds `.wav`, `.mp3` or `.flac`, fonts `.ttf`: put them under `Assets`. A sound up
@@ -312,10 +312,10 @@ definition's) or `Clip` with its own `Bus`, `Volume`, `Pitch`, `bLoop`, `bSpatia
 `Attenuation`. `bPlayOnStart` starts it with its entity; `bStopOnDestroy` off lets it play to its end
 after the entity is gone.
 
-## Movement (`Mover`, `MoveMode`)
+## Movement (`Mover`, move modes)
 
-Both are assets. A `Mover` lists the modes a `Mover` component can switch between; each mode is a
-`MoveMode` asset of its own (a tuning):
+Both are assets. A `Mover` lists the modes a `Mover` component can switch between; each mode is an
+asset of a `MoveMode` class, which is a way of moving and its tuning:
 
 ```json
 { "Class": "Mover", "Properties": {
@@ -325,17 +325,21 @@ Both are assets. A `Mover` lists the modes a `Mover` component can switch betwee
 ```
 
 ```json
-{ "Class": "MoveMode", "Properties": {
-    "Mode": "GroundMove", "MaxSpeed": 420.0, "Acceleration": 12.0, "GroundDeceleration": 9.0,
-    "AirSteer": 0.35, "JumpSpeed": 620.0, "GravityScale": 1.0, "MaxSlopeAngleDeg": 50.0,
-    "MinSpeed": 10.0, "StopSpeed": 100.0 } }
+{ "Class": "GroundMoveMode", "Properties": {
+    "MaxSpeed": 420.0, "Acceleration": 12.0, "GroundDeceleration": 9.0, "AirSteer": 0.35,
+    "JumpSpeed": 620.0, "GravityScale": 1.0, "MaxSlopeAngleDeg": 50.0, "MinSpeed": 10.0,
+    "StopSpeed": 100.0 } }
+{ "Class": "FlyMoveMode", "Properties": { "MaxSpeed": 600.0, "MaxSlopeAngleDeg": 50.0 } }
 ```
 
-`Mode` names a registered mode (`GroundMove`, `FlyMove`, or a game's `OPAAX_REGISTER_MOVER_MODE`); its
-window shows only the fields that mode reads. A tuning that does not load moves with the defaults (a
-walking mode). In a Mover, names resolve by first match: an edit clears a repeated name, names an
-entry after its tuning's file when it has none, and clears a default that names no entry. Gameplay
-drives a mover through its component: `Input.MoveDir`, `Input.bJump`, `PendingMode`.
+The class is the mode: `GroundMoveMode` walks, jumps and falls, `FlyMoveMode` flies, and a game adds
+its own as a `MoveMode` subclass. Each lists only the fields it reads; `MaxSlopeAngleDeg`, the
+steepest slope that counts as ground, belongs to every mode. A mode that does not load walks with
+`GroundMoveMode`'s defaults. A file written before the modes were classes (`"Class": "MoveMode"` with a
+`"Mode": "GroundMove"` field) loads as the class its `Mode` names, `GroundMoveMode` here, with a
+warning; `--upgrade-assets` rewrites it. In a Mover, names resolve by first match: an edit clears a
+repeated name, names an entry after its mode's file when it has none, and clears a default that names
+no entry. Gameplay drives a mover through its component: `Input.MoveDir`, `Input.bJump`, `PendingMode`.
 
 ## Fonts (`FontFamily`)
 

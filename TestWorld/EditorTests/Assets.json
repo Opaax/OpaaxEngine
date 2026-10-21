@@ -295,9 +295,8 @@
             "path": "Movers/Walker_Fly.opaaxasset"
         },
         "expect": {
-            "class": "MoveMode",
+            "class": "FlyMoveMode",
             "properties": {
-                "Mode": "FlyMove",
                 "MaxSpeed": 600.0
             }
         }

@@ -53,6 +53,8 @@ namespace Opaax
         /** The asset, or T's default object when it is missing: for a type whose defaults make sense. */
         const T& GetOrDefault() const
         {
+            static_assert(!TIsAbstract<T>, "GetOrDefault: an abstract class has no default object; use Get().");
+
             const T* lAsset = Get();
             return lAsset != nullptr ? *lAsset : *static_cast<const T*>(T::StaticClass().GetDefaultObject());
         }

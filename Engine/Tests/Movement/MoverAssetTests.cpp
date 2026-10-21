@@ -1,4 +1,4 @@
-// Suite: the mover assets — MoveMode (a tuning) and Mover (named modes).
+// Suite: the mover assets — the move modes (a way of moving and its tuning) and Mover (named modes).
 // A named mode that is missing gives nullptr (no silent fallback); only "no opinion" gets the default.
 // File cases use a unique temp directory, created and removed per case.
 #include <doctest.h>
@@ -8,6 +8,8 @@
 #include "Core/IO/FileIO.h"
 #include "Movement/Assets/MoveMode.h"
 #include "Movement/Assets/Mover.h"
+#include "Movement/Modes/FlyMoveMode.h"
+#include "Movement/Modes/GroundMoveMode.h"
 #include "Object/ObjectClassRegistry.h"
 #include "Resources/Asset/AssetFile.h"
 
@@ -20,6 +22,8 @@ namespace
         MovementClasses()
         {
             Register<MoveMode>();
+            Register<GroundMoveMode>();
+            Register<FlyMoveMode>();
             Register<Mover>();
         }
     };
@@ -34,27 +38,27 @@ namespace
 }
 
 // =============================================================================
-// MoveMode — the tuning
+// The modes — a way of moving and its tuning
 // =============================================================================
 
-TEST_CASE("MoveMode: the defaults are a walkable ground mode")
+TEST_CASE("GroundMoveMode: the defaults walk and jump")
 {
-    const MoveMode lMode;
+    const GroundMoveMode lMode;
 
-    // A tuning that does not load gives these (TAssetHandle::GetOrDefault): a broken reference
-    // degrades into walking rather than freezing the entity.
-    CHECK(lMode.Mode == OPAAX_ID("GroundMove"));
+    // What a mode that does not load moves with (MoverSubsystem falls back to this class's default
+    // object): a broken reference degrades into walking rather than freezing the entity.
     CHECK(lMode.MaxSpeed > 0.f);
     CHECK(lMode.JumpSpeed > 0.f);
+    CHECK(lMode.GravityScale == doctest::Approx(1.f));
 
-    const MoveMode* lDefault = static_cast<const MoveMode*>(MoveMode::StaticClass().GetDefaultObject());
+    const GroundMoveMode* lDefault = static_cast<const GroundMoveMode*>(GroundMoveMode::StaticClass().GetDefaultObject());
     REQUIRE(lDefault != nullptr);
-    CHECK(lDefault->Mode == OPAAX_ID("GroundMove"));
+    CHECK(lDefault->MaxSpeed == doctest::Approx(lMode.MaxSpeed));
 }
 
 TEST_CASE("MoveMode: GroundNormalY is the COSINE of the slope limit")
 {
-    MoveMode lMode;
+    FlyMoveMode lMode;   // the base's, shared by every mode
 
     // 0 degrees means only a perfectly flat surface counts as ground, so the threshold is 1.
     lMode.MaxSlopeAngleDeg = 0.f;
@@ -71,31 +75,12 @@ TEST_CASE("MoveMode: GroundNormalY is the COSINE of the slope limit")
     CHECK(lMode.GroundNormalY() < lAt45);
 }
 
-TEST_CASE("MoveMode: an editor shows only the fields its mode reads")
-{
-    MoveMode lMode;
-    CHECK(lMode.IsPropertyVisible(OpaaxStringView("JumpSpeed")));
-    CHECK(lMode.IsPropertyVisible(OpaaxStringView("GravityScale")));
-
-    // Flight has no ground; the mode stays editable, so it can be switched back.
-    lMode.Mode = OPAAX_ID("FlyMove");
-    CHECK(lMode.IsPropertyVisible(OpaaxStringView("Mode")));
-    CHECK(lMode.IsPropertyVisible(OpaaxStringView("MaxSpeed")));
-    CHECK(lMode.IsPropertyVisible(OpaaxStringView("Acceleration")));
-    CHECK_FALSE(lMode.IsPropertyVisible(OpaaxStringView("JumpSpeed")));
-    CHECK_FALSE(lMode.IsPropertyVisible(OpaaxStringView("GravityScale")));
-
-    // A game's own mode: nothing is hidden.
-    lMode.Mode = OPAAX_ID("SwimMove");
-    CHECK(lMode.IsPropertyVisible(OpaaxStringView("GravityScale")));
-}
-
-TEST_CASE("MoveMode: a tuning round-trips through its asset file; a missing key keeps its default")
+TEST_CASE("Move modes: a mode round-trips through its asset file as its own class; a missing key keeps its default")
 {
     const TestTempDir     lDir("modeRoundTrip");
     const MovementClasses lClasses;
 
-    MoveMode lSaved;
+    GroundMoveMode lSaved;
     lSaved.MaxSpeed         = 375.f;
     lSaved.JumpSpeed        = 640.f;
     lSaved.MaxSlopeAngleDeg = 60.f;
@@ -103,8 +88,15 @@ TEST_CASE("MoveMode: a tuning round-trips through its asset file; a missing key 
     const OpaaxString lPath = lDir.Sub("Hero_Ground.opaaxasset");
     REQUIRE(AssetFile::Save(lPath, lSaved));
 
+    // The base's field and the mode's, under the mode's class.
+    AssetFile::Contents lContents;
+    REQUIRE(AssetFile::Load(lPath, lContents));
+    CHECK(lContents.Class == OPAAX_ID("GroundMoveMode"));
+    CHECK(lContents.Properties.contains("MaxSlopeAngleDeg"));
+    CHECK(lContents.Properties.contains("JumpSpeed"));
+
     const TStrongObjectPtr<Asset> lLoaded = AssetFile::LoadAsset(lPath, lClasses);
-    const MoveMode* lMode = Cast<MoveMode>(lLoaded.Get());
+    const GroundMoveMode* lMode = Cast<GroundMoveMode>(lLoaded.Get());
     REQUIRE(lMode != nullptr);
     CHECK(lMode->MaxSpeed == doctest::Approx(375.f));
     CHECK(lMode->JumpSpeed == doctest::Approx(640.f));
@@ -112,12 +104,40 @@ TEST_CASE("MoveMode: a tuning round-trips through its asset file; a missing key 
 
     // Written before JumpSpeed existed: it still loads, with that field's default.
     const OpaaxString lPartial = lDir.Sub("Partial.opaaxasset");
-    REQUIRE(FileIO::WriteAllText(lPartial, OpaaxString(R"({ "Class": "MoveMode", "Properties": { "Mode": "FlyMove", "MaxSpeed": 900.0 } })")));
+    REQUIRE(FileIO::WriteAllText(lPartial, OpaaxString(R"({ "Class": "GroundMoveMode", "Properties": { "MaxSpeed": 900.0 } })")));
 
-    const TStrongObjectPtr<Asset> lOld = AssetFile::LoadAsset(lPartial, lClasses);
-    REQUIRE(Cast<MoveMode>(lOld.Get()) != nullptr);
-    CHECK(Cast<MoveMode>(lOld.Get())->Mode == OPAAX_ID("FlyMove"));
-    CHECK(Cast<MoveMode>(lOld.Get())->JumpSpeed == doctest::Approx(MoveMode{}.JumpSpeed));
+    const TStrongObjectPtr<Asset> lShort = AssetFile::LoadAsset(lPartial, lClasses);
+    const GroundMoveMode* lShortMode = Cast<GroundMoveMode>(lShort.Get());
+    REQUIRE(lShortMode != nullptr);
+    CHECK(lShortMode->MaxSpeed == doctest::Approx(900.f));
+    CHECK(lShortMode->JumpSpeed == doctest::Approx(GroundMoveMode{}.JumpSpeed));
+}
+
+TEST_CASE("Move modes: a file of the old MoveMode form loads as the mode its Mode named")
+{
+    const TestTempDir     lDir("modeOldForm");
+    const MovementClasses lClasses;
+
+    // Before the modes were classes: one MoveMode class, the mode named by a field, every field saved.
+    const OpaaxString lPath = lDir.Sub("Hero_Fly.opaaxasset");
+    REQUIRE(FileIO::WriteAllText(lPath, OpaaxString(R"({ "Class": "MoveMode", "Properties": {
+        "Mode": "FlyMove", "MaxSpeed": 650.0, "JumpSpeed": 500.0, "MaxSlopeAngleDeg": 40.0 }, "Version": 1 })")));
+
+    const TStrongObjectPtr<Asset> lLoaded = AssetFile::LoadAsset(lPath, lClasses);
+    const FlyMoveMode* lFly = Cast<FlyMoveMode>(lLoaded.Get());
+    REQUIRE(lFly != nullptr);
+    CHECK(lFly->MaxSpeed == doctest::Approx(650.f));
+    CHECK(lFly->MaxSlopeAngleDeg == doctest::Approx(40.f));
+
+    // The file itself is untouched until --upgrade-assets rewrites it.
+    AssetFile::Contents lRaw;
+    REQUIRE(AssetFile::Parse(FileIO::ReadAllText(lPath), lRaw));
+    CHECK(lRaw.Class == OPAAX_ID("MoveMode"));
+
+    // The base cannot be made by itself: a file naming it without a mode does not load.
+    const OpaaxString lBare = lDir.Sub("Bare.opaaxasset");
+    REQUIRE(FileIO::WriteAllText(lBare, OpaaxString(R"({ "Class": "MoveMode", "Properties": { "MaxSpeed": 1.0 } })")));
+    CHECK_FALSE(AssetFile::LoadAsset(lBare, lClasses).IsValid());
 }
 
 // =============================================================================

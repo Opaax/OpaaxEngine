@@ -578,6 +578,7 @@ namespace Opaax::Editor
         lTypes.Register<Material2D>().SetCategory(OpaaxString("Rendering"));
         lTypes.Register<AudioClipDef>().SetCategory(OpaaxString("Audio"));
         lTypes.Register<AudioBank>().SetCategory(OpaaxString("Audio"));
+        // Every mode (a MoveMode subclass, a game's too) goes with it.
         lTypes.Register<MoveMode>().SetCategory(OpaaxString("Movement"));
         lTypes.Register<Mover>().SetCategory(OpaaxString("Movement")).SetGlyph(OpaaxString("[MV]"));
 

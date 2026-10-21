@@ -78,7 +78,8 @@ if (const EnemyStats* lData = lStats.Get())   // null when the file is missing o
 
 Keep the handle, not the pointer: saving the file in the editor reloads it in place, and the handle
 reads the new values. `GetOrDefault()` answers the class's defaults when the file is missing, for a
-class whose defaults make sense (a `MoveMode` walks). A path written in code works too:
+class whose defaults make sense (a `Material2D` is lit and flat); an abstract class has none. A path
+written in code works too:
 `LoadAsset<EnemyStats>(Resources, Paths, Opaax::OpaaxString("Data/Grunt.opaaxasset"))`.
 
 ## Hooks
@@ -89,10 +90,22 @@ An asset can react to what happens to it by overriding:
 |---|---|---|
 | `PostLoad()` | Its properties were just read (a file, an undo). It may run on a loading thread: touch nothing but the object. | derived values |
 | `PostEditChange()` | An editor or a script changed it. Fix or refuse the values here; the window records the fixed ones. | `Mover`, `AnimationLibrary`: a repeated name is cleared; `SpriteSheet`: a default past the last frame goes back to 0 |
-| `IsPropertyVisible(name)` | The editor asks whether to show a field | `MoveMode` shows only the fields of its mode |
+| `IsPropertyVisible(name)` | The editor asks whether to show a field | a field that only applies to some values of another |
 
 `Resources/Asset/NamedAssetEntries.h` has the lookups and fix-ups of a list that gives other assets
 short names (a Mover's modes, a library's clips), for a class of the same kind.
+
+## Assets with code
+
+An asset class can carry behaviour as well as data. The move modes do: `MoveMode` is an abstract asset
+class whose subclasses are ways of moving, each with its tuning as properties and its step as a
+`const` `Tick` (`Movement/Modes/GroundMoveMode.h`). One asset serves every entity that moves that way,
+so a mode keeps no state of its own; the entity's lives on its component. A new way of moving is a new
+subclass and one `OPAAX_REGISTER_OBJECT` line, and its window shows exactly its fields.
+
+When a class is split into subclasses like this, a line in `AssetMigration::GetClassSplits` (the old
+class, the property that named the kind, the suffix that makes the subclass's name) lets the files
+written before load as their subclass, and `--upgrade-assets` rewrites them.
 
 ## In the editor
 
@@ -161,8 +174,9 @@ without a window.
 
 Before this model, each asset type had its own extension (`.opaaxsheet`, `.opaaxclip`...). Starting
 the editor with `--upgrade-assets` converts every such file of the project and of the engine's content
-into an `.opaaxasset` of the same name, and rewrites the paths that named it in levels, maps, prefabs,
-canvases, assets and configs. A path written in game code is not rewritten: one that still names an
+into an `.opaaxasset` of the same name, rewrites the paths that named it in levels, maps, prefabs,
+canvases, assets and configs, and rewrites in its subclass every file of a split class (a
+`MoveMode` naming its `Mode`). A path written in game code is not rewritten: one that still names an
 old file loads the converted one and logs a warning saying where to change it. When a class of yours
 replaces a format of your own, add one line to the table in `AssetMigration::GetLegacyFormats`.
 

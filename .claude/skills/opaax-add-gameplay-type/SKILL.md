@@ -14,6 +14,7 @@ description: Add a component, behaviour, world or game instance subsystem, asset
 | Logic for a whole world | world subsystem (`Opaax::WorldSubsystem` + `OPAAX_OBJECT`) | `OPAAX_REGISTER_OBJECT(T)` |
 | Logic across levels | game instance subsystem (`Opaax::GameInstanceSubsystem` + `OPAAX_OBJECT`) | `OPAAX_REGISTER_OBJECT(T)` |
 | Shared tuning data in a file | asset class (`Opaax::Asset` + `OPAAX_OBJECT`, `.opaaxasset` files) | `OPAAX_REGISTER_OBJECT(T)` |
+| A way of moving for the Mover | move mode (`Opaax::MoveMode` subclass: tuning as properties, a `const` `Tick`) | `OPAAX_REGISTER_OBJECT(T)` |
 | A file format of its own | resource | `OPAAX_REGISTER_RESOURCE(T)` |
 
 Engine types go in their module (`Engine/Source/<Module>/`) and register in the module's

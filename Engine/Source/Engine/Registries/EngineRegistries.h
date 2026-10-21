@@ -6,7 +6,6 @@
 #include "Resources/ResourceFormatRegistry.h"
 #include "UI/UIWidgetRegistry.h"
 #include "World/Components/ComponentRegistry.h"
-#include "Movement/Modes/MoverModeRegistry.h"
 
 namespace Opaax
 {
@@ -44,10 +43,6 @@ namespace Opaax
         ResourceFormatRegistry&       Resources()       noexcept { return m_ResourceFormats; }
         const ResourceFormatRegistry& Resources() const noexcept { return m_ResourceFormats; }
 
-        // Movement modes a MoveMode asset can use.
-        MoverModeRegistry&       MoverModes()       noexcept { return m_MoverModes; }
-        const MoverModeRegistry& MoverModes() const noexcept { return m_MoverModes; }
-
         /** Widget types a .opaaxui can use. */
         UIWidgetRegistry&       UIWidgets()       noexcept { return m_UIWidgets; }
         const UIWidgetRegistry& UIWidgets() const noexcept { return m_UIWidgets; }
@@ -67,7 +62,6 @@ namespace Opaax
         {
             m_Components.Seal();
             m_ResourceFormats.Seal();
-            m_MoverModes.Seal();
             m_UIWidgets.Seal();
             m_ObjectClasses.Seal();
         }
@@ -78,7 +72,6 @@ namespace Opaax
     private:
         ComponentRegistry             m_Components;
         ResourceFormatRegistry        m_ResourceFormats;
-        MoverModeRegistry             m_MoverModes;
         UIWidgetRegistry              m_UIWidgets;
         ObjectClassRegistry           m_ObjectClasses;
     };

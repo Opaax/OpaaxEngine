@@ -11,13 +11,12 @@ namespace Opaax
 {
     OPAAX_REGISTER_NAMED_COMPONENT(MoverComponent, "Mover");
 
-    // A MoveMode is one tuning (like an animation clip); a Mover names several (like a library).
+    // A move mode asset is one way of moving and its tuning (like an animation clip); a Mover names
+    // several (like a library). The class names are saved in the files.
     OPAAX_REGISTER_OBJECT(MoveMode);
+    OPAAX_REGISTER_OBJECT(GroundMoveMode);
+    OPAAX_REGISTER_OBJECT(FlyMoveMode);
     OPAAX_REGISTER_OBJECT(Mover);
-
-    // These names are saved in MoveMode assets: renaming one breaks existing assets.
-    OPAAX_REGISTER_MOVER_MODE(GroundMoveMode, "GroundMove");
-    OPAAX_REGISTER_MOVER_MODE(FlyMoveMode, "FlyMove");
 
     // After Physics: the mover must see this step's poses.
     OPAAX_REGISTER_OBJECT(MoverSubsystem);

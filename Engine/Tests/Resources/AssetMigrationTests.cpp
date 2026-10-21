@@ -1,5 +1,6 @@
-// Suite: AssetMigration — old per-type asset files brought to .opaaxasset: the text of one file, the
-// paths that name them, and a whole run over a project and the engine's content.
+// Suite: AssetMigration — old per-type asset files brought to .opaaxasset, and files of a class split
+// into subclasses brought to their subclass: the text of one file, the paths that name them, and a
+// whole run over a project and the engine's content.
 #include <doctest.h>
 
 #include "../TestTempDir.h"
@@ -33,6 +34,22 @@ namespace
     {
         AssetFile::Contents lContents;
         CHECK(AssetFile::Load(InPath, lContents));
+        return lContents;
+    }
+
+    /** The file as written, without the upgrade AssetFile::Load applies. */
+    AssetFile::Contents ParseAsset(const OpaaxString& InPath)
+    {
+        AssetFile::Contents lContents;
+        CHECK(AssetFile::Parse(FileIO::ReadAllText(InPath), lContents));
+        return lContents;
+    }
+
+    AssetFile::Contents MakeContents(const char* InClass, nlohmann::json InProperties)
+    {
+        AssetFile::Contents lContents;
+        lContents.Class      = OpaaxStringID(InClass);
+        lContents.Properties = Move(InProperties);
         return lContents;
     }
 }
@@ -83,6 +100,59 @@ TEST_CASE("AssetMigration: a data asset's type becomes the class, its data the p
     CHECK_FALSE(lError.IsEmpty());
     CHECK_FALSE(AssetMigration::ConvertText(OpaaxString(R"({ "Data": {} })"), DataFormat(), lAssetText));
     CHECK_FALSE(AssetMigration::ConvertText(OpaaxString(R"({ "Type": "X", "Data": 3 })"), DataFormat(), lAssetText));
+}
+
+// =============================================================================
+// A class split into subclasses
+// =============================================================================
+
+TEST_CASE("AssetMigration: a file of a split class names its subclass, and loses the property that named it")
+{
+    AssetFile::Contents lGround = MakeContents("MoveMode", { { "Mode", "GroundMove" }, { "MaxSpeed", 420.0 } });
+    REQUIRE(AssetMigration::UpgradeSplitClass(lGround));
+    CHECK(lGround.Class == OPAAX_ID("GroundMoveMode"));
+    CHECK(lGround.Properties == nlohmann::json{ { "MaxSpeed", 420.0 } });
+
+    // Already upgraded, another class, or no property saying which: left as it is.
+    CHECK_FALSE(AssetMigration::UpgradeSplitClass(lGround));
+
+    AssetFile::Contents lOther = MakeContents("Mover", { { "Mode", "GroundMove" } });
+    CHECK_FALSE(AssetMigration::UpgradeSplitClass(lOther));
+    CHECK(lOther.Class == OPAAX_ID("Mover"));
+
+    AssetFile::Contents lUnnamed = MakeContents("MoveMode", { { "MaxSpeed", 1.0 } });
+    CHECK_FALSE(AssetMigration::UpgradeSplitClass(lUnnamed));
+    CHECK(lUnnamed.Class == OPAAX_ID("MoveMode"));
+
+    AssetFile::Contents lNotText = MakeContents("MoveMode", { { "Mode", 3 } });
+    CHECK_FALSE(AssetMigration::UpgradeSplitClass(lNotText));
+}
+
+TEST_CASE("AssetMigration: an old .opaaxmovemode file converts straight to its mode's class")
+{
+    const AssetMigration::LegacyFormat* lFormat = AssetMigration::FindLegacyFormat(OpaaxStringView("Hero.opaaxmovemode"));
+    REQUIRE(lFormat != nullptr);
+
+    OpaaxString lAssetText;
+    REQUIRE(AssetMigration::ConvertText(OpaaxString(R"({ "Mode": "FlyMove", "MaxSpeed": 600.0 })"), *lFormat, lAssetText));
+
+    AssetFile::Contents lContents;
+    REQUIRE(AssetFile::Parse(lAssetText, lContents));
+    CHECK(lContents.Class == OPAAX_ID("FlyMoveMode"));
+    CHECK(lContents.Properties == nlohmann::json{ { "MaxSpeed", 600.0 } });
+}
+
+TEST_CASE("AssetMigration: loading reads an unconverted file as its subclass, and leaves the file alone")
+{
+    TestTempDir       lDir("AssetMigrationLoad");
+    const OpaaxString lPath = Write(lDir.Path(), "Hero_Ground.opaaxasset",
+                                    R"({ "Class": "MoveMode", "Properties": { "Mode": "GroundMove", "JumpSpeed": 610.0 } })");
+
+    const AssetFile::Contents lRead = ReadAsset(lPath);
+    CHECK(lRead.Class == OPAAX_ID("GroundMoveMode"));
+    CHECK(lRead.Properties == nlohmann::json{ { "JumpSpeed", 610.0 } });
+
+    CHECK(ParseAsset(lPath).Class == OPAAX_ID("MoveMode"));
 }
 
 // =============================================================================
@@ -178,6 +248,39 @@ TEST_CASE("AssetMigration: a project and the engine's content brought to .opaaxa
     const AssetMigration::Report lAgain = AssetMigration::Migrate(lRoots, { lConfigs });
     CHECK(lAgain.Converted.empty());
     CHECK(lAgain.Rewritten.empty());
+}
+
+TEST_CASE("AssetMigration: a run rewrites every file of a split class in its subclass, once")
+{
+    TestTempDir       lDir("AssetMigrationSplit");
+    const OpaaxString lProject = lDir.Sub("Game/Assets");
+
+    const OpaaxString lFly    = Write(lProject, "Movers/Hero_Fly.opaaxasset",
+                                      R"({ "Class": "MoveMode", "Properties": { "Mode": "FlyMove", "MaxSpeed": 600.0 } })");
+    const OpaaxString lMover  = Write(lProject, "Movers/Hero.opaaxasset",
+                                      R"({ "Class": "Mover", "Properties": { "DefaultMode": "Fly" } })");
+    const OpaaxString lLegacy = Write(lProject, "Movers/Hero_Ground.opaaxmovemode", R"({ "Mode": "GroundMove" })");
+
+    const TDynArray<AssetMigration::AssetRoot> lRoots = { { lProject, OpaaxString() } };
+
+    const AssetMigration::Report lReport = AssetMigration::Migrate(lRoots);
+
+    // On disk now, not only when loaded; the old-format file went straight to its subclass.
+    REQUIRE(lReport.Upgraded.size() == 1);
+    CHECK(lReport.Upgraded[0] == lFly);
+    CHECK(ParseAsset(lFly).Class == OPAAX_ID("FlyMoveMode"));
+    CHECK(ParseAsset(lFly).Properties == nlohmann::json{ { "MaxSpeed", 600.0 } });
+    CHECK(ParseAsset(lMover).Class == OPAAX_ID("Mover"));
+
+    REQUIRE(lReport.Converted.size() == 1);
+    CHECK_FALSE(FileSystem::Exists(lLegacy));
+    CHECK(ParseAsset(PathString::Join(lProject, OpaaxStringView("Movers/Hero_Ground.opaaxasset"))).Class
+          == OPAAX_ID("GroundMoveMode"));
+    CHECK(lReport.Errors.empty());
+
+    const AssetMigration::Report lAgain = AssetMigration::Migrate(lRoots);
+    CHECK(lAgain.Upgraded.empty());
+    CHECK(lAgain.Converted.empty());
 }
 
 TEST_CASE("AssetMigration: paths to the engine's files converted by another project's run are rewritten too")

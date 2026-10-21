@@ -16,8 +16,7 @@
 //   OPAAX_REGISTER_BEHAVIOUR(Coin);
 //   OPAAX_REGISTER_RESOURCE(WaveResource);
 //   OPAAX_REGISTER_UI_WIDGET(UIHealthBar);
-//   OPAAX_REGISTER_MOVER_MODE(SwimMoveMode, "Swim");
-//   OPAAX_REGISTER_OBJECT(EnemyStats);      // any Object class: assets, subsystems...
+//   OPAAX_REGISTER_OBJECT(EnemyStats);      // any Object class: assets, move modes, subsystems...
 //
 // The engine runs every registration when it is constructed, before any world exists. Game
 // modules are linked whole (see opaax_add_game), so a registration in any of their files is
@@ -42,7 +41,6 @@ namespace Opaax
         Component,
         ComponentAlias,
         Behaviour,
-        MoverMode,
         UIWidget
     };
 
@@ -153,9 +151,3 @@ namespace Opaax
     OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::ObjectClassAlias,               \
         ::Opaax::OpaaxHash::Hash64(OldName), 0, OldName,                                           \
         InRegistrar.ObjectClasses().AddAlias(::Opaax::OpaaxStringID(OldName), ::Opaax::OpaaxStringID(Name)))
-
-/** Registers a movement mode under the name MoveMode assets use. */
-#define OPAAX_REGISTER_MOVER_MODE(Type, Name)                                                        \
-    OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::MoverMode,                      \
-        ::Opaax::TypeIdOf<Type>(), 0, Name,                                                        \
-        InRegistrar.MoverModes().Register<Type>(::Opaax::OpaaxStringID(Name)))

@@ -1,7 +1,6 @@
 #include "Movement/Modes/GroundMoveMode.h"
 
 #include "Core/Maths/Maths.h"
-#include "Movement/Assets/MoveMode.h"
 #include "Physics/IPhysicsWorld.h"
 #include "Movement/MoverComponent.h"
 #include "World/Components/TransformComponent.h"
@@ -14,7 +13,7 @@ namespace Opaax
          * Quake-style ground/air update: friction, acceleration toward the desired speed, jump, gravity.
          * Gravity is the world's vector scaled by the tuning.
          */
-        Vector2F SolveVelocity(const MoveMode& InParams, Vector2F InVelocity, Vector2F InMoveDir,
+        Vector2F SolveVelocity(const GroundMoveMode& InParams, Vector2F InVelocity, Vector2F InMoveDir,
                                const bool bInGrounded, const bool bInJump, Vector2F InWorldGravity,
                                const float InDelta) noexcept
         {
@@ -70,12 +69,12 @@ namespace Opaax
         }
     }
 
-    void GroundMoveMode::Tick(MoverTickContext& InContext)
+    void GroundMoveMode::Tick(MoverTickContext& InContext) const
     {
         MoverComponent&     lMover     = InContext.Mover;
         TransformComponent& lTransform = InContext.Transform;
 
-        const Vector2F lVelocity = SolveVelocity(InContext.Params, lMover.Velocity, lMover.Input.MoveDir,
+        const Vector2F lVelocity = SolveVelocity(*this, lMover.Velocity, lMover.Input.MoveDir,
                                                  lMover.bGrounded, lMover.Input.bJump,
                                                  InContext.World.GetGravity(), InContext.DeltaTime);
 
@@ -89,7 +88,7 @@ namespace Opaax
         lInput.DeltaTime      = InContext.DeltaTime;
         lInput.ChannelMask    = AllChannelsMask();
         lInput.MaxIterations  = 5;
-        lInput.GroundNormalY  = InContext.Params.GroundNormalY();
+        lInput.GroundNormalY  = GroundNormalY();
         lInput.IgnoreUserData = InContext.SelfUserData;
 
         const MoveCapsuleResult lResult = InContext.World.MoveCapsule(lInput);
