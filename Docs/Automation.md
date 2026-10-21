@@ -113,7 +113,7 @@ The editor adds:
 | `asset.classes` | | The asset classes a project can make: name, label, category, and properties at their defaults |
 | `asset.new` | `path`, `class`, `properties` | Creates an asset of a class, every field at its default, then sets `properties`, saves and opens it; refuses a file that exists |
 | `asset.open` | `path` | Opens an asset in its window: `path`, `class`, `properties`, `unsaved`, `canUndo`, `canRedo`, `fromSourceFile` (an image and the like: read-only) |
-| `asset.get` | `path` | An asset's class and values: its window's when open (unsaved changes included), else its file's; an image answers its class (`Texture2D`) |
+| `asset.get` | `path` | An asset's class and values: its window's when open (unsaved changes included), else its file's; an image or a font answers its class (`Texture2D`, `FontFace`) |
 | `asset.set` | `path`, `properties` | Merges values into an asset (opened first if needed) as one undo step, then its class's fixes apply; not saved. A value of the wrong type changes nothing |
 | `asset.undo`, `asset.redo` | `path` | Steps an open asset's own history |
 | `asset.save` | `path` | Writes an open asset and reloads it, so a playing game reads the new values |

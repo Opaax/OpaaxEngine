@@ -17,6 +17,7 @@
 #include "Editor/UI/TinyFdEditorDialogs.h"      // the concrete IEditorDialogs
 #include "Editor/Toolbar/EditorNativeViewportTools.h"
 #include "Editor/Assets/Editors/AnimationClipEditor.h"
+#include "Editor/Assets/Editors/FontFaceEditor.h"
 #include "Editor/Assets/Editors/FontFamilyEditor.h"
 #include "Editor/Assets/Editors/InputMappingContextEditor.h"
 #include "Editor/Assets/Editors/SpriteSheetEditor.h"
@@ -72,9 +73,8 @@
 #include "Movement/Assets/MoveMode.h"
 #include "Movement/Assets/Mover.h"
 #include "Renderer/Materials/Material2D.h"
-#include "Renderer/Text/FontFaceResource.h"
+#include "Renderer/Text/FontFace.h"
 #include "Renderer/Text/FontFamily.h"
-#include "Editor/Resources/ResourcePreviewDrawers.h"   // what a preview draws (no ImGui here)
 #include "Editor/Properties/NativeComponentDrawers.h"
 #include "Editor/Properties/WidgetPropertyVisitor.h"
 #include "World/Components/ComponentRegistry.h"
@@ -584,6 +584,13 @@ namespace Opaax::Editor
             .SetGlyph(OpaaxString("[FF]"))
             .SetEditor<FontFamilyEditor>();
 
+        // A font file: its window shows the baked atlas and the metrics.
+        lTypes.Register<FontFace>()
+            .SetLabel(OpaaxString("Font Face"))
+            .SetCategory(OpaaxString("Text"))
+            .SetGlyph(OpaaxString("[F]"))
+            .SetEditor<FontFaceEditor>();
+
         // A texture cut into frames, edited over its image.
         lTypes.Register<SpriteSheet>()
             .SetCategory(OpaaxString("Rendering"))
@@ -629,16 +636,6 @@ namespace Opaax::Editor
                 InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_PREFAB_AT,
                                                         InContext, PrefabPathParams{InFile.AbsPath});
             });
-
-        // A .ttf previews its baked atlas: glyph count, atlas size and metrics.
-        m_Extensions.ResourceTypes().Register<FontFaceResource>()
-            .SetGlyph(OpaaxString("[F]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                InContext.Preview.Open(InFile, ResourceTypeID::Get<FontFaceResource>());
-                InContext.Panels.SetVisible(ResourcePreviewPanel::PanelID(), true);
-            })
-            .SetPreview<FontFaceResource>(&NativeResourcePreviews::DrawFontFace);
 
         // A canvas opens its editor (it is a document).
         m_Extensions.ResourceTypes().Register<UICanvasResource>()

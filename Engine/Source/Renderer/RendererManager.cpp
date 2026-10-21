@@ -48,7 +48,7 @@
 #include "Resources/ResourceManager.h"
 #include "Renderer/Textures/Texture2D.h"
 #include "Renderer/Textures/SpriteSheet.h"
-#include "Renderer/Text/FontFaceResource.h"
+#include "Renderer/Text/FontFace.h"
 #include "Renderer/Text/FontFamily.h"
 
 #include "Renderer/Text/Text2D.h"
@@ -941,48 +941,46 @@ namespace Opaax
         return (lTexture != nullptr) ? lTexture->GetTexture() : m_MissingTexture.get();
     }
 
-    FontFaceView RendererManager::ResolveFace(const TResourcePath<FontFaceResource>& InPath)
+    FontFaceView RendererManager::ResolveFace(const TAssetRef<FontFace>& InRef)
     {
-        if (InPath.IsEmpty())
+        if (InRef.IsEmpty())
         {
             return FontFaceView{};
         }
 
-        const OpaaxStringID lKey(InPath.Path);
+        const OpaaxStringID lKey(InRef.Path);
 
         auto lIt = m_FaceCache.find(lKey.GetId());
         if (lIt == m_FaceCache.end())
         {
-            const OpaaxString lAbsolute = OpaaxApplication::GetAppService<IPaths>().AssetToAbsolute(InPath.Path);
+            // Cached even when loading failed, so a missing file is not retried every frame.
+            lIt = m_FaceCache.emplace(lKey.GetId(),
+                                      LoadAsset(OpaaxApplication::GetAppService<IEngine>().GetResources(),
+                                                OpaaxApplication::GetAppService<IPaths>(), InRef)).first;
 
-            ResourceRef<FontFaceResource> lRef =
-                OpaaxApplication::GetAppService<IEngine>().GetResources().Load<FontFaceResource>(lAbsolute.CStr());
-
-            // Cached even when loading failed (empty placeholder face, draws boxes).
-            lIt = m_FaceCache.emplace(lKey.GetId(), Move(lRef)).first;
-
-            if (!lIt->second.IsValid() || lIt->second.Get() == nullptr)
+            if (lIt->second.Get() == nullptr)
             {
                 OPAAX_LOG(LogRendererManager, Warn, "Face '{}' did not load — the text draws tofu",
-                          InPath.Path.CStr());
+                          InRef.Path.CStr());
             }
         }
 
-        FontFaceResource* lResource = lIt->second.Get();
-        if (lResource == nullptr)
+        // A face that did not load lays out as boxes, which makes the problem obvious.
+        const FontFace* lFace = lIt->second.Get();
+        if (lFace == nullptr)
         {
-            return FontFaceView{};
+            return FontFaceView{ &TofuFace(), nullptr };
         }
 
-        // The atlas is null while uploading; the layout is still done, nothing is drawn.
-        return FontFaceView{ &lResource->Face, lResource->GetAtlas() };
+        // The atlas is null without a device; the layout is still done, nothing is drawn.
+        return FontFaceView{ &lFace->GetData(), lFace->GetAtlas() };
     }
 
     FontFaceView RendererManager::ResolveFace(const char* InAssetPath)
     {
-        TResourcePath<FontFaceResource> lPath;
-        lPath.Path = OpaaxString(InAssetPath);
-        return ResolveFace(lPath);
+        TAssetRef<FontFace> lRef;
+        lRef.Path = OpaaxString(InAssetPath);
+        return ResolveFace(lRef);
     }
 
     ITexture2D* RendererManager::ResolveTexture(const char* InAssetPath)

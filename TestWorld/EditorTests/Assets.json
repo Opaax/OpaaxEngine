@@ -703,6 +703,50 @@
         }
     },
     {
+        "id": "font-file-is-a-face",
+        "command": "asset.get",
+        "params": {
+            "path": "/Engine/Fonts/Roboto/roboto-latin-400-normal.ttf"
+        },
+        "expect": {
+            "class": "FontFace",
+            "fromSourceFile": true
+        }
+    },
+    {
+        "id": "open-font-face",
+        "command": "asset.open",
+        "params": {
+            "path": "/Engine/Fonts/Roboto/roboto-latin-400-normal.ttf"
+        },
+        "expect": {
+            "class": "FontFace",
+            "open": true,
+            "fromSourceFile": true,
+            "unsaved": false
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot-font-face",
+        "command": "screenshot",
+        "params": {
+            "path": "AssetsFontFace.png"
+        }
+    },
+    {
+        "id": "close-font-face",
+        "command": "asset.close",
+        "params": {
+            "path": "/Engine/Fonts/Roboto/roboto-latin-400-normal.ttf"
+        }
+    },
+    {
         "id": "nothing-open",
         "command": "asset.list",
         "expect": {

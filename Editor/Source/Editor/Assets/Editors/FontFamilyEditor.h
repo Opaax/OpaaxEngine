@@ -5,14 +5,14 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Editor/Assets/IAssetEditor.h"
 #include "Renderer/Text/FontStyle.h"
-#include "Resources/ResourceRef.hpp"
+#include "Resources/Asset/AssetHandle.h"
 
 namespace Opaax
 {
     OPAAX_LOG_CATEGORY(FontFamilyEditor);
 
+    class FontFace;
     class FontFamily;
-    struct FontFaceResource;
 }
 
 namespace Opaax::Editor
@@ -76,7 +76,7 @@ namespace Opaax::Editor
         OpaaxString m_SampleText = "Sphinx of black quartz,\njudge my vow. 0123";
         float       m_SampleSize = 48.f;
 
-        ResourceRef<FontFaceResource> m_SampleFace;
-        OpaaxString                   m_SampleFacePath;
+        TAssetHandle<FontFace> m_SampleFace;
+        OpaaxString            m_SampleFacePath;
     };
 }

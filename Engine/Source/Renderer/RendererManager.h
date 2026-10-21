@@ -38,7 +38,7 @@ namespace Opaax
     struct SpriteComponent;
     struct SpriteUVRect;
     struct WindowResize;
-    struct FontFaceResource;
+    class FontFace;
     class FontFamily;
     struct FontStyleKey;
     struct FontFaceView;
@@ -198,7 +198,7 @@ namespace Opaax
         /**
          * The font face (metrics and atlas) for an asset-relative .ttf path. Loaded once and cached.
          */
-        FontFaceView ResolveFace(const TResourcePath<FontFaceResource>& InPath);
+        FontFaceView ResolveFace(const TAssetRef<FontFace>& InRef);
 
         /** IUIAssetProvider — the same caches, for UI widgets. */
         FontFaceView     ResolveFace(const char* InAssetPath) override;
@@ -376,8 +376,8 @@ namespace Opaax
         TUnorderedSet<Uint32> m_WarnedFrameRange;
 
         /** Same caches for fonts: .ttf faces and font families. */
-        TUnorderedMap<Uint32, ResourceRef<FontFaceResource>> m_FaceCache;
-        TUnorderedMap<Uint32, TAssetHandle<FontFamily>>      m_FamilyCache;
+        TUnorderedMap<Uint32, TAssetHandle<FontFace>>   m_FaceCache;
+        TUnorderedMap<Uint32, TAssetHandle<FontFamily>> m_FamilyCache;
 
         /**
          * (family, style) pairs already warned about. Font path id and packed style in one Uint64.

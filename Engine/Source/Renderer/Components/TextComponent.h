@@ -8,15 +8,13 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringJson.h"
 #include "Resources/Asset/AssetRef.h"
-#include "Resources/ResourcePath.h"
-#include "Resources/ResourcePathJson.h"
 #include "Renderer/Text/FontStyle.h"
 #include "Renderer/RenderLayer.h"
 
 namespace Opaax
 {
-    // Forward-declared: a path or an asset reference only needs the name.
-    struct FontFaceResource;
+    // Forward-declared: an asset reference only needs the name.
+    class FontFace;
     class FontFamily;
 
     // =============================================================================
@@ -36,7 +34,7 @@ namespace Opaax
         FontStyleKey Style;
 
         /** A single .ttf, used when Font is empty. */
-        TResourcePath<FontFaceResource> Face;
+        TAssetRef<FontFace> Face;
 
         /** Cap height in world units. */
         float Size = 32.f;

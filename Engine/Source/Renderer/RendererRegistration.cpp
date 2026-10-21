@@ -8,7 +8,7 @@
 #include "Renderer/Components/QuadComponent.h"
 #include "Renderer/Components/SpriteComponent.h"
 #include "Renderer/Components/TextComponent.h"
-#include "Renderer/Text/FontFaceResource.h"
+#include "Renderer/Text/FontFace.h"
 #include "Renderer/Text/FontFamily.h"
 #include "Renderer/Textures/SpriteSheet.h"
 #include "Renderer/Textures/Texture2D.h"
@@ -41,5 +41,6 @@ namespace Opaax
     // An image, read from its .png (or .jpg, .tga, .bmp) file.
     OPAAX_REGISTER_OBJECT(Texture2D);
 
-    OPAAX_REGISTER_NAMED_RESOURCE(FontFaceResource, "FontFace");
+    // A font's glyphs, baked from its .ttf (or .otf) file.
+    OPAAX_REGISTER_OBJECT(FontFace);
 }

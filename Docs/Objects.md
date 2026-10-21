@@ -1,8 +1,8 @@
 # Objects and assets
 
-Every asset type of the engine (a texture, a material, a sprite sheet, an animation clip, a mover, a
-font family, an input action) and of a game is a class derived from `Opaax::Asset`, itself an
-`Opaax::Object`. A
+Every asset type of the engine (a texture, a font face, a material, a sprite sheet, an animation clip,
+a mover, a font family, an input action) and of a game is a class derived from `Opaax::Asset`, itself
+an `Opaax::Object`. A
 class with fields is enough: the file format, the loading, the sharing, the editor window, undo,
 automation and the conversion of old files come from the base. It is the idea of Unreal's `UObject`
 and `UDataAsset`, and of Godot's `Resource`. Subsystems, UI widgets, behaviours, the game instance,
@@ -133,8 +133,9 @@ public:
 OPAAX_REGISTER_OBJECT(EnemyWave);
 ```
 
-The engine's images are such a class: `Texture2D` reads `.png`, `.jpg`, `.tga` and `.bmp` files
-(`Renderer/Textures/Texture2D.h`), and a sprite names one with `TAssetRef<Texture2D>`. A field names
+The engine's images and fonts are such classes: `Texture2D` reads `.png`, `.jpg`, `.tga` and `.bmp`
+files (`Renderer/Textures/Texture2D.h`) and `FontFace` reads `.ttf` and `.otf` files
+(`Renderer/Text/FontFace.h`); a sprite names an image with `TAssetRef<Texture2D>`. A field names
 one like any asset (`TAssetRef<EnemyWave>`, saved as `"Waves/First.wave"`), and `LoadAsset` loads and
 shares it. Two more hooks serve such a class: `InitializeOnMainThread()` runs on
 the main thread once the file is read (a texture hands its pixels to the GPU there), and

@@ -11,7 +11,7 @@ namespace Opaax
 
     // =============================================================================
     // FontBake — font file bytes to a glyph atlas (stb_truetype). No file IO, no GPU
-    //   (runs on a worker in FontFaceResource::Load). Bakes every glyph the font has in the
+    //   (runs on a worker in FontFace::LoadSource). Bakes every glyph the font has in the
     //   scan range.
     // =============================================================================
     namespace FontBake
