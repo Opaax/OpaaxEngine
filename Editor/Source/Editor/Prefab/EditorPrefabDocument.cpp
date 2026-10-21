@@ -53,7 +53,7 @@ namespace Opaax::Editor
         if (m_World == nullptr)
         {
             // Created once and kept for the session (see the header).
-            m_World = InContext.Worlds.CreateWorld(OpaaxString("Prefab Edit"), EWorldMode::Edit);
+            m_World = InContext.Worlds.CreateWorld(OPAAX_ID("Prefab Edit"), EWorldMode::Edit);
 
             if (m_World == nullptr)
             {

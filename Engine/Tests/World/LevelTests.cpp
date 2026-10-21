@@ -109,7 +109,7 @@ namespace
 
         explicit Fixture(const char* InTag)
             : Dir(InTag)
-            , TheWorld(OpaaxString(InTag))
+            , TheWorld(InTag)
             , Paths(Dir.Root())
             , TheLevel(TheWorld, Components, Paths, Resources, Formats)
         {
@@ -540,7 +540,7 @@ TEST_CASE("Level: adopting another level's mounts does NOT mount anything")
     lSource.TheLevel.SetData(lData);
     REQUIRE(lSource.TheLevel.MountAll().IsValid());
 
-    World             lCloneWorld(OpaaxString("clone-dst"));
+    World             lCloneWorld("clone-dst");
     ComponentRegistry      lCloneComponents;
     ResourceManager        lCloneResources;
     ResourceFormatRegistry lCloneFormats;

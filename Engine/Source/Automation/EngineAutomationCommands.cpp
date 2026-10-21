@@ -370,7 +370,7 @@ namespace Opaax::EngineAutomation
 
                     const CameraView& lView = lWorld->GetCameraView();
                     return AutomationResult::Ok(nlohmann::json{
-                        { "name",     lWorld->GetName() },
+                        { "name",     lWorld->GetName().CStr() },
                         { "mode",     ToString(lWorld->GetMode()) },
                         { "paused",   InEngine.GetWorldManager().IsPaused() },
                         { "entities", lWorld->GetEntityCount() },

@@ -4,6 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/Log/Logger.h"
+#include "Object/ObjectMacros.h"
 #include "World/Entity/EntityTypes.h"
 #include "World/Serialization/LevelFile.h"
 
@@ -20,14 +21,17 @@ namespace Opaax
     inline constexpr LogCategory LogLevel{"Level"};
 
     // =============================================================================
-    // Level — which maps a World contains, and the only thing that mounts or unmounts them.
-    //   One per world, owned by it (World::SetLevel).
+    // Level — which maps a World contains, and the only thing that mounts or unmounts them. An
+    //   Object class made with its world and services (NewObject in WorldManager::CreateWorld), one
+    //   per world and owned by it (World::SetLevel).
     //   The persistent map is mounted first; the others go on top of it.
     //   Unmounting destroys the entities of that map (a map is a subset of the world's registry).
     //   A clone copies this state without mounting again (WorldManager::CloneWorld).
     // =============================================================================
-    class Level
+    class Level : public Object
     {
+        OPAAX_OBJECT(Level, Object)
+
         // =========================================================================
         // Types
         // =========================================================================
@@ -70,17 +74,9 @@ namespace Opaax
          */
         Level(World& InWorld, const ComponentRegistry& InComponents,
               const IPaths& InPaths, ResourceManager& InResources,
-              const ResourceFormatRegistry& InFormats) noexcept;
+              const ResourceFormatRegistry& InFormats);
 
-        ~Level();
-
-        // =========================================================================
-        // Copy - Move Delete
-        // =========================================================================
-        Level(const Level&)            = delete;
-        Level& operator=(const Level&) = delete;
-        Level(Level&&)                 = delete;
-        Level& operator=(Level&&)      = delete;
+        ~Level() override;
 
         // =========================================================================
         // Functions

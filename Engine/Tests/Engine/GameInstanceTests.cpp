@@ -1,4 +1,5 @@
-// Suite: the game lifecycle — StartGame / EndGame, the GameInstance and its subsystem classes.
+// Suite: the game lifecycle — StartGame / EndGame, the GameInstance (and a game's own class) and its
+// subsystem classes.
 //   StartGame -> GameInstance -> first world -> ... -> EndGame -> destroy Play worlds -> destroy
 //   the GameInstance. The game must exist before the first world (world contexts are built at
 //   creation). Where the hosts call these is checked by their boot log, not here.
@@ -11,7 +12,9 @@
 #include "Engine/GameInstance/GameInstanceContext.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
 #include "Engine/GameInstance/GameInstanceSubsystem.h"
+#include "Engine/Registries/AutoRegistration.h"
 #include "Engine/Registries/EngineRegistries.h"
+#include "Engine/Registries/ModuleRegistrar.h"
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/InputManager.h"
 #include "Object/ObjectClassRegistry.h"
@@ -107,6 +110,39 @@ namespace
         OPAAX_OBJECT(OtherKindSubsystem, WorldSubsystem)
     };
 
+    /** A game's own class: what it saw when its hooks ran. */
+    class StoryGame : public GameInstance
+    {
+        OPAAX_OBJECT(StoryGame, GameInstance)
+
+    public:
+        int  StartCount           = 0;
+        int  EndCount             = 0;
+        bool bProbeRunningAtStart = false;
+        bool bProbeRunningAtEnd   = false;
+
+    protected:
+        void OnStart() override
+        {
+            ++StartCount;
+            const ProbeSubsystem* lProbe = GetSubsystems().GetSubsystem<ProbeSubsystem>();
+            bProbeRunningAtStart = lProbe != nullptr && lProbe->IsStarted();
+        }
+
+        void OnEnd() override
+        {
+            ++EndCount;
+            const ProbeSubsystem* lProbe = GetSubsystems().GetSubsystem<ProbeSubsystem>();
+            bProbeRunningAtEnd = lProbe != nullptr && lProbe->IsStarted() && ProbeSubsystem::s_TearDownCount == 0;
+        }
+    };
+
+    /** A base no project runs by itself. */
+    class AbstractGame : public GameInstance
+    {
+        OPAAX_ABSTRACT_OBJECT(AbstractGame, GameInstance)
+    };
+
     /** The classes a game finds: the two probes, and the two it must leave out. */
     void RegisterClasses(ObjectClassRegistry& OutClasses)
     {
@@ -171,7 +207,7 @@ TEST_SUITE("GameInstanceSubsystem classes")
 // =============================================================================
 TEST_SUITE("GameInstance")
 {
-    TEST_CASE("Makes one subsystem per class, starts them in tick order, and hands each the SAME context")
+    TEST_CASE("Start makes one subsystem per class, starts them in tick order, and hands each the SAME context")
     {
         ProbeSubsystem::Reset();
 
@@ -179,10 +215,12 @@ TEST_SUITE("GameInstance")
         RegisterClasses(lClasses);
 
         ContextFixture lFixture;
-        GameInstance   lGame(lFixture.Make());
+        GameInstance   lGame;
+        lGame.Init(lFixture.Make());
 
-        CHECK(lGame.StartSubsystems(lClasses) == 2);
+        CHECK(lGame.Start(lClasses) == 2);
         CHECK(lGame.GetSubsystemCount() == 2);
+        CHECK(lGame.IsRunning());
 
         ProbeSubsystem*  lProbe  = lGame.GetSubsystems().GetSubsystem<ProbeSubsystem>();
         SecondSubsystem* lSecond = lGame.GetSubsystems().GetSubsystem<SecondSubsystem>();
@@ -202,6 +240,32 @@ TEST_SUITE("GameInstance")
 
         // Named after its class, for logs.
         CHECK(lProbe->GetName() == ProbeSubsystem::StaticClass().GetName());
+
+        lGame.End();
+    }
+
+    TEST_CASE("Start is refused before Init, and the second time")
+    {
+        ProbeSubsystem::Reset();
+
+        ObjectClassRegistry lClasses;
+        lClasses.Register<ProbeSubsystem>();
+
+        ContextFixture lFixture;
+        GameInstance   lGame;
+
+        // No services yet: nothing is made.
+        CHECK(lGame.Start(lClasses) == 0);
+        CHECK_FALSE(lGame.IsRunning());
+        CHECK(ProbeSubsystem::s_StartCount == 0);
+
+        lGame.Init(lFixture.Make());
+        CHECK(lGame.Start(lClasses) == 1);
+        CHECK(lGame.Start(lClasses) == 0);
+        CHECK(lGame.GetSubsystemCount() == 1);
+        CHECK(ProbeSubsystem::s_StartCount == 1);
+
+        lGame.End();
     }
 
     TEST_CASE("Update reaches the subsystems")
@@ -210,8 +274,9 @@ TEST_SUITE("GameInstance")
         lClasses.Register<ProbeSubsystem>();
 
         ContextFixture lFixture;
-        GameInstance   lGame(lFixture.Make());
-        lGame.StartSubsystems(lClasses);
+        GameInstance   lGame;
+        lGame.Init(lFixture.Make());
+        lGame.Start(lClasses);
 
         ProbeSubsystem* lProbe = lGame.GetSubsystems().GetSubsystem<ProbeSubsystem>();
         REQUIRE(lProbe != nullptr);
@@ -219,9 +284,11 @@ TEST_SUITE("GameInstance")
         lGame.Update(0.5);
         lGame.Update(0.25);
         CHECK(lProbe->Accumulated() == doctest::Approx(0.75));
+
+        lGame.End();
     }
 
-    TEST_CASE("TearDown and Shutdown are idempotent")
+    TEST_CASE("End tears down and shuts down once, however often it is called")
     {
         ProbeSubsystem::Reset();
 
@@ -230,20 +297,106 @@ TEST_SUITE("GameInstance")
 
         ContextFixture lFixture;
         {
-            GameInstance lGame(lFixture.Make());
-            lGame.StartSubsystems(lClasses);
+            GameInstance lGame;
+            lGame.Init(lFixture.Make());
+            lGame.Start(lClasses);
 
-            lGame.TearDownSubsystems();
-            lGame.TearDownSubsystems();
-            lGame.ShutdownSubsystems();
-            lGame.ShutdownSubsystems();
+            lGame.End();
+            lGame.End();
 
+            CHECK_FALSE(lGame.IsRunning());
             CHECK(ProbeSubsystem::s_TearDownCount == 1);
             CHECK(ProbeSubsystem::s_ShutdownCount == 1);
         }
 
-        // The destructor calls ShutdownSubsystems again; it must not shut a subsystem down twice.
+        // The destructor must not shut a subsystem down twice.
         CHECK(ProbeSubsystem::s_ShutdownCount == 1);
+    }
+
+    TEST_CASE("A game destroyed without End shuts its subsystems down, without tearing them down")
+    {
+        ProbeSubsystem::Reset();
+
+        ObjectClassRegistry lClasses;
+        lClasses.Register<ProbeSubsystem>();
+
+        ContextFixture lFixture;
+        {
+            GameInstance lGame;
+            lGame.Init(lFixture.Make());
+            lGame.Start(lClasses);
+        }
+
+        // TearDown may use services already gone; Shutdown is the safety net.
+        CHECK(ProbeSubsystem::s_TearDownCount == 0);
+        CHECK(ProbeSubsystem::s_ShutdownCount == 1);
+    }
+
+    TEST_CASE("A game's own class: OnStart once its subsystems run, OnEnd before they tear down")
+    {
+        ProbeSubsystem::Reset();
+
+        ObjectClassRegistry lClasses;
+        lClasses.Register<ProbeSubsystem>();
+
+        ContextFixture lFixture;
+        StoryGame      lGame;
+        lGame.Init(lFixture.Make());
+        lGame.Start(lClasses);
+
+        CHECK(lGame.StartCount == 1);
+        CHECK(lGame.bProbeRunningAtStart);
+        CHECK(lGame.EndCount == 0);
+
+        lGame.End();
+        lGame.End();
+        CHECK(lGame.EndCount == 1);
+        CHECK(lGame.bProbeRunningAtEnd);
+        CHECK(ProbeSubsystem::s_TearDownCount == 1);
+    }
+
+    TEST_CASE("A game that never started has nothing to end: no OnEnd")
+    {
+        StoryGame lGame;
+        lGame.End();
+
+        CHECK(lGame.StartCount == 0);
+        CHECK(lGame.EndCount == 0);
+    }
+
+    TEST_CASE("Create makes the class named; no name, or one that is not a concrete GameInstance class, gives a GameInstance")
+    {
+        ObjectClassRegistry lClasses;
+        lClasses.Register<GameInstance>();
+        lClasses.Register<StoryGame>();
+        lClasses.Register<AbstractGame>();
+        lClasses.Register<ProbeSubsystem>();
+
+        const auto lClassOf = [&lClasses](const OpaaxStringID InName) -> const ObjectClass*
+        {
+            const TStrongObjectPtr<GameInstance> lGame = GameInstance::Create(InName, lClasses);
+            return lGame ? &lGame->GetClass() : nullptr;
+        };
+
+        CHECK(lClassOf(OPAAX_ID("StoryGame")) == &StoryGame::StaticClass());
+        CHECK(lClassOf(OpaaxStringID()) == &GameInstance::StaticClass());
+        CHECK(lClassOf(OPAAX_ID("NoSuchGame")) == &GameInstance::StaticClass());
+        CHECK(lClassOf(OPAAX_ID("AbstractGame")) == &GameInstance::StaticClass());
+        CHECK(lClassOf(OPAAX_ID("ProbeSubsystem")) == &GameInstance::StaticClass());
+    }
+
+    TEST_CASE("GameInstance is an object class, registered by the engine under its name")
+    {
+        CHECK(GameInstance::StaticClass().GetName() == OPAAX_ID("GameInstance"));
+        CHECK(GameInstance::StaticClass().IsChildOf(Object::StaticClass()));
+        CHECK_FALSE(GameInstance::StaticClass().IsAbstract());
+
+        EngineRegistries lRegistries;
+        ModuleRegistrar  lRegistrar;
+        lRegistrar.BindEngineRegistries(lRegistries);
+        RunAutoRegistrations(lRegistrar);
+
+        CHECK(lRegistries.ObjectClasses().FindByName(OPAAX_ID("GameInstance")) == &GameInstance::StaticClass());
     }
 }
 
@@ -296,6 +449,36 @@ TEST_SUITE("GameInstanceManager")
         CHECK(lManager.GetGameInstance() == nullptr);
         CHECK(ProbeSubsystem::s_TearDownCount == 1);
         CHECK(ProbeSubsystem::s_ShutdownCount == 1);
+    }
+
+    TEST_CASE("Makes the game of the class it is given: a GameInstance when none is named")
+    {
+        ProbeSubsystem::Reset();
+
+        EngineRegistries lRegistries;
+        lRegistries.ObjectClasses().Register<GameInstance>();
+        lRegistries.ObjectClasses().Register<StoryGame>();
+
+        GameInstanceManager lManager(&lRegistries);
+        REQUIRE(lManager.Startup());
+
+        // No project in a test, so no class named: a plain game.
+        CHECK_FALSE(lManager.GetGameInstanceClass().IsValid());
+        REQUIRE(lManager.StartGame());
+        CHECK(&lManager.GetGameInstance()->GetClass() == &GameInstance::StaticClass());
+        CHECK(lManager.EndGame());
+
+        // What a project's gameInstanceClass sets at Startup.
+        lManager.SetGameInstanceClass(OPAAX_ID("StoryGame"));
+        REQUIRE(lManager.StartGame());
+
+        StoryGame* lStory = Cast<StoryGame>(lManager.GetGameInstance());
+        REQUIRE(lStory != nullptr);
+        CHECK(lStory->StartCount == 1);
+        CHECK(lStory->IsRunning());
+
+        CHECK(lManager.EndGame());
+        CHECK(lManager.GetGameInstance() == nullptr);
     }
 
     TEST_CASE("A second game is a FRESH instance — nothing leaks across a PIE cycle")

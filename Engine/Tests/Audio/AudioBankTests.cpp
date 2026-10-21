@@ -280,7 +280,8 @@ TEST_CASE("AudioGlobalBank: across worlds that come and go, its sounds are never
     lFix.Config.Audio.GlobalBank.Path = OpaaxString("Audio/Global.opaaxasset");
 
     // The game holds the bank, as StartGame makes it.
-    GameInstance lGame(GameInstanceContext{ lFix.Worlds, lFix.Resources, lFix.Assets.Paths, lFix.Events, lFix.Input, lFix.Config });
+    GameInstance lGame;
+    lGame.Init(GameInstanceContext{ lFix.Worlds, lFix.Resources, lFix.Assets.Paths, lFix.Events, lFix.Input, lFix.Config });
     lGame.GetSubsystems().Add<AudioGlobalBank>();
     lGame.GetSubsystems().StartupAll();
     REQUIRE(lGame.GetSubsystems().GetSubsystem<AudioGlobalBank>() != nullptr);
@@ -315,5 +316,5 @@ TEST_CASE("AudioGlobalBank: across worlds that come and go, its sounds are never
     CHECK(bGlobalKept);
     CHECK(lFix.Resources.GetLoadedCount<AudioClipResource>() == lLoadedBefore);
 
-    lGame.ShutdownSubsystems();
+    lGame.End();
 }

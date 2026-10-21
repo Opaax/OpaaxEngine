@@ -19,7 +19,7 @@ namespace Opaax
 {
     Level::Level(World& InWorld, const ComponentRegistry& InComponents,
                  const IPaths& InPaths, ResourceManager& InResources,
-                 const ResourceFormatRegistry& InFormats) noexcept
+                 const ResourceFormatRegistry& InFormats)
         : m_World(InWorld), m_Components(InComponents), m_Paths(InPaths), m_Resources(InResources)
         , m_Formats(InFormats)
     {

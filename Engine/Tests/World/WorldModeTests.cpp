@@ -85,7 +85,7 @@ TEST_CASE("world spec: the spec's mode is the mode the world is created in")
     lSpec.Mode = EWorldMode::Edit;
 
     WorldManager lWorlds;
-    World*       lWorld = lWorlds.CreateWorld(OpaaxString(NULL_LEVEL_WORLD_NAME), lSpec.Mode);
+    World*       lWorld = lWorlds.CreateWorld(OpaaxStringID(NULL_LEVEL_WORLD_NAME), lSpec.Mode);
 
     REQUIRE(lWorld != nullptr);
     CHECK(lWorld->GetName() == OpaaxString("NullLevel"));

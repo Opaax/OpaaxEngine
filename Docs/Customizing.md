@@ -18,6 +18,7 @@ the class it derives from ([Objects.md](Objects.md)).
 | `OPAAX_REGISTER_BEHAVIOUR(Spinner)` | Gameplay code on an entity | QuickStart step 2, `TestWorld/Source` |
 | `OPAAX_REGISTER_OBJECT(ScoreSubsystem)` | A world subsystem (`Opaax::WorldSubsystem`): code that lives as long as a world and ticks with it | below |
 | `OPAAX_REGISTER_OBJECT(SaveSubsystem)` | A game instance subsystem (`Opaax::GameInstanceSubsystem`): lives as long as a game session, across levels | below |
+| `OPAAX_REGISTER_OBJECT(MyGame)` | The game's own `Opaax::GameInstance` class, named in the project file: code run when the game starts and ends | below |
 | `OPAAX_REGISTER_OBJECT(EnemyStats)` | An asset class (an `Opaax::Asset` with `OPAAX_OBJECT`): `.opaaxasset` files, made and edited in the editor | `Renderer/Materials/Material2D.h`, `Sandbox/Source/Sandbox/Data` |
 | `OPAAX_REGISTER_RESOURCE(WaveResource)` | A file type of the game, loaded and cached | `Sandbox/Source/Sandbox/Resources` |
 | `OPAAX_REGISTER_OBJECT(HealthBar)` | A UI widget for `.opaaxui` canvases: a `UIWidget` subclass, its fields as properties | `UI/Widgets` |
@@ -88,6 +89,13 @@ Every game makes one of each class, in `GetTickOrder()` order, and it lives from
 to its end, across level changes (a score, a save); `GetContext()` gives the game's services. A
 behaviour finds it with `GetGameSubsystem<Save>()`, null while no game runs (in the editor outside
 Play). `TestWorld/Source/TestWorld/Probes/LevelProbes.h` has one.
+
+The game session itself can be a class of the game: a `GameInstance` subclass with `OPAAX_OBJECT`,
+registered, and named in the project file (`"gameInstanceClass": "MyGame"`). `OnStart` runs once its
+subsystems have started, before the first world; `OnEnd` once its Play worlds are gone, before its
+subsystems stop. A behaviour reaches it through `GetContext().Game`. Most session features are better
+as game instance subsystems, which every game makes. `ProbeGame` in
+`TestWorld/Source/TestWorld/Probes/ExtensionProbes.h` is one.
 
 ### Events, input and sound
 

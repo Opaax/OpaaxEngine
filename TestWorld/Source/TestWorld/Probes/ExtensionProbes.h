@@ -5,6 +5,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxStringJson.h"
+#include "Engine/GameInstance/GameInstance.h"
 #include "Resources/Asset/Asset.h"
 #include "Resources/Asset/AssetHandle.h"
 #include "Resources/Asset/AssetRef.h"
@@ -68,8 +69,22 @@ namespace TestWorld
     };
 
     // =============================================================================
-    // TuningProbe — loads its entity's tuning asset when it starts and copies it into its fields, and
-    //   reads the game's ProbeCounterSubsystem every frame.
+    // ProbeGame — the game's own GameInstance class, named in TestWorld.opaaxproj.
+    // =============================================================================
+    class ProbeGame final : public Opaax::GameInstance
+    {
+        OPAAX_OBJECT(ProbeGame, Opaax::GameInstance)
+
+    public:
+        bool bStarted = false;
+
+    protected:
+        void OnStart() override { bStarted = true; }
+    };
+
+    // =============================================================================
+    // TuningProbe — loads its entity's tuning asset when it starts and copies it into its fields,
+    //   notes the class of the running game, and reads the game's ProbeCounterSubsystem every frame.
     // =============================================================================
     class TuningProbe : public Opaax::Behaviour
     {
@@ -86,12 +101,23 @@ namespace TestWorld
         Opaax::Int32 CounterFixedSteps = 0;
         Opaax::Int32 CounterTuned      = 0;
 
+        Opaax::OpaaxString GameClass;
+        bool               bGameStarted = false;
+
         OPAAX_PROPERTIES(TuningProbe, OPAAX_PROP(bLoaded), OPAAX_PROP(Speed), OPAAX_PROP(Lives), OPAAX_PROP(Title),
                          OPAAX_PROP(bCounter), OPAAX_PROP(CounterUpdates), OPAAX_PROP(CounterFixedSteps),
-                         OPAAX_PROP(CounterTuned))
+                         OPAAX_PROP(CounterTuned), OPAAX_PROP(GameClass), OPAAX_PROP(bGameStarted))
 
         void OnStart() override
         {
+            if (const Opaax::GameInstance* lGame = GetContext().Game)
+            {
+                GameClass = lGame->GetClass().GetName().ToString();
+
+                const ProbeGame* lProbeGame = Opaax::Cast<ProbeGame>(lGame);
+                bGameStarted = lProbeGame != nullptr && lProbeGame->bStarted;
+            }
+
             const TunedComponent* lTuned = TryGet<TunedComponent>();
             if (lTuned == nullptr)
             {

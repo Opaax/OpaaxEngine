@@ -101,6 +101,7 @@ set(OPAAX_TEST_SOURCES
     World/WorldEntityTests.cpp
     World/WorldEventsTests.cpp
     World/WorldModeTests.cpp
+    World/WorldObjectTests.cpp
     # Two TUs on purpose: they check "one tag per type", not "one tag per TU".
     World/WorldSubsystemIdentityTests.cpp
     World/WorldSubsystemIdentityTU2.cpp

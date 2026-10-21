@@ -109,6 +109,9 @@ Match the code around you. In short:
   default object is built with it); its services from `GetContext()`, valid from `Startup`; which
   worlds and when it ticks by overriding `ShouldCreate` and `GetTickOrder`. A unit test adds it to a
   world after `SetContext` (`GetSubsystems().Add<T>()`, then `StartupAll()`).
+- **Game instance class:** a `GameInstance` subclass with `OPAAX_OBJECT`, `OnStart`/`OnEnd` overrides
+  and one `OPAAX_REGISTER_OBJECT` line, named by the project's `gameInstanceClass`. Session features
+  go in game instance subsystems instead, which every game makes.
 - **UI widget:** a `UIWidget` subclass with `OPAAX_OBJECT`, its saved fields in `OPAAX_PROPERTIES`, and
   one `OPAAX_REGISTER_OBJECT` line: canvases save it, the UI panel offers and draws it. Made with
   `NewObject<T>()` in code; its parent owns it.

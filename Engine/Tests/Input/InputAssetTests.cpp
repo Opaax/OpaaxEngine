@@ -101,7 +101,8 @@ namespace
         /** The game's input mapping, made and started the way a game makes it, with this context. */
         InputMappingSubsystem& StartMapping()
         {
-            Game = MakeUnique<GameInstance>(Make());
+            Game = NewObject<GameInstance>();
+            Game->Init(Make());
             Game->GetSubsystems().Add<InputMappingSubsystem>();
             Game->GetSubsystems().StartupAll();
             return *Game->GetSubsystems().GetSubsystem<InputMappingSubsystem>();
@@ -123,7 +124,7 @@ namespace
         EngineConfigData Config;
 
         // Last: the game ends before the services its context names.
-        TUniquePtr<GameInstance> Game;
+        TStrongObjectPtr<GameInstance> Game;
     };
 }
 

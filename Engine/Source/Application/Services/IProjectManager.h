@@ -19,6 +19,7 @@ namespace Opaax
         OpaaxString LoadingScreen; // asset-relative .opaaxui shown while a level loads; "" = black screen
         float       LoadingScreenMinSeconds = 0.f; // minimum time the loading screen stays up
         float       UIReferenceHeight = 1080.f;    // UI canvas height, in pixels, that HUDs are designed for
+        OpaaxString GameInstanceClass; // the game's GameInstance class, by name; "" = GameInstance
     };
 
     namespace Opaax_Project_Identity
@@ -33,6 +34,7 @@ namespace Opaax
         inline const char* PROJECT_LOADING_SCREEN_KEY           = "loadingScreen";
         inline const char* PROJECT_LOADING_SCREEN_MIN_SECONDS_KEY = "loadingScreenMinSeconds";
         inline const char* PROJECT_UI_REFERENCE_HEIGHT_KEY       = "uiReferenceHeight";
+        inline const char* PROJECT_GAME_INSTANCE_CLASS_KEY       = "gameInstanceClass";
     }
 
     // Parses the .opaaxproj text. Bad JSON or missing fields give empty values; never throws.
@@ -56,6 +58,7 @@ namespace Opaax
         virtual OpaaxString LoadingScreen() const = 0;
         virtual float       LoadingScreenMinSeconds() const = 0;
         virtual float       UIReferenceHeight() const = 0;
+        virtual OpaaxString GameInstanceClass() const = 0;
 
         //----- null object ----------------------------------------------------
         static IProjectManager& Null();
@@ -83,6 +86,7 @@ namespace Opaax
         OpaaxString LoadingScreen() const override { return m_Identity.LoadingScreen; }
         float       LoadingScreenMinSeconds() const override { return m_Identity.LoadingScreenMinSeconds; }
         float       UIReferenceHeight() const override { return m_Identity.UIReferenceHeight; }
+        OpaaxString GameInstanceClass() const override { return m_Identity.GameInstanceClass; }
 
         // =============================================================================
         // Members

@@ -1,10 +1,10 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
-#include "Core/GUID/Guid.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Log/Logger.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
+#include "Object/ObjectHandle.h"
 #include "Renderer/CameraView.h"
 #include "World/Entity/EntityTypes.h"
 
@@ -81,9 +81,9 @@ namespace Opaax
     private:
         WorldManager* m_WorldManager = nullptr; // not owned
 
-        // Last reported result. The Guid starts invalid, so every new world reports once.
-        Guid     m_ReportedWorld;
-        Uint32   m_ReportedCount  = 0;
-        EntityID m_ReportedCamera = ENTITY_NONE;
+        // Last reported result. The handle starts invalid, so every new world reports once.
+        ObjectHandle m_ReportedWorld;
+        Uint32       m_ReportedCount  = 0;
+        EntityID     m_ReportedCamera = ENTITY_NONE;
     };
 }

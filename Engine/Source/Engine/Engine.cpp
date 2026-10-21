@@ -179,7 +179,8 @@ namespace Opaax
         const ResourceRef<LevelResource> lLevelRef = ResolveLevel(InSpec.LevelPath);
         const LevelResource* const       lLevel    = lLevelRef.Get();
 
-        const OpaaxString lName = (lLevel != nullptr) ? lLevel->Data.Name : OpaaxString(NULL_LEVEL_WORLD_NAME);
+        const OpaaxStringID lName = (lLevel != nullptr) ? OpaaxStringID(lLevel->Data.Name)
+                                                        : OpaaxStringID(NULL_LEVEL_WORLD_NAME);
 
         World* lWorld = m_WorldManager->CreateWorld(lName, InSpec.Mode);
         if (lWorld == nullptr)

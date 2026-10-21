@@ -4,8 +4,9 @@ Every asset type of the engine (a material, a sprite sheet, an animation clip, a
 an input action) and of a game is a class derived from `Opaax::Asset`, itself an `Opaax::Object`. A
 class with fields is enough: the file format, the loading, the sharing, the editor window, undo,
 automation and the conversion of old files come from the base. It is the idea of Unreal's `UObject`
-and `UDataAsset`, and of Godot's `Resource`. Subsystems, UI widgets and behaviours are objects too
-([Subsystems](#subsystems), [UI widgets](#ui-widgets), [Behaviours](#behaviours)).
+and `UDataAsset`, and of Godot's `Resource`. Subsystems, UI widgets, behaviours, the game instance,
+worlds and levels are objects too ([Subsystems](#subsystems), [UI widgets](#ui-widgets),
+[Behaviours](#behaviours), [The game, worlds and levels](#the-game-worlds-and-levels)).
 
 Components are plain structs, not objects. Levels, maps, prefabs and UI canvases keep their own
 formats ([AssetFormats.md](AssetFormats.md)).
@@ -217,6 +218,19 @@ component and never moves there, so another object can keep a `TWeakObjectPtr<Co
 null once the behaviour or its entity is gone. A behaviour is saved with its entity, its properties
 under its class name; it is not copied, the Play copy of a world being made from the saved fields.
 
+## The game, worlds and levels
+
+A game session is an object of the `GameInstance` class, or of a game's own subclass named in the
+project file (`"gameInstanceClass": "MyGame"`, [AssetFormats.md](AssetFormats.md#project-opaaxproj)).
+It is made when the game starts, before its first world, and lives across level changes until the
+game ends; `OnStart` and `OnEnd` are its hooks, and its subsystems are made whatever its class. A name
+that is not a registered `GameInstance` class logs an error and the game runs a plain `GameInstance`.
+
+A `World` is an object too: its name is its object name (a level's world is named after the level),
+and its handle is its identity. `WorldManager` makes and owns the worlds, and each world owns its
+`Level`, the object that mounts its maps. Neither is made by class name, so neither has fields to save:
+what a level holds is its file.
+
 ## Lifetime and the garbage collector to come
 
 Every object has a slot in one table (`ObjectTable`), with a generation that changes when the slot is
@@ -230,7 +244,8 @@ at freed memory. Three pointer kinds, as in Unreal:
 | `TWeakObjectPtr<T>` | Never keeps the object alive; reads null once it is gone. |
 
 Assets loaded from files are owned by the resource manager, which releases one that nothing holds;
-subsystems by their owner's collection, and widgets by their parent, each through a
+subsystems by their owner's collection, widgets by their parent, the game instance by
+`GameInstanceManager`, worlds by `WorldManager` and a level by its world, each through a
 `TStrongObjectPtr`; behaviours by their world's entity storage.
 There is no garbage collector yet; what one needs is in place: the table, the object flags (managed,
 class default, being destroyed), and references found through the properties. A mark-and-sweep would

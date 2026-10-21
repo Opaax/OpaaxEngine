@@ -653,7 +653,7 @@ namespace
         TUniquePtr<GameInstanceContext> GameContext;
         GameInstanceSubsystemMgr        ActionSubsystems;
         InputMappingSubsystem*          Actions = nullptr;
-        TUniquePtr<GameInstance>        Game;
+        TStrongObjectPtr<GameInstance>  Game;
 
         WorldManager Worlds;   // last: its worlds end before the services they use
 
@@ -686,7 +686,8 @@ namespace
 
             if (InOptions.bGame)
             {
-                Game = MakeUnique<GameInstance>(*GameContext);
+                Game = NewObject<GameInstance>();
+                Game->Init(*GameContext);
                 Game->GetSubsystems().Add<Tally>();
                 Game->GetSubsystems().StartupAll();
             }
@@ -696,7 +697,7 @@ namespace
 
             TheWorld->SetContext(WorldContext{ *TheWorld, Resources, lPaths, Events, Input, Config,
                                                Actions, /*UI*/ nullptr, Debug, &Components,
-                                               /*Audio*/ nullptr, Game.get() });
+                                               /*Audio*/ nullptr, Game.Get() });
 
             WorldSubsystemMgr& lSubsystems = TheWorld->GetSubsystems();
             lSubsystems.Add<BehaviourSubsystem>();
@@ -935,8 +936,8 @@ TEST_CASE("Behaviours: calls before OnStart are ignored")
 
 TEST_CASE("Behaviours: Edit worlds run no behaviours")
 {
-    const World lEdit(OpaaxString("Edit"), EWorldMode::Edit);
-    const World lPlay(OpaaxString("Play"), EWorldMode::Play);
+    const World lEdit("Edit", EWorldMode::Edit);
+    const World lPlay("Play", EWorldMode::Play);
 
     // Asked on the class default object, as a world asks it.
     const WorldSubsystem* lDefault = Cast<WorldSubsystem>(BehaviourSubsystem::StaticClass().GetDefaultObject());
@@ -1251,7 +1252,7 @@ TEST_CASE("Behaviours: physics events from another world are ignored")
     lB.Add<ContactProbe>();
     lFix.Frame();
 
-    const World lOther(OpaaxString("Other"));
+    const World lOther("Other");
     lFix.Events.GetEventBus().Publish(PhysicsCollisionBegan{ lA.GetHandle(), lB.GetHandle(), &lOther });
     CHECK(lA.Get<ContactProbe>().Collisions == 0);
 

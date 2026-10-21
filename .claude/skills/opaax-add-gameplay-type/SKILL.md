@@ -13,6 +13,7 @@ description: Add a component, behaviour, world or game instance subsystem, asset
 | Logic on an entity (update, events, timers) | behaviour (`Opaax::Behaviour` subclass, `OPAAX_OBJECT(T, Opaax::Behaviour)` first in its body) | `OPAAX_REGISTER_BEHAVIOUR(T)` |
 | Logic for a whole world | world subsystem (`Opaax::WorldSubsystem` + `OPAAX_OBJECT`) | `OPAAX_REGISTER_OBJECT(T)` |
 | Logic across levels | game instance subsystem (`Opaax::GameInstanceSubsystem` + `OPAAX_OBJECT`) | `OPAAX_REGISTER_OBJECT(T)` |
+| Code when the game starts or ends | the game's own class (`Opaax::GameInstance` + `OPAAX_OBJECT`, `OnStart`/`OnEnd`), named by `gameInstanceClass` in the `.opaaxproj` | `OPAAX_REGISTER_OBJECT(T)` |
 | Shared tuning data in a file | asset class (`Opaax::Asset` + `OPAAX_OBJECT`, `.opaaxasset` files) | `OPAAX_REGISTER_OBJECT(T)` |
 | A way of moving for the Mover | move mode (`Opaax::MoveMode` subclass: tuning as properties, a `const` `Tick`) | `OPAAX_REGISTER_OBJECT(T)` |
 | A file format of its own | resource | `OPAAX_REGISTER_RESOURCE(T)` |

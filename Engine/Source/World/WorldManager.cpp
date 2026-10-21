@@ -99,7 +99,7 @@ namespace Opaax
     {
         while (!m_Worlds.empty())
         {
-            DestroyWorld(m_Worlds.back().get());
+            DestroyWorld(m_Worlds.back().Get());
         }
     }
 
@@ -114,7 +114,7 @@ namespace Opaax
     // =========================================================================
     // World lifetime
     // =========================================================================
-    World* WorldManager::CreateWorld(OpaaxString InName, EWorldMode InMode)
+    World* WorldManager::CreateWorld(const OpaaxStringID InName, EWorldMode InMode)
     {
         // Seal here: this is what makes a world exist (covers every CreateWorld, not only startup).
         if (m_Registries != nullptr)
@@ -122,14 +122,15 @@ namespace Opaax
             m_Registries->SealAll();
         }
 
-        m_Worlds.emplace_back(MakeUnique<World>(Move(InName), InMode));
-        World* lWorld = m_Worlds.back().get();
+        // The name twice: the object's, then the constructor's (which names a world made without NewObject).
+        m_Worlds.emplace_back(NewObject<World>(InName, InName, InMode));
+        World* lWorld = m_Worlds.back().Get();
 
         // Level before subsystems: subsystems receive the world. No Level for a bare test manager.
         if (m_Registries != nullptr && m_Paths != nullptr && m_Resources != nullptr)
         {
-            lWorld->SetLevel(MakeUnique<Level>(*lWorld, m_Registries->Components(),
-                                               *m_Paths, *m_Resources, m_Registries->Resources()));
+            lWorld->SetLevel(NewObject<Level>(InName, *lWorld, m_Registries->Components(),
+                                              *m_Paths, *m_Resources, m_Registries->Resources()));
         }
 
         CreateSubsystemsFor(*lWorld);
@@ -188,11 +189,11 @@ namespace Opaax
         // Collected first: DestroyWorld changes m_Worlds.
         TDynArray<World*> lDoomed;
 
-        for (const TUniquePtr<World>& lWorld : m_Worlds)
+        for (const TStrongObjectPtr<World>& lWorld : m_Worlds)
         {
             if (lWorld != nullptr && lWorld->GetMode() == InMode)
             {
-                lDoomed.emplace_back(lWorld.get());
+                lDoomed.emplace_back(lWorld.Get());
             }
         }
 
@@ -208,7 +209,7 @@ namespace Opaax
     {
         Uint64 lCount = 0;
 
-        for (const TUniquePtr<World>& lWorld : m_Worlds)
+        for (const TStrongObjectPtr<World>& lWorld : m_Worlds)
         {
             if (lWorld != nullptr && lWorld->GetMode() == InMode)
             {
@@ -303,7 +304,7 @@ namespace Opaax
 
         for (auto lIt = m_Worlds.begin(); lIt != m_Worlds.end(); ++lIt)
         {
-            if (lIt->get() == InWorld)
+            if (lIt->Get() == InWorld)
             {
                 m_Worlds.erase(lIt);
                 break;

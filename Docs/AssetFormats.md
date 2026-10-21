@@ -10,7 +10,7 @@ engine content with `/Engine/` (`/Engine/Textures/T_Square_256_White.png`).
 
 | Extension | What | In the editor |
 |---|---|---|
-| `.opaaxproj` | The project: name, startup level | (project root) |
+| `.opaaxproj` | The project: name, startup level, the game's class | (project root) |
 | `.opaaxlevel` | A level: the maps it loads | File > New/Open/Save Level |
 | `.opaaxmap` | A map: entities and placed prefabs | Hierarchy, Inspector |
 | `.opaaxprefab` | A prefab, a nested prefab or a variant | Create Prefab, Prefab panel |
@@ -29,11 +29,15 @@ to 10 s is decoded when it loads; a longer one (music) keeps its file and is dec
     "startupLevel": "Levels/Main.opaaxlevel",
     "loadingScreen": "UI/Loading.opaaxui",
     "loadingScreenMinSeconds": 0.5,
-    "uiReferenceHeight": 1080
+    "uiReferenceHeight": 1080,
+    "gameInstanceClass": "TetrisGame"
 }
 ```
 
-`MakeOpaax.sh` (or `OpaaxCreator`) creates a project with this file, its folders and its CMake target.
+`gameInstanceClass` names the game's own `GameInstance` class
+([Objects.md](Objects.md#the-game-worlds-and-levels)); without it, the game runs a plain
+`GameInstance`. `MakeOpaax.sh` (or `OpaaxCreator`) creates a project with this file, its folders and
+its CMake target.
 
 ## Levels and maps (`.opaaxlevel`, `.opaaxmap`)
 

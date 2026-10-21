@@ -25,6 +25,7 @@ namespace Opaax
             OpaaxString LoadingScreen() const override { return OpaaxString(); }
             float       LoadingScreenMinSeconds() const override { return 0.f; }
             float       UIReferenceHeight() const override { return 1080.f; }
+            OpaaxString GameInstanceClass() const override { return OpaaxString(); }
         };
     }
 
@@ -72,7 +73,8 @@ namespace Opaax
             lOut.StartupLevel = lReadString(Opaax_Project_Identity::PROJECT_STARTUP_LEVEL_KEY_DEFAULT);
         }
 
-        lOut.LoadingScreen = lReadString(Opaax_Project_Identity::PROJECT_LOADING_SCREEN_KEY);
+        lOut.LoadingScreen     = lReadString(Opaax_Project_Identity::PROJECT_LOADING_SCREEN_KEY);
+        lOut.GameInstanceClass = lReadString(Opaax_Project_Identity::PROJECT_GAME_INSTANCE_CLASS_KEY);
 
         // Keeps the default if the key is missing or not a number.
         const auto lReadNumber = [&lRoot](const char* InKey, float& InOutValue)

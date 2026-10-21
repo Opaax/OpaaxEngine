@@ -4,8 +4,8 @@
 #include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IEngine.h"
 #include "Application/Services/IPaths.h"
+#include "Application/Services/IProjectManager.h"
 #include "Engine/Config/Config_Engine.h"
-#include "Engine/GameInstance/GameInstance.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Input/InputManager.h"
 #include "World/WorldManager.h"
@@ -29,6 +29,8 @@ namespace Opaax
         m_Input     = &lEngine.GetInput();
         m_Paths     = &OpaaxApplication::GetAppService<IPaths>();
         m_Config    = &OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>().GetData();
+
+        m_GameInstanceClass = OpaaxStringID(OpaaxApplication::GetAppService<IProjectManager>().GameInstanceClass());
 
         return true;
     }
@@ -58,14 +60,14 @@ namespace Opaax
             return false;
         }
 
-        m_GameInstance = MakeUnique<GameInstance>(GameInstanceContext{*m_Worlds, *m_Resources, *m_Paths,
-                                                                      *m_Events, *m_Input, *m_Config});
+        m_GameInstance = GameInstance::Create(m_GameInstanceClass, m_Registries->ObjectClasses());
+        m_GameInstance->Init(GameInstanceContext{*m_Worlds, *m_Resources, *m_Paths, *m_Events, *m_Input, *m_Config});
         ++m_SessionsStarted;
 
-        const Uint64 lCreated = m_GameInstance->StartSubsystems(m_Registries->ObjectClasses());
+        const Uint64 lCreated = m_GameInstance->Start(m_Registries->ObjectClasses());
 
-        OPAAX_LOG(LogGameInstanceManager, Info, "GAME STARTED (session #{}) — {} session subsystem(s) created",
-                  m_SessionsStarted, lCreated);
+        OPAAX_LOG(LogGameInstanceManager, Info, "GAME STARTED (session #{}) — {}, {} session subsystem(s) created",
+                  m_SessionsStarted, m_GameInstance->GetClass().GetName().CStr(), lCreated);
         return true;
     }
 
@@ -78,10 +80,9 @@ namespace Opaax
 
         const Uint64 lCount = m_GameInstance->GetSubsystemCount();
 
-        // TearDown while everything is still alive, then Shutdown. Both are safe to repeat.
-        m_GameInstance->TearDownSubsystems();
-        m_GameInstance->ShutdownSubsystems();
-        m_GameInstance.reset();
+        // While everything it uses is still alive.
+        m_GameInstance->End();
+        m_GameInstance.Reset();
 
         OPAAX_LOG(LogGameInstanceManager, Info, "GAME ENDED (session #{}) — {} session subsystem(s) destroyed",
                   m_SessionsStarted, lCount);
