@@ -44,6 +44,8 @@ namespace MyGame
     // Turns its entity, and jumps when Space is pressed (with a Collider and a Dynamic Rigidbody).
     class Spinner : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(Spinner, Opaax::Behaviour)
+
     public:
         float DegreesPerSecond = 90.f;
         float JumpSpeed        = 500.f;
@@ -65,6 +67,7 @@ namespace MyGame
 }
 ```
 
+`OPAAX_OBJECT` names the class and its parent: a behaviour is an object ([Objects.md](Objects.md)).
 Beside `OnUpdate`: `OnStart`, `OnFixedUpdate` (before each physics step) and `OnDestroy`. A behaviour
 can create, spawn (prefabs) and destroy entities, send and listen to events, set timers, play sounds,
 read input and actions, and push its body: `World/Behaviour/Behaviour.h` lists it all.

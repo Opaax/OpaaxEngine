@@ -10,6 +10,7 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/Reflection/TypeInfo.h"
 #include "Engine/Reflection/PropertyVisitor.h"
+#include "Object/Object.h"
 #include "Resources/ResourcePath.h"
 #include "Resources/ResourceTypeID.hpp"
 #include "World/Components/ComponentConcept.hpp"
@@ -124,6 +125,9 @@ namespace Opaax
     template<CComponent T>
     class TComponentEntry final : public IComponentEntry
     {
+        static_assert(!CDerivedFrom<T, Behaviour> || CObject<T>,
+                      "A behaviour declares its class: OPAAX_OBJECT(Type, Opaax::Behaviour) first in its body.");
+
     public:
         TComponentEntry(OpaaxStringID InName, bool bInEssential)
             : m_Name(InName), m_bEssential(bInEssential)

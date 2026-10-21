@@ -1,7 +1,8 @@
 // Suite: a Behaviour is stored, saved and placed like a component (map round trip, prefab overrides),
-// is found with TryGet, and never moves in storage.
+// is found with TryGet, never moves in storage, and is an object of its own class.
 #include <doctest.h>
 
+#include "Engine/Registries/AutoRegistration.h"
 #include "Engine/Registries/ModuleRegistrar.h"
 #include "World/Behaviour/Behaviour.h"
 #include "World/Components/ComponentRegistry.h"
@@ -21,6 +22,8 @@ namespace GameSide
 {
     struct Mover final : Behaviour
     {
+        OPAAX_OBJECT(Mover, Behaviour)
+
         float    Speed       = 1.f;
         Int32    Lives       = 3;
         Vector2F Direction   = { 1.f, 0.f };
@@ -39,7 +42,17 @@ namespace GameSide
     };
 
     // No fields at all.
-    struct Spinner final : Behaviour {};
+    struct Spinner final : Behaviour
+    {
+        OPAAX_OBJECT(Spinner, Behaviour)
+    };
+
+    // Registered the way a game registers its behaviours.
+    class RegisteredProbe final : public Behaviour
+    {
+        OPAAX_OBJECT(RegisteredProbe, Behaviour)
+    };
+    OPAAX_REGISTER_BEHAVIOUR(RegisteredProbe);
 }
 
 static_assert(CComponent<GameSide::Mover>,   "a behaviour must satisfy the component concept");
@@ -254,4 +267,50 @@ TEST_CASE("Behaviour: a prefab override on a behaviour field holds, and a prefab
     REQUIRE(lMover != nullptr);
     CHECK(lMover->Speed == 9.f);            // the override held
     CHECK(lMover->Lives == 10);             // the prefab's change arrived
+}
+
+TEST_CASE("Behaviour: an object of its own class, which a weak pointer follows until its entity goes")
+{
+    World lWorld("W");
+
+    Entity           lShip  = lWorld.CreateEntity("Ship", k_Map);
+    GameSide::Mover& lMover = lShip.Add<GameSide::Mover>();
+
+    CHECK(&lMover.GetClass() == &GameSide::Mover::StaticClass());
+    CHECK(lMover.IsA<Behaviour>());
+    CHECK(GameSide::Mover::StaticClass().GetName() == OpaaxStringID("Mover"));
+
+    // Its properties as the class lists them: what the map saves under the same name.
+    TDynArray<OpaaxString> lNames;
+    for (const char* lName : GameSide::Mover::StaticClass().GetPropertyNames()) { lNames.emplace_back(lName); }
+    REQUIRE(lNames.size() == 3u);
+    CHECK(lNames[0] == "Speed");
+
+    // The handle follows the behaviour where it lives, and reads null once its entity is destroyed.
+    const TWeakObjectPtr<GameSide::Mover> lWeak(&lMover);
+    for (Int32 i = 0; i < 100; ++i)
+    {
+        lWorld.CreateEntity("Filler", k_Map).Add<GameSide::Mover>();
+    }
+    CHECK(lWeak.Get() == lShip.TryGet<GameSide::Mover>());
+
+    lWorld.DestroyEntity(lShip);
+    CHECK(lWeak.Get() == nullptr);
+}
+
+TEST_CASE("Behaviour: the registration line registers its class as well as its storage")
+{
+    EngineRegistries lRegistries;
+    ModuleRegistrar  lRegistrar;
+    lRegistrar.BindEngineRegistries(lRegistries);
+    RunAutoRegistrations(lRegistrar);
+
+    const ObjectClass* lClass = lRegistries.ObjectClasses().FindByName(OpaaxStringID("RegisteredProbe"));
+    REQUIRE(lClass != nullptr);
+    CHECK(lClass == &GameSide::RegisteredProbe::StaticClass());
+    CHECK(lClass->IsChildOf(Behaviour::StaticClass()));
+
+    const IComponentEntry* lEntry = lRegistries.Components().FindByName(OpaaxStringID("RegisteredProbe"));
+    REQUIRE(lEntry != nullptr);
+    CHECK(lEntry->IsBehaviour());
 }

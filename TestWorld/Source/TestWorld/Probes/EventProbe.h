@@ -24,6 +24,8 @@ namespace TestWorld
     // =============================================================================
     class EventProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(EventProbe, Opaax::Behaviour)
+
     public:
         Opaax::OpaaxString Target;
         bool               bAnnounce = false;

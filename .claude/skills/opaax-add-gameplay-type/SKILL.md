@@ -10,7 +10,7 @@ description: Add a component, behaviour, world or game instance subsystem, asset
 | Need | Kind | Registration |
 |---|---|---|
 | Data on entities, saved in maps | component | `OPAAX_REGISTER_COMPONENT(T)` |
-| Logic on an entity (update, events, timers) | behaviour (derives from `Opaax::Behaviour`) | `OPAAX_REGISTER_BEHAVIOUR(T)` |
+| Logic on an entity (update, events, timers) | behaviour (`Opaax::Behaviour` subclass, `OPAAX_OBJECT(T, Opaax::Behaviour)` first in its body) | `OPAAX_REGISTER_BEHAVIOUR(T)` |
 | Logic for a whole world | world subsystem (`Opaax::WorldSubsystem` + `OPAAX_OBJECT`) | `OPAAX_REGISTER_OBJECT(T)` |
 | Logic across levels | game instance subsystem (`Opaax::GameInstanceSubsystem` + `OPAAX_OBJECT`) | `OPAAX_REGISTER_OBJECT(T)` |
 | Shared tuning data in a file | asset class (`Opaax::Asset` + `OPAAX_OBJECT`, `.opaaxasset` files) | `OPAAX_REGISTER_OBJECT(T)` |

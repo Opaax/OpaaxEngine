@@ -100,9 +100,10 @@ Match the code around you. In short:
 
 ## Adding something
 
-- **Component or behaviour:** the type with `OPAAX_PROPERTIES` (and the JSON macro for a component),
-  one `OPAAX_REGISTER_*` line, unit tests for its logic, a TestWorld probe or level when a game can
-  see it. Old maps must still load: new fields have defaults (`NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT`).
+- **Component or behaviour:** the type with `OPAAX_PROPERTIES` (and the JSON macro for a component;
+  `OPAAX_OBJECT(T, Opaax::Behaviour)` first in a behaviour's body), one `OPAAX_REGISTER_*` line, unit
+  tests for its logic, a TestWorld probe or level when a game can see it. Old maps must still load:
+  new fields have defaults (`NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT`).
 - **Subsystem:** a `WorldSubsystem` or `GameInstanceSubsystem` subclass with `OPAAX_OBJECT` and one
   `OPAAX_REGISTER_OBJECT` line: its owner finds the class. Nothing in its constructor (the class
   default object is built with it); its services from `GetContext()`, valid from `Startup`; which

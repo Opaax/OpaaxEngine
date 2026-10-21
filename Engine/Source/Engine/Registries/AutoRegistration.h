@@ -112,8 +112,14 @@ namespace Opaax
         ::Opaax::OpaaxHash::Hash64(OldName), 0, OldName,                                           \
         InRegistrar.Components().AddAlias(::Opaax::OpaaxStringID(OldName), ::Opaax::OpaaxStringID(Name)))
 
-/** Registers a behaviour (gameplay logic stored like a component, saved under its type name). */
+/**
+ * Registers a behaviour: its class, and its storage on entities (saved like a component, under its
+ * class name).
+ */
 #define OPAAX_REGISTER_BEHAVIOUR(Type)                                                               \
+    static_assert(::Opaax::CObject<Type>,                                                            \
+                  "A behaviour declares its class: OPAAX_OBJECT(" #Type ", Opaax::Behaviour) first in its body."); \
+    OPAAX_REGISTER_OBJECT(Type);                                                                     \
     OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::Behaviour,                      \
         ::Opaax::TypeIdOf<Type>(), 0, #Type, InRegistrar.Behaviours().Register<Type>())
 

@@ -46,6 +46,8 @@ namespace TestWorld
     // =============================================================================
     class LedgerProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(LedgerProbe, Opaax::Behaviour)
+
     public:
         bool         bFound         = false;
         Opaax::Int32 LedgersStarted = 0;
@@ -85,6 +87,8 @@ namespace TestWorld
     // =============================================================================
     class TravelProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(TravelProbe, Opaax::Behaviour)
+
     public:
         Opaax::OpaaxString Target;
         float              Delay = 0.2f;

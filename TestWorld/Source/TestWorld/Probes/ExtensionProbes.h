@@ -73,6 +73,8 @@ namespace TestWorld
     // =============================================================================
     class TuningProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(TuningProbe, Opaax::Behaviour)
+
     public:
         bool               bLoaded = false;
         float              Speed   = 0.f;

@@ -14,6 +14,8 @@ namespace TestWorld
     // =============================================================================
     class WalkerProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(WalkerProbe, Opaax::Behaviour)
+
     public:
         float WalkAt = 0.5f;
         float JumpAt = 2.0f;

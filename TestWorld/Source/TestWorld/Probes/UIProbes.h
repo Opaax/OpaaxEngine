@@ -19,6 +19,8 @@ namespace TestWorld
     // =============================================================================
     class UIProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(UIProbe, Opaax::Behaviour)
+
     public:
         Opaax::OpaaxString Asset = "UI/Probe.opaaxui";
 

@@ -20,6 +20,7 @@
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/InputManager.h"
 #include "Input/Mapping/InputMappingSubsystem.h"
+#include "Object/ObjectClass.h"
 #include "Physics/Collision/CollisionChannel.h"
 #include "Physics/Components/ColliderComponent.h"
 #include "Physics/Components/RigidbodyComponent.h"
@@ -91,6 +92,8 @@ namespace RuntimeProbes
     /** Writes its lifecycle to the journal. */
     struct Probe final : Behaviour
     {
+        OPAAX_OBJECT(Probe, Behaviour)
+
         bool DestroySelfOnUpdate = false;
 
         void OnStart() override { Note(*this, "Start"); }
@@ -111,9 +114,20 @@ namespace RuntimeProbes
         }
     };
 
+    /** A saved field and nothing else. */
+    struct Tuned final : Behaviour
+    {
+        OPAAX_OBJECT(Tuned, Behaviour)
+
+        Int32 Power = 0;
+        OPAAX_PROPERTIES(Tuned, OPAAX_PROP(Power))
+    };
+
     /** Adds an entity with a Probe during its first update. */
     struct Adder final : Behaviour
     {
+        OPAAX_OBJECT(Adder, Behaviour)
+
         bool bAdded = false;
 
         void OnUpdate(float) override
@@ -129,6 +143,8 @@ namespace RuntimeProbes
     /** Destroys the entity named Target during each update. */
     struct Killer final : Behaviour
     {
+        OPAAX_OBJECT(Killer, Behaviour)
+
         OpaaxString Target;
 
         void OnUpdate(float) override
@@ -140,11 +156,15 @@ namespace RuntimeProbes
     /** Removes its entity's Probe during each update. */
     struct Remover final : Behaviour
     {
+        OPAAX_OBJECT(Remover, Behaviour)
+
         void OnUpdate(float) override { Remove<Probe>(); }
     };
 
     struct Ticker final : Behaviour
     {
+        OPAAX_OBJECT(Ticker, Behaviour)
+
         Int32 Updates = 0;
 
         void OnUpdate(float) override { ++Updates; }
@@ -152,6 +172,8 @@ namespace RuntimeProbes
 
     struct HitCounter final : Behaviour
     {
+        OPAAX_OBJECT(HitCounter, Behaviour)
+
         Int32 Hits  = 0;
         Int32 Total = 0;
 
@@ -173,6 +195,8 @@ namespace RuntimeProbes
     /** A second listener type for Hit, on the same entity as a HitCounter. */
     struct Armor final : Behaviour
     {
+        OPAAX_OBJECT(Armor, Behaviour)
+
         Int32 Hits = 0;
 
         void OnStart() override { Listen<&Armor::OnHit>(); }
@@ -182,6 +206,8 @@ namespace RuntimeProbes
     /** Sends one Hit to Target during its first update. */
     struct Shooter final : Behaviour
     {
+        OPAAX_OBJECT(Shooter, Behaviour)
+
         OpaaxString Target;
         bool        bFired = false;
 
@@ -198,6 +224,8 @@ namespace RuntimeProbes
     /** Sends a Hit to Target from its OnStart. */
     struct Greeter final : Behaviour
     {
+        OPAAX_OBJECT(Greeter, Behaviour)
+
         OpaaxString Target;
 
         void OnStart() override
@@ -209,6 +237,8 @@ namespace RuntimeProbes
 
     struct ClickCounter final : Behaviour
     {
+        OPAAX_OBJECT(ClickCounter, Behaviour)
+
         Int32 Clicks = 0;
         bool  bStop  = false;
 
@@ -223,6 +253,8 @@ namespace RuntimeProbes
 
     struct ClickWitness final : Behaviour
     {
+        OPAAX_OBJECT(ClickWitness, Behaviour)
+
         Int32 Clicks = 0;
 
         void OnStart() override { Listen<&ClickWitness::OnClicked>(); }
@@ -232,6 +264,8 @@ namespace RuntimeProbes
     /** Answers every Ping by sending one to Partner. */
     struct Echo final : Behaviour
     {
+        OPAAX_OBJECT(Echo, Behaviour)
+
         OpaaxString Partner;
         Int32       Pings = 0;
 
@@ -246,6 +280,8 @@ namespace RuntimeProbes
 
     struct ScoreKeeper final : Behaviour
     {
+        OPAAX_OBJECT(ScoreKeeper, Behaviour)
+
         Int32 Total = 0;
 
         void OnStart() override { Subscribe<&ScoreKeeper::OnScore>(); }
@@ -260,6 +296,8 @@ namespace RuntimeProbes
     /** Broadcasts, sends and creates from its OnDestroy. */
     struct Dier final : Behaviour
     {
+        OPAAX_OBJECT(Dier, Behaviour)
+
         void OnDestroy() override
         {
             Broadcast(ScoreChanged{ 10 });
@@ -271,6 +309,8 @@ namespace RuntimeProbes
 
     struct TimerUser final : Behaviour
     {
+        OPAAX_OBJECT(TimerUser, Behaviour)
+
         Int32       OnceFired   = 0;
         Int32       RepeatFired = 0;
         Int32       LambdaFired = 0;
@@ -291,12 +331,16 @@ namespace RuntimeProbes
 
     struct Fuse final : Behaviour
     {
+        OPAAX_OBJECT(Fuse, Behaviour)
+
         void OnStart() override { DestroyAfter(0.25f); }
     };
 
     /** Handlers that change nothing of the behaviour's own state can be const members. */
     struct ConstHandlers final : Behaviour
     {
+        OPAAX_OBJECT(ConstHandlers, Behaviour)
+
         mutable Int32 Timers = 0;
         mutable Int32 Scores = 0;
 
@@ -313,6 +357,8 @@ namespace RuntimeProbes
     /** Spawns Prefab during its first update, then sends the new root a Hit. */
     struct Spawner final : Behaviour
     {
+        OPAAX_OBJECT(Spawner, Behaviour)
+
         OpaaxString Prefab;
         Entity      Spawned;
         bool        bDone = false;
@@ -332,6 +378,8 @@ namespace RuntimeProbes
     /** Spawns Prefab from its OnStart and checks the spawned root has started. */
     struct StartSpawner final : Behaviour
     {
+        OPAAX_OBJECT(StartSpawner, Behaviour)
+
         OpaaxString Prefab;
         bool        bRootStarted = false;
 
@@ -344,6 +392,8 @@ namespace RuntimeProbes
 
     struct ContactProbe final : Behaviour
     {
+        OPAAX_OBJECT(ContactProbe, Behaviour)
+
         Int32    Collisions     = 0;
         Int32    Overlaps       = 0;
         EntityID LastOther      = ENTITY_NONE;
@@ -372,18 +422,24 @@ namespace RuntimeProbes
     /** Launches its own body from OnStart, on the frame its entity was created. */
     struct Launcher final : Behaviour
     {
+        OPAAX_OBJECT(Launcher, Behaviour)
+
         void OnStart() override { SetVelocity(Vector2F{ 120.f, 0.f }); }
     };
 
     /** Kicks its entity every frame, body or not. */
     struct Kicker final : Behaviour
     {
+        OPAAX_OBJECT(Kicker, Behaviour)
+
         void OnUpdate(float) override { AddImpulse(Vector2F{ 1.f, 0.f }); }
     };
 
     /** Every frame: a ray 200 units down from its entity, and what is within 100 units of it. */
     struct Seeker final : Behaviour
     {
+        OPAAX_OBJECT(Seeker, Behaviour)
+
         Uint64            Channels = ~0ull;
         RayHit            Down;
         TDynArray<Entity> Around;
@@ -399,6 +455,8 @@ namespace RuntimeProbes
     /** Counts "Jump" starts twice: from a bound handler, and by polling in OnUpdate. */
     struct Jumper final : Behaviour
     {
+        OPAAX_OBJECT(Jumper, Behaviour)
+
         Int32 BoundJumps  = 0;
         Int32 PolledJumps = 0;
         bool  bHeld       = false;
@@ -415,6 +473,8 @@ namespace RuntimeProbes
 
     struct KeyWatcher final : Behaviour
     {
+        OPAAX_OBJECT(KeyWatcher, Behaviour)
+
         bool bDown     = false;
         bool bPressed  = false;
         bool bReleased = false;
@@ -429,17 +489,23 @@ namespace RuntimeProbes
 
     struct Quitter final : Behaviour
     {
+        OPAAX_OBJECT(Quitter, Behaviour)
+
         void OnUpdate(float) override { QuitGame(); }
     };
 
     struct Traveller final : Behaviour
     {
+        OPAAX_OBJECT(Traveller, Behaviour)
+
         void OnUpdate(float) override { OpenLevel(OpaaxString("Levels/Next.opaaxlevel")); }
     };
 
     /** Counts the started Probes it can see. */
     struct Finder final : Behaviour
     {
+        OPAAX_OBJECT(Finder, Behaviour)
+
         Int32 Seen      = 0;
         bool  bFoundOne = false;
 
@@ -453,6 +519,8 @@ namespace RuntimeProbes
 
     struct Mover final : Behaviour
     {
+        OPAAX_OBJECT(Mover, Behaviour)
+
         void OnUpdate(float) override { SetWorldPosition(Vector2F{ 150.f, 0.f }); }
     };
 
@@ -468,6 +536,8 @@ namespace RuntimeProbes
     /** Adds one to the game's Tally when it starts. */
     struct TallyClerk final : Behaviour
     {
+        OPAAX_OBJECT(TallyClerk, Behaviour)
+
         bool bFound = false;
 
         void OnStart() override
@@ -483,6 +553,8 @@ namespace RuntimeProbes
     /** Records the clock it sees. */
     struct Clock final : Behaviour
     {
+        OPAAX_OBJECT(Clock, Behaviour)
+
         double Time  = 0.0;
         float  Delta = 0.f;
 
@@ -508,6 +580,7 @@ namespace
         REQUIRE(InRegistry.Register<Adder>(OpaaxStringID("Adder")));
         REQUIRE(InRegistry.Register<Killer>(OpaaxStringID("Killer")));
         REQUIRE(InRegistry.Register<Probe>(OpaaxStringID("Probe")));
+        REQUIRE(InRegistry.Register<Tuned>(OpaaxStringID("Tuned")));
         REQUIRE(InRegistry.Register<Remover>(OpaaxStringID("Remover")));
         REQUIRE(InRegistry.Register<Ticker>(OpaaxStringID("Ticker")));
         REQUIRE(InRegistry.Register<HitCounter>(OpaaxStringID("HitCounter")));
@@ -824,19 +897,25 @@ TEST_CASE("Behaviours: one added during a pass starts in that pass and is first 
     CHECK(CountOf("Late:Start") == 1);
 }
 
-TEST_CASE("Behaviours: copying a behaviour copies its fields, never its runtime binding")
+TEST_CASE("Behaviours: never copied; their fields go through their class, never their runtime binding")
 {
+    // An object: no copy, no move. A Play copy of a world is made from the saved fields.
+    static_assert(!CConstructibleFrom<Tuned, const Tuned&>);
+    static_assert(!CConstructibleFrom<Tuned, Tuned&&>);
+
     RuntimeFixture lFix;
     Entity lEntity = lFix.Make("A");
-    lEntity.Add<Probe>().DestroySelfOnUpdate = false;
+    lEntity.Add<Tuned>().Power = 7;
     lFix.Frame();
 
-    const Probe& lLive = lEntity.Get<Probe>();
+    const Tuned& lLive = lEntity.Get<Tuned>();
     REQUIRE(lLive.IsStarted());
 
-    const Probe lCopy = lLive;
-    CHECK_FALSE(lCopy.IsStarted());
-    CHECK_FALSE(lCopy.GetEntity().IsValid());
+    Tuned lFresh;
+    REQUIRE(Tuned::StaticClass().ReadProperties(lFresh, Tuned::StaticClass().WriteProperties(lLive)));
+    CHECK(lFresh.Power == 7);
+    CHECK_FALSE(lFresh.IsStarted());
+    CHECK_FALSE(lFresh.GetEntity().IsValid());
 }
 
 TEST_CASE("Behaviours: calls before OnStart are ignored")

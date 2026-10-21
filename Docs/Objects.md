@@ -4,8 +4,8 @@ Every asset type of the engine (a material, a sprite sheet, an animation clip, a
 an input action) and of a game is a class derived from `Opaax::Asset`, itself an `Opaax::Object`. A
 class with fields is enough: the file format, the loading, the sharing, the editor window, undo,
 automation and the conversion of old files come from the base. It is the idea of Unreal's `UObject`
-and `UDataAsset`, and of Godot's `Resource`. Subsystems and UI widgets are objects too
-([Subsystems](#subsystems), [UI widgets](#ui-widgets)).
+and `UDataAsset`, and of Godot's `Resource`. Subsystems, UI widgets and behaviours are objects too
+([Subsystems](#subsystems), [UI widgets](#ui-widgets), [Behaviours](#behaviours)).
 
 Components are plain structs, not objects. Levels, maps, prefabs and UI canvases keep their own
 formats ([AssetFormats.md](AssetFormats.md)).
@@ -208,6 +208,15 @@ other code. `UIWidget::Create(name, classes)` makes one by class name. A parent 
 `TStrongObjectPtr`; code that keeps a widget it does not own can hold a `TWeakObjectPtr`, which reads
 null once the widget is gone.
 
+## Behaviours
+
+A behaviour (gameplay code on an entity) is an object of a `Behaviour` subclass, declared with
+`OPAAX_OBJECT(Coin, Opaax::Behaviour)` and registered with `OPAAX_REGISTER_BEHAVIOUR(Coin)`, which
+registers its class as well as its place on entities. It lives in its entity's storage like a
+component and never moves there, so another object can keep a `TWeakObjectPtr<Coin>` to it: it reads
+null once the behaviour or its entity is gone. A behaviour is saved with its entity, its properties
+under its class name; it is not copied, the Play copy of a world being made from the saved fields.
+
 ## Lifetime and the garbage collector to come
 
 Every object has a slot in one table (`ObjectTable`), with a generation that changes when the slot is
@@ -222,7 +231,7 @@ at freed memory. Three pointer kinds, as in Unreal:
 
 Assets loaded from files are owned by the resource manager, which releases one that nothing holds;
 subsystems by their owner's collection, and widgets by their parent, each through a
-`TStrongObjectPtr`.
+`TStrongObjectPtr`; behaviours by their world's entity storage.
 There is no garbage collector yet; what one needs is in place: the table, the object flags (managed,
 class default, being destroyed), and references found through the properties. A mark-and-sweep would
 start from the strong pointers and the resource manager, follow `TObjectPtr` properties, and destroy

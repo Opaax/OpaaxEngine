@@ -657,6 +657,8 @@ namespace AudioProbes
     /** Plays the beep when it starts. */
     struct Chime final : Behaviour
     {
+        OPAAX_OBJECT(Chime, Behaviour)
+
         SoundHandle Sound;
 
         void OnStart() override { Sound = PlaySound("Audio/Beep.wav"); }

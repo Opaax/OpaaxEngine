@@ -16,6 +16,8 @@ namespace TestWorld
     // =============================================================================
     class AnimProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(AnimProbe, Opaax::Behaviour)
+
     public:
         Opaax::OpaaxString SwitchTo;
         float              SwitchAfter = 1.f;

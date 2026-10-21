@@ -12,6 +12,8 @@ namespace TestWorld
     // =============================================================================
     class CameraProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(CameraProbe, Opaax::Behaviour)
+
     public:
         Opaax::OpaaxString Raise;
         float              RaiseAfter = 0.5f;

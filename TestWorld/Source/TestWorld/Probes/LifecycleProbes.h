@@ -10,6 +10,8 @@ namespace TestWorld
     // =============================================================================
     class LifecycleProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(LifecycleProbe, Opaax::Behaviour)
+
     public:
         Opaax::Int32 StartCount       = 0;
         Opaax::Int32 UpdateCount      = 0;
@@ -28,6 +30,8 @@ namespace TestWorld
     // =============================================================================
     class TimerProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(TimerProbe, Opaax::Behaviour)
+
     public:
         float        Delay       = 0.25f;
         float        Period      = 0.1f;
@@ -64,6 +68,8 @@ namespace TestWorld
     // =============================================================================
     class SelfDestructProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(SelfDestructProbe, Opaax::Behaviour)
+
     public:
         float Seconds = 0.3f;
 
@@ -89,6 +95,8 @@ namespace TestWorld
     // =============================================================================
     class EndProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(EndProbe, Opaax::Behaviour)
+
     public:
         void OnDestroy() override { Broadcast(ProbeEnded{ IsWorldEnding() }); }
     };
@@ -99,6 +107,8 @@ namespace TestWorld
     // =============================================================================
     class WitnessProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(WitnessProbe, Opaax::Behaviour)
+
     public:
         Opaax::Int32 Ended        = 0;
         Opaax::Int32 WorldEndings = 0;
