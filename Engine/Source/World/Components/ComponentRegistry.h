@@ -11,6 +11,7 @@
 #include "Core/Reflection/TypeInfo.h"
 #include "Engine/Reflection/PropertyVisitor.h"
 #include "Object/Object.h"
+#include "Resources/Asset/AssetRef.h"
 #include "Resources/ResourcePath.h"
 #include "Resources/ResourceTypeID.hpp"
 #include "World/Components/ComponentConcept.hpp"
@@ -21,6 +22,7 @@
 namespace Opaax
 {
     class Behaviour;
+    struct AssetResource;
 
     inline constexpr LogCategory LogComponentRegistry{"ComponentRegistry"};
 
@@ -37,7 +39,7 @@ namespace Opaax
         virtual void OnBehaviourDestroyed(EntityID InEntity, TypeId InType, Behaviour& InBehaviour) = 0;
     };
 
-    /** One hard resource field of a component: its JSON key and resource type id. */
+    /** One hard reference field of a component: its JSON key and the resource type that loads it. */
     struct HardRefField
     {
         OpaaxStringID Name;
@@ -84,8 +86,9 @@ namespace Opaax
         virtual void Load(EntityRegistry& InRegistry, EntityID InEntity, const nlohmann::json& InJson) const = 0;
 
         /**
-         * This component's hard resource fields (THardResourcePath): JSON key and resource type id.
-         * Lets a loader of untyped JSON load them up front. Found from the property list at registration.
+         * This component's hard reference fields (THardResourcePath, THardAssetRef): JSON key and the
+         * resource type that loads it. Lets a loader of untyped JSON load them up front. Found from the
+         * property list at registration.
          */
         virtual const TDynArray<HardRefField>& GetHardRefFields() const = 0;
 
@@ -255,7 +258,7 @@ namespace Opaax
 
     private:
         /**
-         * Collects the names of T's hard resource fields from its property list.
+         * Collects T's hard reference fields (THardResourcePath, THardAssetRef) from its property list.
          * A type without OPAAX_PROPERTIES has none.
          */
         void CollectHardRefFields()
@@ -268,12 +271,18 @@ namespace Opaax
                                 {
                                     using TValue = typename TDecay<decltype(InProperty)>::ValueType;
 
+                                    // The property name is also the JSON key.
                                     if constexpr (k_IsHardResourcePath<TValue>)
                                     {
-                                        // The property name is also the JSON key.
                                         m_HardRefFields.emplace_back(
                                             OpaaxStringID(InProperty.Name),
                                             ResourceTypeID::Get<typename TValue::ResourceType>());
+                                    }
+                                    else if constexpr (k_IsHardAssetRef<TValue>)
+                                    {
+                                        // Every asset file loads as an AssetResource, whatever its class.
+                                        m_HardRefFields.emplace_back(OpaaxStringID(InProperty.Name),
+                                                                     ResourceTypeID::Get<AssetResource>());
                                     }
                                 }(lProperties), ...);
                            },

@@ -80,7 +80,8 @@ if (const EnemyStats* lData = lStats.Get())   // null when the file is missing o
 ```
 
 Keep the handle, not the pointer: saving the file in the editor reloads it in place, and the handle
-reads the new values. `GetOrDefault()` answers the class's defaults when the file is missing, for a
+reads the new values. A component field declared `THardAssetRef<T>` is loaded with the map that holds
+it and stays loaded while that map is mounted, so its first use does not wait (a gun's bullet). `GetOrDefault()` answers the class's defaults when the file is missing, for a
 class whose defaults make sense (a `Material2D` is lit and flat); an abstract class has none. A path
 written in code works too:
 `LoadAsset<EnemyStats>(Resources, Paths, Opaax::OpaaxString("Data/Grunt.opaaxasset"))`.

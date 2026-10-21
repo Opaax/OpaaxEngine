@@ -61,10 +61,10 @@ namespace Opaax::Editor
     void DrawAssetRefField(IEditorWidgets& InWidgets, const char* InLabel, OpaaxString& InPath,
                            const ObjectClass& InClass);
 
-    template<typename T>
-    struct TPropertyDrawer<TAssetRef<T>>
+    template<typename T, EResourceLoad TLoad>
+    struct TPropertyDrawer<TAssetRef<T, TLoad>>
     {
-        static void Draw(IEditorWidgets& InWidgets, const char* InLabel, TAssetRef<T>& InValue, const PropertyMeta&)
+        static void Draw(IEditorWidgets& InWidgets, const char* InLabel, TAssetRef<T, TLoad>& InValue, const PropertyMeta&)
         {
             DrawAssetRefField(InWidgets, InLabel, InValue.Path, T::StaticClass());
         }

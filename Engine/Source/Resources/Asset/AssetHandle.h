@@ -157,8 +157,8 @@ namespace Opaax
     }
 
     /** Loads the asset InRef names. */
-    template<typename T>
-    TAssetHandle<T> LoadAsset(ResourceManager& InResources, const IPaths& InPaths, const TAssetRef<T>& InRef)
+    template<typename T, EResourceLoad TLoad>
+    TAssetHandle<T> LoadAsset(ResourceManager& InResources, const IPaths& InPaths, const TAssetRef<T, TLoad>& InRef)
     {
         return LoadAsset<T>(InResources, InPaths, InRef.Path);
     }
