@@ -8,7 +8,7 @@ namespace Opaax
 {
     /**
      * OpenGL ITexture2D. Uploads decoded pixels (R8, RGB or RGBA). R8 is swizzled into alpha,
-     * so the RGBA sprite shader reads (1,1,1,coverage). Does not read files (see TextureResource).
+     * so the RGBA sprite shader reads (1,1,1,coverage). Does not read files (see Texture2D).
      */
     class OpenGLTexture2D final : public ITexture2D
     {

@@ -46,7 +46,7 @@
 #include "Core/Maths/Maths.h"
 
 #include "Resources/ResourceManager.h"
-#include "Renderer/Textures/TextureResource.h"
+#include "Renderer/Textures/Texture2D.h"
 #include "Renderer/Textures/SpriteSheet.h"
 #include "Renderer/Text/FontFaceResource.h"
 #include "Renderer/Text/FontFamily.h"
@@ -170,6 +170,10 @@ namespace Opaax
         // The active world is the one drawn.
         m_WorldManager = &OpaaxApplication::GetAppService<IEngine>().GetWorldManager();
 
+        // 2x2 opaque magenta: a texture that decoded to transparent black would look like nothing drawn.
+        constexpr Uint8 k_Magenta[] = { 255, 0, 255, 255,  255, 0, 255, 255,  255, 0, 255, 255,  255, 0, 255, 255 };
+        m_MissingTexture = CreateTexture(k_Magenta, 2, 2, 4);
+
         return true;
     }
 
@@ -197,6 +201,7 @@ namespace Opaax
         m_FaceCache.clear();     // holds the font atlases
         m_FamilyCache.clear();
         m_MaterialCache.clear();
+        m_MissingTexture.reset();
 
         m_RenderSystem.reset(); // waits idle, then tears down
     }
@@ -901,43 +906,39 @@ namespace Opaax
         return lIt->second.Get();
     }
 
-    ITexture2D* RendererManager::ResolveTexture(const TResourcePath<TextureResource>& InPath)
+    ITexture2D* RendererManager::ResolveTexture(const TAssetRef<Texture2D>& InRef)
     {
-        if (InPath.IsEmpty())
+        if (InRef.IsEmpty())
         {
             return nullptr;
         }
 
-        const OpaaxStringID lKey(InPath.Path);
+        const OpaaxStringID lKey(InRef.Path);
 
         auto lIt = m_TextureCache.find(lKey.GetId());
         if (lIt == m_TextureCache.end())
         {
-            const OpaaxString lAbsolute = OpaaxApplication::GetAppService<IPaths>().AssetToAbsolute(InPath.Path);
-
-            ResourceRef<TextureResource> lRef =
-                OpaaxApplication::GetAppService<IEngine>().GetResources().Load<TextureResource>(lAbsolute.CStr());
-
-            // Cached even when loading failed (magenta placeholder), so it is not retried every frame.
-            lIt = m_TextureCache.emplace(lKey.GetId(), Move(lRef)).first;
+            // Cached even when loading failed, so a missing file is not retried every frame.
+            lIt = m_TextureCache.emplace(lKey.GetId(),
+                                         LoadAsset(OpaaxApplication::GetAppService<IEngine>().GetResources(),
+                                                   OpaaxApplication::GetAppService<IPaths>(), InRef)).first;
 
             // Logged once per texture, success or failure (on separate lines).
-            if (const TextureResource* lLoaded = lIt->second.IsValid() ? lIt->second.Get() : nullptr)
+            if (const Texture2D* lLoaded = lIt->second.Get())
             {
                 OPAAX_LOG(LogRendererManager, Trace, "Texture '{}' -> {}x{}",
-                          InPath.Path.CStr(), lLoaded->Width, lLoaded->Height);
+                          InRef.Path.CStr(), lLoaded->GetWidth(), lLoaded->GetHeight());
             }
             else
             {
                 OPAAX_LOG(LogRendererManager, Warn, "Texture '{}' did not load — drawing the placeholder",
-                          InPath.Path.CStr());
+                          InRef.Path.CStr());
             }
         }
 
-        TextureResource* lResource = lIt->second.Get();
-
-        // Null while loading or without a device: not drawable this frame. No log.
-        return (lResource != nullptr) ? lResource->GetTexture() : nullptr;
+        // Null without a device: not drawable. No log.
+        const Texture2D* lTexture = lIt->second.Get();
+        return (lTexture != nullptr) ? lTexture->GetTexture() : m_MissingTexture.get();
     }
 
     FontFaceView RendererManager::ResolveFace(const TResourcePath<FontFaceResource>& InPath)
@@ -986,9 +987,9 @@ namespace Opaax
 
     ITexture2D* RendererManager::ResolveTexture(const char* InAssetPath)
     {
-        TResourcePath<TextureResource> lPath;
-        lPath.Path = OpaaxString(InAssetPath);
-        return ResolveTexture(lPath);
+        TAssetRef<Texture2D> lRef;
+        lRef.Path = OpaaxString(InAssetPath);
+        return ResolveTexture(lRef);
     }
 
     UISheetFrameView RendererManager::ResolveSheetFrame(const char* InSheetPath, const Int32 InFrame)

@@ -18,8 +18,10 @@ engine content with `/Engine/` (`/Engine/Textures/T_Square_256_White.png`).
 | `.opaaxasset` | An asset of any registered class (a `Material2D`, a `SpriteSheet`, an `AudioClipDef` or `AudioBank`, a `Mover` or a move mode (`GroundMoveMode`, `FlyMoveMode`), an `InputActionAsset` or `InputMappingContextAsset`, an `AnimationClip` or `AnimationLibrary`, a `FontFamily`, a game's own classes) | Its own window: double-click it |
 | `Configs/*.config` | Engine, renderer and editor settings | Config panel |
 
-Images are `.png`, sounds `.wav`, `.mp3` or `.flac`, fonts `.ttf`: put them under `Assets`. A sound up
-to 10 s is decoded when it loads; a longer one (music) keeps its file and is decoded while it plays.
+Images are `.png` (or `.jpg`, `.tga`, `.bmp`), sounds `.wav`, `.mp3` or `.flac`, fonts `.ttf`: put
+them under `Assets`. An image is a `Texture2D` asset read from the file itself, with nothing beside
+it; double-click shows it. A sound up to 10 s is decoded when it loads; a longer one (music) keeps
+its file and is decoded while it plays.
 
 ## Project (`.opaaxproj`)
 

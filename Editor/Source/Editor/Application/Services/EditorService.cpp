@@ -20,6 +20,7 @@
 #include "Editor/Assets/Editors/FontFamilyEditor.h"
 #include "Editor/Assets/Editors/InputMappingContextEditor.h"
 #include "Editor/Assets/Editors/SpriteSheetEditor.h"
+#include "Editor/Assets/Editors/TextureEditor.h"
 
 #include "Editor/Operation/EditorGizmo.hpp"
 #include "Editor/Operation/EditorViewport.hpp"   // grid toggle
@@ -60,7 +61,7 @@
 #include "World/Prefab/PrefabResource.hpp"
 #include "Editor/Operation/ResourceOperations.h"
 #include "Resources/ResourceTypeID.hpp"
-#include "Renderer/Textures/TextureResource.h"
+#include "Renderer/Textures/Texture2D.h"
 #include "Renderer/Textures/SpriteSheet.h"
 #include "Animation/Assets/AnimationClip.h"
 #include "Animation/Assets/AnimationLibrary.h"
@@ -589,6 +590,14 @@ namespace Opaax::Editor
             .SetIcon(OpaaxString("Icons/T_SpriteSheet_Icon.png"))
             .SetGlyph(OpaaxString("[S]"))
             .SetEditor<SpriteSheetEditor>();
+
+        // An image file: its window shows it, its size and its format.
+        lTypes.Register<Texture2D>()
+            .SetLabel(OpaaxString("Texture"))
+            .SetCategory(OpaaxString("Rendering"))
+            .SetIcon(OpaaxString("Icons/T_Texture_Icon.png"))
+            .SetGlyph(OpaaxString("[T]"))
+            .SetEditor<TextureEditor>();
     }
 
     void EditorService::RegisterNativeResourceTypes()
@@ -620,17 +629,6 @@ namespace Opaax::Editor
                 InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_PREFAB_AT,
                                                         InContext, PrefabPathParams{InFile.AbsPath});
             });
-
-        // Double-click opens the preview (the same route maps and levels use to open their document).
-        m_Extensions.ResourceTypes().Register<TextureResource>()
-            .SetIcon(OpaaxString("Icons/T_Texture_Icon.png"))
-            .SetGlyph(OpaaxString("[T]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                InContext.Preview.Open(InFile, ResourceTypeID::Get<TextureResource>());
-                InContext.Panels.SetVisible(ResourcePreviewPanel::PanelID(), true);
-            })
-            .SetPreview<TextureResource>(&NativeResourcePreviews::DrawTexture);
 
         // A .ttf previews its baked atlas: glyph count, atlas size and metrics.
         m_Extensions.ResourceTypes().Register<FontFaceResource>()

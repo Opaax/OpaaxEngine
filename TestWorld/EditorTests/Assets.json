@@ -639,6 +639,70 @@
         }
     },
     {
+        "id": "image-is-a-texture",
+        "command": "asset.get",
+        "params": {
+            "path": "Textures/Circle.png"
+        },
+        "expect": {
+            "class": "Texture2D",
+            "open": false,
+            "fromSourceFile": true
+        }
+    },
+    {
+        "id": "image-not-made-as-an-asset",
+        "command": "asset.new",
+        "params": {
+            "path": "Scratch/Image.opaaxasset",
+            "class": "Texture2D"
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "open-image",
+        "command": "asset.open",
+        "params": {
+            "path": "Textures/Circle.png"
+        },
+        "expect": {
+            "class": "Texture2D",
+            "open": true,
+            "fromSourceFile": true,
+            "unsaved": false,
+            "canUndo": false
+        }
+    },
+    {
+        "id": "image-read-only",
+        "command": "asset.set",
+        "params": {
+            "path": "Textures/Circle.png",
+            "properties": {}
+        },
+        "expectFailure": true
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot-image",
+        "command": "screenshot",
+        "params": {
+            "path": "AssetsTexture.png"
+        }
+    },
+    {
+        "id": "close-image",
+        "command": "asset.close",
+        "params": {
+            "path": "Textures/Circle.png"
+        }
+    },
+    {
         "id": "nothing-open",
         "command": "asset.list",
         "expect": {

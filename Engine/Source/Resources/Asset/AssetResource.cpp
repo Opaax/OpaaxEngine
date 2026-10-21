@@ -31,8 +31,7 @@ namespace Opaax
 
             if (!lAsset->LoadSource(InPath))
             {
-                OPAAX_LOG(LogAssetFile, Error, "'{}' could not be read as a {}", InPath, lClass->GetName());
-                return NullOpt;
+                return NullOpt;   // the class logged why
             }
 
             AssetResource lResource;

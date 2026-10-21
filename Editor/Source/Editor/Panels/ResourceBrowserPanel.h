@@ -2,7 +2,7 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/String/OpaaxString.hpp"
-#include "Resources/ResourceRef.hpp"
+#include "Resources/Asset/AssetHandle.h"
 #include "Editor/Panels/IEditorPanel.h"
 #include "Editor/Resources/ResourceScan.h"
 #include "Editor/UI/IEditorUIBackend.h"                  // EditorImage
@@ -12,7 +12,7 @@ namespace Opaax
     OPAAX_LOG_CATEGORY(ResourceBrowserPanel);
 
     struct ResourceFormatEntry;
-    struct TextureResource;
+    class Texture2D;
 }
 
 namespace Opaax::Editor
@@ -59,9 +59,9 @@ namespace Opaax::Editor
         /** How one asset class looks, built once at Startup from AssetTypes(). */
         struct AssetChrome
         {
-            OpaaxString                  Label;
-            OpaaxString                  Glyph;
-            ResourceRef<TextureResource> Icon;
+            OpaaxString             Label;
+            OpaaxString             Glyph;
+            TAssetHandle<Texture2D> Icon;
         };
 
         /** One file: its type (engine) and how it looks (editor); an asset's class has its own look. */
@@ -152,6 +152,9 @@ namespace Opaax::Editor
          */
         OpaaxString ResolveIconPath(const OpaaxString& InIconRel) const;
 
+        /** The image at InAbsPath, loaded and kept. Empty for an empty path. */
+        TAssetHandle<Texture2D> LoadIcon(const OpaaxString& InAbsPath) const;
+
         bool MatchesFilter(const ResourceFile& InFile) const;
 
         /** @return True if this folder or anything under it has a file passing the filter */
@@ -203,9 +206,9 @@ namespace Opaax::Editor
         OpaaxString             m_Filter;
         OpaaxString             m_SelectedPath;   // "<Root>/<RelPath>", highlight only (not EditorSelection)
 
-        // ResourceTypeID -> the icon texture claim. Filled once at Startup (failed loads kept too,
-        // so drawing is a plain lookup).
-        TUnorderedMap<Uint32, ResourceRef<TextureResource>> m_TypeIcons;
+        // ResourceTypeID -> the icon image. Filled once at Startup with the icons that loaded, so
+        // drawing is a plain lookup.
+        TUnorderedMap<Uint32, TAssetHandle<Texture2D>> m_TypeIcons;
 
         // An asset class's name id -> its look. Built once at Startup.
         TUnorderedMap<Uint32, AssetChrome> m_AssetChrome;

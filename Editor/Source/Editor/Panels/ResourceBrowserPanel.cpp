@@ -22,7 +22,7 @@
 #include "Engine/Registries/EngineRegistries.h"   // extension -> resource type
 #include "Resources/ResourceManager.h"
 #include "Resources/ResourceTypeID.hpp"
-#include "Renderer/Textures/TextureResource.h"
+#include "Renderer/Textures/Texture2D.h"
 #include "Resources/Asset/AssetFile.h"
 #include "Resources/Asset/AssetResource.h"
 
@@ -612,6 +612,16 @@ namespace Opaax::Editor
         return m_Context.EditorPathsOrNull->ToolAssetToAbsolute(InIconRel);
     }
 
+    TAssetHandle<Texture2D> ResourceBrowserPanel::LoadIcon(const OpaaxString& InAbsPath) const
+    {
+        if (InAbsPath.IsEmpty())
+        {
+            return {};
+        }
+
+        return TAssetHandle<Texture2D>(m_Context.Resources.Load<AssetResource>(InAbsPath.CStr()), InAbsPath);
+    }
+
     void ResourceBrowserPanel::LoadTypeIcons()
     {
         // Loaded at startup: the type registry is sealed, so the icon set is known now.
@@ -622,21 +632,17 @@ namespace Opaax::Editor
                 continue;   // glyph only
             }
 
-            const OpaaxString lAbsolute = ResolveIconPath(lChrome.Icon);
-            ResourceRef<TextureResource> lRef = lAbsolute.IsEmpty()
-                                                    ? ResourceRef<TextureResource>{}
-                                                    : m_Context.Resources.Load<TextureResource>(lAbsolute.CStr());
+            TAssetHandle<Texture2D> lIcon = LoadIcon(ResolveIconPath(lChrome.Icon));
 
-            // Logged either way. A failed ref is dropped (Get() would return the magenta placeholder);
-            // nothing is retried.
-            if (!lRef.IsValid())
+            // A failed icon is dropped, and not retried: that type draws its glyph.
+            if (lIcon.Get() == nullptr)
             {
                 OPAAX_LOG(LogResourceBrowserPanel, Warn, "Icon '{}' did not load — that type draws its glyph",
                     lChrome.Icon.CStr());
                 continue;
             }
 
-            m_TypeIcons.emplace(lChrome.TypeId, Move(lRef));
+            m_TypeIcons.emplace(lChrome.TypeId, Move(lIcon));
         }
 
         // Every class an asset file can hold: its label, glyph and icon, defaults included.
@@ -650,11 +656,7 @@ namespace Opaax::Editor
             lChrome.Glyph = lAssetTypes.GlyphOf(*lClass);
 
             const OpaaxString lIcon = lAssetTypes.IconOf(*lClass);
-            const OpaaxString lAbsolute = lIcon.IsEmpty() ? OpaaxString() : ResolveIconPath(lIcon);
-            if (!lAbsolute.IsEmpty())
-            {
-                lChrome.Icon = m_Context.Resources.Load<TextureResource>(lAbsolute.CStr());
-            }
+            lChrome.Icon = LoadIcon(lIcon.IsEmpty() ? OpaaxString() : ResolveIconPath(lIcon));
 
             m_AssetChrome.emplace(lClass->GetName().GetId(), Move(lChrome));
         }
@@ -724,9 +726,9 @@ namespace Opaax::Editor
 
     EditorImage ResourceBrowserPanel::IconOf(const FileType& InType) const
     {
-        if (InType.Asset != nullptr && InType.Asset->Icon.IsValid())
+        if (InType.Asset != nullptr)
         {
-            const TextureResource* lAssetIcon = InType.Asset->Icon.Get();
+            const Texture2D* lAssetIcon = InType.Asset->Icon.Get();
             if (lAssetIcon != nullptr && lAssetIcon->GetTexture() != nullptr)
             {
                 return m_Context.UIBackend.GetTextureImage(*lAssetIcon->GetTexture());
@@ -744,7 +746,7 @@ namespace Opaax::Editor
             return EditorImage{};
         }
 
-        const TextureResource* lIcon = lIt->second.Get();
+        const Texture2D* lIcon = lIt->second.Get();
         if (lIcon == nullptr || lIcon->GetTexture() == nullptr)
         {
             return EditorImage{};
@@ -757,13 +759,13 @@ namespace Opaax::Editor
     {
         // An image file shows itself once something has loaded it. Find never loads, so scrolling a
         // folder loads nothing. The claim is held only for this frame.
-        if (InType.Format != nullptr && InType.Format->TypeId == ResourceTypeID::Get<TextureResource>())
+        if (InFile.AssetClass == Texture2D::StaticClass().GetName())
         {
-            const ResourceRef<TextureResource> lLoaded =
-                m_Context.Resources.Find<TextureResource>(InFile.AbsPath.CStr());
+            const ResourceRef<AssetResource> lLoaded  = m_Context.Resources.Find<AssetResource>(InFile.AbsPath.CStr());
+            const AssetResource*             lFound   = lLoaded.IsValid() ? lLoaded.Get() : nullptr;
+            const Texture2D*                 lTexture = (lFound != nullptr) ? lFound->Get<Texture2D>() : nullptr;
 
-            if (const TextureResource* lTexture = lLoaded.IsValid() ? lLoaded.Get() : nullptr;
-                lTexture != nullptr && lTexture->GetTexture() != nullptr)
+            if (lTexture != nullptr && lTexture->GetTexture() != nullptr)
             {
                 return m_Context.UIBackend.GetTextureImage(*lTexture->GetTexture());
             }

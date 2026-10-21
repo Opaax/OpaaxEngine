@@ -4,16 +4,15 @@
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
 #include "Resources/Asset/AssetRef.h"
-#include "Resources/ResourcePath.h"
 #include "UI/UIAssetProvider.h"
 
 namespace Opaax
 {
     class ITexture2D;
 
-    // Forward-declared: a path or an asset reference only needs the name.
-    struct TextureResource;
+    // Forward-declared: an asset reference only needs the name.
     class SpriteSheet;
+    class Texture2D;
 
     // =============================================================================
     // The image of UIImage and UIButton. A runtime pointer wins, then a sheet frame, then a texture.
@@ -32,7 +31,7 @@ namespace Opaax
      *   (plain colour) or it is not ready yet (bOutNamed tells them apart)
      */
     bool ResolveImageSource(const UIBuildContext& InContext, ITexture2D* InRuntime,
-                                      const TResourcePath<TextureResource>& InTexture,
+                                      const TAssetRef<Texture2D>& InTexture,
                                       const TAssetRef<SpriteSheet>& InSheet, Int32 InFrame,
                                       UIResolvedImage& Out, bool& bOutNamed);
 }

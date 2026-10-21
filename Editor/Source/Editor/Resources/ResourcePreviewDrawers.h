@@ -2,7 +2,6 @@
 
 namespace Opaax
 {
-    struct TextureResource;
     struct FontFaceResource;
 }
 
@@ -18,9 +17,6 @@ namespace Opaax::Editor
     // =============================================================================
     namespace NativeResourcePreviews
     {
-        /** The image itself, aspect-fit into a square box, plus its dimensions. */
-        void DrawTexture(EditorContext& InContext, const TextureResource& InTexture);
-
         /**
          * The baked glyph atlas, plus what the bake found: glyphs, kern pairs, atlas size and vertical
          * metrics. Drawn with straight UVs (the atlas is top-down, unlike a texture).

@@ -143,7 +143,7 @@ set(OPAAX_TEST_SOURCES
     Renderer/RenderTargetTests.cpp
     Renderer/SortKeyTests.cpp
     Renderer/SpriteSheetTests.cpp
-    Renderer/TextureResourceTests.cpp
+    Renderer/Texture2DTests.cpp
 
     # Runtime UI (layout, events, serialization; no GL context needed)
     UI/UIBindingTests.cpp

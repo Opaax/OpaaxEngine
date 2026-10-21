@@ -1,7 +1,8 @@
 # Objects and assets
 
-Every asset type of the engine (a material, a sprite sheet, an animation clip, a mover, a font family,
-an input action) and of a game is a class derived from `Opaax::Asset`, itself an `Opaax::Object`. A
+Every asset type of the engine (a texture, a material, a sprite sheet, an animation clip, a mover, a
+font family, an input action) and of a game is a class derived from `Opaax::Asset`, itself an
+`Opaax::Object`. A
 class with fields is enough: the file format, the loading, the sharing, the editor window, undo,
 automation and the conversion of old files come from the base. It is the idea of Unreal's `UObject`
 and `UDataAsset`, and of Godot's `Resource`. Subsystems, UI widgets, behaviours, the game instance,
@@ -37,10 +38,10 @@ OPAAX_REGISTER_OBJECT(EnemyStats);
   without namespace), its parent, a default object holding every field's default.
 - `OPAAX_PROPERTIES` lists the fields that are saved, drawn in the editor and set by automation:
   numbers, `bool`, strings, names (`OpaaxStringID`), enums declared with `OPAAX_ENUM_VALUES` (saved by
-  name), vectors and colours, a file (`TResourcePath<TextureResource>`), another asset
-  (`TAssetRef<Material2D>`), and lists of structs that have `OPAAX_PROPERTIES` and
-  `NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT`. Give every field a default: a file written before a
-  field existed still loads.
+  name), vectors and colours, another asset (`TAssetRef<Material2D>`, `TAssetRef<Texture2D>` for an
+  image), a file of another kind (`TResourcePath<PrefabResource>`), and lists of structs that have
+  `OPAAX_PROPERTIES` and `NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT`. Give every field a default: a
+  file written before a field existed still loads.
 - `OPAAX_REGISTER_OBJECT(Class)` is the only registration. After renaming a class,
   `OPAAX_REGISTER_OBJECT_ALIAS("OldName", "NewName")` keeps its old files loading.
 
@@ -132,8 +133,10 @@ public:
 OPAAX_REGISTER_OBJECT(EnemyWave);
 ```
 
-A field names one like any asset (`TAssetRef<EnemyWave>`, saved as `"Waves/First.wave"`), and
-`LoadAsset` loads and shares it. Two more hooks serve such a class: `InitializeOnMainThread()` runs on
+The engine's images are such a class: `Texture2D` reads `.png`, `.jpg`, `.tga` and `.bmp` files
+(`Renderer/Textures/Texture2D.h`), and a sprite names one with `TAssetRef<Texture2D>`. A field names
+one like any asset (`TAssetRef<EnemyWave>`, saved as `"Waves/First.wave"`), and `LoadAsset` loads and
+shares it. Two more hooks serve such a class: `InitializeOnMainThread()` runs on
 the main thread once the file is read (a texture hands its pixels to the GPU there), and
 `GetResourceSize()` says what it holds, for the resource statistics. One extension belongs to one
 class: registering a second class for `.wave` is refused. In the editor the file shows as an asset of

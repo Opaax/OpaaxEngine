@@ -78,8 +78,8 @@ TEST_CASE("UIImageSource: runtime beats sheet beats texture, and nothing named i
     StubAssets lAssets;
     UIBuildContext lContext{ &lAssets };
 
-    TResourcePath<TextureResource>     lTexture;  lTexture.Path = "UI/Art.png";
-    TAssetRef<SpriteSheet>             lSheet;    lSheet.Path   = "UI/Icons.opaaxasset";
+    TAssetRef<Texture2D>   lTexture;  lTexture.Path = "UI/Art.png";
+    TAssetRef<SpriteSheet> lSheet;    lSheet.Path   = "UI/Icons.opaaxasset";
     FakeTexture lRuntime{ 4u };
 
     UIResolvedImage lImage;

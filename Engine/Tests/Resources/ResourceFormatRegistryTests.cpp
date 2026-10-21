@@ -11,7 +11,7 @@ using namespace Opaax;
 
 namespace
 {
-    // A type with several extensions (the real one is TextureResource).
+    // A type with several extensions.
     struct ProbeTextureResource
     {
         OPAAX_RESOURCE_FORMAT("Probe Texture", ".png", ".jpg", ".TGA")

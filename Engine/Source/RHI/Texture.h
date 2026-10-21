@@ -20,7 +20,7 @@ namespace Opaax
         // =============================================================================
         // Functions
         // =============================================================================
-        // Created by IRHIDevice::CreateTexture. Loading files is TextureResource's job.
+        // Created by IRHIDevice::CreateTexture. Loading files is Texture2D's job.
     public:
         virtual void Bind(Uint32 InSlot = 0) const = 0;
         virtual void Unbind()                const = 0;

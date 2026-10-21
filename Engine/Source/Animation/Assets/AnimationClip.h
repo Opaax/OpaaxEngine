@@ -9,15 +9,12 @@
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/String/OpaaxStringIDJson.h"
 #include "Renderer/Textures/SpriteSheet.h"
+#include "Renderer/Textures/Texture2D.h"   // complete: an asset class visits its texture references
 #include "Resources/Asset/Asset.h"
 #include "Resources/Asset/AssetRef.h"
-#include "Resources/ResourcePath.h"
-#include "Resources/ResourcePathJson.h"
 
 namespace Opaax
 {
-    struct TextureResource;
-
     /** What happens when a clip reaches its end. */
     enum class EAnimPlayMode : Uint8
     {
@@ -51,7 +48,7 @@ namespace Opaax
         OpaaxStringID Frame;
 
         /** Texture clips: the image. Only used when the clip has no sheet. */
-        TResourcePath<TextureResource> Texture;
+        TAssetRef<Texture2D> Texture;
 
         /**
          * How many ticks this step lasts, at the clip's Fps. Zero counts as one.

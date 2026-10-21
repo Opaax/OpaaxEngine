@@ -6,17 +6,13 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Renderer/Textures/SpriteSheet.h"   // complete: a widget class visits its sheet reference
+#include "Renderer/Textures/Texture2D.h"     // and its texture reference
 #include "Resources/Asset/AssetRef.h"
-#include "Resources/ResourcePath.h"
-#include "Resources/ResourcePathJson.h"
 #include "UI/UIWidget.h"
 
 namespace Opaax
 {
     class ITexture2D;
-
-    // Forward-declared: a path only needs the name.
-    struct TextureResource;
 
     DECLARE_MULTICAST_DELEGATE(FOnUIClick)
 
@@ -40,7 +36,7 @@ namespace Opaax
         bool        bEnabled = true;
 
         /** The button's art, tinted by the state colour. The sheet wins over the texture. */
-        TResourcePath<TextureResource> Texture;
+        TAssetRef<Texture2D> Texture;
         TAssetRef<SpriteSheet>         Sheet;
         Int32                          Frame = -1;
 

@@ -6,14 +6,14 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Editor/Assets/IAssetEditor.h"
 #include "Editor/UI/EditorRectGeometry.h"   // ERectEdge
-#include "Resources/ResourceRef.hpp"
+#include "Resources/Asset/AssetHandle.h"
 
 namespace Opaax
 {
     OPAAX_LOG_CATEGORY(SpriteSheetEditor);
 
     class SpriteSheet;
-    struct TextureResource;
+    class Texture2D;
 }
 
 namespace Opaax::Editor
@@ -49,18 +49,18 @@ namespace Opaax::Editor
          * so the window records the drag as one undo step.
          * @param InTexture The sheet's image; null shows why instead
          */
-        void DrawCanvas(SpriteSheet& InSheet, const TextureResource* InTexture);
+        void DrawCanvas(SpriteSheet& InSheet, const Texture2D* InTexture);
 
         /**
          * Selects on a click, and moves or resizes the selected frame while the canvas is held.
          * @param InTexel  The mouse, in texture pixels
          * @param InScale  Screen pixels per texture pixel
          */
-        void UpdateFrameDrag(SpriteSheet& InSheet, const TextureResource& InTexture, Vector2F InTexel, float InScale,
+        void UpdateFrameDrag(SpriteSheet& InSheet, const Texture2D& InTexture, Vector2F InTexel, float InScale,
                              bool bInClicked, bool bInHeld);
 
         /** The grid's fields, Slice (replaces every frame) and Auto-Name (names the unnamed). */
-        void DrawSliceTools(SpriteSheet& InSheet, const TextureResource* InTexture);
+        void DrawSliceTools(SpriteSheet& InSheet, const Texture2D* InTexture);
 
         /** The selected frame's fields, and Set as Default. */
         void DrawSelectedFrame(SpriteSheet& InSheet);
@@ -69,12 +69,12 @@ namespace Opaax::Editor
         void DrawFrameList(const SpriteSheet& InSheet);
 
         /** The sheet's image, claimed while the sheet names it. Null when there is none or it did not load. */
-        const TextureResource* ClaimTexture(const SpriteSheet& InSheet);
+        const Texture2D* ClaimTexture(const SpriteSheet& InSheet);
 
         EditorContext& m_Context;
 
-        ResourceRef<TextureResource> m_Claim;
-        OpaaxString                  m_ClaimedPath;
+        TAssetHandle<Texture2D> m_Claim;
+        OpaaxString             m_ClaimedPath;
 
         /** The selected frame (list and canvas), or -1. */
         Int32 m_Selected = -1;

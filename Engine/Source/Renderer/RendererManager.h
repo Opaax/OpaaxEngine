@@ -33,7 +33,7 @@ namespace Opaax
     class IRenderTarget;
     class ITexture2D;
     struct FramebufferSpec;
-    struct TextureResource;
+    class Texture2D;
     class SpriteSheet;
     struct SpriteComponent;
     struct SpriteUVRect;
@@ -178,10 +178,10 @@ namespace Opaax
         void SubmitRenderCounters();
 
         /**
-         * The GPU texture for an asset-relative path. Loaded once and cached.
-         * Null for an empty path or while uploading; a failed load gives the magenta placeholder.
+         * The GPU texture of the image InRef names. Loaded once and cached. Null for an empty reference
+         * or without a device; an image that did not load gives a magenta texture.
          */
-        ITexture2D* ResolveTexture(const TResourcePath<TextureResource>& InPath);
+        ITexture2D* ResolveTexture(const TAssetRef<Texture2D>& InRef);
 
         /**
          * The sprite sheet InRef names. Loaded once and cached. Null for an empty reference.
@@ -259,7 +259,7 @@ namespace Opaax
         TUniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec& InSpec);
 
         /**
-         * Uploads decoded pixels to a GPU texture (used by TextureResource::Initialize).
+         * Uploads decoded pixels to a GPU texture (used by Texture2D::InitializeOnMainThread).
          * Release it before the render core shuts down.
          * @return Null before Startup
          */
@@ -359,9 +359,12 @@ namespace Opaax
         // Debug shapes. Owned here because the renderer consumes them.
         DebugDraw               m_DebugDraw;
 
-        // Asset path -> loaded texture. Released in Shutdown, before the ResourceManager's,
+        // Images by path, kept for the session. Released in Shutdown, before the ResourceManager's,
         // while the GL context is still alive.
-        TUnorderedMap<Uint32, ResourceRef<TextureResource>> m_TextureCache;
+        TUnorderedMap<Uint32, TAssetHandle<Texture2D>> m_TextureCache;
+
+        /** What an image that did not load draws: a magenta square, loud on purpose. */
+        TUniquePtr<ITexture2D> m_MissingTexture;
 
         /** Sprite sheets by path, kept for the session (a saved sheet reloads in place). */
         TUnorderedMap<Uint32, TAssetHandle<SpriteSheet>> m_SheetCache;

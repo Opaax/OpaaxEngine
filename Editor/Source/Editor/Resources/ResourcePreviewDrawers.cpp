@@ -6,7 +6,6 @@
 #include "Editor/UI/IEditorUIBackend.h"
 
 #include "Renderer/Text/FontFaceResource.h"
-#include "Renderer/Textures/TextureResource.h"
 
 #include <imgui.h>
 
@@ -18,18 +17,6 @@ namespace Opaax::Editor::NativeResourcePreviews
         constexpr float MAX_IMAGE_SIZE = 256.f;
     }
 
-    void DrawTexture(EditorContext& InContext, const TextureResource& InTexture)
-    {
-        const ImVec2 lSize = ImguiLayout::AspectFit(InTexture.Width, InTexture.Height, MAX_IMAGE_SIZE);
-
-        ImguiWidgets::Image(InTexture.GetTexture() != nullptr
-                                ? InContext.UIBackend.GetTextureImage(*InTexture.GetTexture())
-                                : EditorImage{},
-                            lSize);
-
-        ImGui::TextDisabled("%u x %u", InTexture.Width, InTexture.Height);
-    }
-
     void DrawFontFace(EditorContext& InContext, const FontFaceResource& InFace)
     {
         EditorImage lImage;
@@ -38,8 +25,8 @@ namespace Opaax::Editor::NativeResourcePreviews
         {
             lImage = InContext.UIBackend.GetTextureImage(*InFace.GetAtlas());
 
-            // Straight UVs, overriding GetTextureImage's flip: a TextureResource is stored bottom-up, but a
-            // font atlas is stb_truetype's top-down buffer, so flipping it would draw it upside down.
+            // Straight UVs, overriding GetTextureImage's flip: a Texture2D is stored bottom-up, but a font
+            // atlas is stb_truetype's top-down buffer, so flipping it would draw it upside down.
             lImage.UV0 = { 0.f, 0.f };
             lImage.UV1 = { 1.f, 1.f };
         }

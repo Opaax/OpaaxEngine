@@ -28,6 +28,7 @@
 #include "Engine/Registries/EngineRegistries.h"
 #include "Platform/IFileSystem.h"
 #include "Resources/Asset/AssetFile.h"
+#include "Resources/ResourceFormat.h"   // NormalizeExtension
 #include "UI/UICanvasFile.h"
 #include "World/Entity/Entity.h"
 #include "World/Level.h"
@@ -948,14 +949,15 @@ namespace Opaax::Editor::EditorAutomation
             const EditorUndo* lHistory = InContext.Assets.FindHistory(InDocument.GetAbsPath());
 
             return nlohmann::json{
-                { "path",       InContext.Paths.AbsoluteToAsset(InDocument.GetAbsPath()).CStr() },
-                { "class",      InDocument.GetClassName().CStr() },
-                { "open",       true },
-                { "known",      InDocument.IsClassKnown() },
-                { "unsaved",    InDocument.IsDirty() },
-                { "canUndo",    lHistory != nullptr && lHistory->CanUndo() },
-                { "canRedo",    lHistory != nullptr && lHistory->CanRedo() },
-                { "properties", InDocument.GetProperties() } };
+                { "path",           InContext.Paths.AbsoluteToAsset(InDocument.GetAbsPath()).CStr() },
+                { "class",          InDocument.GetClassName().CStr() },
+                { "open",           true },
+                { "known",          InDocument.IsClassKnown() },
+                { "fromSourceFile", InDocument.IsFromSourceFile() },
+                { "unsaved",        InDocument.IsDirty() },
+                { "canUndo",        lHistory != nullptr && lHistory->CanUndo() },
+                { "canRedo",        lHistory != nullptr && lHistory->CanRedo() },
+                { "properties",     InDocument.GetProperties() } };
         }
 
         /** InParams["path"] opened in its window. Null (with OutError) when it is not an asset that opens. */
@@ -1072,6 +1074,25 @@ namespace Opaax::Editor::EditorAutomation
                         return AutomationResult::Ok(DescribeAsset(InContext, *lOpen));
                     }
 
+                    // A file of a class's own format (a .png): its class, from its extension.
+                    const OpaaxStringID lExtension = NormalizeExtension(PathString::Extension(lPath));
+                    if (lExtension != NormalizeExtension(AssetFile::ASSET_EXTENSION))
+                    {
+                        const ObjectClass* lClass =
+                            InContext.Engine.GetRegistries().ObjectClasses().FindBySourceExtension(lExtension);
+                        if (lClass == nullptr || !InContext.FileSystem.IsPathExist(lPath))
+                        {
+                            return AutomationResult::Fail("no asset file at '" + lPath + "'");
+                        }
+
+                        return AutomationResult::Ok(nlohmann::json{
+                            { "path",           InContext.Paths.AbsoluteToAsset(lPath).CStr() },
+                            { "class",          lClass->GetName().CStr() },
+                            { "open",           false },
+                            { "fromSourceFile", true },
+                            { "properties",     nlohmann::json::object() } });
+                    }
+
                     AssetFile::Contents lContents;
                     if (!AssetFile::Load(lPath, lContents))
                     {
@@ -1079,10 +1100,11 @@ namespace Opaax::Editor::EditorAutomation
                     }
 
                     return AutomationResult::Ok(nlohmann::json{
-                        { "path",       InContext.Paths.AbsoluteToAsset(lPath).CStr() },
-                        { "class",      lContents.Class.CStr() },
-                        { "open",       false },
-                        { "properties", lContents.Properties } });
+                        { "path",           InContext.Paths.AbsoluteToAsset(lPath).CStr() },
+                        { "class",          lContents.Class.CStr() },
+                        { "open",           false },
+                        { "fromSourceFile", false },
+                        { "properties",     lContents.Properties } });
                 });
 
             InCommands.Register("asset.set",
