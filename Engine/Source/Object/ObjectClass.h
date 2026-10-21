@@ -53,6 +53,13 @@ namespace Opaax
         void (*VisitOwn)(Object& InObject, IPropertyVisitor& InVisitor) = nullptr;
         void (*WriteOwn)(const Object& InObject, nlohmann::json& OutJson) = nullptr;
         void (*ReadOwn)(Object& InObject, const nlohmann::json& InJson, TDynArray<OpaaxString>* OutBadFields) = nullptr;
+
+        /**
+         * The extensions of the files the class is read from, as the class writes them (".png"): an asset
+         * class with OPAAX_ASSET_SOURCE. Null for the others.
+         */
+        const char* const* SourceExtensions     = nullptr;
+        Uint32             SourceExtensionCount = 0;
     };
 
     // =============================================================================
@@ -94,6 +101,16 @@ namespace Opaax
 
         /** True when this class is InOther or derives from it. */
         bool IsChildOf(const ObjectClass& InOther) const noexcept;
+
+        // =============================================================================
+        // Source files
+        // =============================================================================
+    public:
+        /** True for an asset class read from files of its own (a .png), not from .opaaxasset files. */
+        bool IsReadFromSourceFiles() const noexcept { return m_Desc.SourceExtensionCount > 0; }
+
+        /** The extensions of those files, as the class writes them. Empty for the other classes. */
+        TDynArray<const char*> GetSourceExtensions() const;
 
         // =============================================================================
         // Instances

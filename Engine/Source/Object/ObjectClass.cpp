@@ -136,6 +136,19 @@ namespace Opaax
         return m_Default;
     }
 
+    TDynArray<const char*> ObjectClass::GetSourceExtensions() const
+    {
+        TDynArray<const char*> lExtensions;
+        lExtensions.reserve(m_Desc.SourceExtensionCount);
+
+        for (Uint32 i = 0; i < m_Desc.SourceExtensionCount; ++i)
+        {
+            lExtensions.emplace_back(m_Desc.SourceExtensions[i]);
+        }
+
+        return lExtensions;
+    }
+
     TDynArray<const char*> ObjectClass::GetPropertyNames() const
     {
         TDynArray<const char*> lNames;

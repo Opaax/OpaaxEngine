@@ -3,6 +3,7 @@
 #include "Platform/IFileSystem.h"
 #include "Core/IO/FileIO.h"
 #include "Core/String/OpaaxPathString.h"                  // Extension
+#include "Object/ObjectClassRegistry.h"
 #include "Resources/Asset/AssetFile.h"
 #include "Resources/ResourceFormat.h"   // NormalizeExtension
 
@@ -21,7 +22,8 @@ namespace Opaax::Editor
         }
 
         void ScanFolder(const IFileSystem& InFileSystem, const OpaaxString& InAbsPath,
-                        const OpaaxString& InRelPath, ResourceFolder& OutFolder, ResourceRoot& InOutRoot)
+                        const OpaaxString& InRelPath, ResourceFolder& OutFolder, ResourceRoot& InOutRoot,
+                        const ObjectClassRegistry* InClasses)
         {
             TDynArray<IFileSystem::Entry> lEntries;
             if (!InFileSystem.ListDirectory(InAbsPath, lEntries))
@@ -42,7 +44,7 @@ namespace Opaax::Editor
                     lChild.RelPath = lChildRel;
 
                     ++InOutRoot.FolderCount;
-                    ScanFolder(InFileSystem, lEntry.AbsPath, lChildRel, lChild, InOutRoot);
+                    ScanFolder(InFileSystem, lEntry.AbsPath, lChildRel, lChild, InOutRoot, InClasses);
 
                     OutFolder.Folders.emplace_back(Move(lChild));
                 }
@@ -54,10 +56,15 @@ namespace Opaax::Editor
                         lEntry.AbsPath,
                         NormalizeExtension(PathString::Extension(lEntry.Name)));
 
-                    // Every asset shares one extension: its class, in the file, says how it looks.
+                    // An .opaaxasset names its class; another file's class is the one that reads its extension.
                     if (lFile.Extension == NormalizeExtension(AssetFile::ASSET_EXTENSION))
                     {
                         lFile.AssetClass = AssetFile::FindClassName(FileIO::ReadAllText(lFile.AbsPath));
+                    }
+                    else if (const ObjectClass* lSourceClass =
+                                 InClasses != nullptr ? InClasses->FindBySourceExtension(lFile.Extension) : nullptr)
+                    {
+                        lFile.AssetClass = lSourceClass->GetName();
                     }
 
                     ++InOutRoot.FileCount;
@@ -75,7 +82,7 @@ namespace Opaax::Editor
         }
     }
 
-    bool ScanRoot(const IFileSystem& InFileSystem, ResourceRoot& InOutRoot)
+    bool ScanRoot(const IFileSystem& InFileSystem, ResourceRoot& InOutRoot, const ObjectClassRegistry* InClasses)
     {
         InOutRoot.Tree         = ResourceFolder{};
         InOutRoot.Tree.Name    = InOutRoot.Label.ToString();
@@ -88,7 +95,7 @@ namespace Opaax::Editor
             return false;
         }
 
-        ScanFolder(InFileSystem, InOutRoot.AbsPath, OpaaxString(), InOutRoot.Tree, InOutRoot);
+        ScanFolder(InFileSystem, InOutRoot.AbsPath, OpaaxString(), InOutRoot.Tree, InOutRoot, InClasses);
         return true;
     }
 }

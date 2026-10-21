@@ -78,6 +78,12 @@ namespace Opaax::Editor
             return lFail(OpaaxString("that file already exists: open it instead"));
         }
 
+        if (InClass.IsReadFromSourceFiles())
+        {
+            return lFail(OpaaxString::Format("a {} is read from a file of its own ({}...): add one to the assets "
+                                             "instead", InClass.GetName().CStr(), InClass.GetSourceExtensions().front()));
+        }
+
         TUniquePtr<AssetDocument> lDocument = AssetDocument::Create(InAbsPath, InClass);
         if (lDocument == nullptr)
         {
@@ -457,7 +463,8 @@ namespace Opaax::Editor
 
         InGui.EndPanelWindow();
 
-        if (bVisible && lDocument.IsClassKnown())
+        // A file of its class's own format is never edited: nothing to record.
+        if (bVisible && lDocument.IsClassKnown() && !lDocument.IsFromSourceFile())
         {
             RecordChanges(InOpen);
         }
@@ -482,6 +489,14 @@ namespace Opaax::Editor
         if (ImGui::IsItemHovered())
         {
             ImGui::SetTooltip("%s", m_Context->Paths.AbsoluteToAsset(lDocument.GetAbsPath()).CStr());
+        }
+
+        // Its file is the source, never rewritten: nothing to save or undo.
+        if (lDocument.IsFromSourceFile())
+        {
+            ImGui::SameLine();
+            ImGui::TextDisabled("read from its file");
+            return;
         }
 
         ImGui::SameLine();

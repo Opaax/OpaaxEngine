@@ -7,6 +7,7 @@
 namespace Opaax
 {
     class IFileSystem;
+    class ObjectClassRegistry;
 }
 
 namespace Opaax::Editor
@@ -22,7 +23,10 @@ namespace Opaax::Editor
         OpaaxString   AbsPath;
         OpaaxStringID Extension;   // ".wave", normalized; INVALID for an extension-less file
 
-        /** The class an .opaaxasset names, read at scan time. Invalid for other files and unknown classes. */
+        /**
+         * The asset class of the file, found at scan time: the one an .opaaxasset names, or the one that
+         * reads its extension. Invalid for other files.
+         */
         OpaaxStringID AssetClass;
     };
 
@@ -58,7 +62,10 @@ namespace Opaax::Editor
      * Rebuilds InOutRoot.Tree from disk: sorted, recursive, through IFileSystem::ListDirectory.
      * @param InFileSystem The platform's file system (IPlatform::GetFileSystem)
      * @param InOutRoot Label and AbsPath are read; Tree, the counts and bExists are written
+     * @param InClasses The classes that read files of their own extensions (null: only .opaaxasset files
+     *                  get a class)
      * @return False when AbsPath is not an existing directory (InOutRoot is left valid and empty)
      */
-    bool ScanRoot(const IFileSystem& InFileSystem, ResourceRoot& InOutRoot);
+    bool ScanRoot(const IFileSystem& InFileSystem, ResourceRoot& InOutRoot,
+                  const ObjectClassRegistry* InClasses = nullptr);
 }

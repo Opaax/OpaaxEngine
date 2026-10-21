@@ -119,7 +119,7 @@ namespace Opaax::Editor
     {
         for (ResourceRoot& lRoot : m_Roots)
         {
-            if (ScanRoot(m_Context.FileSystem, lRoot))
+            if (ScanRoot(m_Context.FileSystem, lRoot, &m_Context.Engine.GetRegistries().ObjectClasses()))
             {
                 OPAAX_LOG(LogResourceBrowserPanel, Trace, "Resource browser scanned '{}' ({}): {} files in {} folders",
                     lRoot.Label, lRoot.AbsPath.CStr(), lRoot.FileCount, lRoot.FolderCount);
@@ -528,7 +528,11 @@ namespace Opaax::Editor
     {
         FileType lType;
 
-        lType.Format = m_Context.Engine.GetRegistries().Resources().FindByExtension(InFile.Extension);
+        const ResourceFormatRegistry& lFormats = m_Context.Engine.GetRegistries().Resources();
+
+        // A file with an asset class is an asset, whatever its extension.
+        lType.Format = InFile.AssetClass.IsValid() ? lFormats.FindByTypeId(ResourceTypeID::Get<AssetResource>())
+                                                   : lFormats.FindByExtension(InFile.Extension);
         if (lType.Format != nullptr)
         {
             lType.Chrome = m_Context.Extensions.ResourceTypes().Find(lType.Format->TypeId);
@@ -666,9 +670,12 @@ namespace Opaax::Editor
             return;
         }
 
-        const AssetTypeRegistry&            lAssetTypes = m_Context.Extensions.AssetTypes();
-        const TDynArray<const ObjectClass*> lClasses =
+        const AssetTypeRegistry& lAssetTypes = m_Context.Extensions.AssetTypes();
+
+        // A class read from files of its own comes with its file: nothing to make here.
+        TDynArray<const ObjectClass*> lClasses =
             m_Context.Engine.GetRegistries().ObjectClasses().GetClassesOf(Asset::StaticClass(), /*bInConcreteOnly*/ true);
+        Algo::RemoveIf(lClasses, [](const ObjectClass* InClass) { return InClass->IsReadFromSourceFiles(); });
 
         // Categories in the order their first class registered; a class without one sits at the top level.
         TDynArray<OpaaxString> lCategories;

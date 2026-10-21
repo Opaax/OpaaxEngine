@@ -120,7 +120,9 @@ Match the code around you. In short:
   (`PostEditChange`). In the editor, an `AssetTypes()` entry for its label, category and glyph; an
   `IAssetEditor` only when a list of fields is not enough, its logic in pure functions beside it.
   Replacing an older per-type file format: a line in `AssetMigration::GetLegacyFormats`, then the
-  content converted with `--upgrade-assets`. See [Docs/Objects.md](Docs/Objects.md).
+  content converted with `--upgrade-assets`. A class read from files of its own format (a `.png`)
+  lists their extensions with `OPAAX_ASSET_SOURCE` and reads one in `LoadSource`. See
+  [Docs/Objects.md](Docs/Objects.md).
 - **Renderer feature:** the CPU side (packing, layout, limits) as tested pure functions; the shader in
   `Engine/Assets/Shaders` with its bindings checked in `EngineShaderTests`; a TestWorld level and a
   screenshot looked at.

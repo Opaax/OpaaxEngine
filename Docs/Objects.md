@@ -109,6 +109,37 @@ When a class is split into subclasses like this, a line in `AssetMigration::GetC
 class, the property that named the kind, the suffix that makes the subclass's name) lets the files
 written before load as their subclass, and `--upgrade-assets` rewrites them.
 
+## Assets read from files of their own
+
+A class can be read from files of its own format instead of `.opaaxasset` files, as Godot reads a
+`.png` as a texture: the file is the asset, with nothing beside it. The class lists the extensions
+after `OPAAX_OBJECT` and reads one file in `LoadSource`:
+
+```cpp
+class EnemyWave final : public Opaax::Asset
+{
+    OPAAX_OBJECT(EnemyWave, Opaax::Asset)
+    OPAAX_ASSET_SOURCE(".wave")
+
+public:
+    Opaax::TDynArray<Opaax::Uint8> Bytes;
+
+    bool LoadSource(const char* InAbsPath) override   // may run on a loading thread
+    {
+        return Opaax::FileIO::ReadAllBytes(Opaax::OpaaxString(InAbsPath), Bytes);
+    }
+};
+OPAAX_REGISTER_OBJECT(EnemyWave);
+```
+
+A field names one like any asset (`TAssetRef<EnemyWave>`, saved as `"Waves/First.wave"`), and
+`LoadAsset` loads and shares it. Two more hooks serve such a class: `InitializeOnMainThread()` runs on
+the main thread once the file is read (a texture hands its pixels to the GPU there), and
+`GetResourceSize()` says what it holds, for the resource statistics. One extension belongs to one
+class: registering a second class for `.wave` is refused. In the editor the file shows as an asset of
+its class and opens in a window on double-click, read-only (its file is the source, never rewritten);
+New Asset does not offer the class, since the file comes from elsewhere.
+
 ## In the editor
 
 - **Make one:** right-click a folder in the Resource Browser > **New Asset** > its category > its

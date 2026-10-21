@@ -991,6 +991,12 @@ namespace Opaax::Editor::EditorAutomation
                     nlohmann::json lList = nlohmann::json::array();
                     for (const ObjectClass* lClass : lClasses.GetClassesOf(Asset::StaticClass(), /*bInConcreteOnly*/ true))
                     {
+                        // Read from files of its own: made by adding such a file, not by asset.new.
+                        if (lClass->IsReadFromSourceFiles())
+                        {
+                            continue;
+                        }
+
                         lList.push_back(nlohmann::json{
                             { "name",       lClass->GetName().CStr() },
                             { "label",      lTypes.LabelOf(*lClass).CStr() },
