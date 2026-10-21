@@ -1,9 +1,10 @@
 // Suite: assets read from files of their own (OPAAX_ASSET_SOURCE) — the class lists its extensions,
-// the registry finds it by extension, and the resource manager loads, initializes, sizes and reloads
-// such a file as an asset of that class.
+// the registry finds it by extension, and the resource manager loads (at once or in the background),
+// finds, initializes, sizes and reloads such a file as an asset of that class.
 #include <doctest.h>
 
 #include "../TestFolderPaths.h"
+#include "../TestManualJobs.h"
 #include "../TestTempDir.h"
 #include "Core/IO/FileIO.h"
 #include "Core/OpaaxTypes.h"
@@ -237,4 +238,56 @@ TEST_CASE("Asset source: a reload reads the file again, and the new asset is ini
     REQUIRE(lNote != nullptr);
     CHECK(lNote->Text == "second");
     CHECK(lNote->Initializations == 1);
+}
+
+TEST_CASE("Asset source: LoadAssetAsync loads in the background; GetState says when; FindAsset never loads")
+{
+    TestManualJobs lJobs;
+    Fixture        lFixture;
+    lFixture.Resources.SetJobSystem(lJobs);
+    lFixture.Write("Notes/Late.note", "late");
+
+    const TestFolderPaths lPaths(lFixture.Dir.Path());
+    const OpaaxString     lPath("Notes/Late.note");
+
+    const TAssetHandle<SourceNote> lHandle = LoadAssetAsync<SourceNote>(lFixture.Resources, lPaths, lPath);
+    CHECK(lHandle.GetState() == EResourceState::Loading);
+    CHECK(lHandle.Get() == nullptr);
+
+    // Still loading: not found.
+    CHECK_FALSE(FindAsset<SourceNote>(lFixture.Resources, lPaths, lPath).IsLoaded());
+
+    lJobs.RunAll();
+
+    CHECK(lHandle.GetState() == EResourceState::Loaded);
+    REQUIRE(lHandle.Get() != nullptr);
+    CHECK(lHandle.Get()->Text == "late");
+    CHECK(lHandle.Get()->Initializations == 1);
+
+    // Loaded: found and shared. A file nothing loaded is not.
+    CHECK(FindAsset<SourceNote>(lFixture.Resources, lPaths, lPath).Get() == lHandle.Get());
+    CHECK_FALSE(FindAsset<SourceNote>(lFixture.Resources, lPaths, OpaaxString("Notes/Other.note")).IsLoaded());
+    CHECK(lFixture.Resources.GetLoadedCount<AssetResource>() == 1u);
+}
+
+TEST_CASE("Asset source: a background load that fails leaves nothing to read; an empty handle names nothing")
+{
+    TestManualJobs lJobs;
+    Fixture        lFixture;
+    lFixture.Resources.SetJobSystem(lJobs);
+
+    const TestFolderPaths lPaths(lFixture.Dir.Path());
+
+    const TAssetHandle<SourceNote> lHandle =
+        LoadAssetAsync<SourceNote>(lFixture.Resources, lPaths, OpaaxString("Notes/Missing.note"));
+    CHECK(lHandle.GetState() == EResourceState::Loading);
+
+    lJobs.RunAll();
+
+    CHECK(lHandle.GetState() != EResourceState::Loading);
+    CHECK(lHandle.GetState() != EResourceState::Loaded);
+    CHECK(lHandle.Get() == nullptr);
+
+    CHECK(TAssetHandle<SourceNote>().GetState() == EResourceState::Unloaded);
+    CHECK_FALSE(LoadAssetAsync<SourceNote>(lFixture.Resources, lPaths, OpaaxString()).IsLoaded());
 }

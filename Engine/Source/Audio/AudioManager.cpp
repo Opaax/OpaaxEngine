@@ -8,8 +8,8 @@
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IConfigSystem.h"
 #include "Audio/AudioAPI.h"
+#include "Audio/AudioClip.h"
 #include "Audio/AudioClipDef.h"
-#include "Audio/AudioClipResource.h"
 #include "Audio/AudioRandom.h"
 #include "Audio/Mixer/AudioMixer.h"
 #include "Audio/Mixer/AudioRingBuffer.h"
@@ -18,6 +18,7 @@
 #include "Audio/Mixer/SpscQueue.h"
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/Config/EngineConfigData.h"
+#include "Resources/Asset/AssetHandle.h"
 #include "Resources/ResourceManager.h"
 
 namespace Opaax
@@ -79,12 +80,12 @@ namespace Opaax
         /** A sound whose clip is still loading, and what was asked of it meanwhile. */
         struct PendingPlay
         {
-            SoundHandle                    Handle;
-            ResourceRef<AudioClipResource> Clip;
-            PlaySoundParams                Params;
-            bool                           bPaused    = false;
-            float                          FadeTarget = -1.f;   // -1: no FadeTo asked
-            Uint32                         FadeFrames = 0;
+            SoundHandle             Handle;
+            TAssetHandle<AudioClip> Clip;
+            PlaySoundParams         Params;
+            bool                    bPaused    = false;
+            float                   FadeTarget = -1.f;   // -1: no FadeTo asked
+            Uint32                  FadeFrames = 0;
         };
 
         /** The sources of a voice replaced in the mixer, kept until it reports it ended. */
@@ -246,7 +247,7 @@ namespace Opaax
             for (size_t lIndex = 0; lIndex < Pending.size();)
             {
                 PendingPlay&         lPending = Pending[lIndex];
-                const EResourceState lState   = lPending.Clip.GetManager()->GetState<AudioClipResource>(lPending.Clip.GetHandle());
+                const EResourceState lState   = lPending.Clip.GetState();
                 if (lState == EResourceState::Loading)
                 {
                     ++lIndex;
@@ -263,7 +264,7 @@ namespace Opaax
                     continue;
                 }
 
-                const AudioClipResource* lClip = lReady.Clip.Get();
+                const AudioClip* lClip = lReady.Clip.Get();
                 if (lState != EResourceState::Loaded || lClip == nullptr || lClip->IsSilent()
                     || !StartVoice(lReady.Handle, *lClip, lReady.Params))
                 {
@@ -668,7 +669,7 @@ namespace Opaax
          * Starts the reserved voice InSound with InClip.
          * @return False when it could not (the caller frees the voice)
          */
-        bool StartVoice(const SoundHandle InSound, const AudioClipResource& InClip, const PlaySoundParams& InParams)
+        bool StartVoice(const SoundHandle InSound, const AudioClip& InClip, const PlaySoundParams& InParams)
         {
             Slot* lSlot = Find(InSound);
             if (lSlot == nullptr || InClip.IsSilent())
@@ -676,7 +677,7 @@ namespace Opaax
                 return false;
             }
 
-            const AudioClipData& lData = *InClip.Data;
+            const AudioClipData& lData = *InClip.GetData();
 
             AudioVoiceDesc lVoice;
             lVoice.Source.Channels   = lData.Format.Channels;
@@ -723,7 +724,7 @@ namespace Opaax
             }
 
             lSlot->bPending = false;
-            lSlot->Data     = InClip.Data;
+            lSlot->Data     = InClip.GetData();
             lSlot->Stream   = Move(lStream);
             return true;
         }
@@ -897,7 +898,7 @@ namespace Opaax
     // =========================================================================
     // Sounds
     // =========================================================================
-    SoundHandle AudioManager::Play(const AudioClipResource& InClip, const PlaySoundParams& InParams)
+    SoundHandle AudioManager::Play(const AudioClip& InClip, const PlaySoundParams& InParams)
     {
         Impl& lImpl = *m_Impl;
         if (!lImpl.bStarted || InClip.IsSilent())
@@ -914,18 +915,19 @@ namespace Opaax
         return lHandle;
     }
 
-    SoundHandle AudioManager::Play(const ResourceRef<AudioClipResource>& InClip, const PlaySoundParams& InParams)
+    SoundHandle AudioManager::Play(const TAssetHandle<AudioClip>& InClip, const PlaySoundParams& InParams)
     {
         Impl& lImpl = *m_Impl;
-        if (!lImpl.bStarted || !InClip.IsValid())
+        if (!lImpl.bStarted)
         {
             return SoundHandle{};
         }
 
-        const EResourceState lState = InClip.GetManager()->GetState<AudioClipResource>(InClip.GetHandle());
+        const EResourceState lState = InClip.GetState();
         if (lState == EResourceState::Loaded)
         {
-            return Play(*InClip.Get(), InParams);
+            const AudioClip* lClip = InClip.Get();
+            return lClip != nullptr ? Play(*lClip, InParams) : SoundHandle{};
         }
 
         if (lState != EResourceState::Loading)

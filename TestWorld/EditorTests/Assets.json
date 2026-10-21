@@ -747,6 +747,50 @@
         }
     },
     {
+        "id": "sound-file-is-a-clip",
+        "command": "asset.get",
+        "params": {
+            "path": "Audio/Beep.wav"
+        },
+        "expect": {
+            "class": "AudioClip",
+            "fromSourceFile": true
+        }
+    },
+    {
+        "id": "open-audio-clip",
+        "command": "asset.open",
+        "params": {
+            "path": "Audio/Beep.wav"
+        },
+        "expect": {
+            "class": "AudioClip",
+            "open": true,
+            "fromSourceFile": true,
+            "unsaved": false
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot-audio-clip",
+        "command": "screenshot",
+        "params": {
+            "path": "AssetsAudioClip.png"
+        }
+    },
+    {
+        "id": "close-audio-clip",
+        "command": "asset.close",
+        "params": {
+            "path": "Audio/Beep.wav"
+        }
+    },
+    {
         "id": "nothing-open",
         "command": "asset.list",
         "expect": {

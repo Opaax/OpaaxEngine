@@ -7,7 +7,6 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Resources/Asset/AssetHandle.h"
-#include "Resources/ResourceRef.hpp"
 #include "World/Entity/EntityTypes.h"
 #include "World/Systems/WorldSubsystem.h"
 
@@ -16,7 +15,6 @@ namespace Opaax
     class AudioManager;
     class World;
     struct WorldPauseChanged;
-    struct AudioClipResource;
 
     // =============================================================================
     // AudioSubsystem — a Play world's sounds. Plays sound files and clip definitions by path,
@@ -99,7 +97,7 @@ namespace Opaax
         SoundHandle Start(const OpaaxString& InPath, const PlaySoundParams& InParams, bool* OutSpatial = nullptr);
 
         /** The clip at InPath, loaded or loading; kept for the world's life. Empty for an empty path. */
-        const ResourceRef<AudioClipResource>& ResolveClip(const OpaaxString& InPath);
+        const TAssetHandle<AudioClip>& ResolveClip(const OpaaxString& InPath);
 
         /** The clip definition at InPath, kept for the world's life. Null when it does not load (logged). */
         const AudioClipDef* ResolveDef(const OpaaxString& InPath);
@@ -108,7 +106,7 @@ namespace Opaax
         void HoldBanks();
 
         /** A clip held by one of the world's banks or the global bank, or null. */
-        const ResourceRef<AudioClipResource>* FindBankClip(const OpaaxString& InPath) const;
+        const TAssetHandle<AudioClip>* FindBankClip(const OpaaxString& InPath) const;
 
         void OnEntityDestroying(EntityID InEntity);
 
@@ -121,7 +119,7 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        TUnorderedMap<OpaaxString, ResourceRef<AudioClipResource>> m_Clips;
+        TUnorderedMap<OpaaxString, TAssetHandle<AudioClip>> m_Clips;
         TUnorderedMap<OpaaxString, TAssetHandle<AudioClipDef>> m_Defs;
 
         /** The banks of each AudioBanks component, keyed by entity. */

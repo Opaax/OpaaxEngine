@@ -6,14 +6,16 @@
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
-#include "Resources/ResourceRef.hpp"
 
 namespace Opaax
 {
     class IAudioDevice;
+    class AudioClip;
     class AudioClipDef;
-    struct AudioClipResource;
     struct AudioSettings;
+
+    template<typename T>
+    class TAssetHandle;
 
     // =============================================================================
     // AudioManager — the game's door to audio: plays, stops and fades sounds through handles, and
@@ -84,14 +86,14 @@ namespace Opaax
          * @return Invalid when the clip is silent, audio is not started, or every voice plays
          *   something of a higher priority
          */
-        SoundHandle Play(const AudioClipResource& InClip, const PlaySoundParams& InParams = {});
+        SoundHandle Play(const AudioClip& InClip, const PlaySoundParams& InParams = {});
 
         /**
          * Starts InClip, or, while it is still loading, starts it as soon as it is loaded: the handle
          * is playing from now, and every call on it is kept until then.
          * @return Invalid when the clip failed to load, or as Play above
          */
-        SoundHandle Play(const ResourceRef<AudioClipResource>& InClip, const PlaySoundParams& InParams = {});
+        SoundHandle Play(const TAssetHandle<AudioClip>& InClip, const PlaySoundParams& InParams = {});
 
         /**
          * Chooses which clip of InDef plays now and how: its bus, volume and pitch (with the spread

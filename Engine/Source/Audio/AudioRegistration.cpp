@@ -1,7 +1,7 @@
 // The Audio module's types. Each registers itself; see Engine/Registries/AutoRegistration.h.
 #include "Audio/AudioBank.h"
+#include "Audio/AudioClip.h"
 #include "Audio/AudioClipDef.h"
-#include "Audio/AudioClipResource.h"
 #include "Audio/AudioGlobalBank.h"
 #include "Audio/AudioSubsystem.h"
 #include "Audio/Components/AudioBanksComponent.h"
@@ -11,7 +11,8 @@
 
 namespace Opaax
 {
-    OPAAX_REGISTER_NAMED_RESOURCE(AudioClipResource, "AudioClip");
+    // A sound, read from its .wav (or .mp3, .flac) file.
+    OPAAX_REGISTER_OBJECT(AudioClip);
     OPAAX_REGISTER_OBJECT(AudioClipDef);
     OPAAX_REGISTER_OBJECT(AudioBank);
 

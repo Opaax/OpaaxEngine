@@ -41,7 +41,7 @@ namespace Opaax
             m_Defs.push_back(Move(lDef));
         }
 
-        for (const TResourcePath<AudioClipResource>& lClip : InBank.Clips)
+        for (const TAssetRef<AudioClip>& lClip : InBank.Clips)
         {
             HoldClip(lClip.Path, InResources, InPaths);
         }
@@ -54,7 +54,7 @@ namespace Opaax
         m_Banks.clear();
     }
 
-    const ResourceRef<AudioClipResource>* AudioBankHold::FindClip(const OpaaxString& InPath) const
+    const TAssetHandle<AudioClip>* AudioBankHold::FindClip(const OpaaxString& InPath) const
     {
         const auto lFound = m_Clips.find(InPath);
         return lFound != m_Clips.end() ? &lFound->second : nullptr;
@@ -67,7 +67,6 @@ namespace Opaax
             return;
         }
 
-        const OpaaxString lAbsolute = InPaths.AssetToAbsolute(InPath);
-        m_Clips.emplace(InPath, InResources.LoadAsync<AudioClipResource>(lAbsolute.CStr()));
+        m_Clips.emplace(InPath, LoadAssetAsync<AudioClip>(InResources, InPaths, InPath));
     }
 }

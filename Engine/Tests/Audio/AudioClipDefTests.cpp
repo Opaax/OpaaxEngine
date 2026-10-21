@@ -13,8 +13,8 @@
 #include "Application/Services/IJobSystem.h"
 #include "Application/Services/IPaths.h"
 #include "Audio/AudioBank.h"
+#include "Audio/AudioClip.h"
 #include "Audio/AudioClipDef.h"
-#include "Audio/AudioClipResource.h"
 #include "Audio/AudioManager.h"
 #include "Audio/AudioRandom.h"
 #include "Audio/AudioSubsystem.h"
@@ -340,6 +340,13 @@ TEST_CASE("AudioManager: a sound whose clip is loading plays once it is loaded; 
     ManualJobs      lJobs;
     ResourceManager lResources;
     lResources.SetJobSystem(lJobs);
+    lResources.SetObjectClasses(&AudioTest::AudioClasses());
+
+    // A clip loading in the background, as the audio subsystem asks for one.
+    const auto lLoadAsync = [&lResources](const OpaaxString& InFile)
+    {
+        return TAssetHandle<AudioClip>(lResources.LoadAsync<AssetResource>(InFile.CStr()), InFile);
+    };
 
     AudioManager lAudio(Headless());
     REQUIRE(lAudio.Startup());
@@ -349,7 +356,8 @@ TEST_CASE("AudioManager: a sound whose clip is loading plays once it is loaded; 
 
     SUBCASE("it starts when loaded, with what was asked meanwhile")
     {
-        const ResourceRef<AudioClipResource> lClip = lResources.LoadAsync<AudioClipResource>(lFile.CStr());
+        const TAssetHandle<AudioClip> lClip = lLoadAsync(lFile);
+        CHECK(lClip.GetState() == EResourceState::Loading);
         const SoundHandle lSound = lAudio.Play(lClip, lParams);
         REQUIRE(lSound.IsValid());
         CHECK(lAudio.IsPlaying(lSound));   // from now
@@ -365,7 +373,7 @@ TEST_CASE("AudioManager: a sound whose clip is loading plays once it is loaded; 
 
     SUBCASE("a stop before it loads: it never plays")
     {
-        const ResourceRef<AudioClipResource> lClip = lResources.LoadAsync<AudioClipResource>(lFile.CStr());
+        const TAssetHandle<AudioClip> lClip = lLoadAsync(lFile);
         const SoundHandle lSound = lAudio.Play(lClip, lParams);
         lAudio.Stop(lSound);
         CHECK_FALSE(lAudio.IsPlaying(lSound));
@@ -378,8 +386,7 @@ TEST_CASE("AudioManager: a sound whose clip is loading plays once it is loaded; 
 
     SUBCASE("a clip that fails to load frees its voice")
     {
-        const OpaaxString                    lMissing = lDir.Sub("Nope.wav");
-        const ResourceRef<AudioClipResource> lClip    = lResources.LoadAsync<AudioClipResource>(lMissing.CStr());
+        const TAssetHandle<AudioClip> lClip = lLoadAsync(lDir.Sub("Nope.wav"));
         const SoundHandle lSound = lAudio.Play(lClip, lParams);
 
         lJobs.RunAll();

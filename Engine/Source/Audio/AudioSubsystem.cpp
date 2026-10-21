@@ -3,7 +3,7 @@
 #include "Core/Algo/Algo.h"
 
 #include "Application/Services/IPaths.h"
-#include "Audio/AudioClipResource.h"
+#include "Audio/AudioClip.h"
 #include "Audio/AudioGlobalBank.h"
 #include "Audio/AudioManager.h"
 #include "Audio/Components/AudioBanksComponent.h"
@@ -293,9 +293,9 @@ namespace Opaax
         return lAudio->Play(ResolveClip(lDef->Clips[lIndex].Clip.Path), lParams);
     }
 
-    const ResourceRef<AudioClipResource>& AudioSubsystem::ResolveClip(const OpaaxString& InPath)
+    const TAssetHandle<AudioClip>& AudioSubsystem::ResolveClip(const OpaaxString& InPath)
     {
-        static const ResourceRef<AudioClipResource> s_None;
+        static const TAssetHandle<AudioClip> s_None;
         if (InPath.IsEmpty())
         {
             return s_None;
@@ -309,18 +309,17 @@ namespace Opaax
 
         // A bank's (maybe still loading), or loaded already (another world): it plays as soon as it can.
         // Else it loads without stopping the game.
-        if (const ResourceRef<AudioClipResource>* lBanked = FindBankClip(InPath))
+        if (const TAssetHandle<AudioClip>* lBanked = FindBankClip(InPath))
         {
             return m_Clips.emplace(InPath, *lBanked).first->second;
         }
 
-        const OpaaxString lAbsolute = GetContext().Paths.AssetToAbsolute(InPath);
-        ResourceRef<AudioClipResource> lClip = GetContext().Resources.Find<AudioClipResource>(lAbsolute.CStr());
-        if (!lClip.IsValid())
+        TAssetHandle<AudioClip> lClip = FindAsset<AudioClip>(GetContext().Resources, GetContext().Paths, InPath);
+        if (!lClip.IsLoaded())
         {
             OPAAX_LOG(LogAudio, Warn, "Audio clip '{}' was not loaded when played: it plays once loaded. List it in "
                       "an audio bank to have it ready", InPath.CStr());
-            lClip = GetContext().Resources.LoadAsync<AudioClipResource>(lAbsolute.CStr());
+            lClip = LoadAssetAsync<AudioClip>(GetContext().Resources, GetContext().Paths, InPath);
         }
 
         return m_Clips.emplace(InPath, Move(lClip)).first->second;
@@ -364,11 +363,11 @@ namespace Opaax
         }
     }
 
-    const ResourceRef<AudioClipResource>* AudioSubsystem::FindBankClip(const OpaaxString& InPath) const
+    const TAssetHandle<AudioClip>* AudioSubsystem::FindBankClip(const OpaaxString& InPath) const
     {
         for (const auto& [lEntity, lHold] : m_Banks)
         {
-            if (const ResourceRef<AudioClipResource>* lClip = lHold.FindClip(InPath))
+            if (const TAssetHandle<AudioClip>* lClip = lHold.FindClip(InPath))
             {
                 return lClip;
             }

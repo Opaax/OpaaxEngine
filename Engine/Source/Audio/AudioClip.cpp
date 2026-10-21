@@ -1,4 +1,4 @@
-#include "Audio/AudioClipResource.h"
+#include "Audio/AudioClip.h"
 
 #include "Audio/AudioAPI.h"
 #include "Audio/AudioTypes.h"
@@ -13,32 +13,34 @@ namespace Opaax
         constexpr Uint64 DECODE_CHUNK_FRAMES = 4096;
     }
 
-    TOptional<AudioClipResource> AudioClipResource::Load(const char* InPath, LoadContext& /*InCtx*/)
+    AudioClip::AudioClip()  = default;
+    AudioClip::~AudioClip() = default;
+
+    bool AudioClip::LoadSource(const char* InAbsPath)
     {
         TDynArray<Uint8> lBytes;
-        if (!FileIO::ReadAllBytes(OpaaxString(InPath), lBytes))
+        if (!FileIO::ReadAllBytes(OpaaxString(InAbsPath), lBytes))
         {
-            OPAAX_LOG(LogAudio, Error, "Audio clip '{}' cannot be read", InPath);
-            return NullOpt;
+            OPAAX_LOG(LogAudio, Error, "Audio clip '{}' cannot be read", InAbsPath);
+            return false;
         }
 
-        return FromMemory(Move(lBytes), InPath);
+        return LoadFromMemory(Move(lBytes), InAbsPath);
     }
 
-    TOptional<AudioClipResource> AudioClipResource::FromMemory(TDynArray<Uint8> InBytes, const char* InNameForLogs,
-                                                               const EResidency InResidency)
+    bool AudioClip::LoadFromMemory(TDynArray<Uint8> InBytes, const char* InNameForLogs, const EResidency InResidency)
     {
         if (InBytes.empty())
         {
             OPAAX_LOG(LogAudio, Error, "Audio clip '{}' is empty", InNameForLogs);
-            return NullOpt;
+            return false;
         }
 
         TUniquePtr<IAudioDecoder> lDecoder = AudioAPI::OpenDecoder(InBytes.data(), InBytes.size());
         if (lDecoder == nullptr)
         {
             OPAAX_LOG(LogAudio, Error, "Audio clip '{}' is not a supported sound (.wav, .mp3, .flac)", InNameForLogs);
-            return NullOpt;
+            return false;
         }
 
         TSharedPtr<AudioClipData> lData = MakeShared<AudioClipData>();
@@ -71,7 +73,7 @@ namespace Opaax
             if (lData->Format.FrameCount == 0)
             {
                 OPAAX_LOG(LogAudio, Error, "Audio clip '{}' has no samples", InNameForLogs);
-                return NullOpt;
+                return false;
             }
         }
         else
@@ -79,11 +81,18 @@ namespace Opaax
             lData->Encoded = Move(InBytes);
         }
 
-        AudioClipResource lClip;
-        lClip.Channels   = lData->Format.Channels;
-        lClip.SampleRate = lData->Format.SampleRate;
-        lClip.FrameCount = lData->Format.FrameCount;
-        lClip.Data       = Move(lData);
-        return lClip;
+        m_Channels   = lData->Format.Channels;
+        m_SampleRate = lData->Format.SampleRate;
+        m_FrameCount = lData->Format.FrameCount;
+        m_Data       = Move(lData);
+        return true;
+    }
+
+    Uint64 AudioClip::GetResourceSize() const
+    {
+        if (m_Data == nullptr) { return sizeof(AudioClip); }
+
+        return sizeof(AudioClip) + (m_Data->IsStreamed() ? static_cast<Uint64>(m_Data->Encoded.size())
+                                                         : static_cast<Uint64>(m_Data->Frames.size() * sizeof(float)));
     }
 }

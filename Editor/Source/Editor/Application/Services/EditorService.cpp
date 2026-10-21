@@ -17,6 +17,7 @@
 #include "Editor/UI/TinyFdEditorDialogs.h"      // the concrete IEditorDialogs
 #include "Editor/Toolbar/EditorNativeViewportTools.h"
 #include "Editor/Assets/Editors/AnimationClipEditor.h"
+#include "Editor/Assets/Editors/AudioClipEditor.h"
 #include "Editor/Assets/Editors/FontFaceEditor.h"
 #include "Editor/Assets/Editors/FontFamilyEditor.h"
 #include "Editor/Assets/Editors/InputMappingContextEditor.h"
@@ -67,6 +68,7 @@
 #include "Animation/Assets/AnimationClip.h"
 #include "Animation/Assets/AnimationLibrary.h"
 #include "Audio/AudioBank.h"
+#include "Audio/AudioClip.h"
 #include "Audio/AudioClipDef.h"
 #include "Input/Assets/InputActionAsset.h"
 #include "Input/Assets/InputMappingContextAsset.h"
@@ -554,6 +556,14 @@ namespace Opaax::Editor
         lTypes.Register<Material2D>().SetCategory(OpaaxString("Rendering"));
         lTypes.Register<AudioClipDef>().SetCategory(OpaaxString("Audio"));
         lTypes.Register<AudioBank>().SetCategory(OpaaxString("Audio"));
+
+        // A sound file: its window plays it and tells its length and format.
+        lTypes.Register<AudioClip>()
+            .SetLabel(OpaaxString("Audio Clip"))
+            .SetCategory(OpaaxString("Audio"))
+            .SetGlyph(OpaaxString("[AU]"))
+            .SetEditor<AudioClipEditor>();
+
         // Every mode (a MoveMode subclass, a game's too) goes with it.
         lTypes.Register<MoveMode>().SetCategory(OpaaxString("Movement"));
         lTypes.Register<Mover>().SetCategory(OpaaxString("Movement")).SetGlyph(OpaaxString("[MV]"));

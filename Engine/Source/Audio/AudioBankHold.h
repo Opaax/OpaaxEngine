@@ -1,11 +1,10 @@
 #pragma once
 
 #include "Audio/AudioBank.h"
-#include "Audio/AudioClipResource.h"
+#include "Audio/AudioClip.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Resources/Asset/AssetHandle.h"
-#include "Resources/ResourceRef.hpp"
 
 namespace Opaax
 {
@@ -30,15 +29,15 @@ namespace Opaax
         void Release();
 
         /** A held clip by its asset-relative path (loaded or loading), or null. */
-        const ResourceRef<AudioClipResource>* FindClip(const OpaaxString& InPath) const;
+        const TAssetHandle<AudioClip>* FindClip(const OpaaxString& InPath) const;
 
         Uint32 GetClipCount() const noexcept { return static_cast<Uint32>(m_Clips.size()); }
 
     private:
         void HoldClip(const OpaaxString& InPath, ResourceManager& InResources, const IPaths& InPaths);
 
-        TDynArray<TAssetHandle<AudioBank>>                         m_Banks;
-        TDynArray<TAssetHandle<AudioClipDef>>                      m_Defs;
-        TUnorderedMap<OpaaxString, ResourceRef<AudioClipResource>> m_Clips;
+        TDynArray<TAssetHandle<AudioBank>>                  m_Banks;
+        TDynArray<TAssetHandle<AudioClipDef>>               m_Defs;
+        TUnorderedMap<OpaaxString, TAssetHandle<AudioClip>> m_Clips;
     };
 }
