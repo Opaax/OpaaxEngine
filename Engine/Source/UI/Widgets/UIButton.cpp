@@ -63,35 +63,6 @@ namespace Opaax
         }
     }
 
-    void UIButton::SaveFields(nlohmann::json& InOutJson) const
-    {
-        UIWidget::SaveFields(InOutJson);
-
-        // OnClick is not saved: gameplay binds it by name after loading.
-        InOutJson["Normal"]   = Normal;
-        InOutJson["Hovered"]  = Hovered;
-        InOutJson["Pressed"]  = Pressed;
-        InOutJson["Disabled"] = Disabled;
-        InOutJson["bEnabled"] = bEnabled;
-        InOutJson["Texture"]  = Texture;
-        InOutJson["Sheet"]    = Sheet;
-        InOutJson["Frame"]    = Frame;
-    }
-
-    void UIButton::LoadFields(const nlohmann::json& InJson)
-    {
-        UIWidget::LoadFields(InJson);
-
-        Normal   = InJson.value("Normal", Normal);
-        Hovered  = InJson.value("Hovered", Hovered);
-        Pressed  = InJson.value("Pressed", Pressed);
-        Disabled = InJson.value("Disabled", Disabled);
-        bEnabled = InJson.value("bEnabled", bEnabled);
-        Texture  = InJson.value("Texture", Texture);
-        Sheet    = InJson.value("Sheet", Sheet);
-        Frame    = InJson.value("Frame", Frame);
-    }
-
     void UIButton::Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
     {
         // Same rule as UIImage: named but not ready draws nothing and retries; nothing named is a plain quad.

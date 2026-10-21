@@ -6,6 +6,7 @@
 #include "Core/Reflection/OpaaxEnum.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
+#include "Renderer/Textures/SpriteSheet.h"   // complete: a widget class visits its sheet reference
 #include "Resources/Asset/AssetRef.h"
 #include "Resources/ResourcePath.h"
 #include "Resources/ResourcePathJson.h"
@@ -16,9 +17,8 @@ namespace Opaax
 {
     class ITexture2D;
 
-    // Forward-declared: a path or an asset reference only needs the name.
+    // Forward-declared: a path only needs the name.
     struct TextureResource;
-    class SpriteSheet;
 
     /** How FillAmount crops the image. None ignores it. */
     enum class EUIFill : Uint8
@@ -46,6 +46,8 @@ namespace Opaax
     // =============================================================================
     class UIImage final : public UIWidget
     {
+        OPAAX_OBJECT(UIImage, UIWidget)
+
         // =============================================================================
         // Authored state
         // =============================================================================
@@ -99,11 +101,6 @@ namespace Opaax
         // UIWidget
         // =============================================================================
     public:
-        OpaaxStringID GetTypeName() const noexcept override { return OPAAX_ID("UIImage"); }
-
-        void SaveFields(nlohmann::json& InOutJson) const override;
-        void LoadFields(const nlohmann::json& InJson) override;
-
         void OnPullBindings(UIBindingTable& InBindings) override;
 
     protected:

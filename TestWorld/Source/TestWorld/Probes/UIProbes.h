@@ -94,7 +94,7 @@ namespace TestWorld
         static Opaax::Int32 CountWidgets(const Opaax::UIWidget& InWidget)
         {
             Opaax::Int32 lCount = 1;
-            for (const Opaax::TUniquePtr<Opaax::UIWidget>& lChild : InWidget.GetChildren())
+            for (const Opaax::TStrongObjectPtr<Opaax::UIWidget>& lChild : InWidget.GetChildren())
             {
                 lCount += CountWidgets(*lChild);
             }

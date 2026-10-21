@@ -13,16 +13,16 @@
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/ImguiLibrary/ImguiWidgets.h"
 #include "Editor/Operation/UICanvasOperations.h"
-#include "Editor/Properties/PropertyDrawers.h"
+#include "Editor/Properties/ObjectPropertyDrawer.h"
 #include "Editor/UI/IEditorGui.h"                 // IsKeyboardOwnedByUI
 #include "Editor/UI/IEditorUIBackend.h"
 
 #include "Engine/Registries/EngineRegistries.h"
 #include "RHI/Framebuffer.h"
 #include "Renderer/RenderTarget.hpp"             // OffscreenRenderTarget
+#include "Object/ObjectClassRegistry.h"
 #include "UI/UICanvasFile.h"
 #include "UI/UIWidget.h"
-#include "UI/UIWidgetRegistry.h"
 #include "UI/Widgets/UIButton.h"
 #include "UI/Widgets/UIImage.h"
 #include "UI/Widgets/UIPanel.h"
@@ -39,10 +39,10 @@ namespace Opaax::Editor
         /** Distance from the selection's edge that counts as a grip, in image pixels. */
         constexpr float GRIP_PX = 6.f;
 
-        /** The widget type registry. */
-        const UIWidgetRegistry& Registry()
+        /** The registered classes, the widget classes among them. */
+        const ObjectClassRegistry& Classes()
         {
-            return OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets();
+            return OpaaxApplication::GetAppService<IEngine>().GetRegistries().ObjectClasses();
         }
 
         ImGuiMouseCursor CursorFor(const ERectEdge InEdge) noexcept
@@ -285,10 +285,10 @@ namespace Opaax::Editor
         if (lLeaf)     { lFlags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen; }
         if (lSelected) { lFlags |= ImGuiTreeNodeFlags_Selected; }
 
-        const OpaaxString lLabel = InWidget.Name.IsEmpty() ? InWidget.GetTypeName().ToString() : InWidget.Name;
+        const OpaaxStringID lClassName = InWidget.GetClass().GetName();
+        const OpaaxString   lLabel     = InWidget.Name.IsEmpty() ? lClassName.ToString() : InWidget.Name;
 
-        const bool lOpen = ImGui::TreeNodeEx(lLabel.CStr(), lFlags, "%s  (%s)",
-                                             lLabel.CStr(), InWidget.GetTypeName().CStr());
+        const bool lOpen = ImGui::TreeNodeEx(lLabel.CStr(), lFlags, "%s  (%s)", lLabel.CStr(), lClassName.CStr());
 
         if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
         {
@@ -337,9 +337,10 @@ namespace Opaax::Editor
 
         if (ImGui::BeginPopup("UIAddWidget"))
         {
-            // Every registered type (a game's widget types show up too).
-            for (const OpaaxStringID& lName : Registry().GetNames())
+            // Every registered widget class (a game's show up too).
+            for (const ObjectClass* lClass : Classes().GetClassesOf(UIWidget::StaticClass(), /*bInConcreteOnly*/true))
             {
+                const OpaaxStringID lName = lClass->GetName();
                 if (ImGui::Selectable(lName.CStr()))
                 {
                     // Under the selection if any, else at the top level.
@@ -396,7 +397,7 @@ namespace Opaax::Editor
         }
         else
         {
-            ImGui::TextDisabled("%s", lWidget->GetTypeName().CStr());
+            ImGui::TextDisabled("%s", lWidget->GetClass().GetName().CStr());
 
             // The resolved rect, read-only: what the anchors produced.
             const Bounds2D& lBounds = lWidget->GetBounds();
@@ -420,17 +421,8 @@ namespace Opaax::Editor
             // The preset has its own undo step; re-sampled so its press does not open the gesture.
             lActiveBefore = ImGui::IsAnyItemActive();
 
-            // Two parts: the base fields every widget has (Name, Rect, visibility), then the type's own
-            // through the drawer registry.
-            DrawProperties(m_Context.Widgets, static_cast<UIWidget&>(*lWidget));
-
-            ImGui::Separator();
-
-            if (!m_Context.Extensions.UIWidgetDrawers().DrawFirst(*lWidget, m_Context.Widgets, m_Context))
-            {
-                // A widget type without a drawer: say so.
-                ImGui::TextDisabled("No drawer registered for %s.", lWidget->GetTypeName().CStr());
-            }
+            // Its class's properties: the base fields every widget has (Name, Rect, visibility), then its own.
+            DrawObjectProperties(m_Context.Widgets, *lWidget);
         }
 
         // One undo step per gesture: opens on the first active frame of these fields, closes when

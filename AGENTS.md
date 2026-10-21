@@ -108,6 +108,9 @@ Match the code around you. In short:
   default object is built with it); its services from `GetContext()`, valid from `Startup`; which
   worlds and when it ticks by overriding `ShouldCreate` and `GetTickOrder`. A unit test adds it to a
   world after `SetContext` (`GetSubsystems().Add<T>()`, then `StartupAll()`).
+- **UI widget:** a `UIWidget` subclass with `OPAAX_OBJECT`, its saved fields in `OPAAX_PROPERTIES`, and
+  one `OPAAX_REGISTER_OBJECT` line: canvases save it, the UI panel offers and draws it. Made with
+  `NewObject<T>()` in code; its parent owns it.
 - **Asset class:** an `Asset` subclass with `OPAAX_OBJECT` and `OPAAX_PROPERTIES` (a default on every
   field), one `OPAAX_REGISTER_OBJECT` line, unit tests for its file round trip and its hooks
   (`PostEditChange`). In the editor, an `AssetTypes()` entry for its label, category and glyph; an
@@ -150,8 +153,9 @@ Match the code around you. In short:
 - Core has namespaces named `Clock`, `Random`, `Algo`, `Memory`, `FileSystem`, `Console`, `Process`:
   a type of the same name, used under `using namespace Opaax`, is ambiguous. Name it otherwise.
 - Visiting a `TAssetRef<T>` property needs `T::StaticClass()`, so `T` must be complete wherever the
-  owner's properties are registered or drawn: an asset class header includes the asset classes it
-  references; a component forward-declares them and its registration file includes them.
+  owner's properties are registered or drawn: an object class header (an asset, a widget) includes
+  the asset classes it references, since every file that makes one builds its class; a component
+  forward-declares them and its registration file includes them.
 - An asset window records an undo step whenever no ImGui item is active: an editor that edits on a
   mouse drag keeps an item active for the whole drag (an `InvisibleButton` over the area), or every
   frame of it becomes a step.

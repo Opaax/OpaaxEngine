@@ -13,15 +13,15 @@
 #include "UI/UICanvasResource.h"
 #include "UI/UICanvasFile.h"
 #include "UI/UIWidget.h"
-#include "UI/UIWidgetRegistry.h"
+#include "Object/ObjectClassRegistry.h"
 
 namespace Opaax::Editor
 {
     namespace
     {
-        const UIWidgetRegistry& Registry()
+        const ObjectClassRegistry& Classes()
         {
-            return OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets();
+            return OpaaxApplication::GetAppService<IEngine>().GetRegistries().ObjectClasses();
         }
 
         /** Records InBefore -> the current tree, under InLabel. */
@@ -67,7 +67,7 @@ namespace Opaax::Editor
             return {};
         }
 
-        TUniquePtr<UIWidget> lWidget = Registry().Create(InType);
+        TStrongObjectPtr<UIWidget> lWidget = UIWidget::Create(InType, Classes());
         if (!lWidget)
         {
             OPAAX_LOG(LogEditorUICanvasDocument, Warn, "Add — '{}' is not a registered widget type", InType);
@@ -127,7 +127,7 @@ namespace Opaax::Editor
 
         OpaaxString lBefore = Snapshot(InContext);
 
-        TUniquePtr<UIWidget> lOwned = lWidget->GetParent()->RemoveChild(*lWidget);
+        TStrongObjectPtr<UIWidget> lOwned = lWidget->GetParent()->RemoveChild(*lWidget);
         UIWidget* const      lMoved = lParent->AddChild(Move(lOwned));
 
         InContext.UICanvasDocument.Select(InContext.UICanvasDocument.PathOf(*lMoved));
@@ -152,7 +152,7 @@ namespace Opaax::Editor
 
         OpaaxString lBefore = Snapshot(InContext);
 
-        TUniquePtr<UIWidget> lOwned = lParent.RemoveChild(*lWidget);
+        TStrongObjectPtr<UIWidget> lOwned = lParent.RemoveChild(*lWidget);
         UIWidget* const      lMoved = lParent.AddChild(Move(lOwned), static_cast<Uint64>(lTo));
 
         InContext.UICanvasDocument.Select(InContext.UICanvasDocument.PathOf(*lMoved));
@@ -168,7 +168,7 @@ namespace Opaax::Editor
         UIWidget* const lWidget = InContext.UICanvasDocument.Resolve(InPath);
         if (lWidget == nullptr || lWidget->GetParent() == nullptr) { return {}; }
 
-        TUniquePtr<UIWidget> lClone = UICanvasFile::CloneWidget(*lWidget, Registry());
+        TStrongObjectPtr<UIWidget> lClone = UICanvasFile::CloneWidget(*lWidget, Classes());
         if (!lClone) { return {}; }
 
         OpaaxString lBefore = Snapshot(InContext);
@@ -198,7 +198,7 @@ namespace Opaax::Editor
         UIWidget* const lParent = InContext.UICanvasDocument.Resolve(InParent);
         if (lParent == nullptr) { return {}; }
 
-        TUniquePtr<UIWidget> lWidget = UICanvasFile::DeserializeNode(InText, Registry());
+        TStrongObjectPtr<UIWidget> lWidget = UICanvasFile::DeserializeNode(InText, Classes());
         if (!lWidget) { return {}; }   // not a widget node
 
         OpaaxString lBefore = Snapshot(InContext);

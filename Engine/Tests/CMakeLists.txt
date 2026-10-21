@@ -157,6 +157,7 @@ set(OPAAX_TEST_SOURCES
     UI/UISliceTests.cpp
     UI/UIStackTests.cpp
     UI/UITextTests.cpp
+    UI/UIWidgetClassTests.cpp
 
     # Editor logic that needs no ImGui (header-only editor types)
     Editor/AnimationClipEditingTests.cpp
@@ -175,7 +176,6 @@ set(OPAAX_TEST_SOURCES
     Editor/ResourceDragPayloadTests.cpp
     Editor/SpriteSheetEditingTests.cpp
     Editor/UIPreviewAspectTests.cpp
-    Editor/UIWidgetDrawerTests.cpp
 
     # Micro-benchmarks: doctest suite "perf", skipped by default. Run them in Release with
     # OpaaxTests --test-suite=perf --no-skip.

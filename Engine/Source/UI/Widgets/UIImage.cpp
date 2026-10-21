@@ -96,35 +96,6 @@ namespace Opaax
         }
     }
 
-    void UIImage::SaveFields(nlohmann::json& InOutJson) const
-    {
-        UIWidget::SaveFields(InOutJson);
-
-        // Only the path is saved; the runtime pointer is set by code.
-        InOutJson["Color"]       = Color;
-        InOutJson["Texture"]     = Texture;
-        InOutJson["Sheet"]       = Sheet;
-        InOutJson["Frame"]       = Frame;
-        InOutJson["Border"]      = Border;
-        InOutJson["Fill"]        = Fill;
-        InOutJson["FillAmount"]  = FillAmount;
-        InOutJson["FillBinding"] = FillBinding;
-    }
-
-    void UIImage::LoadFields(const nlohmann::json& InJson)
-    {
-        UIWidget::LoadFields(InJson);
-
-        Color       = InJson.value("Color", Color);
-        Texture     = InJson.value("Texture", Texture);
-        Sheet       = InJson.value("Sheet", Sheet);
-        Frame       = InJson.value("Frame", Frame);
-        Border      = InJson.value("Border", Border);
-        Fill        = InJson.value("Fill", Fill);
-        FillAmount  = InJson.value("FillAmount", FillAmount);
-        FillBinding = InJson.value("FillBinding", FillBinding);
-    }
-
     void UIImage::Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
     {
         const float lAmount = Fill == EUIFill::None ? 1.f : Maths::Clamp(FillAmount, 0.f, 1.f);

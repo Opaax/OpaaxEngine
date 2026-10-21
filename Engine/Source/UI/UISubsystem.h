@@ -50,7 +50,7 @@ namespace Opaax
         UIWidget* MountAsset(const OpaaxString& InAssetPath, UIWidget* InParent = nullptr);
 
         /** Loads a .opaaxui tree without adding it (for another canvas). */
-        TUniquePtr<UIWidget> LoadTree(const OpaaxString& InAssetPath, float& OutAuthoredHeight) const;
+        TStrongObjectPtr<UIWidget> LoadTree(const OpaaxString& InAssetPath, float& OutAuthoredHeight) const;
 
         // =========================================================================
         // Loading screen

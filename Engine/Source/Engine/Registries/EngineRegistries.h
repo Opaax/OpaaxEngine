@@ -4,7 +4,6 @@
 
 #include "Object/ObjectClassRegistry.h"
 #include "Resources/ResourceFormatRegistry.h"
-#include "UI/UIWidgetRegistry.h"
 #include "World/Components/ComponentRegistry.h"
 
 namespace Opaax
@@ -44,8 +43,6 @@ namespace Opaax
         const ResourceFormatRegistry& Resources() const noexcept { return m_ResourceFormats; }
 
         /** Widget types a .opaaxui can use. */
-        UIWidgetRegistry&       UIWidgets()       noexcept { return m_UIWidgets; }
-        const UIWidgetRegistry& UIWidgets() const noexcept { return m_UIWidgets; }
 
         /** Object classes: what files name, and the subsystems games and worlds make. */
         ObjectClassRegistry&       ObjectClasses()       noexcept { return m_ObjectClasses; }
@@ -62,7 +59,6 @@ namespace Opaax
         {
             m_Components.Seal();
             m_ResourceFormats.Seal();
-            m_UIWidgets.Seal();
             m_ObjectClasses.Seal();
         }
 
@@ -72,7 +68,6 @@ namespace Opaax
     private:
         ComponentRegistry             m_Components;
         ResourceFormatRegistry        m_ResourceFormats;
-        UIWidgetRegistry              m_UIWidgets;
         ObjectClassRegistry           m_ObjectClasses;
     };
 }

@@ -22,6 +22,8 @@ namespace Opaax
     // =============================================================================
     class UIMask final : public UIWidget
     {
+        OPAAX_OBJECT(UIMask, UIWidget)
+
         // =============================================================================
         // Authored state
         // =============================================================================
@@ -44,11 +46,6 @@ namespace Opaax
         // =============================================================================
     public:
         UIMask() { bHitTestable = false; }
-
-        OpaaxStringID GetTypeName() const noexcept override { return OPAAX_ID("UIMask"); }
-
-        void SaveFields(nlohmann::json& InOutJson) const override;
-        void LoadFields(const nlohmann::json& InJson) override;
 
         /**
          * The resolved mask texture, or null for a rect clip. Resolved at rebuild (a texture still

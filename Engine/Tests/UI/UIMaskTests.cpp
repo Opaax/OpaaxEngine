@@ -53,7 +53,7 @@ namespace
     /** An image always emits exactly one quad, which makes the draw list easy to reason about. */
     UIImage* AddImage(UIWidget& InParent, const char* InName)
     {
-        auto lImage  = MakeUnique<UIImage>();
+        auto lImage  = NewObject<UIImage>();
         lImage->Name = InName;
         lImage->SetRect(Centred({ 50.f, 50.f }));
         return static_cast<UIImage*>(InParent.AddChild(Move(lImage)));
@@ -92,7 +92,7 @@ TEST_CASE("UIMask: everything UNDER a mask carries it; a sibling outside carries
 {
     Fixture lF;
 
-    auto lMaskNode  = MakeUnique<UIMask>();
+    auto lMaskNode  = NewObject<UIMask>();
     lMaskNode->Name = "Mask";
     lMaskNode->SetRect(Centred({ 200.f, 200.f }));
     UIMask* const lMask = static_cast<UIMask*>(lF.Canvas.Root().AddChild(Move(lMaskNode)));
@@ -101,7 +101,7 @@ TEST_CASE("UIMask: everything UNDER a mask carries it; a sibling outside carries
     UIImage* const lOutside = AddImage(lF.Canvas.Root(), "Outside");
 
     // A masked TEXT is the case that costs nothing extra — text goes through UIQuad like the rest.
-    auto lTextNode  = MakeUnique<UIText>();
+    auto lTextNode  = NewObject<UIText>();
     lTextNode->Name = "Label";
     UIWidget* const lText = lMask->AddChild(Move(lTextNode));
 
@@ -119,13 +119,13 @@ TEST_CASE("UIMask: a nested mask REPLACES its ancestor — nearest wins")
 {
     Fixture lF;
 
-    auto lOuterNode = MakeUnique<UIMask>();
+    auto lOuterNode = NewObject<UIMask>();
     lOuterNode->SetRect(Centred({ 400.f, 400.f }));
     UIMask* const lOuter = static_cast<UIMask*>(lF.Canvas.Root().AddChild(Move(lOuterNode)));
 
     UIImage* const lUnderOuter = AddImage(*lOuter, "UnderOuter");
 
-    auto lInnerNode = MakeUnique<UIMask>();
+    auto lInnerNode = NewObject<UIMask>();
     lInnerNode->SetRect(Centred({ 100.f, 100.f }));
     UIMask* const lInner = static_cast<UIMask*>(lOuter->AddChild(Move(lInnerNode)));
 
@@ -141,7 +141,7 @@ TEST_CASE("UIMask: the mask's RECT is its own resolved bounds, so moving it move
 {
     Fixture lF;
 
-    auto lMaskNode = MakeUnique<UIMask>();
+    auto lMaskNode = NewObject<UIMask>();
     lMaskNode->SetRect(Centred({ 200.f, 100.f }));
     UIMask* const lMask = static_cast<UIMask*>(lF.Canvas.Root().AddChild(Move(lMaskNode)));
     AddImage(*lMask, "Inside");
@@ -161,7 +161,7 @@ TEST_CASE("UIMask: an EMPTY texture path resolves nothing and is a pure rect cli
 {
     Fixture lF;
 
-    auto lMaskNode = MakeUnique<UIMask>();
+    auto lMaskNode = NewObject<UIMask>();
     lMaskNode->SetRect(Centred({ 200.f, 200.f }));
     UIMask* const lMask = static_cast<UIMask*>(lF.Canvas.Root().AddChild(Move(lMaskNode)));
     UIImage* const lInside = AddImage(*lMask, "Inside");
@@ -177,7 +177,7 @@ TEST_CASE("UIMask: a named texture is resolved through the provider, and re-arme
 {
     Fixture lF;
 
-    auto lMaskNode = MakeUnique<UIMask>();
+    auto lMaskNode = NewObject<UIMask>();
     lMaskNode->SetRect(Centred({ 200.f, 200.f }));
     UIMask* const lMask = static_cast<UIMask*>(lF.Canvas.Root().AddChild(Move(lMaskNode)));
     AddImage(*lMask, "Inside");
@@ -202,7 +202,7 @@ TEST_CASE("UIMask: a hidden mask hides its children, and the mask is not a hit t
 {
     Fixture lF;
 
-    auto lMaskNode = MakeUnique<UIMask>();
+    auto lMaskNode = NewObject<UIMask>();
     lMaskNode->SetRect(Centred({ 200.f, 200.f }));
     UIMask* const lMask = static_cast<UIMask*>(lF.Canvas.Root().AddChild(Move(lMaskNode)));
     AddImage(*lMask, "Inside");
@@ -244,7 +244,7 @@ TEST_CASE("UIDrawList: order is tree order, parents before children")
 {
     Fixture lF;
 
-    UIWidget* const lPanel = lF.Canvas.Root().AddChild(MakeUnique<UIPanel>());
+    UIWidget* const lPanel = lF.Canvas.Root().AddChild(NewObject<UIPanel>());
     UIImage*  const lFirst  = AddImage(*lPanel, "First");
     UIImage*  const lSecond = AddImage(*lPanel, "Second");
 

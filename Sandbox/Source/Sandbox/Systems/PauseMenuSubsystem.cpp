@@ -44,10 +44,10 @@ namespace Sandbox
         /** The modal's root: focused while the menu is up, so Escape reaches it in UIOnly. */
         class PauseMenuPanel final : public UIWidget
         {
+            OPAAX_OBJECT(PauseMenuPanel, UIWidget)
+
         public:
             TFunction<void()> OnEscape;
-
-            OpaaxStringID GetTypeName() const noexcept override { return OPAAX_ID("PauseMenuPanel"); }
 
             EUIReply OnKeyEvent(const UIKeyEvent& InEvent) override
             {
@@ -81,11 +81,11 @@ namespace Sandbox
         /** A button with a centred label, sized InSize, at InRect. */
         UIButton* AddButton(UIWidget& InParent, const char* InName, const char* InLabel, const UIRect& InRect, float InTextSize)
         {
-            auto lButton  = MakeUnique<UIButton>();
+            auto lButton  = NewObject<UIButton>();
             lButton->Name = InName;
             lButton->SetRect(InRect);
 
-            auto lLabel = MakeUnique<UIText>();
+            auto lLabel = NewObject<UIText>();
             lLabel->Name = OpaaxString(InName) + "Label";
             lLabel->SetRect(Stretched());
             lLabel->bHitTestable = false;   // the button is the target, not its text
@@ -121,7 +121,7 @@ namespace Sandbox
 
         // The modal's root is built in code (it handles Escape); its content is the authored asset. Added
         // after the button so it draws over it and is hit-tested first.
-        auto lMenu     = MakeUnique<PauseMenuPanel>();
+        auto lMenu     = NewObject<PauseMenuPanel>();
         lMenu->Name    = "PauseMenu";
         lMenu->bVisible = false;
         lMenu->Opacity  = 0.f;   // so the first Open fades in too

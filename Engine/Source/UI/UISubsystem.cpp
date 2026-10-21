@@ -42,7 +42,7 @@ namespace Opaax
         return true;
     }
 
-    TUniquePtr<UIWidget> UISubsystem::LoadTree(const OpaaxString& InAssetPath, float& OutAuthoredHeight) const
+    TStrongObjectPtr<UIWidget> UISubsystem::LoadTree(const OpaaxString& InAssetPath, float& OutAuthoredHeight) const
     {
         const OpaaxString lAbsPath = GetContext().Paths.AssetToAbsolute(InAssetPath);
 
@@ -55,8 +55,8 @@ namespace Opaax
             return nullptr;
         }
 
-        TUniquePtr<UIWidget> lTree =
-            lResource->BuildTree(OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets(), OutAuthoredHeight);
+        TStrongObjectPtr<UIWidget> lTree =
+            lResource->BuildTree(OpaaxApplication::GetAppService<IEngine>().GetRegistries().ObjectClasses(), OutAuthoredHeight);
 
         if (!lTree)
         {
@@ -69,7 +69,7 @@ namespace Opaax
     UIWidget* UISubsystem::MountAsset(const OpaaxString& InAssetPath, UIWidget* InParent)
     {
         float lAuthoredHeight = 0.f;
-        TUniquePtr<UIWidget> lTree = LoadTree(InAssetPath, lAuthoredHeight);
+        TStrongObjectPtr<UIWidget> lTree = LoadTree(InAssetPath, lAuthoredHeight);
         if (!lTree)
         {
             return nullptr;   // LoadTree logged why
@@ -103,7 +103,7 @@ namespace Opaax
         {
             // Alone on its canvas, so the asset's own height is used.
             float lAuthoredHeight = 0.f;
-            if (TUniquePtr<UIWidget> lTree = LoadTree(lAsset, lAuthoredHeight))
+            if (TStrongObjectPtr<UIWidget> lTree = LoadTree(lAsset, lAuthoredHeight))
             {
                 m_LoadingCanvas.SetReferenceHeight(lAuthoredHeight);
                 lRoot.AddChild(Move(lTree));
@@ -116,7 +116,7 @@ namespace Opaax
             OPAAX_LOG(LogUISubsystem, Warn, "Loading screen '{}' did not load — a black cover stands in.", lAsset.CStr());
         }
 
-        auto lBlack = MakeUnique<UIImage>();
+        auto lBlack = NewObject<UIImage>();
         lBlack->Name = "Cover";
         lBlack->SetColor({ 0.f, 0.f, 0.f, 1.f });
 

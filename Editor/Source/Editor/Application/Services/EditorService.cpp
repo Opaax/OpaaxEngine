@@ -469,33 +469,8 @@ namespace Opaax::Editor
     void EditorService::RegisterNativeDrawers()
     {
         // The engine's own components, through the same route a game's components use. They are all
-        // reflected, so registering is all there is to do.
-        // UI widgets too: every widget type needs a drawer or its fields are invisible in the UI panel.
-        // The count check below reports a missing one.
-        UIWidgetDrawerRegistry& lWidgetDrawers = m_Extensions.UIWidgetDrawers();
-        lWidgetDrawers.Register<UIPanel>();
-        lWidgetDrawers.Register<UIImage>();
-        lWidgetDrawers.Register<UIText>();
-        lWidgetDrawers.Register<UIButton>();
-        lWidgetDrawers.Register<UIMask>();
-        lWidgetDrawers.Register<UISafeArea>();
-        lWidgetDrawers.Register<UIStack>();
-
-        // Through the locator, not m_Context: the EditorContext does not exist yet at this point.
-        const Uint64 lWidgetTypes =
-            OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets().Count();
-        if (lWidgetDrawers.Count() != lWidgetTypes)
-        {
-            OPAAX_LOG(LogEditorService, Warn,
-                      "{} UI widget type(s) registered but {} drawer(s) — a type with no drawer shows only "
-                      "its base fields (**UI18**)", lWidgetTypes, lWidgetDrawers.Count());
-        }
-        else
-        {
-            OPAAX_LOG(LogEditorService, Trace, "UI widget drawers: {} for {} registered type(s)",
-                      lWidgetDrawers.Count(), lWidgetTypes);
-        }
-
+        // reflected, so registering is all there is to do. UI widgets need nothing: the UI panel draws
+        // any widget from its class.
         ComponentDrawerRegistry& lDrawers = m_Extensions.Drawers();
 
         // Every entity has one.
@@ -672,10 +647,10 @@ namespace Opaax::Editor
             .SetGlyph(OpaaxString("[UI]"))
             .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
             {
-                const UIWidgetRegistry& lRegistry =
-                    OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets();
+                const ObjectClassRegistry& lClasses =
+                    OpaaxApplication::GetAppService<IEngine>().GetRegistries().ObjectClasses();
 
-                if (InContext.UICanvasDocument.Open(InFile.AbsPath, lRegistry))
+                if (InContext.UICanvasDocument.Open(InFile.AbsPath, lClasses))
                 {
                     InContext.Panels.SetVisible(UICanvasPanel::PanelID(), true);
                 }

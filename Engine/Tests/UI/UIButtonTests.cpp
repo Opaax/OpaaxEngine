@@ -24,7 +24,7 @@ namespace
         Fixture()
         {
             Canvas.SetTargetSize(1920, 1080);
-            Button = static_cast<UIButton*>(Canvas.Root().AddChild(MakeUnique<UIButton>()));
+            Button = static_cast<UIButton*>(Canvas.Root().AddChild(NewObject<UIButton>()));
             UIRect lRect;
             lRect.SizeDelta = { 200.f, 80.f };
             Button->SetRect(lRect);

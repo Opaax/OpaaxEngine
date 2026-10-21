@@ -166,7 +166,9 @@ A tree of widgets, designed at `ReferenceHeight` (the canvas scales to the scree
 }
 ```
 
-Every widget has `Type`, `Name`, `Rect`, `Opacity`, `bVisible`, `bHitTestable` and `Children`. A
+`Type` is the widget's class and the other keys are its properties, the base's (`Name`, `Rect`,
+`Opacity`, `bVisible`, `bHitTestable`, which every widget has) then its own; `Children` holds the
+widgets under it. A game's widget class is written the same way, under its class name. A
 `Rect` anchors the widget in its parent (`AnchorMin`/`AnchorMax`, fractions; equal = a point, apart =
 stretch), places its `Pivot` at `AnchoredPosition` (canvas units, Y up) and gives its `SizeDelta`. A
 mounted canvas's root sits in the screen, so a HUD's root stretches over it (anchors 0 to 1, `SizeDelta`

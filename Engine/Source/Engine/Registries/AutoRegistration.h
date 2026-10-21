@@ -15,8 +15,7 @@
 //   OPAAX_REGISTER_COMPONENT(Health);
 //   OPAAX_REGISTER_BEHAVIOUR(Coin);
 //   OPAAX_REGISTER_RESOURCE(WaveResource);
-//   OPAAX_REGISTER_UI_WIDGET(UIHealthBar);
-//   OPAAX_REGISTER_OBJECT(EnemyStats);      // any Object class: assets, move modes, subsystems...
+//   OPAAX_REGISTER_OBJECT(EnemyStats);      // any Object class: assets, move modes, subsystems, widgets...
 //
 // The engine runs every registration when it is constructed, before any world exists. Game
 // modules are linked whole (see opaax_add_game), so a registration in any of their files is
@@ -40,8 +39,7 @@ namespace Opaax
         ResourceFormat,
         Component,
         ComponentAlias,
-        Behaviour,
-        UIWidget
+        Behaviour
     };
 
     // =============================================================================
@@ -129,17 +127,6 @@ namespace Opaax
     OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::ResourceFormat,                 \
         ::Opaax::TypeIdOf<Type>(), 0, Name,                                                        \
         InRegistrar.Resources().Register<Type>(::Opaax::OpaaxStringID(Name)))
-
-/** Registers a widget type for .opaaxui files, saved under its type name. */
-#define OPAAX_REGISTER_UI_WIDGET(Type)                                                               \
-    OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::UIWidget,                       \
-        ::Opaax::TypeIdOf<Type>(), 0, #Type, InRegistrar.UIWidgets().Register<Type>())
-
-/** Registers a widget type saved under Name. */
-#define OPAAX_REGISTER_NAMED_UI_WIDGET(Type, Name)                                                   \
-    OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::UIWidget,                       \
-        ::Opaax::TypeIdOf<Type>(), 0, Name,                                                        \
-        InRegistrar.UIWidgets().Register<Type>(::Opaax::OpaaxStringID(Name)))
 
 /** Registers an Object class under its C++ name (no namespace), the name its files use. */
 #define OPAAX_REGISTER_OBJECT(Type)                                                                  \

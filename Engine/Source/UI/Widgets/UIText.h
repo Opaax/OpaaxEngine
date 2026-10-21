@@ -43,6 +43,8 @@ namespace Opaax
     // =============================================================================
     class UIText final : public UIWidget
     {
+        OPAAX_OBJECT(UIText, UIWidget)
+
         // =============================================================================
         // Authored state
         // =============================================================================
@@ -82,11 +84,6 @@ namespace Opaax
         // UIWidget
         // =============================================================================
     public:
-        OpaaxStringID GetTypeName() const noexcept override { return OPAAX_ID("UIText"); }
-
-        void SaveFields(nlohmann::json& InOutJson) const override;
-        void LoadFields(const nlohmann::json& InJson) override;
-
         void OnPullBindings(UIBindingTable& InBindings) override;
 
         /** What is drawn: the formatted bound value when available, else Text. */

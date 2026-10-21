@@ -32,7 +32,7 @@ TEST_CASE("UISafeArea: it starts stretched, and 5% per edge leaves the title-saf
     UICanvas lCanvas(1080.f);
     lCanvas.SetTargetSize(1920, 1080);
 
-    auto* lSafe = static_cast<UISafeArea*>(lCanvas.Root().AddChild(MakeUnique<UISafeArea>()));
+    auto* lSafe = static_cast<UISafeArea*>(lCanvas.Root().AddChild(NewObject<UISafeArea>()));
     lCanvas.Update();
 
     // The default rect is the parent's, not a 100x100 box — the one widget that could not sensibly
@@ -46,8 +46,8 @@ TEST_CASE("UISafeArea: a stretched CHILD lands inside the insets, not inside the
     UICanvas lCanvas(1080.f);
     lCanvas.SetTargetSize(1920, 1080);
 
-    UIWidget* lSafe  = lCanvas.Root().AddChild(MakeUnique<UISafeArea>());
-    UIWidget* lChild = lSafe->AddChild(MakeUnique<UIImage>());
+    UIWidget* lSafe  = lCanvas.Root().AddChild(NewObject<UISafeArea>());
+    UIWidget* lChild = lSafe->AddChild(NewObject<UIImage>());
     lChild->SetRect(Stretch());
     lCanvas.Update();
 
@@ -64,7 +64,7 @@ TEST_CASE("UISafeArea: the insets are FRACTIONS, so a wider target keeps the sam
     UICanvas lCanvas(1080.f);
     lCanvas.SetTargetSize(1920, 1080);
 
-    auto* lSafe = static_cast<UISafeArea*>(lCanvas.Root().AddChild(MakeUnique<UISafeArea>()));
+    auto* lSafe = static_cast<UISafeArea*>(lCanvas.Root().AddChild(NewObject<UISafeArea>()));
     lCanvas.Update();
 
     // 21:9 — the case their "adapting to all screen even wide" names. An ABSOLUTE inset would be a
@@ -81,8 +81,8 @@ TEST_CASE("UISafeArea: per-edge insets, and changing them re-lays the subtree")
     UICanvas lCanvas(1080.f);
     lCanvas.SetTargetSize(1920, 1080);
 
-    auto*     lSafe  = static_cast<UISafeArea*>(lCanvas.Root().AddChild(MakeUnique<UISafeArea>()));
-    UIWidget* lChild = lSafe->AddChild(MakeUnique<UIImage>());
+    auto*     lSafe  = static_cast<UISafeArea*>(lCanvas.Root().AddChild(NewObject<UISafeArea>()));
+    UIWidget* lChild = lSafe->AddChild(NewObject<UIImage>());
     lChild->SetRect(Stretch());
     lCanvas.Update();
 
@@ -105,7 +105,7 @@ TEST_CASE("UISafeArea: insets that would swallow the rect are fitted, never inve
     UICanvas lCanvas(1080.f);
     lCanvas.SetTargetSize(1920, 1080);
 
-    auto* lSafe = static_cast<UISafeArea*>(lCanvas.Root().AddChild(MakeUnique<UISafeArea>()));
+    auto* lSafe = static_cast<UISafeArea*>(lCanvas.Root().AddChild(NewObject<UISafeArea>()));
 
     // A hand-edited file is not the inspector: 0.8 + 0.8 is authorable, and a
     // negative edge is too. Both must leave a rect that still resolves.

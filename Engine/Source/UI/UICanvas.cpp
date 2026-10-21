@@ -39,7 +39,7 @@ namespace Opaax
                 OutItems.emplace_back(UIDrawItem{ &lQuad, lMask, lAlpha, lOrder });
             }
 
-            for (const TUniquePtr<UIWidget>& lChild : InWidget.GetChildren())
+            for (const TStrongObjectPtr<UIWidget>& lChild : InWidget.GetChildren())
             {
                 CollectTree(*lChild, lMask, lAlpha, InOutOrder, OutItems);
             }
@@ -52,7 +52,7 @@ namespace Opaax
 
     UICanvas::UICanvas(const float InReferenceHeight)
         : m_ReferenceHeight(InReferenceHeight)
-        , m_Root(MakeUnique<UIPanel>())
+        , m_Root(NewObject<UIPanel>())
     {
         // The root covers the visible rect and is never hit (it covers the whole screen).
         m_Root->Name           = "Root";

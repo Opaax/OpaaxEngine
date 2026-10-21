@@ -250,48 +250,10 @@ namespace Opaax
     };
 
     // =============================================================================
-    // UIWidgetRoute — registers the widget types a .opaaxui can use. The name is saved in the file.
-    // =============================================================================
-    class UIWidgetRoute
-    {
-    public:
-        /**
-         * Registers T as a widget type.
-         * @param InName The name .opaaxui files use. Optional: defaults to the type name.
-         * @return True if registered
-         */
-        template<typename T>
-        requires TIsBaseOf<UIWidget, T>
-        bool Register(OpaaxStringID InName = {})
-        {
-            ++m_Count;
-
-            if (m_Registry == nullptr)
-            {
-                OPAAX_LOG(LogModuleRegistrar, Error, "UIWidgets().Register — route is not bound; registration dropped.");
-                return false;
-            }
-
-            return m_Registry->Register<T>(InName.IsValid() ? InName : DeriveTypeLeafName<T>());
-        }
-
-        /** Connects this route to the registry. Called once, before any module registers. */
-        void Bind(UIWidgetRegistry* InRegistry) noexcept { m_Registry = InRegistry; }
-
-        /** Number of registration requests, including refused ones. */
-        Uint64 Count() const noexcept { return m_Count; }
-
-    private:
-        UIWidgetRegistry* m_Registry = nullptr; // owned by the engine
-        Uint64            m_Count    = 0;
-    };
-
-    // =============================================================================
     // ModuleRegistrar — what engine and game code register into, before any world exists.
     //     Components()             -> ComponentRegistry
     //     Behaviours()             -> ComponentRegistry (stored like components)
     //     Resources()              -> ResourceFormatRegistry
-    //     UIWidgets()              -> UIWidgetRegistry
     //     ObjectClasses()          -> ObjectClassRegistry (assets, subsystems, any Object class)
     //   Most types register themselves with the OPAAX_REGISTER_* macros (AutoRegistration.h).
     // =============================================================================
@@ -301,13 +263,11 @@ namespace Opaax
         ComponentRoute&             Components()             noexcept { return m_Components; }
         BehaviourRoute&             Behaviours()             noexcept { return m_Behaviours; }
         ResourceFormatRoute&        Resources()              noexcept { return m_ResourceFormats; }
-        UIWidgetRoute&              UIWidgets()              noexcept { return m_UIWidgets; }
         ObjectClassRoute&           ObjectClasses()          noexcept { return m_ObjectClasses; }
 
         const ComponentRoute&             Components()             const noexcept { return m_Components; }
         const BehaviourRoute&             Behaviours()             const noexcept { return m_Behaviours; }
         const ResourceFormatRoute&        Resources()              const noexcept { return m_ResourceFormats; }
-        const UIWidgetRoute&              UIWidgets()              const noexcept { return m_UIWidgets; }
         const ObjectClassRoute&           ObjectClasses()          const noexcept { return m_ObjectClasses; }
 
         /**
@@ -318,7 +278,6 @@ namespace Opaax
             m_Components.Bind(&InRegistries.Components());
             m_Behaviours.Bind(&InRegistries.Components());
             m_ResourceFormats.Bind(&InRegistries.Resources());
-            m_UIWidgets.Bind(&InRegistries.UIWidgets());
             m_ObjectClasses.Bind(&InRegistries.ObjectClasses());
         }
 
@@ -326,7 +285,6 @@ namespace Opaax
         ComponentRoute             m_Components;
         BehaviourRoute             m_Behaviours;
         ResourceFormatRoute        m_ResourceFormats;
-        UIWidgetRoute              m_UIWidgets;
         ObjectClassRoute           m_ObjectClasses;
     };
 }

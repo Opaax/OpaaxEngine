@@ -3,7 +3,6 @@
 #include "Core/Config/IConfig.h"                // the second subject
 #include "Core/OpaaxTypes.h"                    // TFunction, TDynArray, Uint64
 #include "World/Entity/Entity.h"                // Entity::TryGet
-#include "UI/UIWidget.h"                        // the third subject
 #include "Engine/Registries/ModuleRegistrar.h"     // DeriveTypeLeafName (a section's label)
 #include "Editor/Properties/PropertyDrawers.h"  // the built-in widgets
 
@@ -32,7 +31,7 @@ namespace Opaax::Editor
     // =============================================================================
     // TDrawerResolver<TSubject, TTarget> — whether a drawer applies to a subject, and what it draws.
     //   Declared, never defined: an unknown subject is a compile error. One specialization per subject
-    //   (components, configs, UI widgets) lets a single registry serve them all.
+    //   (components, configs) lets a single registry serve them all.
     //     DrawableType   what the drawer operates on (a component is the target; a config holds its data)
     //     Resolve        null when the entry does not apply to that subject
     //     bDrawsSection  whether the entry draws its own header (the Inspector stacks many components;
@@ -50,20 +49,6 @@ namespace Opaax::Editor
         static constexpr bool bDrawsSection = true;
 
         static DrawableType* Resolve(Entity& InSubject) { return InSubject.TryGet<TTarget>(); }
-    };
-
-    /**
-     * UI widgets: a widget arrives as a base reference, so the check is a cast. No section header:
-     * the panel already names the type above the fields.
-     */
-    template<typename TTarget>
-    struct TDrawerResolver<UIWidget, TTarget>
-    {
-        using DrawableType = TTarget;
-
-        static constexpr bool bDrawsSection = false;
-
-        static DrawableType* Resolve(UIWidget& InSubject) { return dynamic_cast<TTarget*>(&InSubject); }
     };
 
     /** Configs: a config knows its own type id, so the check is an integer compare. */
@@ -237,6 +222,5 @@ namespace Opaax::Editor
 
     // Named per use: Drawers() / ConfigDrawers().
     using ComponentDrawerRegistry = TDrawerRegistry<Entity>;
-    using UIWidgetDrawerRegistry  = TDrawerRegistry<UIWidget>;
     using ConfigDrawerRegistry    = TDrawerRegistry<IConfig>;
 }

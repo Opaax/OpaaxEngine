@@ -20,7 +20,7 @@ the class it derives from ([Objects.md](Objects.md)).
 | `OPAAX_REGISTER_OBJECT(SaveSubsystem)` | A game instance subsystem (`Opaax::GameInstanceSubsystem`): lives as long as a game session, across levels | below |
 | `OPAAX_REGISTER_OBJECT(EnemyStats)` | An asset class (an `Opaax::Asset` with `OPAAX_OBJECT`): `.opaaxasset` files, made and edited in the editor | `Renderer/Materials/Material2D.h`, `Sandbox/Source/Sandbox/Data` |
 | `OPAAX_REGISTER_RESOURCE(WaveResource)` | A file type of the game, loaded and cached | `Sandbox/Source/Sandbox/Resources` |
-| `OPAAX_REGISTER_UI_WIDGET(HealthBar)` | A UI widget for `.opaaxui` canvases | `UI/Widgets` |
+| `OPAAX_REGISTER_OBJECT(HealthBar)` | A UI widget for `.opaaxui` canvases: a `UIWidget` subclass, its fields as properties | `UI/Widgets` |
 | `OPAAX_REGISTER_OBJECT(SwimMoveMode)` | A movement mode of the Mover: a `MoveMode` subclass, its tuning as properties and its step as `Tick` | `Movement/Modes` |
 
 A component or behaviour is saved under its type name: rename the C++ type and maps no longer find
@@ -195,9 +195,10 @@ An asset editor derives from `IAssetEditor` and edits the asset directly in `Dra
 asset's window around it records each change as an undo step and has the Save button
 ([Objects.md](Objects.md)).
 
-Also available: `ViewportTools()` (buttons over the viewport), `ConfigDrawers()` and
-`UIWidgetDrawers()`. A subsystem for edit worlds only is a `WorldSubsystem` like any other, registered
-with `OPAAX_REGISTER_OBJECT`, whose `ShouldCreate` accepts edit worlds. `Sandbox/Editor/Source/SandboxEditor`
+Also available: `ViewportTools()` (buttons over the viewport) and `ConfigDrawers()`. A UI widget
+needs no drawer: the UI panel draws any widget from its class's properties. A subsystem for edit
+worlds only is a `WorldSubsystem` like any other, registered with `OPAAX_REGISTER_OBJECT`, whose
+`ShouldCreate` accepts edit worlds. `Sandbox/Editor/Source/SandboxEditor`
 has a working command, drawer and resource type.
 
 A command receives the `EditorContext`: the worlds, the selection, undo, the open documents, the

@@ -5,6 +5,7 @@
 #include "Core/Events/Delegate.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxStringID.hpp"
+#include "Renderer/Textures/SpriteSheet.h"   // complete: a widget class visits its sheet reference
 #include "Resources/Asset/AssetRef.h"
 #include "Resources/ResourcePath.h"
 #include "Resources/ResourcePathJson.h"
@@ -14,9 +15,8 @@ namespace Opaax
 {
     class ITexture2D;
 
-    // Forward-declared: a path or an asset reference only needs the name.
+    // Forward-declared: a path only needs the name.
     struct TextureResource;
-    class SpriteSheet;
 
     DECLARE_MULTICAST_DELEGATE(FOnUIClick)
 
@@ -27,6 +27,8 @@ namespace Opaax
     // =============================================================================
     class UIButton final : public UIWidget
     {
+        OPAAX_OBJECT(UIButton, UIWidget)
+
         // =============================================================================
         // Authored state
         // =============================================================================
@@ -63,12 +65,7 @@ namespace Opaax
         // UIWidget
         // =============================================================================
     public:
-        OpaaxStringID GetTypeName() const noexcept override { return OPAAX_ID("UIButton"); }
-
         EUIReply OnPointerEvent(const UIPointerEvent& InEvent) override;
-
-        void SaveFields(nlohmann::json& InOutJson) const override;
-        void LoadFields(const nlohmann::json& InJson) override;
 
     protected:
         void Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads) override;

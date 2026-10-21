@@ -8,7 +8,7 @@
 #include "UI/UICanvas.h"
 #include "UI/UICanvasFile.h"
 #include "UI/UIImageSource.h"
-#include "UI/UIWidgetRegistry.h"
+#include "Object/ObjectClassRegistry.h"
 #include "UI/Widgets/UIButton.h"
 #include "UI/Widgets/UIImage.h"
 #include "UI/Widgets/UIPanel.h"
@@ -62,14 +62,15 @@ namespace
         }
     };
 
-    UIWidgetRegistry MakeRegistry()
+    struct WidgetClasses final : ObjectClassRegistry
     {
-        UIWidgetRegistry lRegistry;
-        lRegistry.Register<UIPanel>(OPAAX_ID("UIPanel"));
-        lRegistry.Register<UIImage>(OPAAX_ID("UIImage"));
-        lRegistry.Register<UIButton>(OPAAX_ID("UIButton"));
-        return lRegistry;
-    }
+        WidgetClasses()
+        {
+            Register<UIPanel>();
+            Register<UIImage>();
+            Register<UIButton>();
+        }
+    };
 }
 
 TEST_CASE("UIImageSource: runtime beats sheet beats texture, and nothing named is a plain colour")
@@ -117,7 +118,7 @@ TEST_CASE("UIImage: a sheet frame reaches the quad's UVs, and a sliced frame sta
     UICanvas lCanvas(1080.f);
     lCanvas.SetTargetSize(1920, 1080);
 
-    UIImage* lImage = static_cast<UIImage*>(lCanvas.Root().AddChild(MakeUnique<UIImage>()));
+    UIImage* lImage = static_cast<UIImage*>(lCanvas.Root().AddChild(NewObject<UIImage>()));
     lImage->SetSheetFrame(OpaaxString("UI/Icons.opaaxasset"), 5);
     lCanvas.Update(lContext);
 
@@ -160,7 +161,7 @@ TEST_CASE("UIButton: its art resolves like an image's, tinted by the state colou
     UICanvas lCanvas(1080.f);
     lCanvas.SetTargetSize(1920, 1080);
 
-    UIButton* lButton = static_cast<UIButton*>(lCanvas.Root().AddChild(MakeUnique<UIButton>()));
+    UIButton* lButton = static_cast<UIButton*>(lCanvas.Root().AddChild(NewObject<UIButton>()));
     lButton->Texture.Path = "UI/Button.png";
     lCanvas.Update(lContext);
 
@@ -176,7 +177,7 @@ TEST_CASE("UIButton: its art resolves like an image's, tinted by the state colou
     CHECK(lButton->GetQuads()[0].UVMin.y == doctest::Approx(0.75f));
 
     // A plain button (nothing named) is still a coloured quad, not nothing.
-    UIButton* lPlain = static_cast<UIButton*>(lCanvas.Root().AddChild(MakeUnique<UIButton>()));
+    UIButton* lPlain = static_cast<UIButton*>(lCanvas.Root().AddChild(NewObject<UIButton>()));
     lCanvas.Update(lContext);
     REQUIRE(lPlain->GetQuads().size() == 1u);
     CHECK(lPlain->GetQuads()[0].Texture == nullptr);
@@ -184,17 +185,17 @@ TEST_CASE("UIButton: its art resolves like an image's, tinted by the state colou
 
 TEST_CASE("UIImageSource: the new fields round-trip through the file, and a file without them reads")
 {
-    const UIWidgetRegistry lRegistry = MakeRegistry();
+    const WidgetClasses lRegistry;
 
     UICanvasFile::UICanvasDoc lDoc;
-    lDoc.Root = MakeUnique<UIPanel>();
+    lDoc.Root = NewObject<UIPanel>();
 
-    auto lImage = MakeUnique<UIImage>();
+    auto lImage = NewObject<UIImage>();
     lImage->Sheet.Path = "UI/Icons.opaaxasset";
     lImage->Frame      = 7;
     lDoc.Root->AddChild(Move(lImage));
 
-    auto lButton = MakeUnique<UIButton>();
+    auto lButton = NewObject<UIButton>();
     lButton->Texture.Path = "UI/Button.png";
     lButton->Sheet.Path   = "UI/Icons.opaaxasset";
     lButton->Frame        = 2;
@@ -204,8 +205,8 @@ TEST_CASE("UIImageSource: the new fields round-trip through the file, and a file
     REQUIRE(UICanvasFile::Deserialize(UICanvasFile::Serialize(lDoc), lRegistry, lBack));
     REQUIRE(lBack.Root->GetChildren().size() == 2u);
 
-    const auto* lReadImage  = static_cast<const UIImage*>(lBack.Root->GetChildren()[0].get());
-    const auto* lReadButton = static_cast<const UIButton*>(lBack.Root->GetChildren()[1].get());
+    const auto* lReadImage  = static_cast<const UIImage*>(lBack.Root->GetChildren()[0].Get());
+    const auto* lReadButton = static_cast<const UIButton*>(lBack.Root->GetChildren()[1].Get());
     CHECK(lReadImage->Sheet.Path == OpaaxString("UI/Icons.opaaxasset"));
     CHECK(lReadImage->Frame == 7);
     CHECK(lReadButton->Texture.Path == OpaaxString("UI/Button.png"));
@@ -215,7 +216,7 @@ TEST_CASE("UIImageSource: the new fields round-trip through the file, and a file
     UICanvasFile::UICanvasDoc lOld;
     REQUIRE(UICanvasFile::Deserialize(OpaaxString(R"({"Version":1,"Root":{"Type":"UIPanel","Children":[{"Type":"UIButton"}]}})"),
                                       lRegistry, lOld));
-    const auto* lOldButton = static_cast<const UIButton*>(lOld.Root->GetChildren()[0].get());
+    const auto* lOldButton = static_cast<const UIButton*>(lOld.Root->GetChildren()[0].Get());
     CHECK(lOldButton->Texture.IsEmpty());
     CHECK(lOldButton->Frame == -1);
 }

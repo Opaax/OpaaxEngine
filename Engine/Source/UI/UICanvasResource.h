@@ -12,7 +12,7 @@
 namespace Opaax
 {
     class UIWidget;
-    class UIWidgetRegistry;
+    class ObjectClassRegistry;
 
     inline constexpr LogCategory LogUICanvasResource{"UICanvasResource"};
 
@@ -70,11 +70,11 @@ namespace Opaax
          * @param OutReferenceHeight The canvas height the file was designed for
          * @return The root, or null if the text does not parse
          */
-        TUniquePtr<UIWidget> BuildTree(const UIWidgetRegistry& InRegistry, float& OutReferenceHeight) const
+        TStrongObjectPtr<UIWidget> BuildTree(const ObjectClassRegistry& InClasses, float& OutReferenceHeight) const
         {
             UICanvasFile::UICanvasDoc lDoc;
 
-            if (!UICanvasFile::Deserialize(Text, InRegistry, lDoc))
+            if (!UICanvasFile::Deserialize(Text, InClasses, lDoc))
             {
                 return nullptr;   // UICanvasFile logged why
             }

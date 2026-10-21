@@ -4,7 +4,8 @@ Every asset type of the engine (a material, a sprite sheet, an animation clip, a
 an input action) and of a game is a class derived from `Opaax::Asset`, itself an `Opaax::Object`. A
 class with fields is enough: the file format, the loading, the sharing, the editor window, undo,
 automation and the conversion of old files come from the base. It is the idea of Unreal's `UObject`
-and `UDataAsset`, and of Godot's `Resource`. Subsystems are objects too ([Subsystems](#subsystems)).
+and `UDataAsset`, and of Godot's `Resource`. Subsystems and UI widgets are objects too
+([Subsystems](#subsystems), [UI widgets](#ui-widgets)).
 
 Components are plain structs, not objects. Levels, maps, prefabs and UI canvases keep their own
 formats ([AssetFormats.md](AssetFormats.md)).
@@ -197,6 +198,16 @@ ticks (`GetTickOrder`), makes them all, gives each its context (`GetContext()`),
 order. The constructor makes nothing, since the default object is built with it outside any owner.
 How to write one: [Customizing.md](Customizing.md#a-subsystem).
 
+## UI widgets
+
+Every widget of a canvas is an object of a `UIWidget` subclass (`UIPanel`, `UIImage`, `UIText`, a
+game's own). Its class is the `Type` a `.opaaxui` file saves, and its properties are the fields the file
+holds and the UI panel draws: a new widget is a class with `OPAAX_OBJECT`, `OPAAX_PROPERTIES` and one
+`OPAAX_REGISTER_OBJECT` line, and the canvas file, the editor's Add menu and its inspector take it with no
+other code. `UIWidget::Create(name, classes)` makes one by class name. A parent owns its children through
+`TStrongObjectPtr`; code that keeps a widget it does not own can hold a `TWeakObjectPtr`, which reads
+null once the widget is gone.
+
 ## Lifetime and the garbage collector to come
 
 Every object has a slot in one table (`ObjectTable`), with a generation that changes when the slot is
@@ -210,7 +221,8 @@ at freed memory. Three pointer kinds, as in Unreal:
 | `TWeakObjectPtr<T>` | Never keeps the object alive; reads null once it is gone. |
 
 Assets loaded from files are owned by the resource manager, which releases one that nothing holds;
-subsystems by their owner's collection, which holds each through a `TStrongObjectPtr`.
+subsystems by their owner's collection, and widgets by their parent, each through a
+`TStrongObjectPtr`.
 There is no garbage collector yet; what one needs is in place: the table, the object flags (managed,
 class default, being destroyed), and references found through the properties. A mark-and-sweep would
 start from the strong pointers and the resource manager, follow `TObjectPtr` properties, and destroy

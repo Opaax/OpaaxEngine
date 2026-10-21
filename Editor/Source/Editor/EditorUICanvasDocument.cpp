@@ -5,7 +5,7 @@
 #include "Core/String/OpaaxPathString.h"
 #include "UI/UICanvasFile.h"
 #include "UI/UIWidget.h"
-#include "UI/UIWidgetRegistry.h"
+#include "Object/ObjectClassRegistry.h"
 
 namespace Opaax::Editor
 {
@@ -22,11 +22,11 @@ namespace Opaax::Editor
         }
     }
 
-    bool EditorUICanvasDocument::Open(const OpaaxString& InAbsPath, const UIWidgetRegistry& InRegistry)
+    bool EditorUICanvasDocument::Open(const OpaaxString& InAbsPath, const ObjectClassRegistry& InClasses)
     {
         UICanvasFile::UICanvasDoc lDoc;
 
-        if (!UICanvasFile::Load(InAbsPath, InRegistry, lDoc))
+        if (!UICanvasFile::Load(InAbsPath, InClasses, lDoc))
         {
             return false;   // UICanvasFile logged why; the previous document stays open
         }
@@ -65,11 +65,11 @@ namespace Opaax::Editor
         m_Baseline = Serialize();
     }
 
-    bool EditorUICanvasDocument::RestoreFrom(const OpaaxString& InText, const UIWidgetRegistry& InRegistry)
+    bool EditorUICanvasDocument::RestoreFrom(const OpaaxString& InText, const ObjectClassRegistry& InClasses)
     {
         UICanvasFile::UICanvasDoc lDoc;
 
-        if (!UICanvasFile::Deserialize(InText, InRegistry, lDoc))
+        if (!UICanvasFile::Deserialize(InText, InClasses, lDoc))
         {
             return false;
         }
@@ -123,7 +123,7 @@ namespace Opaax::Editor
                 return nullptr;   // no longer there
             }
 
-            lNode = lNode->GetChildren()[lIndex].get();
+            lNode = lNode->GetChildren()[lIndex].Get();
         }
 
         return lNode;
@@ -135,11 +135,11 @@ namespace Opaax::Editor
 
         for (const UIWidget* lNode = &InWidget; lNode->GetParent() != nullptr; lNode = lNode->GetParent())
         {
-            const TDynArray<TUniquePtr<UIWidget>>& lSiblings = lNode->GetParent()->GetChildren();
+            const TDynArray<TStrongObjectPtr<UIWidget>>& lSiblings = lNode->GetParent()->GetChildren();
 
             for (Uint32 lIndex = 0; lIndex < lSiblings.size(); ++lIndex)
             {
-                if (lSiblings[lIndex].get() == lNode)
+                if (lSiblings[lIndex].Get() == lNode)
                 {
                     lPath.emplace_back(lIndex);
                     break;
@@ -162,7 +162,7 @@ namespace Opaax::Editor
                 return nullptr;
             }
 
-            const TDynArray<TUniquePtr<UIWidget>>& lChildren = InNode.GetChildren();
+            const TDynArray<TStrongObjectPtr<UIWidget>>& lChildren = InNode.GetChildren();
             for (auto lIt = lChildren.rbegin(); lIt != lChildren.rend(); ++lIt)
             {
                 if (const UIWidget* lHit = DeepestAt(**lIt, InPoint))

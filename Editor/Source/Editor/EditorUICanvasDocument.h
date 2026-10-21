@@ -8,7 +8,7 @@
 namespace Opaax
 {
     class UIWidget;
-    class UIWidgetRegistry;
+    class ObjectClassRegistry;
 }
 
 namespace Opaax::Editor
@@ -42,7 +42,7 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         /** Reads InAbsPath and makes it the open document. On failure the previous one stays open. */
-        bool Open(const OpaaxString& InAbsPath, const UIWidgetRegistry& InRegistry);
+        bool Open(const OpaaxString& InAbsPath, const ObjectClassRegistry& InClasses);
 
         /** Closes the document. Discards unsaved edits (the caller asks first). */
         void Close();
@@ -51,7 +51,7 @@ namespace Opaax::Editor
         void MarkSaved();
 
         /** Replaces the whole tree from text (used by undo). */
-        bool RestoreFrom(const OpaaxString& InText, const UIWidgetRegistry& InRegistry);
+        bool RestoreFrom(const OpaaxString& InText, const ObjectClassRegistry& InClasses);
 
         // =============================================================================
         // Get

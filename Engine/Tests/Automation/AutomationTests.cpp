@@ -549,14 +549,14 @@ TEST_CASE("Automation UI: widgets are listed in screen pixels, and a click lands
     UICanvas lCanvas(1080.f);
     lCanvas.SetTargetSize(1920, 1080);
 
-    UIWidget* const lPlay = lCanvas.Root().AddChild(MakeUnique<UIButton>());
+    UIWidget* const lPlay = lCanvas.Root().AddChild(NewObject<UIButton>());
     lPlay->Name = OpaaxString("Play");
     UIRect lRect;
     lRect.AnchoredPosition = { 100.f, 200.f };   // right of and above the centre
     lRect.SizeDelta        = { 300.f, 80.f };
     lPlay->SetRect(lRect);
 
-    UIWidget* const lSecret = lCanvas.Root().AddChild(MakeUnique<UIButton>());
+    UIWidget* const lSecret = lCanvas.Root().AddChild(NewObject<UIButton>());
     lSecret->Name     = OpaaxString("Secret");
     lSecret->bVisible = false;
 

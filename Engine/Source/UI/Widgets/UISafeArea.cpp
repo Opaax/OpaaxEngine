@@ -59,17 +59,4 @@ namespace Opaax
                                     { lMin.x + lSize.x * (1.f - lRight), lMin.y + lSize.y * (1.f - lTop) });
     }
 
-    void UISafeArea::SaveFields(nlohmann::json& InOutJson) const
-    {
-        UIWidget::SaveFields(InOutJson);
-
-        InOutJson["Insets"] = Insets;
-    }
-
-    void UISafeArea::LoadFields(const nlohmann::json& InJson)
-    {
-        UIWidget::LoadFields(InJson);
-
-        Insets = InJson.value("Insets", Insets);
-    }
 }

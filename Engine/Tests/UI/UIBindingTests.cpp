@@ -7,7 +7,7 @@
 #include "UI/UIBinding.h"
 #include "UI/UICanvas.h"
 #include "UI/UICanvasFile.h"
-#include "UI/UIWidgetRegistry.h"
+#include "Object/ObjectClassRegistry.h"
 #include "UI/Widgets/UIImage.h"
 #include "UI/Widgets/UIPanel.h"
 #include "UI/Widgets/UIText.h"
@@ -156,7 +156,7 @@ TEST_CASE("UIBinding: a bound UIText rebuilds when the value changes and not whe
     Model lModel;
     const UIBindingHandle lSource = lCanvas.Bindings().Add(OPAAX_ID("Player"), MakeBindingReader(lModel));
 
-    auto lOwned = MakeUnique<UIText>();
+    auto lOwned = NewObject<UIText>();
     lOwned->Text    = "Lives: {}";
     lOwned->Binding = "Player.Lives";
     UIText* lText = static_cast<UIText*>(lCanvas.Root().AddChild(Move(lOwned)));
@@ -177,7 +177,7 @@ TEST_CASE("UIBinding: a bound UIText rebuilds when the value changes and not whe
     CHECK(lText->GetDisplayText() == OpaaxString("Lives: 2"));
 
     // A path nothing answers: the authored text stands, and nothing rebuilds for it.
-    auto lLost = MakeUnique<UIText>();
+    auto lLost = NewObject<UIText>();
     lLost->Text    = "Mana: {}";
     lLost->Binding = "Player.Mana";
     UIText* lLostText = static_cast<UIText*>(lCanvas.Root().AddChild(Move(lLost)));
@@ -201,7 +201,7 @@ TEST_CASE("UIBinding: a UIImage's FillBinding drives its FillAmount")
     Model lModel;
     lCanvas.Bindings().Add(OPAAX_ID("Player"), MakeBindingReader(lModel));
 
-    auto lOwned = MakeUnique<UIImage>();
+    auto lOwned = NewObject<UIImage>();
     lOwned->Fill        = EUIFill::Horizontal;
     lOwned->FillAmount  = 1.f;
     lOwned->FillBinding = "Player.Health";
@@ -223,32 +223,32 @@ TEST_CASE("UIBinding: a UIImage's FillBinding drives its FillAmount")
 
 TEST_CASE("UIBinding: both binding fields round-trip through the file, and a file without them reads")
 {
-    UIWidgetRegistry lRegistry;
-    lRegistry.Register<UIPanel>(OPAAX_ID("UIPanel"));
-    lRegistry.Register<UIText>(OPAAX_ID("UIText"));
-    lRegistry.Register<UIImage>(OPAAX_ID("UIImage"));
+    ObjectClassRegistry lRegistry;
+    lRegistry.Register<UIPanel>();
+    lRegistry.Register<UIText>();
+    lRegistry.Register<UIImage>();
 
     UICanvasFile::UICanvasDoc lDoc;
-    lDoc.Root = MakeUnique<UIPanel>();
+    lDoc.Root = NewObject<UIPanel>();
 
-    auto lText = MakeUnique<UIText>();
+    auto lText = NewObject<UIText>();
     lText->Text    = "Jumps: {}";
     lText->Binding = "Hud.Jumps";
     lDoc.Root->AddChild(Move(lText));
 
-    auto lImage = MakeUnique<UIImage>();
+    auto lImage = NewObject<UIImage>();
     lImage->FillBinding = "Hud.Speed";
     lDoc.Root->AddChild(Move(lImage));
 
     UICanvasFile::UICanvasDoc lBack;
     REQUIRE(UICanvasFile::Deserialize(UICanvasFile::Serialize(lDoc), lRegistry, lBack));
     REQUIRE(lBack.Root->GetChildren().size() == 2u);
-    CHECK(static_cast<const UIText*>(lBack.Root->GetChildren()[0].get())->Binding == OpaaxString("Hud.Jumps"));
-    CHECK(static_cast<const UIImage*>(lBack.Root->GetChildren()[1].get())->FillBinding == OpaaxString("Hud.Speed"));
+    CHECK(static_cast<const UIText*>(lBack.Root->GetChildren()[0].Get())->Binding == OpaaxString("Hud.Jumps"));
+    CHECK(static_cast<const UIImage*>(lBack.Root->GetChildren()[1].Get())->FillBinding == OpaaxString("Hud.Speed"));
 
     // An older file: no key, so no binding.
     UICanvasFile::UICanvasDoc lOld;
     REQUIRE(UICanvasFile::Deserialize(OpaaxString(R"({"Version":1,"Root":{"Type":"UIPanel","Children":[{"Type":"UIText","Text":"Hi"}]}})"),
                                       lRegistry, lOld));
-    CHECK(static_cast<const UIText*>(lOld.Root->GetChildren()[0].get())->Binding.IsEmpty());
+    CHECK(static_cast<const UIText*>(lOld.Root->GetChildren()[0].Get())->Binding.IsEmpty());
 }
