@@ -34,7 +34,6 @@
 #include "Editor/Panels/InspectorPanel.h"
 #include "Editor/Panels/PlayToolbarPanel.h"
 #include "Editor/Panels/ResourceBrowserPanel.h"
-#include "Editor/Panels/ResourcePreviewPanel.h"
 #include "Resources/Asset/AssetResource.h"
 #include "Editor/Panels/UICanvasPanel.h"
 #include "Editor/EditorUICanvasDocument.h"
@@ -148,7 +147,6 @@ namespace Opaax::Editor
         m_ResourceEvents    = MakeUnique<EditorResourceEvents>();
         m_PrefabDocument    = MakeUnique<EditorPrefabDocument>();
         m_Viewport          = MakeUnique<EditorViewport>();
-        m_Preview           = MakeUnique<ResourcePreview>();
         m_Camera            = MakeUnique<EditorCamera>();
         m_Gizmo             = MakeUnique<EditorGizmo>();
         m_Undo              = MakeUnique<EditorUndo>();
@@ -169,7 +167,6 @@ namespace Opaax::Editor
     {
         m_Selection.reset();
         m_Viewport.reset();
-        m_Preview.reset();
         m_Camera.reset();
         m_Gizmo.reset();
         m_Undo.reset();
@@ -207,7 +204,6 @@ namespace Opaax::Editor
             *m_UICanvasDocument,
             m_Extensions,
             m_Gui->Panels(),
-            *m_Preview,
             OpaaxApplication::GetAppService<IPaths>(),
             OpaaxApplication::GetAppService<IPlatform>().GetFileSystem(),
             OpaaxApplication::GetAppService<IConfigSystem>(),
@@ -363,7 +359,6 @@ namespace Opaax::Editor
         
         // Hidden by default
         lPanelsRegistry.Register<CameraPreviewPanel>(PanelDesc  {.Id = CameraPreviewPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden});
-        lPanelsRegistry.Register<ResourcePreviewPanel>(PanelDesc{.Id = ResourcePreviewPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden});
         // Hidden until a prefab is opened. Its SaveCommand routes Ctrl+S to the prefab.
         lPanelsRegistry.Register<PrefabPanel>(PanelDesc         {.Id = PrefabPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_PREFAB, .UndoCommand = Tags::EDITOR_COMMAND_UNDO_PREFAB, .RedoCommand = Tags::EDITOR_COMMAND_REDO_PREFAB, .DeleteCommand = Tags::EDITOR_COMMAND_DELETE_PREFAB_SELECTION});
         lPanelsRegistry.Register<UICanvasPanel>(PanelDesc{.Id = UICanvasPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_UI, .DeleteCommand = Tags::EDITOR_COMMAND_DELETE_UI_WIDGET});

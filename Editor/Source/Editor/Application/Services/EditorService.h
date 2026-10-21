@@ -12,7 +12,6 @@
 #include "Editor/Resources/EditorResourceEvents.h"
 #include "Editor/Undo/EditorUndo.h"
 #include "Editor/Operation/EditorViewport.hpp"
-#include "Editor/Resources/ResourcePreview.h"
 #include "Editor/Input/InputRoute.h"
 #include "Editor/EditorMapDocument.h"
 #include "Editor/EditorLevelDocument.h"
@@ -293,7 +292,6 @@ namespace Opaax::Editor
 
         EditorExtensionRegistrar        m_Extensions;
 
-        TUniquePtr<ResourcePreview>     m_Preview;     
         TUniquePtr<EditorSelection>     m_Selection;
 
         /** "A document was saved", two-phase. Referenced by EditorContext. */

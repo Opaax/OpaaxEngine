@@ -6,7 +6,6 @@
 #include "Resources/ResourceFormat.h"   // CResourceFormat
 #include "Resources/ResourceTypeID.hpp" // ResourceTypeID
 #include "Editor/Resources/ResourceScan.h"      // ResourceFile (the callback's argument)
-#include "Editor/Resources/ResourcePreviewClaim.h" // FResourcePreviewOpen
 
 namespace Opaax::Editor
 {
@@ -20,8 +19,8 @@ namespace Opaax::Editor
 
     // =============================================================================
     // ResourceTypeDesc — the editor's side of one resource type: how it looks and what a double-click
-    //   does. Keyed by ResourceTypeID, not extension: the engine maps extensions to types, so one
-    //   texture entry covers .png/.jpg/.tga.
+    //   does. Keyed by ResourceTypeID, not extension: the engine maps extensions to types, so one entry
+    //   covers every extension of its type.
     // =============================================================================
     struct ResourceTypeDesc
     {
@@ -30,7 +29,6 @@ namespace Opaax::Editor
         OpaaxString          Icon;          // optional editor-assets-relative image; empty uses the Glyph
         OpaaxString          Glyph;         // short text, "[W]", used when Icon is absent or missing
         FResourceActivate    OnActivate;
-        FResourcePreviewOpen OnPreviewOpen; // optional; absent means no preview
     };
 
     class ResourceTypeRegistry;
@@ -71,21 +69,6 @@ namespace Opaax::Editor
 
         /** What a double-click does. If omitted, the browser only logs the activation. */
         ResourceTypeBuilder& SetActivate(FResourceActivate InActivate);
-
-        /**
-         * What the Preview panel draws for this type, given the loaded resource. The type is named only
-         * here; the panel knows nothing about textures or fonts.
-         * @tparam TResource The resource type
-         * @param InDraw Runs every frame the entry is open, with the resource already loaded
-         */
-        template<CResource TResource>
-        ResourceTypeBuilder& SetPreview(typename TResourcePreviewClaim<TResource>::FDraw InDraw)
-        {
-            return SetPreviewOpen(MakePreviewOpener<TResource>(Move(InDraw)));
-        }
-
-        /** The type-erased form, for a caller that already built its opener. */
-        ResourceTypeBuilder& SetPreviewOpen(FResourcePreviewOpen InOpen);
 
         // =============================================================================
         // Members
@@ -211,16 +194,6 @@ namespace Opaax::Editor
         if (ResourceTypeDesc* lEntry = m_Registry != nullptr ? m_Registry->EntryAt(m_Index) : nullptr)
         {
             lEntry->OnActivate = Move(InActivate);
-        }
-
-        return *this;
-    }
-
-    inline ResourceTypeBuilder& ResourceTypeBuilder::SetPreviewOpen(FResourcePreviewOpen InOpen)
-    {
-        if (ResourceTypeDesc* lEntry = m_Registry != nullptr ? m_Registry->EntryAt(m_Index) : nullptr)
-        {
-            lEntry->OnPreviewOpen = Move(InOpen);
         }
 
         return *this;
