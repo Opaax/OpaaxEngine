@@ -205,6 +205,45 @@
         "id": "added-kept"
     },
     {
+        "id": "map-is-an-asset",
+        "command": "asset.get",
+        "params": {
+            "path": "Scratch/Donor.opaaxmap"
+        },
+        "expect": {
+            "class": "MapAsset",
+            "open": false,
+            "fromSourceFile": true
+        }
+    },
+    {
+        "id": "open-map-asset",
+        "command": "asset.open",
+        "params": {
+            "path": "Scratch/Donor.opaaxmap"
+        },
+        "expect": {
+            "class": "MapAsset",
+            "document": true
+        }
+    },
+    {
+        "id": "map-asset-focused",
+        "command": "level.info",
+        "expect": {
+            "maps": [
+                {
+                    "path": "Scratch/Moved.opaaxmap",
+                    "focused": false
+                },
+                {
+                    "path": "Scratch/Donor.opaaxmap",
+                    "focused": true
+                }
+            ]
+        }
+    },
+    {
         "id": "ui",
         "command": "ui.new",
         "params": {

@@ -7,7 +7,7 @@
 #include "World/Components/TransformComponent.h"
 #include "World/Prefab/PrefabAsset.h"
 #include "World/Serialization/LevelResource.hpp"
-#include "World/Serialization/MapResource.hpp"
+#include "World/Serialization/MapAsset.h"
 
 namespace Opaax
 {
@@ -18,7 +18,7 @@ namespace Opaax
     OPAAX_REGISTER_NAMED_COMPONENT(PrefabInstanceComponent, "PrefabInstance");
 
     OPAAX_REGISTER_NAMED_RESOURCE(LevelResource, "Level");
-    OPAAX_REGISTER_NAMED_RESOURCE(MapResource, "Map");
+    OPAAX_REGISTER_OBJECT(MapAsset);
 
     // A prefab is loaded once, however many instances a level places.
     OPAAX_REGISTER_OBJECT(PrefabAsset);

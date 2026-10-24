@@ -14,7 +14,7 @@
 #include "World/Prefab/PrefabFold.h"
 #include "World/Prefab/ResourcePrefabResolver.h"
 #include "World/Serialization/LevelResource.hpp"
-#include "World/Serialization/MapResource.hpp"
+#include "Resources/Asset/AssetResource.h"
 #include "Resources/ResourceManager.h"
 
 namespace
@@ -221,7 +221,7 @@ namespace Opaax::Editor
         lRecord->Baseline = lText;
         lRecord->bDirty   = false;
 
-        ReloadIfLoaded<MapResource>(m_Resources, m_Paths, lRecord->AbsPath);
+        ReloadIfLoaded<AssetResource>(m_Resources, m_Paths, lRecord->AbsPath);
         return true;
     }
 

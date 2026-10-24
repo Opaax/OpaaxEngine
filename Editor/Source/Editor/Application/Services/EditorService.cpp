@@ -58,7 +58,7 @@
 #include "Renderer/Config/Config_Renderer.h"
 #include "Input/InputEvents.h"
 #include "World/Serialization/LevelResource.hpp"
-#include "World/Serialization/MapResource.hpp"
+#include "World/Serialization/MapAsset.h"
 #include "World/Prefab/PrefabAsset.h"
 #include "Editor/Operation/ResourceOperations.h"
 #include "Resources/ResourceTypeID.hpp"
@@ -589,6 +589,22 @@ namespace Opaax::Editor
             .SetGlyph(OpaaxString("[FF]"))
             .SetEditor<FontFamilyEditor>();
 
+        // A map opens for editing: focused when its level has it, else on its own. Both the icon and the
+        // glyph are set: the glyph shows if the image is missing.
+        lTypes.Register<MapAsset>()
+            .SetLabel(OpaaxString("Map"))
+            .SetIcon(OpaaxString("Icons/T_Map_Icon.png"))
+            .SetGlyph(OpaaxString("[M]"))
+            .SetActivate([](EditorContext& InContext, const OpaaxString& InAbsPath)
+            {
+                InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_MAP_AT, InContext,
+                                                        MapPathParams{InAbsPath});
+
+                // The document may hold the path in another form: compared as asset paths.
+                const OpaaxString lWanted = InContext.Paths.AbsoluteToAsset(InAbsPath);
+                return !lWanted.IsEmpty() && InContext.Paths.AbsoluteToAsset(InContext.MapDocument.AbsPath()) == lWanted;
+            });
+
         // A prefab opens in the prefab editor (placing one is a drag into the Hierarchy or a viewport).
         lTypes.Register<PrefabAsset>()
             .SetLabel(OpaaxString("Prefab"))
@@ -632,16 +648,6 @@ namespace Opaax::Editor
             {
                 InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_ASSET, InContext,
                                                         AssetPathParams{ InFile.AbsPath });
-            });
-
-        // Both are set: the image shows, the glyph is the fallback if the image is missing.
-        m_Extensions.ResourceTypes().Register<MapResource>()
-            .SetIcon(OpaaxString("Icons/T_Map_Icon.png"))
-            .SetGlyph(OpaaxString("[M]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_MAP_AT, InContext,
-                                                        MapPathParams{InFile.AbsPath});
             });
 
         // A canvas opens its editor (it is a document).

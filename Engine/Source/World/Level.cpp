@@ -3,14 +3,15 @@
 #include "Core/OpaaxTypes.h"
 
 #include "Application/Services/IPaths.h"
-#include "Resources/ResourceManager.h"   // before the resources (completes LoadContext)
+#include "Resources/Asset/AssetHandle.h"
+#include "Resources/ResourceManager.h"
 #include "Resources/ResourceFormatRegistry.h"
 #include "Resources/ResourceHold.hpp"           // completes IResourceHold
 #include "World/Components/ComponentRegistry.h"
 #include "World/Entity/EntityMeta.h"
 #include "World/Serialization/HardReferences.h"
 #include "World/Serialization/MapFactory.h"
-#include "World/Serialization/MapResource.hpp"
+#include "World/Serialization/MapAsset.h"
 #include "World/Prefab/PrefabFold.h"
 #include "World/Prefab/ResourcePrefabResolver.h"
 #include "World/World.h"
@@ -84,22 +85,20 @@ namespace Opaax
             return false;
         }
 
-        const OpaaxString lAbsPath = m_Paths.AssetToAbsolute(InAssetRelPath);
-
-        // Load through the ResourceManager (shared between worlds). The ref is only needed until
+        // Loaded through the ResourceManager (shared between worlds). The handle is only needed until
         // the entities exist.
-        const ResourceRef<MapResource> lRef = m_Resources.Load<MapResource>(lAbsPath.CStr());
-        const MapResource* const       lMap = lRef.Get();
+        const TAssetHandle<MapAsset> lHandle = LoadAsset<MapAsset>(m_Resources, m_Paths, InAssetRelPath);
+        const MapAsset* const        lAsset  = lHandle.Get();
 
-        if (lMap == nullptr)
+        if (lAsset == nullptr)
         {
-            // FailFast: a missing map gives null.
             OPAAX_LOG(LogLevel, Error, "Map '{}' failed to load — not mounted", InAssetRelPath.CStr());
             ++OutResult.MapsFailed;
             return false;
         }
 
-        const MapId lMapId = lMap->Data.Id;
+        const MapData& lMap   = lAsset->GetData();
+        const MapId    lMapId = lMap.Id;
         if (IsMounted(lMapId))
         {
             OPAAX_LOG(LogLevel, Warn, "Map '{}' claims map id '{}', which is already mounted — skipped",
@@ -109,19 +108,19 @@ namespace Opaax
         }
 
         ++OutResult.MapsMounted;
-        OutResult.EntitiesCreated += MapFactory::Instantiate(lMap->Data, m_World, m_Components);
+        OutResult.EntitiesCreated += MapFactory::Instantiate(lMap, m_World, m_Components);
 
         MountedMap lMounted{ lMapId, InAssetRelPath };
 
         // The resources the map's entities need loaded up front.
-        HoldHardReferences(lMap->Data, lMounted);
+        HoldHardReferences(lMap, lMounted);
 
         // The map's prefab placements, rebuilt from their prefabs and overrides (second pass).
-        if (!lMap->Data.Instances.empty())
+        if (!lMap.Instances.empty())
         {
             MapData lPlacements;
             lPlacements.Id        = lMapId;
-            lPlacements.Instances = lMap->Data.Instances;
+            lPlacements.Instances = lMap.Instances;
 
             ResourcePrefabResolver lResolver(m_Paths, m_Resources, m_Components);
             const Uint64 lExpanded = PrefabFold::Expand(lPlacements, lResolver, m_Components);
@@ -129,7 +128,7 @@ namespace Opaax
             OutResult.EntitiesCreated += MapFactory::Instantiate(lPlacements, m_World, m_Components);
 
             OPAAX_LOG(LogLevel, Info, "Map '{}' expanded {} of {} prefab placement(s)",
-                      InAssetRelPath.CStr(), lExpanded, lMap->Data.InstanceCount());
+                      InAssetRelPath.CStr(), lExpanded, lMap.InstanceCount());
 
             // Prefab placements have hard references too.
             HoldHardReferences(lPlacements, lMounted);
