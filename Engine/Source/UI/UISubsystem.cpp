@@ -11,8 +11,9 @@
 #include "Input/Mapping/InputMappingSubsystem.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Engine/Subsystems/EngineEventBus.h"
+#include "Resources/Asset/AssetHandle.h"
 #include "Resources/ResourceManager.h"
-#include "UI/UICanvasResource.h"
+#include "UI/UICanvasAsset.h"
 #include "UI/UIInputRouter.h"
 #include "UI/UICanvasFile.h"
 #include "UI/Widgets/UIImage.h"
@@ -44,19 +45,18 @@ namespace Opaax
 
     TStrongObjectPtr<UIWidget> UISubsystem::LoadTree(const OpaaxString& InAssetPath, float& OutAuthoredHeight) const
     {
-        const OpaaxString lAbsPath = GetContext().Paths.AssetToAbsolute(InAssetPath);
+        const TAssetHandle<UICanvasAsset> lHandle =
+            LoadAsset<UICanvasAsset>(GetContext().Resources, GetContext().Paths, InAssetPath);
+        const UICanvasAsset* const lCanvas = lHandle.Get();
 
-        const ResourceRef<UICanvasResource> lRef      = GetContext().Resources.Load<UICanvasResource>(lAbsPath.CStr());
-        const UICanvasResource* const       lResource = lRef.IsValid() ? lRef.Get() : nullptr;
-
-        if (lResource == nullptr)
+        if (lCanvas == nullptr)
         {
             OPAAX_LOG(LogUISubsystem, Error, "UI asset '{}' did not load", InAssetPath.CStr());
             return nullptr;
         }
 
         TStrongObjectPtr<UIWidget> lTree =
-            lResource->BuildTree(OpaaxApplication::GetAppService<IEngine>().GetRegistries().ObjectClasses(), OutAuthoredHeight);
+            lCanvas->BuildTree(OpaaxApplication::GetAppService<IEngine>().GetRegistries().ObjectClasses(), OutAuthoredHeight);
 
         if (!lTree)
         {

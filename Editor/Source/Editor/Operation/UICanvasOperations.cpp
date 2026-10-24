@@ -10,7 +10,8 @@
 #include "Editor/Undo/EditorUndo.h"
 #include "Editor/Undo/UICanvasUndoables.h"
 #include "Engine/Registries/EngineRegistries.h"
-#include "UI/UICanvasResource.h"
+#include "Resources/Asset/AssetResource.h"
+#include "UI/UICanvasAsset.h"
 #include "UI/UICanvasFile.h"
 #include "UI/UIWidget.h"
 #include "Object/ObjectClassRegistry.h"
@@ -237,7 +238,7 @@ namespace Opaax::Editor
         InContext.UICanvasDocument.MarkSaved();
 
         // Reload the resource, so a running game using this canvas sees the change.
-        ResourceOps::SavedToDisk<UICanvasResource>(InContext, lPath);
+        ResourceOps::SavedToDisk<AssetResource>(InContext, lPath, UICanvasAsset::StaticClass().GetName());
 
         OPAAX_LOG(LogEditorUICanvasDocument, Info, "Saved '{}'", lPath.CStr());
         return true;

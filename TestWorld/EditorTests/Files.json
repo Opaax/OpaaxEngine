@@ -262,6 +262,29 @@
         "expectFailure": true
     },
     {
+        "id": "canvas-is-an-asset",
+        "command": "asset.get",
+        "params": {
+            "path": "Scratch/Hud.opaaxui"
+        },
+        "expect": {
+            "class": "UICanvasAsset",
+            "open": false,
+            "fromSourceFile": true
+        }
+    },
+    {
+        "id": "open-canvas-asset",
+        "command": "asset.open",
+        "params": {
+            "path": "UI/Probe.opaaxui"
+        },
+        "expect": {
+            "class": "UICanvasAsset",
+            "document": true
+        }
+    },
+    {
         "id": "variant",
         "command": "prefab.variant",
         "params": {

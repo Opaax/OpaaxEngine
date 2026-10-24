@@ -45,7 +45,7 @@
 #include "UI/Widgets/UISafeArea.h"
 #include "UI/Widgets/UIStack.h"
 #include "UI/Widgets/UIText.h"
-#include "UI/UICanvasResource.h"
+#include "UI/UICanvasAsset.h"
 #include "Editor/Panels/PrefabPanel.h"
 #include "Renderer/RenderTarget.hpp"
 #include "Editor/Panels/LogPanel.h"
@@ -605,6 +605,21 @@ namespace Opaax::Editor
                 return !lWanted.IsEmpty() && InContext.Paths.AbsoluteToAsset(InContext.LevelDocument.AbsPath()) == lWanted;
             });
 
+        // A canvas opens in the UI panel (it is a document).
+        lTypes.Register<UICanvasAsset>()
+            .SetLabel(OpaaxString("UI Canvas"))
+            .SetGlyph(OpaaxString("[UI]"))
+            .SetActivate([](EditorContext& InContext, const OpaaxString& InAbsPath)
+            {
+                if (!InContext.UICanvasDocument.Open(InAbsPath, InContext.Engine.GetRegistries().ObjectClasses()))
+                {
+                    return false;
+                }
+
+                InContext.Panels.SetVisible(UICanvasPanel::PanelID(), true);
+                return true;
+            });
+
         // A map opens for editing: focused when its level has it, else on its own.
         lTypes.Register<MapAsset>()
             .SetLabel(OpaaxString("Map"))
@@ -663,20 +678,6 @@ namespace Opaax::Editor
             {
                 InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_ASSET, InContext,
                                                         AssetPathParams{ InFile.AbsPath });
-            });
-
-        // A canvas opens its editor (it is a document).
-        m_Extensions.ResourceTypes().Register<UICanvasResource>()
-            .SetGlyph(OpaaxString("[UI]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                const ObjectClassRegistry& lClasses =
-                    OpaaxApplication::GetAppService<IEngine>().GetRegistries().ObjectClasses();
-
-                if (InContext.UICanvasDocument.Open(InFile.AbsPath, lClasses))
-                {
-                    InContext.Panels.SetVisible(UICanvasPanel::PanelID(), true);
-                }
             });
     }
     

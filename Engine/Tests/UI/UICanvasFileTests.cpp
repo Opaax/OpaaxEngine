@@ -1,8 +1,13 @@
 // Suite: the .opaaxui format (UI/UICanvasFile.h). Every field of every widget class and the tree
-// shape survive a round trip; an unknown type costs one node; a missing key keeps its default.
+// shape survive a round trip; an unknown type costs one node; a missing key keeps its default. And
+// UICanvasAsset, the file loaded as an asset.
 #include <doctest.h>
 
-#include "UI/UICanvasResource.h"
+#include "../TestTempDir.h"
+#include "Core/IO/FileIO.h"
+#include "Resources/Asset/AssetResource.h"
+#include "Resources/ResourceManager.h"
+#include "UI/UICanvasAsset.h"
 #include "UI/UICanvasFile.h"
 #include "Object/ObjectClassRegistry.h"
 #include "UI/Widgets/UIButton.h"
@@ -255,21 +260,26 @@ TEST_CASE("UIWidget: FindByName takes the FIRST match in tree order, and misses 
     CHECK(lRoot.FindByName(OpaaxString("Nobody")) == nullptr);
 }
 
-TEST_CASE("UICanvasResource: BuildTree yields an INDEPENDENT tree every time")
+TEST_CASE("UICanvasAsset: BuildTree yields an INDEPENDENT tree every time")
 {
+    const TestTempDir   lTemp("canvas_asset");
     const WidgetClasses lRegistry;
 
-    UICanvasResource lResource;
-    lResource.Text = OpaaxString(R"({
+    const OpaaxString lPath = lTemp.Sub("Hud.opaaxui");
+    REQUIRE(FileIO::WriteAllText(lPath, OpaaxString(R"({
     "ReferenceHeight": 720.0,
     "Root": { "Type": "UIPanel", "Children": [ { "Type": "UIText", "Name": "Label" } ] },
     "Version": 1
-})");
+})")));
+
+    UICanvasAsset lCanvas;
+    REQUIRE(lCanvas.LoadSource(lPath.CStr()));
+    CHECK(lCanvas.GetResourceSize() > sizeof(UICanvasAsset));
 
     float lHeightA = 0.f;
     float lHeightB = 0.f;
-    TStrongObjectPtr<UIWidget> lA = lResource.BuildTree(lRegistry, lHeightA);
-    TStrongObjectPtr<UIWidget> lB = lResource.BuildTree(lRegistry, lHeightB);
+    TStrongObjectPtr<UIWidget> lA = lCanvas.BuildTree(lRegistry, lHeightA);
+    TStrongObjectPtr<UIWidget> lB = lCanvas.BuildTree(lRegistry, lHeightB);
 
     REQUIRE(lA != nullptr);
     REQUIRE(lB != nullptr);
@@ -277,14 +287,42 @@ TEST_CASE("UICanvasResource: BuildTree yields an INDEPENDENT tree every time")
     CHECK(lHeightA == doctest::Approx(720.f));
     CHECK(lHeightB == doctest::Approx(720.f));
 
-    // Editing one must not reach the other — the property the resource holds TEXT for.
+    // Editing one must not reach the other — the property the asset holds TEXT for.
     lA->FindByName(OpaaxString("Label"))->Name = "Renamed";
     CHECK(lB->FindByName(OpaaxString("Label")) != nullptr);
     CHECK(lB->FindByName(OpaaxString("Renamed")) == nullptr);
+}
 
-    // A placeholder builds a real (empty) tree rather than a null — a failed load still draws.
-    float lPlaceholderHeight = 0.f;
-    CHECK(UICanvasResource::Placeholder().BuildTree(lRegistry, lPlaceholderHeight) != nullptr);
+TEST_CASE("UICanvasAsset: a canvas file loads as a UICanvasAsset; a missing or empty one gives none")
+{
+    const TestTempDir lTemp("canvas_resource");
+
+    const OpaaxString lPath  = lTemp.Sub("Menu.opaaxui");
+    const OpaaxString lEmpty = lTemp.Sub("Empty.opaaxui");
+    REQUIRE(FileIO::WriteAllText(lPath,
+        OpaaxString(R"({ "ReferenceHeight": 1080.0, "Root": { "Type": "UIPanel" }, "Version": 1 })")));
+    REQUIRE(FileIO::WriteAllText(lEmpty, OpaaxString()));
+
+    ObjectClassRegistry lClasses;
+    REQUIRE(lClasses.Register<UICanvasAsset>());
+
+    ResourceManager lResources;
+    lResources.SetObjectClasses(&lClasses);
+
+    const ResourceRef<AssetResource> lRef    = lResources.Load<AssetResource>(lPath.CStr());
+    const UICanvasAsset* const       lCanvas = lRef.Get() != nullptr ? lRef.Get()->Get<UICanvasAsset>() : nullptr;
+    REQUIRE(lCanvas != nullptr);
+    CHECK(lCanvas->GetName() == OPAAX_ID("Menu"));
+
+    const WidgetClasses lWidgets;
+    float               lHeight = 0.f;
+    CHECK(lCanvas->BuildTree(lWidgets, lHeight) != nullptr);
+    CHECK(lHeight == doctest::Approx(1080.f));
+
+    CHECK_FALSE(lResources.Load<AssetResource>(lEmpty.CStr()).IsValid());
+    CHECK_FALSE(lResources.Load<AssetResource>(lTemp.Sub("Missing.opaaxui").CStr()).IsValid());
+
+    lResources.FlushAll();
 }
 
 TEST_CASE("UICanvasFile: U5b's two new fields round-trip, and a file without them keeps the defaults")

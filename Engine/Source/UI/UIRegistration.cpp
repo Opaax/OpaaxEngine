@@ -1,7 +1,7 @@
 // The UI module's types. Each registers itself; see Engine/Registries/AutoRegistration.h.
 #include "Engine/Registries/AutoRegistration.h"
 #include "Renderer/Textures/SpriteSheet.h"   // completes the widgets' sheet references
-#include "UI/UICanvasResource.h"
+#include "UI/UICanvasAsset.h"
 #include "UI/UISubsystem.h"
 #include "UI/Widgets/UIButton.h"
 #include "UI/Widgets/UIImage.h"
@@ -30,7 +30,7 @@ namespace Opaax
     OPAAX_REGISTER_OBJECT(UIStack);
 
     // An authored widget tree (.opaaxui). Each instance builds its own widgets from it.
-    OPAAX_REGISTER_NAMED_RESOURCE(UICanvasResource, "UICanvas");
+    OPAAX_REGISTER_OBJECT(UICanvasAsset);
 
     // Created first: it routes raw input and consumes what the UI used, before input mapping runs.
     OPAAX_REGISTER_OBJECT(UISubsystem);

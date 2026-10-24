@@ -134,17 +134,19 @@ public:
 OPAAX_REGISTER_OBJECT(EnemyWave);
 ```
 
-The engine's images, fonts, sounds, prefabs, maps and levels are such classes: `Texture2D` reads
-`.png`, `.jpg`, `.tga` and `.bmp` files (`Renderer/Textures/Texture2D.h`), `FontFace` reads `.ttf`
-and `.otf` files (`Renderer/Text/FontFace.h`), `AudioClip` reads `.wav`, `.mp3` and `.flac` files
-(`Audio/AudioClip.h`), `PrefabAsset` reads `.opaaxprefab` files (`World/Prefab/PrefabAsset.h`),
-`MapAsset` reads `.opaaxmap` files (`World/Serialization/MapAsset.h`) and `LevelAsset` reads
-`.opaaxlevel` files (`World/Serialization/LevelAsset.h`); a sprite names an image with
-`TAssetRef<Texture2D>`, a gun its bullet with `THardAssetRef<PrefabAsset>`. A class whose files have
-a document of their own sets what a double-click does (`AssetTypes().Register<T>().SetActivate`),
-which `asset.open` does too: a prefab opens in the prefab editor, a map or a level for editing, not
-in an asset window. `LoadAssetAsync` loads one without stopping the game (`GetState()` says when it
-is ready), as the audio does for a sound that was not in a bank. A field names one like any asset
+The engine's images, fonts, sounds, prefabs, maps, levels and UI canvases are such classes:
+`Texture2D` reads `.png`, `.jpg`, `.tga` and `.bmp` files (`Renderer/Textures/Texture2D.h`),
+`FontFace` reads `.ttf` and `.otf` files (`Renderer/Text/FontFace.h`), `AudioClip` reads `.wav`,
+`.mp3` and `.flac` files (`Audio/AudioClip.h`), `PrefabAsset` reads `.opaaxprefab` files
+(`World/Prefab/PrefabAsset.h`), `MapAsset` reads `.opaaxmap` files
+(`World/Serialization/MapAsset.h`), `LevelAsset` reads `.opaaxlevel` files
+(`World/Serialization/LevelAsset.h`) and `UICanvasAsset` reads `.opaaxui` files
+(`UI/UICanvasAsset.h`); a sprite names an image with `TAssetRef<Texture2D>`, a gun its bullet with
+`THardAssetRef<PrefabAsset>`. A class whose files have a document of their own sets what a
+double-click does (`AssetTypes().Register<T>().SetActivate`), which `asset.open` does too: a prefab
+opens in the prefab editor, a map or a level for editing, a canvas in the UI panel, not in an asset
+window. `LoadAssetAsync` loads one without stopping the game (`GetState()` says when it is ready),
+as the audio does for a sound that was not in a bank. A field names one like any asset
 (`TAssetRef<EnemyWave>`, saved as `"Waves/First.wave"`), and `LoadAsset` loads and shares it. Two
 more hooks serve such a class: `InitializeOnMainThread()` runs on the main thread once the file is
 read (a texture hands its pixels to the GPU there), and `GetResourceSize()` says what it holds, for
