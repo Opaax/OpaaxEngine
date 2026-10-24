@@ -88,6 +88,29 @@ TEST_CASE("AssetTypeRegistry: a registered look wins; a subclass inherits icon, 
     CHECK(lRegistry.FindExact(UIHealthBarStyle::StaticClass()) == nullptr);
 }
 
+TEST_CASE("AssetTypeRegistry: a double-click opens the asset's window unless the class or a parent says otherwise")
+{
+    AssetTypeRegistry lRegistry;
+    CHECK(lRegistry.ActivateOf(ToonMaterial::StaticClass()) == nullptr);   // the asset's window
+
+    lRegistry.Register<Material2DLike>().SetActivate([](EditorContext&, const OpaaxString&) { return true; });
+    REQUIRE(lRegistry.ActivateOf(Material2DLike::StaticClass()) != nullptr);
+
+    // The subclass does what its parent does, even once registered for something else (asked again
+    // after each registration: registering may move the entries)...
+    CHECK(lRegistry.ActivateOf(ToonMaterial::StaticClass()) == lRegistry.ActivateOf(Material2DLike::StaticClass()));
+
+    lRegistry.Register<ToonMaterial>().SetCategory(OpaaxString("Stylized"));
+    CHECK(lRegistry.ActivateOf(ToonMaterial::StaticClass()) == lRegistry.ActivateOf(Material2DLike::StaticClass()));
+
+    // ...until it sets its own.
+    lRegistry.Register<ToonMaterial>().SetActivate([](EditorContext&, const OpaaxString&) { return true; });
+    REQUIRE(lRegistry.ActivateOf(ToonMaterial::StaticClass()) != nullptr);
+    CHECK(lRegistry.ActivateOf(ToonMaterial::StaticClass()) != lRegistry.ActivateOf(Material2DLike::StaticClass()));
+
+    CHECK(lRegistry.ActivateOf(UIHealthBarStyle::StaticClass()) == nullptr);
+}
+
 TEST_CASE("AssetTypeRegistry: registering a class twice keeps one entry")
 {
     AssetTypeRegistry lRegistry;

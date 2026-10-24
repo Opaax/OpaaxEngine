@@ -3,6 +3,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Resources/Asset/AssetHandle.h"
+#include "Editor/Extensions/AssetTypeRegistry.h"   // FAssetActivate
 #include "Editor/Panels/IEditorPanel.h"
 #include "Editor/Resources/ResourceScan.h"
 #include "Editor/UI/IEditorUIBackend.h"                  // EditorImage
@@ -62,6 +63,9 @@ namespace Opaax::Editor
             OpaaxString             Label;
             OpaaxString             Glyph;
             TAssetHandle<Texture2D> Icon;
+
+            /** What a double-click does; empty opens the asset's window. */
+            FAssetActivate          Activate;
         };
 
         /** One file: its type (engine) and how it looks (editor); an asset's class has its own look. */

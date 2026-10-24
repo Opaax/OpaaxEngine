@@ -8,6 +8,8 @@
 #include "Core/IO/FileIO.h"
 #include "Core/IO/FileSystem.h"
 #include "Core/String/OpaaxPathString.h"
+#include "Object/ObjectClassRegistry.h"
+#include "Resources/Asset/AssetResource.h"
 #include "Resources/ResourceFormatRegistry.h"
 #include "Resources/ResourceManager.h"
 #include "Resources/ResourcePathJson.h"
@@ -15,8 +17,8 @@
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
 #include "World/Level.h"
+#include "World/Prefab/PrefabAsset.h"
 #include "World/Prefab/PrefabFile.h"
-#include "World/Prefab/PrefabResource.hpp"
 #include "World/Serialization/LevelFile.h"
 #include "World/Serialization/MapFile.h"
 #include "World/World.h"
@@ -116,15 +118,21 @@ namespace
         }
     };
 
-    // The user's own case: a gun naming the bullet it spawns (hard) and the flash it draws
-    // (soft). Real PrefabResource on both, so the only thing separating them is the declared policy.
+    // The user's own case: a gun naming the bullet it spawns (hard) and the flash it spawns (soft).
+    // Real PrefabAsset on both, so the only thing separating them is the declared policy.
     struct GunComponent
     {
-        THardResourcePath<PrefabResource> Bullet;
-        TResourcePath<PrefabResource>     MuzzleFlash;
+        THardAssetRef<PrefabAsset> Bullet;
+        TAssetRef<PrefabAsset>     MuzzleFlash;
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(GunComponent, Bullet, MuzzleFlash)
         OPAAX_PROPERTIES(GunComponent, OPAAX_PROP(Bullet), OPAAX_PROP(MuzzleFlash))
+    };
+
+    /** What the resource manager reads asset files with here: prefabs. */
+    struct PrefabClasses final : ObjectClassRegistry
+    {
+        PrefabClasses() { Register<PrefabAsset>(); }
     };
 
     // A one-entity map carrying a gun, written by the real writer, plus the prefab it names.
@@ -561,10 +569,12 @@ TEST_CASE("Level: adopting another level's mounts does NOT mount anything")
 
 TEST_CASE("Level: a HARD reference is resident the moment its map mounts, and released when it unmounts")
 {
-    Fixture lFix("hardref");
+    Fixture             lFix("hardref");
+    const PrefabClasses lClasses;
+    lFix.Resources.SetObjectClasses(&lClasses);
     REQUIRE(lFix.Resources.Startup());
     REQUIRE(lFix.Components.Register<GunComponent>("Gun"));
-    REQUIRE(lFix.Formats.Register<PrefabResource>(OPAAX_ID("Prefab")));
+    REQUIRE(lFix.Formats.Register<AssetResource>(OPAAX_ID("Asset")));
 
     // The gun names the bullet through its HARD field.
     WriteGunMap(lFix, "Prefabs/Bullet.opaaxprefab", "");
@@ -574,25 +584,25 @@ TEST_CASE("Level: a HARD reference is resident the moment its map mounts, and re
     lData.Maps.push_back(OpaaxString("Maps/Guns.opaaxmap"));
     lFix.TheLevel.SetData(lData);
 
-    CHECK(lFix.Resources.GetLoadedCount<PrefabResource>() == 0);   // nothing has asked for it yet
+    CHECK(lFix.Resources.GetLoadedCount<AssetResource>() == 0);   // nothing has asked for it yet
 
     const Level::MountResult lResult = lFix.TheLevel.MountAll();
     REQUIRE(lResult.MapsMounted == 1);
     CHECK(lResult.EntitiesCreated == 1);
 
     // IMMEDIATELY resident — nobody resolved it, the mount did — and held by the record.
-    CHECK(lFix.Resources.GetLoadedCount<PrefabResource>() == 1);
+    CHECK(lFix.Resources.GetLoadedCount<AssetResource>() == 1);
     REQUIRE(lFix.TheLevel.GetMountedMaps().size() == 1);
     CHECK(lFix.TheLevel.GetMountedMaps()[0].HardRefs.size() == 1);
 
     // Still resident across a pump: the hold is a live claim, not a grace window.
     lFix.Resources.Update(0.0);
-    CHECK(lFix.Resources.GetLoadedCount<PrefabResource>() == 1);
+    CHECK(lFix.Resources.GetLoadedCount<AssetResource>() == 1);
 
     // Unmount drops the record, the record drops the hold, the pump collects.
     REQUIRE(lFix.TheLevel.Unmount(MapId("Guns")));
     lFix.Resources.Update(0.0);
-    CHECK(lFix.Resources.GetLoadedCount<PrefabResource>() == 0);
+    CHECK(lFix.Resources.GetLoadedCount<AssetResource>() == 0);
 
     lFix.Resources.FlushAll();
 }
@@ -601,10 +611,12 @@ TEST_CASE("Level: the SAME map with the bullet on a SOFT field holds nothing")
 {
     // The half that fails in a build where everything eager-loads: same component, same type,
     // same file, one field over — and nothing is resident, because nothing asked.
-    Fixture lFix("softref");
+    Fixture             lFix("softref");
+    const PrefabClasses lClasses;
+    lFix.Resources.SetObjectClasses(&lClasses);
     REQUIRE(lFix.Resources.Startup());
     REQUIRE(lFix.Components.Register<GunComponent>("Gun"));
-    REQUIRE(lFix.Formats.Register<PrefabResource>(OPAAX_ID("Prefab")));
+    REQUIRE(lFix.Formats.Register<AssetResource>(OPAAX_ID("Asset")));
 
     WriteGunMap(lFix, "", "Prefabs/Bullet.opaaxprefab");
 
@@ -615,7 +627,36 @@ TEST_CASE("Level: the SAME map with the bullet on a SOFT field holds nothing")
 
     REQUIRE(lFix.TheLevel.MountAll().MapsMounted == 1);
 
-    CHECK(lFix.Resources.GetLoadedCount<PrefabResource>() == 0);
+    CHECK(lFix.Resources.GetLoadedCount<AssetResource>() == 0);
+    REQUIRE(lFix.TheLevel.GetMountedMaps().size() == 1);
+    CHECK(lFix.TheLevel.GetMountedMaps()[0].HardRefs.empty());
+
+    lFix.Resources.FlushAll();
+}
+
+TEST_CASE("Level: a HARD reference to a missing file mounts the map and holds nothing")
+{
+    // An asset file that fails to load leaves a placeholder in the resource manager: the map must not
+    // count that as held.
+    Fixture             lFix("hardmissing");
+    const PrefabClasses lClasses;
+    lFix.Resources.SetObjectClasses(&lClasses);
+    REQUIRE(lFix.Resources.Startup());
+    REQUIRE(lFix.Components.Register<GunComponent>("Gun"));
+    REQUIRE(lFix.Formats.Register<AssetResource>(OPAAX_ID("Asset")));
+
+    WriteGunMap(lFix, "Prefabs/Missing.opaaxprefab", "");
+
+    LevelData lData;
+    lData.Name = OpaaxString("Guns");
+    lData.Maps.push_back(OpaaxString("Maps/Guns.opaaxmap"));
+    lFix.TheLevel.SetData(lData);
+
+    const Level::MountResult lResult = lFix.TheLevel.MountAll();
+    REQUIRE(lResult.MapsMounted == 1);
+    CHECK(lResult.EntitiesCreated == 1);
+
+    CHECK(lFix.Resources.GetLoadedCount<AssetResource>() == 0);
     REQUIRE(lFix.TheLevel.GetMountedMaps().size() == 1);
     CHECK(lFix.TheLevel.GetMountedMaps()[0].HardRefs.empty());
 

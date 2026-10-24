@@ -6,12 +6,11 @@
 #include "Application/Services/IEngine.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Resources/ResourceManager.h"
-#include "Resources/ResourceTypeID.hpp"
 
 #include "World/Components/ComponentRegistry.h"
 #include "World/Components/PrefabInstanceComponent.h"
 #include "World/Prefab/PrefabFold.h"
-#include "World/Prefab/PrefabResource.hpp"
+#include "World/Prefab/PrefabAsset.h"
 #include "World/Prefab/ResourcePrefabResolver.h"
 #include "World/Serialization/MapFactory.h"
 #include "World/Serialization/MapSerializer.h"
@@ -37,7 +36,7 @@ namespace Opaax::Editor
         m_Pending = MapData{};
         m_Affected.clear();
 
-        if (InEvent.TypeId != ResourceTypeID::Get<PrefabResource>()) { return; }
+        if (InEvent.AssetClass != PrefabAsset::StaticClass().GetName()) { return; }
 
         World* const lWorld = m_Context.Worlds.GetActiveWorld();
         if (lWorld == nullptr || InEvent.AssetPath.IsEmpty()) { return; }

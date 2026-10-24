@@ -59,7 +59,7 @@
 #include "Input/InputEvents.h"
 #include "World/Serialization/LevelResource.hpp"
 #include "World/Serialization/MapResource.hpp"
-#include "World/Prefab/PrefabResource.hpp"
+#include "World/Prefab/PrefabAsset.h"
 #include "Editor/Operation/ResourceOperations.h"
 #include "Resources/ResourceTypeID.hpp"
 #include "Renderer/Textures/Texture2D.h"
@@ -589,6 +589,17 @@ namespace Opaax::Editor
             .SetGlyph(OpaaxString("[FF]"))
             .SetEditor<FontFamilyEditor>();
 
+        // A prefab opens in the prefab editor (placing one is a drag into the Hierarchy or a viewport).
+        lTypes.Register<PrefabAsset>()
+            .SetLabel(OpaaxString("Prefab"))
+            .SetGlyph(OpaaxString("[P]"))
+            .SetActivate([](EditorContext& InContext, const OpaaxString& InAbsPath)
+            {
+                InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_PREFAB_AT,
+                                                        InContext, PrefabPathParams{InAbsPath});
+                return InContext.PrefabDocument.AbsPath() == InAbsPath && InContext.PrefabDocument.GetWorld() != nullptr;
+            });
+
         // A font file: its window shows the baked atlas and the metrics.
         lTypes.Register<FontFace>()
             .SetLabel(OpaaxString("Font Face"))
@@ -631,15 +642,6 @@ namespace Opaax::Editor
             {
                 InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_MAP_AT, InContext,
                                                         MapPathParams{InFile.AbsPath});
-            });
-
-        // Double-click places one into the focused map (also possible from the Hierarchy and a viewport drop).
-        m_Extensions.ResourceTypes().Register<PrefabResource>()
-            .SetGlyph(OpaaxString("[P]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_PREFAB_AT,
-                                                        InContext, PrefabPathParams{InFile.AbsPath});
             });
 
         // A canvas opens its editor (it is a document).

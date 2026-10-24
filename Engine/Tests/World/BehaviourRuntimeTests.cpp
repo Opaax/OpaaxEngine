@@ -21,6 +21,7 @@
 #include "Input/InputManager.h"
 #include "Input/Mapping/InputMappingSubsystem.h"
 #include "Object/ObjectClass.h"
+#include "Object/ObjectClassRegistry.h"
 #include "Physics/Collision/CollisionChannel.h"
 #include "Physics/Components/ColliderComponent.h"
 #include "Physics/Components/RigidbodyComponent.h"
@@ -37,6 +38,7 @@
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityHierarchy.h"
 #include "World/Entity/EntityMeta.h"
+#include "World/Prefab/PrefabAsset.h"
 #include "World/Prefab/PrefabData.h"
 #include "World/Prefab/PrefabFile.h"
 #include "World/Systems/WorldContext.h"
@@ -641,12 +643,13 @@ namespace
 
     struct RuntimeFixture
     {
-        ResourceManager   Resources;
-        EngineEventBus    Events;
-        DebugDraw         Debug;
-        EngineConfigData  Config;
-        InputManager      Input;
-        ComponentRegistry Components;
+        ObjectClassRegistry Classes;   // what the resource manager reads asset files with: prefabs
+        ResourceManager     Resources;
+        EngineEventBus      Events;
+        DebugDraw           Debug;
+        EngineConfigData    Config;
+        InputManager        Input;
+        ComponentRegistry   Components;
 
         // The game's input mapping and the game, when asked for. Declared before Worlds: as in the
         // engine, the game outlives its worlds.
@@ -664,6 +667,9 @@ namespace
         {
             Journal().clear();
             RegisterTypes(Components);
+
+            REQUIRE(Classes.Register<PrefabAsset>());
+            Resources.SetObjectClasses(&Classes);
 
             const IPaths& lPaths = (InOptions.Paths != nullptr) ? *InOptions.Paths : IPaths::Null();
 

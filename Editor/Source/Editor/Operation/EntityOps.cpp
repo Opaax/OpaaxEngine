@@ -31,13 +31,13 @@
 #include "World/WorldManager.h"
 
 #include "Application/Services/IPaths.h"         // the marker stores an asset-relative path
-#include "Resources/ResourceManager.h"  // before PrefabResource (completes LoadContext)
+#include "Resources/ResourceManager.h"
 #include "World/Components/PrefabInstanceComponent.h"
 #include "World/Prefab/PrefabFactory.h"
 #include "World/Prefab/PrefabFile.h"
 #include "Editor/Operation/ResourceOperations.h"
 #include "World/Prefab/ResourcePrefabResolver.h"
-#include "World/Prefab/PrefabResource.hpp"
+#include "World/Prefab/PrefabAsset.h"
 #include "World/Serialization/MapFactory.h"
 
 using namespace Opaax;
@@ -338,7 +338,7 @@ namespace Opaax::Editor
         const PrefabData lPrefab = PrefabFactory::BuildPrefab(lForPrefab, lRegistry);
 
         // Before the write (see EditorPrefabDocument::Save): matters when overwriting a placed prefab.
-        ResourceOps::AboutToSave<PrefabResource>(InContext, InAbsPath);
+        ResourceOps::AboutToSave<AssetResource>(InContext, InAbsPath, PrefabAsset::StaticClass().GetName());
 
         if (!PrefabFile::Save(InAbsPath, lPrefab))
         {
@@ -347,7 +347,7 @@ namespace Opaax::Editor
 
         // Usually does nothing (a new prefab has no instances); when overwriting a placed prefab, every
         // instance rebuilds against the new file, keeping its overrides.
-        ResourceOps::SavedToDisk<PrefabResource>(InContext, InAbsPath);
+        ResourceOps::SavedToDisk<AssetResource>(InContext, InAbsPath, PrefabAsset::StaticClass().GetName());
 
         const Guid lInstanceId = Guid::New();
         MapData    lInstance   = PrefabFactory::BuildInstance(lPrefab, lAssetPath, lInstanceId, lOwnerMap,

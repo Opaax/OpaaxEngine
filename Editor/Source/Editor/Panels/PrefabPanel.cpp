@@ -19,7 +19,6 @@
 
 #include "Application/Services/IEngine.h"
 #include "Core/Maths/Bounds2D.h"
-#include "Resources/ResourceManager.h"   // before PrefabResource (completes LoadContext)
 #include "RHI/Framebuffer.h"
 #include "Renderer/CameraView.h"
 #include "Renderer/RenderTarget.hpp"        // OffscreenRenderTarget
@@ -28,7 +27,7 @@
 #include "World/Entity/EntityHierarchy.h"   // Detach needs a parent
 #include "World/Entity/EntityMeta.h"
 #include "World/Entity/EntityQuery.h"
-#include "World/Prefab/PrefabResource.hpp"
+#include "World/Prefab/PrefabAsset.h"
 #include "World/World.h"
 
 namespace Opaax::Editor
@@ -337,7 +336,7 @@ namespace Opaax::Editor
         // Drop a prefab to nest one: stored with the pixel, run after the pass.
         {
             OpaaxString lDropped;
-            if (AcceptResourceDragPayload(ResourceTypeID::Get<PrefabResource>(), lDropped))
+            if (AcceptAssetDragPayload<PrefabAsset>(lDropped))
             {
                 const ImVec2 lMouse = ImGui::GetMousePos();
 

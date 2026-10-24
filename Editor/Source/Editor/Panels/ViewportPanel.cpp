@@ -16,8 +16,7 @@
 #include "Editor/Operation/EntityOps.h"          // gizmo drags write through it
 #include "Editor/EditorMapDocument.h"            // a drop goes into the focused map
 #include "Editor/Resources/ResourceDragDrop.h"   // typed drag payloads
-#include "Resources/ResourceManager.h"   // before PrefabResource (completes LoadContext)
-#include "World/Prefab/PrefabResource.hpp"
+#include "World/Prefab/PrefabAsset.h"
 #include "Editor/UI/IEditorUIBackend.h"
 #include "Editor/Viewport/ViewportOverlays.h"    // outline and icons, shared with the prefab panel
 
@@ -413,7 +412,7 @@ namespace Opaax::Editor
         // Recorded, not run (it creates entities); the local pixel is stored with it.
         {
             OpaaxString lDropped;
-            if (AcceptResourceDragPayload(ResourceTypeID::Get<PrefabResource>(), lDropped))
+            if (AcceptAssetDragPayload<PrefabAsset>(lDropped))
             {
                 const ImVec2 lMouse = ImGui::GetMousePos();
 

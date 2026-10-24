@@ -22,6 +22,7 @@
 #include "Editor/Operation/NewLevelPlan.hpp"
 #include "Editor/Export/GameExport.h"
 #include "Editor/Prefab/EditorPrefabDocument.h"
+#include "Editor/Resources/AssetFileClass.hpp"
 #include "Editor/Undo/ComponentUndoables.h"
 #include "Editor/Undo/EditorUndo.h"
 #include "Editor/UI/GuardedEditorDialogs.hpp"
@@ -960,6 +961,19 @@ namespace Opaax::Editor::EditorAutomation
                 { "properties",     InDocument.GetProperties() } };
         }
 
+        /**
+         * What a double-click on the asset at InAbsPath does when its class opens in a document of its own
+         * (a prefab); null when it opens in an asset window.
+         */
+        const FAssetActivate* OwnDocumentOf(EditorContext& InContext, const OpaaxString& InAbsPath, OpaaxStringID& OutClass)
+        {
+            const ObjectClassRegistry& lClasses = InContext.Engine.GetRegistries().ObjectClasses();
+            OutClass = FindAssetClass(InAbsPath, &lClasses);
+
+            const ObjectClass* lClass = OutClass.IsValid() ? lClasses.FindByName(OutClass) : nullptr;
+            return lClass != nullptr ? InContext.Extensions.AssetTypes().ActivateOf(*lClass) : nullptr;
+        }
+
         /** InParams["path"] opened in its window. Null (with OutError) when it is not an asset that opens. */
         AssetDocument* OpenAsset(EditorContext& InContext, const nlohmann::json& InParams, OpaaxString& OutError)
         {
@@ -971,6 +985,12 @@ namespace Opaax::Editor::EditorAutomation
             if (!InContext.FileSystem.IsPathExist(lPath))
             {
                 OutError = "no file at '" + lPath + "'";
+                return nullptr;
+            }
+            if (OpaaxStringID lClass; OwnDocumentOf(InContext, lPath, lClass) != nullptr)
+            {
+                OutError = "'" + lPath + "' is a " + lClass.CStr() + ", which opens in a document of its own, not in "
+                           "an asset window: asset.open opens it there";
                 return nullptr;
             }
             if (!InContext.Assets.Open(lPath, &OutError))
@@ -1048,10 +1068,32 @@ namespace Opaax::Editor::EditorAutomation
 
             InCommands.Register("asset.open",
                 "Opens the asset at {path} in a window of its own (or brings its window forward): {path, class, "
-                "properties, unsaved, canUndo, canRedo}.",
+                "properties, unsaved, canUndo, canRedo}. A class with a document of its own opens there, as a "
+                "double-click does (a prefab in the Prefab panel): {path, class, document: true}.",
                 [&InContext](const nlohmann::json& InParams)
                 {
-                    OpaaxString          lError;
+                    OpaaxString lPath;
+                    OpaaxString lError;
+                    if (!AssetPath(InContext, InParams, lPath, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    OpaaxStringID lClass;
+                    if (const FAssetActivate* lActivate = InContext.FileSystem.IsPathExist(lPath)
+                                                              ? OwnDocumentOf(InContext, lPath, lClass) : nullptr)
+                    {
+                        if (!(*lActivate)(InContext, lPath))
+                        {
+                            return AutomationResult::Fail("'" + lPath + "' did not open (see the log)");
+                        }
+
+                        return AutomationResult::Ok(nlohmann::json{
+                            { "path",     InContext.Paths.AbsoluteToAsset(lPath).CStr() },
+                            { "class",    lClass.CStr() },
+                            { "document", true } });
+                    }
+
                     const AssetDocument* lDocument = OpenAsset(InContext, InParams, lError);
                     return lDocument != nullptr ? AutomationResult::Ok(DescribeAsset(InContext, *lDocument))
                                                 : AutomationResult::Fail(lError);

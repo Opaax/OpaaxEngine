@@ -497,7 +497,12 @@ namespace Opaax::Editor
 
             if (ImGui::IsMouseDoubleClicked(0))
             {
-                if (lType.Format == nullptr)
+                if (lType.Asset != nullptr && lType.Asset->Activate)
+                {
+                    // An asset class with a document of its own (a prefab) opens it.
+                    lType.Asset->Activate(m_Context, InFile.AbsPath);
+                }
+                else if (lType.Format == nullptr)
                 {
                     OPAAX_LOG(LogResourceBrowserPanel, Info, "'{}' activated — no resource type registered for '{}'",
                         InFile.Name.CStr(),
@@ -654,6 +659,11 @@ namespace Opaax::Editor
             AssetChrome lChrome;
             lChrome.Label = lAssetTypes.LabelOf(*lClass);
             lChrome.Glyph = lAssetTypes.GlyphOf(*lClass);
+
+            if (const FAssetActivate* lActivate = lAssetTypes.ActivateOf(*lClass))
+            {
+                lChrome.Activate = *lActivate;
+            }
 
             const OpaaxString lIcon = lAssetTypes.IconOf(*lClass);
             lChrome.Icon = LoadIcon(lIcon.IsEmpty() ? OpaaxString() : ResolveIconPath(lIcon));

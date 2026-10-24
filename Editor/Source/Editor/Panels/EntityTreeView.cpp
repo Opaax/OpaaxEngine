@@ -3,9 +3,7 @@
 #include "Editor/Operation/EditorSelection.hpp"
 #include "Editor/Resources/ResourceDragDrop.h"   // prefab drops on rows and headers
 
-#include "Resources/ResourceManager.h"   // before PrefabResource (completes LoadContext)
-#include "Resources/ResourceTypeID.hpp"
-#include "World/Prefab/PrefabResource.hpp"
+#include "World/Prefab/PrefabAsset.h"
 #include "World/Components/PrefabInstanceComponent.h"   // linked rows are blue
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityHierarchy.h"
@@ -104,7 +102,7 @@ namespace Opaax::Editor
         }
 
         // A prefab dropped on a row: an instance as this entity's child.
-        if (OpaaxString lPrefab; AcceptResourceDragPayload(ResourceTypeID::Get<PrefabResource>(), lPrefab))
+        if (OpaaxString lPrefab; AcceptAssetDragPayload<PrefabAsset>(lPrefab))
         {
             m_PrefabDrop     = EntityTreePrefabDrop{ Move(lPrefab), InEntity, MapId{} };
             m_bHasPrefabDrop = true;
@@ -137,7 +135,7 @@ namespace Opaax::Editor
         }
 
         // A prefab dropped on a map header: an instance in that map, at its authored position.
-        if (OpaaxString lPrefab; AcceptResourceDragPayload(ResourceTypeID::Get<PrefabResource>(), lPrefab))
+        if (OpaaxString lPrefab; AcceptAssetDragPayload<PrefabAsset>(lPrefab))
         {
             m_PrefabDrop     = EntityTreePrefabDrop{ Move(lPrefab), ENTITY_NONE, InMap };
             m_bHasPrefabDrop = true;

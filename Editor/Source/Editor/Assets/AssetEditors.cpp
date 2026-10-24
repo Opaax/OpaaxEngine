@@ -95,7 +95,7 @@ namespace Opaax::Editor
             return lFail(OpaaxString("the file could not be written (see the log)"));
         }
 
-        ResourceOps::SavedToDisk<AssetResource>(*m_Context, InAbsPath);
+        ResourceOps::SavedToDisk<AssetResource>(*m_Context, InAbsPath, InClass.GetName());
 
         OPAAX_LOG(LogAssetEditors, Info, "Created asset '{}' ({})", InAbsPath.CStr(), InClass.GetName());
         AddWindow(Move(lDocument));
@@ -156,7 +156,7 @@ namespace Opaax::Editor
         }
 
         // The running copy follows: a game reading this asset sees the new values.
-        ResourceOps::SavedToDisk<AssetResource>(*m_Context, InAbsPath);
+        ResourceOps::SavedToDisk<AssetResource>(*m_Context, InAbsPath, lOpen->Document->GetClassName());
         return true;
     }
 

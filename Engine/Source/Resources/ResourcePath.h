@@ -8,7 +8,7 @@
 // =============================================================================
 // TResourcePath<T> — asset-relative path to a resource file, typed by the resource that loads it.
 //   The type lets the editor refuse a wrong file in a drop target. T only needs a forward declaration.
-//   Always asset-relative ("Prefabs/Bullet.opaaxprefab") or a mount ("/Engine/...").
+//   Always asset-relative ("Waves/First.wave") or a mount ("/Engine/...").
 // =============================================================================
 namespace Opaax
 {
@@ -50,8 +50,8 @@ namespace Opaax
     /**
      * A reference loaded with its holder: TResourcePath<T, Hard>.
      *
-     *     TResourcePath<PrefabResource>      Flash;     // loaded when spawned
-     *     THardResourcePath<PrefabResource>  Bullet;    // loaded before the gun fires
+     *     TResourcePath<WaveResource>      Wave;     // loaded when first asked for
+     *     THardResourcePath<WaveResource>  Boss;     // loaded with the map
      */
     template<typename TResource>
     using THardResourcePath = TResourcePath<TResource, EResourceLoad::Hard>;

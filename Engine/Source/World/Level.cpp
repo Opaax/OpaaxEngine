@@ -169,7 +169,7 @@ namespace Opaax
 
             if (lHold == nullptr || !lHold->IsLoaded())
             {
-                // A FailFast type gives null: report it now rather than at first use.
+                // Reported at mount rather than at first use.
                 OPAAX_LOG(LogLevel, Warn, "Map '{}' — hard reference '{}' ({}) did not load",
                           OutMounted.AssetRelPath.CStr(), lRef.Path.CStr(), lEntry->Name);
                 continue;

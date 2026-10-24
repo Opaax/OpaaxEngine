@@ -17,7 +17,7 @@ namespace Opaax
     public:
         virtual ~IResourceHold() = default;
 
-        /** False for a FailFast type that failed to load. */
+        /** False when the file did not load, even for a type whose placeholder stands in for it. */
         virtual bool IsLoaded() const noexcept = 0;
     };
 
@@ -27,7 +27,8 @@ namespace Opaax
     public:
         explicit TResourceHold(ResourceRef<T> InRef) noexcept : m_Ref(Move(InRef)) {}
 
-        bool IsLoaded() const noexcept override { return m_Ref.Get() != nullptr; }
+        // A failed load gives an empty handle, whatever the type's fail policy.
+        bool IsLoaded() const noexcept override { return m_Ref.IsValid() && m_Ref.Get() != nullptr; }
 
     private:
         ResourceRef<T> m_Ref;

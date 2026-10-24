@@ -1,10 +1,8 @@
 #include "Editor/Resources/ResourceScan.h"
 
+#include "Editor/Resources/AssetFileClass.hpp"
 #include "Platform/IFileSystem.h"
-#include "Core/IO/FileIO.h"
 #include "Core/String/OpaaxPathString.h"                  // Extension
-#include "Object/ObjectClassRegistry.h"
-#include "Resources/Asset/AssetFile.h"
 #include "Resources/ResourceFormat.h"   // NormalizeExtension
 
 #include "Core/Algo/Algo.h"
@@ -56,16 +54,7 @@ namespace Opaax::Editor
                         lEntry.AbsPath,
                         NormalizeExtension(PathString::Extension(lEntry.Name)));
 
-                    // An .opaaxasset names its class; another file's class is the one that reads its extension.
-                    if (lFile.Extension == NormalizeExtension(AssetFile::ASSET_EXTENSION))
-                    {
-                        lFile.AssetClass = AssetFile::FindClassName(FileIO::ReadAllText(lFile.AbsPath));
-                    }
-                    else if (const ObjectClass* lSourceClass =
-                                 InClasses != nullptr ? InClasses->FindBySourceExtension(lFile.Extension) : nullptr)
-                    {
-                        lFile.AssetClass = lSourceClass->GetName();
-                    }
+                    lFile.AssetClass = FindAssetClass(lFile.AbsPath, InClasses);
 
                     ++InOutRoot.FileCount;
                 }

@@ -39,7 +39,7 @@ OPAAX_REGISTER_OBJECT(EnemyStats);
 - `OPAAX_PROPERTIES` lists the fields that are saved, drawn in the editor and set by automation:
   numbers, `bool`, strings, names (`OpaaxStringID`), enums declared with `OPAAX_ENUM_VALUES` (saved by
   name), vectors and colours, another asset (`TAssetRef<Material2D>`, `TAssetRef<Texture2D>` for an
-  image), a file of another kind (`TResourcePath<PrefabResource>`), and lists of structs that have
+  image, `TAssetRef<PrefabAsset>` for a prefab), and lists of structs that have
   `OPAAX_PROPERTIES` and `NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT`. Give every field a default: a
   file written before a field existed still loads.
 - `OPAAX_REGISTER_OBJECT(Class)` is the only registration. After renaming a class,
@@ -134,19 +134,22 @@ public:
 OPAAX_REGISTER_OBJECT(EnemyWave);
 ```
 
-The engine's images, fonts and sounds are such classes: `Texture2D` reads `.png`, `.jpg`, `.tga` and
-`.bmp` files (`Renderer/Textures/Texture2D.h`), `FontFace` reads `.ttf` and `.otf` files
-(`Renderer/Text/FontFace.h`) and `AudioClip` reads `.wav`, `.mp3` and `.flac` files
-(`Audio/AudioClip.h`); a sprite names an image with `TAssetRef<Texture2D>`. `LoadAssetAsync` loads
-one without stopping the game (`GetState()` says when it is ready), as the audio does for a sound
-that was not in a bank. A field names
-one like any asset (`TAssetRef<EnemyWave>`, saved as `"Waves/First.wave"`), and `LoadAsset` loads and
-shares it. Two more hooks serve such a class: `InitializeOnMainThread()` runs on
-the main thread once the file is read (a texture hands its pixels to the GPU there), and
+The engine's images, fonts, sounds and prefabs are such classes: `Texture2D` reads `.png`, `.jpg`,
+`.tga` and `.bmp` files (`Renderer/Textures/Texture2D.h`), `FontFace` reads `.ttf` and `.otf` files
+(`Renderer/Text/FontFace.h`), `AudioClip` reads `.wav`, `.mp3` and `.flac` files
+(`Audio/AudioClip.h`) and `PrefabAsset` reads `.opaaxprefab` files (`World/Prefab/PrefabAsset.h`); a
+sprite names an image with `TAssetRef<Texture2D>`, a gun its bullet with
+`THardAssetRef<PrefabAsset>`. A class whose files have a document of their own sets what a
+double-click does (`AssetTypes().Register<T>().SetActivate`), which `asset.open` does too: a prefab
+opens in the prefab editor, not in an asset window. `LoadAssetAsync` loads one without stopping the
+game (`GetState()` says when it is ready), as the audio does for a sound that was not in a bank. A
+field names one like any asset (`TAssetRef<EnemyWave>`, saved as `"Waves/First.wave"`), and
+`LoadAsset` loads and shares it. Two more hooks serve such a class: `InitializeOnMainThread()` runs
+on the main thread once the file is read (a texture hands its pixels to the GPU there), and
 `GetResourceSize()` says what it holds, for the resource statistics. One extension belongs to one
-class: registering a second class for `.wave` is refused. In the editor the file shows as an asset of
-its class and opens in a window on double-click, read-only (its file is the source, never rewritten);
-New Asset does not offer the class, since the file comes from elsewhere.
+class: registering a second class for `.wave` is refused. In the editor the file shows as an asset
+of its class and opens in a window on double-click, read-only (its file is the source, never
+rewritten); New Asset does not offer the class, since the file comes from elsewhere.
 
 ## In the editor
 

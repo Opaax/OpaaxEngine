@@ -17,7 +17,6 @@
 #include "Renderer/Textures/SpriteSheet.h"
 #include "Renderer/Textures/Texture2D.h"
 #include "Resources/ResourceManager.h"
-#include "Resources/ResourceTypeID.hpp"
 
 namespace Opaax::Editor
 {
@@ -318,8 +317,7 @@ namespace Opaax::Editor
         {
             ImGui::Button("Drop a texture here to add a step", ImVec2(-1.f, 0.f));
 
-            if (OpaaxString lDropped; AcceptResourceDragPayload(ResourceTypeID::Get<AssetResource>(), lDropped,
-                                                                Texture2D::StaticClass().GetName().GetId()))
+            if (OpaaxString lDropped; AcceptAssetDragPayload<Texture2D>(lDropped))
             {
                 if (ClipEditing::AddTextureStep(lSteps, lDropped))
                 {
