@@ -8,7 +8,6 @@
 #include "Engine/FrameClock.h"
 #include "Core/Events/EventBus.h"
 #include "Engine/Registries/EngineRegistries.h"
-#include "Resources/ResourceRef.hpp"
 
 namespace Opaax
 {
@@ -23,7 +22,10 @@ namespace Opaax
     class IFramebuffer;
     class IRenderTarget;
     struct FramebufferSpec;
-    struct LevelResource;
+    class LevelAsset;
+
+    template<typename T>
+    class TAssetHandle;
 
     // =============================================================================
     // Engine — the concrete IEngine. Owns the engine subsystems and runs the frame.
@@ -76,9 +78,9 @@ namespace Opaax
     private:
         /**
          * Loads the level named by InSpec, before the world is created.
-         * @return Null for an empty path (no warning) or a missing level (warning)
+         * @return An empty handle for an empty path (no warning) or a missing level (warning)
          */
-        ResourceRef<LevelResource> ResolveLevel(const OpaaxString& InAssetRelPath) const;
+        TAssetHandle<LevelAsset> ResolveLevel(const OpaaxString& InAssetRelPath) const;
 
         /** Opens the level requested by RequestOpenLevel, at the start of the frame. */
         void ResolvePendingLevel();

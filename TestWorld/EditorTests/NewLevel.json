@@ -246,5 +246,44 @@
             "path": "Scratch/FreshProps.opaaxmap"
         },
         "expectFailure": true
+    },
+    {
+        "id": "level-is-an-asset",
+        "command": "asset.get",
+        "params": {
+            "path": "Scratch/Fresh.opaaxlevel"
+        },
+        "expect": {
+            "class": "LevelAsset",
+            "open": false,
+            "fromSourceFile": true
+        }
+    },
+    {
+        "id": "open-level-asset",
+        "command": "asset.open",
+        "params": {
+            "path": "Levels/Hierarchy.opaaxlevel"
+        },
+        "expect": {
+            "class": "LevelAsset",
+            "document": true
+        }
+    },
+    {
+        "id": "level-asset-opened",
+        "command": "level.info",
+        "expect": {
+            "level": "Levels/Hierarchy.opaaxlevel",
+            "unsaved": false
+        }
+    },
+    {
+        "command": "world.info",
+        "expect": {
+            "name": "Hierarchy",
+            "mode": "Edit"
+        },
+        "id": "level-asset-world"
     }
 ]

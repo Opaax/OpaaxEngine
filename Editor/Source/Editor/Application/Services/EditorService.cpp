@@ -57,7 +57,7 @@
 #include "Engine/Registries/EngineRegistries.h"
 #include "Renderer/Config/Config_Renderer.h"
 #include "Input/InputEvents.h"
-#include "World/Serialization/LevelResource.hpp"
+#include "World/Serialization/LevelAsset.h"
 #include "World/Serialization/MapAsset.h"
 #include "World/Prefab/PrefabAsset.h"
 #include "Editor/Operation/ResourceOperations.h"
@@ -589,8 +589,23 @@ namespace Opaax::Editor
             .SetGlyph(OpaaxString("[FF]"))
             .SetEditor<FontFamilyEditor>();
 
-        // A map opens for editing: focused when its level has it, else on its own. Both the icon and the
-        // glyph are set: the glyph shows if the image is missing.
+        // A level opens for editing, in place of the open one. Both the icon and the glyph are set: the
+        // glyph shows if the image is missing.
+        lTypes.Register<LevelAsset>()
+            .SetLabel(OpaaxString("Level"))
+            .SetIcon(OpaaxString("Icons/T_Level_Icon.png"))
+            .SetGlyph(OpaaxString("[L]"))
+            .SetActivate([](EditorContext& InContext, const OpaaxString& InAbsPath)
+            {
+                InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_LEVEL_AT, InContext,
+                                                        LevelPathParams{InAbsPath});
+
+                // The document may hold the path in another form: compared as asset paths.
+                const OpaaxString lWanted = InContext.Paths.AbsoluteToAsset(InAbsPath);
+                return !lWanted.IsEmpty() && InContext.Paths.AbsoluteToAsset(InContext.LevelDocument.AbsPath()) == lWanted;
+            });
+
+        // A map opens for editing: focused when its level has it, else on its own.
         lTypes.Register<MapAsset>()
             .SetLabel(OpaaxString("Map"))
             .SetIcon(OpaaxString("Icons/T_Map_Icon.png"))
@@ -662,14 +677,6 @@ namespace Opaax::Editor
                 {
                     InContext.Panels.SetVisible(UICanvasPanel::PanelID(), true);
                 }
-            });
-
-        m_Extensions.ResourceTypes().Register<LevelResource>()
-            .SetIcon(OpaaxString("Icons/T_Level_Icon.png"))
-            .SetGlyph(OpaaxString("[L]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_LEVEL_AT, InContext, LevelPathParams{InFile.AbsPath});
             });
     }
     

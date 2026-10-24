@@ -19,11 +19,12 @@
 #include "Input/InputManager.h"
 #include "Renderer/Camera/CameraManager.h"
 #include "Renderer/RendererManager.h"
+#include "Resources/Asset/AssetHandle.h"
 #include "Resources/ResourceManager.h"
 #include "RHI/Framebuffer.h"
 #include "RHI/Texture.h"
 #include "World/Level.h"
-#include "World/Serialization/LevelResource.hpp"
+#include "World/Serialization/LevelAsset.h"
 #include "World/WorldEvents.h"
 #include "World/WorldManager.h"
 
@@ -135,7 +136,7 @@ namespace Opaax
     // Startup
     // =========================================================================
 
-    ResourceRef<LevelResource> Engine::ResolveLevel(const OpaaxString& InAssetRelPath) const
+    TAssetHandle<LevelAsset> Engine::ResolveLevel(const OpaaxString& InAssetRelPath) const
     {
         // The user may want to create a new world each time.
         if (InAssetRelPath.IsEmpty())
@@ -150,18 +151,16 @@ namespace Opaax
             return {};
         }
 
-        const OpaaxString lAbsPath = m_Paths->AssetToAbsolute(InAssetRelPath);
-
-        // FailFast: a missing or unreadable level gives null.
-        ResourceRef<LevelResource> lRef = m_Resources->Load<LevelResource>(lAbsPath.CStr());
-        if (!lRef.IsValid())
+        // A missing or unreadable level gives no asset.
+        TAssetHandle<LevelAsset> lLevel = LoadAsset<LevelAsset>(*m_Resources, *m_Paths, InAssetRelPath);
+        if (lLevel.Get() == nullptr)
         {
             // The project names a level that cannot be opened: warn, then boot an empty world.
             OPAAX_ENGINE_LOG(Warn, "Startup level '{}' could not be opened — falling back to '{}'",
                              InAssetRelPath.CStr(), NULL_LEVEL_WORLD_NAME);
         }
 
-        return lRef;
+        return lLevel;
     }
 
     World* Engine::OpenLevel(const WorldSpec& InSpec)
@@ -176,10 +175,10 @@ namespace Opaax
         World* const lPrevious = m_WorldManager->GetActiveWorld();
 
         // Read the level first: the world takes its name from it.
-        const ResourceRef<LevelResource> lLevelRef = ResolveLevel(InSpec.LevelPath);
-        const LevelResource* const       lLevel    = lLevelRef.Get();
+        const TAssetHandle<LevelAsset> lLevelHandle = ResolveLevel(InSpec.LevelPath);
+        const LevelAsset* const        lLevel       = lLevelHandle.Get();
 
-        const OpaaxStringID lName = (lLevel != nullptr) ? OpaaxStringID(lLevel->Data.Name)
+        const OpaaxStringID lName = (lLevel != nullptr) ? OpaaxStringID(lLevel->GetData().Name)
                                                         : OpaaxStringID(NULL_LEVEL_WORLD_NAME);
 
         World* lWorld = m_WorldManager->CreateWorld(lName, InSpec.Mode);
@@ -191,14 +190,14 @@ namespace Opaax
         // Mount before activating, so OnActiveWorldChanged subscribers see the content.
         if (lLevel != nullptr && lWorld->GetLevel() != nullptr)
         {
-            lWorld->GetLevel()->SetData(lLevel->Data);
+            lWorld->GetLevel()->SetData(lLevel->GetData());
 
             const Level::MountResult lResult = lWorld->GetLevel()->MountAll();
             if (!lResult.IsValid())
             {
                 // A half-opened level looks fine but misses content: report it.
                 OPAAX_ENGINE_LOG(Error, "Level '{}' did not open cleanly ({} map(s) mounted, {} failed)",
-                                 lLevel->Data.Name.CStr(), lResult.MapsMounted, lResult.MapsFailed);
+                                 lLevel->GetData().Name.CStr(), lResult.MapsMounted, lResult.MapsFailed);
             }
         }
 

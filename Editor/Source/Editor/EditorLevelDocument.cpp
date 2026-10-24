@@ -13,7 +13,6 @@
 #include "World/Serialization/MapSerializer.h"
 #include "World/Prefab/PrefabFold.h"
 #include "World/Prefab/ResourcePrefabResolver.h"
-#include "World/Serialization/LevelResource.hpp"
 #include "Resources/Asset/AssetResource.h"
 #include "Resources/ResourceManager.h"
 
@@ -244,7 +243,7 @@ namespace Opaax::Editor
         m_ManifestBaseline = lText;
         m_bManifestDirty   = false;
 
-        ReloadIfLoaded<LevelResource>(m_Resources, m_Paths, m_AbsPath);
+        ReloadIfLoaded<AssetResource>(m_Resources, m_Paths, m_AbsPath);
     }
 
     bool EditorLevelDocument::SaveMapAs(MapId InMapId, const OpaaxString& InAbsPath,
@@ -301,7 +300,7 @@ namespace Opaax::Editor
                 {
                     m_ManifestBaseline = lManifest;
                     lManifestWritten   = true;
-                    ReloadIfLoaded<LevelResource>(m_Resources, m_Paths, m_AbsPath);
+                    ReloadIfLoaded<AssetResource>(m_Resources, m_Paths, m_AbsPath);
                 }
                 else
                 {
