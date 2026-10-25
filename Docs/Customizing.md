@@ -97,6 +97,31 @@ subsystems stop. A behaviour reaches it through `GetContext().Game`. Most sessio
 as game instance subsystems, which every game makes. `ProbeGame` in
 `TestWorld/Source/TestWorld/Probes/ExtensionProbes.h` is one.
 
+### A config
+
+Settings a game reads (difficulty, a spawn rate) and edits in the editor's Config panel are a config:
+a data struct saved in `Configs/<Name>.config`, held by a `Config` class.
+
+```cpp
+struct GameplayConfigData
+{
+    float SpawnRate = 2.f;
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(GameplayConfigData, SpawnRate)
+    OPAAX_PROPERTIES(GameplayConfigData, OPAAX_PROP(SpawnRate).SetRange(0.f, 10.f))
+};
+
+DECLARE_T_CONFIG(Gameplay, GameplayConfigData)   // Config_Gameplay, saved as Gameplay.config
+
+OPAAX_REGISTER_OBJECT(Config_Gameplay);           // in a .cpp
+```
+
+`IConfigSystem::Get<Config_Gameplay>().GetData()` reads it. The engine makes one of each registered
+config class at startup and loads its file (written with the defaults when missing), so the Config
+panel lists it before the game first reads it, draws its values from their properties, and saves or
+resets them. A missing key keeps its default. Subscribe to `OnChanged()` to follow edits made while
+the game runs.
+
 ### Events, input and sound
 
 From a behaviour: `Send(entity, event)` / `Listen<&Class::OnEvent>()` for an entity's events,
@@ -203,10 +228,10 @@ An asset editor derives from `IAssetEditor` and edits the asset directly in `Dra
 asset's window around it records each change as an undo step and has the Save button
 ([Objects.md](Objects.md)).
 
-Also available: `ViewportTools()` (buttons over the viewport) and `ConfigDrawers()`. A UI widget
-needs no drawer: the UI panel draws any widget from its class's properties. A subsystem for edit
-worlds only is a `WorldSubsystem` like any other, registered with `OPAAX_REGISTER_OBJECT`, whose
-`ShouldCreate` accepts edit worlds. `Sandbox/Editor/Source/SandboxEditor`
+Also available: `ViewportTools()` (buttons over the viewport). A UI widget needs no drawer: the
+UI panel draws any widget from its class's properties, and the Config panel draws any config from
+its values' properties. A subsystem for edit worlds only is a `WorldSubsystem` like any other,
+registered with `OPAAX_REGISTER_OBJECT`, whose `ShouldCreate` accepts edit worlds. `Sandbox/Editor/Source/SandboxEditor`
 has a working command, drawer and resource type.
 
 A command receives the `EditorContext`: the worlds, the selection, undo, the open documents, the

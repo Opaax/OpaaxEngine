@@ -1,15 +1,16 @@
 // Suite: EngineConfigData through the generic codec (the same macro as components).
 // Missing keys keep defaults, malformed input keeps defaults, and the round trip is exact.
-// The codec throws; TConfig::Load catches.
+// The codec throws; TConfig::Load catches. And what TConfig gives every config: reset, the values the
+// Config panel draws, change notification.
 #include <doctest.h>
 
-#include "../../TestTempDir.h"
+#include "../TestTempDir.h"
 #include "Core/String/CString.h"
 
-#include "Core/Config/TConfig.hpp"
 #include "Core/IO/FileIO.h"
 #include "Core/IO/FileSystem.h"
 #include "Engine/Config/EngineConfigData.h"
+#include "Engine/Config/TConfig.h"
 #include "Renderer/Config/RendererConfigData.h"
 
 using namespace Opaax;
@@ -20,13 +21,13 @@ namespace
 
     EngineConfigData Parse(const char* InText) { return Codec::FromText(OpaaxString(InText)); }
 
-    // A config over the same data, so Load's behaviour can be exercised without the registry.
-    // Its id is fixed rather than stamped with OPAAX_CONFIG_TYPE: nothing registers it.
+    // A config over the same data, so Load's behaviour can be exercised without the config system.
     class ProbeConfig final : public TConfig<EngineConfigData>
     {
+        OPAAX_OBJECT(ProbeConfig, Config)
+
     public:
-        const char*  FileName() const override { return "probe.config"; }
-        ConfigTypeID GetConfigTypeID() const noexcept override { return 0; }
+        const char* FileName() const override { return "probe.config"; }
     };
 }
 
@@ -156,7 +157,7 @@ namespace
     };
 }
 
-TEST_CASE("IConfig::NotifyChanged: every subscriber is called exactly once")
+TEST_CASE("Config::NotifyChanged: every subscriber is called exactly once")
 {
     ProbeConfig   lProbe;
     ChangeCounter lMember;
@@ -171,7 +172,7 @@ TEST_CASE("IConfig::NotifyChanged: every subscriber is called exactly once")
     CHECK(lLambdaCalls  == 1);
 }
 
-TEST_CASE("IConfig::OnChanged: after RemoveAll(owner) the subscriber is no longer called")
+TEST_CASE("Config::OnChanged: after RemoveAll(owner) the subscriber is no longer called")
 {
     // The unsubscribe every subsystem must do in Shutdown (the config outlives it).
     ProbeConfig   lProbe;
@@ -282,4 +283,121 @@ TEST_CASE("RendererConfigData: ClearColor is live, the batch limits need a resta
     CHECK_FALSE(HasFlag(FlagsOf(lRenderer, "ClearColor"), EPropertyFlags::NeedRestart));
     CHECK(HasFlag(FlagsOf(lRenderer, "MaxQuadsPerBatch"), EPropertyFlags::NeedRestart));
     CHECK(HasFlag(FlagsOf(lRenderer, "MaxTextureSlots"), EPropertyFlags::NeedRestart));
+}
+
+// =============================================================================
+// What every config gets from TConfig
+// =============================================================================
+
+namespace
+{
+    /** Records the groups and fields a walk meets, at any depth. */
+    class ValueNames final : public IPropertyVisitor
+    {
+    public:
+        TDynArray<OpaaxString> Groups;
+        Uint32                 Fields = 0;
+
+        void Visit(const char*, bool&, const PropertyMeta&) override          { ++Fields; }
+        void Visit(const char*, Int16&, const PropertyMeta&) override         { ++Fields; }
+        void Visit(const char*, Int32&, const PropertyMeta&) override         { ++Fields; }
+        void Visit(const char*, Uint32&, const PropertyMeta&) override        { ++Fields; }
+        void Visit(const char*, float&, const PropertyMeta&) override         { ++Fields; }
+        void Visit(const char*, Vector2F&, const PropertyMeta&) override      { ++Fields; }
+        void Visit(const char*, Vector3F&, const PropertyMeta&) override      { ++Fields; }
+        void Visit(const char*, Vector4F&, const PropertyMeta&) override      { ++Fields; }
+        void Visit(const char*, LinearColor&, const PropertyMeta&) override   { ++Fields; }
+        void Visit(const char*, OpaaxString&, const PropertyMeta&) override   { ++Fields; }
+        void Visit(const char*, OpaaxStringID&, const PropertyMeta&) override { ++Fields; }
+        void VisitEnum(const char*, const char* const*, Uint32, Uint32&, const PropertyMeta&) override { ++Fields; }
+        void VisitResourcePath(const char*, OpaaxString&, Uint32, const PropertyMeta&) override { ++Fields; }
+        void VisitAssetRef(const char*, OpaaxString&, const ObjectClass&, const PropertyMeta&) override { ++Fields; }
+        void VisitObjectRef(const char*, ObjectHandle&, const ObjectClass&, const PropertyMeta&) override { ++Fields; }
+        void VisitUnsupported(const char*, OpaaxStringView) override { ++Fields; }
+
+        bool BeginGroup(const char* InName, const PropertyMeta&) override
+        {
+            Groups.emplace_back(InName);
+            return true;
+        }
+
+        void EndGroup() override {}
+
+        bool HasGroup(const char* InName) const
+        {
+            for (const OpaaxString& lGroup : Groups)
+            {
+                if (lGroup == InName) { return true; }
+            }
+            return false;
+        }
+    };
+
+    /** Values with no property list: the editor shows their text. */
+    struct PlainData
+    {
+        Int32 Value = 3;
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(PlainData, Value)
+    };
+
+    class PlainConfig final : public TConfig<PlainData>
+    {
+        OPAAX_OBJECT(PlainConfig, Config)
+
+    public:
+        const char* FileName() const override { return "Plain.config"; }
+    };
+}
+
+TEST_CASE("TConfig: ResetToDefaults puts every value back, without saving or announcing it")
+{
+    const TestTempDir lDir("ConfigReset");
+    const OpaaxString lPath = lDir.Sub("Probe.config");
+    FileIO::WriteAllText(lPath, OpaaxString(R"({"Window":{"Width":900},"Render":{"bInterpolation":false}})"));
+
+    ProbeConfig lProbe;
+    REQUIRE(lProbe.Load(lPath));
+    REQUIRE(lProbe.GetData().Window.Width == 900u);
+
+    ChangeCounter lMember;
+    lProbe.OnChanged().AddMember(&lMember, &ChangeCounter::OnChanged);
+
+    lProbe.ResetToDefaults();
+
+    CHECK(lProbe.GetData().Window.Width == 1280u);
+    CHECK(lProbe.GetData().Render.bInterpolation);
+    CHECK(lProbe.ToText() == Codec::ToText(EngineConfigData{}));
+
+    CHECK(lMember.Calls == 0);                                                    // the panel announces it
+    CHECK(FileIO::ReadAllText(lPath).Contains("900"));                            // the file is untouched
+}
+
+TEST_CASE("TConfig: VisitValues walks the data's properties, which the Config panel draws")
+{
+    ProbeConfig lProbe;
+
+    ValueNames lNames;
+    CHECK(lProbe.VisitValues(lNames));
+    CHECK(lNames.HasGroup("Window"));
+    CHECK(lNames.HasGroup("Render"));
+    CHECK(lNames.Fields > 0);
+
+    // Values without a property list are not walked: the panel shows the text instead.
+    PlainConfig lPlain;
+    ValueNames  lNone;
+    CHECK_FALSE(lPlain.VisitValues(lNone));
+    CHECK(lNone.Fields == 0);
+    CHECK(lPlain.ToText().Contains("Value"));
+}
+
+TEST_CASE("Config: a config is an Object class under Config, named after its file by NameFromFile")
+{
+    CHECK(ProbeConfig::StaticClass().IsChildOf(Config::StaticClass()));
+    CHECK(Config::StaticClass().IsAbstract());
+    CHECK_FALSE(ProbeConfig::StaticClass().IsAbstract());
+
+    // Only the last extension goes: "test.config.json" keeps its inner dot.
+    CHECK(Config::NameFromFile("Engine.config") == OPAAX_ID("Engine"));
+    CHECK(Config::NameFromFile("test.config.json") == OPAAX_ID("test.config"));
 }

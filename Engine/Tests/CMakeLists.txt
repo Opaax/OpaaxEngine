@@ -23,7 +23,6 @@ set(OPAAX_TEST_SOURCES
     Core/AlgoTests.cpp
     Core/ColorTests.cpp
     Core/CStringTests.cpp
-    Core/Config/EngineConfigDataTests.cpp
     Core/GuidTests.cpp
     Core/Image/PngWriterTests.cpp
     Core/IO/FileSystemTests.cpp
@@ -63,6 +62,7 @@ set(OPAAX_TEST_SOURCES
 
     # Engine
     Engine/AutoRegistrationTests.cpp
+    Engine/EngineConfigDataTests.cpp
     Engine/EngineEventsTests.cpp
     Engine/FrameClockTests.cpp
     Engine/GameInstanceTests.cpp

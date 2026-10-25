@@ -126,7 +126,6 @@ namespace Opaax::Editor
         /**
          * Registers drawers for the engine and editor configs (drawn from their properties, not JSON).
          */
-        void RegisterNativeConfigDrawers();
 
         /**
          * Gives every reflected component that has no drawer (typically a game's) the generic one, drawn

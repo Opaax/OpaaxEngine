@@ -1,6 +1,6 @@
-﻿#pragma once
+#pragma once
 
-#include <Core/Config/TConfig.hpp>
+#include "Engine/Config/TConfig.h"
 #include <Renderer/Config/RendererConfigData.h>
 
 #include "Core/EngineAPI.h"

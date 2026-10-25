@@ -52,7 +52,6 @@
 #include "Editor/Panels/StatsPanel.h"
 #include "Editor/Panels/ViewportPanel.h"
 #include "Editor/Imgui/Configs/Config_EditorImgui.h"
-#include "Editor/Imgui/Configs/EditorImguiConfigDrawer.h"
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Renderer/Config/Config_Renderer.h"
@@ -533,15 +532,6 @@ namespace Opaax::Editor
         });
     }
 
-    void EditorService::RegisterNativeConfigDrawers()
-    {
-        // Engine and editor configs, through the same route a game's config would use. Drawn from their
-        // OPAAX_PROPERTIES; only the resolver (which config) is config-specific.
-        m_Extensions.ConfigDrawers().Register<Config_Engine>();
-        m_Extensions.ConfigDrawers().Register<Config_Renderer>();
-        m_Extensions.ConfigDrawers().Register<Config_EditorImgui, EditorImguiConfigDrawer>();
-    }
-
     void EditorService::RegisterNativeAssetTypes()
     {
         // The engine's asset classes, by New Asset submenu. A class registered nowhere is offered at the
@@ -948,7 +938,6 @@ namespace Opaax::Editor
         RegisterNativeAssetTypes();
         RegisterNativeEditorCommand();
         RegisterNativeDrawers();
-        RegisterNativeConfigDrawers();
 
         // After the commands: the mode buttons dispatch by tag.
         RegisterNativeViewportTools();
@@ -967,8 +956,8 @@ namespace Opaax::Editor
         m_Extensions.Seal();
 
         OPAAX_LOG(LogEditorService, Info,
-                  "Editor extensions sealed (before first world): drawers={}, configDrawers={}, panels={}, resourceTypes={}, titleBar={}, commands={}",
-                  m_Extensions.Drawers().Count(), m_Extensions.ConfigDrawers().Count(),
+                  "Editor extensions sealed (before first world): drawers={}, panels={}, resourceTypes={}, titleBar={}, commands={}",
+                  m_Extensions.Drawers().Count(),
                   m_Extensions.Panels().Count(), m_Extensions.ResourceTypes().Count(),
                   m_Extensions.TitleBar().Count(), m_Extensions.Commands().Count());
     }

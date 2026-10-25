@@ -4,6 +4,7 @@
 
 #include "Application/OpaaxApplication.h"
 #include "Core/Log/Logger.h"
+#include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IJobSystem.h"
 #include "Application/Services/IPaths.h"
 #include "Audio/AudioManager.h"
@@ -331,6 +332,9 @@ namespace Opaax
             m_Resources->SetJobSystem(OpaaxApplication::GetAppService<IJobSystem>());
             m_Resources->SetObjectClasses(&m_Registries.ObjectClasses());
         }
+
+        // Every config class has its config from now on, read or not: the editor lists them all.
+        OpaaxApplication::GetAppService<IConfigSystem>().RegisterClasses(m_Registries.ObjectClasses());
         
         BindToWorldMgrEvents();
 

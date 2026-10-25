@@ -1,6 +1,8 @@
-﻿#include "Config_Renderer.h"
+#include "Renderer/Config/Config_Renderer.h"
+
+#include "Engine/Registries/AutoRegistration.h"
 
 namespace Opaax
 {
-    IMPL_T_CONFIG(Renderer)
+    OPAAX_REGISTER_OBJECT(Config_Renderer);
 }

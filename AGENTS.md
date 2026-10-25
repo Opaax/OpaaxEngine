@@ -112,6 +112,10 @@ Match the code around you. In short:
 - **Game instance class:** a `GameInstance` subclass with `OPAAX_OBJECT`, `OnStart`/`OnEnd` overrides
   and one `OPAAX_REGISTER_OBJECT` line, named by the project's `gameInstanceClass`. Session features
   go in game instance subsystems instead, which every game makes.
+- **Config:** a data struct with the JSON macro and `OPAAX_PROPERTIES` (a default on every field), a
+  `TConfig<Data>` subclass with `OPAAX_OBJECT(Class, Opaax::Config)` and its `FileName()` (or
+  `DECLARE_T_CONFIG`), and one `OPAAX_REGISTER_OBJECT` line. Read with `IConfigSystem::Get<T>()`; the
+  Config panel draws it from its properties. See [Docs/Customizing.md](Docs/Customizing.md).
 - **UI widget:** a `UIWidget` subclass with `OPAAX_OBJECT`, its saved fields in `OPAAX_PROPERTIES`, and
   one `OPAAX_REGISTER_OBJECT` line: canvases save it, the UI panel offers and draws it. Made with
   `NewObject<T>()` in code; its parent owns it.
@@ -156,6 +160,9 @@ Match the code around you. In short:
   warning MSB8029), and stale objects then crash at run time. Keep checkouts and builds out of it.
 - A `git worktree` has no submodules: run `git submodule update --init --recursive` in it before the
   first build (the configure step says so).
+- `OPAAX_REGISTER_*` runs only in code linked whole: the engine and the game modules. The editor
+  library is not, so a registration in an editor file is dropped by the linker; the editor registers
+  through its `EditorExtensionRegistrar`, and makes its config by reading it.
 - Core has namespaces named `Clock`, `Random`, `Algo`, `Memory`, `FileSystem`, `Console`, `Process`:
   a type of the same name, used under `using namespace Opaax`, is ambiguous. Name it otherwise.
 - Visiting a `TAssetRef<T>` property needs `T::StaticClass()`, so `T` must be complete wherever the

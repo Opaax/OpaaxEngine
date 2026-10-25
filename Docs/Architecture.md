@@ -8,7 +8,7 @@ how to extend each part.
 
 | Module | Holds |
 |---|---|
-| `Core` | Types and aliases over the standard library, strings and paths, files, time, logging, reflection (`OPAAX_PROPERTIES`), events, jobs, maths, configs |
+| `Core` | Types and aliases over the standard library, strings and paths, files, time, logging, reflection (`OPAAX_PROPERTIES`), events, jobs, maths |
 | `Platform` | The window and input devices (GLFW), the file system |
 | `RHI` | The rendering interface and its OpenGL 4.1 backend (`RHI/OpenGL`) |
 | `Renderer` | Sprites, text and debug drawing in batches, cameras, and the HDR path: lights, soft shadows, ambient occlusion, bloom, tonemapping (`Post/ScenePipeline2D`) |
@@ -18,7 +18,7 @@ how to extend each part.
 | `Physics` | Colliders, rigidbodies, contacts and queries over Box2D (`Physics/Box2D`) |
 | `Audio` | Sound: the engine's own mixer (voices, buses, fades, spatial sound) on an audio thread, clip definitions and banks, sources and the listener; the device and the decoders behind a backend (`Audio/Miniaudio`) |
 | `Input`, `Animation`, `Movement`, `UI` | Actions and mapping contexts, sprite animation, character movers, UI canvases |
-| `Engine`, `Application` | The application, its services, the registries and the frame loop |
+| `Engine`, `Application` | The application, its services, the registries, the frame loop and the configs (`Engine/Config`: one `Config` object class per `.config` file) |
 | `Automation` | The request runner, its two transports (a script, an inbox folder) and the engine's commands |
 
 The editor is a separate library (`Editor/`) on top of the engine: panels, commands, documents

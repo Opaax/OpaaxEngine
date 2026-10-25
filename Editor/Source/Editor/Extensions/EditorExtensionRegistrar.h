@@ -21,7 +21,6 @@ namespace Opaax::Editor
     {
     public:
         ComponentDrawerRegistry&   Drawers()          noexcept { return m_Drawers; }
-        ConfigDrawerRegistry&      ConfigDrawers()    noexcept { return m_ConfigDrawers; }
         PanelRegistry&             Panels()           noexcept { return m_Panels; }
         ResourceTypeRegistry&      ResourceTypes()    noexcept { return m_ResourceTypes; }
         AssetTypeRegistry&         AssetTypes()       noexcept { return m_AssetTypes; }
@@ -30,7 +29,6 @@ namespace Opaax::Editor
         ViewportToolbarRegistry&   ViewportTools()    noexcept { return m_ViewportTools; }
 
         const ComponentDrawerRegistry& Drawers()       const noexcept { return m_Drawers; }
-        const ConfigDrawerRegistry&  ConfigDrawers()   const noexcept { return m_ConfigDrawers; }
         const PanelRegistry&         Panels()          const noexcept { return m_Panels; }
         const ResourceTypeRegistry&  ResourceTypes()   const noexcept { return m_ResourceTypes; }
         const AssetTypeRegistry&     AssetTypes()      const noexcept { return m_AssetTypes; }
@@ -42,9 +40,7 @@ namespace Opaax::Editor
         bool IsSealed() const noexcept { return m_Sealed; }
 
     private:
-        // Instances of one registry type (TDrawerRegistry); only the resolver differs.
         ComponentDrawerRegistry m_Drawers;
-        ConfigDrawerRegistry    m_ConfigDrawers;
         PanelRegistry        m_Panels;
         ResourceTypeRegistry m_ResourceTypes;
 

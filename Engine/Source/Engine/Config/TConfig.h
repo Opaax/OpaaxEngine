@@ -2,12 +2,13 @@
 
 #include <nlohmann/json.hpp>
 
-#include "Core/Config/IConfig.h"
 #include "Core/IO/FileIO.h"
+#include "Core/OpaaxMacro.hpp"
+#include "Core/Reflection/OpaaxProperty.h"
 #include "Core/Serialization/JsonConcept.h"
 #include "Core/String/OpaaxString.hpp"
-#include "Core/OpaaxMacro.hpp"
-#include "Core/EngineAPI.h"
+#include "Engine/Config/Config.h"
+#include "Engine/Reflection/PropertyVisitor.h"
 
 // =============================================================================
 // ==== USAGE ==================================================================
@@ -15,21 +16,22 @@
 // A config data type uses the same nlohmann macro as a component.
 //
 // In your .h:
-//   #include "Core/Config/TConfig.hpp"
+//   #include "Engine/Config/TConfig.h"
 //   struct MyConfigData
 //   {
 //       float Value = 10.f;
 //
 //       NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(MyConfigData, Value)
-//       OPAAX_PROPERTIES(MyConfigData, OPAAX_PROP(Value))                  // optional: editor display
+//       OPAAX_PROPERTIES(MyConfigData, OPAAX_PROP(Value))                  // what the Config panel draws
 //   };
 //
-//   DECLARE_T_CONFIG(MyConfig, MyConfigData)
+//   DECLARE_T_CONFIG(MyConfig, MyConfigData)                               // Config_MyConfig, MyConfig.config
 //
 // In your .cpp:
-//   IMPL_T_CONFIG(MyConfig)
+//   OPAAX_REGISTER_OBJECT(Config_MyConfig);
 //
-// Nested structs are written as nested JSON objects and shown as groups in the editor.
+// Read it with IConfigSystem::Get<Config_MyConfig>().GetData(). Nested structs are written as nested
+// JSON objects and shown as groups in the editor.
 // =============================================================================
 // ==== END USAGE ==============================================================
 // =============================================================================
@@ -61,11 +63,12 @@ namespace Opaax
     };
 
     // =============================================================================
-    // TConfig — generic config base. A concrete config declares its data type and
-    // file name; the base handles Load, Save and the default file.
+    // TConfig — a config whose values are a TData. A concrete config derives from it, declares
+    //   OPAAX_OBJECT(Class, Config) and its file name; the base handles Load, Save, the default file and
+    //   what the editor draws (TData's OPAAX_PROPERTIES).
     // =============================================================================
     template<class TData>
-    class TConfig : public IConfig
+    class TConfig : public Config
     {
         // =============================================================================
         // Function
@@ -81,7 +84,7 @@ namespace Opaax
         // Override
         // =============================================================================
 
-        //~Begin Opaax::IConfig interface
+        //~Begin Config interface
     public:
         bool Load(const OpaaxString& InAbsPath) override
         {
@@ -91,7 +94,7 @@ namespace Opaax
             if (lText.IsEmpty())
             {
                 // Missing or empty: write the default file, keep the defaults.
-                return GenerateDefaultConfig(InAbsPath);
+                return FileIO::WriteAllText(InAbsPath, TConfigCodec<TData>::ToText(m_Data));
             }
 
             // Bad JSON or wrong-typed value: keep the defaults and return false
@@ -129,13 +132,21 @@ namespace Opaax
         // Same codec as Save.
         OpaaxString ToText() const override { return TConfigCodec<TData>::ToText(m_Data); }
 
-    protected:
-        bool GenerateDefaultConfig(const OpaaxString& InAbsPath) override
+        bool VisitValues(IPropertyVisitor& InVisitor) override
         {
-            // The default file is the serialized defaults.
-            return FileIO::WriteAllText(InAbsPath, TConfigCodec<TData>::ToText(m_Data));
+            if constexpr (CReflected<TData>)
+            {
+                VisitProperties(m_Data, InVisitor);
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
-        //~End Opaax::IConfig interface
+
+        void ResetToDefaults() override { m_Data = TData{}; }
+        //~End Config interface
 
         // =============================================================================
         // Members
@@ -145,17 +156,15 @@ namespace Opaax
         OpaaxString m_LoadedPath;
     };
 }
-    
-// =============================================================================
-// Declares Config_<ConfigName>, saved as <ConfigName>.config. Pair with IMPL_T_CONFIG in a .cpp.
-// =============================================================================
-#define DECLARE_T_CONFIG(ConfigName, DataType)\
-class Config_##ConfigName final : public TConfig<DataType> \
-{ public: OPAAX_CONFIG_TYPE(ConfigName) const char* FileName() const override { return STR(ConfigName) ".config"; } };
 
-#define IMPL_T_CONFIG(ConfigName)\
-::Opaax::ConfigTypeID Config_##ConfigName::StaticTypeID() noexcept\
-{\
-    static const int s_Tag = 0;\
-    return reinterpret_cast<::Opaax::ConfigTypeID>(&s_Tag);\
-}
+// =============================================================================
+// Declares Config_<ConfigName>, saved as <ConfigName>.config, its values a DataType. Register it in a
+// .cpp with OPAAX_REGISTER_OBJECT(Config_<ConfigName>).
+// =============================================================================
+#define DECLARE_T_CONFIG(ConfigName, DataType)                                                      \
+    class Config_##ConfigName final : public ::Opaax::TConfig<DataType>                            \
+    {                                                                                               \
+        OPAAX_OBJECT(Config_##ConfigName, ::Opaax::Config)                                          \
+    public:                                                                                         \
+        const char* FileName() const override { return STR(ConfigName) ".config"; }               \
+    };

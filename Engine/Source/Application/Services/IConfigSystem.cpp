@@ -3,6 +3,8 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/String/OpaaxPathString.h"
+#include "Object/ObjectClass.h"
+#include "Object/ObjectClassRegistry.h"
 
 namespace Opaax
 {
@@ -18,8 +20,8 @@ namespace Opaax
             void SaveAll() override {}
 
         protected:
-            void OnConfigRegistered(IConfig&) override {}   // defaults only
-            bool SaveConfig(ConfigTypeID) override { return false; }
+            void OnConfigRegistered(Config&) override {}   // defaults only
+            bool SaveConfig(const ObjectClass&) override { return false; }
         };
     }
 
@@ -41,30 +43,40 @@ namespace Opaax
     // =========================================================================
     // Registry
     // =========================================================================
-    IConfig* IConfigSystem::FindConfig(const ConfigTypeID InId) const noexcept
+    Config* IConfigSystem::FindConfig(const ObjectClass& InClass) const noexcept
     {
-        for (const TUniquePtr<IConfig>& lConfig : m_Configs)
+        for (const TStrongObjectPtr<Config>& lConfig : m_Configs)
         {
-            if (lConfig->GetConfigTypeID() == InId) { return lConfig.get(); }
+            if (&lConfig->GetClass() == &InClass) { return lConfig.Get(); }
         }
 
         return nullptr;
     }
 
-    IConfig& IConfigSystem::FindOrCreate(const ConfigTypeID InId, const TFunction<TUniquePtr<IConfig>()>& InFactory)
+    Config& IConfigSystem::FindOrCreate(const ObjectClass& InClass)
     {
-        if (IConfig* lFound = FindConfig(InId))
+        if (Config* lFound = FindConfig(InClass))
         {
             return *lFound;
         }
 
-        m_Configs.emplace_back(InFactory());
-        IConfig& lConfig = *m_Configs.back();
+        // Named after its file ("Engine.config" -> "Engine"): the Config panel lists it by that name.
+        const Config* const lDefault = static_cast<const Config*>(InClass.GetDefaultObject());
+        m_Configs.emplace_back(Cast<Config>(InClass.CreateInstance(Config::NameFromFile(lDefault->FileName()))));
+        Config& lConfig = *m_Configs.back();
 
         // Registered before the hook, so a config reading others while loading finds itself.
         OnConfigRegistered(lConfig);
 
         return lConfig;
+    }
+
+    void IConfigSystem::RegisterClasses(const ObjectClassRegistry& InClasses)
+    {
+        for (const ObjectClass* lClass : InClasses.GetClassesOf(Config::StaticClass(), /*bInConcreteOnly*/ true))
+        {
+            FindOrCreate(*lClass);
+        }
     }
 
     // =========================================================================
@@ -86,7 +98,7 @@ namespace Opaax
         return PathString::Join(m_ConfigsDir, InFileName);
     }
 
-    void ConfigSystem::OnConfigRegistered(IConfig& InConfig)
+    void ConfigSystem::OnConfigRegistered(Config& InConfig)
     {
         // Loads the file, or creates the default one if missing.
         const OpaaxString lPath = JoinConfigPath(InConfig.FileName());
@@ -103,15 +115,15 @@ namespace Opaax
         OPAAX_LOG(LogConfigSystem, Trace, "Config [{}] Created", InConfig.FileName());
     }
 
-    bool ConfigSystem::SaveConfig(ConfigTypeID InId)
+    bool ConfigSystem::SaveConfig(const ObjectClass& InClass)
     {
-        IConfig* lConfig = FindConfig(InId);
+        Config* lConfig = FindConfig(InClass);
         return lConfig != nullptr && lConfig->Save();
     }
 
     void ConfigSystem::SaveAll()
     {
-        for (const TUniquePtr<IConfig>& lConfig : GetConfigs())
+        for (const TStrongObjectPtr<Config>& lConfig : GetConfigs())
         {
             lConfig->Save();
         }

@@ -1,12 +1,12 @@
 #pragma once
 
-#include "Core/Config/IConfig.h"            // ConfigTypeID
 #include "Core/String/OpaaxString.hpp"
+#include "Core/String/OpaaxStringID.hpp"
 
 namespace Opaax::Editor
 {
     // =============================================================================
-    // ConfigChangeTracker — decides when the Config panel calls IConfig::NotifyChanged: once per
+    // ConfigChangeTracker — decides when the Config panel calls Config::NotifyChanged: once per
     //   committed edit (after a drag, pick or typing ends), never every frame. A drag ending where it
     //   started announces nothing. Compares this frame's text with the last announced text.
     // =============================================================================
@@ -15,16 +15,16 @@ namespace Opaax::Editor
     public:
         /**
          * Feeds one frame of the shown config.
-         * @param InId        The shown config. A different one resets the baseline silently.
-         * @param InText      Its current text (IConfig::ToText)
+         * @param InConfig    The shown config's name. A different one resets the baseline silently.
+         * @param InText      Its current text (Config::ToText)
          * @param bInEditing  A widget is still being edited
          * @return True on the frame the edit is committed (the caller notifies)
          */
-        bool Update(const ConfigTypeID InId, const OpaaxString& InText, const bool bInEditing)
+        bool Update(const OpaaxStringID InConfig, const OpaaxString& InText, const bool bInEditing)
         {
-            if (InId != m_Id)
+            if (InConfig != m_Config)
             {
-                m_Id        = InId;
+                m_Config    = InConfig;
                 m_Announced = InText;
                 return false;
             }
@@ -39,7 +39,7 @@ namespace Opaax::Editor
         }
 
     private:
-        ConfigTypeID m_Id = 0;
-        OpaaxString  m_Announced;
+        OpaaxStringID m_Config;
+        OpaaxString   m_Announced;
     };
 }
