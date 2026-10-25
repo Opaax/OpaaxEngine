@@ -659,18 +659,6 @@ namespace Opaax::Editor
             .SetEditor<TextureEditor>();
     }
 
-    void EditorService::RegisterNativeResourceTypes()
-    {
-        // Every asset class opens in a window of its own; how each looks comes from AssetTypes().
-        m_Extensions.ResourceTypes().Register<AssetResource>()
-            .SetGlyph(OpaaxString("[A]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_ASSET, InContext,
-                                                        AssetPathParams{ InFile.AbsPath });
-            });
-    }
-    
     // =============================================================================
     // =============================================================================
     // World
@@ -934,7 +922,6 @@ namespace Opaax::Editor
     {
         RegisterNativePanels();
         RegisterNativeMenus();
-        RegisterNativeResourceTypes();
         RegisterNativeAssetTypes();
         RegisterNativeEditorCommand();
         RegisterNativeDrawers();
@@ -956,9 +943,9 @@ namespace Opaax::Editor
         m_Extensions.Seal();
 
         OPAAX_LOG(LogEditorService, Info,
-                  "Editor extensions sealed (before first world): drawers={}, panels={}, resourceTypes={}, titleBar={}, commands={}",
+                  "Editor extensions sealed (before first world): drawers={}, panels={}, assetTypes={}, titleBar={}, commands={}",
                   m_Extensions.Drawers().Count(),
-                  m_Extensions.Panels().Count(), m_Extensions.ResourceTypes().Count(),
+                  m_Extensions.Panels().Count(), m_Extensions.AssetTypes().Entries().size(),
                   m_Extensions.TitleBar().Count(), m_Extensions.Commands().Count());
     }
 

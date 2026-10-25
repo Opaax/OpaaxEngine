@@ -1,19 +1,13 @@
 #include "SandboxEditorModule.h"
 
-#include "Core/Log/Logger.h"   // OPAAX_LOG + LogCategory
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/EditorContext.h"   // the Panels factory receives EditorContext&
 #include "Commands/SandboxEditorCommandTags.h"
 #include "Commands/ValidateSandboxCommand.h"
 #include "Drawers/TagsComponentDrawer.h"
-#include "Resources/WaveResource.h"
+#include "Data/EnemyWave.h"
 
 using namespace Opaax;
-
-namespace
-{
-    constexpr LogCategory LogSandboxEditorModule{"SandboxEditorModule"};
-}
 
 void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& InRegistrar)
 {
@@ -30,15 +24,12 @@ void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& In
     // Hand-written: tags are added/removed from a validated vocabulary, not typed as a field.
     InRegistrar.Drawers().Register<Sandbox::TagsComponent, TagsComponentDrawer>();
 
-    // The game's own file type. The runtime module registers WaveResource (and its .wave extension);
-    // the editor only adds the glyph and the double-click action.
-    InRegistrar.ResourceTypes().Register<Sandbox::WaveResource>()
-        .SetGlyph(OpaaxString("[W]"))
-        .SetActivate([](Opaax::Editor::EditorContext&, const Opaax::Editor::ResourceFile& InFile)
-        {
-            // No wave editor yet; activating only logs.
-            OPAAX_LOG(LogSandboxEditorModule, Info, "Wave definition activated: {}", InFile.RelPath.CStr());
-        });
+    // The game's own file format: an asset class read from .wave files. The runtime module registers
+    // the class (and its extension); the editor only adds its look. A double-click opens its window.
+    InRegistrar.AssetTypes().Register<Sandbox::EnemyWave>()
+        .SetLabel(OpaaxString("Enemy Wave"))
+        .SetCategory(OpaaxString("Gameplay"))
+        .SetGlyph(OpaaxString("[W]"));
 
     // No game panel is registered at the moment. Re-adding one is a single Register call.
 }

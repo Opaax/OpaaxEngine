@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
-#include "Resources/ResourcePath.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Log/Logger.h"
 #include "Engine/Subsystems/EngineSubsystem.h"

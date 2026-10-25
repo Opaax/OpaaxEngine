@@ -51,8 +51,7 @@ ended.
 ### Types register themselves
 
 A type is added with one line beside its definition (`OPAAX_REGISTER_COMPONENT(Health)`); the engine
-runs the registrations when it starts, kind by kind (object classes, resource formats, components,
-behaviours...). Object classes include the game and world subsystems: an owner finds them in the
+runs the registrations when it starts, kind by kind (object classes, components, behaviours...). Object classes include the game and world subsystems: an owner finds them in the
 class registry, so no subsystem list exists either.
 
 - **For:** no central list or registrar function to edit, for the engine and a game alike. A type

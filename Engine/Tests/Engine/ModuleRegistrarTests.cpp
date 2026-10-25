@@ -57,18 +57,6 @@ namespace TestGame
     {
         OPAAX_OBJECT(PatrolSubsystem, Opaax::WorldSubsystem)
     };
-
-    // A module's resource type: it names the extension it claims, and the engine's table is what
-    // makes `.pickup` a known file everywhere — no engine header mentions it.
-    struct PickupResource
-    {
-        OPAAX_RESOURCE_FORMAT("Pickup Table", ".pickup")
-
-        static constexpr Opaax::EFailPolicy FailPolicy = Opaax::EFailPolicy::Placeholder;
-
-        static TOptional<PickupResource> Load(const char*, Opaax::LoadContext&) { return PickupResource{}; }
-        static PickupResource            Placeholder() { return PickupResource{}; }
-    };
 }
 
 // Global namespace on purpose (like an editor module): MSVC's "class " prefix must be stripped.
@@ -224,32 +212,6 @@ TEST_CASE("ObjectClassRoute: a module's subsystem class reaches the engine regis
         CollectSubsystemClasses(lRegistries.ObjectClasses(), WorldSubsystem::StaticClass());
     REQUIRE(lFound.size() == 1u);
     CHECK(lFound[0] == lClass);
-}
-
-TEST_CASE("ResourceFormatRoute: an unbound route refuses rather than dropping silently")
-{
-    ModuleRegistrar lRegistrar; // deliberately NOT bound
-
-    CHECK_FALSE(lRegistrar.Resources().Register<TestGame::PickupResource>());
-
-    CHECK(lRegistrar.Resources().Count() == 1u);
-}
-
-TEST_CASE("ResourceFormatRoute: a bound route forwards into the engine registry, name derived")
-{
-    EngineRegistries lRegistries;
-    ModuleRegistrar  lRegistrar;
-    lRegistrar.BindEngineRegistries(lRegistries);
-
-    REQUIRE(lRegistrar.Resources().Register<TestGame::PickupResource>());
-
-    CHECK(lRegistries.Resources().Count() == 1u);
-
-    // The extension the TYPE declared is what the table answers for — the game module said it once
-    // and no engine file mentions ".pickup" anywhere.
-    const ResourceFormatEntry* const lEntry = lRegistries.Resources().FindByExtension(NormalizeExtension(".pickup"));
-    REQUIRE(lEntry != nullptr);
-    CHECK(lEntry->Name == OpaaxStringID(OpaaxString("PickupResource")));
 }
 
 // =============================================================================

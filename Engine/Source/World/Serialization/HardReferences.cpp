@@ -28,7 +28,7 @@ namespace Opaax::HardReferences
 
                 for (const HardRefField& lField : lEntry->GetHardRefFields())
                 {
-                    // TResourcePath is saved as a plain string.
+                    // An asset reference is saved as a plain string.
                     const auto lIt = lComponent.Payload.find(lField.Name.CStr());
                     if (lIt == lComponent.Payload.end() || !lIt->is_string()) { continue; }
 

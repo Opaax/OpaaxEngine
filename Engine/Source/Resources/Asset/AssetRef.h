@@ -2,13 +2,31 @@
 
 #include <nlohmann/json.hpp>
 
+#include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringJson.h"
 #include "Core/Templates/TypeTraits.h"
-#include "Resources/ResourcePath.h"   // EResourceLoad
 
 namespace Opaax
 {
+    // =============================================================================
+    // EResourceLoad — when a referenced asset is loaded (like Unreal's TObjectPtr / TSoftObjectPtr).
+    //   Part of the type, not saved in the file.
+    // =============================================================================
+    enum class EResourceLoad : Uint8
+    {
+        /**
+         * Loaded when first asked for. The default. The only option for a prefab that references itself.
+         */
+        Soft,
+
+        /**
+         * Loaded with the map that holds it, and kept while it is mounted (e.g. a gun's bullet prefab,
+         * so the first shot does not stall). Cycles are refused.
+         */
+        Hard,
+    };
+
     // =============================================================================
     // TAssetRef<T> — a field that names an asset file holding a T (or a subclass of T): an .opaaxasset,
     //   or a file a class reads (a .png for a Texture2D). Saved as its path. The editor draws it as a drop

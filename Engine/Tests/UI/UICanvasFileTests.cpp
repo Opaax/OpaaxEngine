@@ -374,8 +374,8 @@ TEST_CASE("UICanvasFile: U5b's two new fields round-trip, and a file without the
 
 TEST_CASE("UICanvasFile: a file written when the asset fields were STRINGS still reads")
 {
-    // The zero-format-change claim, asserted rather than trusted. TResourcePath serializes as a
-    // BARE STRING (ResourcePathJson.h), so a `.opaaxui` authored before the fields became typed
+    // The zero-format-change claim, asserted rather than trusted. TAssetRef serializes as a
+    // BARE STRING (AssetRef.h), so a `.opaaxui` authored before the fields became typed
     // must load with its paths intact — no migration, no version bump.
     const WidgetClasses lRegistry;
 

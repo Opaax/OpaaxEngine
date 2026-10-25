@@ -35,13 +35,6 @@ namespace Opaax::Editor
         DrawPropertyNote(m_Widgets, InMeta);
     }
 
-    void WidgetPropertyVisitor::VisitResourcePath(const char* InName, OpaaxString& InPath,
-                                                  const Uint32 InResourceTypeId, const PropertyMeta& InMeta)
-    {
-        DrawResourcePathField(m_Widgets, InName, InPath, InResourceTypeId);
-        DrawPropertyNote(m_Widgets, InMeta);
-    }
-
     void WidgetPropertyVisitor::VisitAssetRef(const char* InName, OpaaxString& InPath, const ObjectClass& InClass,
                                               const PropertyMeta& InMeta)
     {

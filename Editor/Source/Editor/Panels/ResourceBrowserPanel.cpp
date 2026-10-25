@@ -3,7 +3,6 @@
 #include "Editor/EditorContext.h"
 #include "Editor/Application/Services/EditorPaths.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
-#include "Editor/Extensions/ResourceTypeRegistry.h"
 #include "Editor/ImguiLibrary/ImguiDraw.h"
 #include "Editor/ImguiLibrary/ImguiWidgets.h"
 #include "Editor/Resources/ResourceDragDrop.h"
@@ -19,7 +18,7 @@
 #include "Application/Services/IEngine.h"
 #include "Application/Services/IPaths.h"
 #include "Platform/IFileSystem.h"
-#include "Engine/Registries/EngineRegistries.h"   // extension -> resource type
+#include "Engine/Registries/EngineRegistries.h"   // the asset resource format
 #include "Resources/ResourceManager.h"
 #include "Resources/ResourceTypeID.hpp"
 #include "Renderer/Textures/Texture2D.h"
@@ -36,6 +35,7 @@ namespace
 {
     constexpr float k_TileSize      = 84.f;
     constexpr char  k_UnknownGlyph[] = "[ ? ]";
+    constexpr char  k_AssetGlyph[]   = "[A]";   // an asset of a class this build does not know
 
     // The icon column of a Tree/List row: one line tall.
     float RowIconSize() { return ImGui::GetTextLineHeight(); }
@@ -78,7 +78,6 @@ namespace Opaax::Editor
         m_Context.ResourceEvents.OnResourceSaved.RemoveAll(this);
 
         // Before the ResourceManager's flush, while the GL context is alive.
-        m_TypeIcons.clear();
         m_AssetChrome.clear();
     }
 
@@ -502,20 +501,17 @@ namespace Opaax::Editor
                     // An asset class with a document of its own (a prefab) opens it.
                     lType.Asset->Activate(m_Context, InFile.AbsPath);
                 }
-                else if (lType.Format == nullptr)
+                else if (lType.Format != nullptr)
                 {
-                    OPAAX_LOG(LogResourceBrowserPanel, Info, "'{}' activated — no resource type registered for '{}'",
-                        InFile.Name.CStr(),
-                        InFile.Extension.IsValid() ? InFile.Extension.CStr() : "(no extension)");
-                }
-                else if (lType.Chrome == nullptr || !lType.Chrome->OnActivate)
-                {
-                    OPAAX_LOG(LogResourceBrowserPanel, Info, "'{}' activated — type '{}' registers no action",
-                        InFile.Name.CStr(), LabelOf(lType));
+                    // Any other asset opens in a window of its own.
+                    m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_ASSET, m_Context,
+                                                            AssetPathParams{ InFile.AbsPath });
                 }
                 else
                 {
-                    lType.Chrome->OnActivate(m_Context, InFile);
+                    OPAAX_LOG(LogResourceBrowserPanel, Info, "'{}' activated — no asset class reads '{}' files",
+                        InFile.Name.CStr(),
+                        InFile.Extension.IsValid() ? InFile.Extension.CStr() : "(no extension)");
                 }
             }
         }
@@ -533,18 +529,11 @@ namespace Opaax::Editor
     {
         FileType lType;
 
-        const ResourceFormatRegistry& lFormats = m_Context.Engine.GetRegistries().Resources();
-
-        // A file with an asset class is an asset, whatever its extension.
-        lType.Format = InFile.AssetClass.IsValid() ? lFormats.FindByTypeId(ResourceTypeID::Get<AssetResource>())
-                                                   : lFormats.FindByExtension(InFile.Extension);
-        if (lType.Format != nullptr)
-        {
-            lType.Chrome = m_Context.Extensions.ResourceTypes().Find(lType.Format->TypeId);
-        }
-
+        // A file with an asset class is an asset, whatever its extension; any other file is unknown.
         if (InFile.AssetClass.IsValid())
         {
+            lType.Format = m_Context.Engine.GetRegistries().Resources().FindByTypeId(ResourceTypeID::Get<AssetResource>());
+
             const auto lIt = m_AssetChrome.find(InFile.AssetClass.GetId());
             lType.Asset    = (lIt != m_AssetChrome.end()) ? &lIt->second : nullptr;
         }
@@ -578,11 +567,6 @@ namespace Opaax::Editor
             return InType.Asset->Label.CStr();
         }
 
-        if (InType.Chrome != nullptr && InType.Chrome->Label.IsValid())
-        {
-            return InType.Chrome->Label.CStr();
-        }
-
         return (InType.Format != nullptr) ? InType.Format->Format->Label : "Unknown type";
     }
 
@@ -593,9 +577,7 @@ namespace Opaax::Editor
             return InType.Asset->Glyph.CStr();
         }
 
-        return (InType.Chrome != nullptr && !InType.Chrome->Glyph.IsEmpty())
-                   ? InType.Chrome->Glyph.CStr()
-                   : k_UnknownGlyph;
+        return (InType.Format != nullptr) ? k_AssetGlyph : k_UnknownGlyph;
     }
 
     // =============================================================================
@@ -629,28 +611,8 @@ namespace Opaax::Editor
 
     void ResourceBrowserPanel::LoadTypeIcons()
     {
-        // Loaded at startup: the type registry is sealed, so the icon set is known now.
-        for (const ResourceTypeDesc& lChrome : m_Context.Extensions.ResourceTypes().Entries())
-        {
-            if (lChrome.Icon.IsEmpty())
-            {
-                continue;   // glyph only
-            }
-
-            TAssetHandle<Texture2D> lIcon = LoadIcon(ResolveIconPath(lChrome.Icon));
-
-            // A failed icon is dropped, and not retried: that type draws its glyph.
-            if (lIcon.Get() == nullptr)
-            {
-                OPAAX_LOG(LogResourceBrowserPanel, Warn, "Icon '{}' did not load — that type draws its glyph",
-                    lChrome.Icon.CStr());
-                continue;
-            }
-
-            m_TypeIcons.emplace(lChrome.TypeId, Move(lIcon));
-        }
-
-        // Every class an asset file can hold: its label, glyph and icon, defaults included.
+        // Every class an asset file can hold: its label, glyph and icon, defaults included. Built at
+        // startup: the registries are sealed, so the set is known now.
         const AssetTypeRegistry& lAssetTypes = m_Context.Extensions.AssetTypes();
 
         for (const ObjectClass* lClass :
@@ -745,24 +707,7 @@ namespace Opaax::Editor
             }
         }
 
-        if (InType.Chrome == nullptr)
-        {
-            return EditorImage{};
-        }
-
-        const auto lIt = m_TypeIcons.find(InType.Chrome->TypeId);
-        if (lIt == m_TypeIcons.end())
-        {
-            return EditorImage{};
-        }
-
-        const Texture2D* lIcon = lIt->second.Get();
-        if (lIcon == nullptr || lIcon->GetTexture() == nullptr)
-        {
-            return EditorImage{};
-        }
-
-        return m_Context.UIBackend.GetTextureImage(*lIcon->GetTexture());
+        return EditorImage{};
     }
 
     EditorImage ResourceBrowserPanel::TileImageOf(const ResourceFile& InFile, const FileType& InType) const

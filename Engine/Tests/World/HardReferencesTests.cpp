@@ -1,4 +1,4 @@
-// Suite: hard references (THardResourcePath, THardAssetRef). What a set of entities must have loaded
+// Suite: hard references (THardAssetRef). What a set of entities must have loaded
 // (HardReferences::Collect), and how a type id becomes a typed load (ResourceFormatEntry::Acquire).
 // Hard fields are collected, soft ones are not. The mounted-map case is in LevelTests.
 #include <doctest.h>
@@ -11,7 +11,6 @@
 #include "Resources/Asset/AssetResource.h"
 #include "Resources/ResourceFormatRegistry.h"
 #include "Resources/ResourceManager.h"
-#include "Resources/ResourcePathJson.h"   // the json bridge the map writer uses for a path
 #include "Resources/ResourceTypeID.hpp"
 #include "World/Components/ComponentRegistry.h"
 #include "World/Prefab/PrefabAsset.h"
@@ -34,24 +33,6 @@ namespace
         OPAAX_PROPERTIES(TurretGunComponent, OPAAX_PROP(Bullet), OPAAX_PROP(MuzzleFlash))
     };
 
-
-    // A file type of its own, for the THardResourcePath case.
-    struct TurretTableResource
-    {
-        OPAAX_RESOURCE_FORMAT("Turret Table", ".turrettable")
-        static constexpr EFailPolicy FailPolicy = EFailPolicy::FailFast;
-        static TOptional<TurretTableResource> Load(const char*, LoadContext&) { return TurretTableResource{}; }
-        static TurretTableResource            Placeholder() { return TurretTableResource{}; }
-    };
-
-    struct TurretTableComponent
-    {
-        THardResourcePath<TurretTableResource> Table;
-        TResourcePath<TurretTableResource>     Spare;
-
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(TurretTableComponent, Table, Spare)
-        OPAAX_PROPERTIES(TurretTableComponent, OPAAX_PROP(Table), OPAAX_PROP(Spare))
-    };
 
     // An asset a turret holds hard (its shell) or soft (the scorch it leaves).
     class TurretShell final : public Asset
@@ -230,27 +211,4 @@ TEST_CASE("HardReferences: the asset entry's Acquire keeps a hard asset loaded w
     CHECK(lResources.GetLoadedCount<AssetResource>() == 0);
 
     lResources.FlushAll();
-}
-
-TEST_CASE("HardReferences: a hard resource path is collected with its own resource type")
-{
-    ComponentRegistry lRegistry;
-    REQUIRE(lRegistry.Register<TurretTableComponent>("TurretTable"));
-
-    TurretTableComponent lTable;
-    lTable.Table.Path = OpaaxString("Tables/Fire.turrettable");
-    lTable.Spare.Path = OpaaxString("Tables/Spare.turrettable");
-
-    EntityData lEntity;
-    lEntity.Id   = Guid::New();
-    lEntity.Name = OpaaxString("Turret");
-    lEntity.Components.emplace_back(OpaaxStringID("TurretTable"), nlohmann::json(lTable));
-
-    MapData lData;
-    lData.Entities.emplace_back(Move(lEntity));
-
-    const TDynArray<HardReference> lRefs = HardReferences::Collect(lData, lRegistry);
-    REQUIRE(lRefs.size() == 1);
-    CHECK(lRefs[0].TypeId == ResourceTypeID::Get<TurretTableResource>());
-    CHECK(lRefs[0].Path   == OpaaxString("Tables/Fire.turrettable"));
 }

@@ -282,7 +282,6 @@ namespace
         void Visit(const char*, OpaaxString&, const PropertyMeta&) override   {}
         void Visit(const char*, OpaaxStringID&, const PropertyMeta&) override {}
         void VisitEnum(const char*, const char* const*, Uint32, Uint32&, const PropertyMeta&) override {}
-        void VisitResourcePath(const char*, OpaaxString&, Uint32, const PropertyMeta&) override {}
 
         void VisitAssetRef(const char*, OpaaxString&, const ObjectClass&, const PropertyMeta&) override {}
         void VisitObjectRef(const char*, ObjectHandle&, const ObjectClass&, const PropertyMeta&) override {}

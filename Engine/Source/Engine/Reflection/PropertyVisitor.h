@@ -11,8 +11,6 @@
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/Reflection/TypeInfo.h"
 #include "Object/ObjectHandle.h"
-#include "Resources/ResourcePath.h"
-#include "Resources/ResourceTypeID.hpp"
 
 namespace Opaax
 {
@@ -96,12 +94,6 @@ namespace Opaax
                                Uint32& InOutIndex, const PropertyMeta& InMeta) = 0;
 
         /**
-         * A resource reference: its asset-relative path and the resource type it accepts.
-         */
-        virtual void VisitResourcePath(const char* InName, OpaaxString& InPath, Uint32 InResourceTypeId,
-                                       const PropertyMeta& InMeta) = 0;
-
-        /**
          * An asset reference (TAssetRef): its asset-relative path and the class it accepts (subclasses too).
          */
         virtual void VisitAssetRef(const char* InName, OpaaxString& InPath, const ObjectClass& InClass,
@@ -135,12 +127,6 @@ namespace Opaax
 
     namespace PropertyVisitorDetail
     {
-        template<typename T>
-        inline constexpr bool k_IsResourcePath = false;
-
-        template<typename TResource, EResourceLoad TLoad>
-        inline constexpr bool k_IsResourcePath<TResourcePath<TResource, TLoad>> = true;
-
         /** A TAssetRef<T>, recognised by its marker (Resources/Asset/AssetRef.h is not needed here). */
         template<typename T>
         concept CAssetRefField = requires(T& InValue)
@@ -259,11 +245,6 @@ namespace Opaax
             InVisitor.VisitEnum(InName, EnumLabels<TValue>(), lCount, lIndex, InMeta);
 
             if (lIndex != lBefore && lIndex < lCount) { InValue = TEnumValues<TValue>::Values[lIndex]; }
-        }
-        else if constexpr (k_IsResourcePath<TValue>)
-        {
-            InVisitor.VisitResourcePath(InName, InValue.Path,
-                                        ResourceTypeID::Get<typename TValue::ResourceType>(), InMeta);
         }
         else if constexpr (CAssetRefField<TValue>)
         {

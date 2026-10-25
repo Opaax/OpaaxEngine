@@ -10,7 +10,6 @@ using namespace Opaax;
 
 namespace
 {
-    struct JsonTestResource {};
 
     // Outside Opaax on purpose, like a game's enum.
     enum class EJsonTestMode : Uint8 { Idle, Walk, Run };
@@ -60,7 +59,6 @@ namespace
         OpaaxStringID                   Id;
         OpaaxTag                        Team;
         EJsonTestMode                   Mode     = EJsonTestMode::Walk;
-        TResourcePath<JsonTestResource> Asset;
         TAssetRef<JsonTestData>         Stats;
         JsonTestInner                   Inner;
         TDynArray<Int32>                Numbers;
@@ -77,7 +75,6 @@ namespace
                          OPAAX_PROP(Id),
                          OPAAX_PROP(Team),
                          OPAAX_PROP(Mode),
-                         OPAAX_PROP(Asset),
                          OPAAX_PROP(Stats),
                          OPAAX_PROP(Inner),
                          OPAAX_PROP(Numbers),
@@ -96,7 +93,6 @@ namespace
         lSubject.Id           = OpaaxStringID("Json.Test.Id");
         lSubject.Team         = OpaaxTag("Team.Red");
         lSubject.Mode         = EJsonTestMode::Run;
-        lSubject.Asset.Path   = OpaaxString("Textures/Hero.png");
         lSubject.Stats.Path   = OpaaxString("Data/Grunt.opaaxasset");
         lSubject.Inner.Amount = 4.5f;
         lSubject.Inner.Level  = 9;
@@ -122,7 +118,6 @@ TEST_CASE("PropertyJson: every listed field round-trips, with no NLOHMANN macro"
     CHECK(lRead.Count == -12);
     CHECK(lRead.Mode == EJsonTestMode::Run);
     CHECK(lRead.Team == OpaaxTag("Team.Red"));
-    CHECK(lRead.Asset.Path == "Textures/Hero.png");
     CHECK(lRead.Stats.Path == "Data/Grunt.opaaxasset");
     CHECK(lRead.Inner.Level == 9);
     CHECK(lRead.Numbers == TDynArray<Int32>{ 1, 2, 3 });
@@ -135,10 +130,10 @@ TEST_CASE("PropertyJson: the file shape: field names as keys, a group as an obje
 {
     const nlohmann::json lJson = PropertiesToJson(MakeEdited());
 
-    CHECK(lJson.size() == 14);              // the listed fields only
+    CHECK(lJson.size() == 13);              // the listed fields only
     CHECK_FALSE(lJson.contains("NotListed"));
     CHECK(lJson.at("Mode") == "Run");       // a label, so reordering the enum is safe
-    CHECK(lJson.at("Asset") == "Textures/Hero.png");
+    CHECK(lJson.at("Stats") == "Data/Grunt.opaaxasset");   // an asset reference: its path
     CHECK(lJson.at("Inner").is_object());
     CHECK(lJson.at("Inner").at("Level") == 9);
     CHECK(lJson.at("Items").is_array());    // a list of groups: an array of objects

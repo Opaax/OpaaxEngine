@@ -3,7 +3,6 @@
 #include "Core/OpaaxTypes.h"                       
 #include "Editor/Extensions/PanelRegistry.h"       
 #include "Editor/Extensions/DrawerRegistry.h"      
-#include "Editor/Extensions/ResourceTypeRegistry.h"
 #include "Editor/Extensions/AssetTypeRegistry.h"
 #include "Editor/Extensions/ViewportToolbarRegistry.h"
 #include "Editor/TitleBar/TitleBarRegistry.h"
@@ -22,7 +21,6 @@ namespace Opaax::Editor
     public:
         ComponentDrawerRegistry&   Drawers()          noexcept { return m_Drawers; }
         PanelRegistry&             Panels()           noexcept { return m_Panels; }
-        ResourceTypeRegistry&      ResourceTypes()    noexcept { return m_ResourceTypes; }
         AssetTypeRegistry&         AssetTypes()       noexcept { return m_AssetTypes; }
         TitleBarRegistry&          TitleBar()         noexcept { return m_TitleBar; }
         EditorCommandRegistry&     Commands()         noexcept { return m_EditorCommands; }
@@ -30,7 +28,6 @@ namespace Opaax::Editor
 
         const ComponentDrawerRegistry& Drawers()       const noexcept { return m_Drawers; }
         const PanelRegistry&         Panels()          const noexcept { return m_Panels; }
-        const ResourceTypeRegistry&  ResourceTypes()   const noexcept { return m_ResourceTypes; }
         const AssetTypeRegistry&     AssetTypes()      const noexcept { return m_AssetTypes; }
         const TitleBarRegistry&      TitleBar()        const noexcept { return m_TitleBar; }
         const EditorCommandRegistry& Commands()        const noexcept { return m_EditorCommands; }
@@ -42,7 +39,6 @@ namespace Opaax::Editor
     private:
         ComponentDrawerRegistry m_Drawers;
         PanelRegistry        m_Panels;
-        ResourceTypeRegistry m_ResourceTypes;
 
         // How each asset class looks and what edits it (its window's body).
         AssetTypeRegistry    m_AssetTypes;

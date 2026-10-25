@@ -12,7 +12,6 @@
 #include "Engine/Reflection/PropertyVisitor.h"
 #include "Object/Object.h"
 #include "Resources/Asset/AssetRef.h"
-#include "Resources/ResourcePath.h"
 #include "Resources/ResourceTypeID.hpp"
 #include "World/Components/ComponentConcept.hpp"
 #include "World/Entity/EntityTypes.h"
@@ -86,9 +85,9 @@ namespace Opaax
         virtual void Load(EntityRegistry& InRegistry, EntityID InEntity, const nlohmann::json& InJson) const = 0;
 
         /**
-         * This component's hard reference fields (THardResourcePath, THardAssetRef): JSON key and the
-         * resource type that loads it. Lets a loader of untyped JSON load them up front. Found from the
-         * property list at registration.
+         * This component's hard reference fields (THardAssetRef): JSON key and the resource type that
+         * loads it. Lets a loader of untyped JSON load them up front. Found from the property list at
+         * registration.
          */
         virtual const TDynArray<HardRefField>& GetHardRefFields() const = 0;
 
@@ -258,8 +257,8 @@ namespace Opaax
 
     private:
         /**
-         * Collects T's hard reference fields (THardResourcePath, THardAssetRef) from its property list.
-         * A type without OPAAX_PROPERTIES has none.
+         * Collects T's hard reference fields (THardAssetRef) from its property list. A type without
+         * OPAAX_PROPERTIES has none.
          */
         void CollectHardRefFields()
         {
@@ -272,13 +271,7 @@ namespace Opaax
                                     using TValue = typename TDecay<decltype(InProperty)>::ValueType;
 
                                     // The property name is also the JSON key.
-                                    if constexpr (k_IsHardResourcePath<TValue>)
-                                    {
-                                        m_HardRefFields.emplace_back(
-                                            OpaaxStringID(InProperty.Name),
-                                            ResourceTypeID::Get<typename TValue::ResourceType>());
-                                    }
-                                    else if constexpr (k_IsHardAssetRef<TValue>)
+                                    if constexpr (k_IsHardAssetRef<TValue>)
                                     {
                                         // Every asset file loads as an AssetResource, whatever its class.
                                         m_HardRefFields.emplace_back(OpaaxStringID(InProperty.Name),

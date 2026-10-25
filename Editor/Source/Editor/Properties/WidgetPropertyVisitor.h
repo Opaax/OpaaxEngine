@@ -31,9 +31,6 @@ namespace Opaax::Editor
         void VisitEnum(const char* InName, const char* const* InLabels, Uint32 InCount,
                        Uint32& InOutIndex, const PropertyMeta& InMeta) override;
 
-        void VisitResourcePath(const char* InName, OpaaxString& InPath, Uint32 InResourceTypeId,
-                               const PropertyMeta& InMeta) override;
-
         void VisitAssetRef(const char* InName, OpaaxString& InPath, const ObjectClass& InClass,
                            const PropertyMeta& InMeta) override;
 

@@ -14,7 +14,6 @@
 //
 //   OPAAX_REGISTER_COMPONENT(Health);
 //   OPAAX_REGISTER_BEHAVIOUR(Coin);
-//   OPAAX_REGISTER_RESOURCE(WaveResource);
 //   OPAAX_REGISTER_OBJECT(EnemyStats);      // any Object class: assets, move modes, subsystems, widgets...
 //
 // The engine runs every registration when it is constructed, before any world exists. Game
@@ -36,7 +35,6 @@ namespace Opaax
     {
         ObjectClass,
         ObjectClassAlias,
-        ResourceFormat,
         Component,
         ComponentAlias,
         Behaviour
@@ -122,17 +120,6 @@ namespace Opaax
     OPAAX_REGISTER_OBJECT(Type);                                                                     \
     OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::Behaviour,                      \
         ::Opaax::TypeIdOf<Type>(), 0, #Type, InRegistrar.Behaviours().Register<Type>())
-
-/** Registers a resource type for the extensions its OPAAX_RESOURCE_FORMAT lists. */
-#define OPAAX_REGISTER_RESOURCE(Type)                                                                \
-    OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::ResourceFormat,                 \
-        ::Opaax::TypeIdOf<Type>(), 0, #Type, InRegistrar.Resources().Register<Type>())
-
-/** Registers a resource type under a display name. */
-#define OPAAX_REGISTER_NAMED_RESOURCE(Type, Name)                                                    \
-    OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::ResourceFormat,                 \
-        ::Opaax::TypeIdOf<Type>(), 0, Name,                                                        \
-        InRegistrar.Resources().Register<Type>(::Opaax::OpaaxStringID(Name)))
 
 /** Registers an Object class under its C++ name (no namespace), the name its files use. */
 #define OPAAX_REGISTER_OBJECT(Type)                                                                  \

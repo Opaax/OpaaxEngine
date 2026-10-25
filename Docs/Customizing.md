@@ -20,7 +20,8 @@ the class it derives from ([Objects.md](Objects.md)).
 | `OPAAX_REGISTER_OBJECT(SaveSubsystem)` | A game instance subsystem (`Opaax::GameInstanceSubsystem`): lives as long as a game session, across levels | below |
 | `OPAAX_REGISTER_OBJECT(MyGame)` | The game's own `Opaax::GameInstance` class, named in the project file: code run when the game starts and ends | below |
 | `OPAAX_REGISTER_OBJECT(EnemyStats)` | An asset class (an `Opaax::Asset` with `OPAAX_OBJECT`): `.opaaxasset` files, made and edited in the editor | `Renderer/Materials/Material2D.h`, `Sandbox/Source/Sandbox/Data` |
-| `OPAAX_REGISTER_RESOURCE(WaveResource)` | A file type of the game, loaded and cached | `Sandbox/Source/Sandbox/Resources` |
+| `OPAAX_REGISTER_OBJECT(EnemyWave)` | A file format of the game: an asset class read from its own files (`OPAAX_ASSET_SOURCE(".wave")`), loaded and cached like any asset | `Sandbox/Source/Sandbox/Data/EnemyWave.h` |
+| `OPAAX_REGISTER_OBJECT(Config_Gameplay)` | A config: settings saved in `Configs/`, edited in the Config panel | below |
 | `OPAAX_REGISTER_OBJECT(HealthBar)` | A UI widget for `.opaaxui` canvases: a `UIWidget` subclass, its fields as properties | `UI/Widgets` |
 | `OPAAX_REGISTER_OBJECT(SwimMoveMode)` | A movement mode of the Mover: a `MoveMode` subclass, its tuning as properties and its step as `Tick` | `Movement/Modes` |
 
@@ -212,9 +213,6 @@ void MyGameEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& InR
     // An Inspector drawer replacing the one made from the component's OPAAX_PROPERTIES.
     InRegistrar.Drawers().Register<TagsComponent, TagsComponentDrawer>();
 
-    // A file type of the game in the Resource Browser (the runtime module registers the resource).
-    InRegistrar.ResourceTypes().Register<WaveResource>().SetGlyph(Opaax::OpaaxString("[W]"));
-
     // How an asset class shows: its New Asset category, its glyph, and an editor of its own (optional:
     // without one, its window lists its properties).
     InRegistrar.AssetTypes().Register<EnemyStats>()
@@ -231,8 +229,8 @@ asset's window around it records each change as an undo step and has the Save bu
 Also available: `ViewportTools()` (buttons over the viewport). A UI widget needs no drawer: the
 UI panel draws any widget from its class's properties, and the Config panel draws any config from
 its values' properties. A subsystem for edit worlds only is a `WorldSubsystem` like any other,
-registered with `OPAAX_REGISTER_OBJECT`, whose `ShouldCreate` accepts edit worlds. `Sandbox/Editor/Source/SandboxEditor`
-has a working command, drawer and resource type.
+registered with `OPAAX_REGISTER_OBJECT`, whose `ShouldCreate` accepts edit worlds.
+`Sandbox/Editor/Source/SandboxEditor` has a working command, drawer and asset type (the `.wave` files).
 
 A command receives the `EditorContext`: the worlds, the selection, undo, the open documents, the
 dialogs. Edits made through `EntityOps` (create, destroy, add or remove a component) and

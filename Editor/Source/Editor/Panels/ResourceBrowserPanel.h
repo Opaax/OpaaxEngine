@@ -19,7 +19,6 @@ namespace Opaax
 namespace Opaax::Editor
 {
     struct EditorContext;
-    struct ResourceTypeDesc;
     struct ResourceSavedEvent;
 
     // =============================================================================
@@ -68,11 +67,10 @@ namespace Opaax::Editor
             FAssetActivate          Activate;
         };
 
-        /** One file: its type (engine) and how it looks (editor); an asset's class has its own look. */
+        /** One file: an asset (its resource format, its class's look), or neither for any other file. */
         struct FileType
         {
             const ResourceFormatEntry* Format = nullptr;
-            const ResourceTypeDesc*    Chrome = nullptr;
             const AssetChrome*         Asset  = nullptr;
         };
 
@@ -122,7 +120,7 @@ namespace Opaax::Editor
         /** @return The type's fallback text, else the unknown-type glyph (used when there is no icon image) */
         static const char* GlyphOf(const FileType& InType);
 
-        /** Loads every registered type's icon once, at Startup, and builds each asset class's look. */
+        /** Builds each asset class's look once, at Startup, its icon loaded. */
         void LoadTypeIcons();
 
         /**
@@ -209,10 +207,6 @@ namespace Opaax::Editor
 
         OpaaxString             m_Filter;
         OpaaxString             m_SelectedPath;   // "<Root>/<RelPath>", highlight only (not EditorSelection)
-
-        // ResourceTypeID -> the icon image. Filled once at Startup with the icons that loaded, so
-        // drawing is a plain lookup.
-        TUnorderedMap<Uint32, TAssetHandle<Texture2D>> m_TypeIcons;
 
         // An asset class's name id -> its look. Built once at Startup.
         TUnorderedMap<Uint32, AssetChrome> m_AssetChrome;

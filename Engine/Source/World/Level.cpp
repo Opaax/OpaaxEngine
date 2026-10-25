@@ -139,7 +139,7 @@ namespace Opaax
     }
 
     // =============================================================================
-    // HoldHardReferences — loads every THardResourcePath the entities use, and keeps the holds on
+    // HoldHardReferences — loads every THardAssetRef the entities use, and keeps the holds on
     //   the map's record so they are released with the map.
     // =============================================================================
     void Level::HoldHardReferences(const MapData& InData, MountedMap& OutMounted)

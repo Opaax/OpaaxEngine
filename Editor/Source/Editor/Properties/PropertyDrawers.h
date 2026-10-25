@@ -6,7 +6,6 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Engine/Reflection/PropertyVisitor.h"            // EnumLabels
-#include "Resources/ResourcePath.h"     // TResourcePath
 #include "Resources/Asset/AssetRef.h"           // TAssetRef
 #include "Resources/ResourceTypeID.hpp" // ResourceTypeID
 #include "Editor/Properties/PropertyDrawer.h"
@@ -44,19 +43,11 @@ namespace Opaax::Editor
     //   Inline because it is a template.
     // =============================================================================
     // =============================================================================
-    // Every resource reference at once. Filled by dragging a file from the Resource Browser onto it.
-    //   A file of another resource type is refused (no highlight, the drag stays live).
+    // Asset references. Filled by dragging a file from the Resource Browser onto it. An asset of
+    //   another class is refused (no highlight, the drag stays live).
     // =============================================================================
     /**
-     * A resource reference as a drop target, for any resource type. Shared by the typed drawer below
-     * and by the type-erased one.
-     * @param InResourceTypeId Only files of this resource type are accepted
-     */
-    void DrawResourcePathField(IEditorWidgets& InWidgets, const char* InLabel, OpaaxString& InPath,
-                               Uint32 InResourceTypeId);
-
-    /**
-     * An asset reference as a drop target: only an .opaaxasset of InClass, or of a subclass, is accepted.
+     * An asset reference as a drop target: only an asset file of InClass, or of a subclass, is accepted.
      */
     void DrawAssetRefField(IEditorWidgets& InWidgets, const char* InLabel, OpaaxString& InPath,
                            const ObjectClass& InClass);
@@ -76,17 +67,6 @@ namespace Opaax::Editor
      */
     void DrawEnumIndexField(IEditorWidgets& InWidgets, const char* InLabel, const char* const* InLabels,
                             Uint32 InCount, Uint32& InOutIndex);
-
-    // One specialization for both load policies (soft or hard only changes what the loader does).
-    template<typename TResource, EResourceLoad TLoad>
-    struct TPropertyDrawer<TResourcePath<TResource, TLoad>>
-    {
-        static void Draw(IEditorWidgets& InWidgets, const char* InLabel,
-                         TResourcePath<TResource, TLoad>& InValue, const PropertyMeta&)
-        {
-            DrawResourcePathField(InWidgets, InLabel, InValue.Path, ResourceTypeID::Get<TResource>());
-        }
-    };
 
     /**
      * A list as a tree node: each element with a remove and a move-up button, then an Add button.

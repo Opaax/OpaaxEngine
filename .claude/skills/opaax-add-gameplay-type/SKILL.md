@@ -1,6 +1,6 @@
 ---
 name: opaax-add-gameplay-type
-description: Add a component, behaviour, world or game instance subsystem, asset class or resource type to the Opaax engine or to a game, with its registration, editor support, tests and a TestWorld check. Use when the task adds gameplay data or logic.
+description: Add a component, behaviour, world or game instance subsystem, asset class or config to the Opaax engine or to a game, with its registration, editor support, tests and a TestWorld check. Use when the task adds gameplay data or logic.
 ---
 
 # Add a gameplay type
@@ -17,7 +17,7 @@ description: Add a component, behaviour, world or game instance subsystem, asset
 | Shared tuning data in a file | asset class (`Opaax::Asset` + `OPAAX_OBJECT`, `.opaaxasset` files) | `OPAAX_REGISTER_OBJECT(T)` |
 | Data in files of a format of its own | asset class read from them (`OPAAX_ASSET_SOURCE(".ext")` after `OPAAX_OBJECT`, `LoadSource`) | `OPAAX_REGISTER_OBJECT(T)` |
 | A way of moving for the Mover | move mode (`Opaax::MoveMode` subclass: tuning as properties, a `const` `Tick`) | `OPAAX_REGISTER_OBJECT(T)` |
-| A cached file type that is not an asset (rare: prefer an asset class read from its files) | resource | `OPAAX_REGISTER_RESOURCE(T)` |
+| Settings edited in the Config panel, saved in `Configs/` | config (`TConfig<Data>` subclass + `OPAAX_OBJECT(T, Opaax::Config)`, or `DECLARE_T_CONFIG`) | `OPAAX_REGISTER_OBJECT(T)` |
 
 Engine types go in their module (`Engine/Source/<Module>/`) and register in the module's
 `<Module>Registration.cpp`; a game's types go anywhere under `<Game>/Source/<Game>/`.
@@ -48,10 +48,16 @@ Engine types go in their module (`Engine/Source/<Module>/`) and register in the 
   adds `OPAAX_ASSET_SOURCE(".ext")` after `OPAAX_OBJECT` and overrides `LoadSource` (any thread),
   `InitializeOnMainThread` (GPU or device work) and `GetResourceSize`; its files open read-only.
 - An asset's editor look: `AssetTypes().Register<T>()` with `SetLabel`, `SetCategory`, `SetGlyph`
-  (engine: `EditorService::RegisterNativeAssetTypes`; a game: its editor module's `OnRegister`). A
+  (engine: `EditorService::RegisterNativeAssetTypes`; a game: its editor module's `OnRegister`), and
+  `SetActivate` when its files open in a document of their own (as maps, levels, prefabs, canvases
+  do; `asset.open` follows it). A
   custom editor (`IAssetEditor`, `SetEditor<E>()`) only when a field list is not enough: it edits the
   asset directly, the window does undo and Save; keep its logic in a pure header beside it
   (`Editor/Assets/Editors/*Editing.h`) and keep an ImGui item active during a drag.
+- Configs: a data struct with the JSON macro and `OPAAX_PROPERTIES`, then `DECLARE_T_CONFIG(Name, Data)`
+  (or a `TConfig<Data>` subclass with `OPAAX_OBJECT(T, Opaax::Config)` and `FileName()`) and
+  `OPAAX_REGISTER_OBJECT(Config_Name)` in a .cpp. Read with `IConfigSystem::Get<T>().GetData()`; the
+  Config panel draws it. Registrations in editor code never run (the editor library is not linked whole).
 - Style: AGENTS.md (prefixes, banners, short plain comments).
 
 ## Test it

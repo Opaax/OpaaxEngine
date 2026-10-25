@@ -21,6 +21,7 @@
 #include "Renderer/Camera/CameraManager.h"
 #include "Renderer/RendererManager.h"
 #include "Resources/Asset/AssetHandle.h"
+#include "Resources/Asset/AssetResource.h"
 #include "Resources/ResourceManager.h"
 #include "RHI/Framebuffer.h"
 #include "RHI/Texture.h"
@@ -71,6 +72,9 @@ namespace Opaax
         // game modules'. Runs before any world exists, so the registries are still open.
         ModuleRegistrar lRegistrar;
         lRegistrar.BindEngineRegistries(m_Registries);
+
+        // The one resource format: every asset file, whatever its class. A game adds asset classes.
+        m_Registries.Resources().Register<AssetResource>(OPAAX_ID("Asset"));
 
         const Uint64 lCount = RunAutoRegistrations(lRegistrar);
 

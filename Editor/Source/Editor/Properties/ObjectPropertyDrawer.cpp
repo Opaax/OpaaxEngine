@@ -37,12 +37,6 @@ namespace Opaax::Editor
                 if (Shows(InName)) { m_Target.VisitEnum(InName, InLabels, InCount, InOutIndex, InMeta); }
             }
 
-            void VisitResourcePath(const char* InName, OpaaxString& InPath, const Uint32 InResourceTypeId,
-                                   const PropertyMeta& InMeta) override
-            {
-                if (Shows(InName)) { m_Target.VisitResourcePath(InName, InPath, InResourceTypeId, InMeta); }
-            }
-
             void VisitAssetRef(const char* InName, OpaaxString& InPath, const ObjectClass& InClass,
                                const PropertyMeta& InMeta) override
             {

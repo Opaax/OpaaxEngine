@@ -18,7 +18,7 @@ namespace Opaax
 
     // =============================================================================
     // HardReferences — the files a map's entities need loaded before they run (their
-    //   THardResourcePath and THardAssetRef fields). Pure: reads entity data, not a world.
+    //   THardAssetRef fields). Pure: reads entity data, not a world.
     // =============================================================================
     namespace HardReferences
     {

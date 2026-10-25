@@ -96,7 +96,7 @@ namespace Opaax
             // The open .opaaxui. Owns a real UICanvas: the panel previews it by rendering it.
             EditorUICanvasDocument& UICanvasDocument;
 
-            // The sealed extension routes (Inspector: Drawers(), Resource Browser: ResourceTypes()).
+            // The sealed extension routes (Inspector: Drawers(), Resource Browser: AssetTypes()).
             // Const: registration is closed before this context is built.
             const EditorExtensionRegistrar& Extensions;
 

@@ -13,7 +13,6 @@
 #include "Resources/Asset/AssetResource.h"
 #include "Resources/ResourceFormatRegistry.h"
 #include "Resources/ResourceManager.h"
-#include "Resources/ResourcePathJson.h"
 #include "World/Components/ComponentRegistry.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"

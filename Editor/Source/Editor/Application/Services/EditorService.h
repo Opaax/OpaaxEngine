@@ -110,7 +110,6 @@ namespace Opaax::Editor
          * Registers how the browser shows each resource type and what a double-click does.
          * File extensions come from the engine's ResourceFormatRegistry.
          */
-        void RegisterNativeResourceTypes();
 
         /**
          * Registers how the engine's asset classes look and where New Asset lists them. Before the game
