@@ -1,0 +1,31 @@
+{
+    "Class": "AnimationClip",
+    "Properties": {
+        "Fps": 6.0,
+        "PlayMode": "Loop",
+        "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset",
+        "Steps": [
+            {
+                "Frame": "Frame_0",
+                "Hold": 1,
+                "Texture": ""
+            },
+            {
+                "Frame": "Frame_1",
+                "Hold": 1,
+                "Texture": ""
+            },
+            {
+                "Frame": "Frame_2",
+                "Hold": 1,
+                "Texture": ""
+            },
+            {
+                "Frame": "Frame_3",
+                "Hold": 1,
+                "Texture": ""
+            }
+        ]
+    },
+    "Version": 1
+}

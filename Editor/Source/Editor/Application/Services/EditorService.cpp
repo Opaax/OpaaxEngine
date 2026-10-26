@@ -16,6 +16,10 @@
 #include "Editor/Imgui/ImGuiEditorGui.h"        // the concrete IEditorGui
 #include "Editor/UI/TinyFdEditorDialogs.h"      // the concrete IEditorDialogs
 #include "Editor/Toolbar/EditorNativeViewportTools.h"
+#include "Editor/Assets/Editors/AnimationClipEditor.h"
+#include "Editor/Assets/Editors/FontFamilyEditor.h"
+#include "Editor/Assets/Editors/InputMappingContextEditor.h"
+#include "Editor/Assets/Editors/SpriteSheetEditor.h"
 
 #include "Editor/Operation/EditorGizmo.hpp"
 #include "Editor/Operation/EditorViewport.hpp"   // grid toggle
@@ -28,16 +32,7 @@
 #include "Editor/Panels/PlayToolbarPanel.h"
 #include "Editor/Panels/ResourceBrowserPanel.h"
 #include "Editor/Panels/ResourcePreviewPanel.h"
-#include "Editor/Panels/AnimationClipPanel.h"
-#include "Editor/Panels/AnimationLibraryPanel.h"
-#include "Editor/Panels/MoveModePanel.h"
-#include "Editor/Panels/DataAssetPanel.h"
-#include "Resources/DataAsset/DataAssetResource.h"
-#include "Editor/Panels/InputActionPanel.h"
-#include "Editor/Panels/InputMappingContextPanel.h"
-#include "Editor/Panels/MoverPanel.h"
-#include "Editor/Panels/FontFamilyPanel.h"
-#include "Editor/EditorFontFamilyDocument.h"
+#include "Resources/Asset/AssetResource.h"
 #include "Editor/Panels/UICanvasPanel.h"
 #include "Editor/EditorUICanvasDocument.h"
 #include "UI/UICanvasFile.h"
@@ -51,7 +46,6 @@
 #include "UI/UICanvasResource.h"
 #include "Editor/Panels/PrefabPanel.h"
 #include "Renderer/RenderTarget.hpp"
-#include "Editor/Panels/SpriteSheetPanel.h"
 #include "Editor/Panels/LogPanel.h"
 #include "Editor/Panels/StatsPanel.h"
 #include "Editor/Panels/ViewportPanel.h"
@@ -67,15 +61,18 @@
 #include "Editor/Operation/ResourceOperations.h"
 #include "Resources/ResourceTypeID.hpp"
 #include "Renderer/Textures/TextureResource.h"
-#include "Renderer/Textures/SpriteSheetResource.h"
-#include "Animation/AnimationClipResource.h"
-#include "Animation/AnimationLibraryResource.h"
-#include "Movement/Assets/MoveModeResource.h"
-#include "Movement/Assets/MoverResource.h"
-#include "Input/Assets/InputActionResource.h"
-#include "Input/Assets/InputMappingContextResource.h"
+#include "Renderer/Textures/SpriteSheet.h"
+#include "Animation/Assets/AnimationClip.h"
+#include "Animation/Assets/AnimationLibrary.h"
+#include "Audio/AudioBank.h"
+#include "Audio/AudioClipDef.h"
+#include "Input/Assets/InputActionAsset.h"
+#include "Input/Assets/InputMappingContextAsset.h"
+#include "Movement/Assets/MoveMode.h"
+#include "Movement/Assets/Mover.h"
+#include "Renderer/Materials/Material2D.h"
 #include "Renderer/Text/FontFaceResource.h"
-#include "Renderer/Text/FontFamilyResource.h"
+#include "Renderer/Text/FontFamily.h"
 #include "Editor/Resources/ResourcePreviewDrawers.h"   // what a preview draws (no ImGui here)
 #include "Editor/Properties/NativeComponentDrawers.h"
 #include "Editor/Properties/WidgetPropertyVisitor.h"
@@ -160,17 +157,9 @@ namespace Opaax::Editor
         // What prefab paths are resolved with when a map is folded for saving.
         m_LevelDocument->BindPrefabSources(OpaaxApplication::GetAppService<IPaths>(),
                                            OpaaxApplication::GetAppService<IEngine>().GetResources());
-        m_SheetDocument     = MakeUnique<EditorSpriteSheetDocument>();
-        m_ClipDocument      = MakeUnique<EditorAnimationClipDocument>();
-        m_LibraryDocument   = MakeUnique<EditorAnimationLibraryDocument>();
-        m_FamilyDocument    = MakeUnique<EditorFontFamilyDocument>();
         m_UICanvasDocument  = MakeUnique<EditorUICanvasDocument>();
-        m_MoveModeDocument  = MakeUnique<EditorMoveModeDocument>();
-        m_MoverDocument     = MakeUnique<EditorMoverDocument>();
-        m_InputActionDocument = MakeUnique<EditorInputActionDocument>();
-        m_InputMapDocument    = MakeUnique<EditorInputMappingContextDocument>();
-        m_DataAssetDocument   = MakeUnique<EditorDataAssetDocument>();
-        m_Export              = MakeUnique<GameExport>();
+        m_Export            = MakeUnique<GameExport>();
+        m_AssetEditors      = MakeUnique<AssetEditors>();
     }
 
     void EditorService::ClearEditorSystems()
@@ -186,6 +175,8 @@ namespace Opaax::Editor
 
         // Waits for an export still running.
         m_Export.reset();
+
+        m_AssetEditors.reset();
     }
 
     void EditorService::CreateEditorContext(Window* InWindow, IEngine& InEngine)
@@ -210,16 +201,7 @@ namespace Opaax::Editor
             *m_InputRoute,
             *m_LevelDocument,
             *m_MapDocument,
-            *m_SheetDocument,
-            *m_ClipDocument,
-            *m_LibraryDocument,
-            *m_FamilyDocument,
             *m_UICanvasDocument,
-            *m_MoveModeDocument,
-            *m_MoverDocument,
-            *m_InputActionDocument,
-            *m_InputMapDocument,
-            *m_DataAssetDocument,
             m_Extensions,
             m_Gui->Panels(),
             *m_Preview,
@@ -228,8 +210,11 @@ namespace Opaax::Editor
             OpaaxApplication::GetAppService<IConfigSystem>(),
             *InWindow,
             m_EditorPaths,
-            *m_Export
+            *m_Export,
+            *m_AssetEditors
         });
+
+        m_AssetEditors->Bind(*m_Context);
 
         // After the context, because it holds one. The reconciler handles prefab instances (entities,
         // which a plain Reload cannot update).
@@ -293,6 +278,9 @@ namespace Opaax::Editor
         lFile.AddSeparator();
         lFile.AddSeparator();
         lFile.AddCommand("New UI...", Tags::EDITOR_COMMAND_NEW_UI);
+        lFile.AddSeparator();
+        lFile.AddCommand("Save All Assets", Tags::EDITOR_COMMAND_SAVE_ALL_ASSETS)
+             .SetEnabled([](const EditorContext& InContext) { return InContext.Assets.HasUnsaved(); });
         lFile.AddSeparator();
         lFile.AddCommand("New Level...", Tags::EDITOR_COMMAND_NEW_LEVEL).SetEnabled(IsEditing);
         lFile.AddCommand("Open Level...", Tags::EDITOR_COMMAND_OPEN_LEVEL);
@@ -373,17 +361,8 @@ namespace Opaax::Editor
         // Hidden by default
         lPanelsRegistry.Register<CameraPreviewPanel>(PanelDesc  {.Id = CameraPreviewPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<ResourcePreviewPanel>(PanelDesc{.Id = ResourcePreviewPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden});
-        lPanelsRegistry.Register<SpriteSheetPanel>(PanelDesc    {.Id = SpriteSheetPanel::PanelID(),     .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_SHEET});
         // Hidden until a prefab is opened. Its SaveCommand routes Ctrl+S to the prefab.
         lPanelsRegistry.Register<PrefabPanel>(PanelDesc         {.Id = PrefabPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_PREFAB, .UndoCommand = Tags::EDITOR_COMMAND_UNDO_PREFAB, .RedoCommand = Tags::EDITOR_COMMAND_REDO_PREFAB, .DeleteCommand = Tags::EDITOR_COMMAND_DELETE_PREFAB_SELECTION});
-        lPanelsRegistry.Register<AnimationClipPanel>(PanelDesc  {.Id = AnimationClipPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_CLIP});
-        lPanelsRegistry.Register<AnimationLibraryPanel>(PanelDesc{.Id = AnimationLibraryPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_LIBRARY});
-        lPanelsRegistry.Register<MoveModePanel>(PanelDesc{.Id = MoveModePanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_MOVE_MODE});
-        lPanelsRegistry.Register<MoverPanel>(PanelDesc{.Id = MoverPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_MOVER});
-        lPanelsRegistry.Register<DataAssetPanel>(PanelDesc{.Id = DataAssetPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_DATA_ASSET});
-        lPanelsRegistry.Register<InputActionPanel>(PanelDesc{.Id = InputActionPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_INPUT_ACTION});
-        lPanelsRegistry.Register<InputMappingContextPanel>(PanelDesc{.Id = InputMappingContextPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_INPUT_MAP});
-        lPanelsRegistry.Register<FontFamilyPanel>(PanelDesc{.Id = FontFamilyPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_FAMILY});
         lPanelsRegistry.Register<UICanvasPanel>(PanelDesc{.Id = UICanvasPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_UI, .DeleteCommand = Tags::EDITOR_COMMAND_DELETE_UI_WIDGET});
         lPanelsRegistry.Register<ConfigPanel>(PanelDesc         {.Id = ConfigPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<InputPanel>(PanelDesc          {.Id = InputPanel::PanelID(),           .DefaultVisibility = EPanelVisibility::Hidden });
@@ -436,15 +415,6 @@ namespace Opaax::Editor
         lCommands.Register<OpenLevelAtCommand>(Tags::EDITOR_COMMAND_OPEN_LEVEL_AT);
         lCommands.Register<SaveLevelCommand>(Tags::EDITOR_COMMAND_SAVE_LEVEL);
         lCommands.Register<ResaveLevelCommand>(Tags::EDITOR_COMMAND_RESAVE_LEVEL);
-        lCommands.Register<SaveSheetCommand>(Tags::EDITOR_COMMAND_SAVE_SHEET);
-        lCommands.Register<SaveClipCommand>(Tags::EDITOR_COMMAND_SAVE_CLIP);
-        lCommands.Register<SaveLibraryCommand>(Tags::EDITOR_COMMAND_SAVE_LIBRARY);
-        lCommands.Register<SaveMoveModeCommand>(Tags::EDITOR_COMMAND_SAVE_MOVE_MODE);
-        lCommands.Register<SaveMoverCommand>(Tags::EDITOR_COMMAND_SAVE_MOVER);
-        lCommands.Register<SaveDataAssetCommand>(Tags::EDITOR_COMMAND_SAVE_DATA_ASSET);
-        lCommands.Register<SaveInputActionCommand>(Tags::EDITOR_COMMAND_SAVE_INPUT_ACTION);
-        lCommands.Register<SaveInputMapCommand>(Tags::EDITOR_COMMAND_SAVE_INPUT_MAP);
-        lCommands.Register<SaveFamilyCommand>(Tags::EDITOR_COMMAND_SAVE_FAMILY);
 
         // A document type gets its own New, like maps and levels.
         lCommands.Register<NewUICommand>(Tags::EDITOR_COMMAND_NEW_UI);
@@ -464,6 +434,15 @@ namespace Opaax::Editor
         lCommands.Register<RedoCommand>(Tags::EDITOR_COMMAND_REDO);
 
         lCommands.Register<ExportGameCommand>(Tags::EDITOR_COMMAND_EXPORT_GAME);
+
+        // Every asset class, through one set of commands.
+        lCommands.Register<OpenAssetCommand>(Tags::EDITOR_COMMAND_OPEN_ASSET);
+        lCommands.Register<NewAssetCommand>(Tags::EDITOR_COMMAND_NEW_ASSET);
+        lCommands.Register<SaveAssetCommand>(Tags::EDITOR_COMMAND_SAVE_ASSET);
+        lCommands.Register<SaveAllAssetsCommand>(Tags::EDITOR_COMMAND_SAVE_ALL_ASSETS);
+        lCommands.Register<CloseAssetCommand>(Tags::EDITOR_COMMAND_CLOSE_ASSET);
+        lCommands.Register<UndoAssetCommand>(Tags::EDITOR_COMMAND_UNDO_ASSET);
+        lCommands.Register<RedoAssetCommand>(Tags::EDITOR_COMMAND_REDO_ASSET);
     }
 
     void EditorService::RegisterNativeViewportTools()
@@ -590,8 +569,63 @@ namespace Opaax::Editor
         m_Extensions.ConfigDrawers().Register<Config_EditorImgui, EditorImguiConfigDrawer>();
     }
 
+    void EditorService::RegisterNativeAssetTypes()
+    {
+        // The engine's asset classes, by New Asset submenu. A class registered nowhere is offered at the
+        // top level, named and drawn from its class name; a game module registers its own the same way.
+        AssetTypeRegistry& lTypes = m_Extensions.AssetTypes();
+
+        lTypes.Register<Material2D>().SetCategory(OpaaxString("Rendering"));
+        lTypes.Register<AudioClipDef>().SetCategory(OpaaxString("Audio"));
+        lTypes.Register<AudioBank>().SetCategory(OpaaxString("Audio"));
+        lTypes.Register<MoveMode>().SetCategory(OpaaxString("Movement"));
+        lTypes.Register<Mover>().SetCategory(OpaaxString("Movement")).SetGlyph(OpaaxString("[MV]"));
+
+        // An action is what gameplay binds; a context is which keys reach it (what a rebind edits).
+        lTypes.Register<InputActionAsset>()
+            .SetLabel(OpaaxString("Input Action"))
+            .SetCategory(OpaaxString("Input"))
+            .SetGlyph(OpaaxString("[IA]"));
+        lTypes.Register<InputMappingContextAsset>()
+            .SetLabel(OpaaxString("Input Mapping Context"))
+            .SetCategory(OpaaxString("Input"))
+            .SetGlyph(OpaaxString("[IM]"))
+            .SetEditor<InputMappingContextEditor>();
+
+        // A clip is pictures and their timing, edited with a playing preview; a library names clips.
+        lTypes.Register<AnimationClip>()
+            .SetCategory(OpaaxString("Animation"))
+            .SetGlyph(OpaaxString("[AC]"))
+            .SetEditor<AnimationClipEditor>();
+        lTypes.Register<AnimationLibrary>()
+            .SetCategory(OpaaxString("Animation"))
+            .SetGlyph(OpaaxString("[AL]"));
+
+        // A typeface's faces by style, edited as a matrix with a live sample.
+        lTypes.Register<FontFamily>()
+            .SetCategory(OpaaxString("Text"))
+            .SetGlyph(OpaaxString("[FF]"))
+            .SetEditor<FontFamilyEditor>();
+
+        // A texture cut into frames, edited over its image.
+        lTypes.Register<SpriteSheet>()
+            .SetCategory(OpaaxString("Rendering"))
+            .SetIcon(OpaaxString("Icons/T_SpriteSheet_Icon.png"))
+            .SetGlyph(OpaaxString("[S]"))
+            .SetEditor<SpriteSheetEditor>();
+    }
+
     void EditorService::RegisterNativeResourceTypes()
     {
+        // Every asset class opens in a window of its own; how each looks comes from AssetTypes().
+        m_Extensions.ResourceTypes().Register<AssetResource>()
+            .SetGlyph(OpaaxString("[A]"))
+            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
+            {
+                InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_ASSET, InContext,
+                                                        AssetPathParams{ InFile.AbsPath });
+            });
+
         // Both are set: the image shows, the glyph is the fallback if the image is missing.
         m_Extensions.ResourceTypes().Register<MapResource>()
             .SetIcon(OpaaxString("Icons/T_Map_Icon.png"))
@@ -632,17 +666,6 @@ namespace Opaax::Editor
             })
             .SetPreview<FontFaceResource>(&NativeResourcePreviews::DrawFontFace);
 
-        // A family opens its editor (it is a document).
-        m_Extensions.ResourceTypes().Register<FontFamilyResource>()
-            .SetGlyph(OpaaxString("[FF]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                if (InContext.FamilyDocument.Open(InFile.AbsPath))
-                {
-                    InContext.Panels.SetVisible(FontFamilyPanel::PanelID(), true);
-                }
-            });
-
         // A canvas opens its editor (it is a document).
         m_Extensions.ResourceTypes().Register<UICanvasResource>()
             .SetGlyph(OpaaxString("[UI]"))
@@ -654,93 +677,6 @@ namespace Opaax::Editor
                 if (InContext.UICanvasDocument.Open(InFile.AbsPath, lRegistry))
                 {
                     InContext.Panels.SetVisible(UICanvasPanel::PanelID(), true);
-                }
-            });
-
-        // A sheet opens its editor, not the preview (it is a document with its own panel).
-        m_Extensions.ResourceTypes().Register<SpriteSheetResource>()
-            .SetIcon(OpaaxString("Icons/T_SpriteSheet_Icon.png"))
-            .SetGlyph(OpaaxString("[S]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                if (InContext.SheetDocument.Open(InFile.AbsPath))
-                {
-                    InContext.Panels.SetVisible(SpriteSheetPanel::PanelID(), true);
-                }
-            });
-
-        // A clip opens its editor too.
-        m_Extensions.ResourceTypes().Register<AnimationClipResource>()
-            .SetGlyph(OpaaxString("[C]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                if (InContext.ClipDocument.Open(InFile.AbsPath))
-                {
-                    InContext.Panels.SetVisible(AnimationClipPanel::PanelID(), true);
-                }
-            });
-
-        m_Extensions.ResourceTypes().Register<AnimationLibraryResource>()
-            .SetGlyph(OpaaxString("[A]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                if (InContext.LibraryDocument.Open(InFile.AbsPath))
-                {
-                    InContext.Panels.SetVisible(AnimationLibraryPanel::PanelID(), true);
-                }
-            });
-
-        // Both open their editor (they are documents).
-        m_Extensions.ResourceTypes().Register<MoveModeResource>()
-            .SetGlyph(OpaaxString("[MM]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                if (InContext.MoveModeDocument.Open(InFile.AbsPath))
-                {
-                    InContext.Panels.SetVisible(MoveModePanel::PanelID(), true);
-                }
-            });
-
-        // Every data asset type opens the same panel; its fields come from the registered struct.
-        m_Extensions.ResourceTypes().Register<DataAssetResource>()
-            .SetGlyph(OpaaxString("[D]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                if (InContext.DataAssetDocument.Open(InFile.AbsPath, InContext.Engine.GetRegistries().DataAssets()))
-                {
-                    InContext.Panels.SetVisible(DataAssetPanel::PanelID(), true);
-                }
-            });
-
-        m_Extensions.ResourceTypes().Register<MoverResource>()
-            .SetGlyph(OpaaxString("[MV]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                if (InContext.MoverDocument.Open(InFile.AbsPath))
-                {
-                    InContext.Panels.SetVisible(MoverPanel::PanelID(), true);
-                }
-            });
-
-        // Two types, two editors: an action is what gameplay binds, a context is which keys reach it
-        // (a rebind only opens the context).
-        m_Extensions.ResourceTypes().Register<InputActionResource>()
-            .SetGlyph(OpaaxString("[IA]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                if (InContext.InputActionDocument.Open(InFile.AbsPath))
-                {
-                    InContext.Panels.SetVisible(InputActionPanel::PanelID(), true);
-                }
-            });
-
-        m_Extensions.ResourceTypes().Register<InputMappingContextResource>()
-            .SetGlyph(OpaaxString("[IM]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                if (InContext.InputMapDocument.Open(InFile.AbsPath))
-                {
-                    InContext.Panels.SetVisible(InputMappingContextPanel::PanelID(), true);
                 }
             });
 
@@ -1017,6 +953,7 @@ namespace Opaax::Editor
         RegisterNativePanels();
         RegisterNativeMenus();
         RegisterNativeResourceTypes();
+        RegisterNativeAssetTypes();
         RegisterNativeEditorCommand();
         RegisterNativeDrawers();
         RegisterNativeConfigDrawers();
@@ -1230,6 +1167,26 @@ namespace Opaax::Editor
         // keyboard (so they are in the route); Ctrl+S only matters while the editor has it.
         if (m_Context == nullptr) { return; }
 
+        // An asset window has the focus: the chords act on that asset's file and history.
+        if (const AssetDocument* lAsset = m_Context->Assets.GetFocused())
+        {
+            const AssetPathParams lTarget{ lAsset->GetAbsPath() };
+
+            if (m_Gui->Shortcut(EKeyCode::LeftControl, EKeyCode::S))
+            {
+                m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_SAVE_ASSET, *m_Context, lTarget);
+            }
+            if (m_Gui->Shortcut(EKeyCode::LeftControl, EKeyCode::Z))
+            {
+                m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_UNDO_ASSET, *m_Context, lTarget);
+            }
+            if (m_Gui->Shortcut(EKeyCode::LeftControl, EKeyCode::Y))
+            {
+                m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_REDO_ASSET, *m_Context, lTarget);
+            }
+            return;
+        }
+
         // One chord for every document: the target follows the focused panel, which declares it
         // (PanelDesc::SaveCommand, Undo/Redo/DeleteCommand). Invalid = the level's command.
         const auto lCommandForFocused = [this](const OpaaxTag& InDefault, OpaaxTag PanelDesc::* InMember)
@@ -1310,6 +1267,12 @@ namespace Opaax::Editor
 
         // 0. Unsubscribe from the WorldManager before the panels and selection its handlers use are destroyed.
         ClearWorldManager();
+
+        // The asset windows (a custom editor may hold textures it shows) before the UI goes.
+        if (m_AssetEditors != nullptr)
+        {
+            m_AssetEditors->CloseAll();
+        }
 
         // 1. The whole UI (panels, then backend): the Viewport frees its FBO while the GL context is
         //    current. Destroying the context also saves the dock layout. Before m_Context.reset().

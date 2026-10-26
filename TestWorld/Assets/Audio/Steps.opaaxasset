@@ -1,0 +1,27 @@
+{
+    "Class": "AudioClipDef",
+    "Properties": {
+        "Bus": "SFX",
+        "Clips": [
+            {
+                "Clip": "Audio/Step0.wav"
+            },
+            {
+                "Clip": "Audio/Step1.wav"
+            },
+            {
+                "Clip": "Audio/Step2.wav"
+            },
+            {
+                "Clip": "Audio/Step3.wav"
+            },
+            {
+                "Clip": "Audio/Step4.wav"
+            }
+        ],
+        "PitchSpread": 0.05,
+        "Selection": "RandomNoRepeat",
+        "Volume": 0.6
+    },
+    "Version": 1
+}

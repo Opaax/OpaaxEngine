@@ -15,12 +15,7 @@ engine content with `/Engine/` (`/Engine/Textures/T_Square_256_White.png`).
 | `.opaaxmap` | A map: entities and placed prefabs | Hierarchy, Inspector |
 | `.opaaxprefab` | A prefab, a nested prefab or a variant | Create Prefab, Prefab panel |
 | `.opaaxui` | A UI canvas | UI editor |
-| `.opaaxaction`, `.opaaxinputmap` | Input actions, and the keys that drive them | Input panels |
-| `.opaaxsheet` | A texture cut into named frames | Sprite Sheet panel |
-| `.opaaxclip`, `.opaaxanim` | An animation clip, a library of clips | Animation panels |
-| `.opaaxdata` | A data asset (a `Material2D`, an `AudioClipDef` or `AudioBank`, a game's own structs) | Data Asset panel |
-| `.opaaxmover`, `.opaaxmovemode` | A Mover's modes, and one mode's tuning | Mover panels |
-| `.opaaxfont` | A font family: faces by style | Font Family panel |
+| `.opaaxasset` | An asset of any registered class (a `Material2D`, a `SpriteSheet`, an `AudioClipDef` or `AudioBank`, a `Mover` or `MoveMode`, an `InputActionAsset` or `InputMappingContextAsset`, an `AnimationClip` or `AnimationLibrary`, a `FontFamily`, a game's own classes) | Its own window: double-click it |
 | `Configs/*.config` | Engine, renderer and editor settings | Config panel |
 
 Images are `.png`, sounds `.wav`, `.mp3` or `.flac`, fonts `.ttf`: put them under `Assets`. A sound up
@@ -92,7 +87,7 @@ What is in front: a `Sprite` or a `Text` is drawn by its `Layer` (`Background`, 
 `Debug`, `UI`, back to front), then its `OrderInLayer` (lower is behind). A `Quad` has no order of its
 own: it is drawn in `Default` at order 0. For a plain colour that must sit behind or in front of
 something, use a `Sprite` of the engine's white square (`"Texture": "/Engine/Textures/T_Square_32_White.png"`)
-with a `Color`. Engine content is named from `/Engine/` (`/Engine/Fonts/Roboto.opaaxfont`).
+with a `Color`. Engine content is named from `/Engine/` (`/Engine/Fonts/Roboto.opaaxasset`).
 
 ### Placed prefabs
 
@@ -192,78 +187,110 @@ A binding (`"Hud.Score"`) reads a property of a source the game registers on the
 the value. A game mounts a canvas with `GetContext().UI->MountAsset("UI/Hud.opaaxui")` and finds a
 widget with `FindByName`.
 
-## Input (`.opaaxaction`, `.opaaxinputmap`)
+## Input (`InputActionAsset`, `InputMappingContextAsset`)
 
-An action is what the game reads (`GetAction`, `BindAction`); a map binds keys to actions.
+Both are assets. An action is what the game reads (`GetAction`, `BindAction`); a mapping context
+binds keys to actions.
 
 ```json
-{ "Name": "Move", "ValueType": "Axis2D", "HoldSeconds": 0.5, "Description": "Walk and climb",
-  "Modifiers": [ { "Type": "Normalize" } ] }
+{ "Class": "InputActionAsset", "Properties": {
+    "Name": "Move", "ValueType": "Axis2D", "HoldSeconds": 0.5, "Description": "Walk and climb",
+    "Modifiers": [ { "Type": "Normalize" } ] } }
 ```
 
 ```json
-{
+{ "Class": "InputMappingContextAsset", "Properties": {
     "Priority": 0,
     "Mappings": [
-        { "Action": "Input/Move.opaaxaction", "Key": "D", "Modifiers": [], "bConsume": true },
-        { "Action": "Input/Move.opaaxaction", "Key": "A", "Modifiers": [ { "Type": "Negate" } ], "bConsume": true },
-        { "Action": "Input/Move.opaaxaction", "Key": "W", "Modifiers": [ { "Type": "Swizzle" } ], "bConsume": true },
-        { "Action": "Input/Move.opaaxaction", "Key": "S", "Modifiers": [ { "Type": "Swizzle" }, { "Type": "Negate" } ], "bConsume": true },
-        { "Action": "Input/Jump.opaaxaction", "Key": "Space", "Modifiers": [], "bConsume": true }
-    ]
-}
+        { "Action": "Input/Move.opaaxasset", "Key": "D", "Modifiers": [], "bConsume": true },
+        { "Action": "Input/Move.opaaxasset", "Key": "A", "Modifiers": [ { "Type": "Negate" } ], "bConsume": true },
+        { "Action": "Input/Move.opaaxasset", "Key": "W", "Modifiers": [ { "Type": "Swizzle" } ], "bConsume": true },
+        { "Action": "Input/Move.opaaxasset", "Key": "S", "Modifiers": [ { "Type": "Swizzle" }, { "Type": "Negate" } ], "bConsume": true },
+        { "Action": "Input/Jump.opaaxasset", "Key": "Space", "Modifiers": [], "bConsume": true }
+    ] } }
 ```
 
-`ValueType` is `Bool`, `Axis1D` or `Axis2D`. Modifiers apply in order: `Negate`, `Swizzle` (x and y
-swapped), `DeadZone` (`DeadZoneLower`, `DeadZoneUpper`), `Scalar` (`Scale`), `Normalize`. Keys are
-named as in `EKeyCode` (`A`...`Z`, `Space`, `Escape`, `Left`, `Mouse_Left`...). A game adds a map with
-`GetContext().Actions->AddContextAsset(OPAAX_ID("Gameplay"), "Input/Gameplay.opaaxinputmap")`.
+`Name` is what gameplay binds (`OPAAX_ID("Move")`); left empty, it is the file's name. `ValueType` is
+`Bool`, `Axis1D` or `Axis2D`. Modifiers apply in order: `Negate`, `Swizzle` (x and y swapped),
+`DeadZone` (`DeadZoneLower`, `DeadZoneUpper`), `Scalar` (`Scale`), `Normalize`. Keys are named as in
+`EKeyCode` (`A`...`Z`, `Space`, `Escape`, `Left`, `Mouse_Left`...). A game adds a context with
+`GetContext().Actions->AddContextAsset(OPAAX_ID("Gameplay"), "Input/Gameplay.opaaxasset")`; a mapping
+whose action does not load is skipped, with a warning. A context's window lists its mappings, key
+first; **2D Composite (WASD)** and **Arrows** replace the selected one with the four that make an
+`Axis2D` of its action.
 
-## Sprites and animation (`.opaaxsheet`, `.opaaxclip`, `.opaaxanim`)
+## Sprites and animation (`SpriteSheet`, `AnimationClip`, `AnimationLibrary`)
 
-A sheet cuts a texture into named frames (pixels, from the top-left corner); `Grid` only records how
-the editor sliced it:
+All three are assets. A sheet cuts a texture into named frames (pixels, from the top-left corner);
+`Grid` only records how the editor sliced it:
 
 ```json
-{
+{ "Class": "SpriteSheet", "Properties": {
     "Texture": "Textures/Hero.png",
     "DefaultFrame": 0,
     "Frames": [
         { "Name": "Idle", "Offset": { "x": 0.0, "y": 0.0 }, "Size": { "x": 64.0, "y": 64.0 } },
         { "Name": "Run_0", "Offset": { "x": 64.0, "y": 0.0 }, "Size": { "x": 64.0, "y": 64.0 } }
-    ]
-}
+    ] } }
 ```
 
-A clip plays frames of a sheet (or whole textures) in order; `PlayMode` is `Once`, `Loop` or
-`PingPong`, and `Hold` keeps a step for that many ticks:
+A sprite, a `UIImage` or a `UIButton` shows a sheet frame by index (`Frame`; -1 is the sheet's
+`DefaultFrame`), a clip by name. A sheet's window draws its frames over the image: a click selects
+one, dragging it moves it, dragging an edge resizes it. **Slice** replaces the frames with the grid's
+cells (a grid that cuts nothing is refused), and **Auto-Name** names the unnamed ones `Frame_<index>`.
+An edit that leaves `DefaultFrame` past the last frame sets it back to 0.
+
+A clip plays frames of a sheet (or whole textures) in order;
+`PlayMode` is `Once`, `Loop` or `PingPong`, and `Hold` keeps a step for that many ticks:
 
 ```json
-{ "Sheet": "Sprites/Hero.opaaxsheet", "Fps": 8.0, "PlayMode": "Loop",
-  "Steps": [ { "Frame": "Run_0", "Hold": 1 }, { "Frame": "Run_1", "Hold": 1 } ] }
+{ "Class": "AnimationClip", "Properties": {
+    "Sheet": "Sprites/Hero.opaaxasset", "Fps": 8.0, "PlayMode": "Loop",
+    "Steps": [ { "Frame": "Run_0", "Hold": 1 }, { "Frame": "Run_1", "Hold": 1 } ] } }
 ```
+
+A clip's window plays it (Play, Pause, Restart, a scrub bar), picks each step's frame among the
+sheet's names, and adds a step for each texture dropped on a clip without a sheet.
 
 A library names clips for a `SpriteAnimator` to switch between:
-`{ "DefaultClip": "Run", "Entries": [ { "Name": "Run", "Clip": "Anims/Run.opaaxclip" } ] }`.
-
-## Data assets (`.opaaxdata`)
-
-A registered struct (`OPAAX_REGISTER_DATA_ASSET`) by type name, with its fields:
 
 ```json
-{ "Type": "Material2D", "Data": { "bLit": true, "NormalMap": "Textures/Bricks_N.png",
-                                  "EmissiveColor": { "x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0 }, "EmissiveStrength": 1.0 } }
+{ "Class": "AnimationLibrary", "Properties": {
+    "DefaultClip": "Run",
+    "Entries": [ { "Name": "Idle", "Clip": "Anims/Hero_Idle.opaaxasset" },
+                 { "Name": "Run",  "Clip": "Anims/Hero_Run.opaaxasset" } ] } }
 ```
 
-A sprite uses a material through its `Material` field.
+Names resolve by first match, as in a `Mover`: an edit clears a repeated name, names an entry after
+its clip's file when it has none, and clears a default that names no entry (the first entry plays).
+
+## Assets (`.opaaxasset`)
+
+One format for every asset class (`OPAAX_REGISTER_OBJECT` of an `Asset` subclass): the class's name,
+its properties by field name, and the format's version:
+
+```json
+{ "Class": "Material2D",
+  "Properties": { "bLit": true, "NormalMap": "Textures/Bricks_N.png",
+                  "EmissiveColor": { "x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0 }, "EmissiveStrength": 1.0 },
+  "Version": 1 }
+```
+
+A missing property keeps its default, so `{ "Class": "Material2D" }` is a whole asset. A value of the
+wrong type makes the file fail to load (the log names the field). A sprite uses a material through its
+`Material` field. Files written by an older engine (`.opaaxdata`, `.opaaxmover`, `.opaaxmovemode`,
+`.opaaxaction`, `.opaaxinputmap`, `.opaaxclip`, `.opaaxanim`, `.opaaxfont`, `.opaaxsheet`) are
+converted once by starting the editor with `--upgrade-assets`: each becomes an `.opaaxasset` of the
+same name (its class appended when that name is taken), and the paths that named it in levels, maps,
+prefabs, canvases, assets and configs are rewritten. Paths written in game code are not: one that
+still names an old file loads the converted one, with a warning to update it.
 
 ## Sound (`AudioClipDef`, `AudioBank`)
 
-Both are data assets. A clip definition says how a sound plays; one of its `Clips` is chosen each
-time:
+Both are assets. A clip definition says how a sound plays; one of its `Clips` is chosen each time:
 
 ```json
-{ "Type": "AudioClipDef", "Data": {
+{ "Class": "AudioClipDef", "Properties": {
     "Clips": [ { "Clip": "Audio/Step0.wav" }, { "Clip": "Audio/Step1.wav", "Weight": 2.0, "VolumeScale": 0.8 } ],
     "Selection": "RandomNoRepeat", "Bus": "SFX", "Volume": 0.6, "Pitch": 1.0,
     "VolumeSpread": 0.1, "PitchSpread": 0.05, "bLoop": false,
@@ -275,9 +302,9 @@ time:
 that much, up or down. `Attenuation`: `Linear` or `InverseSquare`, full within `MinDistance`, silent
 from `MaxDistance`. When every voice plays, the lowest `Priority` is replaced first.
 
-A bank lists what to load before it plays: `{ "Type": "AudioBank", "Data": { "ClipDefs":
-["Audio/Steps.opaaxdata"], "Clips": ["Audio/Jump.wav"] } }`. A level holds its banks with an
-`AudioBanks` component (`{ "Banks": ["Audio/Level1.opaaxdata"] }`) on any entity of its map;
+A bank lists what to load before it plays: `{ "Class": "AudioBank", "Properties": { "ClipDefs":
+["Audio/Steps.opaaxasset"], "Clips": ["Audio/Jump.wav"] } }`. A level holds its banks with an
+`AudioBanks` component (`{ "Banks": ["Audio/Level1.opaaxasset"] }`) on any entity of its map;
 `Audio.GlobalBank` in `Engine.config` names the bank held for the whole game.
 
 An `AudioSource` plays either `Sound` (a clip definition: its `Volume` and `Pitch` then scale the
@@ -285,29 +312,48 @@ definition's) or `Clip` with its own `Bus`, `Volume`, `Pitch`, `bLoop`, `bSpatia
 `Attenuation`. `bPlayOnStart` starts it with its entity; `bStopOnDestroy` off lets it play to its end
 after the entity is gone.
 
-## Movement (`.opaaxmover`, `.opaaxmovemode`)
+## Movement (`Mover`, `MoveMode`)
 
-A mover lists the modes a `Mover` component can switch between; each mode is its own tuning file:
+Both are assets. A `Mover` lists the modes a `Mover` component can switch between; each mode is a
+`MoveMode` asset of its own (a tuning):
 
 ```json
-{ "DefaultMode": "Ground", "Entries": [ { "Name": "Ground", "ModeAsset": "Movers/Hero_Ground.opaaxmovemode" },
-                                        { "Name": "Fly",    "ModeAsset": "Movers/Hero_Fly.opaaxmovemode" } ] }
+{ "Class": "Mover", "Properties": {
+    "DefaultMode": "Ground",
+    "Entries": [ { "Name": "Ground", "ModeAsset": "Movers/Hero_Ground.opaaxasset" },
+                 { "Name": "Fly",    "ModeAsset": "Movers/Hero_Fly.opaaxasset" } ] } }
 ```
 
 ```json
-{ "Mode": "GroundMove", "MaxSpeed": 420.0, "Acceleration": 12.0, "GroundDeceleration": 9.0,
-  "AirSteer": 0.35, "JumpSpeed": 620.0, "GravityScale": 1.0, "MaxSlopeAngleDeg": 50.0,
-  "MinSpeed": 10.0, "StopSpeed": 100.0 }
+{ "Class": "MoveMode", "Properties": {
+    "Mode": "GroundMove", "MaxSpeed": 420.0, "Acceleration": 12.0, "GroundDeceleration": 9.0,
+    "AirSteer": 0.35, "JumpSpeed": 620.0, "GravityScale": 1.0, "MaxSlopeAngleDeg": 50.0,
+    "MinSpeed": 10.0, "StopSpeed": 100.0 } }
 ```
 
-`Mode` names a registered mode (`GroundMove`, `FlyMove`, or a game's `OPAAX_REGISTER_MOVER_MODE`).
-Gameplay drives a mover through its component: `Input.MoveDir`, `Input.bJump`, `PendingMode`.
+`Mode` names a registered mode (`GroundMove`, `FlyMove`, or a game's `OPAAX_REGISTER_MOVER_MODE`); its
+window shows only the fields that mode reads. A tuning that does not load moves with the defaults (a
+walking mode). In a Mover, names resolve by first match: an edit clears a repeated name, names an
+entry after its tuning's file when it has none, and clears a default that names no entry. Gameplay
+drives a mover through its component: `Input.MoveDir`, `Input.bJump`, `PendingMode`.
 
-## Fonts (`.opaaxfont`)
+## Fonts (`FontFamily`)
 
-A family maps styles to font files, so text asks for "Bold Italic" rather than a file:
-`{ "Entries": [ { "Face": "Fonts/Title-Bold.ttf", "Style": { "Weight": "Bold", "Slant": "Normal",
-"Width": "Normal", "Subset": "Latin" } } ] }`.
+A family is an asset that maps styles to font files, so text asks for "Bold Italic" rather than a
+file:
+
+```json
+{ "Class": "FontFamily", "Properties": { "Entries": [
+    { "Face": "Fonts/Title-Bold.ttf",
+      "Style": { "Subset": "Latin", "Weight": "Bold", "Width": "Normal", "Slant": "Normal" } } ] } }
+```
+
+A `TextComponent` names a family in `Font` (the engine's is `/Engine/Fonts/Roboto.opaaxasset`) and
+the style it wants in `Style`. The script (`Subset`) never falls back: a family without it draws
+boxes. The other axes do, in CSS's order: width, then slant, then weight (the nearest). Each style is
+written once; of two equal ones the first is drawn, and the editor refuses the second. A family's
+window shows it as a matrix (script across, weight down, for one width and slant), with a sample of
+text in the selected face and what a style request resolves to.
 
 ## Configs (`Configs/*.config`)
 
@@ -320,6 +366,6 @@ and the global bank:
 
 ```json
 "Audio": { "bEnabled": true, "Backend": "Miniaudio", "MasterVolume": 1.0, "MaxVoices": 64,
-           "GlobalBank": "Audio/Global.opaaxdata",
+           "GlobalBank": "Audio/Global.opaaxasset",
            "Buses": [ { "Name": "Music" }, { "Name": "SFX" }, { "Name": "Footsteps", "Parent": "SFX", "Volume": 0.8 } ] }
 ```

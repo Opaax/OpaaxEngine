@@ -7,7 +7,7 @@
 #include "Core/String/OpaaxStringID.hpp"
 #include "Engine/Reflection/PropertyVisitor.h"            // EnumLabels
 #include "Resources/ResourcePath.h"     // TResourcePath
-#include "Resources/DataAsset/DataAssetRef.h"   // TDataAssetRef
+#include "Resources/Asset/AssetRef.h"           // TAssetRef
 #include "Resources/ResourceTypeID.hpp" // ResourceTypeID
 #include "Editor/Properties/PropertyDrawer.h"
 #include "Editor/Resources/ResourceDragDrop.h"
@@ -56,17 +56,17 @@ namespace Opaax::Editor
                                Uint32 InResourceTypeId);
 
     /**
-     * A data asset reference as a drop target: only a .opaaxdata holding InDataType is accepted.
+     * An asset reference as a drop target: only an .opaaxasset of InClass, or of a subclass, is accepted.
      */
-    void DrawDataAssetRefField(IEditorWidgets& InWidgets, const char* InLabel, OpaaxString& InPath,
-                               OpaaxStringID InDataType);
+    void DrawAssetRefField(IEditorWidgets& InWidgets, const char* InLabel, OpaaxString& InPath,
+                           const ObjectClass& InClass);
 
-    template<CDataAsset T>
-    struct TPropertyDrawer<TDataAssetRef<T>>
+    template<typename T>
+    struct TPropertyDrawer<TAssetRef<T>>
     {
-        static void Draw(IEditorWidgets& InWidgets, const char* InLabel, TDataAssetRef<T>& InValue, const PropertyMeta&)
+        static void Draw(IEditorWidgets& InWidgets, const char* InLabel, TAssetRef<T>& InValue, const PropertyMeta&)
         {
-            DrawDataAssetRefField(InWidgets, InLabel, InValue.Path, DataAssetTypeName<T>());
+            DrawAssetRefField(InWidgets, InLabel, InValue.Path, T::StaticClass());
         }
     };
 

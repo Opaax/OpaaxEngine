@@ -9,7 +9,7 @@
 namespace Opaax
 {
     // =============================================================================
-    // InputKeyNames — EKeyCode to text and back, for .opaaxinputmap files.
+    // InputKeyNames — EKeyCode to text and back, for input mapping context assets.
     //   Generated from InputKeyCodeList.h.
     // =============================================================================
 

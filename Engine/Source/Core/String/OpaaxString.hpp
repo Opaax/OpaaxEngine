@@ -81,7 +81,9 @@ namespace Opaax
         // CTOR - DTOR
         // =============================================================================
     public:
-        OpaaxString() = default;
+        // Not defaulted: with a defaulted one, Clang refuses `const T x;` for any T that holds a string
+        // (it counts the union's member that has no initializer).
+        constexpr OpaaxString() noexcept {}
 
         ~OpaaxString() { Clear(); }
 

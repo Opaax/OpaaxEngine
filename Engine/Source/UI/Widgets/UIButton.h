@@ -5,6 +5,7 @@
 #include "Core/Events/Delegate.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxStringID.hpp"
+#include "Resources/Asset/AssetRef.h"
 #include "Resources/ResourcePath.h"
 #include "Resources/ResourcePathJson.h"
 #include "UI/UIWidget.h"
@@ -13,9 +14,9 @@ namespace Opaax
 {
     class ITexture2D;
 
-    // Forward-declared: TResourcePath only needs the name.
+    // Forward-declared: a path or an asset reference only needs the name.
     struct TextureResource;
-    struct SpriteSheetResource;
+    class SpriteSheet;
 
     DECLARE_MULTICAST_DELEGATE(FOnUIClick)
 
@@ -37,9 +38,9 @@ namespace Opaax
         bool        bEnabled = true;
 
         /** The button's art, tinted by the state colour. The sheet wins over the texture. */
-        TResourcePath<TextureResource>     Texture;
-        TResourcePath<SpriteSheetResource> Sheet;
-        Int32                              Frame = -1;
+        TResourcePath<TextureResource> Texture;
+        TAssetRef<SpriteSheet>         Sheet;
+        Int32                          Frame = -1;
 
         OPAAX_PROPERTIES(UIButton,
                          OPAAX_PROP(Normal),

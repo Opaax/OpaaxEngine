@@ -9,8 +9,8 @@
 #include "Renderer/Components/SpriteComponent.h"
 #include "Renderer/Components/TextComponent.h"
 #include "Renderer/Text/FontFaceResource.h"
-#include "Renderer/Text/FontFamilyResource.h"
-#include "Renderer/Textures/SpriteSheetResource.h"
+#include "Renderer/Text/FontFamily.h"
+#include "Renderer/Textures/SpriteSheet.h"
 #include "Renderer/Textures/TextureResource.h"
 
 namespace Opaax
@@ -30,10 +30,14 @@ namespace Opaax
     OPAAX_REGISTER_NAMED_COMPONENT(ShadowCaster2DComponent, "ShadowCaster2D");
 
     // How a sprite takes light, shared by the sprites that point at it.
-    OPAAX_REGISTER_DATA_ASSET(Material2D);
+    OPAAX_REGISTER_OBJECT(Material2D);
+
+    // A typeface's faces by style, which text asks for instead of a .ttf.
+    OPAAX_REGISTER_OBJECT(FontFamily);
+
+    // A texture cut into frames, which sprites, UI images and clips show.
+    OPAAX_REGISTER_OBJECT(SpriteSheet);
 
     OPAAX_REGISTER_NAMED_RESOURCE(TextureResource, "Texture");
-    OPAAX_REGISTER_NAMED_RESOURCE(SpriteSheetResource, "SpriteSheet");
     OPAAX_REGISTER_NAMED_RESOURCE(FontFaceResource, "FontFace");
-    OPAAX_REGISTER_NAMED_RESOURCE(FontFamilyResource, "FontFamily");
 }

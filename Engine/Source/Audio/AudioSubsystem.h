@@ -6,7 +6,7 @@
 #include "Core/Events/DelegateHandle.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
-#include "Resources/DataAsset/DataAssetHandle.h"
+#include "Resources/Asset/AssetHandle.h"
 #include "Resources/ResourceRef.hpp"
 #include "World/Entity/EntityTypes.h"
 #include "World/Systems/WorldSubsystem.h"
@@ -69,7 +69,7 @@ namespace Opaax
          * Plays a sound file or a clip definition, not tied to an entity: it plays to its end (or
          * until the world ends). For a clip definition, its settings win, and InParams adds to them:
          * its volume and pitch multiply, its position, fade-in, and bSpatial (on) are used.
-         * @param InPath Asset-relative: "Audio/Coin.wav", or "Audio/Footsteps.opaaxdata"
+         * @param InPath Asset-relative: "Audio/Coin.wav", or "Audio/Footsteps.opaaxasset"
          * @return Invalid when nothing can play (a missing file, a definition with no clips, no audio)
          */
         SoundHandle PlaySound(const OpaaxString& InPath, const PlaySoundParams& InParams = {});
@@ -131,7 +131,7 @@ namespace Opaax
         WorldContext* m_Context = nullptr;   // owned by the World
 
         TUnorderedMap<OpaaxString, ResourceRef<AudioClipResource>> m_Clips;
-        TUnorderedMap<OpaaxString, TDataAssetHandle<AudioClipDef>> m_Defs;
+        TUnorderedMap<OpaaxString, TAssetHandle<AudioClipDef>> m_Defs;
 
         /** The banks of each AudioBanks component, keyed by entity. */
         TUnorderedMap<Uint32, AudioBankHold> m_Banks;

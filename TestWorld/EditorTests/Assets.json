@@ -1,0 +1,649 @@
+[
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 10
+        }
+    },
+    {
+        "id": "classes",
+        "command": "asset.classes"
+    },
+    {
+        "id": "new",
+        "command": "asset.new",
+        "params": {
+            "path": "Scratch/Tuning.opaaxasset",
+            "class": "ProbeTuning",
+            "properties": {
+                "Speed": 4.0,
+                "Title": "Made by a script"
+            }
+        },
+        "expect": {
+            "path": "Scratch/Tuning.opaaxasset",
+            "class": "ProbeTuning",
+            "open": true,
+            "unsaved": false,
+            "properties": {
+                "Speed": 4.0,
+                "Lives": 3,
+                "Title": "Made by a script"
+            }
+        }
+    },
+    {
+        "id": "set",
+        "command": "asset.set",
+        "params": {
+            "path": "Scratch/Tuning.opaaxasset",
+            "properties": {
+                "Lives": 7
+            }
+        },
+        "expect": {
+            "unsaved": true,
+            "canUndo": true,
+            "properties": {
+                "Lives": 7,
+                "Speed": 4.0
+            }
+        }
+    },
+    {
+        "id": "set-wrong-type-refused",
+        "command": "asset.set",
+        "params": {
+            "path": "Scratch/Tuning.opaaxasset",
+            "properties": {
+                "Lives": "many"
+            }
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "undo",
+        "command": "asset.undo",
+        "params": {
+            "path": "Scratch/Tuning.opaaxasset"
+        },
+        "expect": {
+            "unsaved": false,
+            "canRedo": true,
+            "properties": {
+                "Lives": 3
+            }
+        }
+    },
+    {
+        "id": "redo",
+        "command": "asset.redo",
+        "params": {
+            "path": "Scratch/Tuning.opaaxasset"
+        },
+        "expect": {
+            "unsaved": true,
+            "properties": {
+                "Lives": 7
+            }
+        }
+    },
+    {
+        "id": "close-unsaved-refused",
+        "command": "asset.close",
+        "params": {
+            "path": "Scratch/Tuning.opaaxasset"
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "list-open",
+        "command": "asset.list",
+        "expect": {
+            "assets": [
+                {
+                    "path": "Scratch/Tuning.opaaxasset",
+                    "class": "ProbeTuning",
+                    "unsaved": true
+                }
+            ]
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "Assets.png"
+        }
+    },
+    {
+        "id": "save",
+        "command": "asset.save",
+        "params": {
+            "path": "Scratch/Tuning.opaaxasset"
+        },
+        "expect": {
+            "unsaved": false
+        }
+    },
+    {
+        "id": "close",
+        "command": "asset.close",
+        "params": {
+            "path": "Scratch/Tuning.opaaxasset"
+        }
+    },
+    {
+        "id": "read-file",
+        "command": "asset.get",
+        "params": {
+            "path": "Scratch/Tuning.opaaxasset"
+        },
+        "expect": {
+            "class": "ProbeTuning",
+            "open": false,
+            "properties": {
+                "Speed": 4.0,
+                "Lives": 7,
+                "Title": "Made by a script"
+            }
+        }
+    },
+    {
+        "id": "new-over-existing-refused",
+        "command": "asset.new",
+        "params": {
+            "path": "Scratch/Tuning.opaaxasset",
+            "class": "ProbeTuning"
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "new-unknown-class-refused",
+        "command": "asset.new",
+        "params": {
+            "path": "Scratch/Nobody.opaaxasset",
+            "class": "NoSuchClass"
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "open-project-asset",
+        "command": "asset.open",
+        "params": {
+            "path": "Data/Tuning.opaaxasset"
+        },
+        "expect": {
+            "class": "ProbeTuning",
+            "unsaved": false,
+            "properties": {
+                "Lives": 5,
+                "Speed": 2.5,
+                "Title": "Hard"
+            }
+        }
+    },
+    {
+        "id": "discard-edit",
+        "command": "asset.set",
+        "params": {
+            "path": "Data/Tuning.opaaxasset",
+            "properties": {
+                "Lives": 99
+            }
+        }
+    },
+    {
+        "id": "close-discarding",
+        "command": "asset.close",
+        "params": {
+            "path": "Data/Tuning.opaaxasset",
+            "discard": true
+        }
+    },
+    {
+        "id": "project-asset-untouched",
+        "command": "asset.get",
+        "params": {
+            "path": "Data/Tuning.opaaxasset"
+        },
+        "expect": {
+            "open": false,
+            "properties": {
+                "Lives": 5
+            }
+        }
+    },
+    {
+        "id": "open-mover",
+        "command": "asset.open",
+        "params": {
+            "path": "Movers/Walker.opaaxasset"
+        },
+        "expect": {
+            "class": "Mover",
+            "properties": {
+                "DefaultMode": "Ground",
+                "Entries": [
+                    {
+                        "Name": "Ground",
+                        "ModeAsset": "Movers/Walker_Ground.opaaxasset"
+                    },
+                    {
+                        "Name": "Fly",
+                        "ModeAsset": "Movers/Walker_Fly.opaaxasset"
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "id": "mover-repeated-name-renamed",
+        "command": "asset.set",
+        "params": {
+            "path": "Movers/Walker.opaaxasset",
+            "properties": {
+                "Entries": [
+                    {
+                        "Name": "Ground",
+                        "ModeAsset": "Movers/Walker_Ground.opaaxasset"
+                    },
+                    {
+                        "Name": "Ground",
+                        "ModeAsset": "Movers/Walker_Fly.opaaxasset"
+                    }
+                ]
+            }
+        },
+        "expect": {
+            "unsaved": true,
+            "properties": {
+                "Entries": [
+                    {
+                        "Name": "Ground"
+                    },
+                    {
+                        "Name": "Walker_Fly"
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot-mover",
+        "command": "screenshot",
+        "params": {
+            "path": "AssetsMover.png"
+        }
+    },
+    {
+        "id": "open-move-mode",
+        "command": "asset.open",
+        "params": {
+            "path": "Movers/Walker_Fly.opaaxasset"
+        },
+        "expect": {
+            "class": "MoveMode",
+            "properties": {
+                "Mode": "FlyMove",
+                "MaxSpeed": 600.0
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot-move-mode",
+        "command": "screenshot",
+        "params": {
+            "path": "AssetsMoveMode.png"
+        }
+    },
+    {
+        "id": "close-mover-discarding",
+        "command": "asset.close",
+        "params": {
+            "path": "Movers/Walker.opaaxasset",
+            "discard": true
+        }
+    },
+    {
+        "id": "close-move-mode",
+        "command": "asset.close",
+        "params": {
+            "path": "Movers/Walker_Fly.opaaxasset"
+        }
+    },
+    {
+        "id": "open-input-context",
+        "command": "asset.open",
+        "params": {
+            "path": "Input/Controls.opaaxasset"
+        },
+        "expect": {
+            "class": "InputMappingContextAsset",
+            "unsaved": false,
+            "properties": {
+                "Priority": 0,
+                "Mappings": [
+                    {
+                        "Action": "Input/Move.opaaxasset",
+                        "Key": "D"
+                    },
+                    {
+                        "Action": "Input/Move.opaaxasset",
+                        "Key": "A"
+                    },
+                    {
+                        "Action": "Input/Move.opaaxasset",
+                        "Key": "W"
+                    },
+                    {
+                        "Action": "Input/Move.opaaxasset",
+                        "Key": "S"
+                    },
+                    {
+                        "Action": "Input/Charge.opaaxasset",
+                        "Key": "Space"
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "id": "input-unknown-key-refused",
+        "command": "asset.set",
+        "params": {
+            "path": "Input/Controls.opaaxasset",
+            "properties": {
+                "Mappings": [
+                    {
+                        "Action": "Input/Charge.opaaxasset",
+                        "Key": "NoSuchKey"
+                    }
+                ]
+            }
+        },
+        "expectFailure": true
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot-input-context",
+        "command": "screenshot",
+        "params": {
+            "path": "AssetsInputContext.png"
+        }
+    },
+    {
+        "id": "open-input-action",
+        "command": "asset.open",
+        "params": {
+            "path": "Input/Charge.opaaxasset"
+        },
+        "expect": {
+            "class": "InputActionAsset",
+            "properties": {
+                "Name": "Charge",
+                "ValueType": "Bool",
+                "HoldSeconds": 0.5
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot-input-action",
+        "command": "screenshot",
+        "params": {
+            "path": "AssetsInputAction.png"
+        }
+    },
+    {
+        "id": "close-input-context-unchanged",
+        "command": "asset.close",
+        "params": {
+            "path": "Input/Controls.opaaxasset"
+        }
+    },
+    {
+        "id": "close-input-action",
+        "command": "asset.close",
+        "params": {
+            "path": "Input/Charge.opaaxasset"
+        }
+    },
+    {
+        "id": "open-clip",
+        "command": "asset.open",
+        "params": {
+            "path": "Anims/Cycle.opaaxasset"
+        },
+        "expect": {
+            "class": "AnimationClip",
+            "unsaved": false,
+            "properties": {
+                "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset",
+                "Fps": 6.0,
+                "PlayMode": "Loop"
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot-clip",
+        "command": "screenshot",
+        "params": {
+            "path": "AssetsClip.png"
+        }
+    },
+    {
+        "id": "open-library",
+        "command": "asset.open",
+        "params": {
+            "path": "Anims/Library.opaaxasset"
+        },
+        "expect": {
+            "class": "AnimationLibrary",
+            "properties": {
+                "DefaultClip": "Cycle",
+                "Entries": [
+                    {
+                        "Name": "Cycle",
+                        "Clip": "Anims/Cycle.opaaxasset"
+                    },
+                    {
+                        "Name": "Blink",
+                        "Clip": "Anims/Blink.opaaxasset"
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "id": "library-names-fixed",
+        "command": "asset.set",
+        "params": {
+            "path": "Anims/Library.opaaxasset",
+            "properties": {
+                "Entries": [
+                    {
+                        "Name": "Cycle",
+                        "Clip": "Anims/Cycle.opaaxasset"
+                    },
+                    {
+                        "Name": "Cycle",
+                        "Clip": "Anims/Blink.opaaxasset"
+                    },
+                    {
+                        "Name": "",
+                        "Clip": "Anims/Once.opaaxasset"
+                    }
+                ]
+            }
+        },
+        "expect": {
+            "unsaved": true,
+            "properties": {
+                "Entries": [
+                    {
+                        "Name": "Cycle"
+                    },
+                    {
+                        "Name": "Blink"
+                    },
+                    {
+                        "Name": "Once"
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot-library",
+        "command": "screenshot",
+        "params": {
+            "path": "AssetsLibrary.png"
+        }
+    },
+    {
+        "id": "close-library-discarding",
+        "command": "asset.close",
+        "params": {
+            "path": "Anims/Library.opaaxasset",
+            "discard": true
+        }
+    },
+    {
+        "id": "close-clip",
+        "command": "asset.close",
+        "params": {
+            "path": "Anims/Cycle.opaaxasset"
+        }
+    },
+    {
+        "id": "open-engine-font-family",
+        "command": "asset.open",
+        "params": {
+            "path": "/Engine/Fonts/Roboto.opaaxasset"
+        },
+        "expect": {
+            "path": "/Engine/Fonts/Roboto.opaaxasset",
+            "class": "FontFamily",
+            "unsaved": false
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot-font-family",
+        "command": "screenshot",
+        "params": {
+            "path": "AssetsFontFamily.png"
+        }
+    },
+    {
+        "id": "close-font-family",
+        "command": "asset.close",
+        "params": {
+            "path": "/Engine/Fonts/Roboto.opaaxasset"
+        }
+    },
+    {
+        "id": "open-engine-sheet",
+        "command": "asset.open",
+        "params": {
+            "path": "/Engine/SpriteSheets/TSS_Default_128.opaaxasset"
+        },
+        "expect": {
+            "class": "SpriteSheet",
+            "unsaved": false,
+            "properties": {
+                "Texture": "/Engine/SpriteSheets/TSS_Default_128.png",
+                "DefaultFrame": 0
+            }
+        }
+    },
+    {
+        "id": "sheet-default-past-the-end-put-back",
+        "command": "asset.set",
+        "params": {
+            "path": "/Engine/SpriteSheets/TSS_Default_128.opaaxasset",
+            "properties": {
+                "DefaultFrame": 9
+            }
+        },
+        "expect": {
+            "unsaved": false,
+            "properties": {
+                "DefaultFrame": 0
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot-sheet",
+        "command": "screenshot",
+        "params": {
+            "path": "AssetsSheet.png"
+        }
+    },
+    {
+        "id": "close-sheet",
+        "command": "asset.close",
+        "params": {
+            "path": "/Engine/SpriteSheets/TSS_Default_128.opaaxasset"
+        }
+    },
+    {
+        "id": "nothing-open",
+        "command": "asset.list",
+        "expect": {
+            "assets": []
+        }
+    }
+]

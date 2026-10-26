@@ -8,6 +8,7 @@
 #include "Core/Reflection/OpaaxEnumJson.h"
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxStringIDJson.h"
+#include "Resources/Asset/Asset.h"
 #include "Resources/ResourcePath.h"
 #include "Resources/ResourcePathJson.h"
 
@@ -72,11 +73,14 @@ namespace Opaax
 
     // =============================================================================
     // AudioClipDef — how a sound plays: its clips (variations, one chosen per play), its bus, volume
-    //   and pitch with a random spread, looping, and where it is heard from. A data asset
-    //   (.opaaxdata), written by designers; played by path like a sound file.
+    //   and pitch with a random spread, looping, and where it is heard from. An asset written by
+    //   designers; played by path like a sound file.
     // =============================================================================
-    struct AudioClipDef
+    class AudioClipDef final : public Asset
     {
+        OPAAX_OBJECT(AudioClipDef, Asset)
+
+    public:
         TDynArray<AudioClipEntry> Clips;
         EAudioSelection           Selection = EAudioSelection::Random;
 
@@ -100,10 +104,6 @@ namespace Opaax
 
         /** When every voice is busy, the lowest priority is replaced first. */
         Uint32 Priority = 128;
-
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(AudioClipDef, Clips, Selection, Bus, Volume, Pitch, VolumeSpread,
-                                                    PitchSpread, bLoop, bSpatial, MinDistance, MaxDistance,
-                                                    Attenuation, Priority)
 
         OPAAX_PROPERTIES(AudioClipDef,
                          OPAAX_PROP(Clips).SetTooltip("The variations: one is chosen each time it plays."),

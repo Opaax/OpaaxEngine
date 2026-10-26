@@ -18,6 +18,9 @@ description: Build OpaaxEngine and run its unit tests and TestWorld feature test
   configure time. Test files must also be listed in `Engine/Tests/CMakeLists.txt`.
 - Find errors in a long log: `grep -E " error |warning C" build.log` (MSVC), `grep -E "error:|warning:"`
   (GCC, Clang).
+- A full build takes minutes once a widely included editor header changes: run it in the background.
+  If its log stops and `cl.exe` uses no more CPU for minutes, it is hung: stop the build's processes
+  and `mspdbsrv.exe` (nothing else is compiling), then build again.
 
 ## Unit tests
 

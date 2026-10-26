@@ -3,6 +3,7 @@
 // stands in for the renderer's caches.
 #include <doctest.h>
 
+#include "Renderer/Textures/SpriteSheet.h"   // completes the widgets' sheet references
 #include "RHI/Texture.h"
 #include "UI/UICanvas.h"
 #include "UI/UICanvasFile.h"
@@ -77,7 +78,7 @@ TEST_CASE("UIImageSource: runtime beats sheet beats texture, and nothing named i
     UIBuildContext lContext{ &lAssets };
 
     TResourcePath<TextureResource>     lTexture;  lTexture.Path = "UI/Art.png";
-    TResourcePath<SpriteSheetResource> lSheet;    lSheet.Path   = "UI/Icons.opaaxsheet";
+    TAssetRef<SpriteSheet>             lSheet;    lSheet.Path   = "UI/Icons.opaaxasset";
     FakeTexture lRuntime{ 4u };
 
     UIResolvedImage lImage;
@@ -117,7 +118,7 @@ TEST_CASE("UIImage: a sheet frame reaches the quad's UVs, and a sliced frame sta
     lCanvas.SetTargetSize(1920, 1080);
 
     UIImage* lImage = static_cast<UIImage*>(lCanvas.Root().AddChild(MakeUnique<UIImage>()));
-    lImage->SetSheetFrame(OpaaxString("UI/Icons.opaaxsheet"), 5);
+    lImage->SetSheetFrame(OpaaxString("UI/Icons.opaaxasset"), 5);
     lCanvas.Update(lContext);
 
     REQUIRE(lImage->GetQuads().size() == 1u);
@@ -167,7 +168,7 @@ TEST_CASE("UIButton: its art resolves like an image's, tinted by the state colou
     CHECK(lButton->GetQuads()[0].Texture == &lAssets.Plain);
     CHECK(lButton->GetQuads()[0].Color.r == doctest::Approx(lButton->Normal.r));
 
-    lButton->Sheet.Path = "UI/Icons.opaaxsheet";
+    lButton->Sheet.Path = "UI/Icons.opaaxasset";
     lButton->Frame      = 1;
     lButton->InvalidateContent();
     lCanvas.Update(lContext);
@@ -189,13 +190,13 @@ TEST_CASE("UIImageSource: the new fields round-trip through the file, and a file
     lDoc.Root = MakeUnique<UIPanel>();
 
     auto lImage = MakeUnique<UIImage>();
-    lImage->Sheet.Path = "UI/Icons.opaaxsheet";
+    lImage->Sheet.Path = "UI/Icons.opaaxasset";
     lImage->Frame      = 7;
     lDoc.Root->AddChild(Move(lImage));
 
     auto lButton = MakeUnique<UIButton>();
     lButton->Texture.Path = "UI/Button.png";
-    lButton->Sheet.Path   = "UI/Icons.opaaxsheet";
+    lButton->Sheet.Path   = "UI/Icons.opaaxasset";
     lButton->Frame        = 2;
     lDoc.Root->AddChild(Move(lButton));
 
@@ -205,10 +206,10 @@ TEST_CASE("UIImageSource: the new fields round-trip through the file, and a file
 
     const auto* lReadImage  = static_cast<const UIImage*>(lBack.Root->GetChildren()[0].get());
     const auto* lReadButton = static_cast<const UIButton*>(lBack.Root->GetChildren()[1].get());
-    CHECK(lReadImage->Sheet.Path == OpaaxString("UI/Icons.opaaxsheet"));
+    CHECK(lReadImage->Sheet.Path == OpaaxString("UI/Icons.opaaxasset"));
     CHECK(lReadImage->Frame == 7);
     CHECK(lReadButton->Texture.Path == OpaaxString("UI/Button.png"));
-    CHECK(lReadButton->Sheet.Path == OpaaxString("UI/Icons.opaaxsheet"));
+    CHECK(lReadButton->Sheet.Path == OpaaxString("UI/Icons.opaaxasset"));
     CHECK(lReadButton->Frame == 2);
 
     UICanvasFile::UICanvasDoc lOld;

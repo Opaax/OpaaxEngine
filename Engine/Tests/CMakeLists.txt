@@ -7,6 +7,7 @@
 set(OPAAX_TEST_SOURCES
     Main.cpp
     SmokeTest.cpp
+    LegacyAssetFile.cpp
     TestTempDir.cpp
 
     # Audio
@@ -67,8 +68,13 @@ set(OPAAX_TEST_SOURCES
     Engine/GameInstanceTests.cpp
     Engine/ModuleRegistrarTests.cpp
 
+    # Object
+    Object/ObjectClassRegistryTests.cpp
+    Object/ObjectTests.cpp
+
     # Resources
-    Resources/DataAssetTests.cpp
+    Resources/AssetMigrationTests.cpp
+    Resources/AssetTests.cpp
     Resources/ResourceFormatRegistryTests.cpp
     Resources/ResourceSystemTests.cpp
 
@@ -102,6 +108,7 @@ set(OPAAX_TEST_SOURCES
     World/WorldTickGateTests.cpp
 
     # Input
+    Input/InputAssetTests.cpp
     Input/InputManagerTests.cpp
     Input/InputMappingTests.cpp
 
@@ -152,15 +159,21 @@ set(OPAAX_TEST_SOURCES
     UI/UITextTests.cpp
 
     # Editor logic that needs no ImGui (header-only editor types)
+    Editor/AnimationClipEditingTests.cpp
+    Editor/AssetDocumentTests.cpp
+    Editor/AssetTypeRegistryTests.cpp
+    Editor/AssetWindowPlacementTests.cpp
     Editor/ConfigChangeTrackerTests.cpp
     Editor/DrawerRegistryTests.cpp
     Editor/EditorGizmoTests.cpp
     Editor/EditorRectGeometryTests.cpp
+    Editor/FontFamilyEditingTests.cpp
     Editor/GameExportPlanTests.cpp
     Editor/GuardedEditorDialogsTests.cpp
     Editor/LogFilterTests.cpp
     Editor/NewLevelPlanTests.cpp
     Editor/ResourceDragPayloadTests.cpp
+    Editor/SpriteSheetEditingTests.cpp
     Editor/UIPreviewAspectTests.cpp
     Editor/UIWidgetDrawerTests.cpp
 

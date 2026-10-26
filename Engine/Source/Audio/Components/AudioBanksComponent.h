@@ -4,7 +4,7 @@
 
 #include "Audio/AudioBank.h"
 #include "Core/Reflection/OpaaxProperty.h"
-#include "Resources/DataAsset/DataAssetRef.h"
+#include "Resources/Asset/AssetRef.h"
 
 namespace Opaax
 {
@@ -15,11 +15,11 @@ namespace Opaax
     // =============================================================================
     struct AudioBanksComponent
     {
-        TDynArray<TDataAssetRef<AudioBank>> Banks;
+        TDynArray<TAssetRef<AudioBank>> Banks;
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(AudioBanksComponent, Banks)
 
         OPAAX_PROPERTIES(AudioBanksComponent,
-                         OPAAX_PROP(Banks).SetTooltip("Audio banks (.opaaxdata): their sounds are loaded before they play."))
+                         OPAAX_PROP(Banks).SetTooltip("Audio banks: their sounds are loaded before they play."))
     };
 }

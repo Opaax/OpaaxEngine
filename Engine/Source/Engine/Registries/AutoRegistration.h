@@ -18,9 +18,9 @@
 //   OPAAX_REGISTER_WORLD_SUBSYSTEM_ORDERED(CameraFollow, WorldSubsystemOrder::Presentation);
 //   OPAAX_REGISTER_GAME_INSTANCE_SUBSYSTEM(ScoreKeeper);
 //   OPAAX_REGISTER_RESOURCE(WaveResource);
-//   OPAAX_REGISTER_DATA_ASSET(EnemyStats);
 //   OPAAX_REGISTER_UI_WIDGET(UIHealthBar);
 //   OPAAX_REGISTER_MOVER_MODE(SwimMoveMode, "Swim");
+//   OPAAX_REGISTER_OBJECT(EnemyStats);
 //
 // The engine runs every registration when it is constructed, before any world exists. Game
 // modules are linked whole (see opaax_add_game), so a registration in any of their files is
@@ -39,8 +39,9 @@ namespace Opaax
     // =============================================================================
     enum class EAutoRegistrationKind : Uint8
     {
+        ObjectClass,
+        ObjectClassAlias,
         ResourceFormat,
-        DataAsset,
         Component,
         ComponentAlias,
         Behaviour,
@@ -183,11 +184,6 @@ namespace Opaax
         ::Opaax::TypeIdOf<Type>(), 0, Name,                                                        \
         InRegistrar.Resources().Register<Type>(::Opaax::OpaaxStringID(Name)))
 
-/** Registers a struct a .opaaxdata file can hold. */
-#define OPAAX_REGISTER_DATA_ASSET(Type)                                                              \
-    OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::DataAsset,                      \
-        ::Opaax::TypeIdOf<Type>(), 0, #Type, InRegistrar.DataAssets().Register<Type>())
-
 /** Registers a widget type for .opaaxui files, saved under its type name. */
 #define OPAAX_REGISTER_UI_WIDGET(Type)                                                               \
     OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::UIWidget,                       \
@@ -199,7 +195,18 @@ namespace Opaax
         ::Opaax::TypeIdOf<Type>(), 0, Name,                                                        \
         InRegistrar.UIWidgets().Register<Type>(::Opaax::OpaaxStringID(Name)))
 
-/** Registers a movement mode under the name .opaaxmovemode files use. */
+/** Registers an Object class under its C++ name (no namespace), the name its files use. */
+#define OPAAX_REGISTER_OBJECT(Type)                                                                  \
+    OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::ObjectClass,                    \
+        ::Opaax::TypeIdOf<Type>(), 0, #Type, InRegistrar.ObjectClasses().Register<Type>())
+
+/** Lets files that name OldName load as the class now registered as Name (after a rename). */
+#define OPAAX_REGISTER_OBJECT_ALIAS(OldName, Name)                                                   \
+    OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::ObjectClassAlias,               \
+        ::Opaax::OpaaxHash::Hash64(OldName), 0, OldName,                                           \
+        InRegistrar.ObjectClasses().AddAlias(::Opaax::OpaaxStringID(OldName), ::Opaax::OpaaxStringID(Name)))
+
+/** Registers a movement mode under the name MoveMode assets use. */
 #define OPAAX_REGISTER_MOVER_MODE(Type, Name)                                                        \
     OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::MoverMode,                      \
         ::Opaax::TypeIdOf<Type>(), 0, Name,                                                        \

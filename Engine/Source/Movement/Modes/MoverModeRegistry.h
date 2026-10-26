@@ -11,7 +11,7 @@ namespace Opaax
     OPAAX_LOG_CATEGORY(MoverModeRegistry);
 
     // =============================================================================
-    // MoverModeRegistry — the movement modes a .opaaxmovemode can use.
+    // MoverModeRegistry — the movement modes a MoveMode asset can use.
     //   Modes are stateless: one instance of each, shared. Sealed before the first world.
     // =============================================================================
     class MoverModeRegistry
@@ -36,7 +36,7 @@ namespace Opaax
         // =========================================================================
     public:
         /**
-         * Registers T under InName (the name .opaaxmovemode files use).
+         * Registers T under InName (the name MoveMode assets use).
          * @return False if sealed, if the name is invalid, or if it is already used (no replacing)
          */
         template<typename T>

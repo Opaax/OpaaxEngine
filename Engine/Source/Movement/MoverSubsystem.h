@@ -5,8 +5,7 @@
 #include "Core/Maths/MathTypes.h"   // Vector2F
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxStringID.hpp"
-#include "Resources/ResourceRef.hpp"
-#include "Resources/ResourcePath.h"
+#include "Resources/Asset/AssetHandle.h"
 #include "World/Entity/EntityTypes.h"
 #include "World/Systems/WorldSubsystem.h"
 
@@ -20,11 +19,8 @@ namespace Opaax
     struct WorldContext;
     struct MoverComponent;
     struct TransformComponent;
-    struct MoveModeData;
-
-    // Forward-declared for the caches.
-    struct MoverResource;
-    struct MoveModeResource;
+    class Mover;
+    class MoveMode;
 
     // =============================================================================
     // MoverSubsystem — advances every MoverComponent with the mode its Mover asset names.
@@ -76,10 +72,7 @@ namespace Opaax
         /**
          * The tuning for InModeName in InMover, or nullptr. Each failure logs once.
          */
-        const MoveModeData* ResolveMode(const MoverComponent& InMover, OpaaxStringID InModeName);
-
-        /** Asset-relative -> absolute. */
-        OpaaxString ToAbsolute(const OpaaxString& InAssetPath) const;
+        const MoveMode* ResolveMode(const MoverComponent& InMover, OpaaxStringID InModeName);
 
         /** True the first time InKey is seen (log once). */
         bool ShouldWarnOnce(Uint32 InKey);
@@ -93,9 +86,9 @@ namespace Opaax
         /** Resolved in Startup. */
         const MoverModeRegistry* m_Modes = nullptr;
 
-        /** Loaded resource caches. */
-        TUnorderedMap<Uint32, ResourceRef<MoverResource>>    m_MoverCache;
-        TUnorderedMap<Uint32, ResourceRef<MoveModeResource>> m_ModeCache;
+        /** Loaded asset caches, by path. */
+        TUnorderedMap<Uint32, TAssetHandle<Mover>>    m_MoverCache;
+        TUnorderedMap<Uint32, TAssetHandle<MoveMode>> m_ModeCache;
 
         /** Keys already warned about. */
         TUnorderedSet<Uint32> m_Warned;

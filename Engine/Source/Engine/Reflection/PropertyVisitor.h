@@ -10,12 +10,14 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/Reflection/TypeInfo.h"
+#include "Object/ObjectHandle.h"
 #include "Resources/ResourcePath.h"
 #include "Resources/ResourceTypeID.hpp"
 
 namespace Opaax
 {
     class IPropertyVisitor;
+    class ObjectClass;
 
     // =============================================================================
     // IPropertyList — a list field (TDynArray) seen without its element type: its size, the edits a
@@ -100,10 +102,16 @@ namespace Opaax
                                        const PropertyMeta& InMeta) = 0;
 
         /**
-         * A data asset reference: its asset-relative path and the data type it accepts ("EnemyStats").
+         * An asset reference (TAssetRef): its asset-relative path and the class it accepts (subclasses too).
          */
-        virtual void VisitDataAssetRef(const char* InName, OpaaxString& InPath, OpaaxStringID InDataType,
-                                       const PropertyMeta& InMeta) = 0;
+        virtual void VisitAssetRef(const char* InName, OpaaxString& InPath, const ObjectClass& InClass,
+                                   const PropertyMeta& InMeta) = 0;
+
+        /**
+         * An object reference (TObjectPtr): its handle and the class it accepts. Not saved in files.
+         */
+        virtual void VisitObjectRef(const char* InName, ObjectHandle& InHandle, const ObjectClass& InClass,
+                                    const PropertyMeta& InMeta) = 0;
 
         /**
          * A nested reflected struct. Return false to skip its fields (e.g. a collapsed tree node);
@@ -133,12 +141,12 @@ namespace Opaax
         template<typename TResource, EResourceLoad TLoad>
         inline constexpr bool k_IsResourcePath<TResourcePath<TResource, TLoad>> = true;
 
-        /** A TDataAssetRef<T>, recognised by its marker (the header is above this one). */
+        /** A TAssetRef<T>, recognised by its marker (Resources/Asset/AssetRef.h is not needed here). */
         template<typename T>
-        concept CDataAssetRefField = requires(T& InValue)
+        concept CAssetRefField = requires(T& InValue)
         {
-            typename T::DataType;
-            requires T::k_IsDataAssetRef;
+            typename T::AssetType;
+            requires T::k_IsAssetRef;
             { InValue.Path } -> CConvertibleTo<OpaaxString&>;
         };
 
@@ -257,9 +265,13 @@ namespace Opaax
             InVisitor.VisitResourcePath(InName, InValue.Path,
                                         ResourceTypeID::Get<typename TValue::ResourceType>(), InMeta);
         }
-        else if constexpr (CDataAssetRefField<TValue>)
+        else if constexpr (CAssetRefField<TValue>)
         {
-            InVisitor.VisitDataAssetRef(InName, InValue.Path, DeriveTypeLeafName<typename TValue::DataType>(), InMeta);
+            InVisitor.VisitAssetRef(InName, InValue.Path, TValue::AssetType::StaticClass(), InMeta);
+        }
+        else if constexpr (CObjectPtrField<TValue>)
+        {
+            InVisitor.VisitObjectRef(InName, InValue.GetMutableHandle(), TValue::ObjectType::StaticClass(), InMeta);
         }
         else if constexpr (k_IsList<TValue> && !TIsSame<TValue, TDynArray<bool>>)
         {

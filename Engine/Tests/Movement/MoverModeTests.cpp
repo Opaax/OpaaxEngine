@@ -2,7 +2,7 @@
 // real physics world (MoverSubsystem itself needs a started engine).
 #include <doctest.h>
 
-#include "Movement/Assets/MoveModeData.h"
+#include "Movement/Assets/MoveMode.h"
 #include "Physics/PhysicsAPI.h"
 #include "Movement/MoverComponent.h"
 #include "World/Components/TransformComponent.h"
@@ -51,7 +51,7 @@ namespace
 
     /** Run InMode for InSteps fixed steps at 60 Hz. */
     void Drive(IMoverMode& InMode, IPhysicsWorld& InWorld, MoverComponent& InMover,
-               TransformComponent& InTransform, const MoveModeData& InParams, const int InSteps)
+               TransformComponent& InTransform, const MoveMode& InParams, const int InSteps)
     {
         for (int i = 0; i < InSteps; ++i)
         {
@@ -121,7 +121,7 @@ TEST_CASE("GroundMoveMode: a mover falls and LANDS on the floor")
     TransformComponent lTransform;
     lTransform.Position = { 0.f, 400.f };
 
-    const MoveModeData lParams{};   // the defaults are a walkable ground mode
+    const MoveMode lParams{};   // the defaults are a walkable ground mode
 
     Drive(lMode, *lWorld, lMover, lTransform, lParams, 180);
 
@@ -141,7 +141,7 @@ TEST_CASE("GroundMoveMode: intent WALKS it, and the direction follows the sign")
     TransformComponent lTransform;
     lTransform.Position = { 0.f, 60.f };
 
-    const MoveModeData lParams{};
+    const MoveMode lParams{};
 
     Drive(lMode, *lWorld, lMover, lTransform, lParams, 30);   // settle
     const float lRestX = lTransform.Position.x;
@@ -166,7 +166,7 @@ TEST_CASE("GroundMoveMode: a jump LEAVES the ground, and the edge is consumed")
     TransformComponent lTransform;
     lTransform.Position = { 0.f, 60.f };
 
-    const MoveModeData lParams{};
+    const MoveMode lParams{};
 
     Drive(lMode, *lWorld, lMover, lTransform, lParams, 30);
     REQUIRE(lMover.bGrounded);
@@ -198,7 +198,7 @@ TEST_CASE("GroundMoveMode: a jump in MID-AIR is refused")
     TransformComponent lTransform;
     lTransform.Position = { 0.f, 600.f };   // falling, nothing underneath
 
-    const MoveModeData lParams{};
+    const MoveMode lParams{};
 
     Drive(lMode, *lWorld, lMover, lTransform, lParams, 5);
     REQUIRE_FALSE(lMover.bGrounded);
@@ -221,7 +221,7 @@ TEST_CASE("GroundMoveMode: GravityScale 0 leaves it hanging")
     TransformComponent lTransform;
     lTransform.Position = { 0.f, 600.f };
 
-    MoveModeData lParams;
+    MoveMode lParams;
     lParams.GravityScale = 0.f;
 
     Drive(lMode, *lWorld, lMover, lTransform, lParams, 60);
@@ -243,7 +243,7 @@ TEST_CASE("FlyMoveMode: intent maps straight to velocity, on BOTH axes")
     TransformComponent lTransform;
     lTransform.Position = { 0.f, 400.f };
 
-    MoveModeData lParams;
+    MoveMode lParams;
     lParams.Mode     = OPAAX_ID("FlyMove");
     lParams.MaxSpeed = 300.f;
 
@@ -264,7 +264,7 @@ TEST_CASE("FlyMoveMode: NO gravity — releasing the stick leaves it hanging")
     TransformComponent lTransform;
     lTransform.Position = { 0.f, 400.f };
 
-    MoveModeData lParams;
+    MoveMode lParams;
     lParams.Mode = OPAAX_ID("FlyMove");
 
     Drive(lMode, *lWorld, lMover, lTransform, lParams, 60);   // no intent at all
@@ -283,12 +283,12 @@ TEST_CASE("FlyMoveMode: OnModeEnter drops momentum carried in from a fall")
     TransformComponent lTransform;
     lTransform.Position = { 0.f, 600.f };
 
-    const MoveModeData lGroundParams{};
+    const MoveMode lGroundParams{};
 
     Drive(lGround, *lWorld, lMover, lTransform, lGroundParams, 20);
     REQUIRE(lMover.Velocity.y < -50.f);   // genuinely falling
 
-    MoveModeData lFlyParams;
+    MoveMode lFlyParams;
     lFlyParams.Mode = OPAAX_ID("FlyMove");
 
     MoverTickContext lEnter{ *lWorld, lMover, lTransform, lFlyParams, 0.f, 0 };
@@ -332,7 +332,7 @@ TEST_CASE("IMoverMode: Owner reaches the entity's other components")
     BoostMoveMode      lMode;
     MoverComponent     lMover = MakeMover();
     TransformComponent lTransform;
-    const MoveModeData lParams{};
+    const MoveMode lParams{};
 
     MoverTickContext lTick{ *lPhysics, lMover, lTransform, lParams, 1.f / 60.f, 0, lEntity };
     lMode.Tick(lTick);

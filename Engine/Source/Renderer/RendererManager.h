@@ -12,7 +12,7 @@
 #include "Renderer/Lighting/Lighting2D.h"
 #include "Renderer/Materials/Material2D.h"
 #include "Renderer/Renderer2D.h"           // QuadLighting
-#include "Resources/DataAsset/DataAssetHandle.h"
+#include "Resources/Asset/AssetHandle.h"
 #include "UI/UIAssetProvider.h"
 #include "World/Entity/EntityTypes.h"   // EntityID
 
@@ -34,14 +34,12 @@ namespace Opaax
     class ITexture2D;
     struct FramebufferSpec;
     struct TextureResource;
-    struct SpriteSheetResource;
-    struct SpriteSheetData;
+    class SpriteSheet;
     struct SpriteComponent;
     struct SpriteUVRect;
     struct WindowResize;
     struct FontFaceResource;
-    struct FontFamilyResource;
-    struct FontFamilyData;
+    class FontFamily;
     struct FontStyleKey;
     struct FontFaceView;
     struct TextComponent;
@@ -132,7 +130,7 @@ namespace Opaax
         TDynArray<Light2DInstance> CollectLights(World& InWorld);
 
         /** How a sprite with InMaterial takes light (cached per material path). */
-        QuadLighting ResolveLighting(const TDataAssetRef<Material2D>& InMaterial);
+        QuadLighting ResolveLighting(const TAssetRef<Material2D>& InMaterial);
 
         /** The maps a lit pass reads, drawn from the shadow casters. Null: none this frame. */
         struct LightingMaps
@@ -190,9 +188,9 @@ namespace Opaax
         ITexture2D* ResolveTexture(const TResourcePath<TextureResource>& InPath);
 
         /**
-         * The sprite sheet for an asset-relative path. Loaded once and cached. Null for an empty path.
+         * The sprite sheet InRef names. Loaded once and cached. Null for an empty reference.
          */
-        const SpriteSheetData* ResolveSheet(const TResourcePath<SpriteSheetResource>& InPath);
+        const SpriteSheet* ResolveSheet(const TAssetRef<SpriteSheet>& InRef);
 
         /**
          * What a sprite draws: its texture and the region to sample. A sheet wins over a texture.
@@ -212,10 +210,9 @@ namespace Opaax
         UISheetFrameView ResolveSheetFrame(const char* InSheetPath, Int32 InFrame) override;
 
         /**
-         * The font family for an asset-relative .opaaxfont path. Loaded once and cached.
-         * Null for an empty path.
+         * The font family InRef names. Loaded once and cached. Null for an empty reference.
          */
-        const FontFamilyData* ResolveFamily(const TResourcePath<FontFamilyResource>& InPath);
+        const FontFamily* ResolveFamily(const TAssetRef<FontFamily>& InRef);
 
         /**
          * What a text component draws with. A family wins over a face.
@@ -370,18 +367,18 @@ namespace Opaax
         // while the GL context is still alive.
         TUnorderedMap<Uint32, ResourceRef<TextureResource>> m_TextureCache;
 
-        /** Same cache for sprite sheets. */
-        TUnorderedMap<Uint32, ResourceRef<SpriteSheetResource>> m_SheetCache;
+        /** Sprite sheets by path, kept for the session (a saved sheet reloads in place). */
+        TUnorderedMap<Uint32, TAssetHandle<SpriteSheet>> m_SheetCache;
 
         /** Materials by path, kept for the session (a saved material reloads in place). */
-        TUnorderedMap<Uint32, TDataAssetHandle<Material2D>> m_MaterialCache;
+        TUnorderedMap<Uint32, TAssetHandle<Material2D>> m_MaterialCache;
 
         /** Sheets already warned about for a missing frame. */
         TUnorderedSet<Uint32> m_WarnedFrameRange;
 
-        /** Same caches for fonts: .ttf faces and .opaaxfont families. */
-        TUnorderedMap<Uint32, ResourceRef<FontFaceResource>>   m_FaceCache;
-        TUnorderedMap<Uint32, ResourceRef<FontFamilyResource>> m_FamilyCache;
+        /** Same caches for fonts: .ttf faces and font families. */
+        TUnorderedMap<Uint32, ResourceRef<FontFaceResource>> m_FaceCache;
+        TUnorderedMap<Uint32, TAssetHandle<FontFamily>>      m_FamilyCache;
 
         /**
          * (family, style) pairs already warned about. Font path id and packed style in one Uint64.

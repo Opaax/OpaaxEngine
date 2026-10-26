@@ -1,0 +1,9 @@
+{
+    "Class": "WeaponStats",
+    "Properties": {
+        "Damage": 12,
+        "ShotsPerSec": 4.0,
+        "Spread": 2.5
+    },
+    "Version": 1
+}

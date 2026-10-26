@@ -8,10 +8,10 @@ namespace Opaax
 {
     bool AudioBankHold::Hold(const OpaaxString& InBankPath, ResourceManager& InResources, const IPaths& InPaths)
     {
-        TDataAssetRef<AudioBank> lRef;
+        TAssetRef<AudioBank> lRef;
         lRef.Path = InBankPath;
 
-        TDataAssetHandle<AudioBank> lBank = LoadDataAsset(InResources, InPaths, lRef);
+        TAssetHandle<AudioBank> lBank = LoadAsset(InResources, InPaths, lRef);
         if (lBank.Get() == nullptr)
         {
             OPAAX_LOG(LogAudio, Warn, "Audio bank '{}' does not load: its sounds load when they first play", InBankPath.CStr());
@@ -25,9 +25,9 @@ namespace Opaax
 
     void AudioBankHold::Hold(const AudioBank& InBank, ResourceManager& InResources, const IPaths& InPaths)
     {
-        for (const TDataAssetRef<AudioClipDef>& lDefRef : InBank.ClipDefs)
+        for (const TAssetRef<AudioClipDef>& lDefRef : InBank.ClipDefs)
         {
-            TDataAssetHandle<AudioClipDef> lDef = LoadDataAsset(InResources, InPaths, lDefRef);
+            TAssetHandle<AudioClipDef> lDef = LoadAsset(InResources, InPaths, lDefRef);
             if (lDef.Get() == nullptr)
             {
                 OPAAX_LOG(LogAudio, Warn, "A bank names clip definition '{}', which does not load", lDefRef.Path.CStr());

@@ -1,0 +1,15 @@
+{
+    "Class": "InputMappingContextAsset",
+    "Properties": {
+        "Mappings": [
+            {
+                "Action": "Input/Click.opaaxasset",
+                "Key": "Mouse_Left",
+                "Modifiers": [],
+                "bConsume": true
+            }
+        ],
+        "Priority": 0
+    },
+    "Version": 1
+}

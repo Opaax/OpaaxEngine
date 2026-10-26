@@ -22,7 +22,7 @@
                     "Layer": "Default",
                     "Material": "",
                     "OrderInLayer": 0,
-                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxsheet",
+                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset",
                     "Size": {
                         "x": 100.0,
                         "y": 100.0
@@ -32,7 +32,7 @@
                 },
                 "SpriteAnimator": {
                     "Clip": "",
-                    "ClipAsset": "Anims/Cycle.opaaxclip",
+                    "ClipAsset": "Anims/Cycle.opaaxasset",
                     "Library": "",
                     "Speed": 0.0,
                     "bPlaying": true
@@ -75,7 +75,7 @@
                     "Layer": "Default",
                     "Material": "",
                     "OrderInLayer": 0,
-                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxsheet",
+                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset",
                     "Size": {
                         "x": 100.0,
                         "y": 100.0
@@ -86,7 +86,7 @@
                 "SpriteAnimator": {
                     "Clip": "",
                     "ClipAsset": "",
-                    "Library": "Anims/Library.opaaxanim",
+                    "Library": "Anims/Library.opaaxasset",
                     "Speed": 1.0,
                     "bPlaying": true
                 },
@@ -150,7 +150,7 @@
                     "Layer": "Default",
                     "Material": "",
                     "OrderInLayer": 0,
-                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxsheet",
+                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset",
                     "Size": {
                         "x": 100.0,
                         "y": 100.0
@@ -160,7 +160,7 @@
                 },
                 "SpriteAnimator": {
                     "Clip": "",
-                    "ClipAsset": "Anims/Once.opaaxclip",
+                    "ClipAsset": "Anims/Once.opaaxasset",
                     "Library": "",
                     "Speed": 1.0,
                     "bPlaying": true
@@ -203,7 +203,7 @@
                     "Layer": "Default",
                     "Material": "",
                     "OrderInLayer": 0,
-                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxsheet",
+                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset",
                     "Size": {
                         "x": 100.0,
                         "y": 100.0
@@ -213,7 +213,7 @@
                 },
                 "SpriteAnimator": {
                     "Clip": "",
-                    "ClipAsset": "Anims/Cycle.opaaxclip",
+                    "ClipAsset": "Anims/Cycle.opaaxasset",
                     "Library": "",
                     "Speed": 1.0,
                     "bPlaying": false

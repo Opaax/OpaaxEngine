@@ -49,7 +49,7 @@
                     },
                     "Frame": -1,
                     "Layer": "Foreground",
-                    "Material": "Materials/Bumpy.opaaxdata",
+                    "Material": "Materials/Bumpy.opaaxasset",
                     "OrderInLayer": 0,
                     "Sheet": "",
                     "Size": {
@@ -344,7 +344,7 @@
                     },
                     "Frame": -1,
                     "Layer": "Foreground",
-                    "Material": "Materials/Glow.opaaxdata",
+                    "Material": "Materials/Glow.opaaxasset",
                     "OrderInLayer": 0,
                     "Sheet": "",
                     "Size": {

@@ -8,6 +8,7 @@
 #include "Core/String/OpaaxPathString.h"
 #include "Core/String/OpaaxStringJson.h"
 #include "Core/Tag/OpaaxTag.h"
+#include "Editor/Assets/AssetEditors.h"
 #include "Editor/Commands/EditorNativeCommands.h"
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
 #include "Editor/EditorContext.h"
@@ -26,6 +27,7 @@
 #include "Editor/UI/GuardedEditorDialogs.hpp"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Platform/IFileSystem.h"
+#include "Resources/Asset/AssetFile.h"
 #include "UI/UICanvasFile.h"
 #include "World/Entity/Entity.h"
 #include "World/Level.h"
@@ -70,20 +72,25 @@ namespace Opaax::Editor::EditorAutomation
             return WorldState(InContext);
         }
 
-        /** InPath made absolute: kept when absolute, else under the project's assets. */
+        /**
+         * InPath made absolute: an engine path ("/Engine/...") under the engine's assets, an absolute one
+         * kept, any other under the project's assets. The mount is tested first: on Linux and macOS
+         * "/Engine/..." is an absolute path too.
+         */
         OpaaxString ToAbsolute(EditorContext& InContext, const OpaaxString& InPath)
         {
-            return PathString::IsAbsolute(InPath) ? PathString::Generic(InPath)
-                                                  : InContext.Paths.AssetToAbsolute(InPath);
+            const bool bEnginePath = InPath.StartsWith(ENGINE_MOUNT);
+            return (!bEnginePath && PathString::IsAbsolute(InPath)) ? PathString::Generic(InPath)
+                                                                    : InContext.Paths.AssetToAbsolute(InPath);
         }
 
-        /** An absolute path from InParams["path"]: kept when absolute, else under the project's assets. */
+        /** An absolute path from InParams["path"], made as ToAbsolute does. */
         bool AssetPath(EditorContext& InContext, const nlohmann::json& InParams, OpaaxString& OutPath, OpaaxString& OutError)
         {
             const OpaaxString lPath = InParams.value("path", OpaaxString());
             if (lPath.IsEmpty())
             {
-                OutError = "\"path\" names the file (absolute, or relative to the project's assets)";
+                OutError = "\"path\" names the file: relative to the project's assets, /Engine/... for the engine's, or absolute";
                 return false;
             }
 
@@ -930,6 +937,256 @@ namespace Opaax::Editor::EditorAutomation
                     return AutomationResult::Ok(nlohmann::json{ { "path", InContext.Paths.AbsoluteToAsset(lPath).CStr() } });
                 });
         }
+
+        // =========================================================================
+        // Assets
+        // =========================================================================
+
+        /** What an open asset shows: its file, class, values, and whether they are saved. */
+        nlohmann::json DescribeAsset(EditorContext& InContext, const AssetDocument& InDocument)
+        {
+            const EditorUndo* lHistory = InContext.Assets.FindHistory(InDocument.GetAbsPath());
+
+            return nlohmann::json{
+                { "path",       InContext.Paths.AbsoluteToAsset(InDocument.GetAbsPath()).CStr() },
+                { "class",      InDocument.GetClassName().CStr() },
+                { "open",       true },
+                { "known",      InDocument.IsClassKnown() },
+                { "unsaved",    InDocument.IsDirty() },
+                { "canUndo",    lHistory != nullptr && lHistory->CanUndo() },
+                { "canRedo",    lHistory != nullptr && lHistory->CanRedo() },
+                { "properties", InDocument.GetProperties() } };
+        }
+
+        /** InParams["path"] opened in its window. Null (with OutError) when it is not an asset that opens. */
+        AssetDocument* OpenAsset(EditorContext& InContext, const nlohmann::json& InParams, OpaaxString& OutError)
+        {
+            OpaaxString lPath;
+            if (!AssetPath(InContext, InParams, lPath, OutError))
+            {
+                return nullptr;
+            }
+            if (!InContext.FileSystem.IsPathExist(lPath))
+            {
+                OutError = "no file at '" + lPath + "'";
+                return nullptr;
+            }
+            if (!InContext.Assets.Open(lPath, &OutError))
+            {
+                return nullptr;
+            }
+            return InContext.Assets.Find(lPath);
+        }
+
+        void RegisterAssets(Commands& InCommands, EditorContext& InContext)
+        {
+            InCommands.Register("asset.classes",
+                "The asset classes a project can make: {classes: [{name, label, category, properties}]}, each with "
+                "its properties at their default values.",
+                [&InContext](const nlohmann::json&)
+                {
+                    const ObjectClassRegistry& lClasses = InContext.Engine.GetRegistries().ObjectClasses();
+                    const AssetTypeRegistry&   lTypes   = InContext.Extensions.AssetTypes();
+
+                    nlohmann::json lList = nlohmann::json::array();
+                    for (const ObjectClass* lClass : lClasses.GetClassesOf(Asset::StaticClass(), /*bInConcreteOnly*/ true))
+                    {
+                        lList.push_back(nlohmann::json{
+                            { "name",       lClass->GetName().CStr() },
+                            { "label",      lTypes.LabelOf(*lClass).CStr() },
+                            { "category",   lTypes.CategoryOf(*lClass).CStr() },
+                            { "properties", lClass->WriteProperties(*lClass->GetDefaultObject()) } });
+                    }
+                    return AutomationResult::Ok(nlohmann::json{ { "classes", lList } });
+                });
+
+            InCommands.Register("asset.new",
+                "Creates an asset of {class} at {path} (.opaaxasset), every field at its default, then sets "
+                "{properties} if given, saves and opens it. Refuses a file that exists.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString lPath;
+                    OpaaxString lError;
+                    if (!AssetPath(InContext, InParams, lPath, lError)
+                        || !NewFilePath(InContext, lPath, "path", AssetFile::ASSET_EXTENSION, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    const OpaaxString  lClassName = InParams.value("class", OpaaxString());
+                    const ObjectClass* lClass =
+                        InContext.Engine.GetRegistries().ObjectClasses().FindByName(OpaaxStringID::Find(lClassName));
+                    if (lClass == nullptr)
+                    {
+                        return AutomationResult::Fail("\"class\" names a registered asset class (asset.classes lists them): '"
+                                                      + lClassName + "'");
+                    }
+
+                    if (!InContext.Assets.Create(lPath, *lClass, &lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    if (const auto lProperties = InParams.find("properties"); lProperties != InParams.end())
+                    {
+                        if (!InContext.Assets.Edit(lPath, *lProperties, &lError) || !InContext.Assets.Save(lPath))
+                        {
+                            return AutomationResult::Fail("created, but its properties were refused: " + lError);
+                        }
+                    }
+
+                    return AutomationResult::Ok(DescribeAsset(InContext, *InContext.Assets.Find(lPath)));
+                });
+
+            InCommands.Register("asset.open",
+                "Opens the asset at {path} in a window of its own (or brings its window forward): {path, class, "
+                "properties, unsaved, canUndo, canRedo}.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString          lError;
+                    const AssetDocument* lDocument = OpenAsset(InContext, InParams, lError);
+                    return lDocument != nullptr ? AutomationResult::Ok(DescribeAsset(InContext, *lDocument))
+                                                : AutomationResult::Fail(lError);
+                });
+
+            InCommands.Register("asset.get",
+                "The asset at {path}: its class and values. Those of its window when it is open (unsaved changes "
+                "included), else those of its file.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString lPath;
+                    OpaaxString lError;
+                    if (!AssetPath(InContext, InParams, lPath, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    if (const AssetDocument* lOpen = InContext.Assets.Find(lPath))
+                    {
+                        return AutomationResult::Ok(DescribeAsset(InContext, *lOpen));
+                    }
+
+                    AssetFile::Contents lContents;
+                    if (!AssetFile::Load(lPath, lContents))
+                    {
+                        return AutomationResult::Fail("no asset file at '" + lPath + "' (see the log)");
+                    }
+
+                    return AutomationResult::Ok(nlohmann::json{
+                        { "path",       InContext.Paths.AbsoluteToAsset(lPath).CStr() },
+                        { "class",      lContents.Class.CStr() },
+                        { "open",       false },
+                        { "properties", lContents.Properties } });
+                });
+
+            InCommands.Register("asset.set",
+                "Changes the asset at {path}: {properties} merged into its values (opened first if needed), as one "
+                "undo step, not saved (asset.save). A value of the wrong type changes nothing.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString          lError;
+                    const AssetDocument* lDocument = OpenAsset(InContext, InParams, lError);
+                    if (lDocument == nullptr)
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    const auto lProperties = InParams.find("properties");
+                    if (lProperties == InParams.end() || !lProperties->is_object())
+                    {
+                        return AutomationResult::Fail("\"properties\" is an object of the values to change");
+                    }
+
+                    if (!InContext.Assets.Edit(lDocument->GetAbsPath(), *lProperties, &lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+                    return AutomationResult::Ok(DescribeAsset(InContext, *lDocument));
+                });
+
+            const auto lStep = [&InCommands, &InContext](const char* InName, const char* InHelp, const bool bInUndo)
+            {
+                InCommands.Register(InName, InHelp, [&InContext, bInUndo](const nlohmann::json& InParams)
+                {
+                    OpaaxString lPath;
+                    OpaaxString lError;
+                    if (!AssetPath(InContext, InParams, lPath, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    const AssetDocument* lDocument = InContext.Assets.Find(lPath);
+                    if (lDocument == nullptr)
+                    {
+                        return AutomationResult::Fail("the asset is not open (asset.open)");
+                    }
+
+                    if (bInUndo) { InContext.Assets.Undo(lPath); }
+                    else         { InContext.Assets.Redo(lPath); }
+                    return AutomationResult::Ok(DescribeAsset(InContext, *lDocument));
+                });
+            };
+            lStep("asset.undo", "Undoes the last change to the open asset at {path} (its own history).", true);
+            lStep("asset.redo", "Redoes the last undone change to the open asset at {path}.", false);
+
+            InCommands.Register("asset.save",
+                "Writes the open asset at {path} and reloads it, so a playing game reads the new values.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString lPath;
+                    OpaaxString lError;
+                    if (!AssetPath(InContext, InParams, lPath, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    const AssetDocument* lDocument = InContext.Assets.Find(lPath);
+                    if (lDocument == nullptr)
+                    {
+                        return AutomationResult::Fail("the asset is not open (asset.open, asset.set)");
+                    }
+                    if (!InContext.Assets.Save(lPath))
+                    {
+                        return AutomationResult::Fail("the asset was not written (a class no module registered is "
+                                                      "read-only; see the log)");
+                    }
+                    return AutomationResult::Ok(DescribeAsset(InContext, *lDocument));
+                });
+
+            InCommands.Register("asset.close",
+                "Closes the window of the asset at {path}. Unsaved changes are refused unless \"discard\": true.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString lPath;
+                    OpaaxString lError;
+                    if (!AssetPath(InContext, InParams, lPath, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    if (!InContext.Assets.Close(lPath, InParams.value("discard", false)))
+                    {
+                        return AutomationResult::Fail("the asset has unsaved changes: save them first (asset.save), or "
+                                                      "pass \"discard\": true to lose them");
+                    }
+                    return AutomationResult::Ok(nlohmann::json{ { "path", InContext.Paths.AbsoluteToAsset(lPath).CStr() } });
+                },
+                "save the asset first (asset.save), or pass \"discard\": true to lose its changes");
+
+            InCommands.Register("asset.list",
+                "The open assets: {assets: [{path, class, unsaved, ...}]}, in the order they were opened.",
+                [&InContext](const nlohmann::json&)
+                {
+                    nlohmann::json lList = nlohmann::json::array();
+                    for (const AssetDocument* lDocument : InContext.Assets.GetOpen())
+                    {
+                        nlohmann::json lEntry = DescribeAsset(InContext, *lDocument);
+                        lEntry.erase("properties");
+                        lList.push_back(Move(lEntry));
+                    }
+                    return AutomationResult::Ok(nlohmann::json{ { "assets", lList } });
+                });
+        }
     }
 
     void Register(AutomationRunner& InRunner, EditorContext& InContext, GuardedEditorDialogs& InDialogs)
@@ -940,5 +1197,6 @@ namespace Opaax::Editor::EditorAutomation
         RegisterEntities(lCommands, InContext);
         RegisterPrefabs(lCommands, InContext);
         RegisterUI(lCommands, InContext);
+        RegisterAssets(lCommands, InContext);
     }
 }

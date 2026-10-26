@@ -1,5 +1,6 @@
 // The UI module's types. Each registers itself; see Engine/Registries/AutoRegistration.h.
 #include "Engine/Registries/AutoRegistration.h"
+#include "Renderer/Textures/SpriteSheet.h"   // completes the widgets' sheet references
 #include "UI/UICanvasResource.h"
 #include "UI/UISubsystem.h"
 #include "UI/Widgets/UIButton.h"

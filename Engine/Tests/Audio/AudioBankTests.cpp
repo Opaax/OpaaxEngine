@@ -1,4 +1,4 @@
-// Suite: audio banks — the data asset, a hold loading every sound of a bank in the background and
+// Suite: audio banks — the asset, a hold loading every sound of a bank in the background and
 // letting them go, a level's AudioBanks components (a banked sound plays without the "not loaded"
 // warning, the banks go with their entity), and the global bank across worlds that come and go: its
 // sounds are never loaded again, a level's are let go each time.
@@ -23,8 +23,6 @@
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/InputManager.h"
 #include "Renderer/DebugDraw.h"
-#include "Resources/DataAsset/DataAsset.h"
-#include "Resources/DataAsset/DataAssetFile.h"
 #include "Resources/ResourceManager.h"
 #include "World/Behaviour/BehaviourSubsystem.h"
 #include "World/Components/ComponentRegistry.h"
@@ -39,19 +37,14 @@
 using namespace Opaax;
 using AudioTest::ManualJobs;
 using AudioTest::MakeWav;
+using AudioTest::SaveAsset;
 using AudioTest::TempPaths;
 
 namespace
 {
-    void SaveData(const OpaaxString& InPath, const OpaaxStringID InType, const nlohmann::json& InData)
-    {
-        FileSystem::CreateDirectories(PathString::Parent(InPath));
-        REQUIRE(DataAssetFile::Save(InPath, InType, InData));
-    }
-
     /**
-     * Audio/A,B,C,D,G,L.wav; Audio/Steps.opaaxdata (A and B); Audio/Bank.opaaxdata (Steps, C and A
-     * again); Audio/Global.opaaxdata (G); Audio/Level.opaaxdata (L).
+     * Audio/A,B,C,D,G,L.wav; Audio/Steps.opaaxasset (A and B); Audio/Bank.opaaxasset (Steps, C and A
+     * again); Audio/Global.opaaxasset (G); Audio/Level.opaaxasset (L).
      */
     struct BankAssets
     {
@@ -69,25 +62,25 @@ namespace
             lSteps.Clips.resize(2);
             lSteps.Clips[0].Clip.Path = OpaaxString("Audio/A.wav");
             lSteps.Clips[1].Clip.Path = OpaaxString("Audio/B.wav");
-            SaveData(Dir.Sub("Audio/Steps.opaaxdata"), DataAssetTypeName<AudioClipDef>(), nlohmann::json(lSteps));
+            REQUIRE(SaveAsset(Dir.Sub("Audio/Steps.opaaxasset"), lSteps));
 
             AudioBank lBank;
             lBank.ClipDefs.resize(1);
-            lBank.ClipDefs[0].Path = OpaaxString("Audio/Steps.opaaxdata");
+            lBank.ClipDefs[0].Path = OpaaxString("Audio/Steps.opaaxasset");
             lBank.Clips.resize(2);
             lBank.Clips[0].Path = OpaaxString("Audio/C.wav");
             lBank.Clips[1].Path = OpaaxString("Audio/A.wav");
-            SaveData(Dir.Sub("Audio/Bank.opaaxdata"), DataAssetTypeName<AudioBank>(), nlohmann::json(lBank));
+            REQUIRE(SaveAsset(Dir.Sub("Audio/Bank.opaaxasset"), lBank));
 
             AudioBank lGlobal;
             lGlobal.Clips.resize(1);
             lGlobal.Clips[0].Path = OpaaxString("Audio/G.wav");
-            SaveData(Dir.Sub("Audio/Global.opaaxdata"), DataAssetTypeName<AudioBank>(), nlohmann::json(lGlobal));
+            REQUIRE(SaveAsset(Dir.Sub("Audio/Global.opaaxasset"), lGlobal));
 
             AudioBank lLevel;
             lLevel.Clips.resize(1);
             lLevel.Clips[0].Path = OpaaxString("Audio/L.wav");
-            SaveData(Dir.Sub("Audio/Level.opaaxdata"), DataAssetTypeName<AudioBank>(), nlohmann::json(lLevel));
+            REQUIRE(SaveAsset(Dir.Sub("Audio/Level.opaaxasset"), lLevel));
         }
 
         OpaaxString Absolute(const char* InAsset) const { return Paths.AssetToAbsolute(OpaaxString(InAsset)); }
@@ -152,6 +145,7 @@ namespace
         BankWorlds()
         {
             Resources.SetJobSystem(Jobs);
+            Resources.SetObjectClasses(&AudioTest::AudioClasses());
             REQUIRE(Audio.Startup());
             REQUIRE(Components.Register<TransformComponent>(OpaaxStringID("Transform"), /*bEssential*/true));
         }
@@ -192,25 +186,26 @@ namespace
 // =============================================================================
 // The bank and its hold
 // =============================================================================
-TEST_CASE("AudioBank: the data asset round-trips; a file missing fields keeps their defaults")
+TEST_CASE("AudioBank: the asset round-trips; a file missing fields keeps their defaults")
 {
     AudioBank lBank;
     lBank.ClipDefs.resize(1);
-    lBank.ClipDefs[0].Path = OpaaxString("Audio/Steps.opaaxdata");
+    lBank.ClipDefs[0].Path = OpaaxString("Audio/Steps.opaaxasset");
     lBank.Clips.resize(1);
     lBank.Clips[0].Path = OpaaxString("Audio/Jump.wav");
 
-    const nlohmann::json lJson = lBank;
-    CHECK(lJson.at("ClipDefs").at(0) == "Audio/Steps.opaaxdata");
+    const ObjectClass&   lClass = AudioBank::StaticClass();
+    const nlohmann::json lJson  = lClass.WriteProperties(lBank);
+    CHECK(lJson.at("ClipDefs").at(0) == "Audio/Steps.opaaxasset");
 
-    const TUniquePtr<TDataAssetObject<AudioBank>> lRead = ReadDataAsset<AudioBank>(lJson);
-    REQUIRE(lRead != nullptr);
-    CHECK(lRead->Value.Clips[0].Path == "Audio/Jump.wav");
+    AudioBank lRead;
+    REQUIRE(lClass.ReadProperties(lRead, lJson));
+    CHECK(lRead.Clips[0].Path == "Audio/Jump.wav");
 
-    const TUniquePtr<TDataAssetObject<AudioBank>> lEmpty = ReadDataAsset<AudioBank>(nlohmann::json::object());
-    REQUIRE(lEmpty != nullptr);
-    CHECK(lEmpty->Value.ClipDefs.empty());
-    CHECK(DataAssetTypeName<AudioBank>() == OPAAX_ID("AudioBank"));
+    AudioBank lEmpty;
+    REQUIRE(lClass.ReadProperties(lEmpty, nlohmann::json::object()));
+    CHECK(lEmpty.ClipDefs.empty());
+    CHECK(lClass.GetName() == OPAAX_ID("AudioBank"));
 }
 
 TEST_CASE("AudioBankHold: every sound of a bank loads in the background, once; releasing lets them go")
@@ -219,9 +214,10 @@ TEST_CASE("AudioBankHold: every sound of a bank loads in the background, once; r
     ManualJobs       lJobs;
     ResourceManager  lResources;
     lResources.SetJobSystem(lJobs);
+    lResources.SetObjectClasses(&AudioTest::AudioClasses());
 
     AudioBankHold lHold;
-    REQUIRE(lHold.Hold(OpaaxString("Audio/Bank.opaaxdata"), lResources, lAssets.Paths));
+    REQUIRE(lHold.Hold(OpaaxString("Audio/Bank.opaaxasset"), lResources, lAssets.Paths));
     CHECK(lHold.GetClipCount() == 3);   // A, B (the definition) and C; A listed twice is held once
     CHECK(lHold.FindClip(OpaaxString("Audio/B.wav")) != nullptr);
     CHECK(lHold.FindClip(OpaaxString("Audio/D.wav")) == nullptr);
@@ -240,7 +236,7 @@ TEST_CASE("AudioBankHold: every sound of a bank loads in the background, once; r
     lResources.Update(0.0);
     CHECK_FALSE(IsResident(lResources, lAssets, "Audio/C.wav"));
 
-    CHECK_FALSE(lHold.Hold(OpaaxString("Audio/Nope.opaaxdata"), lResources, lAssets.Paths));
+    CHECK_FALSE(lHold.Hold(OpaaxString("Audio/Nope.opaaxasset"), lResources, lAssets.Paths));
 }
 
 // =============================================================================
@@ -250,7 +246,7 @@ TEST_CASE("AudioSubsystem: a level's banked sound plays without the warning; the
 {
     BankWorlds lFix;
     Entity     lHolder;
-    World*     lWorld = lFix.MakeWorld("Level", "Audio/Bank.opaaxdata", &lHolder);
+    World*     lWorld = lFix.MakeWorld("Level", "Audio/Bank.opaaxasset", &lHolder);
     AudioSubsystem* lSounds = lWorld->GetSubsystems().GetSubsystem<AudioSubsystem>();
 
     LogWatch lLog;
@@ -280,7 +276,7 @@ TEST_CASE("AudioSubsystem: a level's banked sound plays without the warning; the
 TEST_CASE("AudioGlobalBank: across worlds that come and go, its sounds are never loaded again; a level's go each time")
 {
     BankWorlds lFix;
-    lFix.Config.Audio.GlobalBank.Path = OpaaxString("Audio/Global.opaaxdata");
+    lFix.Config.Audio.GlobalBank.Path = OpaaxString("Audio/Global.opaaxasset");
 
     GameInstanceContext lGameContext{ lFix.Worlds, lFix.Resources, lFix.Assets.Paths, lFix.Events, lFix.Input, lFix.Config };
     AudioGlobalBank     lGlobal(lGameContext);
@@ -296,7 +292,7 @@ TEST_CASE("AudioGlobalBank: across worlds that come and go, its sounds are never
     bool bLevelGone   = true;
     for (int lRound = 0; lRound < 5; ++lRound)
     {
-        World* lWorld = lFix.MakeWorld(OpaaxString::Format("Level{}", lRound).CStr(), "Audio/Level.opaaxdata");
+        World* lWorld = lFix.MakeWorld(OpaaxString::Format("Level{}", lRound).CStr(), "Audio/Level.opaaxasset");
         lFix.Frame();
         lFix.Jobs.RunAll();
         lFix.Frame();

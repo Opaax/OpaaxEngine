@@ -44,8 +44,10 @@ A change is done when it is tested and seen working, not when it compiles.
    `Sandbox --capture shot.png --capture-frame 30`, then open the PNG. Do not describe a picture you
    have not looked at.
 4. **The editor** is checked by driving it: `SandboxEditor --exec script.json` with the editor's
-   commands (create entities, edit components, undo, play) and a screenshot; a script in
-   `TestWorld/EditorTests` runs in CTest. See [Docs/Automation.md](Docs/Automation.md).
+   commands (create entities, edit components and assets, undo, play) and a screenshot; a script in
+   `TestWorld/EditorTests` runs in CTest. See [Docs/Automation.md](Docs/Automation.md). Automation
+   cannot click inside a window: what a custom asset editor shows for a selection is checked with a
+   local build that starts selected, then reverted.
 5. **CI** (`.github/workflows/build.yml`): Windows, Ubuntu and macOS, debug-editor and release.
    Linux also renders on Mesa's software OpenGL (stricter than desktop drivers) and runs the feature
    tests there. A change is finished when every job is green.
@@ -101,6 +103,12 @@ Match the code around you. In short:
 - **Component or behaviour:** the type with `OPAAX_PROPERTIES` (and the JSON macro for a component),
   one `OPAAX_REGISTER_*` line, unit tests for its logic, a TestWorld probe or level when a game can
   see it. Old maps must still load: new fields have defaults (`NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT`).
+- **Asset class:** an `Asset` subclass with `OPAAX_OBJECT` and `OPAAX_PROPERTIES` (a default on every
+  field), one `OPAAX_REGISTER_OBJECT` line, unit tests for its file round trip and its hooks
+  (`PostEditChange`). In the editor, an `AssetTypes()` entry for its label, category and glyph; an
+  `IAssetEditor` only when a list of fields is not enough, its logic in pure functions beside it.
+  Replacing an older per-type file format: a line in `AssetMigration::GetLegacyFormats`, then the
+  content converted with `--upgrade-assets`. See [Docs/Objects.md](Docs/Objects.md).
 - **Renderer feature:** the CPU side (packing, layout, limits) as tested pure functions; the shader in
   `Engine/Assets/Shaders` with its bindings checked in `EngineShaderTests`; a TestWorld level and a
   screenshot looked at.
@@ -136,3 +144,9 @@ Match the code around you. In short:
   first build (the configure step says so).
 - Core has namespaces named `Clock`, `Random`, `Algo`, `Memory`, `FileSystem`, `Console`, `Process`:
   a type of the same name, used under `using namespace Opaax`, is ambiguous. Name it otherwise.
+- Visiting a `TAssetRef<T>` property needs `T::StaticClass()`, so `T` must be complete wherever the
+  owner's properties are registered or drawn: an asset class header includes the asset classes it
+  references; a component forward-declares them and its registration file includes them.
+- An asset window records an undo step whenever no ImGui item is active: an editor that edits on a
+  mouse drag keeps an item active for the whole drag (an `InvisibleButton` over the area), or every
+  frame of it becomes a step.

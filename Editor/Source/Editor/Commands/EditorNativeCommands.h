@@ -63,6 +63,19 @@ namespace Opaax::Editor
         OpaaxString AbsPath;
     };
 
+    /** An absolute path to an .opaaxasset. Empty: the asset whose window has the focus. */
+    struct AssetPathParams
+    {
+        OpaaxString AbsPath;
+    };
+
+    /** Where a new asset goes and what it is: a folder (absolute) and a registered class's name. */
+    struct NewAssetParams
+    {
+        OpaaxString   FolderAbsPath;
+        OpaaxStringID ClassName;
+    };
+
     /** Which panel a panel command acts on (the id from its PanelDesc). */
     struct PanelIdParams
     {
@@ -549,43 +562,6 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params&);
     };
 
-    /**
-     * Writes the open .opaaxsheet. Used by the panel's button and Ctrl+S (when the sheet panel has
-     * focus; see EditorService::HandleAuthoringShortcuts).
-     */
-    struct SaveSheetCommand
-    {
-        using Params = NoParams;
-
-        void Execute(EditorContext& InContext, const Params&);
-    };
-
-    /**
-     * Writes the open .opaaxclip and reloads it. Ctrl+S reaches it when the clip panel has focus.
-     */
-    struct SaveClipCommand
-    {
-        using Params = NoParams;
-
-        void Execute(EditorContext& InContext, const Params&);
-    };
-
-    /** Writes the open .opaaxanim and reloads it. */
-    struct SaveLibraryCommand
-    {
-        using Params = NoParams;
-
-        void Execute(EditorContext& InContext, const Params&);
-    };
-
-    /** Writes the open .opaaxfont and reloads it. */
-    struct SaveFamilyCommand
-    {
-        using Params = NoParams;
-
-        void Execute(EditorContext& InContext, const Params&);
-    };
-
     /** Asks where, then runs NewUIAtCommand. */
     struct NewUICommand
     {
@@ -621,46 +597,6 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params&);
     };
 
-    /** Writes the open .opaaxmovemode and reloads it. */
-    struct SaveMoveModeCommand
-    {
-        using Params = NoParams;
-
-        void Execute(EditorContext& InContext, const Params&);
-    };
-
-    /** Writes the open .opaaxmover and reloads it. */
-    struct SaveMoverCommand
-    {
-        using Params = NoParams;
-
-        void Execute(EditorContext& InContext, const Params&);
-    };
-
-    /** Writes the open .opaaxdata and reloads it. */
-    struct SaveDataAssetCommand
-    {
-        using Params = NoParams;
-
-        void Execute(EditorContext& InContext, const Params&);
-    };
-
-    /** Writes the open .opaaxaction and reloads it. */
-    struct SaveInputActionCommand
-    {
-        using Params = NoParams;
-
-        void Execute(EditorContext& InContext, const Params&);
-    };
-
-    /** Writes the open .opaaxinputmap and reloads it (saves a rebind). */
-    struct SaveInputMapCommand
-    {
-        using Params = NoParams;
-
-        void Execute(EditorContext& InContext, const Params&);
-    };
-
     /**
      * Add Map to Level: asks for a map file, then runs AddMapToLevelAtCommand. (Removing a map and choosing
      * the persistent one are on the Hierarchy's map headers.)
@@ -679,6 +615,69 @@ namespace Opaax::Editor
     struct AddMapToLevelAtCommand
     {
         using Params = MapPathParams;
+
+        void Execute(EditorContext& InContext, const Params& InParams);
+    };
+
+    // =============================================================================
+    // Assets — any .opaaxasset, whatever its class (AssetEditors)
+    // =============================================================================
+
+    /** Opens the asset in a window of its own, or brings its window forward. */
+    struct OpenAssetCommand
+    {
+        using Params = AssetPathParams;
+
+        void Execute(EditorContext& InContext, const Params& InParams);
+    };
+
+    /**
+     * Writes a new asset of Params::ClassName in Params::FolderAbsPath, named New<Class> (numbered when
+     * taken), and opens it.
+     */
+    struct NewAssetCommand
+    {
+        using Params = NewAssetParams;
+
+        void Execute(EditorContext& InContext, const Params& InParams);
+    };
+
+    /** Writes the asset (empty path: the focused one) and reloads it, so a running game reads it. */
+    struct SaveAssetCommand
+    {
+        using Params = AssetPathParams;
+
+        void Execute(EditorContext& InContext, const Params& InParams);
+    };
+
+    /** Writes every open asset with unsaved changes. */
+    struct SaveAllAssetsCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /** Closes the asset's window (empty path: the focused one), asking before losing unsaved changes. */
+    struct CloseAssetCommand
+    {
+        using Params = AssetPathParams;
+
+        void Execute(EditorContext& InContext, const Params& InParams);
+    };
+
+    /** Steps the asset's own history back (empty path: the focused one). */
+    struct UndoAssetCommand
+    {
+        using Params = AssetPathParams;
+
+        void Execute(EditorContext& InContext, const Params& InParams);
+    };
+
+    /** Steps the asset's own history forward (empty path: the focused one). */
+    struct RedoAssetCommand
+    {
+        using Params = AssetPathParams;
 
         void Execute(EditorContext& InContext, const Params& InParams);
     };

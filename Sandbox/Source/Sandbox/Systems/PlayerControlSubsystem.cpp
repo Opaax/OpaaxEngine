@@ -31,7 +31,7 @@ namespace Sandbox
         /** The context this game plays under. */
         const OpaaxStringID kGameplayContext = OPAAX_ID("Gameplay");
 
-        constexpr const char* kGameplayMapAsset = "Input/Gameplay.opaaxinputmap";
+        constexpr const char* kGameplayMapAsset = "Input/Gameplay.opaaxasset";
     }
 
     bool PlayerControlSubsystem::ShouldCreate(const World& InWorld)

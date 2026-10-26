@@ -16,7 +16,7 @@ world exists; a game module is linked whole, so nothing else is needed.
 | `OPAAX_REGISTER_BEHAVIOUR(Spinner)` | Gameplay code on an entity | QuickStart step 2, `TestWorld/Source` |
 | `OPAAX_REGISTER_WORLD_SUBSYSTEM(Score)` | Code that lives as long as a world and ticks with it | below |
 | `OPAAX_REGISTER_GAME_INSTANCE_SUBSYSTEM(Save)` | Code that lives as long as a game session (across levels) | |
-| `OPAAX_REGISTER_DATA_ASSET(EnemyStats)` | A struct stored in `.opaaxdata` files, edited in the editor | `Renderer/Materials/Material2D.h` |
+| `OPAAX_REGISTER_OBJECT(EnemyStats)` | An asset class (an `Opaax::Asset` with `OPAAX_OBJECT`): `.opaaxasset` files, made and edited in the editor | `Renderer/Materials/Material2D.h`, `Sandbox/Source/Sandbox/Data` |
 | `OPAAX_REGISTER_RESOURCE(WaveResource)` | A file type of the game, loaded and cached | `Sandbox/Source/Sandbox/Resources` |
 | `OPAAX_REGISTER_UI_WIDGET(HealthBar)` | A UI widget for `.opaaxui` canvases | `UI/Widgets` |
 | `OPAAX_REGISTER_MOVER_MODE(Swim, "Swim")` | A movement mode of the Mover | `Movement` |
@@ -27,6 +27,30 @@ it. `OPAAX_REGISTER_NAMED_COMPONENT(Type, "Name")` keeps a stable name, and
 
 Fields listed in `OPAAX_PROPERTIES` are saved and drawn by the Inspector with no other code;
 `SetRange`, `SetDragStep` and `SetTooltip` shape the editing.
+
+### An asset class
+
+Data shared by many entities (a kind of enemy, a weapon, a tuning) is an asset class:
+
+```cpp
+class EnemyStats final : public Opaax::Asset
+{
+    OPAAX_OBJECT(EnemyStats, Opaax::Asset)
+
+public:
+    float Speed = 120.f;
+
+    OPAAX_PROPERTIES(EnemyStats, OPAAX_PROP(Speed).SetRange(0.f, 2000.f))
+};
+
+OPAAX_REGISTER_OBJECT(EnemyStats);
+```
+
+Its `.opaaxasset` files are made in the editor (New Asset in the Resource Browser), by `asset.new`, or
+by hand. A component or another asset names one with a `TAssetRef<EnemyStats>` field; `LoadAsset`
+loads it, shared, and the `TAssetHandle` it returns reads the new values when the file is saved.
+`PostEditChange` fixes values after an edit, `IsPropertyVisible` hides fields that do not apply.
+[Objects.md](Objects.md) covers the file, the hooks, custom editors and old files.
 
 ### A world subsystem
 
@@ -66,13 +90,13 @@ editor outside Play). `TestWorld/Source/TestWorld/Probes/LevelProbes.h` has one.
 
 From a behaviour: `Send(entity, event)` / `Listen<&Class::OnEvent>()` for an entity's events,
 `Broadcast(event)` / `Subscribe<&Class::OnEvent>()` for everyone's, `SetTimer<&Class::OnTimer>(seconds)`,
-`BindAction<&Class::OnJump>("Jump", EInputTrigger::Started)` for input actions (declared in
-`.opaaxaction` files, bound to keys in `.opaaxinputmap` files), `PlaySound("Audio/Coin.wav")`. Handlers
+`BindAction<&Class::OnJump>("Jump", EInputTrigger::Started)` for input actions (`InputActionAsset`
+assets, bound to keys by `InputMappingContextAsset` assets), `PlaySound("Audio/Coin.wav")`. Handlers
 can be `const` members.
 
 ### Sound
 
-- **Play:** `PlaySound(path)` takes a sound file or a clip definition (`"Audio/Steps.opaaxdata"`: its
+- **Play:** `PlaySound(path)` takes a sound file or a clip definition (`"Audio/Steps.opaaxasset"`: its
   clips are variations, one chosen per play, with its bus, volume, pitch spread, loop and space).
   `PlaySoundAt(path, position)` places it in the world; `StopSound(handle, fadeSeconds)` fades it out.
   A handle stays harmless once its sound ended. An `AudioSource` component plays with its entity
@@ -83,7 +107,7 @@ can be `const` members.
   `GetSubsystem<AudioSubsystem>()->GetAudio()` gives the `AudioManager`, with `SetBusVolume`,
   `FadeBus(OPAAX_ID("Music"), 0.f, 2.f)` (a fade apart from the player's volume), `SetBusMuted`,
   `SetBusSolo`.
-- **Banks:** an `AudioBank` (`.opaaxdata`) lists clip definitions and sound files to load before they
+- **Banks:** an `AudioBank` asset lists clip definitions and sound files to load before they
   play. A level lists its banks in an `AudioBanks` component on any entity of its map; `Audio.GlobalBank`
   in `Engine.config` is held for the whole game (menus, the player). A sound in no bank is logged,
   loads in the background and plays once loaded.
@@ -107,7 +131,7 @@ drawn as they are and lights do nothing (the log says so once).
 | Environment | Ambient light, ambient occlusion (`bAmbientOcclusion`, radius, strength), bloom (threshold, softness, intensity), exposure, tonemapper (ACES, Reinhard, None) |
 | Light2D | Point, Spot (along the entity's rotation) or Global; colour, intensity, radius, falloff, height (how low lights graze normal maps); shadows (`bCastShadows`, softness, strength) |
 | ShadowCaster2D | The entity's sprite (by its alpha) or quad blocks lights that cast shadows, and darkens the ambient light around it |
-| Material2D (`.opaaxdata`) | On a Sprite: lit or not, a normal map (tangent space, Y up, the sprite's layout), an emissive colour and strength |
+| Material2D (an asset) | On a Sprite: lit or not, a normal map (tangent space, Y up, the sprite's layout), an emissive colour and strength |
 
 ### Shaders
 
@@ -154,8 +178,19 @@ void MyGameEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& InR
 
     // A file type of the game in the Resource Browser (the runtime module registers the resource).
     InRegistrar.ResourceTypes().Register<WaveResource>().SetGlyph(Opaax::OpaaxString("[W]"));
+
+    // How an asset class shows: its New Asset category, its glyph, and an editor of its own (optional:
+    // without one, its window lists its properties).
+    InRegistrar.AssetTypes().Register<EnemyStats>()
+        .SetCategory(Opaax::OpaaxString("Gameplay"))
+        .SetGlyph(Opaax::OpaaxString("[E]"))
+        .SetEditor<EnemyStatsEditor>();
 }
 ```
+
+An asset editor derives from `IAssetEditor` and edits the asset directly in `DrawContents`; the
+asset's window around it records each change as an undo step and has the Save button
+([Objects.md](Objects.md)).
 
 Also available: `ViewportTools()` (buttons over the viewport), `EditWorldSystems()` (subsystems for
 edit worlds only), `ConfigDrawers()` and `UIWidgetDrawers()`. `Sandbox/Editor/Source/SandboxEditor`

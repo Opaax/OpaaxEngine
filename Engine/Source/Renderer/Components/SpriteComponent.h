@@ -13,13 +13,13 @@
 #include "Resources/ResourcePathJson.h"
 #include "Renderer/Materials/Material2D.h"
 #include "Renderer/RenderLayer.h"
-#include "Resources/DataAsset/DataAssetRef.h"
+#include "Resources/Asset/AssetRef.h"
 
 namespace Opaax
 {
-    // Forward-declared: TResourcePath only needs the name.
+    // Forward-declared: a path or an asset reference only needs the name.
     struct TextureResource;
-    struct SpriteSheetResource;
+    class SpriteSheet;
 
     // =============================================================================
     // SpriteComponent — an image drawn in the world, at the entity's Transform.
@@ -30,8 +30,8 @@ namespace Opaax
         /** Asset-relative ("Textures/Hero.png"). Empty draws nothing. */
         TResourcePath<TextureResource> Texture;
 
-        /** Asset-relative ("Sheets/Hero.opaaxsheet"). Wins over Texture. */
-        TResourcePath<SpriteSheetResource> Sheet;
+        /** Asset-relative ("Sheets/Hero.opaaxasset"). Wins over Texture. */
+        TAssetRef<SpriteSheet> Sheet;
 
         /** Sheet frame. Negative = the sheet's DefaultFrame. Ignored without a sheet. */
         Int32        Frame        = -1;
@@ -47,8 +47,8 @@ namespace Opaax
         ERenderLayer Layer        = ERenderLayer::Default;
         Int16        OrderInLayer = 0;
 
-        /** How it takes light (.opaaxdata). Empty: lit, flat, no glow. Needs an Environment in the level. */
-        TDataAssetRef<Material2D> Material;
+        /** How it takes light (a Material2D asset). Empty: lit, flat, no glow. Needs an Environment in the level. */
+        TAssetRef<Material2D> Material;
 
         // _WITH_DEFAULT: a missing key keeps its default, so maps saved before a new field still load.
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(SpriteComponent,

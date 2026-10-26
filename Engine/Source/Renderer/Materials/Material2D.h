@@ -1,10 +1,9 @@
 #pragma once
 
-#include <nlohmann/json.hpp>
-
 #include "Core/Color/LinearColor.h"
 #include "Core/Color/LinearColorJson.h"
 #include "Core/Reflection/OpaaxProperty.h"
+#include "Resources/Asset/Asset.h"
 #include "Resources/ResourcePath.h"
 #include "Resources/ResourcePathJson.h"
 
@@ -13,12 +12,15 @@ namespace Opaax
     struct TextureResource;
 
     // =============================================================================
-    // Material2D — how a sprite takes light: a data asset (.opaaxdata) a SpriteComponent points
-    //   at, so many sprites share one. Without one, a sprite is lit, flat and does not glow.
-    //   Lighting needs an EnvironmentComponent in the level.
+    // Material2D — how a sprite takes light: an asset a SpriteComponent points at, so many sprites
+    //   share one. Without one, a sprite is lit, flat and does not glow. Lighting needs an
+    //   EnvironmentComponent in the level.
     // =============================================================================
-    struct Material2D
+    class Material2D final : public Asset
     {
+        OPAAX_OBJECT(Material2D, Asset)
+
+    public:
         /** Lit by the world's lights and ambient. Off: drawn at full brightness (UI-like, glowing signs). */
         bool bLit = true;
 
@@ -30,8 +32,6 @@ namespace Opaax
 
         /** Above 1 it is brighter than white (HDR), and blooms when the Environment has bloom. */
         float EmissiveStrength = 1.f;
-
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(Material2D, bLit, NormalMap, EmissiveColor, EmissiveStrength)
 
         OPAAX_PROPERTIES(Material2D,
                          OPAAX_PROP(bLit).SetTooltip("Lit by the scene's lights. Off: always full brightness."),

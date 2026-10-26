@@ -7,8 +7,8 @@
 #include "Core/Profiling/Profiler.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Resources/ResourceManager.h"
-#include "Movement/Assets/MoveModeResource.h"
-#include "Movement/Assets/MoverResource.h"
+#include "Movement/Assets/MoveMode.h"
+#include "Movement/Assets/Mover.h"
 #include "Physics/IPhysicsWorld.h"
 #include "Movement/MoverComponent.h"
 #include "World/Components/TransformComponent.h"
@@ -114,8 +114,8 @@ namespace Opaax
         // ---- pending mode switch, applied between steps ---------------------------------------
         if (InMover.PendingMode.IsValid() && InMover.PendingMode != InMover.ModeName)
         {
-            const MoveModeData* lFromParams = ResolveMode(InMover, InMover.ModeName);
-            const MoveModeData* lToParams   = ResolveMode(InMover, InMover.PendingMode);
+            const MoveMode* lFromParams = ResolveMode(InMover, InMover.ModeName);
+            const MoveMode* lToParams   = ResolveMode(InMover, InMover.PendingMode);
 
             // Refuse a switch to a mode that cannot be resolved.
             if (lToParams == nullptr)
@@ -147,7 +147,7 @@ namespace Opaax
             }
         }
 
-        const MoveModeData* lParams = ResolveMode(InMover, InMover.ModeName);
+        const MoveMode* lParams = ResolveMode(InMover, InMover.ModeName);
 
         if (lParams == nullptr)
         {
@@ -173,8 +173,8 @@ namespace Opaax
     // =========================================================================
     // Resolution
     // =========================================================================
-    const MoveModeData* MoverSubsystem::ResolveMode(const MoverComponent& InMover,
-                                                    const OpaaxStringID InModeName)
+    const MoveMode* MoverSubsystem::ResolveMode(const MoverComponent& InMover,
+                                                const OpaaxStringID InModeName)
     {
         if (InMover.Mover.IsEmpty())
         {
@@ -188,27 +188,25 @@ namespace Opaax
 
         if (lMoverIt == m_MoverCache.end())
         {
-            ResourceRef<MoverResource> lRef =
-                m_Context->Resources.Load<MoverResource>(ToAbsolute(InMover.Mover.Path).CStr());
+            lMoverIt = m_MoverCache.emplace(lMoverKey.GetId(),
+                                            LoadAsset(m_Context->Resources, m_Context->Paths, InMover.Mover)).first;
 
-            lMoverIt = m_MoverCache.emplace(lMoverKey.GetId(), Move(lRef)).first;
-
-            if (!lMoverIt->second.IsValid())
+            if (lMoverIt->second.Get() == nullptr)
             {
                 OPAAX_LOG(LogMover, Warn, "Mover '{}' did not load — no mode name can resolve",
                           InMover.Mover.Path.CStr());
             }
         }
 
-        const MoverResource* lMoverRes = lMoverIt->second.Get();
+        const Mover* lMover = lMoverIt->second.Get();
 
-        if (lMoverRes == nullptr)
+        if (lMover == nullptr)
         {
             return nullptr;
         }
 
         // ---- the entry the name resolves to ------------------------------------------------
-        const MoverEntry* lEntry = lMoverRes->Data.Find(InModeName);
+        const MoverEntry* lEntry = lMover->Find(InModeName);
 
         if (lEntry == nullptr)
         {
@@ -233,25 +231,18 @@ namespace Opaax
 
         if (lModeIt == m_ModeCache.end())
         {
-            ResourceRef<MoveModeResource> lRef =
-                m_Context->Resources.Load<MoveModeResource>(ToAbsolute(lEntry->ModeAsset.Path).CStr());
+            lModeIt = m_ModeCache.emplace(lModeKey.GetId(),
+                                          LoadAsset(m_Context->Resources, m_Context->Paths, lEntry->ModeAsset)).first;
 
-            lModeIt = m_ModeCache.emplace(lModeKey.GetId(), Move(lRef)).first;
-
-            if (!lModeIt->second.IsValid())
+            if (lModeIt->second.Get() == nullptr)
             {
-                OPAAX_LOG(LogMover, Warn, "Move mode '{}' did not load", lEntry->ModeAsset.Path.CStr());
+                OPAAX_LOG(LogMover, Warn, "Move mode '{}' did not load — it moves with the default tuning",
+                          lEntry->ModeAsset.Path.CStr());
             }
         }
 
-        const MoveModeResource* lModeRes = lModeIt->second.Get();
-
-        return (lModeRes != nullptr) ? &lModeRes->Data : nullptr;
-    }
-
-    OpaaxString MoverSubsystem::ToAbsolute(const OpaaxString& InAssetPath) const
-    {
-        return m_Context->Paths.AssetToAbsolute(InAssetPath);
+        // A tuning that does not load still moves (the defaults are a walking mode).
+        return &lModeIt->second.GetOrDefault();
     }
 
     bool MoverSubsystem::ShouldWarnOnce(const Uint32 InKey)

@@ -1,8 +1,0 @@
-{
-    "Type": "AudioBank",
-    "Data": {
-        "ClipDefs": [
-            "Audio/Steps.opaaxdata"
-        ]
-    }
-}

@@ -88,26 +88,19 @@ namespace Opaax::Editor::Tags
     inline const OpaaxTag EDITOR_COMMAND_DELETE_PREFAB_SELECTION =
         OpaaxTag("Editor.Command.DeletePrefabSelection");
 
-    //Sprite sheet
-    inline const OpaaxTag EDITOR_COMMAND_SAVE_SHEET  = OpaaxTag("Editor.Command.SaveSheet");
-
-    //Animation
-    inline const OpaaxTag EDITOR_COMMAND_SAVE_CLIP    = OpaaxTag("Editor.Command.SaveClip");
-    inline const OpaaxTag EDITOR_COMMAND_SAVE_LIBRARY = OpaaxTag("Editor.Command.SaveLibrary");
-    inline const OpaaxTag EDITOR_COMMAND_SAVE_FAMILY  = OpaaxTag("Editor.Command.SaveFamily");
-
     //UI
     inline const OpaaxTag EDITOR_COMMAND_NEW_UI           = OpaaxTag("Editor.Command.NewUI");
     inline const OpaaxTag EDITOR_COMMAND_NEW_UI_AT        = OpaaxTag("Editor.Command.NewUIAt");
     inline const OpaaxTag EDITOR_COMMAND_SAVE_UI          = OpaaxTag("Editor.Command.SaveUI");
     inline const OpaaxTag EDITOR_COMMAND_DELETE_UI_WIDGET = OpaaxTag("Editor.Command.DeleteUIWidget");
 
-    //Mover
-    inline const OpaaxTag EDITOR_COMMAND_SAVE_MOVE_MODE = OpaaxTag("Editor.Command.SaveMoveMode");
-    inline const OpaaxTag EDITOR_COMMAND_SAVE_MOVER     = OpaaxTag("Editor.Command.SaveMover");
-    inline const OpaaxTag EDITOR_COMMAND_SAVE_DATA_ASSET = OpaaxTag("Editor.Command.SaveDataAsset");
-
-    // Input: an action and its mapping context are separate assets, saved separately.
-    inline const OpaaxTag EDITOR_COMMAND_SAVE_INPUT_ACTION = OpaaxTag("Editor.Command.SaveInputAction");
-    inline const OpaaxTag EDITOR_COMMAND_SAVE_INPUT_MAP    = OpaaxTag("Editor.Command.SaveInputMap");
+    // Assets: every .opaaxasset, whatever its class, in a window of its own. The asset is the
+    // AssetPathParams payload; an empty path means the focused asset window.
+    inline const OpaaxTag EDITOR_COMMAND_OPEN_ASSET      = OpaaxTag("Editor.Command.OpenAsset");
+    inline const OpaaxTag EDITOR_COMMAND_NEW_ASSET       = OpaaxTag("Editor.Command.NewAsset");
+    inline const OpaaxTag EDITOR_COMMAND_SAVE_ASSET      = OpaaxTag("Editor.Command.SaveAsset");
+    inline const OpaaxTag EDITOR_COMMAND_SAVE_ALL_ASSETS = OpaaxTag("Editor.Command.SaveAllAssets");
+    inline const OpaaxTag EDITOR_COMMAND_CLOSE_ASSET     = OpaaxTag("Editor.Command.CloseAsset");
+    inline const OpaaxTag EDITOR_COMMAND_UNDO_ASSET      = OpaaxTag("Editor.Command.UndoAsset");
+    inline const OpaaxTag EDITOR_COMMAND_REDO_ASSET      = OpaaxTag("Editor.Command.RedoAsset");
 }

@@ -9,14 +9,13 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/String/OpaaxStringIDJson.h"
-#include "Resources/ResourcePath.h"
-#include "Resources/ResourcePathJson.h"
+#include "Resources/Asset/AssetRef.h"
 #include "Physics/Collision/CollisionChannel.h"
 #include "Physics/PhysicsTypes.h"
 
 namespace Opaax
 {
-    struct MoverResource;
+    class Mover;
 
     // =============================================================================
     // MoverInput — this step's intent, written by a controller (player, AI, ...) and read by
@@ -34,14 +33,14 @@ namespace Opaax
     // =============================================================================
     // MoverComponent — kinematic movement driven by an IMoverMode.
     //   Sweeps a capsule against the world and moves its Transform. Do not add a ColliderComponent too.
-    //   Behaviour lives in the modes; tuning lives in the .opaaxmover / .opaaxmovemode assets.
+    //   Behaviour lives in the modes; tuning lives in the Mover and MoveMode assets.
     //   This holds the capsule (per entity) and the runtime state.
     // =============================================================================
     struct MoverComponent
     {
         // ---- modes (saved) ---------------------------------------------------------------------
-        /** Asset-relative ("Movers/Hero.opaaxmover"). Empty: does not move. */
-        TResourcePath<MoverResource> Mover;
+        /** Asset-relative ("Movers/Hero.opaaxasset"). Empty: does not move. */
+        TAssetRef<Opaax::Mover> Mover;
 
         /** Active mode. Invalid means the mover's default. */
         OpaaxStringID ModeName;
@@ -74,7 +73,7 @@ namespace Opaax
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(MoverComponent, Mover, ModeName, Height, Radius, Channel)
 
         OPAAX_PROPERTIES(MoverComponent,
-                         OPAAX_PROP(Mover).SetTooltip("The .opaaxmover naming this thing's modes."),
+                         OPAAX_PROP(Mover).SetTooltip("The Mover asset naming this thing's modes."),
                          OPAAX_PROP(ModeName).SetTooltip("Which mode to start in.\n"
                                                          "Empty uses the mover's own default."),
                          OPAAX_PROP(Height).SetRange(1.f, 2048.f)

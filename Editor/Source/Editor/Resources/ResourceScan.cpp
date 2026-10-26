@@ -1,7 +1,9 @@
 #include "Editor/Resources/ResourceScan.h"
 
 #include "Platform/IFileSystem.h"
+#include "Core/IO/FileIO.h"
 #include "Core/String/OpaaxPathString.h"                  // Extension
+#include "Resources/Asset/AssetFile.h"
 #include "Resources/ResourceFormat.h"   // NormalizeExtension
 
 #include "Core/Algo/Algo.h"
@@ -46,11 +48,17 @@ namespace Opaax::Editor
                 }
                 else
                 {
-                    OutFolder.Files.emplace_back(
+                    ResourceFile& lFile = OutFolder.Files.emplace_back(
                         lEntry.Name,
                         lChildRel,
                         lEntry.AbsPath,
                         NormalizeExtension(PathString::Extension(lEntry.Name)));
+
+                    // Every asset shares one extension: its class, in the file, says how it looks.
+                    if (lFile.Extension == NormalizeExtension(AssetFile::ASSET_EXTENSION))
+                    {
+                        lFile.AssetClass = AssetFile::FindClassName(FileIO::ReadAllText(lFile.AbsPath));
+                    }
 
                     ++InOutRoot.FileCount;
                 }

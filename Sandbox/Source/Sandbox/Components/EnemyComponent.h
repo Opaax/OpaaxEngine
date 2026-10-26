@@ -4,19 +4,19 @@
 
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Data/EnemyStats.h"
-#include "Resources/DataAsset/DataAssetRef.h"
+#include "Resources/Asset/AssetRef.h"
 #include "Engine/Registries/AutoRegistration.h"
 
 namespace Sandbox
 {
     // =============================================================================
-    // EnemyComponent — an example of a component pointing at a data asset. Many enemies can share one
-    //   Data/Grunt.opaaxdata; editing it changes all of them. Only an EnemyStats asset can be dropped on
-    //   Stats. Read it at runtime with LoadDataAsset (DataAssetHandle.h).
+    // EnemyComponent — an example of a component pointing at an asset. Many enemies can share one
+    //   Data/Grunt.opaaxasset; editing it changes all of them. Only an EnemyStats asset can be dropped on
+    //   Stats. Read it at runtime with LoadAsset (Resources/Asset/AssetHandle.h).
     // =============================================================================
     struct EnemyComponent
     {
-        Opaax::TDataAssetRef<EnemyStats> Stats;
+        Opaax::TAssetRef<EnemyStats> Stats;
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(EnemyComponent, Stats)
 

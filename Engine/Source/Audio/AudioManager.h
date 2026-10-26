@@ -11,7 +11,7 @@
 namespace Opaax
 {
     class IAudioDevice;
-    struct AudioClipDef;
+    class AudioClipDef;
     struct AudioClipResource;
     struct AudioSettings;
 

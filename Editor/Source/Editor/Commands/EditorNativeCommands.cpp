@@ -1,8 +1,11 @@
 #include "Editor/Commands/EditorNativeCommands.h"
 
+#include "Editor/Assets/AssetEditors.h"
 #include "Editor/EditorContext.h"
 #include "Editor/EditorLevelDocument.h"
 #include "Editor/EditorMapDocument.h"
+#include "Core/String/OpaaxPathString.h"
+#include "Resources/Asset/AssetFile.h"
 #include "Editor/Operation/EditorGizmo.hpp"   // SetMode
 #include "Editor/Operation/EditorSelection.hpp"   // the primary selection
 #include "Editor/Undo/EditorUndo.h"           // Undo / Redo
@@ -12,16 +15,7 @@
 #include "Editor/Operation/ExportOperations.h"
 #include "Editor/Export/GameExport.h"
 #include "Editor/Operation/LevelOperations.h"
-#include "Editor/Operation/SheetOperations.h"
-#include "Editor/Operation/ClipOperations.h"
-#include "Editor/Operation/LibraryOperations.h"
-#include "Editor/Operation/InputOperations.h"
-#include "Editor/Operation/DataAssetOperations.h"
-#include "Editor/Resources/Types/DataAsset/EditorDataAssetDocument.h"
-#include "Editor/Operation/MoverOperations.h"
-#include "Editor/Operation/FontFamilyOperations.h"
 #include "Editor/Operation/UICanvasOperations.h"
-#include "Editor/EditorFontFamilyDocument.h"
 #include "Editor/EditorUICanvasDocument.h"
 #include "Editor/Panels/UICanvasPanel.h"
 #include "Application/OpaaxApplication.h"
@@ -29,13 +23,6 @@
 #include "Engine/Registries/EngineRegistries.h"
 #include "UI/UICanvasFile.h"
 #include "UI/UIWidgetRegistry.h"
-#include "Editor/EditorSpriteSheetDocument.h"
-#include "Editor/Resources/Types/Animation/EditorAnimationClipDocument.h"
-#include "Editor/Resources/Types/Animation/EditorAnimationLibraryDocument.h"
-#include "Editor/Resources/Types/Input/EditorInputActionDocument.h"
-#include "Editor/Resources/Types/Input/EditorInputMappingContextDocument.h"
-#include "Editor/Resources/Types/Mover/EditorMoveModeDocument.h"
-#include "Editor/Resources/Types/Mover/EditorMoverDocument.h"
 #include "Editor/Operation/MapOperations.h"
 #include "Editor/Operation/NewLevelPlan.hpp"
 #include "Editor/PIE/PlayInEditor.h"
@@ -744,105 +731,6 @@ namespace Opaax::Editor
         });
     }
 
-    void SaveSheetCommand::Execute(EditorContext& InContext, const Params&)
-    {
-        if (!InContext.SheetDocument.IsOpen())
-        {
-            OPAAX_LOG(LogEditorCommands, Warn, "Save Sheet ignored — no sprite sheet is open");
-            return;
-        }
-
-        SheetOps::Save(InContext);   // logs the write, updates the dirty baseline
-    }
-
-    void SaveClipCommand::Execute(EditorContext& InContext, const Params&)
-    {
-        if (!InContext.ClipDocument.IsOpen())
-        {
-            OPAAX_LOG(LogEditorCommands, Warn, "Save Clip ignored — no animation clip is open");
-            return;
-        }
-
-        ClipOps::Save(InContext);   // logs the write, updates the baseline, reloads
-    }
-
-    void SaveLibraryCommand::Execute(EditorContext& InContext, const Params&)
-    {
-        if (!InContext.LibraryDocument.IsOpen())
-        {
-            OPAAX_LOG(LogEditorCommands, Warn, "Save Library ignored — no animation library is open");
-            return;
-        }
-
-        LibraryOps::Save(InContext);
-    }
-
-    void SaveMoveModeCommand::Execute(EditorContext& InContext, const Params&)
-    {
-        if (!InContext.MoveModeDocument.IsOpen())
-        {
-            OPAAX_LOG(LogEditorCommands, Warn, "Save Move Mode ignored — no move mode is open");
-            return;
-        }
-
-        MoveModeOps::Save(InContext);
-    }
-
-    void SaveDataAssetCommand::Execute(EditorContext& InContext, const Params&)
-    {
-        if (!InContext.DataAssetDocument.IsOpen())
-        {
-            OPAAX_LOG(LogEditorCommands, Warn, "Save Data Asset ignored — no data asset is open");
-            return;
-        }
-
-        DataAssetOps::Save(InContext);
-    }
-
-    void SaveMoverCommand::Execute(EditorContext& InContext, const Params&)
-    {
-        if (!InContext.MoverDocument.IsOpen())
-        {
-            OPAAX_LOG(LogEditorCommands, Warn, "Save Mover ignored — no mover is open");
-            return;
-        }
-
-        MoverOps::Save(InContext);
-    }
-
-    void SaveInputActionCommand::Execute(EditorContext& InContext, const Params&)
-    {
-        if (!InContext.InputActionDocument.IsOpen())
-        {
-            OPAAX_LOG(LogEditorCommands, Warn, "Save Input Action ignored — no input action is open");
-            return;
-        }
-
-        InputActionOps::Save(InContext);
-    }
-
-    void SaveInputMapCommand::Execute(EditorContext& InContext, const Params&)
-    {
-        if (!InContext.InputMapDocument.IsOpen())
-        {
-            OPAAX_LOG(LogEditorCommands, Warn, "Save Input Map ignored — no input mapping context is open");
-            return;
-        }
-
-        InputMapOps::Save(InContext);
-    }
-
-    void SaveFamilyCommand::Execute(EditorContext& InContext, const Params&)
-    {
-        if (!InContext.FamilyDocument.IsOpen())
-        {
-            OPAAX_LOG(LogEditorCommands, Warn, "Save Family ignored — no font family is open");
-            return;
-        }
-
-        FamilyOps::Save(InContext);
-    }
-
     // =============================================================================
     // UI canvas
     // =============================================================================
@@ -963,5 +851,99 @@ namespace Opaax::Editor
         if (lLevel == nullptr) { return; }
 
         AddMapAt(InContext, *lLevel, InParams.AbsPath);
+    }
+
+    // =============================================================================
+    // Assets
+    // =============================================================================
+
+    namespace
+    {
+        /** The asset a command acts on: its params' path, else the focused asset window's. Empty: none. */
+        OpaaxString TargetAsset(EditorContext& InContext, const AssetPathParams& InParams, const char* InCommand)
+        {
+            if (!InParams.AbsPath.IsEmpty())
+            {
+                return InParams.AbsPath;
+            }
+
+            const AssetDocument* lFocused = InContext.Assets.GetFocused();
+            if (lFocused == nullptr)
+            {
+                OPAAX_LOG(LogEditorCommands, Warn, "{} ignored — no asset window has the focus", InCommand);
+                return OpaaxString();
+            }
+
+            return lFocused->GetAbsPath();
+        }
+    }
+
+    void OpenAssetCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        InContext.Assets.Open(InParams.AbsPath);
+    }
+
+    void NewAssetCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        const ObjectClass* lClass = InContext.Engine.GetRegistries().ObjectClasses().FindByName(InParams.ClassName);
+        if (lClass == nullptr)
+        {
+            OPAAX_LOG(LogEditorCommands, Warn, "New Asset ignored — no class '{}' is registered", InParams.ClassName);
+            return;
+        }
+
+        // New<Class>, then New<Class>1, New<Class>2...: a new asset never replaces a file.
+        const OpaaxString lStem = OpaaxString("New") + lClass->GetName().ToString();
+        OpaaxString       lPath = PathString::Join(InParams.FolderAbsPath, lStem + AssetFile::ASSET_EXTENSION);
+
+        for (Uint32 lNumber = 1; InContext.FileSystem.IsPathExist(lPath) && lNumber < 1000; ++lNumber)
+        {
+            lPath = PathString::Join(InParams.FolderAbsPath,
+                                     lStem + OpaaxString::FromUInt(lNumber) + AssetFile::ASSET_EXTENSION);
+        }
+
+        InContext.Assets.Create(lPath, *lClass);
+    }
+
+    void SaveAssetCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        const OpaaxString lPath = TargetAsset(InContext, InParams, "Save Asset");
+        if (!lPath.IsEmpty())
+        {
+            InContext.Assets.Save(lPath);
+        }
+    }
+
+    void SaveAllAssetsCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        const Uint32 lSaved = InContext.Assets.SaveAll();
+        OPAAX_LOG(LogEditorCommands, Info, "Save All Assets — {} asset(s) written", lSaved);
+    }
+
+    void CloseAssetCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        const OpaaxString lPath = TargetAsset(InContext, InParams, "Close Asset");
+        if (!lPath.IsEmpty())
+        {
+            InContext.Assets.Close(lPath);
+        }
+    }
+
+    void UndoAssetCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        const OpaaxString lPath = TargetAsset(InContext, InParams, "Undo");
+        if (!lPath.IsEmpty())
+        {
+            InContext.Assets.Undo(lPath);
+        }
+    }
+
+    void RedoAssetCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        const OpaaxString lPath = TargetAsset(InContext, InParams, "Redo");
+        if (!lPath.IsEmpty())
+        {
+            InContext.Assets.Redo(lPath);
+        }
     }
 }

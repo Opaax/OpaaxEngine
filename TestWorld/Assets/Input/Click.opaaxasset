@@ -1,0 +1,11 @@
+{
+    "Class": "InputActionAsset",
+    "Properties": {
+        "Description": "The left button (the UIProbe counts it).",
+        "HoldSeconds": 0.5,
+        "Modifiers": [],
+        "Name": "Click",
+        "ValueType": "Bool"
+    },
+    "Version": 1
+}

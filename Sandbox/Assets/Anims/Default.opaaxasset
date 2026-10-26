@@ -1,0 +1,17 @@
+{
+    "Class": "AnimationLibrary",
+    "Properties": {
+        "DefaultClip": "Default",
+        "Entries": [
+            {
+                "Clip": "Anims/Default_Cycle.opaaxasset",
+                "Name": "Default"
+            },
+            {
+                "Clip": "Anims/Blink.opaaxasset",
+                "Name": "Blink"
+            }
+        ]
+    },
+    "Version": 1
+}

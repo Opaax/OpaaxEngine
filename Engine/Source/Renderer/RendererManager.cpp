@@ -34,7 +34,7 @@
 #include "Renderer/Components/Light2DComponent.h"
 #include "Renderer/Components/ShadowCaster2DComponent.h"
 #include "Renderer/Lighting/Lighting2D.h"
-#include "Resources/DataAsset/DataAssetHandle.h"
+#include "Resources/Asset/AssetHandle.h"
 #include "Renderer/Components/QuadComponent.h"
 #include "Renderer/Post/ScenePipeline2D.h"
 #include "Renderer/Components/SpriteComponent.h"
@@ -47,9 +47,9 @@
 
 #include "Resources/ResourceManager.h"
 #include "Renderer/Textures/TextureResource.h"
-#include "Renderer/Textures/SpriteSheetResource.h"
+#include "Renderer/Textures/SpriteSheet.h"
 #include "Renderer/Text/FontFaceResource.h"
-#include "Renderer/Text/FontFamilyResource.h"
+#include "Renderer/Text/FontFamily.h"
 
 #include "Renderer/Text/Text2D.h"
 #include "Renderer/Components/TextComponent.h"
@@ -484,7 +484,7 @@ namespace Opaax
         return lLights;
     }
 
-    QuadLighting RendererManager::ResolveLighting(const TDataAssetRef<Material2D>& InMaterial)
+    QuadLighting RendererManager::ResolveLighting(const TAssetRef<Material2D>& InMaterial)
     {
         QuadLighting lLighting;
         if (InMaterial.IsEmpty())
@@ -498,8 +498,8 @@ namespace Opaax
         {
             // Kept even when it fails to load, so a missing file is not retried every frame.
             lIt = m_MaterialCache.emplace(lKey.GetId(),
-                                          LoadDataAsset(OpaaxApplication::GetAppService<IEngine>().GetResources(),
-                                                        OpaaxApplication::GetAppService<IPaths>(), InMaterial)).first;
+                                          LoadAsset(OpaaxApplication::GetAppService<IEngine>().GetResources(),
+                                                    OpaaxApplication::GetAppService<IPaths>(), InMaterial)).first;
         }
 
         const Material2D* lMaterial = lIt->second.Get();
@@ -833,7 +833,7 @@ namespace Opaax
     bool RendererManager::ResolveSpriteDraw(const SpriteComponent& InSprite, ITexture2D*& OutTexture, SpriteUVRect& OutUV)
     {
         // A sheet wins over a texture. No image at all draws nothing.
-        const SpriteSheetData* lSheet = ResolveSheet(InSprite.Sheet);
+        const SpriteSheet* lSheet = ResolveSheet(InSprite.Sheet);
 
         if (lSheet == nullptr)
         {
@@ -874,36 +874,31 @@ namespace Opaax
         return true;
     }
 
-    const SpriteSheetData* RendererManager::ResolveSheet(const TResourcePath<SpriteSheetResource>& InPath)
+    const SpriteSheet* RendererManager::ResolveSheet(const TAssetRef<SpriteSheet>& InRef)
     {
-        if (InPath.IsEmpty())
+        if (InRef.IsEmpty())
         {
             return nullptr;
         }
 
-        const OpaaxStringID lKey(InPath.Path);
+        const OpaaxStringID lKey(InRef.Path);
 
         auto lIt = m_SheetCache.find(lKey.GetId());
         if (lIt == m_SheetCache.end())
         {
-            const OpaaxString lAbsolute = OpaaxApplication::GetAppService<IPaths>().AssetToAbsolute(InPath.Path);
-
-            ResourceRef<SpriteSheetResource> lRef =
-                OpaaxApplication::GetAppService<IEngine>().GetResources().Load<SpriteSheetResource>(lAbsolute.CStr());
-
             // Cached even when loading failed, so a missing file is not retried every frame.
-            lIt = m_SheetCache.emplace(lKey.GetId(), Move(lRef)).first;
+            lIt = m_SheetCache.emplace(lKey.GetId(),
+                                       LoadAsset(OpaaxApplication::GetAppService<IEngine>().GetResources(),
+                                                 OpaaxApplication::GetAppService<IPaths>(), InRef)).first;
 
-            if (!lIt->second.IsValid() || lIt->second.Get() == nullptr)
+            if (lIt->second.Get() == nullptr)
             {
                 OPAAX_LOG(LogRendererManager, Warn, "Sheet '{}' did not load — the sprite draws nothing",
-                          InPath.Path.CStr());
+                          InRef.Path.CStr());
             }
         }
 
-        const SpriteSheetResource* lResource = lIt->second.Get();
-
-        return (lResource != nullptr) ? &lResource->Data : nullptr;
+        return lIt->second.Get();
     }
 
     ITexture2D* RendererManager::ResolveTexture(const TResourcePath<TextureResource>& InPath)
@@ -998,12 +993,12 @@ namespace Opaax
 
     UISheetFrameView RendererManager::ResolveSheetFrame(const char* InSheetPath, const Int32 InFrame)
     {
-        TResourcePath<SpriteSheetResource> lPath;
-        lPath.Path = OpaaxString(InSheetPath);
+        TAssetRef<SpriteSheet> lRef;
+        lRef.Path = OpaaxString(InSheetPath);
 
         UISheetFrameView lView;
 
-        const SpriteSheetData* lSheet = ResolveSheet(lPath);
+        const SpriteSheet* lSheet = ResolveSheet(lRef);
         if (lSheet == nullptr)
         {
             return lView;
@@ -1021,7 +1016,7 @@ namespace Opaax
         const SpriteFrame* lFrame = lSheet->FrameAt(InFrame);
         if (lFrame == nullptr)
         {
-            if (InFrame >= 0 && lSheet->FrameCount() > 0 && m_WarnedFrameRange.emplace(OpaaxStringID(lPath.Path).GetId()).second)
+            if (InFrame >= 0 && lSheet->FrameCount() > 0 && m_WarnedFrameRange.emplace(OpaaxStringID(lRef.Path).GetId()).second)
             {
                 OPAAX_LOG(LogRendererManager, Warn, "Sheet '{}' has no frame {} ({} frame(s)) — drawing the whole texture",
                           InSheetPath, InFrame, lSheet->FrameCount());
@@ -1036,41 +1031,36 @@ namespace Opaax
         return lView;
     }
 
-    const FontFamilyData* RendererManager::ResolveFamily(const TResourcePath<FontFamilyResource>& InPath)
+    const FontFamily* RendererManager::ResolveFamily(const TAssetRef<FontFamily>& InRef)
     {
-        if (InPath.IsEmpty())
+        if (InRef.IsEmpty())
         {
             return nullptr;
         }
 
-        const OpaaxStringID lKey(InPath.Path);
+        const OpaaxStringID lKey(InRef.Path);
 
         auto lIt = m_FamilyCache.find(lKey.GetId());
         if (lIt == m_FamilyCache.end())
         {
-            const OpaaxString lAbsolute = OpaaxApplication::GetAppService<IPaths>().AssetToAbsolute(InPath.Path);
+            lIt = m_FamilyCache.emplace(lKey.GetId(),
+                                        LoadAsset(OpaaxApplication::GetAppService<IEngine>().GetResources(),
+                                                  OpaaxApplication::GetAppService<IPaths>(), InRef)).first;
 
-            ResourceRef<FontFamilyResource> lRef =
-                OpaaxApplication::GetAppService<IEngine>().GetResources().Load<FontFamilyResource>(lAbsolute.CStr());
-
-            lIt = m_FamilyCache.emplace(lKey.GetId(), Move(lRef)).first;
-
-            if (!lIt->second.IsValid() || lIt->second.Get() == nullptr)
+            if (lIt->second.Get() == nullptr)
             {
                 OPAAX_LOG(LogRendererManager, Warn, "Family '{}' did not load — the text draws nothing",
-                          InPath.Path.CStr());
+                          InRef.Path.CStr());
             }
         }
 
-        const FontFamilyResource* lResource = lIt->second.Get();
-
-        return (lResource != nullptr) ? &lResource->Data : nullptr;
+        return lIt->second.Get();
     }
 
     FontFaceView RendererManager::ResolveTextDraw(const TextComponent& InText)
     {
         // A family wins over a face. Neither draws nothing.
-        const FontFamilyData* lFamily = ResolveFamily(InText.Font);
+        const FontFamily* lFamily = ResolveFamily(InText.Font);
 
         if (lFamily == nullptr)
         {

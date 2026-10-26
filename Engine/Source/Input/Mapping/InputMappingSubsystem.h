@@ -55,9 +55,9 @@ namespace Opaax
         bool AddContext(const InputMappingContext& InContext);
 
         /**
-         * Loads a .opaaxinputmap, registers the actions it uses, and adds it as a context.
+         * Loads an input mapping context asset, registers the actions it uses, and adds it as a context.
          * @param InName      Name to use with RemoveContext
-         * @param InAssetPath Asset-relative path ("Input/Gameplay.opaaxinputmap")
+         * @param InAssetPath Asset-relative path ("Input/Gameplay.opaaxasset")
          */
         bool AddContextAsset(OpaaxStringID InName, const OpaaxString& InAssetPath);
 

@@ -6,14 +6,12 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/String/OpaaxStringIDJson.h"
-#include "Resources/ResourcePath.h"
-#include "Resources/ResourcePathJson.h"
+#include "Resources/Asset/AssetRef.h"
 
 namespace Opaax
 {
-    // Forward-declared: TResourcePath only needs the name.
-    struct AnimationLibraryResource;
-    struct AnimationClipResource;
+    class AnimationLibrary;
+    class AnimationClip;
 
     // =============================================================================
     // SpriteAnimatorComponent — animates a SpriteComponent's frame (via SpriteAnimationSubsystem).
@@ -22,14 +20,14 @@ namespace Opaax
     // =============================================================================
     struct SpriteAnimatorComponent
     {
-        /** Asset-relative ("Anims/Hero.opaaxanim"). Wins over ClipAsset. */
-        TResourcePath<AnimationLibraryResource> Library;
+        /** Asset-relative ("Anims/Hero.opaaxasset"). Wins over ClipAsset. */
+        TAssetRef<AnimationLibrary> Library;
 
         /** The library clip, by name. Invalid = the library's DefaultClip. */
         OpaaxStringID Clip;
 
-        /** Asset-relative ("Anims/Coin_Spin.opaaxclip"). Played when Library is empty. */
-        TResourcePath<AnimationClipResource> ClipAsset;
+        /** Asset-relative ("Anims/Coin_Spin.opaaxasset"). Played when Library is empty. */
+        TAssetRef<AnimationClip> ClipAsset;
 
         /** Speed multiplier. 0 freezes. */
         float Speed = 1.f;

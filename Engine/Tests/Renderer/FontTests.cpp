@@ -1,11 +1,17 @@
-// Suite: the text stack without a GPU — FontFaceData lookups, FontBake refusals, and the
-// FontFaceResource placeholder. A real bake needs a real .ttf and is checked by the smoke run's
-// "baked N glyph(s)" log line. Tables are keyed by codepoint: cases use codepoints above 0xFF.
+// Suite: the text stack without a GPU — FontFaceData lookups, FontBake refusals, the FontFamily asset
+// (its style matching, file and old format), and the FontFaceResource placeholder. A real bake needs a
+// real .ttf and is checked by the smoke run's "baked N glyph(s)" log line. Tables are keyed by
+// codepoint: cases use codepoints above 0xFF.
 #include <doctest.h>
 
+#include "../LegacyAssetFile.h"
+#include "../TestTempDir.h"
+
+#include "Object/ObjectClassRegistry.h"
+#include "Resources/Asset/AssetFile.h"
 #include "Resources/ResourceManager.h"   // completes LoadContext
 #include "Renderer/Text/FontFaceResource.h"
-#include "Renderer/Text/FontFamilyData.h"
+#include "Renderer/Text/FontFamily.h"
 #include "Renderer/Text/FontBake.h"
 #include "Renderer/Text/FontFaceData.h"
 #include "Renderer/Text/Text2D.h"
@@ -76,6 +82,11 @@ namespace
 
         return lEntry;
     }
+
+    struct FontClasses final : ObjectClassRegistry
+    {
+        FontClasses() { Register<FontFamily>(); }
+    };
 
     /** A context to hand Load. Every case here is a leaf load — nothing acquires a child. */
     struct LoadFixture
@@ -190,25 +201,23 @@ TEST_SUITE("FontBake")
     }
 }
 
-TEST_SUITE("FontFamilyData")
+TEST_SUITE("FontFamily")
 {
-    /** Latin at Regular and Bold, upright and italic; Greek at Regular upright only. */
-    FontFamilyData MakeFamily()
+    /** Makes OutFamily Latin at Regular and Bold, upright and italic, and Greek at Regular upright only. */
+    void FillFamily(FontFamily& OutFamily)
     {
         using enum EFontSubset;
 
-        FontFamilyData lFamily;
-        lFamily.Entries.emplace_back(MakeEntry(Latin, EFontWeight::Regular, EFontWidth::Normal, EFontSlant::Normal, "latin-400.ttf"));
-        lFamily.Entries.emplace_back(MakeEntry(Latin, EFontWeight::Regular, EFontWidth::Normal, EFontSlant::Italic, "latin-400i.ttf"));
-        lFamily.Entries.emplace_back(MakeEntry(Latin, EFontWeight::Bold,    EFontWidth::Normal, EFontSlant::Normal, "latin-700.ttf"));
-        lFamily.Entries.emplace_back(MakeEntry(Greek, EFontWeight::Regular, EFontWidth::Normal, EFontSlant::Normal, "greek-400.ttf"));
-
-        return lFamily;
+        OutFamily.Entries.emplace_back(MakeEntry(Latin, EFontWeight::Regular, EFontWidth::Normal, EFontSlant::Normal, "latin-400.ttf"));
+        OutFamily.Entries.emplace_back(MakeEntry(Latin, EFontWeight::Regular, EFontWidth::Normal, EFontSlant::Italic, "latin-400i.ttf"));
+        OutFamily.Entries.emplace_back(MakeEntry(Latin, EFontWeight::Bold,    EFontWidth::Normal, EFontSlant::Normal, "latin-700.ttf"));
+        OutFamily.Entries.emplace_back(MakeEntry(Greek, EFontWeight::Regular, EFontWidth::Normal, EFontSlant::Normal, "greek-400.ttf"));
     }
 
     TEST_CASE("an exact request answers the exact face")
     {
-        const FontFamilyData lFamily = MakeFamily();
+        FontFamily lFamily;
+        FillFamily(lFamily);
 
         FontStyleKey lWanted;
         lWanted.Subset = EFontSubset::Latin;
@@ -221,7 +230,8 @@ TEST_SUITE("FontFamilyData")
 
     TEST_CASE("a weight the family lacks falls back to the NEAREST one it has")
     {
-        const FontFamilyData lFamily = MakeFamily();
+        FontFamily lFamily;
+        FillFamily(lFamily);
 
         FontStyleKey lWanted;
         lWanted.Subset = EFontSubset::Latin;
@@ -238,7 +248,8 @@ TEST_SUITE("FontFamilyData")
 
     TEST_CASE("the SLANT outranks the weight — a Bold Italic request takes Regular Italic")
     {
-        const FontFamilyData lFamily = MakeFamily();
+        FontFamily lFamily;
+        FillFamily(lFamily);
 
         FontStyleKey lWanted;
         lWanted.Subset = EFontSubset::Latin;
@@ -254,7 +265,7 @@ TEST_SUITE("FontFamilyData")
 
     TEST_CASE("the WIDTH outranks the slant, which is CSS's own order")
     {
-        FontFamilyData lFamily;
+        FontFamily lFamily;
         lFamily.Entries.emplace_back(MakeEntry(EFontSubset::Latin, EFontWeight::Regular,
                                                EFontWidth::Normal, EFontSlant::Normal, "normal-upright.ttf"));
         lFamily.Entries.emplace_back(MakeEntry(EFontSubset::Latin, EFontWeight::Regular,
@@ -272,7 +283,8 @@ TEST_SUITE("FontFamilyData")
 
     TEST_CASE("the SUBSET is never crossed — a script the family lacks answers nullptr")
     {
-        const FontFamilyData lFamily = MakeFamily();
+        FontFamily lFamily;
+        FillFamily(lFamily);
 
         FontStyleKey lWanted;
         lWanted.Subset = EFontSubset::Cyrillic;   // the family has Latin and Greek only
@@ -290,11 +302,74 @@ TEST_SUITE("FontFamilyData")
 
     TEST_CASE("an empty family answers nullptr rather than reaching into nothing")
     {
-        const FontFamilyData lFamily{};
+        const FontFamily lFamily;
 
         CHECK(lFamily.EntryCount() == 0u);
         CHECK(lFamily.Find(FontStyleKey{}) == nullptr);
         CHECK(lFamily.FindExact(FontStyleKey{}) == nullptr);
+    }
+
+    TEST_CASE("a style written twice keeps both entries after an edit, and the first one is drawn")
+    {
+        FontFamily lFamily;
+        FillFamily(lFamily);
+        lFamily.Entries.emplace_back(MakeEntry(EFontSubset::Latin, EFontWeight::Bold, EFontWidth::Normal,
+                                               EFontSlant::Normal, "latin-700-copy.ttf"));
+
+        // Warned about, not deleted: the file may be the one the author meant to keep.
+        lFamily.PostEditChange();
+        CHECK(lFamily.EntryCount() == 5u);
+
+        FontStyleKey lBold;
+        lBold.Weight = EFontWeight::Bold;
+        REQUIRE(lFamily.Find(lBold) != nullptr);
+        CHECK(lFamily.Find(lBold)->Face.Path == "latin-700.ttf");
+    }
+
+    TEST_CASE("a family round-trips through its asset file, each style written by name")
+    {
+        const TestTempDir lDir("familyRoundTrip");
+        const FontClasses lClasses;
+        const OpaaxString lPath = lDir.Sub("Fonts/Hero.opaaxasset");
+
+        FontFamily lSaved;
+        FillFamily(lSaved);
+        REQUIRE(AssetFile::Save(lPath, lSaved));
+
+        // A person reading the file sees "Bold", not an enum's number.
+        AssetFile::Contents lContents;
+        REQUIRE(AssetFile::Load(lPath, lContents));
+        CHECK(lContents.Class == OPAAX_ID("FontFamily"));
+        CHECK(lContents.Properties["Entries"][2]["Style"]["Weight"] == "Bold");
+
+        const TStrongObjectPtr<Asset> lAsset  = AssetFile::LoadAsset(lPath, lClasses);
+        const FontFamily*             lLoaded = Cast<FontFamily>(lAsset.Get());
+        REQUIRE(lLoaded != nullptr);
+        REQUIRE(lLoaded->EntryCount() == 4u);
+
+        FontStyleKey lBold;
+        lBold.Weight = EFontWeight::Bold;
+        REQUIRE(lLoaded->FindExact(lBold) != nullptr);
+        CHECK(lLoaded->FindExact(lBold)->Face.Path == "latin-700.ttf");
+    }
+
+    TEST_CASE("an old .opaaxfont converts with its faces and their styles")
+    {
+        const TestTempDir lDir("familyConvert");
+        const FontClasses lClasses;
+
+        const TStrongObjectPtr<Asset> lAsset = ConvertAndLoad(lDir, "Fonts/Roboto.opaaxfont", R"({ "Entries": [
+            { "Face": "/Engine/Fonts/Roboto/roboto-greek-500-italic.ttf",
+              "Style": { "Slant": "Italic", "Subset": "Greek", "Weight": "Medium", "Width": "Normal" } } ] })",
+            lClasses);
+
+        const FontFamily* lFamily = Cast<FontFamily>(lAsset.Get());
+        REQUIRE(lFamily != nullptr);
+        REQUIRE(lFamily->EntryCount() == 1u);
+        CHECK(lFamily->Entries[0].Face.Path == "/Engine/Fonts/Roboto/roboto-greek-500-italic.ttf");
+        CHECK(lFamily->Entries[0].Style.Subset == EFontSubset::Greek);
+        CHECK(lFamily->Entries[0].Style.Weight == EFontWeight::Medium);
+        CHECK(lFamily->Entries[0].Style.Slant == EFontSlant::Italic);
     }
 }
 
@@ -680,7 +755,7 @@ TEST_SUITE("TextComponent")
         lWritten.Style.Subset = EFontSubset::Greek;
         lWritten.Style.Weight = EFontWeight::Medium;
         lWritten.Style.Slant  = EFontSlant::Italic;
-        lWritten.Font.Path    = OpaaxString("/Engine/Fonts/Roboto.opaaxfont");
+        lWritten.Font.Path    = OpaaxString("/Engine/Fonts/Roboto.opaaxasset");
 
         const nlohmann::json lJson = lWritten;
         const TextComponent  lRead = lJson.get<TextComponent>();
@@ -696,7 +771,7 @@ TEST_SUITE("TextComponent")
         CHECK(lRead.Style.Weight == EFontWeight::Medium);
         CHECK(lRead.Style.Slant  == EFontSlant::Italic);
         CHECK(lRead.Size == doctest::Approx(48.f));
-        CHECK(lRead.Font.Path == "/Engine/Fonts/Roboto.opaaxfont");
+        CHECK(lRead.Font.Path == "/Engine/Fonts/Roboto.opaaxasset");
     }
 
     TEST_CASE("a map written before this component existed still reads — _WITH_DEFAULT, not at()")

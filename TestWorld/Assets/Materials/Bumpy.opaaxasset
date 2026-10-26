@@ -1,0 +1,8 @@
+{
+    "Class": "Material2D",
+    "Properties": {
+        "NormalMap": "Textures/Bumps_N.png",
+        "bLit": true
+    },
+    "Version": 1
+}

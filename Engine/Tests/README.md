@@ -69,8 +69,11 @@ TEST_CASE("Thing: does what it says")
 - Worlds without an engine: `World lWorld("Test"); Entity lEntity = lWorld.CreateEntity("A");`.
   Behaviours, physics and audio have fixtures that build a world with its subsystems and step it by
   hand (`World/BehaviourRuntimeTests.cpp`, `Physics/PhysicsMotionTests.cpp`, `Audio/AudioTests.cpp`).
-- Files: write under a temporary folder removed at the end (see `ScopedTempDir` in
+- Files: write under a temporary folder removed at the end (`TestTempDir.h`, or `ScopedTempDir` in
   `Automation/AutomationTests.cpp`).
+- Asset classes: objects cannot be copied, so build one in place; register its class in a local
+  `ObjectClassRegistry` and round-trip it through `AssetFile::Save` and `AssetFile::LoadAsset`. An old
+  per-type file is converted and loaded by `ConvertAndLoad` (`LegacyAssetFile.h`).
 - A private member is not made public for a test: move the logic into a free function and test that.
 - `Main.cpp` owns `main()` and keeps the logger quiet; never add cases there.
 

@@ -45,6 +45,8 @@
 // =============================================================================
 namespace Opaax
 {
+    class ObjectClassRegistry;
+
     inline constexpr LogCategory LogResourceManager{"ResourceManager"};
 
     // =============================================================================
@@ -145,6 +147,15 @@ namespace Opaax
          * Sets the job system used by LoadAsync (set by the Engine at Startup). Defaults to inline loads.
          */
         void SetJobSystem(IJobSystem& InJobs) noexcept { m_Jobs = &InJobs; }
+
+        /**
+         * Sets the classes asset files are read with (set by the Engine at Startup). Without them, no
+         * .opaaxasset loads.
+         */
+        void SetObjectClasses(const ObjectClassRegistry* InClasses) noexcept { m_ObjectClasses = InClasses; }
+
+        /** @return Null until the Engine (or a test) sets them */
+        const ObjectClassRegistry* GetObjectClasses() const noexcept { return m_ObjectClasses; }
         
         /**
          * Counter incremented by each Update. Used to detect Resolve pointers kept across an Update.
@@ -207,6 +218,7 @@ namespace Opaax
         TDynArray<TUniquePtr<IResourcePool>> m_Pools; // indexed by ResourceTypeID::Get<T>()
         ResourceDependencyGraph             m_Deps;
         IJobSystem*                         m_Jobs = &IJobSystem::Null(); // LoadAsync worker pool
+        const ObjectClassRegistry*          m_ObjectClasses = nullptr;    // owned by the engine
         Uint64                              m_PumpEpoch = 0; // incremented each Update
 
         // Pending LoadAsync callbacks. Each returns true once it has fired.

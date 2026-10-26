@@ -438,7 +438,7 @@ namespace Opaax
     public:
         /**
          * Plays a sound file or a clip definition, not positioned (music, UI, a pickup):
-         * PlaySound("Audio/Coin.wav"), PlaySound("Audio/Steps.opaaxdata"). A definition's own volume
+         * PlaySound("Audio/Coin.wav"), PlaySound("Audio/Steps.opaaxasset"). A definition's own volume
          * and pitch are scaled by these.
          */
         SoundHandle PlaySound(const OpaaxString& InPath, float InVolume = 1.f, float InPitch = 1.f) const;
@@ -468,7 +468,7 @@ namespace Opaax
         bool WasKeyReleased(EKeyCode InKey) const;
 
         // =============================================================================
-        // Input actions — the game's named actions (.opaaxinputmap). They read as zero, and
+        // Input actions — the game's named actions (input mapping contexts). They read as zero, and
         //   BindAction does nothing, when no game is running (no input mapping).
         // =============================================================================
     public:

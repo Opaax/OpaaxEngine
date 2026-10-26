@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Editor/Application/Services/IEditorService.h"
+#include "Editor/Assets/AssetEditors.h"
 #include "Editor/EditorContext.h"
 #include "Editor/Application/Services/EditorPaths.h"
 #include "Editor/Camera/EditorCamera.h"
@@ -15,16 +16,7 @@
 #include "Editor/Input/InputRoute.h"
 #include "Editor/EditorMapDocument.h"
 #include "Editor/EditorLevelDocument.h"
-#include "Editor/EditorSpriteSheetDocument.h"
-#include "Editor/Resources/Types/Animation/EditorAnimationClipDocument.h"
-#include "Editor/Resources/Types/Animation/EditorAnimationLibraryDocument.h"
-#include "Editor/EditorFontFamilyDocument.h"
 #include "Editor/EditorUICanvasDocument.h"
-#include "Editor/Resources/Types/Input/EditorInputActionDocument.h"
-#include "Editor/Resources/Types/Input/EditorInputMappingContextDocument.h"
-#include "Editor/Resources/Types/Mover/EditorMoveModeDocument.h"
-#include "Editor/Resources/Types/DataAsset/EditorDataAssetDocument.h"
-#include "Editor/Resources/Types/Mover/EditorMoverDocument.h"
 #include "Editor/Export/GameExport.h"
 #include "Editor/PIE/PlayInEditor.h"
 #include "Editor/UI/IEditorGui.h"
@@ -120,6 +112,12 @@ namespace Opaax::Editor
          * File extensions come from the engine's ResourceFormatRegistry.
          */
         void RegisterNativeResourceTypes();
+
+        /**
+         * Registers how the engine's asset classes look and where New Asset lists them. Before the game
+         * module's, which may override them.
+         */
+        void RegisterNativeAssetTypes();
 
         /**
          * Registers drawers for the engine's own components (all reflected, so the generic drawer).
@@ -314,25 +312,15 @@ namespace Opaax::Editor
         TUniquePtr<InputRoute>          m_InputRoute;  
         TUniquePtr<EditorMapDocument>   m_MapDocument;
         TUniquePtr<EditorLevelDocument> m_LevelDocument;
-        TUniquePtr<EditorSpriteSheetDocument> m_SheetDocument;
-
-        /** The open .opaaxclip and its data. */
-        TUniquePtr<EditorAnimationClipDocument> m_ClipDocument;
-
-        /** The open .opaaxanim and its data. */
-        TUniquePtr<EditorAnimationLibraryDocument> m_LibraryDocument;
-        TUniquePtr<EditorFontFamilyDocument>       m_FamilyDocument;
 
         /** The open .opaaxui and its canvas. */
         TUniquePtr<EditorUICanvasDocument>         m_UICanvasDocument;
 
-        /** The mover documents (tuning and mover). */
-        TUniquePtr<EditorMoveModeDocument>         m_MoveModeDocument;
-        TUniquePtr<EditorMoverDocument>            m_MoverDocument;
-        TUniquePtr<EditorInputActionDocument>      m_InputActionDocument;
-        TUniquePtr<EditorInputMappingContextDocument> m_InputMapDocument;
-        TUniquePtr<EditorDataAssetDocument>           m_DataAssetDocument;
-        TUniquePtr<GameExport>                        m_Export;
+        /** Exporting the edited game into a folder that runs elsewhere. */
+        TUniquePtr<GameExport>                     m_Export;
+
+        /** The open .opaaxasset files, a window each. */
+        TUniquePtr<AssetEditors>                   m_AssetEditors;
         
         TUniquePtr<EditorContext>       m_Context;
         

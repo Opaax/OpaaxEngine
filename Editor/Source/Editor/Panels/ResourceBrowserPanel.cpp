@@ -7,6 +7,14 @@
 #include "Editor/ImguiLibrary/ImguiDraw.h"
 #include "Editor/ImguiLibrary/ImguiWidgets.h"
 #include "Editor/Resources/ResourceDragDrop.h"
+#include "Editor/Resources/EditorResourceEvents.h"
+#include "Editor/Commands/EditorCommandRegistry.h"
+#include "Editor/Commands/EditorNativeCommands.h"
+#include "Editor/Commands/EditorNativeCommandsTags.hpp"
+#include "Core/Algo/Algo.h"
+#include "Core/String/OpaaxPathString.h"
+#include "Object/ObjectClassRegistry.h"
+#include "Resources/Asset/Asset.h"
 
 #include "Application/Services/IEngine.h"
 #include "Application/Services/IPaths.h"
@@ -15,8 +23,8 @@
 #include "Resources/ResourceManager.h"
 #include "Resources/ResourceTypeID.hpp"
 #include "Renderer/Textures/TextureResource.h"
-#include "Resources/DataAsset/DataAssetFile.h"
-#include "Resources/DataAsset/DataAssetResource.h"
+#include "Resources/Asset/AssetFile.h"
+#include "Resources/Asset/AssetResource.h"
 
 #include <imgui.h>
 
@@ -60,12 +68,51 @@ namespace Opaax::Editor
 
         LoadTypeIcons();
         Refresh();
+
+        // A new asset or level written by the editor shows up without a manual Refresh.
+        m_Context.ResourceEvents.OnResourceSaved.AddMember(this, &ResourceBrowserPanel::HandleResourceSaved);
     }
 
     void ResourceBrowserPanel::Shutdown()
     {
+        m_Context.ResourceEvents.OnResourceSaved.RemoveAll(this);
+
         // Before the ResourceManager's flush, while the GL context is alive.
         m_TypeIcons.clear();
+        m_AssetChrome.clear();
+    }
+
+    void ResourceBrowserPanel::HandleResourceSaved(const ResourceSavedEvent& InEvent)
+    {
+        if (!IsListed(InEvent.AbsPath))
+        {
+            Refresh();
+        }
+    }
+
+    bool ResourceBrowserPanel::IsListed(const OpaaxString& InAbsPath) const
+    {
+        const auto lSearch = [&InAbsPath](const auto& InSelf, const ResourceFolder& InFolder) -> bool
+        {
+            for (const ResourceFile& lFile : InFolder.Files)
+            {
+                if (lFile.AbsPath == InAbsPath) { return true; }
+            }
+
+            for (const ResourceFolder& lChild : InFolder.Folders)
+            {
+                if (InSelf(InSelf, lChild)) { return true; }
+            }
+
+            return false;
+        };
+
+        for (const ResourceRoot& lRoot : m_Roots)
+        {
+            if (lSearch(lSearch, lRoot.Tree)) { return true; }
+        }
+
+        return false;
     }
 
     void ResourceBrowserPanel::Refresh()
@@ -219,6 +266,14 @@ namespace Opaax::Editor
         {
             ImGui::TextDisabled(m_Filter.IsEmpty() ? "Empty folder." : "No resources match the current filter.");
         }
+
+        // Right-click on the folder's background (not on a tile).
+        if (ImGui::BeginPopupContextWindow("##FolderContext",
+                                           ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems))
+        {
+            DrawNewAssetMenu(lFolder->RelPath.IsEmpty() ? lRoot->AbsPath : PathString::Join(lRoot->AbsPath, lFolder->RelPath));
+            ImGui::EndPopup();
+        }
     }
 
     void ResourceBrowserPanel::DrawFolderTile(const OpaaxString& InName, bool& bOutEnter)
@@ -314,6 +369,12 @@ namespace Opaax::Editor
 
         ImGui::PushID(InFolder.RelPath.IsEmpty() ? InFolder.Name.CStr() : InFolder.RelPath.CStr());
         const bool bOpen = ImGui::TreeNodeEx(InFolder.Name.CStr(), lFlags);
+
+        if (ImGui::BeginPopupContextItem("##FolderContext"))
+        {
+            DrawNewAssetMenu(InFolder.RelPath.IsEmpty() ? InRoot.AbsPath : PathString::Join(InRoot.AbsPath, InFolder.RelPath));
+            ImGui::EndPopup();
+        }
 
         if (bOpen)
         {
@@ -415,17 +476,8 @@ namespace Opaax::Editor
         // has no asset path and carries no payload.
         if (lType.Format != nullptr && ImGui::BeginDragDropSource())
         {
-            // A data asset also says which struct it holds, so a typed field can refuse the others.
-            if (lType.Format->TypeId == ResourceTypeID::Get<DataAssetResource>() && m_DragSubTypePath != InFile.AbsPath)
-            {
-                DataAssetFile::Contents lContents;
-                m_DragSubTypePath = InFile.AbsPath;
-                m_DragSubTypeId   = DataAssetFile::Load(InFile.AbsPath, lContents) ? lContents.Type.GetId() : 0;
-            }
-
-            const Uint32 lSubType = lType.Format->TypeId == ResourceTypeID::Get<DataAssetResource>() ? m_DragSubTypeId : 0;
-
-            SetResourceDragPayload(lType.Format->TypeId, m_Context.Paths.AbsoluteToAsset(InFile.AbsPath), lSubType);
+            // An asset also says which class it holds, so a typed field can refuse the others.
+            SetResourceDragPayload(lType.Format->TypeId, m_Context.Paths.AbsoluteToAsset(InFile.AbsPath), KindsOf(InFile));
 
             const float lIconSize = RowIconSize();
             ImguiWidgets::Image(TileImageOf(InFile, lType), ImVec2(lIconSize, lIconSize));
@@ -482,11 +534,41 @@ namespace Opaax::Editor
             lType.Chrome = m_Context.Extensions.ResourceTypes().Find(lType.Format->TypeId);
         }
 
+        if (InFile.AssetClass.IsValid())
+        {
+            const auto lIt = m_AssetChrome.find(InFile.AssetClass.GetId());
+            lType.Asset    = (lIt != m_AssetChrome.end()) ? &lIt->second : nullptr;
+        }
+
         return lType;
+    }
+
+    TDynArray<Uint32> ResourceBrowserPanel::KindsOf(const ResourceFile& InFile) const
+    {
+        TDynArray<Uint32> lKinds;
+
+        if (!InFile.AssetClass.IsValid())
+        {
+            return lKinds;
+        }
+
+        // The class, then each parent: a field for a base class accepts its subclasses.
+        for (const ObjectClass* lClass = m_Context.Engine.GetRegistries().ObjectClasses().FindByName(InFile.AssetClass);
+             lClass != nullptr; lClass = lClass->GetSuper())
+        {
+            lKinds.emplace_back(lClass->GetName().GetId());
+        }
+
+        return lKinds;
     }
 
     const char* ResourceBrowserPanel::LabelOf(const FileType& InType)
     {
+        if (InType.Asset != nullptr)
+        {
+            return InType.Asset->Label.CStr();
+        }
+
         if (InType.Chrome != nullptr && InType.Chrome->Label.IsValid())
         {
             return InType.Chrome->Label.CStr();
@@ -497,6 +579,11 @@ namespace Opaax::Editor
 
     const char* ResourceBrowserPanel::GlyphOf(const FileType& InType)
     {
+        if (InType.Asset != nullptr)
+        {
+            return InType.Asset->Glyph.CStr();
+        }
+
         return (InType.Chrome != nullptr && !InType.Chrome->Glyph.IsEmpty())
                    ? InType.Chrome->Glyph.CStr()
                    : k_UnknownGlyph;
@@ -547,10 +634,98 @@ namespace Opaax::Editor
 
             m_TypeIcons.emplace(lChrome.TypeId, Move(lRef));
         }
+
+        // Every class an asset file can hold: its label, glyph and icon, defaults included.
+        const AssetTypeRegistry& lAssetTypes = m_Context.Extensions.AssetTypes();
+
+        for (const ObjectClass* lClass :
+             m_Context.Engine.GetRegistries().ObjectClasses().GetClassesOf(Asset::StaticClass(), /*bInConcreteOnly*/ true))
+        {
+            AssetChrome lChrome;
+            lChrome.Label = lAssetTypes.LabelOf(*lClass);
+            lChrome.Glyph = lAssetTypes.GlyphOf(*lClass);
+
+            const OpaaxString lIcon = lAssetTypes.IconOf(*lClass);
+            const OpaaxString lAbsolute = lIcon.IsEmpty() ? OpaaxString() : ResolveIconPath(lIcon);
+            if (!lAbsolute.IsEmpty())
+            {
+                lChrome.Icon = m_Context.Resources.Load<TextureResource>(lAbsolute.CStr());
+            }
+
+            m_AssetChrome.emplace(lClass->GetName().GetId(), Move(lChrome));
+        }
+    }
+
+    void ResourceBrowserPanel::DrawNewAssetMenu(const OpaaxString& InFolderAbsPath)
+    {
+        // A game reads only its project's assets (and the engine's): elsewhere, nothing is offered.
+        const bool bInAssets = !m_Context.Paths.AbsoluteToAsset(InFolderAbsPath).IsEmpty();
+
+        if (!ImGui::BeginMenu("New Asset", bInAssets))
+        {
+            return;
+        }
+
+        const AssetTypeRegistry&            lAssetTypes = m_Context.Extensions.AssetTypes();
+        const TDynArray<const ObjectClass*> lClasses =
+            m_Context.Engine.GetRegistries().ObjectClasses().GetClassesOf(Asset::StaticClass(), /*bInConcreteOnly*/ true);
+
+        // Categories in the order their first class registered; a class without one sits at the top level.
+        TDynArray<OpaaxString> lCategories;
+        for (const ObjectClass* lClass : lClasses)
+        {
+            const OpaaxString lCategory = lAssetTypes.CategoryOf(*lClass);
+            if (!lCategory.IsEmpty() && Algo::Find(lCategories, lCategory) == lCategories.end())
+            {
+                lCategories.emplace_back(lCategory);
+            }
+        }
+
+        const auto lItem = [this, &InFolderAbsPath, &lAssetTypes](const ObjectClass& InClass)
+        {
+            if (ImGui::MenuItem(lAssetTypes.LabelOf(InClass).CStr()))
+            {
+                m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_NEW_ASSET, m_Context,
+                                                        NewAssetParams{ InFolderAbsPath, InClass.GetName() });
+            }
+        };
+
+        for (const OpaaxString& lCategory : lCategories)
+        {
+            if (ImGui::BeginMenu(lCategory.CStr()))
+            {
+                for (const ObjectClass* lClass : lClasses)
+                {
+                    if (lAssetTypes.CategoryOf(*lClass) == lCategory) { lItem(*lClass); }
+                }
+                ImGui::EndMenu();
+            }
+        }
+
+        for (const ObjectClass* lClass : lClasses)
+        {
+            if (lAssetTypes.CategoryOf(*lClass).IsEmpty()) { lItem(*lClass); }
+        }
+
+        if (lClasses.empty())
+        {
+            ImGui::TextDisabled("No asset class is registered.");
+        }
+
+        ImGui::EndMenu();
     }
 
     EditorImage ResourceBrowserPanel::IconOf(const FileType& InType) const
     {
+        if (InType.Asset != nullptr && InType.Asset->Icon.IsValid())
+        {
+            const TextureResource* lAssetIcon = InType.Asset->Icon.Get();
+            if (lAssetIcon != nullptr && lAssetIcon->GetTexture() != nullptr)
+            {
+                return m_Context.UIBackend.GetTextureImage(*lAssetIcon->GetTexture());
+            }
+        }
+
         if (InType.Chrome == nullptr)
         {
             return EditorImage{};

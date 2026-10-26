@@ -1,24 +1,24 @@
 #pragma once
 
-#include <nlohmann/json.hpp>
-
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Engine/Registries/AutoRegistration.h"
+#include "Resources/Asset/Asset.h"
 
 namespace Sandbox
 {
     // =============================================================================
-    // WeaponStats — a second example data asset (Data/Blaster.opaaxdata). A field asking for
+    // WeaponStats — a second example asset class (Data/Blaster.opaaxasset). A field asking for
     //   EnemyStats refuses it.
     // =============================================================================
-    struct WeaponStats
+    class WeaponStats final : public Opaax::Asset
     {
+        OPAAX_OBJECT(WeaponStats, Opaax::Asset)
+
+    public:
         Opaax::Int32 Damage      = 10;
         float        ShotsPerSec = 4.f;
         float        Spread      = 0.f;
-
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(WeaponStats, Damage, ShotsPerSec, Spread)
 
         OPAAX_PROPERTIES(WeaponStats,
                          OPAAX_PROP(Damage).SetRange(0.f, 1000.f),
@@ -26,5 +26,5 @@ namespace Sandbox
                          OPAAX_PROP(Spread).SetRange(0.f, 90.f).SetTooltip("Degrees, either side."))
     };
 
-    OPAAX_REGISTER_DATA_ASSET(WeaponStats);
+    OPAAX_REGISTER_OBJECT(WeaponStats);
 }

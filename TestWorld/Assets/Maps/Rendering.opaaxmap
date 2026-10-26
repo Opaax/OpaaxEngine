@@ -13,7 +13,7 @@
                     "Layer": "Default",
                     "Material": "",
                     "OrderInLayer": 0,
-                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxsheet",
+                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset",
                     "Size": {
                         "x": 100.0,
                         "y": 100.0
@@ -84,7 +84,7 @@
                         "z": 1.0
                     },
                     "Face": "",
-                    "Font": "/Engine/Fonts/Roboto.opaaxfont",
+                    "Font": "/Engine/Fonts/Roboto.opaaxasset",
                     "Layer": "Foreground",
                     "LineHeightScale": 1.0,
                     "OrderInLayer": 0,
@@ -229,7 +229,7 @@
                         "z": 0.3499999940395355
                     },
                     "Face": "",
-                    "Font": "/Engine/Fonts/Roboto.opaaxfont",
+                    "Font": "/Engine/Fonts/Roboto.opaaxasset",
                     "Layer": "Foreground",
                     "LineHeightScale": 1.0,
                     "OrderInLayer": 0,
@@ -366,7 +366,7 @@
                         "z": 1.0
                     },
                     "Face": "",
-                    "Font": "/Engine/Fonts/Roboto.opaaxfont",
+                    "Font": "/Engine/Fonts/Roboto.opaaxasset",
                     "Layer": "Foreground",
                     "LineHeightScale": 1.0,
                     "OrderInLayer": 0,
@@ -477,7 +477,7 @@
                     "Layer": "Default",
                     "Material": "",
                     "OrderInLayer": 0,
-                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxsheet",
+                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset",
                     "Size": {
                         "x": 100.0,
                         "y": 100.0
@@ -487,7 +487,7 @@
                 },
                 "SpriteAnimator": {
                     "Clip": "",
-                    "ClipAsset": "Anims/Cycle.opaaxclip",
+                    "ClipAsset": "Anims/Cycle.opaaxasset",
                     "Library": "",
                     "Speed": 1.0,
                     "bPlaying": true

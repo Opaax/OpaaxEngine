@@ -136,7 +136,7 @@
                     "Channel": "Pawn",
                     "Height": 100.0,
                     "ModeName": "",
-                    "Mover": "Movers/Walker.opaaxmover",
+                    "Mover": "Movers/Walker.opaaxasset",
                     "Radius": 25.0
                 },
                 "Quad": {

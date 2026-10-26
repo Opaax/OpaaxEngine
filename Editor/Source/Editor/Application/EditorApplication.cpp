@@ -10,7 +10,10 @@
 #include "Application/Services/IConfigSystem.h"
 
 #include "Application/Services/IEngine.h"
+#include "Application/Services/IPaths.h"
 #include "Core/Log/Logger.h"
+#include "Platform/CommandLine.h"
+#include "Resources/Asset/AssetMigration.h"
 
 using namespace Opaax;
 
@@ -87,6 +90,34 @@ namespace Opaax::Editor
         OPAAX_LOG(LogEditorApp, Info, "Editing project '{}' -> {}", lName, lProjRel);
 
         return MakeUnique<EditorPaths>(InPlatform, InCommandLine, lProjRel);
+    }
+
+    void EditorApplication::OnPathsResolved(const IPaths& InPaths, const CommandLine& InCommandLine)
+    {
+        // The project's assets and the engine's (projects share it); configs name assets too.
+        const TDynArray<AssetMigration::AssetRoot> lRoots = {
+            { InPaths.AssetsDir(), OpaaxString() },
+            { InPaths.EngineAssetsDir(), OpaaxString(ENGINE_MOUNT) }
+        };
+
+        if (!InCommandLine.HasFlag("--upgrade-assets"))
+        {
+            const Uint32 lOld = AssetMigration::CountLegacyFiles(lRoots);
+            if (lOld > 0)
+            {
+                OPAAX_LOG(LogEditorApp, Warn,
+                          "{} asset file(s) are in a format this engine no longer loads (.opaaxdata...): start the "
+                          "editor once with --upgrade-assets to convert them to .opaaxasset", lOld);
+            }
+            return;
+        }
+
+        // Here, before the configs, the project and the levels are read: nothing in memory names an old file.
+        const AssetMigration::Report lReport = AssetMigration::Migrate(lRoots, { InPaths.ConfigsDir() });
+
+        OPAAX_LOG(LogEditorApp, Info, "Upgraded assets: {} converted, {} file(s) rewritten, {} error(s)",
+                  static_cast<Uint64>(lReport.Converted.size()), static_cast<Uint64>(lReport.Rewritten.size()),
+                  static_cast<Uint64>(lReport.Errors.size()));
     }
     
     WorldSpec EditorApplication::GetStartupWorldSpec() const

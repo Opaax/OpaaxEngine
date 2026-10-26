@@ -81,7 +81,10 @@ void OpaaxApplication::Bootstrap()
     //Crash reporting — as soon as we know where to write.
     CrashHandler::Get().Install({ lPath.SaveDir() + "/Crashes", lLogFile, true });
     lPath.LogPaths();
-    
+
+    // Before anything reads the project's files.
+    OnPathsResolved(lPath, m_CommandLine);
+
     //Config
     IConfigSystem& lConfigSystem = BootConfigSystem(lPath);
     PreRegisterConfig(lConfigSystem);

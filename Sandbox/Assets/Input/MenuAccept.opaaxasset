@@ -1,0 +1,11 @@
+{
+    "Class": "InputActionAsset",
+    "Properties": {
+        "Description": "Confirm, while a menu is up. Bound to the same key as Jump on purpose.",
+        "HoldSeconds": 0.5,
+        "Modifiers": [],
+        "Name": "MenuAccept",
+        "ValueType": "Bool"
+    },
+    "Version": 1
+}

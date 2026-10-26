@@ -12,7 +12,8 @@ how to extend each part.
 | `Platform` | The window and input devices (GLFW), the file system |
 | `RHI` | The rendering interface and its OpenGL 4.1 backend (`RHI/OpenGL`) |
 | `Renderer` | Sprites, text and debug drawing in batches, cameras, and the HDR path: lights, soft shadows, ambient occlusion, bloom, tonemapping (`Post/ScenePipeline2D`) |
-| `Resources` | The resource manager: one pool per type, shared, reference counted, loaded on demand or in the background |
+| `Object` | The root of the engine's object types: classes with properties and a default object, the table that handles and object pointers resolve through ([Objects.md](Objects.md)) |
+| `Resources` | The resource manager: one pool per type, shared, reference counted, loaded on demand or in the background; assets (`Resources/Asset`): one `.opaaxasset` format for every asset class, references between assets, the conversion of old formats |
 | `World` | Worlds (EnTT), entities, components, behaviours, levels and maps, prefabs, their files |
 | `Physics` | Colliders, rigidbodies, contacts and queries over Box2D (`Physics/Box2D`) |
 | `Audio` | Sound: the engine's own mixer (voices, buses, fades, spatial sound) on an audio thread, clip definitions and banks, sources and the listener; the device and the decoders behind a backend (`Audio/Miniaudio`) |
@@ -21,8 +22,8 @@ how to extend each part.
 | `Automation` | The request runner, its two transports (a script, an inbox folder) and the engine's commands |
 
 The editor is a separate library (`Editor/`) on top of the engine: panels, commands, documents
-(the files being edited), undo, Play In Editor, its own automation commands and the game export. A
-game is a module of its own types, linked into its runtime and into its editor
+(the files being edited), a window per open asset, undo, Play In Editor, its own automation commands
+and the game export. A game is a module of its own types, linked into its runtime and into its editor
 (`opaax_add_game(<Name>)`).
 
 ## A frame
@@ -50,7 +51,7 @@ ended.
 ### Types register themselves
 
 A type is added with one line beside its definition (`OPAAX_REGISTER_COMPONENT(Health)`); the engine
-runs the registrations when it starts, kind by kind (resource formats, data assets, components,
+runs the registrations when it starts, kind by kind (object classes, resource formats, components,
 behaviours, subsystems...).
 
 - **For:** no central list or registrar function to edit, for the engine and a game alike. A type
@@ -104,6 +105,27 @@ a pointer taken this frame stays valid until then.
 - **Against:** a cached copy can outlive its file, so whatever writes a file reloads it (the editor
   does it for every document it saves). Resources are keyed by their path string, so one file must
   always be named in the engine's form (`IPaths`).
+
+### Assets are objects of one root class
+
+Every asset type, the engine's and a game's, is a class derived from `Asset`, itself an `Object`: it
+names its parent and lists its fields (`OPAAX_OBJECT`, `OPAAX_PROPERTIES`), registers with one line,
+and gets the rest from the base: one `.opaaxasset` format (its class and its properties), loading and
+sharing through the resource manager, references between assets (`TAssetRef`), a window of its own in
+the editor drawn from its properties (or its own editor), automation (`asset.*`). Objects live in one
+table by slot and generation, so a handle to a destroyed object reads null, and the three pointer
+kinds (owning, reflected, weak) are those a garbage collector needs. Unreal's `UObject` and
+`UDataAsset`, Godot's `Resource`. Components, levels, maps, prefabs and canvases stay out of it: they
+are entity or widget data with formats of their own.
+
+- **For:** a new asset type is a class and a line, with no file format, loader, document, panel, undo
+  steps or save command to write (the sheet, clip, library, font family, input and movement types each
+  had their own); the editor, automation and the conversion of old files work the same for every
+  class; a garbage collector can come later without changing the pointers' API.
+- **Against:** fields must be types the reflection knows (anything richer takes a custom editor or a
+  struct with `OPAAX_PROPERTIES`); a file names its class, so a renamed class needs an alias line
+  (`OPAAX_REGISTER_OBJECT_ALIAS`); objects are not copyable; an undo step stores the whole property
+  set, fine for assets, not for large data.
 
 ### OpenGL 4.1 everywhere, behind an RHI
 

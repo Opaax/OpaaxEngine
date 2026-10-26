@@ -6,7 +6,7 @@
                     "Channel": "Pawn",
                     "Height": 100.0,
                     "ModeName": "Ground",
-                    "Mover": "Movers/Hero.opaaxmover",
+                    "Mover": "Movers/Hero.opaaxasset",
                     "Radius": 25.0
                 },
                 "Quad": {

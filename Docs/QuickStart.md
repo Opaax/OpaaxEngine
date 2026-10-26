@@ -17,7 +17,7 @@ build
 ```
 MyGame/
   MyGame.opaaxproj              the project: its startup level
-  Assets/                       levels, maps, textures, sounds, prefabs, data assets
+  Assets/                       levels, maps, textures, sounds, prefabs, assets
   Configs/                      window, renderer and editor settings
   Source/MyGame/                the game's code: components, behaviours, subsystems
   Source/MyGameRuntime/         the game's executable (rarely touched)
@@ -99,7 +99,7 @@ An agent does the same without the mouse: `MyGameEditor --exec` with the editor'
 Add an entity with an **Environment**: the level is now drawn in HDR. Lower its Ambient Intensity, add
 a **Light2D** on another entity, and a **ShadowCaster2D** to the sprite: it casts a shadow when the
 light's `bCastShadows` is on. The Environment also turns on ambient occlusion and bloom; a **Material2D**
-data asset gives a sprite a normal map or a glow. TestWorld's Lighting level (`TestWorld/Assets/Maps`)
+asset gives a sprite a normal map or a glow. TestWorld's Lighting level (`TestWorld/Assets/Maps`)
 uses all of it.
 
 ## 5. Test it
@@ -138,5 +138,5 @@ save first.
 
 ## Next
 
-[Customizing.md](Customizing.md) covers subsystems, data assets, the renderer and the editor's own
+[Customizing.md](Customizing.md) covers subsystems, asset classes, the renderer and the editor's own
 extension points.

@@ -10,7 +10,7 @@
                         "z": 1.0
                     },
                     "Face": "",
-                    "Font": "/Engine/Fonts/Roboto.opaaxfont",
+                    "Font": "/Engine/Fonts/Roboto.opaaxasset",
                     "Layer": "Foreground",
                     "LineHeightScale": 1.0,
                     "OrderInLayer": 0,
@@ -51,7 +51,7 @@
                         "z": 0.3499999940395355
                     },
                     "Face": "",
-                    "Font": "/Engine/Fonts/Roboto.opaaxfont",
+                    "Font": "/Engine/Fonts/Roboto.opaaxasset",
                     "Layer": "Foreground",
                     "LineHeightScale": 1.0,
                     "OrderInLayer": 0,
@@ -131,7 +131,7 @@
                         "z": 1.0
                     },
                     "Face": "",
-                    "Font": "/Engine/Fonts/Roboto.opaaxfont",
+                    "Font": "/Engine/Fonts/Roboto.opaaxasset",
                     "Layer": "Foreground",
                     "LineHeightScale": 1.0,
                     "OrderInLayer": 0,

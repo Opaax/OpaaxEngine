@@ -27,21 +27,13 @@ namespace Opaax
         class InputRoute;               // whether the engine is fed input
         class EditorMapDocument;        // the focused map
         class EditorLevelDocument;      // the open level and whether it changed
-        class EditorSpriteSheetDocument;// the open .opaaxsheet and its data
-        class EditorAnimationClipDocument; // the open .opaaxclip and its data
-        class EditorAnimationLibraryDocument; // the open .opaaxanim and its data
-        class EditorFontFamilyDocument;       // the open .opaaxfont and its data
-        class EditorUICanvasDocument;         // the open .opaaxui and its canvas
-        class EditorMoveModeDocument;         // the open .opaaxmovemode and its data
-        class EditorMoverDocument;            // the open .opaaxmover and its data
-        class EditorInputActionDocument;      // the open .opaaxaction and its data
-        class EditorInputMappingContextDocument; // the open .opaaxinputmap and its data
-        class EditorDataAssetDocument;        // the open .opaaxdata, any registered type
+        class EditorUICanvasDocument;   // the open .opaaxui and its canvas
         class EditorExtensionRegistrar; // the sealed extension routes
         class EditorPaths;              // IPaths subclass: the editor directories
         class EditorPanels;             // live panels and visibility
         class GameExport;               // exporting the game, in the background
         class ResourcePreview;          // which resource a double-click asked to preview
+        class AssetEditors;             // the open .opaaxasset files, a window each
 
         // =============================================================================
         // EditorContext — references to editor and engine systems, built once by EditorService and
@@ -102,37 +94,8 @@ namespace Opaax
             // The focused map (see EditorMapDocument).
             EditorMapDocument& MapDocument;
 
-            // The open sprite sheet. Owns its data: the ResourceManager's copy is what the renderer draws,
-            // so editing it would change the running game.
-            EditorSpriteSheetDocument& SheetDocument;
-
-            // The open animation clip. Owns its data (a playing entity uses the ResourceManager's copy).
-            // Save publishes it.
-            EditorAnimationClipDocument& ClipDocument;
-
-            // The open animation library (short names -> clips). Owns its data.
-            EditorAnimationLibraryDocument& LibraryDocument;
-
-            // The open font family ((subset, weight, width, slant) -> .ttf). Owns its data.
-            EditorFontFamilyDocument& FamilyDocument;
-
             // The open .opaaxui. Owns a real UICanvas: the panel previews it by rendering it.
             EditorUICanvasDocument& UICanvasDocument;
-
-            // The open movement tuning (.opaaxmovemode).
-            EditorMoveModeDocument& MoveModeDocument;
-
-            // The open mover (short names -> tunings).
-            EditorMoverDocument& MoverDocument;
-
-            // The open input action. It names no keys (mapping contexts do).
-            EditorInputActionDocument& InputActionDocument;
-
-            // The open mapping context: which keys reach which actions (what a rebind edits).
-            EditorInputMappingContextDocument& InputMapDocument;
-
-            // The open data asset (.opaaxdata), whatever struct it holds.
-            EditorDataAssetDocument& DataAssetDocument;
 
             // The sealed extension routes (Inspector: Drawers(), Resource Browser: ResourceTypes()).
             // Const: registration is closed before this context is built.
@@ -160,6 +123,9 @@ namespace Opaax
 
             // Exporting the edited game into a folder that runs elsewhere (File > Export Game, automation).
             GameExport& Export;
+
+            // The open assets, whatever their class: one window, one history and one Save each.
+            AssetEditors& Assets;
         };
     }
 }

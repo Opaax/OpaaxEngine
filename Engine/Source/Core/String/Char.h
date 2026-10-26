@@ -27,6 +27,16 @@ namespace Opaax::Char
         return IsAlpha(InChar) || IsDigit(InChar);
     }
 
+    constexpr bool IsUpper(const char InChar) noexcept
+    {
+        return InChar >= 'A' && InChar <= 'Z';
+    }
+
+    constexpr bool IsLower(const char InChar) noexcept
+    {
+        return InChar >= 'a' && InChar <= 'z';
+    }
+
     constexpr char ToLower(const char InChar) noexcept
     {
         return (InChar >= 'A' && InChar <= 'Z') ? static_cast<char>(InChar - 'A' + 'a') : InChar;

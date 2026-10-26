@@ -5,7 +5,12 @@
 
 #include "Application/Services/IJobSystem.h"
 #include "Application/Services/IPaths.h"
+#include "Audio/AudioBank.h"
+#include "Audio/AudioClipDef.h"
 #include "Core/IO/FileIO.h"
+#include "Core/IO/FileSystem.h"
+#include "Object/ObjectClassRegistry.h"
+#include "Resources/Asset/AssetFile.h"
 #include "Core/Maths/Maths.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxPathString.h"
@@ -121,4 +126,28 @@ namespace AudioTest
     private:
         Opaax::TDynArray<Opaax::TPair<Opaax::TFunction<void()>, Opaax::TFunction<void()>>> m_Jobs;
     };
+
+    /** The audio asset classes, as the engine registers them. */
+    struct AudioClassRegistry final : Opaax::ObjectClassRegistry
+    {
+        AudioClassRegistry()
+        {
+            Register<Opaax::AudioClipDef>();
+            Register<Opaax::AudioBank>();
+        }
+    };
+
+    /** What a resource manager reads the audio suites' asset files with. */
+    inline const Opaax::ObjectClassRegistry& AudioClasses()
+    {
+        static const AudioClassRegistry s_Classes;
+        return s_Classes;
+    }
+
+    /** Writes InAsset at InPath, its folders created. */
+    inline bool SaveAsset(const Opaax::OpaaxString& InPath, const Opaax::Asset& InAsset)
+    {
+        Opaax::FileSystem::CreateDirectories(Opaax::PathString::Parent(InPath));
+        return Opaax::AssetFile::Save(InPath, InAsset);
+    }
 }

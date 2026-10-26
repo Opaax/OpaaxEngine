@@ -47,6 +47,9 @@ namespace Opaax
          */
         template<CResource TSub>
         ResourceRef<TSub> Acquire(const char* InPath); // defined in ResourceManager.h
+
+        /** The manager this load runs for (what a loader reads its settings from). */
+        ResourceManager& GetManager() const noexcept { return m_Manager; }
         
         /**
          * Marks a path as loading.

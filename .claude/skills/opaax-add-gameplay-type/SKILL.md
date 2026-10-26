@@ -1,6 +1,6 @@
 ---
 name: opaax-add-gameplay-type
-description: Add a component, behaviour, world or game instance subsystem, data asset or resource type to the Opaax engine or to a game, with its registration, editor support, tests and a TestWorld check. Use when the task adds gameplay data or logic.
+description: Add a component, behaviour, world or game instance subsystem, asset class or resource type to the Opaax engine or to a game, with its registration, editor support, tests and a TestWorld check. Use when the task adds gameplay data or logic.
 ---
 
 # Add a gameplay type
@@ -13,7 +13,7 @@ description: Add a component, behaviour, world or game instance subsystem, data 
 | Logic on an entity (update, events, timers) | behaviour (derives from `Opaax::Behaviour`) | `OPAAX_REGISTER_BEHAVIOUR(T)` |
 | Logic for a whole world | world subsystem (`WorldSubsystemBase`) | `OPAAX_REGISTER_WORLD_SUBSYSTEM_ORDERED(T, WorldSubsystemOrder::X)` |
 | Logic across levels | game instance subsystem | `OPAAX_REGISTER_GAME_INSTANCE_SUBSYSTEM(T)` |
-| Shared tuning data in a file | data asset (`.opaaxdata`) | `OPAAX_REGISTER_DATA_ASSET(T)` |
+| Shared tuning data in a file | asset class (`Opaax::Asset` + `OPAAX_OBJECT`, `.opaaxasset` files) | `OPAAX_REGISTER_OBJECT(T)` |
 | A file format of its own | resource | `OPAAX_REGISTER_RESOURCE(T)` |
 
 Engine types go in their module (`Engine/Source/<Module>/`) and register in the module's
@@ -30,6 +30,20 @@ Engine types go in their module (`Engine/Source/<Module>/`) and register in the 
   `SetVelocity`/`AddImpulse`, `RayCast`/`OverlapBox`. Never the EnTT registry.
 - Subsystems: `OPAAX_SUBSYSTEM_TYPE(T)`, a constructor taking `WorldContext&`, `Startup`/`Shutdown`,
   optional `static bool ShouldCreate(const World&)` (Play-only systems check the world's mode).
+- Asset classes (Docs/Objects.md): `class T final : public Opaax::Asset` with `OPAAX_OBJECT(T, Asset)`
+  and `OPAAX_PROPERTIES`. A list field holds structs with `OPAAX_PROPERTIES` and
+  `NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT`. Another asset is a `TAssetRef<U>` field: include
+  `U`'s header in an asset's header (a component forward-declares it, its registration file includes
+  it). Users load with `LoadAsset(Resources, Paths, Ref)` and keep the `TAssetHandle`. Fixes after an
+  edit go in `PostEditChange`, hidden fields in `IsPropertyVisible`; named entries pointing at other
+  assets use `Resources/Asset/NamedAssetEntries.h`. It replaces an old file format: one line in
+  `AssetMigration::GetLegacyFormats`, then `TestWorldEditor` and `SandboxEditor` with
+  `--upgrade-assets --exec <a script that sends app.quit>`.
+- An asset's editor look: `AssetTypes().Register<T>()` with `SetLabel`, `SetCategory`, `SetGlyph`
+  (engine: `EditorService::RegisterNativeAssetTypes`; a game: its editor module's `OnRegister`). A
+  custom editor (`IAssetEditor`, `SetEditor<E>()`) only when a field list is not enough: it edits the
+  asset directly, the window does undo and Save; keep its logic in a pure header beside it
+  (`Editor/Assets/Editors/*Editing.h`) and keep an ImGui item active during a drag.
 - Style: AGENTS.md (prefixes, banners, short plain comments).
 
 ## Test it
@@ -41,3 +55,9 @@ Engine types go in their module (`Engine/Source/<Module>/`) and register in the 
    feature's script (`TestWorld/Tests`). Run `ctest -L feature`.
 3. In the editor: create one through automation (`entity.create` with `components`), check
    `entity.get`, undo it; or open the Inspector by hand.
+4. An asset class: a round trip through `AssetFile::Save` and `AssetFile::LoadAsset` with a local
+   `ObjectClassRegistry` registering it, a file missing a property (default kept), a wrong type
+   (refused), its hooks called directly, and an old format with `ConvertAndLoad`
+   (`Engine/Tests/LegacyAssetFile.h`). Objects cannot be copied: build them in place. In the editor,
+   steps in `TestWorld/EditorTests/Assets.json`: `asset.open` or `asset.new`, `asset.set` and
+   `expect`, a screenshot of its window, `asset.close` with `discard`.

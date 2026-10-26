@@ -43,7 +43,7 @@
         "params": {
             "entity": "BumpyPanel",
             "path": "Sprite/Material",
-            "equals": "Materials/Bumpy.opaaxdata"
+            "equals": "Materials/Bumpy.opaaxasset"
         }
     },
     {

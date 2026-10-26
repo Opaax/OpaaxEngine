@@ -14,7 +14,7 @@ namespace TestWorld
     // =============================================================================
     // UIProbe — mounts the canvas Asset on the game's UI while it lives. Counts the clicks on its
     //   ClickButton, which its Counter text shows through a binding ("Probe.Clicks"), and the Click
-    //   action (the left button, Input/UITest.opaaxinputmap) the game itself gets: a click the UI
+    //   action (the left button, Input/UITest.opaaxasset) the game itself gets: a click the UI
     //   handled does not reach the game.
     // =============================================================================
     class UIProbe : public Opaax::Behaviour
@@ -56,7 +56,7 @@ namespace TestWorld
 
             if (Opaax::InputMappingSubsystem* const lActions = GetContext().Actions)
             {
-                lActions->AddContextAsset(OPAAX_ID("UITest"), Opaax::OpaaxString("Input/UITest.opaaxinputmap"));
+                lActions->AddContextAsset(OPAAX_ID("UITest"), Opaax::OpaaxString("Input/UITest.opaaxasset"));
             }
             BindAction<&UIProbe::OnGameClick>(OPAAX_ID("Click"), Opaax::EInputTrigger::Started);
         }

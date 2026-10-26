@@ -329,6 +329,7 @@ namespace Opaax
         if (m_Resources != nullptr)
         {
             m_Resources->SetJobSystem(OpaaxApplication::GetAppService<IJobSystem>());
+            m_Resources->SetObjectClasses(&m_Registries.ObjectClasses());
         }
         
         BindToWorldMgrEvents();

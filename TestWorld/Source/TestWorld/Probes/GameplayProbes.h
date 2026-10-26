@@ -16,7 +16,7 @@ namespace TestWorld
 {
     // =============================================================================
     // InputProbe — counts Space presses by polling the keyboard, and the Fire action (F, from
-    //   Input/Test.opaaxinputmap, which it adds) through BindAction.
+    //   Input/Test.opaaxasset, which it adds) through BindAction.
     // =============================================================================
     class InputProbe : public Opaax::Behaviour
     {
@@ -30,7 +30,7 @@ namespace TestWorld
         {
             if (Opaax::InputMappingSubsystem* lActions = GetContext().Actions)
             {
-                lActions->AddContextAsset(OPAAX_ID("Test"), Opaax::OpaaxString("Input/Test.opaaxinputmap"));
+                lActions->AddContextAsset(OPAAX_ID("Test"), Opaax::OpaaxString("Input/Test.opaaxasset"));
             }
             BindAction<&InputProbe::OnFire>(OPAAX_ID("Fire"), Opaax::EInputTrigger::Started);
         }
@@ -47,7 +47,7 @@ namespace TestWorld
     };
 
     // =============================================================================
-    // ControlsProbe — reads the Move action (an Axis2D from WASD, Input/Controls.opaaxinputmap, which
+    // ControlsProbe — reads the Move action (an Axis2D from WASD, Input/Controls.opaaxasset, which
     //   it adds) every way a behaviour can: its value, polled phases and bound handlers for each
     //   trigger; the D key raw; and a Hold on the Charge action (Space).
     // =============================================================================
@@ -78,7 +78,7 @@ namespace TestWorld
         {
             if (Opaax::InputMappingSubsystem* lActions = GetContext().Actions)
             {
-                lActions->AddContextAsset(OPAAX_ID("Controls"), Opaax::OpaaxString("Input/Controls.opaaxinputmap"));
+                lActions->AddContextAsset(OPAAX_ID("Controls"), Opaax::OpaaxString("Input/Controls.opaaxasset"));
             }
             BindAction<&ControlsProbe::OnMoveStarted>(OPAAX_ID("Move"), Opaax::EInputTrigger::Started);
             BindAction<&ControlsProbe::OnMoveCompleted>(OPAAX_ID("Move"), Opaax::EInputTrigger::Completed);
@@ -239,7 +239,7 @@ namespace TestWorld
     class StepsProbe : public Opaax::Behaviour
     {
     public:
-        Opaax::TDataAssetRef<Opaax::AudioClipDef> Steps;
+        Opaax::TAssetRef<Opaax::AudioClipDef> Steps;
 
         bool         bPlayed     = false;
         bool         bNeverTwice = false;
@@ -251,8 +251,8 @@ namespace TestWorld
         {
             bPlayed = PlaySound(Steps.Path).IsValid();
 
-            const Opaax::TDataAssetHandle<Opaax::AudioClipDef> lSteps = Opaax::LoadDataAsset(GetContext().Resources,
-                                                                                               GetContext().Paths, Steps);
+            const Opaax::TAssetHandle<Opaax::AudioClipDef> lSteps = Opaax::LoadAsset(GetContext().Resources,
+                                                                                     GetContext().Paths, Steps);
             const Opaax::AudioSubsystem* lAudio = GetSubsystem<Opaax::AudioSubsystem>();
             if (lSteps.Get() == nullptr || lAudio == nullptr || lAudio->GetAudio() == nullptr)
             {
