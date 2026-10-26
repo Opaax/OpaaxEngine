@@ -1,9 +1,7 @@
 #pragma once
 
-#include "Core/Config/IConfig.h"                // the second subject
 #include "Core/OpaaxTypes.h"                    // TFunction, TDynArray, Uint64
 #include "World/Entity/Entity.h"                // Entity::TryGet
-#include "UI/UIWidget.h"                        // the third subject
 #include "Engine/Registries/ModuleRegistrar.h"     // DeriveTypeLeafName (a section's label)
 #include "Editor/Properties/PropertyDrawers.h"  // the built-in widgets
 
@@ -31,12 +29,10 @@ namespace Opaax::Editor
 
     // =============================================================================
     // TDrawerResolver<TSubject, TTarget> — whether a drawer applies to a subject, and what it draws.
-    //   Declared, never defined: an unknown subject is a compile error. One specialization per subject
-    //   (components, configs, UI widgets) lets a single registry serve them all.
-    //     DrawableType   what the drawer operates on (a component is the target; a config holds its data)
+    //   Declared, never defined: an unknown subject is a compile error. One specialization per subject.
+    //     DrawableType   what the drawer operates on (a component is the target)
     //     Resolve        null when the entry does not apply to that subject
-    //     bDrawsSection  whether the entry draws its own header (the Inspector stacks many components;
-    //                    the Config panel already names the config)
+    //     bDrawsSection  whether the entry draws its own header (the Inspector stacks many components)
     // =============================================================================
     template<typename TSubject, typename TTarget>
     struct TDrawerResolver;
@@ -52,45 +48,15 @@ namespace Opaax::Editor
         static DrawableType* Resolve(Entity& InSubject) { return InSubject.TryGet<TTarget>(); }
     };
 
-    /**
-     * UI widgets: a widget arrives as a base reference, so the check is a cast. No section header:
-     * the panel already names the type above the fields.
-     */
-    template<typename TTarget>
-    struct TDrawerResolver<UIWidget, TTarget>
-    {
-        using DrawableType = TTarget;
-
-        static constexpr bool bDrawsSection = false;
-
-        static DrawableType* Resolve(UIWidget& InSubject) { return dynamic_cast<TTarget*>(&InSubject); }
-    };
-
-    /** Configs: a config knows its own type id, so the check is an integer compare. */
-    template<typename TTarget>
-    struct TDrawerResolver<IConfig, TTarget>
-    {
-        using DrawableType = typename TTarget::DataType;
-
-        static constexpr bool bDrawsSection = false;
-
-        static DrawableType* Resolve(IConfig& InSubject)
-        {
-            return InSubject.GetConfigTypeID() == TTarget::StaticTypeID()
-                       ? &static_cast<TTarget&>(InSubject).GetData()
-                       : nullptr;
-        }
-    };
-
     // =============================================================================
-    // TDrawerRegistry — the storage behind Drawers(), ConfigDrawers() and WidgetDrawers().
+    // TDrawerRegistry — the storage behind Drawers().
     //   Registration wraps <TTarget, TDrawer> into a bool(TSubject&) closure that checks itself through
     //   TDrawerResolver. So the Inspector never asks an entity what components it has: it asks every
     //   drawer whether it applies. Registration order is display order.
     //   Register<TTarget, TDrawer>() uses hand-written UI; Register<TTarget>() builds a default drawer
     //   from the type's property list (OPAAX_PROPERTIES).
     //   A TDrawer needs no base class: default-constructible with
-    //   void Draw(IEditorWidgets&, DrawableType&). Example: EditorImguiConfigDrawer.
+    //   void Draw(IEditorWidgets&, DrawableType&).
     //   Registration only stores; nothing is constructed (it runs before any world exists).
     // =============================================================================
     template<typename TSubject>
@@ -203,7 +169,7 @@ namespace Opaax::Editor
 
         /**
          * Draws the first applicable entry.
-         * @return False when nothing applied (the Config panel then falls back to its json view)
+         * @return False when nothing applied
          */
         bool DrawFirst(TSubject& InSubject, IEditorWidgets& InWidgets, EditorContext& InContext) const
         {
@@ -235,8 +201,6 @@ namespace Opaax::Editor
         TDynArray<TypeId> m_TargetTypeIds;
     };
 
-    // Named per use: Drawers() / ConfigDrawers().
+    // Named per use: Drawers().
     using ComponentDrawerRegistry = TDrawerRegistry<Entity>;
-    using UIWidgetDrawerRegistry  = TDrawerRegistry<UIWidget>;
-    using ConfigDrawerRegistry    = TDrawerRegistry<IConfig>;
 }

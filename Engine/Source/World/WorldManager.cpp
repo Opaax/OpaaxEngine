@@ -99,7 +99,7 @@ namespace Opaax
     {
         while (!m_Worlds.empty())
         {
-            DestroyWorld(m_Worlds.back().get());
+            DestroyWorld(m_Worlds.back().Get());
         }
     }
 
@@ -114,7 +114,7 @@ namespace Opaax
     // =========================================================================
     // World lifetime
     // =========================================================================
-    World* WorldManager::CreateWorld(OpaaxString InName, EWorldMode InMode)
+    World* WorldManager::CreateWorld(const OpaaxStringID InName, EWorldMode InMode)
     {
         // Seal here: this is what makes a world exist (covers every CreateWorld, not only startup).
         if (m_Registries != nullptr)
@@ -122,14 +122,15 @@ namespace Opaax
             m_Registries->SealAll();
         }
 
-        m_Worlds.emplace_back(MakeUnique<World>(Move(InName), InMode));
-        World* lWorld = m_Worlds.back().get();
+        // The name twice: the object's, then the constructor's (which names a world made without NewObject).
+        m_Worlds.emplace_back(NewObject<World>(InName, InName, InMode));
+        World* lWorld = m_Worlds.back().Get();
 
         // Level before subsystems: subsystems receive the world. No Level for a bare test manager.
         if (m_Registries != nullptr && m_Paths != nullptr && m_Resources != nullptr)
         {
-            lWorld->SetLevel(MakeUnique<Level>(*lWorld, m_Registries->Components(),
-                                               *m_Paths, *m_Resources, m_Registries->Resources()));
+            lWorld->SetLevel(NewObject<Level>(InName, *lWorld, m_Registries->Components(),
+                                              *m_Paths, *m_Resources, m_Registries->Resources()));
         }
 
         CreateSubsystemsFor(*lWorld);
@@ -188,11 +189,11 @@ namespace Opaax
         // Collected first: DestroyWorld changes m_Worlds.
         TDynArray<World*> lDoomed;
 
-        for (const TUniquePtr<World>& lWorld : m_Worlds)
+        for (const TStrongObjectPtr<World>& lWorld : m_Worlds)
         {
             if (lWorld != nullptr && lWorld->GetMode() == InMode)
             {
-                lDoomed.emplace_back(lWorld.get());
+                lDoomed.emplace_back(lWorld.Get());
             }
         }
 
@@ -208,7 +209,7 @@ namespace Opaax
     {
         Uint64 lCount = 0;
 
-        for (const TUniquePtr<World>& lWorld : m_Worlds)
+        for (const TStrongObjectPtr<World>& lWorld : m_Worlds)
         {
             if (lWorld != nullptr && lWorld->GetMode() == InMode)
             {
@@ -253,29 +254,30 @@ namespace Opaax
         InWorld.SetContext(WorldContext{InWorld, *m_Resources, *m_Paths, *m_Events, *m_Input, *m_Config,
                                         lActions, lUI, *m_Debug, &m_Registries->Components(), m_Audio, lGame});
 
-        WorldContext* lContext = InWorld.GetContext();
-        OPAAX_ASSERT(lContext != nullptr);
+        OPAAX_ASSERT(InWorld.GetContext() != nullptr);
 
-        // Take the types this world qualifies for (ShouldCreate); rejected ones are never built.
+        // Take the classes this world qualifies for (ShouldCreate); refused ones are never made.
+        const TDynArray<const ObjectClass*> lClasses =
+            CollectSubsystemClasses(m_Registries->ObjectClasses(), WorldSubsystem::StaticClass());
+
         Uint64 lCreated = 0;
 
-        m_Registries->WorldSubsystems().ForEach([&](const IWorldSubsystemEntry& InEntry)
+        for (const ObjectClass* lClass : lClasses)
         {
-            if (!InEntry.ShouldCreate(InWorld))
-            {
-                return;
-            }
+            const WorldSubsystem* lDefault = Cast<WorldSubsystem>(lClass->GetDefaultObject());
 
-            InEntry.CreateInto(InWorld.GetSubsystems(), *lContext);
-            ++lCreated;
-        });
+            if (lDefault != nullptr && lDefault->ShouldCreate(InWorld) && InWorld.GetSubsystems().Add(*lClass))
+            {
+                ++lCreated;
+            }
+        }
 
         // Create all, then start all, so a subsystem can find another during its Startup.
         InWorld.GetSubsystems().StartupAll();
 
-        OPAAX_LOG(LogWorldManager, Trace, "World '{}' ({}) — {} of {} subsystem candidate(s) created",
+        OPAAX_LOG(LogWorldManager, Trace, "World '{}' ({}) — {} of {} subsystem class(es) created",
                   InWorld.GetName().CStr(), ToString(InWorld.GetMode()),
-                  lCreated, m_Registries->WorldSubsystems().Count());
+                  lCreated, static_cast<Uint64>(lClasses.size()));
     }
 
     void WorldManager::DestroyWorld(World* InWorld)
@@ -302,7 +304,7 @@ namespace Opaax
 
         for (auto lIt = m_Worlds.begin(); lIt != m_Worlds.end(); ++lIt)
         {
-            if (lIt->get() == InWorld)
+            if (lIt->Get() == InWorld)
             {
                 m_Worlds.erase(lIt);
                 break;

@@ -4,7 +4,7 @@
 // The budget is the audio design's: under 1 ms per block of 256 frames (5.3 ms of sound).
 #include <doctest.h>
 
-#include "Audio/AudioClipResource.h"
+#include "Audio/AudioClip.h"
 #include "Audio/AudioManager.h"
 
 #include "PerfBench.h"
@@ -29,18 +29,17 @@ TEST_SUITE("perf" * doctest::skip())
         REQUIRE(lAudio.Startup());
 
         // The music: decoded while it plays, resampled from 44.1 kHz.
-        TOptional<AudioClipResource> lMusic = AudioClipResource::FromMemory(AudioTest::MakeWav(44100, 180.f, 220.f),
-                                                                            "Music", AudioClipResource::EResidency::Streamed);
-        REQUIRE(lMusic.has_value());
+        AudioClip lMusic;
+        REQUIRE(lMusic.LoadFromMemory(AudioTest::MakeWav(44100, 180.f, 220.f), "Music", AudioClip::EResidency::Streamed));
 
         PlaySoundParams lMusicParams;
         lMusicParams.Bus   = OPAAX_ID("Music");
         lMusicParams.bLoop = true;
-        REQUIRE(lAudio.Play(*lMusic, lMusicParams).IsValid());
+        REQUIRE(lAudio.Play(lMusic, lMusicParams).IsValid());
 
         // Thirty spatial effects around the listener, each at its own pitch (each resampled).
-        TOptional<AudioClipResource> lEffect = AudioClipResource::FromMemory(AudioTest::MakeWav(44100, 0.5f, 660.f), "Effect");
-        REQUIRE(lEffect.has_value());
+        AudioClip lEffect;
+        REQUIRE(lEffect.LoadFromMemory(AudioTest::MakeWav(44100, 0.5f, 660.f), "Effect"));
         for (Uint32 lIndex = 0; lIndex < 30; ++lIndex)
         {
             PlaySoundParams lParams;
@@ -48,7 +47,7 @@ TEST_SUITE("perf" * doctest::skip())
             lParams.bSpatial = true;
             lParams.Pitch    = 0.9f + 0.01f * static_cast<float>(lIndex);
             lParams.Position = Vector2F{ -600.f + 40.f * static_cast<float>(lIndex), 0.f };
-            REQUIRE(lAudio.Play(*lEffect, lParams).IsValid());
+            REQUIRE(lAudio.Play(lEffect, lParams).IsValid());
         }
 
         TDynArray<float> lOut(static_cast<size_t>(BLOCK) * 2);

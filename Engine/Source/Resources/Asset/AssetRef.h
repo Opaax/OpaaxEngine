@@ -2,20 +2,44 @@
 
 #include <nlohmann/json.hpp>
 
+#include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringJson.h"
+#include "Core/Templates/TypeTraits.h"
 
 namespace Opaax
 {
     // =============================================================================
-    // TAssetRef<T> — a field that names an .opaaxasset holding a T (or a subclass of T). Saved as its
-    //   path. The editor draws it as a drop target that refuses assets of other classes.
-    //   Load it with LoadAsset (AssetHandle.h).
+    // EResourceLoad — when a referenced asset is loaded (like Unreal's TObjectPtr / TSoftObjectPtr).
+    //   Part of the type, not saved in the file.
     // =============================================================================
-    template<typename T>
+    enum class EResourceLoad : Uint8
+    {
+        /**
+         * Loaded when first asked for. The default. The only option for a prefab that references itself.
+         */
+        Soft,
+
+        /**
+         * Loaded with the map that holds it, and kept while it is mounted (e.g. a gun's bullet prefab,
+         * so the first shot does not stall). Cycles are refused.
+         */
+        Hard,
+    };
+
+    // =============================================================================
+    // TAssetRef<T> — a field that names an asset file holding a T (or a subclass of T): an .opaaxasset,
+    //   or a file a class reads (a .png for a Texture2D). Saved as its path. The editor draws it as a drop
+    //   target that refuses assets of other classes. Load it with LoadAsset (AssetHandle.h).
+    //   TLoad says when: Soft (the default) when first loaded by code, Hard with the map that holds it.
+    // =============================================================================
+    template<typename T, EResourceLoad TLoad = EResourceLoad::Soft>
     struct TAssetRef
     {
         using AssetType = T;
+
+        /** When the asset is loaded. See EResourceLoad. */
+        static constexpr EResourceLoad LoadPolicy = TLoad;
 
         /** Lets the property visitor recognise the field without depending on this header. */
         static constexpr bool k_IsAssetRef = true;
@@ -29,14 +53,31 @@ namespace Opaax
         bool operator!=(const TAssetRef& InOther) const noexcept { return !(*this == InOther); }
     };
 
+    /**
+     * An asset loaded with the map that holds it, and kept while the map is mounted (a gun's bullet
+     * prefab, so the first shot does not stall). Cycles are refused.
+     */
     template<typename T>
-    void to_json(nlohmann::json& InJson, const TAssetRef<T>& InValue)
+    using THardAssetRef = TAssetRef<T, EResourceLoad::Hard>;
+
+    /** True if T is a hard asset reference. */
+    template<typename T>
+    struct TIsHardAssetRef : FalseType {};
+
+    template<typename T>
+    struct TIsHardAssetRef<TAssetRef<T, EResourceLoad::Hard>> : TrueType {};
+
+    template<typename T>
+    inline constexpr bool k_IsHardAssetRef = TIsHardAssetRef<T>::value;
+
+    template<typename T, EResourceLoad TLoad>
+    void to_json(nlohmann::json& InJson, const TAssetRef<T, TLoad>& InValue)
     {
         InJson = InValue.Path;
     }
 
-    template<typename T>
-    void from_json(const nlohmann::json& InJson, TAssetRef<T>& InValue)
+    template<typename T, EResourceLoad TLoad>
+    void from_json(const nlohmann::json& InJson, TAssetRef<T, TLoad>& InValue)
     {
         InJson.get_to(InValue.Path);
     }

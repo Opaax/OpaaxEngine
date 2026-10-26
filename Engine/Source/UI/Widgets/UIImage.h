@@ -6,19 +6,15 @@
 #include "Core/Reflection/OpaaxEnum.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
+#include "Renderer/Textures/SpriteSheet.h"   // complete: a widget class visits its sheet reference
+#include "Renderer/Textures/Texture2D.h"     // and its texture reference
 #include "Resources/Asset/AssetRef.h"
-#include "Resources/ResourcePath.h"
-#include "Resources/ResourcePathJson.h"
 #include "UI/UIMargin.h"
 #include "UI/UIWidget.h"
 
 namespace Opaax
 {
     class ITexture2D;
-
-    // Forward-declared: a path or an asset reference only needs the name.
-    struct TextureResource;
-    class SpriteSheet;
 
     /** How FillAmount crops the image. None ignores it. */
     enum class EUIFill : Uint8
@@ -46,6 +42,8 @@ namespace Opaax
     // =============================================================================
     class UIImage final : public UIWidget
     {
+        OPAAX_OBJECT(UIImage, UIWidget)
+
         // =============================================================================
         // Authored state
         // =============================================================================
@@ -57,7 +55,7 @@ namespace Opaax
         OpaaxString FillBinding;
 
         /** A texture path (accepts a dropped .png). */
-        TResourcePath<TextureResource> Texture;
+        TAssetRef<Texture2D> Texture;
 
         /** A sheet path. Wins over Texture. */
         TAssetRef<SpriteSheet> Sheet;
@@ -99,11 +97,6 @@ namespace Opaax
         // UIWidget
         // =============================================================================
     public:
-        OpaaxStringID GetTypeName() const noexcept override { return OPAAX_ID("UIImage"); }
-
-        void SaveFields(nlohmann::json& InOutJson) const override;
-        void LoadFields(const nlohmann::json& InJson) override;
-
         void OnPullBindings(UIBindingTable& InBindings) override;
 
     protected:

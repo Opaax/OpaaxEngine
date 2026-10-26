@@ -56,7 +56,7 @@ namespace Opaax
         OPAAX_STAT_SCOPE("ColliderDebug");
 
         // Checked once: a hidden channel costs a lookup, not a walk of every entity.
-        if (!m_Context->Debug.IsChannelEnabled(DebugChannels::Physics))
+        if (!GetContext().Debug.IsChannelEnabled(DebugChannels::Physics))
         {
             m_LastDrawn = 0;
             return;
@@ -64,7 +64,7 @@ namespace Opaax
 
         Uint64 lDrawn = 0;
 
-        World& lWorld = m_Context->OwningWorld;
+        World& lWorld = GetContext().OwningWorld;
 
         lWorld.Each<ColliderComponent, TransformComponent>(
             [this, &lWorld, &lDrawn](EntityID InEntity, ColliderComponent& InCollider, TransformComponent&)
@@ -83,7 +83,7 @@ namespace Opaax
     void ColliderDebugSubsystem::DrawCollider(const ColliderComponent& InCollider,
                                               const TransformComponent& InTransform)
     {
-        DebugDraw& lDebug = m_Context->Debug;
+        DebugDraw& lDebug = GetContext().Debug;
 
         const float    lRadians = Maths::DegreesToRadians(InTransform.Rotation);
         const Vector2F lCenter  = InTransform.Position + RotateOffset(InCollider.Offset, lRadians);

@@ -1,13 +1,15 @@
 #pragma once
 
 #include "Core/Log/Logger.h"
-#include "Core/Config/IConfig.h"          // ConfigTypeID
 #include "Core/String/OpaaxString.hpp"
 #include "Editor/Panels/ConfigChangeTracker.h"
 #include "Editor/Panels/IEditorPanel.h"
 
 namespace Opaax
 {
+    class Config;
+    class ObjectClass;
+
     OPAAX_LOG_CATEGORY(ConfigPanel);
 }
 
@@ -18,8 +20,8 @@ namespace Opaax::Editor
     // =============================================================================
     // ConfigPanel — every registered config on the left, the current one on the right (like Unreal's
     //   Project Settings). The list is read every frame (configs can register at any time).
-    //   The right side uses a registered drawer, or shows IConfig::ToText() for unknown configs.
-    //   Dirty is derived from the text.
+    //   The right side draws the config's values from their properties, or shows its text when they
+    //   have none. Dirty is derived from the text.
     // =============================================================================
     class ConfigPanel final : public IEditorPanel
     {
@@ -50,15 +52,15 @@ namespace Opaax::Editor
         void DrawList();
 
         /** InConfig's name, file and values. */
-        void DrawCurrent(IConfig& InConfig);
+        void DrawCurrent(Config& InConfig);
 
-        /** The Save button. */
-        void DrawSaveBar(IConfig& InConfig, const OpaaxString& InCurrentText);
+        /** The Save and Reset to Defaults buttons. */
+        void DrawSaveBar(Config& InConfig, const OpaaxString& InCurrentText);
 
         /**
-         * The config shown on the right, looked up by id every frame. Falls back to the first one.
+         * The config shown on the right, looked up by class every frame. Falls back to the first one.
          */
-        IConfig* ResolveCurrent() const;
+        Config* ResolveCurrent() const;
 
         // =============================================================================
         // Override
@@ -88,11 +90,11 @@ namespace Opaax::Editor
         /** Width of the list pane. */
         static constexpr float LIST_WIDTH = 160.f;
 
-        // The current config's id. Zero until something is clicked (then the first one is shown).
-        ConfigTypeID m_Current = 0;
+        // The current config's class. Null until something is clicked (then the first one is shown).
+        const ObjectClass* m_Current = nullptr;
 
         // What the right side last showed, logged once per change.
-        ConfigTypeID m_Reported = 0;
+        const Config* m_Reported = nullptr;
 
         // The config's text when selected or last saved (the dirty baseline).
         OpaaxString m_Baseline;

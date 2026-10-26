@@ -11,18 +11,17 @@
 #include "Input/Mapping/InputMappingSubsystem.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Engine/Subsystems/EngineEventBus.h"
+#include "Resources/Asset/AssetHandle.h"
 #include "Resources/ResourceManager.h"
-#include "UI/UICanvasResource.h"
+#include "UI/UICanvasAsset.h"
 #include "UI/UIInputRouter.h"
 #include "UI/UICanvasFile.h"
 #include "UI/Widgets/UIImage.h"
 
 namespace Opaax
 {
-    UISubsystem::UISubsystem(GameInstanceContext& InContext) noexcept
-        : m_Context(&InContext)
-    {
-    }
+    UISubsystem::UISubsystem()  = default;
+    UISubsystem::~UISubsystem() = default;
 
     bool UISubsystem::Startup()
     {
@@ -38,27 +37,26 @@ namespace Opaax
 
         BuildLoadingCover();
 
-        m_Context->Events.GetEventBus().Subscribe<LevelLoadRequested>(this, &UISubsystem::OnLevelLoadRequested);
-        m_Context->Events.GetEventBus().Subscribe<LevelLoadFinished>(this, &UISubsystem::OnLevelLoadFinished);
+        GetContext().Events.GetEventBus().Subscribe<LevelLoadRequested>(this, &UISubsystem::OnLevelLoadRequested);
+        GetContext().Events.GetEventBus().Subscribe<LevelLoadFinished>(this, &UISubsystem::OnLevelLoadFinished);
 
         return true;
     }
 
-    TUniquePtr<UIWidget> UISubsystem::LoadTree(const OpaaxString& InAssetPath, float& OutAuthoredHeight) const
+    TStrongObjectPtr<UIWidget> UISubsystem::LoadTree(const OpaaxString& InAssetPath, float& OutAuthoredHeight) const
     {
-        const OpaaxString lAbsPath = m_Context->Paths.AssetToAbsolute(InAssetPath);
+        const TAssetHandle<UICanvasAsset> lHandle =
+            LoadAsset<UICanvasAsset>(GetContext().Resources, GetContext().Paths, InAssetPath);
+        const UICanvasAsset* const lCanvas = lHandle.Get();
 
-        const ResourceRef<UICanvasResource> lRef      = m_Context->Resources.Load<UICanvasResource>(lAbsPath.CStr());
-        const UICanvasResource* const       lResource = lRef.IsValid() ? lRef.Get() : nullptr;
-
-        if (lResource == nullptr)
+        if (lCanvas == nullptr)
         {
             OPAAX_LOG(LogUISubsystem, Error, "UI asset '{}' did not load", InAssetPath.CStr());
             return nullptr;
         }
 
-        TUniquePtr<UIWidget> lTree =
-            lResource->BuildTree(OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets(), OutAuthoredHeight);
+        TStrongObjectPtr<UIWidget> lTree =
+            lCanvas->BuildTree(OpaaxApplication::GetAppService<IEngine>().GetRegistries().ObjectClasses(), OutAuthoredHeight);
 
         if (!lTree)
         {
@@ -71,7 +69,7 @@ namespace Opaax
     UIWidget* UISubsystem::MountAsset(const OpaaxString& InAssetPath, UIWidget* InParent)
     {
         float lAuthoredHeight = 0.f;
-        TUniquePtr<UIWidget> lTree = LoadTree(InAssetPath, lAuthoredHeight);
+        TStrongObjectPtr<UIWidget> lTree = LoadTree(InAssetPath, lAuthoredHeight);
         if (!lTree)
         {
             return nullptr;   // LoadTree logged why
@@ -105,7 +103,7 @@ namespace Opaax
         {
             // Alone on its canvas, so the asset's own height is used.
             float lAuthoredHeight = 0.f;
-            if (TUniquePtr<UIWidget> lTree = LoadTree(lAsset, lAuthoredHeight))
+            if (TStrongObjectPtr<UIWidget> lTree = LoadTree(lAsset, lAuthoredHeight))
             {
                 m_LoadingCanvas.SetReferenceHeight(lAuthoredHeight);
                 lRoot.AddChild(Move(lTree));
@@ -118,7 +116,7 @@ namespace Opaax
             OPAAX_LOG(LogUISubsystem, Warn, "Loading screen '{}' did not load — a black cover stands in.", lAsset.CStr());
         }
 
-        auto lBlack = MakeUnique<UIImage>();
+        auto lBlack = NewObject<UIImage>();
         lBlack->Name = "Cover";
         lBlack->SetColor({ 0.f, 0.f, 0.f, 1.f });
 
@@ -168,7 +166,7 @@ namespace Opaax
 
         // Route the input to the canvas and report what the UI used, before input mapping runs.
         InputKeyMask lConsumed{};
-        UIInputRouter::Route(m_Context->Input, m_Canvas, m_InputMode, lConsumed);
+        UIInputRouter::Route(GetContext().Input, m_Canvas, m_InputMode, lConsumed);
 
         if (m_Mapping != nullptr)
         {
@@ -183,6 +181,6 @@ namespace Opaax
 
     void UISubsystem::Shutdown()
     {
-        m_Context->Events.GetEventBus().UnsubscribeAll(this);
+        GetContext().Events.GetEventBus().UnsubscribeAll(this);
     }
 }

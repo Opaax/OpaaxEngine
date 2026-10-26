@@ -200,5 +200,57 @@
     {
         "id": "undo-detach",
         "command": "editor.undo"
+    },
+    {
+        "id": "prefab-is-an-asset",
+        "command": "asset.get",
+        "params": {
+            "path": "Prefabs/Turret.opaaxprefab"
+        },
+        "expect": {
+            "class": "PrefabAsset",
+            "open": false,
+            "fromSourceFile": true
+        }
+    },
+    {
+        "id": "prefab-no-asset-window",
+        "command": "asset.set",
+        "params": {
+            "path": "Prefabs/Turret.opaaxprefab",
+            "properties": {}
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "open-prefab-asset",
+        "command": "asset.open",
+        "params": {
+            "path": "Prefabs/Turret.opaaxprefab"
+        },
+        "expect": {
+            "class": "PrefabAsset",
+            "document": true
+        }
+    },
+    {
+        "command": "asset.list",
+        "expect": {
+            "assets": []
+        },
+        "id": "opened-in-its-document"
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot-prefab",
+        "command": "screenshot",
+        "params": {
+            "path": "PrefabsOpenedAsAsset.png"
+        }
     }
 ]

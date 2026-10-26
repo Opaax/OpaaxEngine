@@ -16,6 +16,8 @@ namespace TestWorld
     // =============================================================================
     class PoseProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(PoseProbe, Opaax::Behaviour)
+
     public:
         float              WorldX = 0.f;
         float              WorldY = 0.f;
@@ -42,6 +44,8 @@ namespace TestWorld
     // =============================================================================
     class BubbleProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(BubbleProbe, Opaax::Behaviour)
+
     public:
         bool         bSend = false;
         bool         bStop = false;
@@ -76,6 +80,8 @@ namespace TestWorld
     // =============================================================================
     class ReparentProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(ReparentProbe, Opaax::Behaviour)
+
     public:
         Opaax::OpaaxString NewParent;
 
@@ -105,6 +111,8 @@ namespace TestWorld
     // =============================================================================
     class MoveProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(MoveProbe, Opaax::Behaviour)
+
     public:
         float           Delay       = 0.f;
         Opaax::Vector2F To          = { 0.f, 0.f };

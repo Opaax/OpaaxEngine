@@ -30,25 +30,25 @@ namespace Sandbox
         constexpr const char* kHudAsset  = "UI/Hud.opaaxui";
         const OpaaxStringID   kHudSource = OPAAX_ID("Hud");
 
-        /** MoveMode's default MaxSpeed: the bar is full at it. */
+        /** GroundMoveMode's default MaxSpeed: the bar is full at it. */
         constexpr float kFullSpeed = 400.f;
     }
 
-    bool HudSubsystem::ShouldCreate(const World& InWorld)
+    bool HudSubsystem::ShouldCreate(const World& InWorld) const
     {
         return InWorld.GetMode() == EWorldMode::Play;
     }
 
     bool HudSubsystem::Startup()
     {
-        if (m_Context->UI == nullptr)
+        if (GetContext().UI == nullptr)
         {
             OPAAX_LOG(LogHud, Error, "HUD started with NO UI subsystem — this world has no game instance, nothing is drawn.");
             return true;
         }
 
         // Loads the tree, checks its height against the canvas, and adds it.
-        m_Root = m_Context->UI->MountAsset(OpaaxString(kHudAsset));
+        m_Root = GetContext().UI->MountAsset(OpaaxString(kHudAsset));
         if (m_Root == nullptr)
         {
             OPAAX_LOG(LogHud, Error, "HUD asset '{}' did not mount — no HUD is drawn.", kHudAsset);
@@ -58,12 +58,12 @@ namespace Sandbox
         // The model is the one thing this owns that the tree reads (the asset decides which widget shows
         // which field). Removed by handle in Shutdown: during a level swap the next world's HUD has
         // already registered "Hud", so removing by name would remove its source.
-        UICanvas& lCanvas = m_Context->UI->GetCanvas();
+        UICanvas& lCanvas = GetContext().UI->GetCanvas();
         m_Source = lCanvas.Bindings().Add(kHudSource, MakeBindingReader(m_Model));
 
-        if (m_Context->Actions != nullptr)
+        if (GetContext().Actions != nullptr)
         {
-            m_Context->Actions->Bind(kJumpAction, EInputTrigger::Started, this, &HudSubsystem::OnJump);
+            GetContext().Actions->Bind(kJumpAction, EInputTrigger::Started, this, &HudSubsystem::OnJump);
         }
 
         OPAAX_LOG(LogHud, Info, "HUD up — source '{}' registered ({} sources on the canvas)",
@@ -74,7 +74,7 @@ namespace Sandbox
     void HudSubsystem::Update(double)
     {
         float lFastest = 0.f;
-        m_Context->OwningWorld.Each<MoverComponent>([&lFastest](EntityID, const MoverComponent& InMover)
+        GetContext().OwningWorld.Each<MoverComponent>([&lFastest](EntityID, const MoverComponent& InMover)
         {
             lFastest = Maths::Max(lFastest, glm::length(InMover.Velocity));
         });
@@ -84,19 +84,19 @@ namespace Sandbox
 
     void HudSubsystem::Shutdown()
     {
-        if (m_Context->Actions != nullptr)
+        if (GetContext().Actions != nullptr)
         {
-            m_Context->Actions->UnbindAll(this);
+            GetContext().Actions->UnbindAll(this);
         }
 
         // The canvas outlives this world; the HUD and its source do not.
-        if (m_Context->UI != nullptr)
+        if (GetContext().UI != nullptr)
         {
-            m_Context->UI->GetCanvas().Bindings().Remove(m_Source);
+            GetContext().UI->GetCanvas().Bindings().Remove(m_Source);
 
             if (m_Root != nullptr)
             {
-                m_Context->UI->GetCanvas().Root().RemoveChild(*m_Root);
+                GetContext().UI->GetCanvas().Root().RemoveChild(*m_Root);
             }
         }
 
@@ -107,7 +107,7 @@ namespace Sandbox
     void HudSubsystem::OnJump(const InputActionValue& /*InValue*/)
     {
         // Bindings outlive worlds: the outgoing world's HUD hears this too.
-        if (!m_Context->OwningWorld.IsActive())
+        if (!GetContext().OwningWorld.IsActive())
         {
             return;
         }
@@ -116,5 +116,5 @@ namespace Sandbox
     }
 
     // The HUD: a jump counter and a speed bar under the GameInstance's canvas.
-    OPAAX_REGISTER_WORLD_SUBSYSTEM_ORDERED(HudSubsystem, Opaax::WorldSubsystemOrder::Presentation);
+    OPAAX_REGISTER_OBJECT(HudSubsystem);
 }

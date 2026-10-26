@@ -17,6 +17,14 @@ namespace Opaax::ObjectClassDetail
     template<typename T>
     concept COwnsProperties = CReflected<T> && TIsSame<typename T::PropertyOwnerType, T>;
 
+    /**
+     * T lists the files it is read from: OPAAX_ASSET_SOURCE inside T (Resources/Asset/Asset.h), not one
+     * inherited from a parent.
+     */
+    template<typename T>
+    concept COwnsSourceExtensions = requires { typename T::SourceOwnerType; }
+                                    && TIsSame<typename T::SourceOwnerType, T>;
+
     /** The description of class T, child of TSuper. Called once, by T::StaticClass(). */
     template<typename T, typename TSuper>
     ObjectClassDesc MakeDesc(const EClassFlags InFlags)
@@ -61,6 +69,12 @@ namespace Opaax::ObjectClassDetail
             {
                 PropertiesFromJson(InJson, static_cast<T&>(InObject), OutBadFields);
             };
+        }
+
+        if constexpr (COwnsSourceExtensions<T>)
+        {
+            lDesc.SourceExtensions     = T::SourceExtensions;
+            lDesc.SourceExtensionCount = static_cast<Uint32>(ArraySize(T::SourceExtensions));
         }
 
         return lDesc;

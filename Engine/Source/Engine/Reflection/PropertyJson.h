@@ -15,7 +15,6 @@
 #include "Core/String/OpaaxStringJson.h"
 #include "Core/Tag/OpaaxTagJson.h"
 #include "Object/ObjectHandle.h"
-#include "Resources/ResourcePathJson.h"
 
 namespace Opaax
 {

@@ -61,13 +61,9 @@ namespace Opaax
         bool           bFailed = true;
     };
 
-    class ResourceManager final : public EngineSubsystemBase
+    class ResourceManager final : public EngineSubsystem
     {
-        // =============================================================================
-        // Base Implementation
-        // =============================================================================
-    public:
-        OPAAX_SUBSYSTEM_TYPE(ResourceManager)
+        OPAAX_OBJECT(ResourceManager, EngineSubsystem)
 
         // =============================================================================
         // CTORS - DTORS
@@ -199,12 +195,12 @@ namespace Opaax
         // Override
         // =============================================================================
         
-        //~Begin ISubsystem interface
+        //~Begin Subsystem interface
     public:
         bool Startup() override;             // pools are created on demand
         void Shutdown() override;            // FlushAll + leak report
         void Update(double DeltaTime) override; // destroys released slots
-        //~End ISubsystem interface
+        //~End Subsystem interface
 
         // =============================================================================
         // Members

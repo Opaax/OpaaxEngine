@@ -11,6 +11,8 @@ namespace TestWorld
     // =============================================================================
     class SpawnProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(SpawnProbe, Opaax::Behaviour)
+
     public:
         Opaax::OpaaxString Prefab       = "Prefabs/Crate.opaaxprefab";
         Opaax::Int32       Count        = 3;

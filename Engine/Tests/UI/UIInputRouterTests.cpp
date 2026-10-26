@@ -17,9 +17,10 @@ namespace
     /** Takes any key it is asked while focused. */
     class KeyEater final : public UIWidget
     {
+        OPAAX_OBJECT(KeyEater, UIWidget)
+
     public:
         Uint32 Keys = 0;
-        OpaaxStringID GetTypeName() const noexcept override { return OPAAX_ID("KeyEater"); }
         EUIReply OnKeyEvent(const UIKeyEvent&) override { ++Keys; return EUIReply::Handled; }
     };
 
@@ -35,12 +36,12 @@ namespace
         Fixture()
         {
             Canvas.SetTargetSize(1920, 1080);
-            Button = static_cast<UIButton*>(Canvas.Root().AddChild(MakeUnique<UIButton>()));
+            Button = static_cast<UIButton*>(Canvas.Root().AddChild(NewObject<UIButton>()));
             UIRect lRect;
             lRect.SizeDelta = { 200.f, 80.f };
             Button->SetRect(lRect);
             Button->OnClick.Add([this]() { ++Clicks; });
-            Eater = static_cast<KeyEater*>(Canvas.Root().AddChild(MakeUnique<KeyEater>()));
+            Eater = static_cast<KeyEater*>(Canvas.Root().AddChild(NewObject<KeyEater>()));
             Eater->bHitTestable = false;   // a key sink only — it sits over the button and must not shadow it
             Canvas.Update();
         }

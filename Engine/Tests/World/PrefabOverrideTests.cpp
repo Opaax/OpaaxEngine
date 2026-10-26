@@ -3,7 +3,10 @@
 // not per-component). Pure JSON: no World, no registry.
 #include <doctest.h>
 
-#include "Resources/ResourcePathJson.h"
+#include "Resources/Asset/Asset.h"
+#include "Resources/Asset/AssetRef.h"
+#include "Resources/Asset/AssetResource.h"
+#include "Resources/ResourceTypeID.hpp"
 #include "World/Components/ComponentRegistry.h"
 #include "World/Components/PrefabInstanceComponent.h"
 #include "World/Components/TransformComponent.h"
@@ -278,11 +281,15 @@ TEST_CASE("PrefabOverrides: Apply survives a malformed patch instead of throwing
 
 namespace
 {
-    struct ProbeResource;   // never defined: a path only ever NAMES its type
+    // The asset class the references name.
+    class ProbeAsset final : public Asset
+    {
+        OPAAX_OBJECT(ProbeAsset, Asset)
+    };
 
     struct SoftOnlyComponent
     {
-        TResourcePath<ProbeResource> Texture;
+        TAssetRef<ProbeAsset> Texture;
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(SoftOnlyComponent, Texture)
         OPAAX_PROPERTIES(SoftOnlyComponent, OPAAX_PROP(Texture))
@@ -291,9 +298,9 @@ namespace
     // The user's own case: a gun naming the bullet it spawns.
     struct GunComponent
     {
-        THardResourcePath<ProbeResource> Bullet;
-        TResourcePath<ProbeResource>     MuzzleFlash;
-        float                            RateOfFire = 1.f;
+        THardAssetRef<ProbeAsset> Bullet;
+        TAssetRef<ProbeAsset>     MuzzleFlash;
+        float                     RateOfFire = 1.f;
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(GunComponent, Bullet, MuzzleFlash, RateOfFire)
         OPAAX_PROPERTIES(GunComponent,
@@ -314,21 +321,20 @@ TEST_CASE("Hard refs: the load policy is part of the TYPE")
 {
     // static_assert as well as CHECK: these are compile-time guarantees, and a build that broke
     // one should not get as far as running.
-    static_assert(k_IsHardResourcePath<THardResourcePath<ProbeResource>>);
-    static_assert(!k_IsHardResourcePath<TResourcePath<ProbeResource>>);
-    static_assert(TResourcePath<ProbeResource>::LoadPolicy == EResourceLoad::Soft);
-    static_assert(THardResourcePath<ProbeResource>::LoadPolicy == EResourceLoad::Hard);
+    static_assert(k_IsHardAssetRef<THardAssetRef<ProbeAsset>>);
+    static_assert(!k_IsHardAssetRef<TAssetRef<ProbeAsset>>);
+    static_assert(TAssetRef<ProbeAsset>::LoadPolicy == EResourceLoad::Soft);
+    static_assert(THardAssetRef<ProbeAsset>::LoadPolicy == EResourceLoad::Hard);
 
     // The alias is the SAME type, not a parallel one — which is why one json bridge and one
     // property drawer serve both.
-    static_assert(TIsSame<THardResourcePath<ProbeResource>,
-                                 TResourcePath<ProbeResource, EResourceLoad::Hard>>);
+    static_assert(TIsSame<THardAssetRef<ProbeAsset>, TAssetRef<ProbeAsset, EResourceLoad::Hard>>);
 
-    CHECK(k_IsHardResourcePath<THardResourcePath<ProbeResource>>);
-    CHECK_FALSE(k_IsHardResourcePath<TResourcePath<ProbeResource>>);
+    CHECK(k_IsHardAssetRef<THardAssetRef<ProbeAsset>>);
+    CHECK_FALSE(k_IsHardAssetRef<TAssetRef<ProbeAsset>>);
 
     // The default is SOFT, which is what keeps every field written before hard references unchanged.
-    CHECK(TResourcePath<ProbeResource>::LoadPolicy == EResourceLoad::Soft);
+    CHECK(TAssetRef<ProbeAsset>::LoadPolicy == EResourceLoad::Soft);
 }
 
 TEST_CASE("Hard refs: the registry derives a component's hard fields, by type")
@@ -350,10 +356,10 @@ TEST_CASE("Hard refs: the registry derives a component's hard fields, by type")
     REQUIRE(lHard.size() == 1);
 
     // The name is the JSON KEY, which is what lets a loader reading untyped payloads find it —
-    // and the type id is what turns the value back into a typed load, named without ever
-    // completing ProbeResource.
+    // and the type id is what turns the value back into a typed load: every asset file loads as
+    // an AssetResource.
     CHECK(lHard[0].Name   == OpaaxStringID("Bullet"));
-    CHECK(lHard[0].TypeId == ResourceTypeID::Get<ProbeResource>());
+    CHECK(lHard[0].TypeId == ResourceTypeID::Get<AssetResource>());
 }
 
 TEST_CASE("Hard refs: no ENGINE component is hard yet, and that is the migration being zero")

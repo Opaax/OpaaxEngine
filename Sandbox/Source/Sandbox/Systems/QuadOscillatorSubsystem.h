@@ -9,31 +9,21 @@
 namespace Sandbox
 {
     // =============================================================================
-    // QuadOscillatorSubsystem — a sample gameplay world subsystem. Play-only (ShouldCreate is static,
-    //   so it is never even constructed in an Edit world). Gets what it needs through the
+    // QuadOscillatorSubsystem — a sample gameplay world subsystem. Play-only (ShouldCreate is asked on
+    //   the class default, so none is made for an Edit world). Gets what it needs through the
     //   WorldContext.
     // =============================================================================
-    class QuadOscillatorSubsystem final : public Opaax::WorldSubsystemBase
+    class QuadOscillatorSubsystem final : public Opaax::WorldSubsystem
     {
-        // =========================================================================
-        // Base implementation
-        // =========================================================================
-    public:
-        OPAAX_SUBSYSTEM_TYPE(QuadOscillatorSubsystem)
-
-        /** Play worlds only. */
-        static bool ShouldCreate(const Opaax::World& InWorld);
-
-        // =========================================================================
-        // CTORS
-        // =========================================================================
-    public:
-        explicit QuadOscillatorSubsystem(Opaax::WorldContext& InContext) : m_Context(&InContext) {}
+        OPAAX_OBJECT(QuadOscillatorSubsystem, Opaax::WorldSubsystem)
 
         // =========================================================================
         // Override
         // =========================================================================
     public:
+        /** Play worlds only. */
+        bool ShouldCreate(const Opaax::World& InWorld) const override;
+
         bool Startup() override;
         void Update(double InDeltaTime) override;
         void Shutdown() override;
@@ -58,7 +48,6 @@ namespace Sandbox
             Opaax::Vector2F  Position;
         };
 
-        Opaax::WorldContext*        m_Context = nullptr; // borrowed; the World owns it
         Opaax::TDynArray<Baseline>  m_Baselines;
         double                      m_Elapsed   = 0.0;
         bool                        m_bCaptured = false;

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Core/String/OpaaxStringID.hpp"
 #include "UI/UIWidget.h"
 
 namespace Opaax
@@ -11,14 +10,9 @@ namespace Opaax
      */
     class UIPanel final : public UIWidget
     {
+        OPAAX_OBJECT(UIPanel, UIWidget)
+
     public:
         UIPanel() { bHitTestable = false; }
-
-        /**
-         * Empty, but declared: otherwise the base fields would be drawn twice in the inspector.
-         */
-        OPAAX_PROPERTIES(UIPanel)
-
-        OpaaxStringID GetTypeName() const noexcept override { return OPAAX_ID("UIPanel"); }
     };
 }

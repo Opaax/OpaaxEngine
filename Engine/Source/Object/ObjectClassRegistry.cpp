@@ -2,6 +2,9 @@
 
 #include <spdlog/fmt/ranges.h>   // fmt::join
 
+#include "Core/Algo/Algo.h"
+#include "Resources/ResourceFormat.h"   // NormalizeExtension
+
 namespace Opaax
 {
     bool ObjectClassRegistry::Register(const ObjectClass& InClass)
@@ -22,8 +25,37 @@ namespace Opaax
             return false;
         }
 
+        // One class reads the files of one extension.
+        TDynArray<OpaaxStringID> lExtensions;
+        for (const char* lRaw : InClass.GetSourceExtensions())
+        {
+            const OpaaxStringID lExtension = NormalizeExtension(OpaaxStringView(lRaw));
+            if (!lExtension.IsValid())
+            {
+                OPAAX_LOG(LogObjectClassRegistry, Error, "Register '{}' — OPAAX_ASSET_SOURCE lists an empty extension.",
+                          InClass.GetName());
+                return false;
+            }
+
+            const ObjectClass* lOwner = FindBySourceExtension(lExtension);
+            if (lOwner != nullptr || Algo::Contains(lExtensions, lExtension))
+            {
+                OPAAX_LOG(LogObjectClassRegistry, Error, "Register '{}' — '{}' files are read by '{}' already.",
+                          InClass.GetName(), lExtension, lOwner != nullptr ? lOwner->GetName() : InClass.GetName());
+                return false;
+            }
+
+            lExtensions.emplace_back(lExtension);
+        }
+
         m_Classes.emplace_back(&InClass);
         m_ByName.emplace(InClass.GetName().GetId(), &InClass);
+
+        for (const OpaaxStringID lExtension : lExtensions)
+        {
+            m_BySourceExtension.emplace(lExtension.GetId(), &InClass);
+        }
+
         return true;
     }
 
@@ -84,6 +116,12 @@ namespace Opaax
         }
 
         return nullptr;
+    }
+
+    const ObjectClass* ObjectClassRegistry::FindBySourceExtension(const OpaaxStringID InExtension) const noexcept
+    {
+        const auto lIt = m_BySourceExtension.find(InExtension.GetId());
+        return lIt != m_BySourceExtension.end() ? lIt->second : nullptr;
     }
 
     TDynArray<const ObjectClass*> ObjectClassRegistry::GetClassesOf(const ObjectClass& InBase,

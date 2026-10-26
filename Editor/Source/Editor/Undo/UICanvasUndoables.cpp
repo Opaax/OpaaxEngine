@@ -20,10 +20,10 @@ namespace Opaax::Editor
                 return;
             }
 
-            const UIWidgetRegistry& lRegistry =
-                OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets();
+            const ObjectClassRegistry& lClasses =
+                OpaaxApplication::GetAppService<IEngine>().GetRegistries().ObjectClasses();
 
-            InContext.UICanvasDocument.RestoreFrom(InText, lRegistry);
+            InContext.UICanvasDocument.RestoreFrom(InText, lClasses);
         }
     }
 

@@ -4,6 +4,7 @@
 
 #include "Application/OpaaxApplication.h"
 #include "Core/Log/Logger.h"
+#include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IJobSystem.h"
 #include "Application/Services/IPaths.h"
 #include "Audio/AudioManager.h"
@@ -19,11 +20,13 @@
 #include "Input/InputManager.h"
 #include "Renderer/Camera/CameraManager.h"
 #include "Renderer/RendererManager.h"
+#include "Resources/Asset/AssetHandle.h"
+#include "Resources/Asset/AssetResource.h"
 #include "Resources/ResourceManager.h"
 #include "RHI/Framebuffer.h"
 #include "RHI/Texture.h"
 #include "World/Level.h"
-#include "World/Serialization/LevelResource.hpp"
+#include "World/Serialization/LevelAsset.h"
 #include "World/WorldEvents.h"
 #include "World/WorldManager.h"
 
@@ -70,30 +73,33 @@ namespace Opaax
         ModuleRegistrar lRegistrar;
         lRegistrar.BindEngineRegistries(m_Registries);
 
+        // The one resource format: every asset file, whatever its class. A game adds asset classes.
+        m_Registries.Resources().Register<AssetResource>(OPAAX_ID("Asset"));
+
         const Uint64 lCount = RunAutoRegistrations(lRegistrar);
 
-        OPAAX_ENGINE_LOG(Trace, "Registered {} type(s): {} component(s), {} world subsystem(s), {} resource format(s)",
-                         lCount, m_Registries.Components().Count(), m_Registries.WorldSubsystems().Count(),
+        OPAAX_ENGINE_LOG(Trace, "Registered {} type(s): {} object class(es), {} component(s), {} resource format(s)",
+                         lCount, m_Registries.ObjectClasses().Count(), m_Registries.Components().Count(),
                          m_Registries.Resources().Count());
     }
 
     void Engine::RegisterNativeSubsystems()
     {
-        m_Subsystems.RegisterSubsystem<EngineEventBus>();
-        m_Subsystems.RegisterSubsystem<ResourceManager>();
-        m_Subsystems.RegisterSubsystem<InputManager>();
+        m_Subsystems.Add<EngineEventBus>();
+        m_Subsystems.Add<ResourceManager>();
+        m_Subsystems.Add<InputManager>();
 
         // Before the worlds: they stop their sounds when they end, so audio shuts down after them.
-        m_Subsystems.RegisterSubsystem<AudioManager>();
+        m_Subsystems.Add<AudioManager>();
 
-        // Before WorldManager: updates run in registration order (session before worlds)
+        // Before WorldManager: updates run in the order added (session before worlds)
         // and teardown in reverse (worlds destroyed before the session).
-        m_Subsystems.RegisterSubsystem<GameInstanceManager>(&m_Registries);
-        m_Subsystems.RegisterSubsystem<WorldManager>(&m_Registries);
+        m_Subsystems.Add<GameInstanceManager>(&m_Registries);
+        m_Subsystems.Add<WorldManager>(&m_Registries);
 
         // Order does not matter: Loop runs UpdateAll and RenderAll as separate passes.
-        m_Subsystems.RegisterSubsystem<CameraManager>();
-        m_Subsystems.RegisterSubsystem<RendererManager>();
+        m_Subsystems.Add<CameraManager>();
+        m_Subsystems.Add<RendererManager>();
     }
     
     void Engine::CacheSubsystems()
@@ -135,7 +141,7 @@ namespace Opaax
     // Startup
     // =========================================================================
 
-    ResourceRef<LevelResource> Engine::ResolveLevel(const OpaaxString& InAssetRelPath) const
+    TAssetHandle<LevelAsset> Engine::ResolveLevel(const OpaaxString& InAssetRelPath) const
     {
         // The user may want to create a new world each time.
         if (InAssetRelPath.IsEmpty())
@@ -150,18 +156,16 @@ namespace Opaax
             return {};
         }
 
-        const OpaaxString lAbsPath = m_Paths->AssetToAbsolute(InAssetRelPath);
-
-        // FailFast: a missing or unreadable level gives null.
-        ResourceRef<LevelResource> lRef = m_Resources->Load<LevelResource>(lAbsPath.CStr());
-        if (!lRef.IsValid())
+        // A missing or unreadable level gives no asset.
+        TAssetHandle<LevelAsset> lLevel = LoadAsset<LevelAsset>(*m_Resources, *m_Paths, InAssetRelPath);
+        if (lLevel.Get() == nullptr)
         {
             // The project names a level that cannot be opened: warn, then boot an empty world.
             OPAAX_ENGINE_LOG(Warn, "Startup level '{}' could not be opened — falling back to '{}'",
                              InAssetRelPath.CStr(), NULL_LEVEL_WORLD_NAME);
         }
 
-        return lRef;
+        return lLevel;
     }
 
     World* Engine::OpenLevel(const WorldSpec& InSpec)
@@ -176,10 +180,11 @@ namespace Opaax
         World* const lPrevious = m_WorldManager->GetActiveWorld();
 
         // Read the level first: the world takes its name from it.
-        const ResourceRef<LevelResource> lLevelRef = ResolveLevel(InSpec.LevelPath);
-        const LevelResource* const       lLevel    = lLevelRef.Get();
+        const TAssetHandle<LevelAsset> lLevelHandle = ResolveLevel(InSpec.LevelPath);
+        const LevelAsset* const        lLevel       = lLevelHandle.Get();
 
-        const OpaaxString lName = (lLevel != nullptr) ? lLevel->Data.Name : OpaaxString(NULL_LEVEL_WORLD_NAME);
+        const OpaaxStringID lName = (lLevel != nullptr) ? OpaaxStringID(lLevel->GetData().Name)
+                                                        : OpaaxStringID(NULL_LEVEL_WORLD_NAME);
 
         World* lWorld = m_WorldManager->CreateWorld(lName, InSpec.Mode);
         if (lWorld == nullptr)
@@ -190,14 +195,14 @@ namespace Opaax
         // Mount before activating, so OnActiveWorldChanged subscribers see the content.
         if (lLevel != nullptr && lWorld->GetLevel() != nullptr)
         {
-            lWorld->GetLevel()->SetData(lLevel->Data);
+            lWorld->GetLevel()->SetData(lLevel->GetData());
 
             const Level::MountResult lResult = lWorld->GetLevel()->MountAll();
             if (!lResult.IsValid())
             {
                 // A half-opened level looks fine but misses content: report it.
                 OPAAX_ENGINE_LOG(Error, "Level '{}' did not open cleanly ({} map(s) mounted, {} failed)",
-                                 lLevel->Data.Name.CStr(), lResult.MapsMounted, lResult.MapsFailed);
+                                 lLevel->GetData().Name.CStr(), lResult.MapsMounted, lResult.MapsFailed);
             }
         }
 
@@ -331,6 +336,9 @@ namespace Opaax
             m_Resources->SetJobSystem(OpaaxApplication::GetAppService<IJobSystem>());
             m_Resources->SetObjectClasses(&m_Registries.ObjectClasses());
         }
+
+        // Every config class has its config from now on, read or not: the editor lists them all.
+        OpaaxApplication::GetAppService<IConfigSystem>().RegisterClasses(m_Registries.ObjectClasses());
         
         BindToWorldMgrEvents();
 

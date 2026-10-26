@@ -6,7 +6,6 @@
 #include "Editor/Assets/IAssetEditor.h"
 #include "Editor/UI/IEditorUIBackend.h"   // EditorImage
 #include "Resources/Asset/AssetHandle.h"
-#include "Resources/ResourceRef.hpp"
 
 namespace Opaax
 {
@@ -15,7 +14,7 @@ namespace Opaax
     class AnimationClip;
     struct AnimationStep;
     class SpriteSheet;
-    struct TextureResource;
+    class Texture2D;
 }
 
 namespace Opaax::Editor
@@ -73,7 +72,7 @@ namespace Opaax::Editor
         const SpriteSheet* ClaimSheet(const AnimationClip& InClip);
 
         /** A texture by asset path, claimed while this window is open. Null when it did not load. */
-        const TextureResource* ClaimTexture(const OpaaxString& InAssetPath);
+        const Texture2D* ClaimTexture(const OpaaxString& InAssetPath);
 
         EditorContext& m_Context;
 
@@ -81,7 +80,7 @@ namespace Opaax::Editor
         OpaaxString               m_ClaimedSheetPath;
 
         /** The textures shown so far, by path id: a playing texture clip does not reload each step. */
-        TUnorderedMap<Uint32, ResourceRef<TextureResource>> m_TextureClaims;
+        TUnorderedMap<Uint32, TAssetHandle<Texture2D>> m_TextureClaims;
 
         /** The selected step, or -1. */
         Int32 m_Selected = -1;

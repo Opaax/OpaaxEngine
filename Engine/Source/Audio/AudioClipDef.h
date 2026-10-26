@@ -3,18 +3,17 @@
 #include <nlohmann/json.hpp>
 
 #include "Audio/AudioBusSettings.h"
+#include "Audio/AudioClip.h"   // complete: an asset class visits its clip references
 #include "Audio/AudioTypes.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxEnumJson.h"
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxStringIDJson.h"
 #include "Resources/Asset/Asset.h"
-#include "Resources/ResourcePath.h"
-#include "Resources/ResourcePathJson.h"
+#include "Resources/Asset/AssetRef.h"
 
 namespace Opaax
 {
-    struct AudioClipResource;
     class AudioRandom;
 
     // =============================================================================
@@ -53,7 +52,7 @@ namespace Opaax
     // =============================================================================
     struct AudioClipEntry
     {
-        TResourcePath<AudioClipResource> Clip;
+        TAssetRef<AudioClip> Clip;
 
         /** How often it is picked by the random selections, against the others. */
         float Weight = 1.f;

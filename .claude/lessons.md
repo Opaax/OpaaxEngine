@@ -13,6 +13,12 @@ What working on this repository taught, kept short so the next session starts fr
   watch that run (`Scratch/tools/ci_watch.py <sha>`).
 - A full build once hung on one `cl.exe` (log stopped, CPU flat for minutes): stop the build's
   processes and `mspdbsrv.exe`, then build again in the background.
+- No Clang compiler is installed, but Visual Studio's `clang-tidy` is Clang's front end: with a Ninja
+  compile db (`Scratch/clangcheck/configure.bat`), `Scratch/clangcheck/run_tidy.py` compiles every own
+  file as Clang does in about two minutes, and reproduced the macOS CI errors exactly. Run it before
+  pushing; ImGui's `static_assert` errors there are clang-cl noise.
+- A failed CI job's log needs admin rights through the API, but its annotations (the compiler errors)
+  are public: `api.github.com/repos/Opaax/OpaaxEngine/check-runs/<job id>/annotations`.
 
 ## Code
 
@@ -27,6 +33,9 @@ What working on this repository taught, kept short so the next session starts fr
   its properties, `T` must be complete (the editor's NativeComponentDrawers.cpp needed the asset
   headers of the components it draws).
 - `/Engine/...` is an absolute path on Linux and macOS: test the engine mount before `IsAbsolute`.
+- Clang refuses `const T x;` when T or one of its members has a defaulted default constructor and an
+  anonymous union with an uninitialized member; MSVC and GCC accept it. OpaaxString had one, so every
+  type holding a string was caught: its constructor is written out (`constexpr OpaaxString() noexcept {}`).
 
 ## Looking at the editor
 

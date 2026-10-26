@@ -13,6 +13,9 @@ namespace Opaax::Editor
     /** Builds an asset class's editor for one open asset. */
     using FAssetEditorFactory = TFunction<TUniquePtr<IAssetEditor>(EditorContext&)>;
 
+    /** What a double-click on a file of the class does, given its absolute path: false when it did not open. */
+    using FAssetActivate = TFunction<bool(EditorContext&, const OpaaxString&)>;
+
     /** What SetEditor<T> accepts: an asset editor built from the context only. */
     template<typename T>
     concept CAssetEditor = CDerivedFrom<T, IAssetEditor> && CConstructibleFrom<T, EditorContext&>;
@@ -29,6 +32,7 @@ namespace Opaax::Editor
         OpaaxString         Icon;       // editor-assets-relative image ("Icons/T_SpriteSheet_Icon.png")
         OpaaxString         Category;   // the New Asset submenu ("Movement")
         FAssetEditorFactory Editor;     // empty: the property editor
+        FAssetActivate      Activate;   // empty: a double-click opens the asset's window
     };
 
     class AssetTypeRegistry;
@@ -59,6 +63,13 @@ namespace Opaax::Editor
         }
 
         AssetTypeBuilder& SetEditorFactory(FAssetEditorFactory InFactory);
+
+        /**
+         * What a double-click does instead of opening the asset's window: a document of its own (a
+         * prefab opens in the prefab editor). Its subclasses do the same, unless they set theirs. The
+         * asset.open automation command does it too.
+         */
+        AssetTypeBuilder& SetActivate(FAssetActivate InActivate);
 
     private:
         AssetTypeRegistry& m_Registry;
@@ -138,6 +149,17 @@ namespace Opaax::Editor
             {
                 const AssetTypeDesc* lEntry = FindExact(*lClass);
                 if (lEntry != nullptr && lEntry->Editor) { return &lEntry->Editor; }
+            }
+            return nullptr;
+        }
+
+        /** What a double-click does, or its nearest parent's; null to open the asset's window. */
+        const FAssetActivate* ActivateOf(const ObjectClass& InClass) const
+        {
+            for (const ObjectClass* lClass = &InClass; lClass != nullptr; lClass = lClass->GetSuper())
+            {
+                const AssetTypeDesc* lEntry = FindExact(*lClass);
+                if (lEntry != nullptr && lEntry->Activate) { return &lEntry->Activate; }
             }
             return nullptr;
         }
@@ -242,6 +264,12 @@ namespace Opaax::Editor
     inline AssetTypeBuilder& AssetTypeBuilder::SetEditorFactory(FAssetEditorFactory InFactory)
     {
         m_Registry.m_Entries[m_Index].Editor = Move(InFactory);
+        return *this;
+    }
+
+    inline AssetTypeBuilder& AssetTypeBuilder::SetActivate(FAssetActivate InActivate)
+    {
+        m_Registry.m_Entries[m_Index].Activate = Move(InActivate);
         return *this;
     }
 }

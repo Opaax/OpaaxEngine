@@ -1,10 +1,9 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
-#include "Resources/ResourceManager.h"   // before PrefabResource (completes LoadContext)
-
+#include "Resources/Asset/AssetHandle.h"
+#include "World/Prefab/PrefabAsset.h"
 #include "World/Prefab/PrefabFold.h"
-#include "World/Prefab/PrefabResource.hpp"
 
 namespace Opaax
 {
@@ -59,10 +58,10 @@ namespace Opaax
     private:
         struct Claim
         {
-            OpaaxString                 Path;
-            ResourceRef<PrefabResource> Ref;        // keeps the payload loaded
-            TUniquePtr<PrefabData>      Flattened;  // what Resolve returns; null for a failed load
-            bool                        bInFlight = false;   // cycle guard
+            OpaaxString               Path;
+            TAssetHandle<PrefabAsset> Prefab;     // keeps the payload loaded
+            TUniquePtr<PrefabData>    Flattened;  // what Resolve returns; null for a failed load
+            bool                      bInFlight = false;   // cycle guard
         };
 
         /** The entry for InAssetPath, loaded and flattened on first use. */

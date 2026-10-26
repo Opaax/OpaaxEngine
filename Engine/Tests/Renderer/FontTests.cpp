@@ -1,7 +1,7 @@
 // Suite: the text stack without a GPU — FontFaceData lookups, FontBake refusals, the FontFamily asset
-// (its style matching, file and old format), and the FontFaceResource placeholder. A real bake needs a
-// real .ttf and is checked by the smoke run's "baked N glyph(s)" log line. Tables are keyed by
-// codepoint: cases use codepoints above 0xFF.
+// (its style matching, file and old format), and the FontFace asset (a real bake of the engine's
+// Roboto, the face text draws when its file is missing). Tables are keyed by codepoint: cases use
+// codepoints above 0xFF.
 #include <doctest.h>
 
 #include "../LegacyAssetFile.h"
@@ -9,8 +9,9 @@
 
 #include "Object/ObjectClassRegistry.h"
 #include "Resources/Asset/AssetFile.h"
-#include "Resources/ResourceManager.h"   // completes LoadContext
-#include "Renderer/Text/FontFaceResource.h"
+#include "Resources/Asset/AssetResource.h"
+#include "Resources/ResourceManager.h"
+#include "Renderer/Text/FontFace.h"
 #include "Renderer/Text/FontFamily.h"
 #include "Renderer/Text/FontBake.h"
 #include "Renderer/Text/FontFaceData.h"
@@ -86,14 +87,6 @@ namespace
     struct FontClasses final : ObjectClassRegistry
     {
         FontClasses() { Register<FontFamily>(); }
-    };
-
-    /** A context to hand Load. Every case here is a leaf load — nothing acquires a child. */
-    struct LoadFixture
-    {
-        ResourceManager         Manager;
-        ResourceDependencyGraph Deps;
-        LoadContext             Ctx{ Manager, Deps };
     };
 }
 
@@ -787,37 +780,76 @@ TEST_SUITE("TextComponent")
     }
 }
 
-TEST_SUITE("FontFaceResource")
+TEST_SUITE("FontFace")
 {
-    TEST_CASE("Placeholder is an empty face that can still LAY OUT")
+    TEST_CASE("the face of a missing file is empty, yet can still LAY OUT")
     {
-        const FontFaceResource lFace = FontFaceResource::Placeholder();
+        const FontFaceData lFace = FontFaceData::Tofu();
 
         // No glyphs, so every codepoint misses and the whole string draws tofu — the magenta-texture
         // rule applied to text.
-        CHECK(lFace.Face.IsEmpty());
-        CHECK(lFace.GetAtlas() == nullptr);
-        CHECK_FALSE(lFace.IsUploaded());
+        CHECK(lFace.IsEmpty());
 
         // But the metrics are usable: a zero PixelHeight divides by zero the moment a draw scales it,
         // and a zero LineAdvance stacks every line of tofu on top of itself.
-        CHECK(lFace.Face.PixelHeight > 0.f);
-        CHECK(lFace.Face.VMetrics.LineAdvance > 0.f);
-        CHECK(lFace.Face.VMetrics.Ascent > 0.f);
-        CHECK(lFace.Face.VMetrics.Descent < 0.f);
+        CHECK(lFace.PixelHeight > 0.f);
+        CHECK(lFace.VMetrics.LineAdvance > 0.f);
+        CHECK(lFace.VMetrics.Ascent > 0.f);
+        CHECK(lFace.VMetrics.Descent < 0.f);
     }
 
-    TEST_CASE("Load answers nullopt for a path that is not there")
+    TEST_CASE("a path that is not there is refused")
     {
-        LoadFixture lFixture;
-
-        CHECK_FALSE(FontFaceResource::Load("Z:/nothing/here/Nope.ttf", lFixture.Ctx).has_value());
+        FontFace lFace;
+        CHECK_FALSE(lFace.LoadSource("Z:/nothing/here/Nope.ttf"));
     }
 
-    TEST_CASE("claims both desktop font spellings, and nothing else")
+    TEST_CASE("is read from both desktop font spellings, and nothing else")
     {
-        CHECK(FontFaceResource::Format.ExtensionCount == 2u);
-        CHECK(OpaaxString(FontFaceResource::Format.Extensions[0]) == ".ttf");
-        CHECK(OpaaxString(FontFaceResource::Format.Extensions[1]) == ".otf");
+        const TDynArray<const char*> lExtensions = FontFace::StaticClass().GetSourceExtensions();
+        REQUIRE(lExtensions.size() == 2u);
+        CHECK(OpaaxString(lExtensions[0]) == ".ttf");
+        CHECK(OpaaxString(lExtensions[1]) == ".otf");
+    }
+
+    TEST_CASE("a real font bakes its glyphs; the upload with no device frees the atlas pixels")
+    {
+        FontFace lFace;
+        REQUIRE(lFace.LoadSource(OPAAX_TEST_ENGINE_ASSETS "/Fonts/Roboto/roboto-latin-400-normal.ttf"));
+
+        const FontFaceData& lData = lFace.GetData();
+        CHECK(lData.GlyphCount() > 90u);   // printable ASCII at least
+        CHECK(lData.AtlasWidth > 0u);
+        CHECK(lData.AtlasHeight > 0u);
+        CHECK(lData.VMetrics.LineAdvance > 0.f);
+        CHECK(lFace.GetPixels().size() == static_cast<size_t>(lData.AtlasWidth) * lData.AtlasHeight);
+
+        const Uint64 lSize = lFace.GetResourceSize();
+        CHECK(lSize > static_cast<Uint64>(lData.AtlasWidth) * lData.AtlasHeight);
+
+        lFace.InitializeOnMainThread();   // IEngine::Null(): no device
+        CHECK(lFace.GetAtlas() == nullptr);
+        CHECK(lFace.GetPixels().empty());
+        CHECK(lFace.GetResourceSize() == lSize);
+    }
+
+    TEST_CASE("loads through the resource manager as an asset, named after its file")
+    {
+        ObjectClassRegistry lClasses;
+        REQUIRE(lClasses.Register<FontFace>());
+
+        ResourceManager lResources;
+        lResources.SetObjectClasses(&lClasses);
+        REQUIRE(lResources.Startup());
+        {
+            const ResourceRef<AssetResource> lRef =
+                lResources.Load<AssetResource>(OPAAX_TEST_ENGINE_ASSETS "/Fonts/Roboto/roboto-latin-400-normal.ttf");
+
+            const FontFace* lFace = (lRef.Get() != nullptr) ? lRef.Get()->Get<FontFace>() : nullptr;
+            REQUIRE(lFace != nullptr);
+            CHECK(lFace->GetName() == OPAAX_ID("roboto-latin-400-normal"));
+            CHECK_FALSE(lFace->GetData().IsEmpty());
+        }
+        lResources.Shutdown();
     }
 }

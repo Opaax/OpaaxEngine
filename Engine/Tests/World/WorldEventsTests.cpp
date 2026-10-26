@@ -147,7 +147,7 @@ TEST_CASE("WorldManager: destroying the active world deactivates it first, then 
         CHECK(lManager.GetWorldCount() == 1u);
 
         REQUIRE(InWorld != nullptr);
-        lNameSeenWhileDying = InWorld->GetName();
+        lNameSeenWhileDying = InWorld->GetName().ToString();
     });
 
     lManager.DestroyWorld(lWorld);

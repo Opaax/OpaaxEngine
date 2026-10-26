@@ -3,6 +3,7 @@
 #include "Core/Algo/Algo.h"
 
 #include "Core/Maths/Maths.h"
+#include "Object/ObjectClassRegistry.h"
 #include "UI/UICanvas.h"
 
 namespace Opaax
@@ -18,22 +19,38 @@ namespace Opaax
     }
 
     // =============================================================================
+    // Making one by class
+    // =============================================================================
+
+    TStrongObjectPtr<UIWidget> UIWidget::Create(const OpaaxStringID InClassName, const ObjectClassRegistry& InClasses)
+    {
+        const ObjectClass* lClass = InClasses.FindByName(InClassName);
+
+        if (lClass == nullptr || lClass->IsAbstract() || !lClass->IsChildOf(StaticClass()))
+        {
+            return {};
+        }
+
+        return Cast<UIWidget>(lClass->CreateInstance());
+    }
+
+    // =============================================================================
     // Tree
     // =============================================================================
 
-    UIWidget* UIWidget::AddChild(TUniquePtr<UIWidget> InChild)
+    UIWidget* UIWidget::AddChild(TStrongObjectPtr<UIWidget> InChild)
     {
         return AddChild(Move(InChild), m_Children.size());
     }
 
-    UIWidget* UIWidget::AddChild(TUniquePtr<UIWidget> InChild, const Uint64 InIndex)
+    UIWidget* UIWidget::AddChild(TStrongObjectPtr<UIWidget> InChild, const Uint64 InIndex)
     {
         if (!InChild)
         {
             return nullptr;
         }
 
-        UIWidget* lChild = InChild.get();
+        UIWidget* lChild = InChild.Get();
         lChild->m_Parent = this;
         lChild->SetCanvasRecursive(m_Canvas);
         m_Children.emplace(m_Children.begin() + static_cast<PtrDiff>(Maths::Min(InIndex, static_cast<Uint64>(m_Children.size()))),
@@ -48,16 +65,16 @@ namespace Opaax
         return lChild;
     }
 
-    TUniquePtr<UIWidget> UIWidget::RemoveChild(UIWidget& InChild)
+    TStrongObjectPtr<UIWidget> UIWidget::RemoveChild(UIWidget& InChild)
     {
         const auto lIt = Algo::FindIf(m_Children,
-                                      [&InChild](const TUniquePtr<UIWidget>& InOwned) { return InOwned.get() == &InChild; });
+                                      [&InChild](const TStrongObjectPtr<UIWidget>& InOwned) { return InOwned.Get() == &InChild; });
         if (lIt == m_Children.end())
         {
             return nullptr;
         }
 
-        TUniquePtr<UIWidget> lRemoved = Move(*lIt);
+        TStrongObjectPtr<UIWidget> lRemoved = Move(*lIt);
         m_Children.erase(lIt);
 
         // Clear pointer state under this subtree before it can be destroyed.
@@ -83,7 +100,7 @@ namespace Opaax
             return this;
         }
 
-        for (const TUniquePtr<UIWidget>& lChild : m_Children)
+        for (const TStrongObjectPtr<UIWidget>& lChild : m_Children)
         {
             if (UIWidget* lFound = lChild->FindByName(InName))
             {
@@ -94,32 +111,10 @@ namespace Opaax
         return nullptr;
     }
 
-    // =============================================================================
-    // Serialization
-    // =============================================================================
-
-    void UIWidget::SaveFields(nlohmann::json& InOutJson) const
-    {
-        InOutJson["Name"]         = Name;
-        InOutJson["Rect"]         = Rect;
-        InOutJson["bVisible"]     = bVisible;
-        InOutJson["bHitTestable"] = bHitTestable;
-        InOutJson["Opacity"]      = Opacity;
-    }
-
-    void UIWidget::LoadFields(const nlohmann::json& InJson)
-    {
-        Name         = InJson.value("Name", Name);
-        Rect         = InJson.value("Rect", Rect);
-        bVisible     = InJson.value("bVisible", bVisible);
-        bHitTestable = InJson.value("bHitTestable", bHitTestable);
-        Opacity      = InJson.value("Opacity", Opacity);
-    }
-
     void UIWidget::SetCanvasRecursive(UICanvas* InCanvas)
     {
         m_Canvas = InCanvas;
-        for (const TUniquePtr<UIWidget>& lChild : m_Children)
+        for (const TStrongObjectPtr<UIWidget>& lChild : m_Children)
         {
             lChild->SetCanvasRecursive(InCanvas);
         }
@@ -202,7 +197,7 @@ namespace Opaax
                 return;
             }
 
-            for (const TUniquePtr<UIWidget>& lChild : m_Children)
+            for (const TStrongObjectPtr<UIWidget>& lChild : m_Children)
             {
                 lChild->UpdateTree(m_Bounds, nullptr, lChanged, InContext, OutStats);
             }
@@ -230,7 +225,7 @@ namespace Opaax
     {
         OnPullBindings(InBindings);
 
-        for (const TUniquePtr<UIWidget>& lChild : m_Children)
+        for (const TStrongObjectPtr<UIWidget>& lChild : m_Children)
         {
             lChild->PullBindings(InBindings);
         }

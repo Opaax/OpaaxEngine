@@ -139,7 +139,7 @@ namespace Opaax::Editor
 
     namespace
     {
-        /** A path field as a drop target. InKind 0 accepts any file of the resource type. */
+        /** A path field as a drop target, for files of the resource type and of the kind InKind. */
         void DrawDropPathField(IEditorWidgets& InWidgets, const char* InLabel, OpaaxString& InPath,
                                const Uint32 InResourceTypeId, const Uint32 InKind, const char* InEmptyText)
         {
@@ -178,12 +178,6 @@ namespace Opaax::Editor
         // The payload lists the dropped asset's class and its parents: a subclass matches too.
         DrawDropPathField(InWidgets, InLabel, InPath, ResourceTypeID::Get<AssetResource>(),
                           InClass.GetName().GetId(), lEmpty.CStr());
-    }
-
-    void DrawResourcePathField(IEditorWidgets& InWidgets, const char* InLabel, OpaaxString& InPath,
-                               const Uint32 InResourceTypeId)
-    {
-        DrawDropPathField(InWidgets, InLabel, InPath, InResourceTypeId, 0, "(drop a resource here)");
     }
 
     void DrawEnumIndexField(IEditorWidgets& InWidgets, const char* InLabel, const char* const* InLabels,

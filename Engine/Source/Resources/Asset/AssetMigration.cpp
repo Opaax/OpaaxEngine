@@ -154,6 +154,39 @@ namespace Opaax
         return s_Formats;
     }
 
+    const TDynArray<AssetMigration::ClassSplit>& AssetMigration::GetClassSplits()
+    {
+        // One line per class, added when its kinds became subclasses.
+        static const TDynArray<ClassSplit> s_Splits = {
+            { "MoveMode", "Mode", "Mode" },
+        };
+
+        return s_Splits;
+    }
+
+    bool AssetMigration::UpgradeSplitClass(AssetFile::Contents& InOutContents)
+    {
+        for (const ClassSplit& lSplit : GetClassSplits())
+        {
+            if (InOutContents.Class != OpaaxStringID(lSplit.Class))
+            {
+                continue;
+            }
+
+            const auto lKind = InOutContents.Properties.find(lSplit.ByProperty);
+            if (lKind == InOutContents.Properties.end() || !lKind->is_string() || lKind->get<OpaaxString>().IsEmpty())
+            {
+                return false;
+            }
+
+            InOutContents.Class = OpaaxStringID(lKind->get<OpaaxString>() + lSplit.Suffix);
+            InOutContents.Properties.erase(lKind);
+            return true;
+        }
+
+        return false;
+    }
+
     const AssetMigration::LegacyFormat* AssetMigration::FindLegacyFormat(const OpaaxStringView InPath)
     {
         const OpaaxStringView lExtension = PathString::Extension(InPath);
@@ -192,24 +225,34 @@ namespace Opaax
             return lFail("not a JSON object");
         }
 
+        AssetFile::Contents lContents;
+
         if (InFormat.ClassName != nullptr)
         {
             // The whole object was the properties; the extension named the class.
-            OutAssetText = AssetFile::Serialize(OpaaxStringID(InFormat.ClassName), lJson);
-            return true;
+            lContents.Class      = OpaaxStringID(InFormat.ClassName);
+            lContents.Properties = lJson;
         }
-
-        // A data asset named its type and kept its values under "Data".
-        const auto lType = lJson.find("Type");
-        const auto lData = lJson.find("Data");
-
-        if (lType == lJson.end() || !lType->is_string() || lType->get<OpaaxString>().IsEmpty()
-            || lData == lJson.end() || !lData->is_object())
+        else
         {
-            return lFail("a data asset needs a \"Type\" name and a \"Data\" object");
+            // A data asset named its type and kept its values under "Data".
+            const auto lType = lJson.find("Type");
+            const auto lData = lJson.find("Data");
+
+            if (lType == lJson.end() || !lType->is_string() || lType->get<OpaaxString>().IsEmpty()
+                || lData == lJson.end() || !lData->is_object())
+            {
+                return lFail("a data asset needs a \"Type\" name and a \"Data\" object");
+            }
+
+            lContents.Class      = OpaaxStringID(lType->get<OpaaxString>());
+            lContents.Properties = *lData;
         }
 
-        OutAssetText = AssetFile::Serialize(OpaaxStringID(lType->get<OpaaxString>()), *lData);
+        // An old file of a class split since then goes straight to its subclass.
+        UpgradeSplitClass(lContents);
+
+        OutAssetText = AssetFile::Serialize(lContents.Class, lContents.Properties);
         return true;
     }
 
@@ -346,6 +389,42 @@ namespace Opaax
 
                 OPAAX_LOG(LogAssetMigration, Info, "Converted '{}' -> '{}' ({})", lName.CStr(),
                           lReport.Converted.back().second.CStr(), lContents.Class);
+            }
+        }
+
+        // ---- Every asset file of a split class becomes a file of its subclass -----------------------
+        for (const AssetRoot& lRoot : InRoots)
+        {
+            for (const OpaaxString& lFile : SortedFiles(lRoot.AbsPath))
+            {
+                if (!EqualsIgnoreCase(PathString::Extension(lFile), OpaaxStringView(AssetFile::ASSET_EXTENSION)))
+                {
+                    continue;
+                }
+
+                // A file that is not an asset file (written by hand, half-saved) is the loader's to report.
+                AssetFile::Contents lContents;
+                if (!AssetFile::Parse(FileIO::ReadAllText(lFile), lContents))
+                {
+                    continue;
+                }
+
+                const OpaaxStringID lOldClass = lContents.Class;
+                if (!UpgradeSplitClass(lContents))
+                {
+                    continue;
+                }
+
+                const OpaaxString lName = NameOf(lRoot, lFile);
+
+                if (!FileIO::WriteAllText(lFile, AssetFile::Serialize(lContents.Class, lContents.Properties)))
+                {
+                    lError(OpaaxString::Format("'{}' was not upgraded: it cannot be written", lName.CStr()));
+                    continue;
+                }
+
+                lReport.Upgraded.emplace_back(lFile);
+                OPAAX_LOG(LogAssetMigration, Info, "Upgraded '{}': {} -> {}", lName.CStr(), lOldClass, lContents.Class);
             }
         }
 

@@ -5,16 +5,14 @@
 #include "Core/Log/Logger.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxProperty.h"
+#include "Renderer/Text/FontFace.h"   // complete: an asset class visits its face references
 #include "Renderer/Text/FontStyle.h"
 #include "Resources/Asset/Asset.h"
-#include "Resources/ResourcePath.h"
-#include "Resources/ResourcePathJson.h"
+#include "Resources/Asset/AssetRef.h"
 
 namespace Opaax
 {
     OPAAX_LOG_CATEGORY(FontFamily);
-
-    struct FontFaceResource;
 
     /** One face: its style, and its file. */
     struct FontFamilyEntry
@@ -22,7 +20,7 @@ namespace Opaax
         FontStyleKey Style;
 
         /** Asset-relative ("Fonts/Roboto/roboto-latin-400-normal.ttf") or a mount. */
-        TResourcePath<FontFaceResource> Face;
+        TAssetRef<FontFace> Face;
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(FontFamilyEntry, Style, Face)
 

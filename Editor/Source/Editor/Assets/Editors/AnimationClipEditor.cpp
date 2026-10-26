@@ -15,9 +15,8 @@
 #include "Editor/Resources/ResourceDragDrop.h"
 #include "Editor/UI/IEditorWidgets.h"
 #include "Renderer/Textures/SpriteSheet.h"
-#include "Renderer/Textures/TextureResource.h"
+#include "Renderer/Textures/Texture2D.h"
 #include "Resources/ResourceManager.h"
-#include "Resources/ResourceTypeID.hpp"
 
 namespace Opaax::Editor
 {
@@ -127,13 +126,13 @@ namespace Opaax::Editor
         // A texture clip: the step has its own image.
         if (InClip.Sheet.IsEmpty())
         {
-            const TextureResource* lTexture = ClaimTexture(lStep->Texture.Path);
+            const Texture2D* lTexture = ClaimTexture(lStep->Texture.Path);
             if (lTexture == nullptr || lTexture->GetTexture() == nullptr)
             {
                 return EditorImage{};
             }
 
-            OutPixelSize = { static_cast<float>(lTexture->Width), static_cast<float>(lTexture->Height) };
+            OutPixelSize = { static_cast<float>(lTexture->GetWidth()), static_cast<float>(lTexture->GetHeight()) };
             return m_Context.UIBackend.GetTextureImage(*lTexture->GetTexture());
         }
 
@@ -147,7 +146,7 @@ namespace Opaax::Editor
 
         const SpriteFrame& lFrame = lSheet->Frames[static_cast<Uint32>(lIndex)];
 
-        const TextureResource* lTexture = ClaimTexture(lSheet->Texture.Path);
+        const Texture2D* lTexture = ClaimTexture(lSheet->Texture.Path);
         if (lTexture == nullptr || lTexture->GetTexture() == nullptr)
         {
             return EditorImage{};
@@ -155,7 +154,7 @@ namespace Opaax::Editor
 
         OutPixelSize = lFrame.Size;
         return ClipEditing::CropToFrame(m_Context.UIBackend.GetTextureImage(*lTexture->GetTexture()), lFrame,
-                                        lTexture->Width, lTexture->Height);
+                                        lTexture->GetWidth(), lTexture->GetHeight());
     }
 
     // =============================================================================
@@ -318,7 +317,7 @@ namespace Opaax::Editor
         {
             ImGui::Button("Drop a texture here to add a step", ImVec2(-1.f, 0.f));
 
-            if (OpaaxString lDropped; AcceptResourceDragPayload(ResourceTypeID::Get<TextureResource>(), lDropped))
+            if (OpaaxString lDropped; AcceptAssetDragPayload<Texture2D>(lDropped))
             {
                 if (ClipEditing::AddTextureStep(lSteps, lDropped))
                 {
@@ -402,7 +401,7 @@ namespace Opaax::Editor
         return m_Sheet.Get();
     }
 
-    const TextureResource* AnimationClipEditor::ClaimTexture(const OpaaxString& InAssetPath)
+    const Texture2D* AnimationClipEditor::ClaimTexture(const OpaaxString& InAssetPath)
     {
         if (InAssetPath.IsEmpty())
         {
@@ -414,16 +413,15 @@ namespace Opaax::Editor
         auto lIt = m_TextureClaims.find(lKey);
         if (lIt == m_TextureClaims.end())
         {
-            const OpaaxString lAbsolute = m_Context.Paths.AssetToAbsolute(InAssetPath);
+            lIt = m_TextureClaims.emplace(lKey, LoadAsset<Texture2D>(m_Context.Resources, m_Context.Paths,
+                                                                     InAssetPath)).first;
 
-            lIt = m_TextureClaims.emplace(lKey, m_Context.Resources.Load<TextureResource>(lAbsolute.CStr())).first;
-
-            if (!lIt->second.IsValid())
+            if (lIt->second.Get() == nullptr)
             {
-                OPAAX_LOG(LogAnimationClipEditor, Warn, "Clip image '{}' did not load", lAbsolute.CStr());
+                OPAAX_LOG(LogAnimationClipEditor, Warn, "Clip image '{}' did not load", InAssetPath.CStr());
             }
         }
 
-        return lIt->second.IsValid() ? lIt->second.Get() : nullptr;
+        return lIt->second.Get();
     }
 }

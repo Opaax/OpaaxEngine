@@ -284,8 +284,8 @@ namespace Opaax
     }
 
     /**
-     * A copyable reference. Passes a reference where a copy is taken: a subsystem factory captures
-     * its arguments by value, so RegisterSubsystem<T>(Ref(InContext)) keeps the context itself.
+     * A copyable reference. Passes a reference where a copy is taken: a factory that captures its
+     * arguments by value keeps the referenced object itself when given Ref(InObject).
      */
     template <typename T>
     using TRef = std::reference_wrapper<T>;

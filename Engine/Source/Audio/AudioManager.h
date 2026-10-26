@@ -6,14 +6,16 @@
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
-#include "Resources/ResourceRef.hpp"
 
 namespace Opaax
 {
     class IAudioDevice;
+    class AudioClip;
     class AudioClipDef;
-    struct AudioClipResource;
     struct AudioSettings;
+
+    template<typename T>
+    class TAssetHandle;
 
     // =============================================================================
     // AudioManager — the game's door to audio: plays, stops and fades sounds through handles, and
@@ -28,13 +30,9 @@ namespace Opaax
     //   Without an audio device (a server, CI, Audio.bEnabled off) it runs headless: no thread, the
     //   game thread mixes as time passes (Update), so sounds still end on time.
     // =============================================================================
-    class AudioManager final : public EngineSubsystemBase
+    class AudioManager final : public EngineSubsystem
     {
-        // =============================================================================
-        // Base implementation
-        // =============================================================================
-    public:
-        OPAAX_SUBSYSTEM_TYPE(AudioManager)
+        OPAAX_OBJECT(AudioManager, EngineSubsystem)
 
         /** How a manager built outside the engine (tests, tools) mixes. */
         struct Desc
@@ -68,14 +66,14 @@ namespace Opaax
         // Override
         // =============================================================================
     public:
-        //~Begin ISubsystem interface
+        //~Begin Subsystem interface
         bool Startup() override;
 
         /** Frees the voices that ended; a headless mix advances by InDeltaTime. */
         void Update(double InDeltaTime) override;
 
         void Shutdown() override;
-        //~End ISubsystem interface
+        //~End Subsystem interface
 
         // =============================================================================
         // Sounds
@@ -88,14 +86,14 @@ namespace Opaax
          * @return Invalid when the clip is silent, audio is not started, or every voice plays
          *   something of a higher priority
          */
-        SoundHandle Play(const AudioClipResource& InClip, const PlaySoundParams& InParams = {});
+        SoundHandle Play(const AudioClip& InClip, const PlaySoundParams& InParams = {});
 
         /**
          * Starts InClip, or, while it is still loading, starts it as soon as it is loaded: the handle
          * is playing from now, and every call on it is kept until then.
          * @return Invalid when the clip failed to load, or as Play above
          */
-        SoundHandle Play(const ResourceRef<AudioClipResource>& InClip, const PlaySoundParams& InParams = {});
+        SoundHandle Play(const TAssetHandle<AudioClip>& InClip, const PlaySoundParams& InParams = {});
 
         /**
          * Chooses which clip of InDef plays now and how: its bus, volume and pitch (with the spread

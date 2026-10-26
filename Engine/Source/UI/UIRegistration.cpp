@@ -1,7 +1,7 @@
 // The UI module's types. Each registers itself; see Engine/Registries/AutoRegistration.h.
 #include "Engine/Registries/AutoRegistration.h"
 #include "Renderer/Textures/SpriteSheet.h"   // completes the widgets' sheet references
-#include "UI/UICanvasResource.h"
+#include "UI/UICanvasAsset.h"
 #include "UI/UISubsystem.h"
 #include "UI/Widgets/UIButton.h"
 #include "UI/Widgets/UIImage.h"
@@ -13,24 +13,25 @@
 
 namespace Opaax
 {
-    // Widget types a .opaaxui can use. Unknown types in a file are skipped.
-    OPAAX_REGISTER_UI_WIDGET(UIPanel);
-    OPAAX_REGISTER_UI_WIDGET(UIImage);
-    OPAAX_REGISTER_UI_WIDGET(UIText);
-    OPAAX_REGISTER_UI_WIDGET(UIButton);
+    // Widget classes a .opaaxui can name. Unknown types in a file are skipped.
+    OPAAX_REGISTER_OBJECT(UIWidget);
+    OPAAX_REGISTER_OBJECT(UIPanel);
+    OPAAX_REGISTER_OBJECT(UIImage);
+    OPAAX_REGISTER_OBJECT(UIText);
+    OPAAX_REGISTER_OBJECT(UIButton);
 
     // Masks its children: white shows, black hides.
-    OPAAX_REGISTER_UI_WIDGET(UIMask);
+    OPAAX_REGISTER_OBJECT(UIMask);
 
     // Keeps its children inside the screen's safe area.
-    OPAAX_REGISTER_UI_WIDGET(UISafeArea);
+    OPAAX_REGISTER_OBJECT(UISafeArea);
 
     // Lays its children out along an axis.
-    OPAAX_REGISTER_UI_WIDGET(UIStack);
+    OPAAX_REGISTER_OBJECT(UIStack);
 
     // An authored widget tree (.opaaxui). Each instance builds its own widgets from it.
-    OPAAX_REGISTER_NAMED_RESOURCE(UICanvasResource, "UICanvas");
+    OPAAX_REGISTER_OBJECT(UICanvasAsset);
 
     // Created first: it routes raw input and consumes what the UI used, before input mapping runs.
-    OPAAX_REGISTER_NAMED_GAME_INSTANCE_SUBSYSTEM(UISubsystem, "UI", 100);
+    OPAAX_REGISTER_OBJECT(UISubsystem);
 }

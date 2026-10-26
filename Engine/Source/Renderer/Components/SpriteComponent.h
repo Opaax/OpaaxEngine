@@ -9,16 +9,14 @@
 #include "Core/Reflection/OpaaxEnum.h"
 #include "Core/Reflection/OpaaxEnumJson.h"
 #include "Core/Reflection/OpaaxProperty.h"
-#include "Resources/ResourcePath.h"
-#include "Resources/ResourcePathJson.h"
 #include "Renderer/Materials/Material2D.h"
 #include "Renderer/RenderLayer.h"
 #include "Resources/Asset/AssetRef.h"
 
 namespace Opaax
 {
-    // Forward-declared: a path or an asset reference only needs the name.
-    struct TextureResource;
+    // Forward-declared: an asset reference only needs the name.
+    class Texture2D;
     class SpriteSheet;
 
     // =============================================================================
@@ -28,7 +26,7 @@ namespace Opaax
     struct SpriteComponent
     {
         /** Asset-relative ("Textures/Hero.png"). Empty draws nothing. */
-        TResourcePath<TextureResource> Texture;
+        TAssetRef<Texture2D> Texture;
 
         /** Asset-relative ("Sheets/Hero.opaaxasset"). Wins over Texture. */
         TAssetRef<SpriteSheet> Sheet;

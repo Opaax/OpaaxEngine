@@ -4,13 +4,12 @@
 
 #include "Core/GUID/Guid.h"
 #include "Core/GUID/GuidJson.h"
-#include "Resources/ResourcePath.h"
-#include "Resources/ResourcePathJson.h"
+#include "Resources/Asset/AssetRef.h"
 
 namespace Opaax
 {
-    // Forward-declared: TResourcePath only needs the name.
-    struct PrefabResource;
+    // Forward-declared: an asset reference only needs the name.
+    class PrefabAsset;
 
     // =============================================================================
     // PrefabInstanceComponent — marks an entity created from a prefab.
@@ -23,7 +22,7 @@ namespace Opaax
     struct PrefabInstanceComponent
     {
         /** Asset-relative ("Prefabs/Bullet.opaaxprefab"). Empty means the link is broken. */
-        TResourcePath<PrefabResource> Prefab;
+        TAssetRef<PrefabAsset> Prefab;
 
         /** Shared by every entity of one placement. Invalid means the link is broken. */
         Guid InstanceId;

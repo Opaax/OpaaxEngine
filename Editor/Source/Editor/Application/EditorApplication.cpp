@@ -115,9 +115,10 @@ namespace Opaax::Editor
         // Here, before the configs, the project and the levels are read: nothing in memory names an old file.
         const AssetMigration::Report lReport = AssetMigration::Migrate(lRoots, { InPaths.ConfigsDir() });
 
-        OPAAX_LOG(LogEditorApp, Info, "Upgraded assets: {} converted, {} file(s) rewritten, {} error(s)",
-                  static_cast<Uint64>(lReport.Converted.size()), static_cast<Uint64>(lReport.Rewritten.size()),
-                  static_cast<Uint64>(lReport.Errors.size()));
+        OPAAX_LOG(LogEditorApp, Info,
+                  "Upgraded assets: {} converted, {} in a new class, {} file(s) rewritten, {} error(s)",
+                  static_cast<Uint64>(lReport.Converted.size()), static_cast<Uint64>(lReport.Upgraded.size()),
+                  static_cast<Uint64>(lReport.Rewritten.size()), static_cast<Uint64>(lReport.Errors.size()));
     }
     
     WorldSpec EditorApplication::GetStartupWorldSpec() const

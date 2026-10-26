@@ -9,15 +9,13 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/String/OpaaxStringIDJson.h"
+#include "Renderer/Textures/Texture2D.h"   // complete: an asset class visits its texture reference
 #include "Resources/Asset/Asset.h"
-#include "Resources/ResourcePath.h"
-#include "Resources/ResourcePathJson.h"
+#include "Resources/Asset/AssetRef.h"
 
 namespace Opaax
 {
     OPAAX_LOG_CATEGORY(SpriteSheet);
-
-    struct TextureResource;
 
     /** One frame's rectangle in the sheet's texture. */
     struct SpriteFrame
@@ -74,7 +72,7 @@ namespace Opaax
 
     public:
         /** Asset-relative ("Textures/Hero.png") or a mount ("/Engine/..."). */
-        TResourcePath<TextureResource> Texture;
+        TAssetRef<Texture2D> Texture;
 
         TDynArray<SpriteFrame> Frames;
 

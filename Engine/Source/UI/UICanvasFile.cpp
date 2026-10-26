@@ -4,8 +4,8 @@
 
 #include "Core/IO/FileIO.h"
 #include "Core/String/OpaaxStringJson.h"
+#include "Object/ObjectClassRegistry.h"
 #include "UI/UIWidget.h"
-#include "UI/UIWidgetRegistry.h"
 #include "UI/Widgets/UIPanel.h"
 
 namespace Opaax
@@ -18,19 +18,19 @@ namespace Opaax
         constexpr const char* KEY_TYPE      = "Type";
         constexpr const char* KEY_CHILDREN  = "Children";
 
-        /** One node: its type, its fields, then its children. */
+        /** One node: its class, its properties, then its children. */
         nlohmann::json WriteNode(const UIWidget& InWidget)
         {
-            nlohmann::json lJson;
-            lJson[KEY_TYPE] = InWidget.GetTypeName().CStr();
+            const ObjectClass& lClass = InWidget.GetClass();
 
-            InWidget.SaveFields(lJson);
+            nlohmann::json lJson = lClass.WriteProperties(InWidget);
+            lJson[KEY_TYPE] = lClass.GetName().CStr();
 
-            const TDynArray<TUniquePtr<UIWidget>>& lChildren = InWidget.GetChildren();
+            const TDynArray<TStrongObjectPtr<UIWidget>>& lChildren = InWidget.GetChildren();
             if (!lChildren.empty())
             {
                 nlohmann::json lArray = nlohmann::json::array();
-                for (const TUniquePtr<UIWidget>& lChild : lChildren)
+                for (const TStrongObjectPtr<UIWidget>& lChild : lChildren)
                 {
                     lArray.emplace_back(WriteNode(*lChild));
                 }
@@ -40,14 +40,17 @@ namespace Opaax
             return lJson;
         }
 
-        /** Builds one node and its subtree. Null for an unknown type (the caller skips it). */
-        TUniquePtr<UIWidget> ReadNode(const nlohmann::json& InJson, const UIWidgetRegistry& InRegistry,
-                                      Uint64& InOutSkipped)
+        /**
+         * Builds one node and its subtree. Null for an unknown type: the caller skips it (counted in
+         * InOutSkipped). Null too for a value of the wrong type, named in OutBadValue: the read fails.
+         */
+        TStrongObjectPtr<UIWidget> ReadNode(const nlohmann::json& InJson, const ObjectClassRegistry& InClasses,
+                                            Uint64& InOutSkipped, OpaaxString& OutBadValue)
         {
             if (!InJson.is_object()) { ++InOutSkipped; return nullptr; }
 
-            const OpaaxString   lType = InJson.value(KEY_TYPE, OpaaxString());
-            TUniquePtr<UIWidget> lWidget = InRegistry.Create(OpaaxStringID(lType));
+            const OpaaxString          lType   = InJson.value(KEY_TYPE, OpaaxString());
+            TStrongObjectPtr<UIWidget> lWidget = UIWidget::Create(OpaaxStringID(lType), InClasses);
 
             if (!lWidget)
             {
@@ -57,15 +60,29 @@ namespace Opaax
                 return nullptr;
             }
 
-            lWidget->LoadFields(InJson);
+            // Strict like an asset file: a wrong value fails the read rather than leaving a default.
+            TDynArray<OpaaxString> lBadFields;
+            lWidget->GetClass().ReadProperties(*lWidget, InJson, &lBadFields);
+
+            if (!lBadFields.empty())
+            {
+                OutBadValue = OpaaxString::Format("{}.{}", lType.CStr(), lBadFields.front().CStr());
+                return nullptr;
+            }
+
+            lWidget->PostLoad();
 
             if (const auto lIt = InJson.find(KEY_CHILDREN); lIt != InJson.end() && lIt->is_array())
             {
                 for (const nlohmann::json& lChildJson : *lIt)
                 {
-                    if (TUniquePtr<UIWidget> lChild = ReadNode(lChildJson, InRegistry, InOutSkipped))
+                    if (TStrongObjectPtr<UIWidget> lChild = ReadNode(lChildJson, InClasses, InOutSkipped, OutBadValue))
                     {
                         lWidget->AddChild(Move(lChild));
+                    }
+                    else if (!OutBadValue.IsEmpty())
+                    {
+                        return nullptr;
                     }
                 }
             }
@@ -98,7 +115,7 @@ namespace Opaax
         return Serialize(*InDoc.Root, InDoc.ReferenceHeight);
     }
 
-    bool UICanvasFile::Deserialize(const OpaaxString& InText, const UIWidgetRegistry& InRegistry, UICanvasDoc& OutDoc)
+    bool UICanvasFile::Deserialize(const OpaaxString& InText, const ObjectClassRegistry& InClasses, UICanvasDoc& OutDoc)
     {
         const nlohmann::json lJson = nlohmann::json::parse(InText.CStr(), nullptr, false);
 
@@ -120,19 +137,27 @@ namespace Opaax
         UICanvasDoc lDoc;
         lDoc.ReferenceHeight = lJson.value(KEY_REF_HEIGHT, 1080.f);
 
-        Uint64 lSkipped = 0;
+        Uint64      lSkipped = 0;
+        OpaaxString lBadValue;
 
         try
         {
             if (const auto lIt = lJson.find(KEY_ROOT); lIt != lJson.end())
             {
-                lDoc.Root = ReadNode(*lIt, InRegistry, lSkipped);
+                lDoc.Root = ReadNode(*lIt, InClasses, lSkipped, lBadValue);
             }
         }
         catch (const nlohmann::json::exception& InError)
         {
-            // An unknown enum value throws; OutDoc is untouched then.
+            // A node's "Type" that is not text; OutDoc is untouched then.
             OPAAX_LOG(LogUICanvasFile, Error, "Unreadable value: {}", InError.what());
+            return false;
+        }
+
+        if (!lBadValue.IsEmpty())
+        {
+            OPAAX_LOG(LogUICanvasFile, Error, "Unreadable value: {} has the wrong type — nothing was read",
+                      lBadValue.CStr());
             return false;
         }
 
@@ -155,7 +180,7 @@ namespace Opaax
     {
         UICanvasDoc lDoc;
         lDoc.ReferenceHeight = InReferenceHeight;
-        lDoc.Root            = MakeUnique<UIPanel>();
+        lDoc.Root            = NewObject<UIPanel>();
         lDoc.Root->Name      = "Root";
 
         // Stretched over its parent: mounted, the root is the whole screen.
@@ -179,7 +204,7 @@ namespace Opaax
         return true;
     }
 
-    bool UICanvasFile::Load(const OpaaxString& InAbsPath, const UIWidgetRegistry& InRegistry, UICanvasDoc& OutDoc)
+    bool UICanvasFile::Load(const OpaaxString& InAbsPath, const ObjectClassRegistry& InClasses, UICanvasDoc& OutDoc)
     {
         const OpaaxString lText = FileIO::ReadAllText(InAbsPath);
 
@@ -189,7 +214,7 @@ namespace Opaax
             return false;
         }
 
-        if (!Deserialize(lText, InRegistry, OutDoc))
+        if (!Deserialize(lText, InClasses, OutDoc))
         {
             OPAAX_LOG(LogUICanvasFile, Error, "Canvas '{}' did not parse — nothing changed", InAbsPath.CStr());
             return false;
@@ -204,7 +229,7 @@ namespace Opaax
     {
         Uint64 lCount = 1;
 
-        for (const TUniquePtr<UIWidget>& lChild : InRoot.GetChildren())
+        for (const TStrongObjectPtr<UIWidget>& lChild : InRoot.GetChildren())
         {
             lCount += CountWidgets(*lChild);
         }
@@ -217,7 +242,7 @@ namespace Opaax
         return OpaaxString(WriteNode(InWidget).dump(4).c_str());
     }
 
-    TUniquePtr<UIWidget> UICanvasFile::DeserializeNode(const OpaaxString& InText, const UIWidgetRegistry& InRegistry)
+    TStrongObjectPtr<UIWidget> UICanvasFile::DeserializeNode(const OpaaxString& InText, const ObjectClassRegistry& InClasses)
     {
         const nlohmann::json lJson = nlohmann::json::parse(InText.CStr(), nullptr, false);
         if (lJson.is_discarded() || !lJson.is_object())
@@ -225,21 +250,31 @@ namespace Opaax
             return nullptr;   // not a node (e.g. unrelated clipboard text)
         }
 
-        Uint64 lSkipped = 0;
+        Uint64                     lSkipped = 0;
+        OpaaxString                lBadValue;
+        TStrongObjectPtr<UIWidget> lNode;
         try
         {
-            return ReadNode(lJson, InRegistry, lSkipped);
+            lNode = ReadNode(lJson, InClasses, lSkipped, lBadValue);
         }
         catch (const nlohmann::json::exception& InError)
         {
             OPAAX_LOG(LogUICanvasFile, Error, "Unreadable node: {}", InError.what());
             return nullptr;
         }
+
+        if (!lBadValue.IsEmpty())
+        {
+            OPAAX_LOG(LogUICanvasFile, Error, "Unreadable node: {} has the wrong type", lBadValue.CStr());
+        }
+
+        return lNode;
     }
 
-    TUniquePtr<UIWidget> UICanvasFile::CloneWidget(const UIWidget& InWidget, const UIWidgetRegistry& InRegistry)
+    TStrongObjectPtr<UIWidget> UICanvasFile::CloneWidget(const UIWidget& InWidget, const ObjectClassRegistry& InClasses)
     {
-        Uint64 lSkipped = 0;
-        return ReadNode(WriteNode(InWidget), InRegistry, lSkipped);
+        Uint64      lSkipped = 0;
+        OpaaxString lBadValue;
+        return ReadNode(WriteNode(InWidget), InClasses, lSkipped, lBadValue);
     }
 }

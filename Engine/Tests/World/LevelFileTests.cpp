@@ -1,10 +1,14 @@
 // Suite: LevelFile — the .opaaxlevel reader, and the world's name: the "name" key if set, else the
-// file name (so a named level keeps its name when moved).
+// file name (so a named level keeps its name when moved). And LevelAsset, the file loaded as an asset.
 // Uses a unique directory under the OS temp dir, created and removed per case.
 #include <doctest.h>
 
 #include "../TestTempDir.h"
 #include "Core/IO/FileIO.h"
+#include "Object/ObjectClassRegistry.h"
+#include "Resources/Asset/AssetResource.h"
+#include "Resources/ResourceManager.h"
+#include "World/Serialization/LevelAsset.h"
 #include "World/Serialization/LevelFile.h"
 
 using namespace Opaax;
@@ -24,9 +28,24 @@ namespace
             return lPath;
         }
 
+        /** InRel under the directory, written or not. */
+        OpaaxString Sub(const char* InRel) const { return m_Dir.Sub(InRel); }
+
     private:
         TestTempDir m_Dir;
     };
+
+    /** What the resource manager reads asset files with here: levels. */
+    struct LevelClasses final : ObjectClassRegistry
+    {
+        LevelClasses() { Register<LevelAsset>(); }
+    };
+
+    /** The level in InRef, or null when it did not load. */
+    const LevelAsset* LevelOf(const ResourceRef<AssetResource>& InRef)
+    {
+        return InRef.Get() != nullptr ? InRef.Get()->Get<LevelAsset>() : nullptr;
+    }
 }
 
 TEST_CASE("LevelFile: the 'name' key names the level")
@@ -233,4 +252,50 @@ TEST_CASE("LevelFile: Save -> Load is a fixed point")
     // And the text is STABLE, which is what the editor's dirty check rests on: a second
     // Save of what was just read must not report the level as changed.
     CHECK(LevelFile::Serialize(lRead) == LevelFile::Serialize(lWritten));
+}
+
+TEST_CASE("LevelAsset: a level file loads as a LevelAsset, shared by every load")
+{
+    const ScopedTempDir lDir("asset");
+    const OpaaxString   lPath = lDir.Write("Arena.opaaxlevel",
+        R"({ "version": 1, "name": "Arena", "maps": [ "Maps/A.opaaxmap", "Maps/B.opaaxmap" ],)"
+        R"(  "persistentMap": "Maps/B.opaaxmap" })");
+
+    const LevelClasses lClasses;
+    ResourceManager    lResources;
+    lResources.SetObjectClasses(&lClasses);
+
+    const ResourceRef<AssetResource> lFirst  = lResources.Load<AssetResource>(lPath.CStr());
+    const ResourceRef<AssetResource> lSecond = lResources.Load<AssetResource>(lPath.CStr());
+
+    const LevelAsset* const lLevel = LevelOf(lFirst);
+    REQUIRE(lLevel != nullptr);
+    CHECK(lLevel == LevelOf(lSecond));   // one file, read once
+    CHECK(lLevel->GetName() == OPAAX_ID("Arena"));
+
+    CHECK(lLevel->GetData().Name == OpaaxString("Arena"));
+    CHECK(lLevel->GetData().MapCount() == 2);
+    CHECK(lLevel->GetData().PersistentMap() == OpaaxString("Maps/B.opaaxmap"));
+
+    // Its maps are not loaded with it: the world's Level mounts them one by one.
+    CHECK(lResources.GetLoadedCount<AssetResource>() == 1);
+    CHECK(lLevel->GetResourceSize() > sizeof(LevelAsset));
+
+    lResources.FlushAll();
+}
+
+TEST_CASE("LevelAsset: a missing or unreadable level gives no level, never an empty one")
+{
+    // An empty level would not degrade, it would LIE: the world opens empty and nothing says why.
+    const ScopedTempDir lDir("asset_missing");
+    const OpaaxString   lBroken = lDir.Write("Broken.opaaxlevel", "{ not json");
+
+    const LevelClasses lClasses;
+    ResourceManager    lResources;
+    lResources.SetObjectClasses(&lClasses);
+
+    CHECK(LevelOf(lResources.Load<AssetResource>(lDir.Sub("Missing.opaaxlevel").CStr())) == nullptr);
+    CHECK(LevelOf(lResources.Load<AssetResource>(lBroken.CStr())) == nullptr);
+
+    lResources.FlushAll();
 }

@@ -14,18 +14,18 @@ namespace Opaax
 
         // A failed load is kept too (empty), so it is not retried for every placement.
         TUniquePtr<Claim> lClaim = MakeUnique<Claim>();
-        lClaim->Path = InAssetPath;
-        lClaim->Ref  = m_Resources.Load<PrefabResource>(m_Paths.AssetToAbsolute(InAssetPath).CStr());
+        lClaim->Path   = InAssetPath;
+        lClaim->Prefab = LoadAsset<PrefabAsset>(m_Resources, m_Paths, InAssetPath);
 
         // Kept by pointer: flattening recurses into Resolve, which grows the list.
         Claim* const lNew = lClaim.get();
         m_Claims.emplace_back(Move(lClaim));
 
-        if (const PrefabResource* const lRaw = lNew->Ref.Get())
+        if (const PrefabAsset* const lRaw = lNew->Prefab.Get())
         {
             lNew->bInFlight = true;
             lNew->Flattened = MakeUnique<PrefabData>(
-                PrefabFactory::Flatten(lRaw->Data, InAssetPath, *this, m_Components));
+                PrefabFactory::Flatten(lRaw->GetData(), InAssetPath, *this, m_Components));
             lNew->bInFlight = false;
         }
 
@@ -69,10 +69,10 @@ namespace Opaax
             if (lSeen) { continue; }
             lVisited.emplace_back(lPath);
 
-            const PrefabResource* const lRaw = ClaimFor(lPath).Ref.Get();
+            const PrefabAsset* const lRaw = ClaimFor(lPath).Prefab.Get();
             if (lRaw == nullptr) { continue; }
 
-            for (const PrefabInstanceRecord& lRecord : lRaw->Data.Instances)
+            for (const PrefabInstanceRecord& lRecord : lRaw->GetData().Instances)
             {
                 if (lRecord.Prefab == InInner) { return true; }
                 lPending.emplace_back(lRecord.Prefab);

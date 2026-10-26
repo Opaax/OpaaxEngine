@@ -2,6 +2,12 @@
 
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
+#include "Resources/ResourceTypeID.hpp"
+
+namespace Opaax
+{
+    struct AssetResource;
+}
 
 namespace Opaax::Editor
 {
@@ -35,4 +41,15 @@ namespace Opaax::Editor
      * @return True when OutAssetPath was written this frame
      */
     bool AcceptResourceDragPayload(Uint32 InTypeId, OpaaxString& OutAssetPath, Uint32 InKind = 0);
+
+    /**
+     * Accepts a dropped asset file that holds a T or a subclass of T: an .opaaxasset, or a file T reads
+     * (a .png for a Texture2D). As AcceptResourceDragPayload.
+     */
+    template<typename T>
+    bool AcceptAssetDragPayload(OpaaxString& OutAssetPath)
+    {
+        return AcceptResourceDragPayload(ResourceTypeID::Get<AssetResource>(), OutAssetPath,
+                                         T::StaticClass().GetName().GetId());
+    }
 }

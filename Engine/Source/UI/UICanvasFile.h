@@ -4,18 +4,19 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
+#include "Object/ObjectPtr.h"
 
 namespace Opaax
 {
+    class ObjectClassRegistry;
     class UIWidget;
-    class UIWidgetRegistry;
 
     inline constexpr LogCategory LogUICanvasFile{"UICanvasFile"};
 
     // =============================================================================
-    // UICanvasFile — reads and writes .opaaxui files. A node names its type and holds its fields;
-    //   the registry creates the widget and the widget reads itself. Unknown types are skipped
-    //   (with one warning).
+    // UICanvasFile — reads and writes .opaaxui files. A node names its widget class ("Type") and holds
+    //   that class's properties; the class registry makes the widget and the class reads them. Unknown
+    //   types are skipped (with one warning); a value of the wrong type refuses the whole read.
     // =============================================================================
     namespace UICanvasFile
     {
@@ -28,8 +29,8 @@ namespace Opaax
         /** A canvas file: reference height and the root's children. */
         struct UICanvasDoc
         {
-            float                ReferenceHeight = 1080.f;
-            TUniquePtr<UIWidget> Root;              // a UIPanel; its children are the authored tree
+            float                      ReferenceHeight = 1080.f;
+            TStrongObjectPtr<UIWidget> Root;   // a UIPanel; its children are the authored tree
         };
 
         /**
@@ -49,16 +50,17 @@ namespace Opaax
         OpaaxString Serialize(const UIWidget& InRoot, float InReferenceHeight);
 
         /**
-         * Parses InText into OutDoc, creating widgets through InRegistry. OutDoc is untouched on failure.
-         * @return False on malformed JSON or an unsupported version
+         * Parses InText into OutDoc, making widgets of the classes InClasses holds. OutDoc is untouched on
+         * failure.
+         * @return False on malformed JSON, an unsupported version or a value of the wrong type
          */
-        bool Deserialize(const OpaaxString& InText, const UIWidgetRegistry& InRegistry, UICanvasDoc& OutDoc);
+        bool Deserialize(const OpaaxString& InText, const ObjectClassRegistry& InClasses, UICanvasDoc& OutDoc);
 
         /** Writes InDoc to InAbsPath, replacing any content. */
         bool Save(const OpaaxString& InAbsPath, const UICanvasDoc& InDoc);
 
         /** Reads InAbsPath into OutDoc (same guarantees as Deserialize). */
-        bool Load(const OpaaxString& InAbsPath, const UIWidgetRegistry& InRegistry, UICanvasDoc& OutDoc);
+        bool Load(const OpaaxString& InAbsPath, const ObjectClassRegistry& InClasses, UICanvasDoc& OutDoc);
 
         /** Number of widgets in InRoot's subtree, itself included. */
         Uint64 CountWidgets(const UIWidget& InRoot);
@@ -71,9 +73,9 @@ namespace Opaax
         OpaaxString SerializeNode(const UIWidget& InWidget);
 
         /** A new subtree from InText, or null if it is not a node. */
-        TUniquePtr<UIWidget> DeserializeNode(const OpaaxString& InText, const UIWidgetRegistry& InRegistry);
+        TStrongObjectPtr<UIWidget> DeserializeNode(const OpaaxString& InText, const ObjectClassRegistry& InClasses);
 
         /** A deep copy through the file format. */
-        TUniquePtr<UIWidget> CloneWidget(const UIWidget& InWidget, const UIWidgetRegistry& InRegistry);
+        TStrongObjectPtr<UIWidget> CloneWidget(const UIWidget& InWidget, const ObjectClassRegistry& InClasses);
     }
 }

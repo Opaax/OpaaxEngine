@@ -12,7 +12,6 @@
 #include "Editor/Resources/EditorResourceEvents.h"
 #include "Editor/Undo/EditorUndo.h"
 #include "Editor/Operation/EditorViewport.hpp"
-#include "Editor/Resources/ResourcePreview.h"
 #include "Editor/Input/InputRoute.h"
 #include "Editor/EditorMapDocument.h"
 #include "Editor/EditorLevelDocument.h"
@@ -111,7 +110,6 @@ namespace Opaax::Editor
          * Registers how the browser shows each resource type and what a double-click does.
          * File extensions come from the engine's ResourceFormatRegistry.
          */
-        void RegisterNativeResourceTypes();
 
         /**
          * Registers how the engine's asset classes look and where New Asset lists them. Before the game
@@ -127,7 +125,6 @@ namespace Opaax::Editor
         /**
          * Registers drawers for the engine and editor configs (drawn from their properties, not JSON).
          */
-        void RegisterNativeConfigDrawers();
 
         /**
          * Gives every reflected component that has no drawer (typically a game's) the generic one, drawn
@@ -293,7 +290,6 @@ namespace Opaax::Editor
 
         EditorExtensionRegistrar        m_Extensions;
 
-        TUniquePtr<ResourcePreview>     m_Preview;     
         TUniquePtr<EditorSelection>     m_Selection;
 
         /** "A document was saved", two-phase. Referenced by EditorContext. */

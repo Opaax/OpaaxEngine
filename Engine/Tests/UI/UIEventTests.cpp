@@ -16,13 +16,13 @@ namespace
     /** Records what it was asked and answers as told. */
     class Recorder final : public UIWidget
     {
+        OPAAX_OBJECT(Recorder, UIWidget)
+
     public:
         bool                        bHandlePointer = false;
         bool                        bHandleKey     = false;
         TDynArray<EUIPointerEventType> Pointer;
         TDynArray<bool>             Keys;   // bPressed per key event
-
-        OpaaxStringID GetTypeName() const noexcept override { return OPAAX_ID("Recorder"); }
 
         EUIReply OnPointerEvent(const UIPointerEvent& InEvent) override
         {
@@ -67,9 +67,9 @@ namespace
         Fixture()
         {
             Canvas.SetTargetSize(1920, 1080);
-            Parent = static_cast<Recorder*>(Canvas.Root().AddChild(MakeUnique<Recorder>()));
+            Parent = static_cast<Recorder*>(Canvas.Root().AddChild(NewObject<Recorder>()));
             Parent->SetRect(Centred({ 400.f, 400.f }));
-            Child = static_cast<Recorder*>(Parent->AddChild(MakeUnique<Recorder>()));
+            Child = static_cast<Recorder*>(Parent->AddChild(NewObject<Recorder>()));
             Child->SetRect(Centred({ 100.f, 100.f }));
             Canvas.Update();
         }
@@ -177,7 +177,7 @@ TEST_CASE("UIEvents: detaching a subtree forgets hovered, pressed and focused un
     REQUIRE(lF.Canvas.GetFocus()   == lF.Child);
 
     // Remove the PARENT: the child under it is gone with it, and nothing may still point at it.
-    const TUniquePtr<UIWidget> lTaken = lF.Canvas.Root().RemoveChild(*lF.Parent);
+    const TStrongObjectPtr<UIWidget> lTaken = lF.Canvas.Root().RemoveChild(*lF.Parent);
     REQUIRE(lTaken != nullptr);
     CHECK(lF.Canvas.GetHovered() == nullptr);
     CHECK(lF.Canvas.GetPressed() == nullptr);
@@ -207,9 +207,9 @@ TEST_CASE("UIEvents: a bare image or panel lets a click fall through — Unreal'
 {
     UICanvas lCanvas(1080.f);
     lCanvas.SetTargetSize(1920, 1080);
-    UIWidget* lPanel = lCanvas.Root().AddChild(MakeUnique<UIPanel>());
+    UIWidget* lPanel = lCanvas.Root().AddChild(NewObject<UIPanel>());
     lPanel->SetRect(Centred({ 400.f, 400.f }));
-    UIWidget* lImage = lPanel->AddChild(MakeUnique<UIImage>());
+    UIWidget* lImage = lPanel->AddChild(NewObject<UIImage>());
     lImage->SetRect(Centred({ 100.f, 100.f }));
     lCanvas.Update();
 

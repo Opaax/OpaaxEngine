@@ -23,7 +23,6 @@ set(OPAAX_TEST_SOURCES
     Core/AlgoTests.cpp
     Core/ColorTests.cpp
     Core/CStringTests.cpp
-    Core/Config/EngineConfigDataTests.cpp
     Core/GuidTests.cpp
     Core/Image/PngWriterTests.cpp
     Core/IO/FileSystemTests.cpp
@@ -63,6 +62,7 @@ set(OPAAX_TEST_SOURCES
 
     # Engine
     Engine/AutoRegistrationTests.cpp
+    Engine/EngineConfigDataTests.cpp
     Engine/EngineEventsTests.cpp
     Engine/FrameClockTests.cpp
     Engine/GameInstanceTests.cpp
@@ -74,6 +74,7 @@ set(OPAAX_TEST_SOURCES
 
     # Resources
     Resources/AssetMigrationTests.cpp
+    Resources/AssetSourceTests.cpp
     Resources/AssetTests.cpp
     Resources/ResourceFormatRegistryTests.cpp
     Resources/ResourceSystemTests.cpp
@@ -101,10 +102,11 @@ set(OPAAX_TEST_SOURCES
     World/WorldEntityTests.cpp
     World/WorldEventsTests.cpp
     World/WorldModeTests.cpp
+    World/WorldObjectTests.cpp
     # Two TUs on purpose: they check "one tag per type", not "one tag per TU".
     World/WorldSubsystemIdentityTests.cpp
     World/WorldSubsystemIdentityTU2.cpp
-    World/WorldSubsystemRegistryTests.cpp
+    World/WorldSubsystemTests.cpp
     World/WorldTickGateTests.cpp
 
     # Input
@@ -141,7 +143,7 @@ set(OPAAX_TEST_SOURCES
     Renderer/RenderTargetTests.cpp
     Renderer/SortKeyTests.cpp
     Renderer/SpriteSheetTests.cpp
-    Renderer/TextureResourceTests.cpp
+    Renderer/Texture2DTests.cpp
 
     # Runtime UI (layout, events, serialization; no GL context needed)
     UI/UIBindingTests.cpp
@@ -157,10 +159,12 @@ set(OPAAX_TEST_SOURCES
     UI/UISliceTests.cpp
     UI/UIStackTests.cpp
     UI/UITextTests.cpp
+    UI/UIWidgetClassTests.cpp
 
     # Editor logic that needs no ImGui (header-only editor types)
     Editor/AnimationClipEditingTests.cpp
     Editor/AssetDocumentTests.cpp
+    Editor/AssetFileClassTests.cpp
     Editor/AssetTypeRegistryTests.cpp
     Editor/AssetWindowPlacementTests.cpp
     Editor/ConfigChangeTrackerTests.cpp
@@ -175,7 +179,6 @@ set(OPAAX_TEST_SOURCES
     Editor/ResourceDragPayloadTests.cpp
     Editor/SpriteSheetEditingTests.cpp
     Editor/UIPreviewAspectTests.cpp
-    Editor/UIWidgetDrawerTests.cpp
 
     # Micro-benchmarks: doctest suite "perf", skipped by default. Run them in Release with
     # OpaaxTests --test-suite=perf --no-skip.

@@ -10,16 +10,19 @@ engine content with `/Engine/` (`/Engine/Textures/T_Square_256_White.png`).
 
 | Extension | What | In the editor |
 |---|---|---|
-| `.opaaxproj` | The project: name, startup level | (project root) |
+| `.opaaxproj` | The project: name, startup level, the game's class | (project root) |
 | `.opaaxlevel` | A level: the maps it loads | File > New/Open/Save Level |
 | `.opaaxmap` | A map: entities and placed prefabs | Hierarchy, Inspector |
 | `.opaaxprefab` | A prefab, a nested prefab or a variant | Create Prefab, Prefab panel |
 | `.opaaxui` | A UI canvas | UI editor |
-| `.opaaxasset` | An asset of any registered class (a `Material2D`, a `SpriteSheet`, an `AudioClipDef` or `AudioBank`, a `Mover` or `MoveMode`, an `InputActionAsset` or `InputMappingContextAsset`, an `AnimationClip` or `AnimationLibrary`, a `FontFamily`, a game's own classes) | Its own window: double-click it |
+| `.opaaxasset` | An asset of any registered class (a `Material2D`, a `SpriteSheet`, an `AudioClipDef` or `AudioBank`, a `Mover` or a move mode (`GroundMoveMode`, `FlyMoveMode`), an `InputActionAsset` or `InputMappingContextAsset`, an `AnimationClip` or `AnimationLibrary`, a `FontFamily`, a game's own classes) | Its own window: double-click it |
 | `Configs/*.config` | Engine, renderer and editor settings | Config panel |
 
-Images are `.png`, sounds `.wav`, `.mp3` or `.flac`, fonts `.ttf`: put them under `Assets`. A sound up
-to 10 s is decoded when it loads; a longer one (music) keeps its file and is decoded while it plays.
+Images are `.png` (or `.jpg`, `.tga`, `.bmp`), sounds `.wav`, `.mp3` or `.flac`, fonts `.ttf` (or
+`.otf`): put them under `Assets`. An image is a `Texture2D` asset, a font a `FontFace` and a sound an
+`AudioClip`, each read from the file itself, with nothing beside it; double-click opens it (a font
+shows its baked glyphs and metrics, a sound plays). A sound up to 10 s is decoded when it loads; a longer one (music) keeps
+its file and is decoded while it plays.
 
 ## Project (`.opaaxproj`)
 
@@ -29,11 +32,15 @@ to 10 s is decoded when it loads; a longer one (music) keeps its file and is dec
     "startupLevel": "Levels/Main.opaaxlevel",
     "loadingScreen": "UI/Loading.opaaxui",
     "loadingScreenMinSeconds": 0.5,
-    "uiReferenceHeight": 1080
+    "uiReferenceHeight": 1080,
+    "gameInstanceClass": "TetrisGame"
 }
 ```
 
-`MakeOpaax.sh` (or `OpaaxCreator`) creates a project with this file, its folders and its CMake target.
+`gameInstanceClass` names the game's own `GameInstance` class
+([Objects.md](Objects.md#the-game-worlds-and-levels)); without it, the game runs a plain
+`GameInstance`. `MakeOpaax.sh` (or `OpaaxCreator`) creates a project with this file, its folders and
+its CMake target.
 
 ## Levels and maps (`.opaaxlevel`, `.opaaxmap`)
 
@@ -166,7 +173,9 @@ A tree of widgets, designed at `ReferenceHeight` (the canvas scales to the scree
 }
 ```
 
-Every widget has `Type`, `Name`, `Rect`, `Opacity`, `bVisible`, `bHitTestable` and `Children`. A
+`Type` is the widget's class and the other keys are its properties, the base's (`Name`, `Rect`,
+`Opacity`, `bVisible`, `bHitTestable`, which every widget has) then its own; `Children` holds the
+widgets under it. A game's widget class is written the same way, under its class name. A
 `Rect` anchors the widget in its parent (`AnchorMin`/`AnchorMax`, fractions; equal = a point, apart =
 stretch), places its `Pivot` at `AnchoredPosition` (canvas units, Y up) and gives its `SizeDelta`. A
 mounted canvas's root sits in the screen, so a HUD's root stretches over it (anchors 0 to 1, `SizeDelta`
@@ -312,10 +321,10 @@ definition's) or `Clip` with its own `Bus`, `Volume`, `Pitch`, `bLoop`, `bSpatia
 `Attenuation`. `bPlayOnStart` starts it with its entity; `bStopOnDestroy` off lets it play to its end
 after the entity is gone.
 
-## Movement (`Mover`, `MoveMode`)
+## Movement (`Mover`, move modes)
 
-Both are assets. A `Mover` lists the modes a `Mover` component can switch between; each mode is a
-`MoveMode` asset of its own (a tuning):
+Both are assets. A `Mover` lists the modes a `Mover` component can switch between; each mode is an
+asset of a `MoveMode` class, which is a way of moving and its tuning:
 
 ```json
 { "Class": "Mover", "Properties": {
@@ -325,17 +334,21 @@ Both are assets. A `Mover` lists the modes a `Mover` component can switch betwee
 ```
 
 ```json
-{ "Class": "MoveMode", "Properties": {
-    "Mode": "GroundMove", "MaxSpeed": 420.0, "Acceleration": 12.0, "GroundDeceleration": 9.0,
-    "AirSteer": 0.35, "JumpSpeed": 620.0, "GravityScale": 1.0, "MaxSlopeAngleDeg": 50.0,
-    "MinSpeed": 10.0, "StopSpeed": 100.0 } }
+{ "Class": "GroundMoveMode", "Properties": {
+    "MaxSpeed": 420.0, "Acceleration": 12.0, "GroundDeceleration": 9.0, "AirSteer": 0.35,
+    "JumpSpeed": 620.0, "GravityScale": 1.0, "MaxSlopeAngleDeg": 50.0, "MinSpeed": 10.0,
+    "StopSpeed": 100.0 } }
+{ "Class": "FlyMoveMode", "Properties": { "MaxSpeed": 600.0, "MaxSlopeAngleDeg": 50.0 } }
 ```
 
-`Mode` names a registered mode (`GroundMove`, `FlyMove`, or a game's `OPAAX_REGISTER_MOVER_MODE`); its
-window shows only the fields that mode reads. A tuning that does not load moves with the defaults (a
-walking mode). In a Mover, names resolve by first match: an edit clears a repeated name, names an
-entry after its tuning's file when it has none, and clears a default that names no entry. Gameplay
-drives a mover through its component: `Input.MoveDir`, `Input.bJump`, `PendingMode`.
+The class is the mode: `GroundMoveMode` walks, jumps and falls, `FlyMoveMode` flies, and a game adds
+its own as a `MoveMode` subclass. Each lists only the fields it reads; `MaxSlopeAngleDeg`, the
+steepest slope that counts as ground, belongs to every mode. A mode that does not load walks with
+`GroundMoveMode`'s defaults. A file written before the modes were classes (`"Class": "MoveMode"` with a
+`"Mode": "GroundMove"` field) loads as the class its `Mode` names, `GroundMoveMode` here, with a
+warning; `--upgrade-assets` rewrites it. In a Mover, names resolve by first match: an edit clears a
+repeated name, names an entry after its mode's file when it has none, and clears a default that names
+no entry. Gameplay drives a mover through its component: `Input.MoveDir`, `Input.bJump`, `PendingMode`.
 
 ## Fonts (`FontFamily`)
 

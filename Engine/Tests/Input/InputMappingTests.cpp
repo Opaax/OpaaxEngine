@@ -7,6 +7,7 @@
 #include "Application/Services/IPaths.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Engine/Config/EngineConfigData.h"
+#include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceContext.h"
 #include "Input/Mapping/InputActionEvaluator.h"
 #include "Input/Mapping/InputMappingSubsystem.h"
@@ -83,6 +84,19 @@ namespace
         {
             return GameInstanceContext{Worlds, Resources, IPaths::Null(), Events, Input, Config};
         }
+
+        /** The game's input mapping, made and started the way a game makes it, with this context. */
+        InputMappingSubsystem& StartMapping()
+        {
+            Game = NewObject<GameInstance>();
+            Game->Init(Make());
+            Game->GetSubsystems().Add<InputMappingSubsystem>();
+            Game->GetSubsystems().StartupAll();
+            return *Game->GetSubsystems().GetSubsystem<InputMappingSubsystem>();
+        }
+
+        // Last: the game ends before the services its context names.
+        TStrongObjectPtr<GameInstance> Game;
     };
 }
 
@@ -751,8 +765,7 @@ TEST_SUITE("InputMappingSubsystem — binding")
     TEST_CASE("Bind fires the right handler for the right phase")
     {
         ContextFixture         lFixture;
-        GameInstanceContext    lContext = lFixture.Make();
-        InputMappingSubsystem  lInput(lContext);
+        InputMappingSubsystem& lInput = lFixture.StartMapping();
         Listener               lListener;
 
         lInput.RegisterAction(MakeAction("Jump", EInputValueType::Bool));
@@ -791,8 +804,7 @@ TEST_SUITE("InputMappingSubsystem — binding")
     TEST_CASE("UnbindAll(this) removes every registration an owner made")
     {
         ContextFixture        lFixture;
-        GameInstanceContext   lContext = lFixture.Make();
-        InputMappingSubsystem lInput(lContext);
+        InputMappingSubsystem& lInput = lFixture.StartMapping();
         Listener              lOwnerA;
         Listener              lOwnerB;
 
@@ -825,8 +837,7 @@ TEST_SUITE("InputMappingSubsystem — binding")
     TEST_CASE("Unbind by handle removes exactly one, and a lambda binding works")
     {
         ContextFixture        lFixture;
-        GameInstanceContext   lContext = lFixture.Make();
-        InputMappingSubsystem lInput(lContext);
+        InputMappingSubsystem& lInput = lFixture.StartMapping();
 
         lInput.RegisterAction(MakeAction("Jump", EInputValueType::Bool));
 
@@ -859,8 +870,7 @@ TEST_SUITE("InputMappingSubsystem — binding")
     TEST_CASE("GetValue reads the same table the callbacks fire from")
     {
         ContextFixture        lFixture;
-        GameInstanceContext   lContext = lFixture.Make();
-        InputMappingSubsystem lInput(lContext);
+        InputMappingSubsystem& lInput = lFixture.StartMapping();
 
         lInput.RegisterAction(MakeAction("Move", EInputValueType::Axis1D));
 

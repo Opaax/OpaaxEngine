@@ -100,15 +100,33 @@ Match the code around you. In short:
 
 ## Adding something
 
-- **Component or behaviour:** the type with `OPAAX_PROPERTIES` (and the JSON macro for a component),
-  one `OPAAX_REGISTER_*` line, unit tests for its logic, a TestWorld probe or level when a game can
-  see it. Old maps must still load: new fields have defaults (`NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT`).
+- **Component or behaviour:** the type with `OPAAX_PROPERTIES` (and the JSON macro for a component;
+  `OPAAX_OBJECT(T, Opaax::Behaviour)` first in a behaviour's body), one `OPAAX_REGISTER_*` line, unit
+  tests for its logic, a TestWorld probe or level when a game can see it. Old maps must still load:
+  new fields have defaults (`NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT`).
+- **Subsystem:** a `WorldSubsystem` or `GameInstanceSubsystem` subclass with `OPAAX_OBJECT` and one
+  `OPAAX_REGISTER_OBJECT` line: its owner finds the class. Nothing in its constructor (the class
+  default object is built with it); its services from `GetContext()`, valid from `Startup`; which
+  worlds and when it ticks by overriding `ShouldCreate` and `GetTickOrder`. A unit test adds it to a
+  world after `SetContext` (`GetSubsystems().Add<T>()`, then `StartupAll()`).
+- **Game instance class:** a `GameInstance` subclass with `OPAAX_OBJECT`, `OnStart`/`OnEnd` overrides
+  and one `OPAAX_REGISTER_OBJECT` line, named by the project's `gameInstanceClass`. Session features
+  go in game instance subsystems instead, which every game makes.
+- **Config:** a data struct with the JSON macro and `OPAAX_PROPERTIES` (a default on every field), a
+  `TConfig<Data>` subclass with `OPAAX_OBJECT(Class, Opaax::Config)` and its `FileName()` (or
+  `DECLARE_T_CONFIG`), and one `OPAAX_REGISTER_OBJECT` line. Read with `IConfigSystem::Get<T>()`; the
+  Config panel draws it from its properties. See [Docs/Customizing.md](Docs/Customizing.md).
+- **UI widget:** a `UIWidget` subclass with `OPAAX_OBJECT`, its saved fields in `OPAAX_PROPERTIES`, and
+  one `OPAAX_REGISTER_OBJECT` line: canvases save it, the UI panel offers and draws it. Made with
+  `NewObject<T>()` in code; its parent owns it.
 - **Asset class:** an `Asset` subclass with `OPAAX_OBJECT` and `OPAAX_PROPERTIES` (a default on every
   field), one `OPAAX_REGISTER_OBJECT` line, unit tests for its file round trip and its hooks
   (`PostEditChange`). In the editor, an `AssetTypes()` entry for its label, category and glyph; an
   `IAssetEditor` only when a list of fields is not enough, its logic in pure functions beside it.
   Replacing an older per-type file format: a line in `AssetMigration::GetLegacyFormats`, then the
-  content converted with `--upgrade-assets`. See [Docs/Objects.md](Docs/Objects.md).
+  content converted with `--upgrade-assets`. A class read from files of its own format (a `.png`)
+  lists their extensions with `OPAAX_ASSET_SOURCE` and reads one in `LoadSource`. See
+  [Docs/Objects.md](Docs/Objects.md).
 - **Renderer feature:** the CPU side (packing, layout, limits) as tested pure functions; the shader in
   `Engine/Assets/Shaders` with its bindings checked in `EngineShaderTests`; a TestWorld level and a
   screenshot looked at.
@@ -142,11 +160,15 @@ Match the code around you. In short:
   warning MSB8029), and stale objects then crash at run time. Keep checkouts and builds out of it.
 - A `git worktree` has no submodules: run `git submodule update --init --recursive` in it before the
   first build (the configure step says so).
+- `OPAAX_REGISTER_*` runs only in code linked whole: the engine and the game modules. The editor
+  library is not, so a registration in an editor file is dropped by the linker; the editor registers
+  through its `EditorExtensionRegistrar`, and makes its config by reading it.
 - Core has namespaces named `Clock`, `Random`, `Algo`, `Memory`, `FileSystem`, `Console`, `Process`:
   a type of the same name, used under `using namespace Opaax`, is ambiguous. Name it otherwise.
 - Visiting a `TAssetRef<T>` property needs `T::StaticClass()`, so `T` must be complete wherever the
-  owner's properties are registered or drawn: an asset class header includes the asset classes it
-  references; a component forward-declares them and its registration file includes them.
+  owner's properties are registered or drawn: an object class header (an asset, a widget) includes
+  the asset classes it references, since every file that makes one builds its class; a component
+  forward-declares them and its registration file includes them.
 - An asset window records an undo step whenever no ImGui item is active: an editor that edits on a
   mouse drag keeps an item active for the whole drag (an `InvisibleButton` over the area), or every
   frame of it becomes a step.

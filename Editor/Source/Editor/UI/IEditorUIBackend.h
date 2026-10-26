@@ -79,7 +79,7 @@ namespace Opaax::Editor
         virtual EditorImage GetViewportImage(IFramebuffer& InFB) = 0;
 
         /**
-         * A loaded texture, ready for ImGui::Image (icons, thumbnails, the Preview panel). V is flipped.
+         * A loaded texture, ready for ImGui::Image (icons, thumbnails, asset windows). V is flipped.
          * @return An invalid image when the texture is not uploaded yet (normal; draw a fallback)
          */
         virtual EditorImage GetTextureImage(ITexture2D& InTexture) = 0;

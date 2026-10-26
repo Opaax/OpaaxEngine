@@ -33,8 +33,9 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Registers InClass under its name. Refused (and logged) once sealed, or when its name or type is
-         * already taken (two namespaces, one class name).
+         * Registers InClass under its name, and under the extensions of the files it is read from, if
+         * any. Refused (and logged) once sealed, or when its name, its type or one of those extensions is
+         * already taken (two namespaces, one class name; two classes for .png files).
          */
         bool Register(const ObjectClass& InClass);
 
@@ -61,6 +62,12 @@ namespace Opaax
         const ObjectClass* FindByTypeId(TypeId InTypeId) const noexcept;
 
         /**
+         * The class read from files of InExtension, or null.
+         * @param InExtension An id from NormalizeExtension (Resources/ResourceFormat.h), not raw text
+         */
+        const ObjectClass* FindBySourceExtension(OpaaxStringID InExtension) const noexcept;
+
+        /**
          * Every registered class that is InBase or derives from it, in registration order.
          * @param bInConcreteOnly Leaves out the abstract classes (what an editor offers to make)
          */
@@ -80,6 +87,9 @@ namespace Opaax
 
         /** Names (and aliases) by their id. */
         TUnorderedMap<Uint32, const ObjectClass*> m_ByName;
+
+        /** The classes read from files of their own, by normalized extension id. */
+        TUnorderedMap<Uint32, const ObjectClass*> m_BySourceExtension;
 
         bool m_bSealed = false;
     };

@@ -16,6 +16,8 @@ namespace TestWorld
     // =============================================================================
     class ContactProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(ContactProbe, Opaax::Behaviour)
+
     public:
         Opaax::Int32       CollisionsBegan = 0;
         Opaax::Int32       CollisionsEnded = 0;
@@ -65,6 +67,8 @@ namespace TestWorld
     // =============================================================================
     class BoundsProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(BoundsProbe, Opaax::Behaviour)
+
     public:
         void OnStart() override { Listen<&BoundsProbe::OnExited>(); }
 
@@ -78,6 +82,8 @@ namespace TestWorld
     // =============================================================================
     class ForceProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(ForceProbe, Opaax::Behaviour)
+
     public:
         Opaax::Vector2F Acceleration = { 0.f, 0.f };
         float           Seconds      = 0.5f;
@@ -103,6 +109,8 @@ namespace TestWorld
     // =============================================================================
     class ImpulseProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(ImpulseProbe, Opaax::Behaviour)
+
     public:
         Opaax::Vector2F Speed          = { 0.f, 0.f };
         float           AngularImpulse = 0.f;
@@ -132,6 +140,8 @@ namespace TestWorld
     // =============================================================================
     class SpinProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(SpinProbe, Opaax::Behaviour)
+
     public:
         float DegreesPerSecond = 0.f;
         float Torque           = 0.f;
@@ -180,6 +190,8 @@ namespace TestWorld
     // =============================================================================
     class LiftProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(LiftProbe, Opaax::Behaviour)
+
     public:
         float Speed  = 200.f;
         float Height = 200.f;
@@ -207,6 +219,8 @@ namespace TestWorld
     // =============================================================================
     class SpeedProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(SpeedProbe, Opaax::Behaviour)
+
     public:
         float SampleAfter = 1.f;
 
@@ -236,6 +250,8 @@ namespace TestWorld
     // =============================================================================
     class RayProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(RayProbe, Opaax::Behaviour)
+
     public:
         float Distance     = 1000.f;
         float Reach        = 100.f;

@@ -14,7 +14,7 @@
 #include "World/Prefab/PrefabFile.h"
 #include "World/Prefab/PrefabJson.h"
 #include "World/Prefab/PrefabFold.h"
-#include "World/Prefab/PrefabResource.hpp"
+#include "World/Prefab/PrefabAsset.h"
 #include "World/Prefab/ResourcePrefabResolver.h"
 #include "World/Serialization/MapFactory.h"
 #include "World/Serialization/MapSerializer.h"
@@ -53,7 +53,7 @@ namespace Opaax::Editor
         if (m_World == nullptr)
         {
             // Created once and kept for the session (see the header).
-            m_World = InContext.Worlds.CreateWorld(OpaaxString("Prefab Edit"), EWorldMode::Edit);
+            m_World = InContext.Worlds.CreateWorld(OPAAX_ID("Prefab Edit"), EWorldMode::Edit);
 
             if (m_World == nullptr)
             {
@@ -102,7 +102,7 @@ namespace Opaax::Editor
         const PrefabData lData = CaptureAsPrefab(InContext, *m_World);
 
         // Before the write: listeners that need the old prefab must read it while the old file exists.
-        ResourceOps::AboutToSave<PrefabResource>(InContext, m_AbsPath);
+        ResourceOps::AboutToSave<AssetResource>(InContext, m_AbsPath, PrefabAsset::StaticClass().GetName());
 
         if (!PrefabFile::Save(m_AbsPath, lData))
         {
@@ -114,7 +114,7 @@ namespace Opaax::Editor
         m_LastRevision = ~0ull;
 
         // Reload the resource and reapply it to every placement in the level, keeping their overrides.
-        ResourceOps::SavedToDisk<PrefabResource>(InContext, m_AbsPath);
+        ResourceOps::SavedToDisk<AssetResource>(InContext, m_AbsPath, PrefabAsset::StaticClass().GetName());
 
         return true;
     }
@@ -152,11 +152,11 @@ namespace Opaax::Editor
         if (lData.Instances.empty()) { return false; }   // the base did not resolve (logged)
 
         // Same bracket as Save, so a variant written over an existing prefab reaches its placements.
-        ResourceOps::AboutToSave<PrefabResource>(InContext, InAbsPath);
+        ResourceOps::AboutToSave<AssetResource>(InContext, InAbsPath, PrefabAsset::StaticClass().GetName());
 
         if (!PrefabFile::Save(InAbsPath, lData)) { return false; }
 
-        ResourceOps::SavedToDisk<PrefabResource>(InContext, InAbsPath);
+        ResourceOps::SavedToDisk<AssetResource>(InContext, InAbsPath, PrefabAsset::StaticClass().GetName());
 
         Uint64 lOverrides = 0;
         for (const PrefabInstanceRecord& lRecord : lData.Instances)

@@ -48,6 +48,8 @@ namespace Opaax
     // =============================================================================
     class UIStack final : public UIWidget
     {
+        OPAAX_OBJECT(UIStack, UIWidget)
+
         // =============================================================================
         // Authored state
         // =============================================================================
@@ -78,11 +80,6 @@ namespace Opaax
         // =============================================================================
     public:
         UIStack();
-
-        OpaaxStringID GetTypeName() const noexcept override { return OPAAX_ID("UIStack"); }
-
-        void SaveFields(nlohmann::json& InOutJson) const override;
-        void LoadFields(const nlohmann::json& InJson) override;
 
     protected:
         /** My rect, with the axis size from the content when bFitContent. */

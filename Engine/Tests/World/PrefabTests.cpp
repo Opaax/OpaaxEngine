@@ -1,4 +1,4 @@
-// Suite: the prefab as a document (PrefabJson / PrefabFile / PrefabResource) and as a placement
+// Suite: the prefab as a document (PrefabJson / PrefabFile / PrefabAsset) and as a placement
 // (PrefabFactory::BuildInstance -> MapFactory::Instantiate). Main case: one prefab placed twice in
 // one world (World::CreateEntityWithGuid refuses duplicate guids, hence Guid::Derive).
 // Uses a unique directory under the OS temp dir, created and removed per case.
@@ -7,7 +7,9 @@
 #include "../TestTempDir.h"
 #include "Core/OpaaxTypes.h"
 
-#include "Resources/ResourceManager.h"   // before PrefabResource — completes LoadContext
+#include "Object/ObjectClassRegistry.h"
+#include "Resources/Asset/AssetResource.h"
+#include "Resources/ResourceManager.h"
 #include "World/Components/ComponentRegistry.h"
 #include "Renderer/Components/QuadComponent.h"
 #include "World/Components/PrefabInstanceComponent.h"
@@ -20,7 +22,7 @@
 #include "World/Prefab/PrefabFold.h"
 #include "World/Prefab/PrefabJson.h"
 #include "World/Prefab/PrefabOverrides.h"
-#include "World/Prefab/PrefabResource.hpp"
+#include "World/Prefab/PrefabAsset.h"
 #include "World/Serialization/MapFactory.h"
 #include "World/Serialization/MapFile.h"
 #include "World/Serialization/MapJson.h"
@@ -709,7 +711,7 @@ TEST_CASE("PrefabJson: an empty prefab is a real document, not a broken one")
     CHECK(lParsed.IsEmpty());
 }
 
-TEST_CASE("PrefabFile + PrefabResource: prefab -> file -> resource -> instance")
+TEST_CASE("PrefabFile + PrefabAsset: prefab -> file -> asset -> instance")
 {
     const TestTempDir   lTemp("resource");
     const OpaaxString   lPath = lTemp.Sub("Gun.opaaxprefab");
@@ -722,30 +724,39 @@ TEST_CASE("PrefabFile + PrefabResource: prefab -> file -> resource -> instance")
 
     // Through the ResourceManager, exactly as the engine will — which is also what buys the dedup
     // a level placing many instances of one prefab depends on.
+    ObjectClassRegistry lClasses;
+    REQUIRE(lClasses.Register<PrefabAsset>());
+
     ResourceManager lResources;
-    const ResourceRef<PrefabResource> lRef = lResources.Load<PrefabResource>(lPath.CStr());
-    const PrefabResource* const       lLoaded = lRef.Get();
+    lResources.SetObjectClasses(&lClasses);
+    const ResourceRef<AssetResource> lRef    = lResources.Load<AssetResource>(lPath.CStr());
+    const PrefabAsset* const         lLoaded = lRef.Get() != nullptr ? lRef.Get()->Get<PrefabAsset>() : nullptr;
 
     REQUIRE(lLoaded != nullptr);
-    REQUIRE(lLoaded->Data.EntityCount() == 2);
+    REQUIRE(lLoaded->GetData().EntityCount() == 2);
+    CHECK(lLoaded->GetName() == OPAAX_ID("Gun"));
 
     World lWorld("Target");
     MapData lInstance = PrefabFactory::BuildInstance(
-        lLoaded->Data, OpaaxString("Prefabs/Gun.opaaxprefab"), Guid::New(), MapId("L"), lRegistry);
+        lLoaded->GetData(), OpaaxString("Prefabs/Gun.opaaxprefab"), Guid::New(), MapId("L"), lRegistry);
 
     CHECK(MapFactory::Instantiate(lInstance, lWorld, lRegistry) == 2);
 
     lResources.FlushAll();
 }
 
-TEST_CASE("PrefabResource: a missing file resolves to NULL, never to an empty prefab")
+TEST_CASE("PrefabAsset: a missing file gives no prefab, never an empty one")
 {
-    // FailFast, and the reason is that an empty prefab does not degrade, it LIES: the instantiate
-    // reports success, nothing appears, and no layer says why.
-    ResourceManager lResources;
-    const ResourceRef<PrefabResource> lRef = lResources.Load<PrefabResource>("Nope/Missing.opaaxprefab");
+    // An empty prefab would not degrade, it would LIE: the instantiate reports success, nothing
+    // appears, and no layer says why.
+    ObjectClassRegistry lClasses;
+    REQUIRE(lClasses.Register<PrefabAsset>());
 
-    CHECK(lRef.Get() == nullptr);
+    ResourceManager lResources;
+    lResources.SetObjectClasses(&lClasses);
+    const ResourceRef<AssetResource> lRef = lResources.Load<AssetResource>("Nope/Missing.opaaxprefab");
+
+    CHECK((lRef.Get() == nullptr || lRef.Get()->Get<PrefabAsset>() == nullptr));
 
     lResources.FlushAll();
 }

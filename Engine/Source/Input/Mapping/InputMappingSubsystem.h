@@ -4,13 +4,12 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/Log/Logger.h"
 #include "Core/Events/Delegate.h"
-#include "Engine/GameInstance/IGameInstanceSubsystem.h"
+#include "Engine/GameInstance/GameInstanceSubsystem.h"
 #include "Input/Mapping/InputActionEvaluator.h"
 #include "Input/Mapping/InputTypes.h"
 
 namespace Opaax
 {
-    struct GameInstanceContext;
 
     inline constexpr LogCategory LogInputMapping{"InputMapping"};
 
@@ -25,21 +24,16 @@ namespace Opaax
     //   Gameplay binds handlers with Bind(action, trigger, this, &T::Handler).
     //   The owner must call UnbindAll(this) in its Shutdown.
     // =============================================================================
-    class InputMappingSubsystem final : public GameInstanceSubsystemBase
+    class InputMappingSubsystem final : public GameInstanceSubsystem
     {
-        // =========================================================================
-        // Base Implementation
-        // =========================================================================
-    public:
-        OPAAX_SUBSYSTEM_TYPE(InputMappingSubsystem)
+        OPAAX_OBJECT(InputMappingSubsystem, GameInstanceSubsystem)
 
         // =========================================================================
         // CTORS - DTORS
         // =========================================================================
     public:
-        /** @param InContext Stable for the whole game. */
-        explicit InputMappingSubsystem(GameInstanceContext& InContext) noexcept;
-        ~InputMappingSubsystem() override = default;
+        InputMappingSubsystem();
+        ~InputMappingSubsystem() override;
 
         // =========================================================================
         // Actions and contexts
@@ -125,15 +119,18 @@ namespace Opaax
         // =========================================================================
         // Override
         // =========================================================================
-        //~Begin IGameInstanceSubsystem interface
     public:
+        //~Begin Subsystem interface
+        /** After the UI, which reads the keys it uses first. */
+        Int32 GetTickOrder() const override { return 200; }
+
         bool Startup() override;
 
         /** Evaluates, then calls the handlers of what fired. Before any world ticks. */
         void Update(double InDeltaTime) override;
 
         void Shutdown() override;
-        //~End IGameInstanceSubsystem interface
+        //~End Subsystem interface
 
         // =========================================================================
         // Functions
@@ -156,8 +153,6 @@ namespace Opaax
             /** Indexed by EInputTrigger. */
             TFixedArray<FOnInputAction, INPUT_TRIGGER_COUNT> ByTrigger;
         };
-
-        GameInstanceContext* m_Context = nullptr;
 
         InputActionEvaluator m_Evaluator;
 

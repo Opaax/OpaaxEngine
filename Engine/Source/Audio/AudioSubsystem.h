@@ -7,7 +7,6 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Resources/Asset/AssetHandle.h"
-#include "Resources/ResourceRef.hpp"
 #include "World/Entity/EntityTypes.h"
 #include "World/Systems/WorldSubsystem.h"
 
@@ -16,8 +15,6 @@ namespace Opaax
     class AudioManager;
     class World;
     struct WorldPauseChanged;
-    struct AudioClipResource;
-    struct WorldContext;
 
     // =============================================================================
     // AudioSubsystem — a Play world's sounds. Plays sound files and clip definitions by path,
@@ -30,36 +27,30 @@ namespace Opaax
     //   loaded (a bank, or the global bank): one that is not is logged, loaded in the background,
     //   and plays once loaded; the world then keeps it until it ends.
     // =============================================================================
-    class AudioSubsystem final : public WorldSubsystemBase
+    class AudioSubsystem final : public WorldSubsystem
     {
-        // =============================================================================
-        // Base implementation
-        // =============================================================================
-    public:
-        OPAAX_SUBSYSTEM_TYPE(AudioSubsystem)
-
-        /** Play worlds only. */
-        static bool ShouldCreate(const World& InWorld);
+        OPAAX_OBJECT(AudioSubsystem, WorldSubsystem)
 
         // =============================================================================
         // CTORS - DTORS
         // =============================================================================
     public:
-        explicit AudioSubsystem(WorldContext& InContext);
+        AudioSubsystem();
         ~AudioSubsystem() override;
-
-        AudioSubsystem(const AudioSubsystem&)            = delete;
-        AudioSubsystem& operator=(const AudioSubsystem&) = delete;
 
         // =============================================================================
         // Override
         // =============================================================================
     public:
-        //~Begin ISubsystem interface
+        //~Begin WorldSubsystem interface
+        /** Play worlds only. */
+        bool  ShouldCreate(const World& InWorld) const override;
+        Int32 GetTickOrder() const override { return WorldSubsystemOrder::Presentation; }
+
         bool Startup() override;
         void Update(double InDeltaTime) override;
         void Shutdown() override;
-        //~End ISubsystem interface
+        //~End WorldSubsystem interface
 
         // =============================================================================
         // Sounds
@@ -106,7 +97,7 @@ namespace Opaax
         SoundHandle Start(const OpaaxString& InPath, const PlaySoundParams& InParams, bool* OutSpatial = nullptr);
 
         /** The clip at InPath, loaded or loading; kept for the world's life. Empty for an empty path. */
-        const ResourceRef<AudioClipResource>& ResolveClip(const OpaaxString& InPath);
+        const TAssetHandle<AudioClip>& ResolveClip(const OpaaxString& InPath);
 
         /** The clip definition at InPath, kept for the world's life. Null when it does not load (logged). */
         const AudioClipDef* ResolveDef(const OpaaxString& InPath);
@@ -115,7 +106,7 @@ namespace Opaax
         void HoldBanks();
 
         /** A clip held by one of the world's banks or the global bank, or null. */
-        const ResourceRef<AudioClipResource>* FindBankClip(const OpaaxString& InPath) const;
+        const TAssetHandle<AudioClip>* FindBankClip(const OpaaxString& InPath) const;
 
         void OnEntityDestroying(EntityID InEntity);
 
@@ -128,9 +119,7 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        WorldContext* m_Context = nullptr;   // owned by the World
-
-        TUnorderedMap<OpaaxString, ResourceRef<AudioClipResource>> m_Clips;
+        TUnorderedMap<OpaaxString, TAssetHandle<AudioClip>> m_Clips;
         TUnorderedMap<OpaaxString, TAssetHandle<AudioClipDef>> m_Defs;
 
         /** The banks of each AudioBanks component, keyed by entity. */

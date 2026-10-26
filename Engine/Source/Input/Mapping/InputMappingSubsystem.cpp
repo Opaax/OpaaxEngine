@@ -11,10 +11,8 @@
 
 namespace Opaax
 {
-    InputMappingSubsystem::InputMappingSubsystem(GameInstanceContext& InContext) noexcept
-        : m_Context(&InContext)
-    {
-    }
+    InputMappingSubsystem::InputMappingSubsystem()  = default;
+    InputMappingSubsystem::~InputMappingSubsystem() = default;
 
     // =========================================================================
     // Actions and contexts
@@ -32,7 +30,7 @@ namespace Opaax
     bool InputMappingSubsystem::AddContextAsset(OpaaxStringID InName, const OpaaxString& InAssetPath)
     {
         const TAssetHandle<InputMappingContextAsset> lMapHandle =
-            LoadAsset<InputMappingContextAsset>(m_Context->Resources, m_Context->Paths, InAssetPath);
+            LoadAsset<InputMappingContextAsset>(GetContext().Resources, GetContext().Paths, InAssetPath);
 
         const InputMappingContextAsset* lMap = lMapHandle.Get();
         if (lMap == nullptr)
@@ -56,7 +54,7 @@ namespace Opaax
             }
 
             const TAssetHandle<InputActionAsset> lActionHandle =
-                LoadAsset(m_Context->Resources, m_Context->Paths, lEntry.Action);
+                LoadAsset(GetContext().Resources, GetContext().Paths, lEntry.Action);
 
             const InputActionAsset* lAction = lActionHandle.Get();
             if (lAction == nullptr)
@@ -194,8 +192,8 @@ namespace Opaax
         // Check: the game must start before any Play world exists.
         OPAAX_LOG(LogInputMapping, Trace,
                   "Input mapping started before any play world exists ({} play world(s), {} total) — {} action(s), {} context(s)",
-                  m_Context->Worlds.CountWorldsOfMode(EWorldMode::Play),
-                  m_Context->Worlds.GetWorldCount(),
+                  GetContext().Worlds.CountWorldsOfMode(EWorldMode::Play),
+                  GetContext().Worlds.GetWorldCount(),
                   m_Evaluator.GetActionCount(), m_Evaluator.GetContextCount());
         return true;
     }
@@ -210,7 +208,7 @@ namespace Opaax
 
     void InputMappingSubsystem::Update(double InDeltaTime)
     {
-        m_Evaluator.Evaluate(m_Context->Input, InDeltaTime, &m_PreConsumed);
+        m_Evaluator.Evaluate(GetContext().Input, InDeltaTime, &m_PreConsumed);
         m_PreConsumed = InputKeyMask{};   // this frame only
 
         // By index, re-read each step: a handler may Bind or RegisterAction during its callback.

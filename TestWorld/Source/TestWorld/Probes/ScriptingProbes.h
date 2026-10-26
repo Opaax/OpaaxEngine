@@ -18,6 +18,8 @@ namespace TestWorld
     // =============================================================================
     class HelperProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(HelperProbe, Opaax::Behaviour)
+
     public:
         float RemoveAfter = 0.2f;
 
@@ -39,6 +41,8 @@ namespace TestWorld
     // =============================================================================
     class ScriptProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(ScriptProbe, Opaax::Behaviour)
+
     public:
         float RemoveQuadAfter = 1.f;
 
@@ -112,6 +116,8 @@ namespace TestWorld
     // =============================================================================
     class DieProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(DieProbe, Opaax::Behaviour)
+
     public:
         float Seconds = 0.3f;
 

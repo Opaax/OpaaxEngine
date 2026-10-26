@@ -1,6 +1,8 @@
-// Suite: the mover runtime — the mode registry and the two modes, driven directly against a
-// real physics world (MoverSubsystem itself needs a started engine).
+// Suite: the mover runtime — the two engine modes as classes, driven directly against a real
+// physics world (MoverSubsystem itself needs a started engine).
 #include <doctest.h>
+
+#include "Core/Algo/Algo.h"
 
 #include "Movement/Assets/MoveMode.h"
 #include "Physics/PhysicsAPI.h"
@@ -8,7 +10,6 @@
 #include "World/Components/TransformComponent.h"
 #include "Movement/Modes/FlyMoveMode.h"
 #include "Movement/Modes/GroundMoveMode.h"
-#include "Movement/Modes/MoverModeRegistry.h"
 
 using namespace Opaax;
 
@@ -50,62 +51,45 @@ namespace
     }
 
     /** Run InMode for InSteps fixed steps at 60 Hz. */
-    void Drive(IMoverMode& InMode, IPhysicsWorld& InWorld, MoverComponent& InMover,
-               TransformComponent& InTransform, const MoveMode& InParams, const int InSteps)
+    void Drive(const MoveMode& InMode, IPhysicsWorld& InWorld, MoverComponent& InMover,
+               TransformComponent& InTransform, const int InSteps)
     {
         for (int i = 0; i < InSteps; ++i)
         {
-            MoverTickContext lTick{ InWorld, InMover, InTransform, InParams, 1.f / 60.f, 0 };
+            MoverTickContext lTick{ InWorld, InMover, InTransform, 1.f / 60.f, 0 };
             InMode.Tick(lTick);
         }
+    }
+
+    /** InClass's property names, parents' first. */
+    TDynArray<OpaaxString> PropertyNames(const ObjectClass& InClass)
+    {
+        TDynArray<OpaaxString> lNames;
+        for (const char* lName : InClass.GetPropertyNames()) { lNames.emplace_back(lName); }
+        return lNames;
     }
 }
 
 // =============================================================================
-// The registry
+// The modes are classes
 // =============================================================================
 
-TEST_CASE("MoverModeRegistry: registers by name and finds them")
+TEST_CASE("MoveMode: each mode is a subclass, and lists only the tuning it reads")
 {
-    MoverModeRegistry lRegistry;
+    // The base holds what every mode shares and cannot be made by itself: a file names a mode.
+    CHECK(MoveMode::StaticClass().IsAbstract());
+    CHECK(GroundMoveMode::StaticClass().IsChildOf(MoveMode::StaticClass()));
+    CHECK(FlyMoveMode::StaticClass().IsChildOf(MoveMode::StaticClass()));
 
-    REQUIRE(lRegistry.Register<GroundMoveMode>(OPAAX_ID("GroundMove")));
-    REQUIRE(lRegistry.Register<FlyMoveMode>(OPAAX_ID("FlyMove")));
+    const TDynArray<OpaaxString> lFly = PropertyNames(FlyMoveMode::StaticClass());
+    REQUIRE(lFly.size() == 2u);
+    CHECK(lFly[0] == "MaxSlopeAngleDeg");   // the base's first
+    CHECK(lFly[1] == "MaxSpeed");
 
-    CHECK(lRegistry.Count() == 2u);
-    CHECK(lRegistry.Find(OPAAX_ID("GroundMove")) != nullptr);
-    CHECK(lRegistry.Find(OPAAX_ID("FlyMove")) != nullptr);
-
-    // A name nothing registered is a REAL state — a tuning may name a mode this build lacks.
-    CHECK(lRegistry.Find(OPAAX_ID("SwimMove")) == nullptr);
-    CHECK(lRegistry.Find(OpaaxStringID{}) == nullptr);
-}
-
-TEST_CASE("MoverModeRegistry: a duplicate is REFUSED, not replaced")
-{
-    MoverModeRegistry lRegistry;
-
-    REQUIRE(lRegistry.Register<GroundMoveMode>(OPAAX_ID("Taken")));
-
-    // Replacing would let a game module silently shadow a built-in that assets already name.
-    CHECK_FALSE(lRegistry.Register<FlyMoveMode>(OPAAX_ID("Taken")));
-    CHECK_FALSE(lRegistry.Register<FlyMoveMode>(OpaaxStringID{}));
-    CHECK(lRegistry.Count() == 1u);
-}
-
-TEST_CASE("MoverModeRegistry: sealing refuses later registration")
-{
-    MoverModeRegistry lRegistry;
-
-    REQUIRE(lRegistry.Register<GroundMoveMode>(OPAAX_ID("GroundMove")));
-    lRegistry.Seal();
-
-    CHECK(lRegistry.IsSealed());
-    CHECK_FALSE(lRegistry.Register<FlyMoveMode>(OPAAX_ID("FlyMove")));
-    CHECK(lRegistry.Count() == 1u);
-
-    lRegistry.Seal();   // safe to call twice
-    CHECK(lRegistry.IsSealed());
+    const TDynArray<OpaaxString> lGround = PropertyNames(GroundMoveMode::StaticClass());
+    CHECK(lGround.size() == 9u);
+    CHECK(Algo::Find(lGround, OpaaxString("JumpSpeed")) != lGround.end());
+    CHECK(Algo::Find(lFly, OpaaxString("JumpSpeed")) == lFly.end());
 }
 
 // =============================================================================
@@ -121,9 +105,8 @@ TEST_CASE("GroundMoveMode: a mover falls and LANDS on the floor")
     TransformComponent lTransform;
     lTransform.Position = { 0.f, 400.f };
 
-    const MoveMode lParams{};   // the defaults are a walkable ground mode
 
-    Drive(lMode, *lWorld, lMover, lTransform, lParams, 180);
+    Drive(lMode, *lWorld, lMover, lTransform, 180);
 
     CHECK(lMover.bGrounded);
     CHECK(lMover.GroundNormal.y > 0.9f);
@@ -141,19 +124,18 @@ TEST_CASE("GroundMoveMode: intent WALKS it, and the direction follows the sign")
     TransformComponent lTransform;
     lTransform.Position = { 0.f, 60.f };
 
-    const MoveMode lParams{};
 
-    Drive(lMode, *lWorld, lMover, lTransform, lParams, 30);   // settle
+    Drive(lMode, *lWorld, lMover, lTransform, 30);   // settle
     const float lRestX = lTransform.Position.x;
 
     lMover.Input.MoveDir = { 1.f, 0.f };
-    Drive(lMode, *lWorld, lMover, lTransform, lParams, 60);
+    Drive(lMode, *lWorld, lMover, lTransform, 60);
     CHECK(lTransform.Position.x > lRestX + 50.f);
 
     const float lRightX = lTransform.Position.x;
 
     lMover.Input.MoveDir = { -1.f, 0.f };
-    Drive(lMode, *lWorld, lMover, lTransform, lParams, 60);
+    Drive(lMode, *lWorld, lMover, lTransform, 60);
     CHECK(lTransform.Position.x < lRightX);
 }
 
@@ -166,25 +148,24 @@ TEST_CASE("GroundMoveMode: a jump LEAVES the ground, and the edge is consumed")
     TransformComponent lTransform;
     lTransform.Position = { 0.f, 60.f };
 
-    const MoveMode lParams{};
 
-    Drive(lMode, *lWorld, lMover, lTransform, lParams, 30);
+    Drive(lMode, *lWorld, lMover, lTransform, 30);
     REQUIRE(lMover.bGrounded);
 
     const float lGroundY = lTransform.Position.y;
 
     lMover.Input.bJump = true;
-    Drive(lMode, *lWorld, lMover, lTransform, lParams, 1);
+    Drive(lMode, *lWorld, lMover, lTransform, 1);
 
     // The edge is spent by the mode, so ONE request is one jump however many steps a frame runs.
     CHECK_FALSE(lMover.Input.bJump);
 
-    Drive(lMode, *lWorld, lMover, lTransform, lParams, 10);
+    Drive(lMode, *lWorld, lMover, lTransform, 10);
     CHECK(lTransform.Position.y > lGroundY + 20.f);
     CHECK_FALSE(lMover.bGrounded);
 
     // ...and it comes back down without needing another request.
-    Drive(lMode, *lWorld, lMover, lTransform, lParams, 180);
+    Drive(lMode, *lWorld, lMover, lTransform, 180);
     CHECK(lMover.bGrounded);
     CHECK(lTransform.Position.y == doctest::Approx(lGroundY).epsilon(0.1));
 }
@@ -198,15 +179,14 @@ TEST_CASE("GroundMoveMode: a jump in MID-AIR is refused")
     TransformComponent lTransform;
     lTransform.Position = { 0.f, 600.f };   // falling, nothing underneath
 
-    const MoveMode lParams{};
 
-    Drive(lMode, *lWorld, lMover, lTransform, lParams, 5);
+    Drive(lMode, *lWorld, lMover, lTransform, 5);
     REQUIRE_FALSE(lMover.bGrounded);
 
     const float lBefore = lTransform.Position.y;
 
     lMover.Input.bJump = true;
-    Drive(lMode, *lWorld, lMover, lTransform, lParams, 5);
+    Drive(lMode, *lWorld, lMover, lTransform, 5);
 
     // Still descending: an ungrounded jump must not spend, or the thing flies by holding Space.
     CHECK(lTransform.Position.y < lBefore);
@@ -221,10 +201,9 @@ TEST_CASE("GroundMoveMode: GravityScale 0 leaves it hanging")
     TransformComponent lTransform;
     lTransform.Position = { 0.f, 600.f };
 
-    MoveMode lParams;
-    lParams.GravityScale = 0.f;
+    lMode.GravityScale = 0.f;
 
-    Drive(lMode, *lWorld, lMover, lTransform, lParams, 60);
+    Drive(lMode, *lWorld, lMover, lTransform, 60);
 
     // The tuning reaches the policy: this is the field doing something a default cannot fake.
     CHECK(lTransform.Position.y == doctest::Approx(600.f).epsilon(0.01));
@@ -243,13 +222,11 @@ TEST_CASE("FlyMoveMode: intent maps straight to velocity, on BOTH axes")
     TransformComponent lTransform;
     lTransform.Position = { 0.f, 400.f };
 
-    MoveMode lParams;
-    lParams.Mode     = OPAAX_ID("FlyMove");
-    lParams.MaxSpeed = 300.f;
+    lMode.MaxSpeed = 300.f;
 
     // Up and right — GroundMove reads x alone, so the y is what distinguishes the two modes.
     lMover.Input.MoveDir = { 1.f, 1.f };
-    Drive(lMode, *lWorld, lMover, lTransform, lParams, 30);
+    Drive(lMode, *lWorld, lMover, lTransform, 30);
 
     CHECK(lTransform.Position.x > 10.f);
     CHECK(lTransform.Position.y > 400.f);
@@ -264,10 +241,7 @@ TEST_CASE("FlyMoveMode: NO gravity — releasing the stick leaves it hanging")
     TransformComponent lTransform;
     lTransform.Position = { 0.f, 400.f };
 
-    MoveMode lParams;
-    lParams.Mode = OPAAX_ID("FlyMove");
-
-    Drive(lMode, *lWorld, lMover, lTransform, lParams, 60);   // no intent at all
+    Drive(lMode, *lWorld, lMover, lTransform, 60);   // no intent at all
 
     CHECK(lTransform.Position.y == doctest::Approx(400.f).epsilon(0.01));
     CHECK_FALSE(lMover.bGrounded);
@@ -283,15 +257,10 @@ TEST_CASE("FlyMoveMode: OnModeEnter drops momentum carried in from a fall")
     TransformComponent lTransform;
     lTransform.Position = { 0.f, 600.f };
 
-    const MoveMode lGroundParams{};
-
-    Drive(lGround, *lWorld, lMover, lTransform, lGroundParams, 20);
+    Drive(lGround, *lWorld, lMover, lTransform, 20);
     REQUIRE(lMover.Velocity.y < -50.f);   // genuinely falling
 
-    MoveMode lFlyParams;
-    lFlyParams.Mode = OPAAX_ID("FlyMove");
-
-    MoverTickContext lEnter{ *lWorld, lMover, lTransform, lFlyParams, 0.f, 0 };
+    MoverTickContext lEnter{ *lWorld, lMover, lTransform, 0.f, 0 };
     lFly.OnModeEnter(lEnter);
 
     // Without this the thing keeps sinking for a moment after switching, which reads as a bug.
@@ -310,10 +279,12 @@ namespace
     };
 
     /** Takes its horizontal speed from a sibling component, the way a game mode reads its tuning. */
-    class BoostMoveMode final : public IMoverMode
+    class BoostMoveMode final : public MoveMode
     {
+        OPAAX_OBJECT(BoostMoveMode, MoveMode)
+
     public:
-        void Tick(MoverTickContext& InContext) override
+        void Tick(MoverTickContext& InContext) const override
         {
             const BoostComponent* lBoost = InContext.Owner ? InContext.Owner.TryGet<BoostComponent>() : nullptr;
             InContext.Mover.Velocity.x = lBoost != nullptr ? lBoost->Speed : -1.f;
@@ -321,7 +292,7 @@ namespace
     };
 }
 
-TEST_CASE("IMoverMode: Owner reaches the entity's other components")
+TEST_CASE("MoveMode: Owner reaches the entity's other components")
 {
     const TUniquePtr<IPhysicsWorld> lPhysics = MakeWorldWithFloor();
 
@@ -332,14 +303,13 @@ TEST_CASE("IMoverMode: Owner reaches the entity's other components")
     BoostMoveMode      lMode;
     MoverComponent     lMover = MakeMover();
     TransformComponent lTransform;
-    const MoveMode lParams{};
 
-    MoverTickContext lTick{ *lPhysics, lMover, lTransform, lParams, 1.f / 60.f, 0, lEntity };
+    MoverTickContext lTick{ *lPhysics, lMover, lTransform, 1.f / 60.f, 0, lEntity };
     lMode.Tick(lTick);
     CHECK(lMover.Velocity.x == doctest::Approx(321.f));
 
     // A context built without an owner is invalid rather than pointing anywhere.
-    MoverTickContext lNoOwner{ *lPhysics, lMover, lTransform, lParams, 1.f / 60.f, 0 };
+    MoverTickContext lNoOwner{ *lPhysics, lMover, lTransform, 1.f / 60.f, 0 };
     CHECK_FALSE(lNoOwner.Owner.IsValid());
     lMode.Tick(lNoOwner);
     CHECK(lMover.Velocity.x == doctest::Approx(-1.f));

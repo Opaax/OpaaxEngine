@@ -100,7 +100,6 @@ namespace
         void Visit(const char* InName, OpaaxString&, const PropertyMeta&) override   { Add("string", InName); }
         void Visit(const char* InName, OpaaxStringID&, const PropertyMeta&) override { Add("id", InName); }
         void VisitEnum(const char* InName, const char* const*, Uint32, Uint32&, const PropertyMeta&) override { Add("enum", InName); }
-        void VisitResourcePath(const char* InName, OpaaxString&, Uint32, const PropertyMeta&) override { Add("resource", InName); }
 
         void VisitAssetRef(const char* InName, OpaaxString&, const ObjectClass&, const PropertyMeta&) override { Add("asset", InName); }
 

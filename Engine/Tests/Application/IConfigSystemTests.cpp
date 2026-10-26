@@ -1,7 +1,7 @@
-// Suite: IConfigSystem registry. A test-local IConfig (TestConfig) records its Load/Save
+// Suite: IConfigSystem registry. A test-local Config class (TestConfig) records its Load/Save
 // calls (no real disk IO) so we can verify the registry mechanics: file-per-config path
-// resolution, same-instance Get, auto-register-on-miss (never null), Save / SaveAll, and the
-// null system staying in-memory.
+// resolution, same-instance Get, auto-register-on-miss (never null), configs named after their
+// files, registering every class of a registry, Save / SaveAll, and the null system staying in-memory.
 #include <doctest.h>
 
 #include "Core/OpaaxTypes.h"
@@ -9,17 +9,18 @@
 #include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IPaths.h"
 #include "Application/Services/AppServiceLocator.h"
-#include "Core/Config/IConfig.h"
+#include "Engine/Config/Config.h"
+#include "Object/ObjectClassRegistry.h"
 
 using namespace Opaax;
 
 namespace
 {
-    class TestConfig final : public IConfig
+    class TestConfig final : public Config
     {
-    public:
-        OPAAX_CONFIG_TYPE(TestConfig)
+        OPAAX_OBJECT(TestConfig, Config)
 
+    public:
         const char* FileName() const override { return "test.config.json"; }
 
         bool Load(const OpaaxString& InAbsPath) override { m_LoadedPath = InAbsPath; ++m_LoadCount; return true; }
@@ -28,12 +29,12 @@ namespace
 
         OpaaxString ToText() const override { return OpaaxString("test-text"); }
 
+        bool VisitValues(IPropertyVisitor&) override { return false; }
+        void ResetToDefaults() override {}
+
         const OpaaxString& LoadedPath() const { return m_LoadedPath; }
         int LoadCount() const { return m_LoadCount; }
         int SaveCount() const { return m_SaveCount; }
-
-    protected:
-        bool GenerateDefaultConfig(const OpaaxString&) override { return true; }
 
     private:
         OpaaxString m_LoadedPath;
@@ -41,19 +42,13 @@ namespace
         int         m_SaveCount = 0;
     };
 
-    ConfigTypeID TestConfig::StaticTypeID() noexcept
-    {
-        static const int s_Tag = 0;
-        return reinterpret_cast<ConfigTypeID>(&s_Tag);
-    }
-
-    // A second type, so the ORDER of the registry is observable at all — one config cannot tell
+    // A second class, so the ORDER of the registry is observable at all — one config cannot tell
     // "registration order" from "whatever the container did".
-    class OtherTestConfig final : public IConfig
+    class OtherTestConfig final : public Config
     {
-    public:
-        OPAAX_CONFIG_TYPE(OtherTestConfig)
+        OPAAX_OBJECT(OtherTestConfig, Config)
 
+    public:
         const char* FileName() const override { return "Other.config"; }
 
         bool Load(const OpaaxString&) override { return true; }
@@ -62,15 +57,34 @@ namespace
 
         OpaaxString ToText() const override { return OpaaxString("other-text"); }
 
-    protected:
-        bool GenerateDefaultConfig(const OpaaxString&) override { return true; }
+        bool VisitValues(IPropertyVisitor&) override { return false; }
+        void ResetToDefaults() override {}
     };
 
-    ConfigTypeID OtherTestConfig::StaticTypeID() noexcept
+    // A base a game could share between its configs: never made.
+    class AbstractTestConfig : public Config
     {
-        static const int s_Tag = 0;
-        return reinterpret_cast<ConfigTypeID>(&s_Tag);
-    }
+        OPAAX_ABSTRACT_OBJECT(AbstractTestConfig, Config)
+    };
+
+    // Any other object class.
+    class NotAConfig final : public Object
+    {
+        OPAAX_OBJECT(NotAConfig, Object)
+    };
+
+    // What a game's registry holds: its configs among other classes.
+    struct GameClasses final : ObjectClassRegistry
+    {
+        GameClasses()
+        {
+            Register<NotAConfig>();
+            Register<Config>();
+            Register<AbstractTestConfig>();
+            Register<OtherTestConfig>();
+            Register<TestConfig>();
+        }
+    };
 
     // Minimal IPaths whose only meaningful answer is ConfigsDir().
     class StubPaths final : public IPaths
@@ -132,30 +146,30 @@ TEST_CASE("ConfigSystem: Save<T> and SaveAll persist the config")
     CHECK(lA.SaveCount() == 2);
 }
 
-TEST_CASE("ConfigSystem: GetConfigs is REGISTRATION order, and FindConfig resolves by id")
+TEST_CASE("ConfigSystem: GetConfigs is REGISTRATION order, and FindConfig resolves by class")
 {
     StubPaths lPaths(OpaaxString("W:/proj/Configs"));
     ConfigSystem lConfig(lPaths);
 
     // Registered second on purpose: the editor's Config panel lists this array, so the order has to
     // be the one the caller registered in and not the one a hash bucket produced.
-    IConfig& lFirst  = lConfig.Register<TestConfig>();
-    IConfig& lSecond = lConfig.Register<OtherTestConfig>();
+    Config& lFirst  = lConfig.Register<TestConfig>();
+    Config& lSecond = lConfig.Register<OtherTestConfig>();
 
     REQUIRE(lConfig.GetConfigs().size() == 2);
-    CHECK(lConfig.GetConfigs()[0].get() == &lFirst);
-    CHECK(lConfig.GetConfigs()[1].get() == &lSecond);
+    CHECK(lConfig.GetConfigs()[0].Get() == &lFirst);
+    CHECK(lConfig.GetConfigs()[1].Get() == &lSecond);
 
-    CHECK(lConfig.FindConfig(TestConfig::StaticTypeID())      == &lFirst);
-    CHECK(lConfig.FindConfig(OtherTestConfig::StaticTypeID()) == &lSecond);
-    CHECK(lConfig.FindConfig(0) == nullptr);          // never registered
+    CHECK(lConfig.FindConfig(TestConfig::StaticClass())      == &lFirst);
+    CHECK(lConfig.FindConfig(OtherTestConfig::StaticClass()) == &lSecond);
+    CHECK(lConfig.FindConfig(AbstractTestConfig::StaticClass()) == nullptr);   // never registered
 
     // Re-registering is a lookup, not a second entry.
     lConfig.Get<TestConfig>();
     CHECK(lConfig.GetConfigs().size() == 2);
 }
 
-TEST_CASE("IConfig: GetName is the file name's stem, ToText comes from the config")
+TEST_CASE("ConfigSystem: a config is named after its file's stem, ToText comes from the config")
 {
     StubPaths lPaths(OpaaxString("W:/proj/Configs"));
     ConfigSystem lConfig(lPaths);
@@ -165,6 +179,32 @@ TEST_CASE("IConfig: GetName is the file name's stem, ToText comes from the confi
     CHECK(lConfig.Register<OtherTestConfig>().GetName()  == OPAAX_ID("Other"));
 
     CHECK(lConfig.Get<OtherTestConfig>().ToText() == "other-text");
+}
+
+TEST_CASE("ConfigSystem: RegisterClasses makes the config of every concrete class not made yet, in order")
+{
+    StubPaths lPaths(OpaaxString("W:/proj/Configs"));
+    ConfigSystem lConfig(lPaths);
+
+    // Read by code before the engine started: kept, not made twice, and still first.
+    TestConfig& lEarly = lConfig.Get<TestConfig>();
+
+    const GameClasses lClasses;
+    lConfig.RegisterClasses(lClasses);
+
+    // The abstract base and the non-config classes are skipped.
+    REQUIRE(lConfig.GetConfigs().size() == 2);
+    CHECK(lConfig.GetConfigs()[0].Get() == &lEarly);
+    CHECK(&lConfig.GetConfigs()[1]->GetClass() == &OtherTestConfig::StaticClass());
+    CHECK(lEarly.LoadCount() == 1);
+
+    // Registered and loaded like any other: Get finds it.
+    CHECK(lConfig.GetConfigs()[1]->GetName() == OPAAX_ID("Other"));
+    CHECK(&lConfig.Get<OtherTestConfig>() == lConfig.GetConfigs()[1].Get());
+
+    // Running it again changes nothing.
+    lConfig.RegisterClasses(lClasses);
+    CHECK(lConfig.GetConfigs().size() == 2);
 }
 
 TEST_CASE("IConfigSystem: the null system stays in-memory (no disk) and is never null")

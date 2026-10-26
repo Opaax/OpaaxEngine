@@ -12,19 +12,24 @@ namespace Opaax
     class LoadContext;
 
     // =============================================================================
-    // AssetResource — an .opaaxasset as a resource: loaded once, shared, reloaded in place when its file
-    //   is saved, whatever its class. Get<T>() reads it as a T.
+    // AssetResource — an asset file as a resource: loaded once, shared, reloaded in place when its file
+    //   is saved, whatever its class. An .opaaxasset names its class; any other file is read by the
+    //   class registered for its extension (OPAAX_ASSET_SOURCE). Get<T>() reads it as a T.
     //   Placeholder: a file that fails to load leaves no asset, so Get<T>() is null.
     // =============================================================================
     struct AssetResource final
     {
-        /** The class the file names, kept even when it did not load. */
+        /**
+         * The asset's class: the one an .opaaxasset names (kept even when it did not load), or the one
+         * that read the file.
+         */
         OpaaxStringID ClassName;
 
         /** The asset, owned by the resource. Empty for the placeholder. */
         TStrongObjectPtr<Asset> Instance;
 
         // ---- CResource contract --------------------------------------------------
+        // The other extensions come from the classes that read them (ObjectClassRegistry).
         OPAAX_RESOURCE_FORMAT("Asset", AssetFile::ASSET_EXTENSION)
 
         static constexpr EFailPolicy FailPolicy = EFailPolicy::Placeholder;
@@ -34,10 +39,16 @@ namespace Opaax
 
         static AssetResource Placeholder() { return AssetResource{}; }
 
-        /** The asset's own size. */
+        /** On the main thread, once loaded: the asset's InitializeOnMainThread. */
+        void Initialize()
+        {
+            if (Instance.IsValid()) { Instance->InitializeOnMainThread(); }
+        }
+
+        /** What the asset holds. */
         Uint64 ByteSize() const noexcept
         {
-            return sizeof(AssetResource) + (Instance.IsValid() ? Instance->GetClass().GetSize() : 0);
+            return sizeof(AssetResource) + (Instance.IsValid() ? Instance->GetResourceSize() : 0);
         }
 
         // =============================================================================

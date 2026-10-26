@@ -64,6 +64,17 @@ TEST_CASE("ParseProjectIdentity: 'uiReferenceHeight' is the canvas's height, 108
     CHECK(ParseProjectIdentity(OpaaxString(R"({"uiReferenceHeight":0})")).UIReferenceHeight == doctest::Approx(1080.f));
 }
 
+TEST_CASE("ParseProjectIdentity: 'gameInstanceClass' names the game's class, and a project without one reads empty")
+{
+    const ProjectIdentity lWith = ParseProjectIdentity(OpaaxString(R"({"name":"MyGame","gameInstanceClass":"MyGame"})"));
+    CHECK(lWith.GameInstanceClass == "MyGame");
+
+    // Empty: the game runs a plain GameInstance. A value that is not a string is ignored.
+    CHECK(ParseProjectIdentity(OpaaxString(R"({"name":"MyGame"})")).GameInstanceClass.IsEmpty());
+    CHECK(ParseProjectIdentity(OpaaxString(R"({"gameInstanceClass":3})")).GameInstanceClass.IsEmpty());
+    CHECK(IProjectManager::Null().GameInstanceClass().IsEmpty());
+}
+
 TEST_CASE("ParseProjectIdentity: 'startupScene' still feeds StartupLevel when the live key is absent")
 {
     const ProjectIdentity lId = ParseProjectIdentity(OpaaxString(

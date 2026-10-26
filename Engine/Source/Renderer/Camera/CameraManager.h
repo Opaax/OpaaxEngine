@@ -1,10 +1,10 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
-#include "Core/GUID/Guid.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Log/Logger.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
+#include "Object/ObjectHandle.h"
 #include "Renderer/CameraView.h"
 #include "World/Entity/EntityTypes.h"
 
@@ -36,13 +36,9 @@ namespace Opaax
     //   Priority wins (among equals, the first found, with a warning). Edit worlds use the editor's
     //   camera instead.
     // =============================================================================
-    class CameraManager final : public EngineSubsystemBase
+    class CameraManager final : public EngineSubsystem
     {
-        // =============================================================================
-        // Base Implementation
-        // =============================================================================
-    public:
-        OPAAX_SUBSYSTEM_TYPE(CameraManager)
+        OPAAX_OBJECT(CameraManager, EngineSubsystem)
 
         // =============================================================================
         // Copy - Move Delete
@@ -72,12 +68,12 @@ namespace Opaax
         // =============================================================================
         // Override
         // =============================================================================
-        //~Begin EngineSubsystemBase Interface
+        //~Begin Subsystem interface
     public:
         bool Startup()                override;
         void Shutdown()               override;
         void Update(double DeltaTime) override;
-        //~End EngineSubsystemBase Interface
+        //~End Subsystem interface
 
         // =============================================================================
         // Members
@@ -85,9 +81,9 @@ namespace Opaax
     private:
         WorldManager* m_WorldManager = nullptr; // not owned
 
-        // Last reported result. The Guid starts invalid, so every new world reports once.
-        Guid     m_ReportedWorld;
-        Uint32   m_ReportedCount  = 0;
-        EntityID m_ReportedCamera = ENTITY_NONE;
+        // Last reported result. The handle starts invalid, so every new world reports once.
+        ObjectHandle m_ReportedWorld;
+        Uint32       m_ReportedCount  = 0;
+        EntityID     m_ReportedCamera = ENTITY_NONE;
     };
 }

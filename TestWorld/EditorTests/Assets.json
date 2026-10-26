@@ -295,9 +295,8 @@
             "path": "Movers/Walker_Fly.opaaxasset"
         },
         "expect": {
-            "class": "MoveMode",
+            "class": "FlyMoveMode",
             "properties": {
-                "Mode": "FlyMove",
                 "MaxSpeed": 600.0
             }
         }
@@ -637,6 +636,158 @@
         "command": "asset.close",
         "params": {
             "path": "/Engine/SpriteSheets/TSS_Default_128.opaaxasset"
+        }
+    },
+    {
+        "id": "image-is-a-texture",
+        "command": "asset.get",
+        "params": {
+            "path": "Textures/Circle.png"
+        },
+        "expect": {
+            "class": "Texture2D",
+            "open": false,
+            "fromSourceFile": true
+        }
+    },
+    {
+        "id": "image-not-made-as-an-asset",
+        "command": "asset.new",
+        "params": {
+            "path": "Scratch/Image.opaaxasset",
+            "class": "Texture2D"
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "open-image",
+        "command": "asset.open",
+        "params": {
+            "path": "Textures/Circle.png"
+        },
+        "expect": {
+            "class": "Texture2D",
+            "open": true,
+            "fromSourceFile": true,
+            "unsaved": false,
+            "canUndo": false
+        }
+    },
+    {
+        "id": "image-read-only",
+        "command": "asset.set",
+        "params": {
+            "path": "Textures/Circle.png",
+            "properties": {}
+        },
+        "expectFailure": true
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot-image",
+        "command": "screenshot",
+        "params": {
+            "path": "AssetsTexture.png"
+        }
+    },
+    {
+        "id": "close-image",
+        "command": "asset.close",
+        "params": {
+            "path": "Textures/Circle.png"
+        }
+    },
+    {
+        "id": "font-file-is-a-face",
+        "command": "asset.get",
+        "params": {
+            "path": "/Engine/Fonts/Roboto/roboto-latin-400-normal.ttf"
+        },
+        "expect": {
+            "class": "FontFace",
+            "fromSourceFile": true
+        }
+    },
+    {
+        "id": "open-font-face",
+        "command": "asset.open",
+        "params": {
+            "path": "/Engine/Fonts/Roboto/roboto-latin-400-normal.ttf"
+        },
+        "expect": {
+            "class": "FontFace",
+            "open": true,
+            "fromSourceFile": true,
+            "unsaved": false
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot-font-face",
+        "command": "screenshot",
+        "params": {
+            "path": "AssetsFontFace.png"
+        }
+    },
+    {
+        "id": "close-font-face",
+        "command": "asset.close",
+        "params": {
+            "path": "/Engine/Fonts/Roboto/roboto-latin-400-normal.ttf"
+        }
+    },
+    {
+        "id": "sound-file-is-a-clip",
+        "command": "asset.get",
+        "params": {
+            "path": "Audio/Beep.wav"
+        },
+        "expect": {
+            "class": "AudioClip",
+            "fromSourceFile": true
+        }
+    },
+    {
+        "id": "open-audio-clip",
+        "command": "asset.open",
+        "params": {
+            "path": "Audio/Beep.wav"
+        },
+        "expect": {
+            "class": "AudioClip",
+            "open": true,
+            "fromSourceFile": true,
+            "unsaved": false
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot-audio-clip",
+        "command": "screenshot",
+        "params": {
+            "path": "AssetsAudioClip.png"
+        }
+    },
+    {
+        "id": "close-audio-clip",
+        "command": "asset.close",
+        "params": {
+            "path": "Audio/Beep.wav"
         }
     },
     {

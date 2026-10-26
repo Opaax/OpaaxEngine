@@ -2,7 +2,7 @@
 
 bool Opaax::EngineEventBus::Startup()
 {
-    return false;
+    return true;
 }
 
 void Opaax::EngineEventBus::Shutdown() {}

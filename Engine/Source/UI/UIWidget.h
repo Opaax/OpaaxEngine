@@ -1,7 +1,5 @@
 #pragma once
 
-#include <nlohmann/json.hpp>
-
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/Bounds2D.h"
@@ -9,6 +7,8 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/String/OpaaxStringJson.h"
+#include "Object/ObjectMacros.h"
+#include "Object/ObjectPtr.h"
 #include "UI/UIEvents.h"
 #include "UI/UIAssetProvider.h"
 #include "UI/UIQuad.h"
@@ -16,12 +16,16 @@
 
 namespace Opaax
 {
+    class  ObjectClassRegistry;
     class  UICanvas;
     struct UICanvasStats;
     class  UIBindingTable;
 
     // =============================================================================
-    // UIWidget — one node of a canvas tree. Does not know about the World.
+    // UIWidget — one node of a canvas tree, an Object: its class is the name a .opaaxui file saves,
+    //   its properties are the fields it saves (a new widget type is a subclass with OPAAX_OBJECT,
+    //   OPAAX_PROPERTIES and one OPAAX_REGISTER_OBJECT line). A parent owns its children. Does not
+    //   know about the World.
     //
     //   Invalidation, not polling: code goes through the setters, which mark what is dirty;
     //   the editor writes fields directly then calls InvalidateLayout(). An idle canvas does no work.
@@ -32,21 +36,11 @@ namespace Opaax
     //
     //   Input bubbles (UIEvents.h). The base lets events through.
     // =============================================================================
-    class UIWidget
+    class UIWidget : public Object
     {
+        OPAAX_ABSTRACT_OBJECT(UIWidget, Object)
+
         friend class UICanvas;
-
-        // =============================================================================
-        // CTOR / DTOR
-        // =============================================================================
-    public:
-        UIWidget() = default;
-        virtual ~UIWidget() = default;
-
-        UIWidget(const UIWidget&)            = delete;
-        UIWidget& operator=(const UIWidget&) = delete;
-        UIWidget(UIWidget&&)                 = delete;
-        UIWidget& operator=(UIWidget&&)      = delete;
 
         // =============================================================================
         // Authored state (public for reflection; use the setters in code)
@@ -73,27 +67,30 @@ namespace Opaax
         void SetRect(const UIRect& InRect);
 
         // =============================================================================
-        // Identity
+        // Making one by class
         // =============================================================================
     public:
-        /** The type name, used in files and logs ("UIImage"). */
-        virtual OpaaxStringID GetTypeName() const noexcept = 0;
+        /**
+         * A new widget of the class named InClassName (what a file or the editor's Add menu names).
+         * @return Empty when InClasses has no such class, or it is abstract or not a widget
+         */
+        static TStrongObjectPtr<UIWidget> Create(OpaaxStringID InClassName, const ObjectClassRegistry& InClasses);
 
         // =============================================================================
         // Tree
         // =============================================================================
     public:
-        UIWidget*                               GetParent()   const noexcept { return m_Parent; }
-        const TDynArray<TUniquePtr<UIWidget>>&  GetChildren() const noexcept { return m_Children; }
+        UIWidget*                                     GetParent()   const noexcept { return m_Parent; }
+        const TDynArray<TStrongObjectPtr<UIWidget>>&  GetChildren() const noexcept { return m_Children; }
 
-        /** Takes ownership; drawn after (on top of) its siblings. @return The child. */
-        UIWidget* AddChild(TUniquePtr<UIWidget> InChild);
+        /** Takes the child (its only owner should be the one given); drawn after (on top of) its siblings. */
+        UIWidget* AddChild(TStrongObjectPtr<UIWidget> InChild);
 
-        /** Takes ownership, at InIndex among my children (clamped). */
-        UIWidget* AddChild(TUniquePtr<UIWidget> InChild, Uint64 InIndex);
+        /** Takes the child, at InIndex among my children (clamped). */
+        UIWidget* AddChild(TStrongObjectPtr<UIWidget> InChild, Uint64 InIndex);
 
-        /** Gives ownership back (for undo). Null if InChild is not mine. */
-        TUniquePtr<UIWidget> RemoveChild(UIWidget& InChild);
+        /** Gives the child back (for undo). Empty if InChild is not mine. */
+        TStrongObjectPtr<UIWidget> RemoveChild(UIWidget& InChild);
 
         /** The canvas this node is in, or null when detached. */
         UICanvas* GetCanvas() const noexcept { return m_Canvas; }
@@ -109,18 +106,6 @@ namespace Opaax
          * Gameplay uses it to find authored widgets after loading a .opaaxui.
          */
         UIWidget* FindByName(const OpaaxString& InName);
-
-        // =============================================================================
-        // Serialization — the base writes its fields; derived types add theirs
-        // =============================================================================
-    public:
-        /**
-         * Writes my fields (not the type, not the children). Overrides call UIWidget::SaveFields first.
-         */
-        virtual void SaveFields(nlohmann::json& InOutJson) const;
-
-        /** Reads my fields. A missing key keeps the default. */
-        virtual void LoadFields(const nlohmann::json& InJson);
 
         // =============================================================================
         // Input — override to handle an event; the default lets it bubble
@@ -206,9 +191,9 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        UIWidget*                        m_Parent = nullptr;   // not owned
-        UICanvas*                        m_Canvas = nullptr;   // not owned; set on attach
-        TDynArray<TUniquePtr<UIWidget>>  m_Children;
+        UIWidget*                             m_Parent = nullptr;   // not owned
+        UICanvas*                             m_Canvas = nullptr;   // not owned; set on attach
+        TDynArray<TStrongObjectPtr<UIWidget>> m_Children;
 
         Bounds2D           m_Bounds;
         TDynArray<UIQuad>  m_Quads;

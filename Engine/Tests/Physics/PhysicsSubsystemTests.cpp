@@ -50,7 +50,7 @@ namespace
                                                Input, Config, /*Actions*/ nullptr, /*UI*/ nullptr, Debug});
 
             // Ref: by value, the context would be copied into a factory that StartupAll destroys.
-            TheWorld->GetSubsystems().RegisterSubsystem<PhysicsSubsystem>(Ref(*TheWorld->GetContext()));
+            TheWorld->GetSubsystems().Add<PhysicsSubsystem>();
             TheWorld->GetSubsystems().StartupAll();
 
             Physics = TheWorld->GetSubsystems().GetSubsystem<PhysicsSubsystem>();
@@ -105,8 +105,11 @@ TEST_CASE("PhysicsSubsystem: it is a PLAY-world subsystem and refuses an Edit wo
     World lPlay("Play", EWorldMode::Play);
     World lEdit("Edit", EWorldMode::Edit);
 
-    CHECK(PhysicsSubsystem::ShouldCreate(lPlay));
-    CHECK_FALSE(PhysicsSubsystem::ShouldCreate(lEdit));
+    // Asked on the class default object, as a world asks it.
+    const WorldSubsystem* lDefault = Cast<WorldSubsystem>(PhysicsSubsystem::StaticClass().GetDefaultObject());
+    REQUIRE(lDefault != nullptr);
+    CHECK(lDefault->ShouldCreate(lPlay));
+    CHECK_FALSE(lDefault->ShouldCreate(lEdit));
 }
 
 // =============================================================================

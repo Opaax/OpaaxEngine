@@ -1,13 +1,11 @@
 // Suite: PngWriter — what it writes is read back by the engine's own image decoder (stb, through
-// TextureResource::Load), which checks every chunk CRC and the zlib checksum. TextureResource flips
-// rows for OpenGL, so its first row is the image's bottom row.
+// Texture2D::LoadSource), which checks every chunk CRC and the zlib checksum. Texture2D flips rows for
+// OpenGL, so its first row is the image's bottom row.
 #include <doctest.h>
 
 #include "../../TestTempDir.h"
 #include "Core/Image/PngWriter.h"
-#include "Renderer/Textures/TextureResource.h"
-#include "Resources/ResourceDependencyGraph.hpp"
-#include "Resources/ResourceManager.h"   // completes LoadContext
+#include "Renderer/Textures/Texture2D.h"
 
 using namespace Opaax;
 
@@ -25,12 +23,9 @@ namespace
     };
 
     /** Decodes a PNG file the way the engine does, without uploading it. */
-    TOptional<TextureResource> Decode(const OpaaxString& InPath)
+    bool Decode(const OpaaxString& InPath, Texture2D& OutTexture)
     {
-        ResourceManager         lManager;
-        ResourceDependencyGraph lDeps;
-        LoadContext             lContext{ lManager, lDeps };
-        return TextureResource::Load(InPath.CStr(), lContext);
+        return OutTexture.LoadSource(InPath.CStr());
     }
 
     /** A pixel's colour from its coordinates, different everywhere. */
@@ -53,12 +48,12 @@ namespace
     }
 
     /** Checks that the decoded (bottom-up) pixels match the written (top-down) image. */
-    void CheckRoundTrip(const TextureResource& InDecoded, const Uint32 InWidth, const Uint32 InHeight, const Uint32 InChannels)
+    void CheckRoundTrip(const Texture2D& InDecoded, const Uint32 InWidth, const Uint32 InHeight, const Uint32 InChannels)
     {
-        REQUIRE(InDecoded.Width == InWidth);
-        REQUIRE(InDecoded.Height == InHeight);
-        REQUIRE(InDecoded.Channels == static_cast<Int32>(InChannels));
-        REQUIRE(InDecoded.Pixels.size() == static_cast<size_t>(InWidth) * InHeight * InChannels);
+        REQUIRE(InDecoded.GetWidth() == InWidth);
+        REQUIRE(InDecoded.GetHeight() == InHeight);
+        REQUIRE(InDecoded.GetChannels() == static_cast<Int32>(InChannels));
+        REQUIRE(InDecoded.GetPixels().size() == static_cast<size_t>(InWidth) * InHeight * InChannels);
 
         Uint32 lMismatches = 0;
         for (Uint32 lY = 0; lY < InHeight; ++lY)
@@ -69,7 +64,7 @@ namespace
                 for (Uint32 lC = 0; lC < InChannels; ++lC)
                 {
                     const size_t lAt = (static_cast<size_t>(lDecodedRow) * InWidth + lX) * InChannels + lC;
-                    if (InDecoded.Pixels[lAt] != Channel(lX, lY, lC)) { ++lMismatches; }
+                    if (InDecoded.GetPixels()[lAt] != Channel(lX, lY, lC)) { ++lMismatches; }
                 }
             }
         }
@@ -85,9 +80,9 @@ TEST_CASE("PngWriter: an RGBA image reads back exactly")
     const TDynArray<Uint8> lImage = MakeImage(5, 3, 4);
     REQUIRE(PngWriter::Write(lPath, 5, 3, 4, lImage.data()));
 
-    const TOptional<TextureResource> lTexture = Decode(lPath);
-    REQUIRE(lTexture.has_value());
-    CheckRoundTrip(*lTexture, 5, 3, 4);
+    Texture2D lTexture;
+    REQUIRE(Decode(lPath, lTexture));
+    CheckRoundTrip(lTexture, 5, 3, 4);
 }
 
 TEST_CASE("PngWriter: an RGB image larger than one stored block reads back exactly")
@@ -99,9 +94,9 @@ TEST_CASE("PngWriter: an RGB image larger than one stored block reads back exact
     const TDynArray<Uint8> lImage = MakeImage(200, 200, 3);
     REQUIRE(PngWriter::Write(lPath, 200, 200, 3, lImage.data()));
 
-    const TOptional<TextureResource> lTexture = Decode(lPath);
-    REQUIRE(lTexture.has_value());
-    CheckRoundTrip(*lTexture, 200, 200, 3);
+    Texture2D lTexture;
+    REQUIRE(Decode(lPath, lTexture));
+    CheckRoundTrip(lTexture, 200, 200, 3);
 }
 
 TEST_CASE("PngWriter: the file starts with the PNG signature and ends with IEND")

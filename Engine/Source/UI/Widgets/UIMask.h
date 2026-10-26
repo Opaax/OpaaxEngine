@@ -3,16 +3,13 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
-#include "Resources/ResourcePath.h"
-#include "Resources/ResourcePathJson.h"
+#include "Renderer/Textures/Texture2D.h"   // complete: a widget class visits its texture reference
+#include "Resources/Asset/AssetRef.h"
 #include "UI/UIWidget.h"
 
 namespace Opaax
 {
     class ITexture2D;
-
-    // Forward-declared: TResourcePath only needs the name.
-    struct TextureResource;
 
     // =============================================================================
     // UIMask — masks everything under it (like Unity's Mask). White shows, black hides
@@ -22,12 +19,14 @@ namespace Opaax
     // =============================================================================
     class UIMask final : public UIWidget
     {
+        OPAAX_OBJECT(UIMask, UIWidget)
+
         // =============================================================================
         // Authored state
         // =============================================================================
     public:
         /** A texture path. Empty = clip to the rect. */
-        TResourcePath<TextureResource> Texture;
+        TAssetRef<Texture2D> Texture;
 
         /** Also draw the mask's own shape (to see where it cuts). */
         bool bShowMaskGraphic = false;
@@ -44,11 +43,6 @@ namespace Opaax
         // =============================================================================
     public:
         UIMask() { bHitTestable = false; }
-
-        OpaaxStringID GetTypeName() const noexcept override { return OPAAX_ID("UIMask"); }
-
-        void SaveFields(nlohmann::json& InOutJson) const override;
-        void LoadFields(const nlohmann::json& InJson) override;
 
         /**
          * The resolved mask texture, or null for a rect clip. Resolved at rebuild (a texture still

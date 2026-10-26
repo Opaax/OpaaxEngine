@@ -32,7 +32,6 @@ namespace Opaax
         class EditorPaths;              // IPaths subclass: the editor directories
         class EditorPanels;             // live panels and visibility
         class GameExport;               // exporting the game, in the background
-        class ResourcePreview;          // which resource a double-click asked to preview
         class AssetEditors;             // the open .opaaxasset files, a window each
 
         // =============================================================================
@@ -97,16 +96,12 @@ namespace Opaax
             // The open .opaaxui. Owns a real UICanvas: the panel previews it by rendering it.
             EditorUICanvasDocument& UICanvasDocument;
 
-            // The sealed extension routes (Inspector: Drawers(), Resource Browser: ResourceTypes()).
+            // The sealed extension routes (Inspector: Drawers(), Resource Browser: AssetTypes()).
             // Const: registration is closed before this context is built.
             const EditorExtensionRegistrar& Extensions;
 
             // The live panels and their visibility (Extensions.Panels() is the list of descriptions).
             EditorPanels& Panels;
-
-            // Which resource a double-click asked to preview (written by the type's activate callback,
-            // read by the Preview panel).
-            ResourcePreview& Preview;
 
             // Paths and file system for the Resource Browser. Resolved once by EditorService.
             const IPaths&      Paths;

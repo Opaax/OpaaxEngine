@@ -3,9 +3,10 @@
 // Helpers shared by the audio suites: generated WAV files, an asset folder in the temp folder, and a
 // job system that runs only when told (a load stays "loading" for as long as a test wants).
 
-#include "Application/Services/IJobSystem.h"
+#include "../TestManualJobs.h"
 #include "Application/Services/IPaths.h"
 #include "Audio/AudioBank.h"
+#include "Audio/AudioClip.h"
 #include "Audio/AudioClipDef.h"
 #include "Core/IO/FileIO.h"
 #include "Core/IO/FileSystem.h"
@@ -89,49 +90,14 @@ namespace AudioTest
     };
 
     /** Runs nothing until RunAll: what it was given stays queued. */
-    class ManualJobs final : public Opaax::IJobSystem
-    {
-    public:
-        Opaax::JobHandle Submit(Opaax::TFunction<void()> InWork) override { return Submit(Opaax::Move(InWork), {}); }
-
-        Opaax::JobHandle Submit(Opaax::TFunction<void()> InWork, Opaax::TFunction<void()> InOnComplete) override
-        {
-            m_Jobs.emplace_back(Opaax::Move(InWork), Opaax::Move(InOnComplete));
-            return Opaax::JobHandle{};
-        }
-
-        void ParallelFor(const Opaax::Uint32 InCount, const Opaax::TFunction<void(Opaax::Uint32)>& InBody, Opaax::Uint32) override
-        {
-            for (Opaax::Uint32 lIndex = 0; lIndex < InCount; ++lIndex) { InBody(lIndex); }
-        }
-
-        void          Wait(const Opaax::JobHandle&) override {}
-        void          DrainCompletions() override {}
-        Opaax::Uint32 GetWorkerCount() const noexcept override { return 0; }
-
-        /** Runs every queued job, then its completion. */
-        void RunAll()
-        {
-            auto lJobs = Opaax::Move(m_Jobs);
-            m_Jobs.clear();
-            for (auto& [lWork, lDone] : lJobs)
-            {
-                if (lWork) { lWork(); }
-                if (lDone) { lDone(); }
-            }
-        }
-
-        bool HasJobs() const noexcept { return !m_Jobs.empty(); }
-
-    private:
-        Opaax::TDynArray<Opaax::TPair<Opaax::TFunction<void()>, Opaax::TFunction<void()>>> m_Jobs;
-    };
+    using ManualJobs = Opaax::TestManualJobs;
 
     /** The audio asset classes, as the engine registers them. */
     struct AudioClassRegistry final : Opaax::ObjectClassRegistry
     {
         AudioClassRegistry()
         {
+            Register<Opaax::AudioClip>();
             Register<Opaax::AudioClipDef>();
             Register<Opaax::AudioBank>();
         }

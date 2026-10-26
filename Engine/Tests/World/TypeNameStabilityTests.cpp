@@ -6,7 +6,7 @@
 #include <entt/entt.hpp>
 
 #include "Core/Reflection/TypeInfo.h"
-#include "Resources/ResourcePath.h"
+#include "Resources/Asset/AssetRef.h"
 #include "Renderer/Components/QuadComponent.h"
 #include "World/Components/TransformComponent.h"
 
@@ -46,7 +46,7 @@ TEST_CASE("TypeNameOf: spells every kind of type exactly as entt did")
     CheckSameAsEntt<GlobalClassProbe>();
     CheckSameAsEntt<TypeNameProbes::Nested>();
     CheckSameAsEntt<TypeNameProbes::EKind>();
-    CheckSameAsEntt<TResourcePath<TypeNameProbes::TextureLike>>();
+    CheckSameAsEntt<TAssetRef<TypeNameProbes::TextureLike>>();
     CheckSameAsEntt<int>();
 }
 

@@ -20,6 +20,8 @@ namespace TestWorld
     // =============================================================================
     class InputProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(InputProbe, Opaax::Behaviour)
+
     public:
         Opaax::Int32 SpacePresses = 0;
         Opaax::Int32 Fires        = 0;
@@ -53,6 +55,8 @@ namespace TestWorld
     // =============================================================================
     class ControlsProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(ControlsProbe, Opaax::Behaviour)
+
     public:
         // This frame's state.
         float MoveX     = 0.f;
@@ -111,6 +115,8 @@ namespace TestWorld
     // =============================================================================
     class PointerProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(PointerProbe, Opaax::Behaviour)
+
     public:
         float        X           = 0.f;
         float        Y           = 0.f;
@@ -135,6 +141,8 @@ namespace TestWorld
     // =============================================================================
     class LaunchProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(LaunchProbe, Opaax::Behaviour)
+
     public:
         float LaunchSpeed = 600.f;
 
@@ -160,6 +168,8 @@ namespace TestWorld
     // =============================================================================
     class AudioProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(AudioProbe, Opaax::Behaviour)
+
     public:
         Opaax::OpaaxString Clip = "Audio/Beep.wav";
 
@@ -176,6 +186,8 @@ namespace TestWorld
     // =============================================================================
     class AudioControlProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(AudioControlProbe, Opaax::Behaviour)
+
     public:
         Opaax::OpaaxString Clip = "Audio/Beep.wav";
 
@@ -238,6 +250,8 @@ namespace TestWorld
     // =============================================================================
     class StepsProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(StepsProbe, Opaax::Behaviour)
+
     public:
         Opaax::TAssetRef<Opaax::AudioClipDef> Steps;
 
@@ -285,6 +299,8 @@ namespace TestWorld
     // =============================================================================
     class BankProbe : public Opaax::Behaviour
     {
+        OPAAX_OBJECT(BankProbe, Opaax::Behaviour)
+
     public:
         Opaax::Int32 GlobalSounds = 0;
 

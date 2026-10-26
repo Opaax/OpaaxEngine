@@ -44,10 +44,10 @@ namespace Sandbox
         /** The modal's root: focused while the menu is up, so Escape reaches it in UIOnly. */
         class PauseMenuPanel final : public UIWidget
         {
+            OPAAX_OBJECT(PauseMenuPanel, UIWidget)
+
         public:
             TFunction<void()> OnEscape;
-
-            OpaaxStringID GetTypeName() const noexcept override { return OPAAX_ID("PauseMenuPanel"); }
 
             EUIReply OnKeyEvent(const UIKeyEvent& InEvent) override
             {
@@ -81,11 +81,11 @@ namespace Sandbox
         /** A button with a centred label, sized InSize, at InRect. */
         UIButton* AddButton(UIWidget& InParent, const char* InName, const char* InLabel, const UIRect& InRect, float InTextSize)
         {
-            auto lButton  = MakeUnique<UIButton>();
+            auto lButton  = NewObject<UIButton>();
             lButton->Name = InName;
             lButton->SetRect(InRect);
 
-            auto lLabel = MakeUnique<UIText>();
+            auto lLabel = NewObject<UIText>();
             lLabel->Name = OpaaxString(InName) + "Label";
             lLabel->SetRect(Stretched());
             lLabel->bHitTestable = false;   // the button is the target, not its text
@@ -99,20 +99,20 @@ namespace Sandbox
         }
     }
 
-    bool PauseMenuSubsystem::ShouldCreate(const World& InWorld)
+    bool PauseMenuSubsystem::ShouldCreate(const World& InWorld) const
     {
         return InWorld.GetMode() == EWorldMode::Play;
     }
 
     bool PauseMenuSubsystem::Startup()
     {
-        if (m_Context->UI == nullptr)
+        if (GetContext().UI == nullptr)
         {
             OPAAX_LOG(LogPauseMenu, Error, "Pause menu started with NO UI subsystem — this world has no game instance, nothing is drawn.");
             return true;
         }
 
-        UICanvas& lCanvas = m_Context->UI->GetCanvas();
+        UICanvas& lCanvas = GetContext().UI->GetCanvas();
 
         // The HUD button, in GameAndUI: a click opens the menu, everything else still reaches the game.
         m_MenuButton = AddButton(lCanvas.Root(), "MenuButton", "Menu",
@@ -121,7 +121,7 @@ namespace Sandbox
 
         // The modal's root is built in code (it handles Escape); its content is the authored asset. Added
         // after the button so it draws over it and is hit-tested first.
-        auto lMenu     = MakeUnique<PauseMenuPanel>();
+        auto lMenu     = NewObject<PauseMenuPanel>();
         lMenu->Name    = "PauseMenu";
         lMenu->bVisible = false;
         lMenu->Opacity  = 0.f;   // so the first Open fades in too
@@ -133,7 +133,7 @@ namespace Sandbox
         UIButton* lNext   = nullptr;
 
         // Loads the tree, checks its height against the canvas, and adds it under the modal's root.
-        if (UIWidget* const lRoot = m_Context->UI->MountAsset(OpaaxString(kMenuAsset), m_Menu))
+        if (UIWidget* const lRoot = GetContext().UI->MountAsset(OpaaxString(kMenuAsset), m_Menu))
         {
             // Found by name in the authored tree: a renamed button stops working, and logs it.
             lResume = dynamic_cast<UIButton*>(lRoot->FindByName(OpaaxString(kResumeName)));
@@ -147,15 +147,15 @@ namespace Sandbox
             OPAAX_LOG(LogPauseMenu, Error, "Menu asset '{}' did not mount — the menu opens EMPTY (Escape still closes it).", kMenuAsset);
         }
 
-        if (m_Context->Actions != nullptr)
+        if (GetContext().Actions != nullptr)
         {
-            m_Context->Actions->Bind(kMenuToggleAction, EInputTrigger::Started, this, &PauseMenuSubsystem::OnMenuToggle);
+            GetContext().Actions->Bind(kMenuToggleAction, EInputTrigger::Started, this, &PauseMenuSubsystem::OnMenuToggle);
         }
 
         OPAAX_LOG(LogPauseMenu, Info, "Pause menu up — {} {}, {} {}, mode {}",
                   kResumeName,    lResume != nullptr ? "bound" : "MISSING",
                   kNextLevelName, lNext   != nullptr ? "bound" : "MISSING",
-                  ToString(m_Context->UI->GetInputMode()));
+                  ToString(GetContext().UI->GetInputMode()));
         return true;
     }
 
@@ -182,20 +182,20 @@ namespace Sandbox
 
     void PauseMenuSubsystem::Shutdown()
     {
-        if (m_Context->Actions != nullptr)
+        if (GetContext().Actions != nullptr)
         {
-            m_Context->Actions->UnbindAll(this);
+            GetContext().Actions->UnbindAll(this);
         }
 
-        if (m_Context->UI != nullptr)
+        if (GetContext().UI != nullptr)
         {
             // A world leaving with the menu up must not leave the session muted.
             if (m_bOpen)
             {
-                m_Context->UI->SetInputMode(EUIInputMode::GameAndUI);
+                GetContext().UI->SetInputMode(EUIInputMode::GameAndUI);
             }
 
-            UIWidget& lRoot = m_Context->UI->GetCanvas().Root();
+            UIWidget& lRoot = GetContext().UI->GetCanvas().Root();
             if (m_Menu       != nullptr) { lRoot.RemoveChild(*m_Menu); }
             if (m_MenuButton != nullptr) { lRoot.RemoveChild(*m_MenuButton); }
         }
@@ -207,7 +207,7 @@ namespace Sandbox
 
     void PauseMenuSubsystem::Open()
     {
-        if (m_bOpen || m_Menu == nullptr || m_Context->UI == nullptr)
+        if (m_bOpen || m_Menu == nullptr || GetContext().UI == nullptr)
         {
             return;
         }
@@ -217,15 +217,15 @@ namespace Sandbox
 
         // Visible at once, faded in by Update; reopening mid-fade-out reverses it.
         m_Menu->bVisible = true;
-        m_Context->UI->GetCanvas().SetFocus(m_Menu);
-        m_Context->UI->SetInputMode(EUIInputMode::UIOnly);
+        GetContext().UI->GetCanvas().SetFocus(m_Menu);
+        GetContext().UI->SetInputMode(EUIInputMode::UIOnly);
 
         OPAAX_LOG(LogPauseMenu, Info, "OPEN (UIOnly)");
     }
 
     void PauseMenuSubsystem::Close()
     {
-        if (!m_bOpen || m_Menu == nullptr || m_Context->UI == nullptr)
+        if (!m_bOpen || m_Menu == nullptr || GetContext().UI == nullptr)
         {
             return;
         }
@@ -233,8 +233,8 @@ namespace Sandbox
         m_bOpen = false;
 
         // Input goes back to the game NOW; the panel stays visible while Update fades it out.
-        m_Context->UI->GetCanvas().SetFocus(nullptr);
-        m_Context->UI->SetInputMode(EUIInputMode::GameAndUI);
+        GetContext().UI->GetCanvas().SetFocus(nullptr);
+        GetContext().UI->SetInputMode(EUIInputMode::GameAndUI);
 
         OPAAX_LOG(LogPauseMenu, Info, "CLOSE (GameAndUI)");
     }
@@ -244,11 +244,11 @@ namespace Sandbox
         // A request, not a call: this runs inside the UI tick, and opening a level now would destroy this
         // world under its own button. The engine swaps at the start of the next frame.
         WorldSpec lSpec;
-        lSpec.LevelPath = m_Context->OwningWorld.GetName() == OpaaxString("Main") ? kLevelPhysics : kLevelMain;
+        lSpec.LevelPath = GetContext().OwningWorld.GetName() == OpaaxString("Main") ? kLevelPhysics : kLevelMain;
         lSpec.Mode      = EWorldMode::Play;
 
         OPAAX_LOG(LogPauseMenu, Info, "Next Level — '{}' requested from '{}'",
-                  lSpec.LevelPath.CStr(), m_Context->OwningWorld.GetName().CStr());
+                  lSpec.LevelPath.CStr(), GetContext().OwningWorld.GetName().CStr());
 
         OpaaxApplication::GetAppService<IEngine>().RequestOpenLevel(lSpec);
     }
@@ -257,7 +257,7 @@ namespace Sandbox
     {
         // Bindings outlive worlds. Only opens: while the menu is up the mapping is muted, so closing is
         // Escape or the Resume button.
-        if (!m_Context->OwningWorld.IsActive())
+        if (!GetContext().OwningWorld.IsActive())
         {
             return;
         }
@@ -266,5 +266,5 @@ namespace Sandbox
     }
 
     // The pause menu: a HUD button (GameAndUI) and a dimmed modal (UIOnly).
-    OPAAX_REGISTER_WORLD_SUBSYSTEM_ORDERED(PauseMenuSubsystem, Opaax::WorldSubsystemOrder::Presentation);
+    OPAAX_REGISTER_OBJECT(PauseMenuSubsystem);
 }

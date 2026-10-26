@@ -10,7 +10,6 @@
 namespace Opaax
 {
     class ResourcePrefabResolver;
-    struct WorldContext;
     struct PhysicsCollisionBegan;
     struct PhysicsCollisionEnded;
     struct PhysicsOverlapBegan;
@@ -27,37 +26,31 @@ namespace Opaax
     //   OnDestroy exactly once, while its entity still has all its components, including when the
     //   world ends.
     // =============================================================================
-    class BehaviourSubsystem final : public WorldSubsystemBase, private IBehaviourSignalSink
+    class BehaviourSubsystem final : public WorldSubsystem, private IBehaviourSignalSink
     {
-        // =============================================================================
-        // Base implementation
-        // =============================================================================
-    public:
-        OPAAX_SUBSYSTEM_TYPE(BehaviourSubsystem)
-
-        /** Play worlds only. */
-        static bool ShouldCreate(const World& InWorld);
+        OPAAX_OBJECT(BehaviourSubsystem, WorldSubsystem)
 
         // =============================================================================
         // CTORS - DTORS
         // =============================================================================
     public:
-        explicit BehaviourSubsystem(WorldContext& InContext);
+        BehaviourSubsystem();
         ~BehaviourSubsystem() override;
-
-        BehaviourSubsystem(const BehaviourSubsystem&)            = delete;
-        BehaviourSubsystem& operator=(const BehaviourSubsystem&) = delete;
 
         // =============================================================================
         // Override
         // =============================================================================
     public:
-        //~Begin ISubsystem interface
+        //~Begin WorldSubsystem interface
+        /** Play worlds only. */
+        bool  ShouldCreate(const World& InWorld) const override;
+        Int32 GetTickOrder() const override { return WorldSubsystemOrder::Gameplay; }
+
         bool Startup() override;
         void Update(double InDeltaTime) override;
         void FixedUpdate(double InFixedDeltaTime) override;
         void Shutdown() override;
-        //~End ISubsystem interface
+        //~End WorldSubsystem interface
 
         // =============================================================================
         // Lifecycle
@@ -155,8 +148,6 @@ namespace Opaax
 
         /** The current frame's delta time. */
         float GetDeltaTime() const noexcept { return m_DeltaTime; }
-
-        WorldContext& GetContext() const noexcept { return *m_Context; }
 
         // =============================================================================
         // Internal
@@ -271,8 +262,6 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        WorldContext* m_Context = nullptr;   // owned by the World
-
         TDynArray<TypeBucket>     m_Buckets;   // one per behaviour type, registration order
         TDynArray<PendingStart>   m_Pending;
         TDynArray<EntityID>       m_DestroyQueue;

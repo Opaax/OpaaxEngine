@@ -1,5 +1,6 @@
 // Suite: AssetDocument (Editor/Assets/AssetDocument.hpp) — an asset open in the editor: its own copy,
-// the dirty mark, saving, all-or-nothing value changes, and a class no module registered.
+// the dirty mark, saving, all-or-nothing value changes, a class no module registered, and a file of
+// its class's own format (read-only).
 #include <doctest.h>
 
 #include "../TestTempDir.h"
@@ -34,6 +35,27 @@ namespace AssetDocumentTestTypes
     {
         OPAAX_ABSTRACT_OBJECT(DocAbstract, Asset)
     };
+
+    // A note read from a text file of its own.
+    class DocNote final : public Asset
+    {
+        OPAAX_OBJECT(DocNote, Asset)
+        OPAAX_ASSET_SOURCE(".docnote")
+
+    public:
+        OpaaxString Text;
+        Int32       Initializations = 0;
+
+        //~Begin Asset interface
+        bool LoadSource(const char* InAbsPath) override
+        {
+            Text = FileIO::ReadAllText(OpaaxString(InAbsPath));
+            return !Text.IsEmpty();
+        }
+
+        void InitializeOnMainThread() override { ++Initializations; }
+        //~End Asset interface
+    };
 }
 
 using namespace AssetDocumentTestTypes;
@@ -45,7 +67,11 @@ namespace
         TestTempDir         Dir{ "AssetDocument" };
         ObjectClassRegistry Classes;
 
-        Fixture() { Classes.Register<DocTuning>(); }
+        Fixture()
+        {
+            Classes.Register<DocTuning>();
+            Classes.Register<DocNote>();
+        }
 
         OpaaxString Write(const OpaaxStringView InName, const char* InText) const
         {
@@ -171,4 +197,49 @@ TEST_CASE("AssetDocument: a new asset has its class's defaults and stays dirty u
     // Only a concrete Asset class can be made.
     CHECK(AssetDocument::Create(lPath, DocAbstract::StaticClass()) == nullptr);
     CHECK(AssetDocument::Create(lPath, Object::StaticClass()) == nullptr);
+}
+
+TEST_CASE("AssetDocument: a file of its class's own format opens read-only: never dirty, written or edited")
+{
+    Fixture lFixture;
+    const OpaaxString lPath = lFixture.Write("Memo.docnote", "remember");
+
+    OpaaxString               lError;
+    TUniquePtr<AssetDocument> lDocument = AssetDocument::Open(lPath, lFixture.Classes, lError);
+    REQUIRE(lDocument != nullptr);
+
+    CHECK(lDocument->IsFromSourceFile());
+    CHECK(lDocument->GetClassName() == OPAAX_ID("DocNote"));
+
+    const DocNote* lNote = Cast<DocNote>(lDocument->GetAsset());
+    REQUIRE(lNote != nullptr);
+    CHECK(lNote->Text == "remember");
+    CHECK(lNote->Initializations == 1);   // opened on the main thread
+
+    CHECK_FALSE(lDocument->IsDirty());
+    CHECK_FALSE(lDocument->Save());
+    CHECK(FileIO::ReadAllText(lPath) == "remember");
+
+    OpaaxString lEditError;
+    CHECK_FALSE(lDocument->SetProperties(nlohmann::json::object(), &lEditError));
+    CHECK(lEditError.Contains("own file"));
+}
+
+TEST_CASE("AssetDocument: a file no class reads, or that its class cannot read, does not open")
+{
+    Fixture lFixture;
+
+    OpaaxString lError;
+    CHECK(AssetDocument::Open(lFixture.Write("Data.nobody", "x"), lFixture.Classes, lError) == nullptr);
+    CHECK(lError.Contains(".nobody"));
+
+    lError = OpaaxString();
+    CHECK(AssetDocument::Open(lFixture.Write("Blank.docnote", ""), lFixture.Classes, lError) == nullptr);
+    CHECK(lError.Contains("DocNote"));
+}
+
+TEST_CASE("AssetDocument: a class read from files of its own is never made as a new asset")
+{
+    Fixture lFixture;
+    CHECK(AssetDocument::Create(lFixture.Dir.Sub("New.opaaxasset"), DocNote::StaticClass()) == nullptr);
 }

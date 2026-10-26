@@ -1,12 +1,14 @@
-// Suite: MapFile (.opaaxmap read/write) and MapResource. The main case is the full round trip
-// through disk: World -> Capture -> Save -> load as MapResource -> Instantiate -> the same world,
+// Suite: MapFile (.opaaxmap read/write) and MapAsset. The main case is the full round trip
+// through disk: World -> Capture -> Save -> load as MapAsset -> Instantiate -> the same world,
 // guids preserved.
 // Uses a unique directory under the OS temp dir, created and removed per case.
 #include <doctest.h>
 
 #include "../TestTempDir.h"
 #include "Core/IO/FileIO.h"
-#include "Resources/ResourceManager.h"   // before MapResource — completes LoadContext
+#include "Object/ObjectClassRegistry.h"
+#include "Resources/Asset/AssetResource.h"
+#include "Resources/ResourceManager.h"
 #include "World/Components/ComponentRegistry.h"
 #include "Renderer/Components/QuadComponent.h"
 #include "World/Components/TransformComponent.h"
@@ -15,7 +17,7 @@
 #include "World/Serialization/MapFactory.h"
 #include "World/Serialization/MapFile.h"
 #include "World/Serialization/MapJson.h"
-#include "World/Serialization/MapResource.hpp"
+#include "World/Serialization/MapAsset.h"
 #include "World/Serialization/MapSerializer.h"
 #include "World/World.h"
 
@@ -54,22 +56,34 @@ namespace
         REQUIRE(InRegistry.Register<StatsComponent>("Stats"));
     }
 
-    // Loads a map the way the engine will: through the ResourceManager, as a MapResource.
-    // Returns an empty MapData when the load failed (a FailFast handle resolves to null).
+    /** What the resource manager reads asset files with here: maps. */
+    struct MapClasses final : ObjectClassRegistry
+    {
+        MapClasses() { Register<MapAsset>(); }
+    };
+
+    /** The map in InRef, or null when it did not load. */
+    const MapAsset* MapOf(const ResourceRef<AssetResource>& InRef)
+    {
+        return InRef.Get() != nullptr ? InRef.Get()->Get<MapAsset>() : nullptr;
+    }
+
+    // Loads a map the way the engine does: through the ResourceManager, as a MapAsset.
+    // Returns an empty MapData when the load failed.
     MapData LoadThroughResourceManager(ResourceManager& InResources, const OpaaxString& InPath, bool& bOutLoaded)
     {
-        const ResourceRef<MapResource> lRef = InResources.Load<MapResource>(InPath.CStr());
-        const MapResource* const       lMap = lRef.Get();
+        const ResourceRef<AssetResource> lRef = InResources.Load<AssetResource>(InPath.CStr());
+        const MapAsset* const            lMap = MapOf(lRef);
 
         bOutLoaded = (lMap != nullptr);
-        return bOutLoaded ? lMap->Data : MapData{};
+        return bOutLoaded ? lMap->GetData() : MapData{};
     }
 }
 
 // =============================================================================
 // The gate — the round trip through a file
 // =============================================================================
-TEST_CASE("MapFile: World -> Capture -> Save -> MapResource -> Instantiate rebuilds the world, GUIDs preserved")
+TEST_CASE("MapFile: World -> Capture -> Save -> MapAsset -> Instantiate rebuilds the world, GUIDs preserved")
 {
     const TestTempDir   lTemp("round_trip");
     const OpaaxString   lPath = lTemp.Sub("Main.opaaxmap");
@@ -98,7 +112,10 @@ TEST_CASE("MapFile: World -> Capture -> Save -> MapResource -> Instantiate rebui
     REQUIRE(MapFile::Save(lPath, MapSerializer::CaptureMap(lSource, lRegistry, lMap)));
 
     // ---- load, through the ResourceManager, into a DIFFERENT world ------------
-    ResourceManager lResources;
+    const MapClasses lClasses;
+    ResourceManager  lResources;
+    lResources.SetObjectClasses(&lClasses);
+
     bool            lLoaded = false;
     const MapData   lData   = LoadThroughResourceManager(lResources, lPath, lLoaded);
     REQUIRE(lLoaded);
@@ -353,21 +370,24 @@ TEST_CASE("MapFile: malformed contents fail rather than throwing")
     CHECK(lLoaded.IsEmpty());
 }
 
-TEST_CASE("MapResource: a missing map resolves to NULL, never to an empty placeholder map")
+TEST_CASE("MapAsset: a missing map gives no map, never an empty one")
 {
-    // The FailFast decision, stated as a test. A placeholder here would not degrade, it would
-    // LIE: the level appears to load, the world comes up empty, and nothing reports a problem.
-    const TestTempDir lTemp("failfast");
+    // An empty map here would not degrade, it would LIE: the level appears to load, the world comes up
+    // empty, and nothing reports a problem.
+    const TestTempDir lTemp("missing");
 
-    ResourceManager lResources;
+    const MapClasses lClasses;
+    ResourceManager  lResources;
+    lResources.SetObjectClasses(&lClasses);
 
-    const ResourceRef<MapResource> lRef = lResources.Load<MapResource>(lTemp.Sub("Absent.opaaxmap").CStr());
-    CHECK(lRef.Get() == nullptr);
+    const ResourceRef<AssetResource> lRef = lResources.Load<AssetResource>(lTemp.Sub("Absent.opaaxmap").CStr());
+    CHECK_FALSE(lRef.IsValid());
+    CHECK(MapOf(lRef) == nullptr);
 
     lResources.FlushAll();
 }
 
-TEST_CASE("MapResource: the same path loads once and is shared")
+TEST_CASE("MapAsset: the same path loads once and is shared")
 {
     // Dedup is the reason the level loader goes through the ResourceManager rather than calling
     // MapFile::Load directly — two worlds opening the same map must not parse it twice.
@@ -381,33 +401,47 @@ TEST_CASE("MapResource: the same path loads once and is shared")
     lData.Entities.push_back(Move(lEntity));
     REQUIRE(MapFile::Save(lPath, lData));
 
-    ResourceManager lResources;
+    const MapClasses lClasses;
+    ResourceManager  lResources;
+    lResources.SetObjectClasses(&lClasses);
 
-    const ResourceRef<MapResource> lFirst  = lResources.Load<MapResource>(lPath.CStr());
-    const ResourceRef<MapResource> lSecond = lResources.Load<MapResource>(lPath.CStr());
+    const ResourceRef<AssetResource> lFirst  = lResources.Load<AssetResource>(lPath.CStr());
+    const ResourceRef<AssetResource> lSecond = lResources.Load<AssetResource>(lPath.CStr());
 
-    REQUIRE(lFirst.Get() != nullptr);
-    CHECK(lFirst.Get() == lSecond.Get());          // one payload, two claims
-    CHECK(lResources.GetLoadedCount<MapResource>() == 1);
+    REQUIRE(MapOf(lFirst) != nullptr);
+    CHECK(MapOf(lFirst) == MapOf(lSecond));          // one payload, two claims
+    CHECK(MapOf(lFirst)->GetName() == OPAAX_ID("Shared"));
+    CHECK(lResources.GetLoadedCount<AssetResource>() == 1);
 
     lResources.FlushAll();
 }
 
-TEST_CASE("MapResource: ByteSize grows with the map")
+TEST_CASE("MapAsset: its resource size grows with the map")
 {
     // It under-counts on purpose (structural records only, not the json payload trees) — what
-    // must hold is that it is not the constant sizeof(MapResource) the pool would fall back to.
-    MapResource lEmpty;
+    // must hold is that it is not the constant sizeof(MapAsset) the pool would fall back to.
+    const TestTempDir lTemp("size");
 
-    MapResource lPopulated;
+    MapData lPopulatedData;
     for (int lIndex = 0; lIndex < 8; ++lIndex)
     {
         EntityData lEntity;
         lEntity.Id   = Guid::New();
         lEntity.Name = OpaaxString("Entity");
         lEntity.Components.push_back(ComponentData{ OpaaxStringID("Quad"), nlohmann::json::object() });
-        lPopulated.Data.Entities.push_back(Move(lEntity));
+        lPopulatedData.Entities.push_back(Move(lEntity));
     }
 
-    CHECK(lPopulated.ByteSize() > lEmpty.ByteSize());
+    const OpaaxString lEmptyPath     = lTemp.Sub("Empty.opaaxmap");
+    const OpaaxString lPopulatedPath = lTemp.Sub("Populated.opaaxmap");
+    REQUIRE(MapFile::Save(lEmptyPath, MapData{}));
+    REQUIRE(MapFile::Save(lPopulatedPath, lPopulatedData));
+
+    MapAsset lEmpty;
+    MapAsset lPopulated;
+    REQUIRE(lEmpty.LoadSource(lEmptyPath.CStr()));
+    REQUIRE(lPopulated.LoadSource(lPopulatedPath.CStr()));
+
+    CHECK(lPopulated.GetData().EntityCount() == 8);
+    CHECK(lPopulated.GetResourceSize() > lEmpty.GetResourceSize());
 }

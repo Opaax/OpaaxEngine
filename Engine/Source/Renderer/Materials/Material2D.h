@@ -3,14 +3,12 @@
 #include "Core/Color/LinearColor.h"
 #include "Core/Color/LinearColorJson.h"
 #include "Core/Reflection/OpaaxProperty.h"
+#include "Renderer/Textures/Texture2D.h"   // complete: an asset class visits its texture reference
 #include "Resources/Asset/Asset.h"
-#include "Resources/ResourcePath.h"
-#include "Resources/ResourcePathJson.h"
+#include "Resources/Asset/AssetRef.h"
 
 namespace Opaax
 {
-    struct TextureResource;
-
     // =============================================================================
     // Material2D — how a sprite takes light: an asset a SpriteComponent points at, so many sprites
     //   share one. Without one, a sprite is lit, flat and does not glow. Lighting needs an
@@ -25,7 +23,7 @@ namespace Opaax
         bool bLit = true;
 
         /** Tangent-space normals, Y up (OpenGL convention), same layout as the sprite's image. */
-        TResourcePath<TextureResource> NormalMap;
+        TAssetRef<Texture2D> NormalMap;
 
         /** Added light in the sprite's own colours, unaffected by the scene's lights. Black: none. */
         LinearColor EmissiveColor = { 0.f, 0.f, 0.f, 1.f };

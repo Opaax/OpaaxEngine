@@ -99,7 +99,7 @@ namespace Opaax::EngineAutomation
 
                 OutList.push_back(nlohmann::json{
                     { "name",    InWidget.Name },
-                    { "type",    InWidget.GetTypeName().CStr() },
+                    { "type",    InWidget.GetClass().GetName().CStr() },
                     { "visible", IsShown(InWidget) },
                     { "x",       lCentre.x },
                     { "y",       lCentre.y },
@@ -107,7 +107,7 @@ namespace Opaax::EngineAutomation
                     { "height",  lBounds.HalfExtent.y * 2.f / lPerPixel } });
             }
 
-            for (const TUniquePtr<UIWidget>& lChild : InWidget.GetChildren())
+            for (const TStrongObjectPtr<UIWidget>& lChild : InWidget.GetChildren())
             {
                 DescribeTree(InCanvas, *lChild, InName, OutList);
             }
@@ -370,7 +370,7 @@ namespace Opaax::EngineAutomation
 
                     const CameraView& lView = lWorld->GetCameraView();
                     return AutomationResult::Ok(nlohmann::json{
-                        { "name",     lWorld->GetName() },
+                        { "name",     lWorld->GetName().CStr() },
                         { "mode",     ToString(lWorld->GetMode()) },
                         { "paused",   InEngine.GetWorldManager().IsPaused() },
                         { "entities", lWorld->GetEntityCount() },

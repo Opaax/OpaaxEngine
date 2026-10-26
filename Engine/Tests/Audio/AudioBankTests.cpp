@@ -11,14 +11,15 @@
 
 #include "Audio/AudioBank.h"
 #include "Audio/AudioBankHold.h"
+#include "Audio/AudioClip.h"
 #include "Audio/AudioClipDef.h"
-#include "Audio/AudioClipResource.h"
 #include "Audio/AudioGlobalBank.h"
 #include "Audio/AudioManager.h"
 #include "Audio/AudioSubsystem.h"
 #include "Audio/Components/AudioBanksComponent.h"
 #include "Core/Log/Logger.h"
 #include "Engine/Config/EngineConfigData.h"
+#include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceContext.h"
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/InputManager.h"
@@ -88,7 +89,7 @@ namespace
 
     bool IsResident(ResourceManager& InResources, const BankAssets& InAssets, const char* InAsset)
     {
-        return InResources.Find<AudioClipResource>(InAssets.Absolute(InAsset).CStr()).IsValid();
+        return InResources.Find<AssetResource>(InAssets.Absolute(InAsset).CStr()).IsValid();
     }
 
     /** Log lines since the last call that contain InText. */
@@ -159,8 +160,8 @@ namespace
                                              /*Actions*/ nullptr, /*UI*/ nullptr, Debug, &Components, &Audio });
 
             WorldSubsystemMgr& lSubsystems = lWorld->GetSubsystems();
-            lSubsystems.RegisterSubsystem<BehaviourSubsystem>(Ref(*lWorld->GetContext()));
-            lSubsystems.RegisterSubsystem<AudioSubsystem>(Ref(*lWorld->GetContext()));
+            lSubsystems.Add<BehaviourSubsystem>();
+            lSubsystems.Add<AudioSubsystem>();
             lSubsystems.StartupAll();
             REQUIRE(Worlds.SetActiveWorld(lWorld));
 
@@ -278,14 +279,17 @@ TEST_CASE("AudioGlobalBank: across worlds that come and go, its sounds are never
     BankWorlds lFix;
     lFix.Config.Audio.GlobalBank.Path = OpaaxString("Audio/Global.opaaxasset");
 
-    GameInstanceContext lGameContext{ lFix.Worlds, lFix.Resources, lFix.Assets.Paths, lFix.Events, lFix.Input, lFix.Config };
-    AudioGlobalBank     lGlobal(lGameContext);
-    REQUIRE(lGlobal.Startup());
+    // The game holds the bank, as StartGame makes it.
+    GameInstance lGame;
+    lGame.Init(GameInstanceContext{ lFix.Worlds, lFix.Resources, lFix.Assets.Paths, lFix.Events, lFix.Input, lFix.Config });
+    lGame.GetSubsystems().Add<AudioGlobalBank>();
+    lGame.GetSubsystems().StartupAll();
+    REQUIRE(lGame.GetSubsystems().GetSubsystem<AudioGlobalBank>() != nullptr);
     lFix.Jobs.RunAll();
 
-    const ResourceRef<AudioClipResource> lFirst = lFix.Resources.Find<AudioClipResource>(lFix.Assets.Absolute("Audio/G.wav").CStr());
+    const ResourceRef<AssetResource> lFirst = lFix.Resources.Find<AssetResource>(lFix.Assets.Absolute("Audio/G.wav").CStr());
     REQUIRE(lFirst.IsValid());
-    const Uint32 lLoadedBefore = lFix.Resources.GetLoadedCount<AudioClipResource>();
+    const Uint32 lLoadedBefore = lFix.Resources.GetLoadedCount<AssetResource>();
 
     bool bGlobalKept  = true;
     bool bLevelLoaded = true;
@@ -303,14 +307,14 @@ TEST_CASE("AudioGlobalBank: across worlds that come and go, its sounds are never
         bLevelGone = bLevelGone && !IsResident(lFix.Resources, lFix.Assets, "Audio/L.wav");
 
         // The same slot every round: the global sound was never released nor loaded again.
-        const ResourceRef<AudioClipResource> lNow = lFix.Resources.Find<AudioClipResource>(lFix.Assets.Absolute("Audio/G.wav").CStr());
+        const ResourceRef<AssetResource> lNow = lFix.Resources.Find<AssetResource>(lFix.Assets.Absolute("Audio/G.wav").CStr());
         bGlobalKept = bGlobalKept && lNow.IsValid() && lNow.GetHandle() == lFirst.GetHandle();
     }
 
     CHECK(bLevelLoaded);
     CHECK(bLevelGone);
     CHECK(bGlobalKept);
-    CHECK(lFix.Resources.GetLoadedCount<AudioClipResource>() == lLoadedBefore);
+    CHECK(lFix.Resources.GetLoadedCount<AssetResource>() == lLoadedBefore);
 
-    lGlobal.Shutdown();
+    lGame.End();
 }

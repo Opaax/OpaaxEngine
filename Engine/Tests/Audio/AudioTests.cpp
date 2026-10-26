@@ -12,7 +12,7 @@
 #include "Core/OpaaxTypes.h"
 
 #include "Application/Services/IPaths.h"
-#include "Audio/AudioClipResource.h"
+#include "Audio/AudioClip.h"
 #include "Audio/AudioManager.h"
 #include "Audio/AudioSubsystem.h"
 #include "Audio/Components/AudioListenerComponent.h"
@@ -43,13 +43,12 @@ namespace
 {
     constexpr Uint32 MIX_RATE = 48000;
 
-    AudioClipResource MakeClip(const float InSeconds, const float InAmplitude = 0.5f,
-                               const AudioClipResource::EResidency InResidency = AudioClipResource::EResidency::Auto)
+    TStrongObjectPtr<AudioClip> MakeClip(const float InSeconds, const float InAmplitude = 0.5f,
+                                         const AudioClip::EResidency InResidency = AudioClip::EResidency::Auto)
     {
-        TOptional<AudioClipResource> lClip = AudioClipResource::FromMemory(MakeWav(44100, InSeconds, 440.f, InAmplitude),
-                                                                                "Test", InResidency);
-        REQUIRE(lClip.has_value());
-        return *lClip;
+        TStrongObjectPtr<AudioClip> lClip = NewObject<AudioClip>();
+        REQUIRE(lClip->LoadFromMemory(MakeWav(44100, InSeconds, 440.f, InAmplitude), "Test", InResidency));
+        return lClip;
     }
 
     AudioManager::Desc Headless(const Uint32 InMaxVoices = 16)
@@ -117,50 +116,64 @@ namespace
 // =============================================================================
 TEST_CASE("AudioClip: a WAV file loads with its format and length; a short one is decoded")
 {
-    const AudioClipResource lClip = MakeClip(0.25f);
+    const TStrongObjectPtr<AudioClip> lClip = MakeClip(0.25f);
 
-    CHECK_FALSE(lClip.IsSilent());
-    CHECK(lClip.Channels == 1);
-    CHECK(lClip.SampleRate == 44100);
-    CHECK(lClip.FrameCount == 11025);
-    CHECK(lClip.GetDuration() == doctest::Approx(0.25f));
+    CHECK_FALSE(lClip->IsSilent());
+    CHECK(lClip->GetChannels() == 1);
+    CHECK(lClip->GetSampleRate() == 44100);
+    CHECK(lClip->GetFrameCount() == 11025);
+    CHECK(lClip->GetDuration() == doctest::Approx(0.25f));
 
-    CHECK_FALSE(lClip.IsStreamed());
-    CHECK(lClip.ByteSize() == 11025 * sizeof(float));
+    CHECK_FALSE(lClip->IsStreamed());
+    CHECK(lClip->GetResourceSize() == sizeof(AudioClip) + 11025 * sizeof(float));
 }
 
 TEST_CASE("AudioClip: a long sound keeps its file and is decoded while it plays")
 {
-    const AudioClipResource lLong = MakeClip(AudioClipResource::DECODE_MAX_SECONDS + 1.f);
-    CHECK(lLong.IsStreamed());
-    CHECK(lLong.ByteSize() == 44 + lLong.FrameCount * 2);   // the WAV file, not its samples
+    const TStrongObjectPtr<AudioClip> lLong = MakeClip(AudioClip::DECODE_MAX_SECONDS + 1.f);
+    CHECK(lLong->IsStreamed());
+    CHECK(lLong->GetResourceSize() == sizeof(AudioClip) + 44 + lLong->GetFrameCount() * 2);   // the WAV file, not its samples
 
-    const AudioClipResource lForced = MakeClip(0.25f, 0.5f, AudioClipResource::EResidency::Streamed);
-    CHECK(lForced.IsStreamed());
-    CHECK(lForced.FrameCount == 11025);
+    const TStrongObjectPtr<AudioClip> lForced = MakeClip(0.25f, 0.5f, AudioClip::EResidency::Streamed);
+    CHECK(lForced->IsStreamed());
+    CHECK(lForced->GetFrameCount() == 11025);
 }
 
-TEST_CASE("AudioClip: bytes that are not a sound are refused; a missing file loads as silence")
+TEST_CASE("AudioClip: bytes that are not a sound are refused; a file that is not one leaves no clip")
 {
     TDynArray<Uint8> lText = { 'n', 'o', 't', ' ', 'a', 'u', 'd', 'i', 'o' };
-    CHECK_FALSE(AudioClipResource::FromMemory(lText, "Text").has_value());
-    CHECK_FALSE(AudioClipResource::FromMemory({}, "Empty").has_value());
+    AudioClip lRefused;
+    CHECK_FALSE(lRefused.LoadFromMemory(lText, "Text"));
+    CHECK_FALSE(lRefused.LoadFromMemory({}, "Empty"));
+    CHECK(lRefused.IsSilent());
 
-    // Through the resource manager: the placeholder policy gives a silent clip, never null.
+    // Through the resource manager, as an asset read from its file: nothing to play when it is not a sound.
     const AudioAssets lAssets("clips");
     ResourceManager   lResources;
+    lResources.SetObjectClasses(&AudioTest::AudioClasses());
 
-    const ResourceRef<AudioClipResource> lGood = lResources.Load<AudioClipResource>(lAssets.Sub("Audio/Beep.wav").CStr());
-    REQUIRE(lGood.Get() != nullptr);
-    CHECK(lGood->FrameCount == 11025);
+    const auto lClipAt = [&lResources, &lAssets](const char* InAsset) -> const AudioClip*
+    {
+        const ResourceRef<AssetResource> lRef = lResources.Load<AssetResource>(lAssets.Sub(InAsset).CStr());
+        return lRef.Get() != nullptr ? lRef.Get()->Get<AudioClip>() : nullptr;
+    };
 
-    const ResourceRef<AudioClipResource> lBad = lResources.Load<AudioClipResource>(lAssets.Sub("Audio/NotASound.wav").CStr());
-    REQUIRE(lBad.Get() != nullptr);
-    CHECK(lBad->IsSilent());
+    const AudioClip* lGood = lClipAt("Audio/Beep.wav");
+    REQUIRE(lGood != nullptr);
+    CHECK(lGood->GetFrameCount() == 11025);
+    CHECK(lGood->GetName() == OPAAX_ID("Beep"));
 
-    const ResourceRef<AudioClipResource> lMissing = lResources.Load<AudioClipResource>(lAssets.Sub("Audio/Nope.wav").CStr());
-    REQUIRE(lMissing.Get() != nullptr);
-    CHECK(lMissing->IsSilent());
+    CHECK(lClipAt("Audio/NotASound.wav") == nullptr);
+    CHECK(lClipAt("Audio/Nope.wav") == nullptr);
+}
+
+TEST_CASE("AudioClip: read from sound files, under their three extensions")
+{
+    const TDynArray<const char*> lExtensions = AudioClip::StaticClass().GetSourceExtensions();
+    REQUIRE(lExtensions.size() == 3u);
+    CHECK(OpaaxString(lExtensions[0]) == ".wav");
+    CHECK(OpaaxString(lExtensions[1]) == ".mp3");
+    CHECK(OpaaxString(lExtensions[2]) == ".flac");
 }
 
 // =============================================================================
@@ -172,7 +185,7 @@ TEST_CASE("AudioManager: a sound plays for its length, then is released")
     REQUIRE(lAudio.Startup());
     CHECK(lAudio.IsHeadless());
 
-    const SoundHandle lSound = lAudio.Play(MakeClip(0.25f));
+    const SoundHandle lSound = lAudio.Play(*MakeClip(0.25f));
     REQUIRE(lSound.IsValid());
     CHECK(lAudio.IsPlaying(lSound));
     CHECK(lAudio.GetVoiceCount() == 1);
@@ -196,7 +209,7 @@ TEST_CASE("AudioManager: a looping sound plays until it is stopped")
 
     PlaySoundParams lParams;
     lParams.bLoop = true;
-    const SoundHandle lSound = lAudio.Play(MakeClip(0.1f), lParams);
+    const SoundHandle lSound = lAudio.Play(*MakeClip(0.1f), lParams);
 
     lAudio.Update(1.0);
     CHECK(lAudio.IsPlaying(lSound));
@@ -219,7 +232,7 @@ TEST_CASE("AudioManager: a stop can fade out; FadeTo and a fade-in take their ti
     PlaySoundParams lParams;
     lParams.bLoop         = true;
     lParams.FadeInSeconds = 0.2f;
-    const SoundHandle lSound = lAudio.Play(MakeClip(0.5f), lParams);
+    const SoundHandle lSound = lAudio.Play(*MakeClip(0.5f), lParams);
 
     CHECK(RenderPeaks(lAudio, 0.02f).Max() < 0.1f);
     RenderPeaks(lAudio, 0.2f);
@@ -245,7 +258,7 @@ TEST_CASE("AudioManager: what is heard follows the sound, bus and master volumes
     PlaySoundParams lParams;
     lParams.bLoop = true;
     lParams.Bus   = OPAAX_ID("SFX");
-    const SoundHandle lSound = lAudio.Play(MakeClip(0.5f), lParams);
+    const SoundHandle lSound = lAudio.Play(*MakeClip(0.5f), lParams);
 
     const float lFull = RenderPeaks(lAudio).Max();
     REQUIRE(lFull > 0.2f);
@@ -314,7 +327,7 @@ TEST_CASE("AudioManager: the bus tree comes from the settings; a fade, mute and 
     PlaySoundParams lParams;
     lParams.bLoop = true;
     lParams.Bus   = OPAAX_ID("Footsteps");
-    lAudio.Play(MakeClip(0.5f), lParams);
+    lAudio.Play(*MakeClip(0.5f), lParams);
 
     // Under SFX at 0.5: half of what the clip holds.
     CHECK(RenderPeaks(lAudio).Max() == doctest::Approx(0.25f).epsilon(0.05));
@@ -353,7 +366,7 @@ TEST_CASE("AudioManager: the bus tree comes from the settings; a fade, mute and 
 
         PlaySoundParams lLost;
         lLost.Bus = OPAAX_ID("Nope");
-        CHECK(lAudio.Play(MakeClip(0.5f), lLost).IsValid());
+        CHECK(lAudio.Play(*MakeClip(0.5f), lLost).IsValid());
     }
 }
 
@@ -365,9 +378,9 @@ TEST_CASE("AudioManager: a sound naming no bus plays in SFX; the old bus name \"
 
     PlaySoundParams lParams;
     lParams.bLoop = true;
-    lAudio.Play(MakeClip(0.5f), lParams);
+    lAudio.Play(*MakeClip(0.5f), lParams);
     lParams.Bus = OPAAX_ID("Effects");
-    lAudio.Play(MakeClip(0.5f), lParams);
+    lAudio.Play(*MakeClip(0.5f), lParams);
 
     CHECK(RenderPeaks(lAudio).Max() == 0.f);
 }
@@ -387,7 +400,7 @@ TEST_CASE("AudioManager: a spatial sound is panned toward its side and silent be
     SUBCASE("to the right")
     {
         lParams.Position = { 300.f, 0.f };
-        lAudio.Play(MakeClip(0.5f), lParams);
+        lAudio.Play(*MakeClip(0.5f), lParams);
 
         const Peaks lPeaks = RenderPeaks(lAudio);
         CHECK(lPeaks.Right > 0.01f);
@@ -397,7 +410,7 @@ TEST_CASE("AudioManager: a spatial sound is panned toward its side and silent be
     SUBCASE("to the left")
     {
         lParams.Position = { -300.f, 0.f };
-        lAudio.Play(MakeClip(0.5f), lParams);
+        lAudio.Play(*MakeClip(0.5f), lParams);
 
         const Peaks lPeaks = RenderPeaks(lAudio);
         CHECK(lPeaks.Left > lPeaks.Right);
@@ -406,14 +419,14 @@ TEST_CASE("AudioManager: a spatial sound is panned toward its side and silent be
     SUBCASE("too far")
     {
         lParams.Position = { 5000.f, 0.f };
-        lAudio.Play(MakeClip(0.5f), lParams);
+        lAudio.Play(*MakeClip(0.5f), lParams);
         CHECK(RenderPeaks(lAudio).Max() < 1e-4f);
     }
 
     SUBCASE("the listener moved next to it")
     {
         lParams.Position = { 5000.f, 0.f };
-        lAudio.Play(MakeClip(0.5f), lParams);
+        lAudio.Play(*MakeClip(0.5f), lParams);
         lAudio.SetListenerPosition({ 5000.f, 0.f });
         CHECK(RenderPeaks(lAudio).Max() > 0.1f);
     }
@@ -424,13 +437,13 @@ TEST_CASE("AudioManager: a handle of a sound that ended does nothing to the soun
     AudioManager lAudio(Headless(/*InMaxVoices*/1));
     REQUIRE(lAudio.Startup());
 
-    const SoundHandle lOld = lAudio.Play(MakeClip(0.05f));
+    const SoundHandle lOld = lAudio.Play(*MakeClip(0.05f));
     lAudio.Update(0.1);
     REQUIRE_FALSE(lAudio.IsPlaying(lOld));
 
     PlaySoundParams lParams;
     lParams.bLoop = true;
-    const SoundHandle lNew = lAudio.Play(MakeClip(0.5f), lParams);
+    const SoundHandle lNew = lAudio.Play(*MakeClip(0.5f), lParams);
     REQUIRE(lNew.GetIndex() == lOld.GetIndex());   // the same voice, another generation
     CHECK(lNew != lOld);
 
@@ -445,7 +458,7 @@ TEST_CASE("AudioManager: a handle of a sound that ended does nothing to the soun
 
 TEST_CASE("AudioManager: a streamed clip sounds exactly like the same clip decoded")
 {
-    const auto lRender = [](const AudioClipResource& InClip)
+    const auto lRender = [](const AudioClip& InClip)
     {
         AudioManager lAudio(Headless());
         REQUIRE(lAudio.Startup());
@@ -457,8 +470,8 @@ TEST_CASE("AudioManager: a streamed clip sounds exactly like the same clip decod
         return lFrames;
     };
 
-    const TDynArray<float> lDecoded  = lRender(MakeClip(0.3f, 0.5f, AudioClipResource::EResidency::Decoded));
-    const TDynArray<float> lStreamed = lRender(MakeClip(0.3f, 0.5f, AudioClipResource::EResidency::Streamed));
+    const TDynArray<float> lDecoded  = lRender(*MakeClip(0.3f, 0.5f, AudioClip::EResidency::Decoded));
+    const TDynArray<float> lStreamed = lRender(*MakeClip(0.3f, 0.5f, AudioClip::EResidency::Streamed));
     CHECK(lDecoded == lStreamed);
     CHECK(*Algo::MaxElement(lDecoded) > 0.4f);
 }
@@ -468,10 +481,11 @@ TEST_CASE("AudioManager: when every voice plays, a new sound replaces the least 
     AudioManager lAudio(Headless(/*InMaxVoices*/2));
 
     // Not started yet.
-    CHECK_FALSE(lAudio.Play(MakeClip(0.1f)).IsValid());
+    CHECK_FALSE(lAudio.Play(*MakeClip(0.1f)).IsValid());
 
     REQUIRE(lAudio.Startup());
-    CHECK_FALSE(lAudio.Play(AudioClipResource::Placeholder()).IsValid());
+    const AudioClip lSilent;
+    CHECK_FALSE(lAudio.Play(lSilent).IsValid());
 
     PlaySoundParams lLoud;
     lLoud.bLoop = true;
@@ -480,9 +494,9 @@ TEST_CASE("AudioManager: when every voice plays, a new sound replaces the least 
 
     SUBCASE("the quietest of equal priority")
     {
-        const SoundHandle lA = lAudio.Play(MakeClip(0.5f), lLoud);
-        const SoundHandle lB = lAudio.Play(MakeClip(0.5f), lQuiet);
-        CHECK(lAudio.Play(MakeClip(0.5f), lLoud).IsValid());
+        const SoundHandle lA = lAudio.Play(*MakeClip(0.5f), lLoud);
+        const SoundHandle lB = lAudio.Play(*MakeClip(0.5f), lQuiet);
+        CHECK(lAudio.Play(*MakeClip(0.5f), lLoud).IsValid());
         CHECK(lAudio.IsPlaying(lA));
         CHECK_FALSE(lAudio.IsPlaying(lB));
         CHECK(lAudio.GetVoiceCount() == 2);
@@ -495,10 +509,10 @@ TEST_CASE("AudioManager: when every voice plays, a new sound replaces the least 
         PlaySoundParams lLower = lLoud;
         lLower.Priority = 5;
 
-        const SoundHandle lA = lAudio.Play(MakeClip(0.5f), lLow);
-        const SoundHandle lB = lAudio.Play(MakeClip(0.5f), lQuiet);   // quieter, but priority 128
-        CHECK_FALSE(lAudio.Play(MakeClip(0.5f), lLower).IsValid());
-        CHECK(lAudio.Play(MakeClip(0.5f), lLoud).IsValid());
+        const SoundHandle lA = lAudio.Play(*MakeClip(0.5f), lLow);
+        const SoundHandle lB = lAudio.Play(*MakeClip(0.5f), lQuiet);   // quieter, but priority 128
+        CHECK_FALSE(lAudio.Play(*MakeClip(0.5f), lLower).IsValid());
+        CHECK(lAudio.Play(*MakeClip(0.5f), lLoud).IsValid());
         CHECK_FALSE(lAudio.IsPlaying(lA));
         CHECK(lAudio.IsPlaying(lB));
     }
@@ -506,8 +520,8 @@ TEST_CASE("AudioManager: when every voice plays, a new sound replaces the least 
     // Every voice comes back once the mixer is done with it: two new sounds start in free voices.
     lAudio.StopAll();
     Settle(lAudio);
-    const SoundHandle lFirst  = lAudio.Play(MakeClip(0.1f));
-    const SoundHandle lSecond = lAudio.Play(MakeClip(0.1f));
+    const SoundHandle lFirst  = lAudio.Play(*MakeClip(0.1f));
+    const SoundHandle lSecond = lAudio.Play(*MakeClip(0.1f));
     CHECK(lFirst.IsValid());
     CHECK(lSecond.IsValid());
     CHECK(lAudio.GetVoiceCount() == 2);
@@ -526,8 +540,8 @@ TEST_CASE("AudioManager: a playing sound keeps its clip's data after the clip is
     {
         PlaySoundParams lParams;
         lParams.bLoop = true;
-        const AudioClipResource lClip = MakeClip(0.2f);
-        lSound = lAudio.Play(lClip, lParams);
+        const TStrongObjectPtr<AudioClip> lClip = MakeClip(0.2f);
+        lSound = lAudio.Play(*lClip, lParams);
     }
 
     CHECK(lAudio.IsPlaying(lSound));
@@ -636,7 +650,7 @@ TEST_CASE("AudioManager: with a device, the audio thread mixes ahead and the dev
 
     PlaySoundParams lParams;
     lParams.bLoop = true;
-    const SoundHandle lSound = lAudio.Play(MakeClip(0.2f), lParams);
+    const SoundHandle lSound = lAudio.Play(*MakeClip(0.2f), lParams);
     CHECK(lAudio.IsPlaying(lSound));   // at once, before the audio thread has seen it
 
     CHECK(WaitFor([&lRecording]() { return lRecording->LastPeak(256) > 0.4f; }));
@@ -657,6 +671,8 @@ namespace AudioProbes
     /** Plays the beep when it starts. */
     struct Chime final : Behaviour
     {
+        OPAAX_OBJECT(Chime, Behaviour)
+
         SoundHandle Sound;
 
         void OnStart() override { Sound = PlaySound("Audio/Beep.wav"); }
@@ -685,6 +701,7 @@ namespace
             : Assets("world")
             , Paths(Assets.Root())
         {
+            Resources.SetObjectClasses(&AudioTest::AudioClasses());   // a sound file is an asset
             REQUIRE(Audio.Startup());
             REQUIRE(Components.Register<TransformComponent>(OpaaxStringID("Transform"), /*bEssential*/true));
             REQUIRE(Components.Register<AudioProbes::Chime>(OpaaxStringID("Chime")));
@@ -696,8 +713,8 @@ namespace
                                                /*Actions*/ nullptr, /*UI*/ nullptr, Debug, &Components, &Audio });
 
             WorldSubsystemMgr& lSubsystems = TheWorld->GetSubsystems();
-            lSubsystems.RegisterSubsystem<BehaviourSubsystem>(Ref(*TheWorld->GetContext()));
-            lSubsystems.RegisterSubsystem<AudioSubsystem>(Ref(*TheWorld->GetContext()));
+            lSubsystems.Add<BehaviourSubsystem>();
+            lSubsystems.Add<AudioSubsystem>();
             lSubsystems.StartupAll();
 
             Sounds = lSubsystems.GetSubsystem<AudioSubsystem>();

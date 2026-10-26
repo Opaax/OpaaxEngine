@@ -4,7 +4,10 @@
 #include "Core/Events/Delegate.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
+#include "Core/String/OpaaxStringID.hpp"
 #include "Core/Log/Logger.h"
+#include "Object/ObjectMacros.h"
+#include "Object/ObjectPtr.h"
 #include "World/WorldSpec.h"   // EWorldMode
 #include "World/WorldGuidRegistry.h"
 
@@ -25,32 +28,27 @@ namespace Opaax
     DECLARE_MULTICAST_DELEGATE_OneParam(FOnEntityDestroying, EntityID /*Entity*/)
 
     // =============================================================================
-    // World — a runtime simulation container (the ECS boundary). Owns its EntityRegistry,
-    //   a Guid -> entity lookup, its subsystems, its Level and its camera view.
-    //   Game code reaches entities through Entity handles.
+    // World — a runtime simulation container (the ECS boundary), an Object class. Owns its
+    //   EntityRegistry, a Guid -> entity lookup, its subsystems, its Level and its camera view.
+    //   Game code reaches entities through Entity handles. Its name and identity are the object's
+    //   (GetName, GetHandle).
     // =============================================================================
-    class World
+    class World : public Object
     {
+        OPAAX_OBJECT(World, Object)
+
         // =========================================================================
         // CTORS - DTORS
         // =========================================================================
     public:
-        //Todo: World should have OpaaxStringID to get ID and Name in one place
         /**
+         * @param InName Its object name (a level's world is named after the level)
          * @param InMode What the world is for. Defaults to Play (tests, game hosts); the editor
          *               passes Edit. Cannot change afterwards.
          */
-        explicit World(OpaaxString InName = "World", EWorldMode InMode = EWorldMode::Play);
-        ~World();
+        explicit World(OpaaxStringID InName = OPAAX_ID("World"), EWorldMode InMode = EWorldMode::Play);
+        ~World() override;
 
-        // =========================================================================
-        // Copy - Move Delete
-        // =========================================================================
-        World(const World&)            = delete;
-        World& operator=(const World&) = delete;
-        World(World&&)                 = delete;
-        World& operator=(World&&)      = delete;
-        
         // =========================================================================
         // Functions
         // =========================================================================
@@ -148,10 +146,10 @@ namespace Opaax
          * Sets this world's Level (which maps it contains). Set once by WorldManager::CreateWorld;
          * null for a bare test world.
          */
-        void SetLevel(TUniquePtr<Level> InLevel);
+        void SetLevel(TStrongObjectPtr<Level> InLevel);
 
         /** This world's Level, or null (bare test world). */
-        Level* GetLevel() const noexcept { return m_Level.get(); }
+        Level* GetLevel() const noexcept { return m_Level.Get(); }
 
         // End Level
         // =========================================================================
@@ -211,8 +209,6 @@ namespace Opaax
         // =========================================================================
         // Get - Set
     public:
-        const Guid&        GetId() const noexcept          { return m_Id; }
-        const OpaaxString& GetName() const noexcept        { return m_Name; }
         Uint64             GetEntityCount() const noexcept { return m_EntityCount; }
 
         /** What this world is for. Cannot change. */
@@ -234,7 +230,7 @@ namespace Opaax
         TUniquePtr<WorldContext> m_Context;
 
         // Which maps are in this world. Null for a bare world (see SetLevel).
-        TUniquePtr<Level>        m_Level;
+        TStrongObjectPtr<Level>  m_Level;
 
         // Default: the centred view (see GetCameraView).
         CameraView               m_CameraView;
@@ -244,8 +240,6 @@ namespace Opaax
         EntityRegistry m_Registry;
         WorldGuidRegistry   m_Guids;
         FOnEntityDestroying m_OnEntityDestroying;
-        Guid           m_Id;
-        OpaaxString    m_Name;
         EWorldMode     m_Mode = EWorldMode::Play; // set in the ctor only
         Uint64         m_EntityCount = 0;
         Uint64         m_Revision    = 0;   // see GetRevision

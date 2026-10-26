@@ -84,5 +84,23 @@
             "equals": 1
         },
         "id": "subsystem-sees-component"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Holder",
+            "path": "TuningProbe/GameClass",
+            "equals": "ProbeGame"
+        },
+        "id": "game-instance-class"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Holder",
+            "path": "TuningProbe/bGameStarted",
+            "equals": true
+        },
+        "id": "game-instance-started"
     }
 ]

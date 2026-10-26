@@ -26,12 +26,13 @@ namespace Opaax::Editor
          * instances need them to keep their overrides). Optional: most savers only call SavedToDisk.
          */
         template<CResource T>
-        void AboutToSave(EditorContext& InContext, const OpaaxString& InAbsPath)
+        void AboutToSave(EditorContext& InContext, const OpaaxString& InAbsPath, const OpaaxStringID InAssetClass = {})
         {
             ResourceSavedEvent lEvent;
-            lEvent.TypeId    = ResourceTypeID::Get<T>();
-            lEvent.AbsPath   = InAbsPath;
-            lEvent.AssetPath = InContext.Paths.AbsoluteToAsset(InAbsPath);
+            lEvent.TypeId     = ResourceTypeID::Get<T>();
+            lEvent.AssetClass = InAssetClass;
+            lEvent.AbsPath    = InAbsPath;
+            lEvent.AssetPath  = InContext.Paths.AbsoluteToAsset(InAbsPath);
 
             InContext.ResourceEvents.OnResourceSaving.Broadcast(lEvent);
         }
@@ -39,16 +40,18 @@ namespace Opaax::Editor
         /**
          * Reloads the resource and announces the save. Call it after the file is written.
          * Not loaded is not a failure (nothing to swap); the event is sent anyway.
-         * @param InAbsPath The file just written, absolute
+         * @param InAbsPath    The file just written, absolute
+         * @param InAssetClass For an asset file (an AssetResource): its class, which listeners tell apart
          * @return True if a loaded copy was replaced
          */
         template<CResource T>
-        bool SavedToDisk(EditorContext& InContext, const OpaaxString& InAbsPath)
+        bool SavedToDisk(EditorContext& InContext, const OpaaxString& InAbsPath, const OpaaxStringID InAssetClass = {})
         {
             ResourceSavedEvent lEvent;
-            lEvent.TypeId    = ResourceTypeID::Get<T>();
-            lEvent.AbsPath   = InAbsPath;
-            lEvent.AssetPath = InContext.Paths.AbsoluteToAsset(InAbsPath);
+            lEvent.TypeId     = ResourceTypeID::Get<T>();
+            lEvent.AssetClass = InAssetClass;
+            lEvent.AbsPath    = InAbsPath;
+            lEvent.AssetPath  = InContext.Paths.AbsoluteToAsset(InAbsPath);
 
             const bool lSwapped = InContext.Resources.Reload<T>(InAbsPath.CStr());
 

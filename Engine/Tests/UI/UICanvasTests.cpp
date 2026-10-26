@@ -51,9 +51,9 @@ TEST_CASE("UICanvas: an aspect change moves the corner-anchored widget and re-la
     UICanvas lCanvas(1080.f);
     lCanvas.SetTargetSize(1920, 1080);
 
-    UIWidget* lCorner  = lCanvas.Root().AddChild(MakeUnique<UIImage>());
-    UIWidget* lCentre  = lCanvas.Root().AddChild(MakeUnique<UIImage>());
-    UIWidget* lNested  = lCentre->AddChild(MakeUnique<UIImage>());
+    UIWidget* lCorner  = lCanvas.Root().AddChild(NewObject<UIImage>());
+    UIWidget* lCentre  = lCanvas.Root().AddChild(NewObject<UIImage>());
+    UIWidget* lNested  = lCentre->AddChild(NewObject<UIImage>());
     lCorner->SetRect(TopRight({ 100.f, 50.f }));
     lCentre->SetRect(Centred({ 200.f, 200.f }));
     lNested->SetRect(Centred({ 20.f, 20.f }));
@@ -79,7 +79,7 @@ TEST_CASE("UICanvas: a same-aspect resize lays out nothing")
 {
     UICanvas lCanvas(1080.f);
     lCanvas.SetTargetSize(1920, 1080);
-    lCanvas.Root().AddChild(MakeUnique<UIImage>())->SetRect(TopRight({ 100.f, 50.f }));
+    lCanvas.Root().AddChild(NewObject<UIImage>())->SetRect(TopRight({ 100.f, 50.f }));
     lCanvas.Update();
 
     lCanvas.SetTargetSize(1280, 720);
@@ -94,7 +94,7 @@ TEST_CASE("UICanvas: an idle frame costs 0/0")
 {
     UICanvas lCanvas(1080.f);
     lCanvas.SetTargetSize(1920, 1080);
-    lCanvas.Root().AddChild(MakeUnique<UIImage>());
+    lCanvas.Root().AddChild(NewObject<UIImage>());
     lCanvas.Update();
 
     const UICanvasStats lStats = lCanvas.Update();
@@ -107,9 +107,9 @@ TEST_CASE("UICanvas: SetRect re-lays that widget and its subtree, never its sibl
     UICanvas lCanvas(1080.f);
     lCanvas.SetTargetSize(1920, 1080);
 
-    UIWidget* lA  = lCanvas.Root().AddChild(MakeUnique<UIPanel>());
-    UIWidget* lA1 = lA->AddChild(MakeUnique<UIImage>());
-    UIWidget* lB  = lCanvas.Root().AddChild(MakeUnique<UIImage>());
+    UIWidget* lA  = lCanvas.Root().AddChild(NewObject<UIPanel>());
+    UIWidget* lA1 = lA->AddChild(NewObject<UIImage>());
+    UIWidget* lB  = lCanvas.Root().AddChild(NewObject<UIImage>());
     lCanvas.Update();
 
     const Bounds2D lBBefore = lB->GetBounds();
@@ -127,7 +127,7 @@ TEST_CASE("UICanvas: content invalidation rebuilds without a layout")
 {
     UICanvas lCanvas(1080.f);
     lCanvas.SetTargetSize(1920, 1080);
-    UIImage* lBar = static_cast<UIImage*>(lCanvas.Root().AddChild(MakeUnique<UIImage>()));
+    UIImage* lBar = static_cast<UIImage*>(lCanvas.Root().AddChild(NewObject<UIImage>()));
     lCanvas.Update();
 
     lBar->SetFill(EUIFill::Horizontal, 0.25f);
@@ -141,16 +141,16 @@ TEST_CASE("UICanvas: AddChild resolves the newcomer alone; RemoveChild resolves 
 {
     UICanvas lCanvas(1080.f);
     lCanvas.SetTargetSize(1920, 1080);
-    lCanvas.Root().AddChild(MakeUnique<UIImage>());
+    lCanvas.Root().AddChild(NewObject<UIImage>());
     lCanvas.Update();
 
-    UIWidget* lNew = lCanvas.Root().AddChild(MakeUnique<UIImage>());
+    UIWidget* lNew = lCanvas.Root().AddChild(NewObject<UIImage>());
     UICanvasStats lStats = lCanvas.Update();
     CHECK(lStats.Layouts  == 1);
     CHECK(lStats.Rebuilds == 1);
 
-    TUniquePtr<UIWidget> lTaken = lCanvas.Root().RemoveChild(*lNew);
-    REQUIRE(lTaken.get() == lNew);
+    TStrongObjectPtr<UIWidget> lTaken = lCanvas.Root().RemoveChild(*lNew);
+    REQUIRE(lTaken.Get() == lNew);
     CHECK(lTaken->GetParent() == nullptr);
     CHECK(lCanvas.Root().GetChildren().size() == 1);
 
@@ -168,8 +168,8 @@ TEST_CASE("UICanvas: hit-test — the later sibling wins, hidden and pass-throug
     UICanvas lCanvas(1080.f);
     lCanvas.SetTargetSize(1920, 1080);
 
-    UIWidget* lUnder = lCanvas.Root().AddChild(MakeUnique<UIImage>());
-    UIWidget* lOver  = lCanvas.Root().AddChild(MakeUnique<UIImage>());
+    UIWidget* lUnder = lCanvas.Root().AddChild(NewObject<UIImage>());
+    UIWidget* lOver  = lCanvas.Root().AddChild(NewObject<UIImage>());
     lCanvas.Update();
 
     // Both are the default 100x100 box at the origin.
@@ -192,8 +192,8 @@ TEST_CASE("UICanvas: hit-test reaches a child outside its parent — nothing cli
     UICanvas lCanvas(1080.f);
     lCanvas.SetTargetSize(1920, 1080);
 
-    UIWidget* lParent = lCanvas.Root().AddChild(MakeUnique<UIPanel>());
-    UIWidget* lChild  = lParent->AddChild(MakeUnique<UIImage>());
+    UIWidget* lParent = lCanvas.Root().AddChild(NewObject<UIPanel>());
+    UIWidget* lChild  = lParent->AddChild(NewObject<UIImage>());
     lChild->SetRect(Centred({ 20.f, 20.f }, { 250.f, 250.f }));
     lCanvas.Update();
 
@@ -205,7 +205,7 @@ TEST_CASE("UIImage: one quad on its bounds; a horizontal fill crops the rect and
 {
     UICanvas lCanvas(1080.f);
     lCanvas.SetTargetSize(1920, 1080);
-    UIImage* lImage = static_cast<UIImage*>(lCanvas.Root().AddChild(MakeUnique<UIImage>()));
+    UIImage* lImage = static_cast<UIImage*>(lCanvas.Root().AddChild(NewObject<UIImage>()));
     lImage->SetRect(Centred({ 200.f, 40.f }));
     lImage->SetColor({ 1.f, 0.f, 0.f, 1.f });
     lCanvas.Update();
@@ -259,11 +259,11 @@ namespace
     /** A leaf whose input is "not ready" for N rebuilds: it re-arms itself from inside Rebuild. */
     class ReArmingWidget final : public UIWidget
     {
+        OPAAX_OBJECT(ReArmingWidget, UIWidget)
+
     public:
         Uint32 NotReadyFor = 0;
         Uint32 Rebuilds    = 0;
-
-        OpaaxStringID GetTypeName() const noexcept override { return OPAAX_ID("ReArming"); }
 
     protected:
         void Rebuild(const UIBuildContext&, TDynArray<UIQuad>& OutQuads) override
@@ -286,8 +286,8 @@ TEST_CASE("UICanvas: a Rebuild that re-arms is visited again next frame, and the
     lCanvas.SetTargetSize(1920, 1080);
 
     // Two levels down, so the re-arm has to climb through a parent whose flags the walk already cleared.
-    UIWidget*       lPanel = lCanvas.Root().AddChild(MakeUnique<UIPanel>());
-    ReArmingWidget* lLeaf  = static_cast<ReArmingWidget*>(lPanel->AddChild(MakeUnique<ReArmingWidget>()));
+    UIWidget*       lPanel = lCanvas.Root().AddChild(NewObject<UIPanel>());
+    ReArmingWidget* lLeaf  = static_cast<ReArmingWidget*>(lPanel->AddChild(NewObject<ReArmingWidget>()));
     lLeaf->NotReadyFor = 2;
 
     lCanvas.Update();
@@ -327,10 +327,10 @@ TEST_CASE("UICanvas: Opacity multiplies down the tree, a subtree at 0 emits noth
     UICanvas lCanvas(1080.f);
     lCanvas.SetTargetSize(1920, 1080);
 
-    UIWidget* lGroup = lCanvas.Root().AddChild(MakeUnique<UIPanel>());
-    UIWidget* lInner = lGroup->AddChild(MakeUnique<UIImage>());
-    UIWidget* lLeaf  = lInner->AddChild(MakeUnique<UIImage>());
-    UIWidget* lOther = lCanvas.Root().AddChild(MakeUnique<UIImage>());
+    UIWidget* lGroup = lCanvas.Root().AddChild(NewObject<UIPanel>());
+    UIWidget* lInner = lGroup->AddChild(NewObject<UIImage>());
+    UIWidget* lLeaf  = lInner->AddChild(NewObject<UIImage>());
+    UIWidget* lOther = lCanvas.Root().AddChild(NewObject<UIImage>());
     lCanvas.Update();
 
     TDynArray<UIDrawItem> lItems;

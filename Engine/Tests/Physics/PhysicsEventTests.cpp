@@ -57,7 +57,7 @@ namespace
 
             TheWorld->SetContext(WorldContext{ *TheWorld, Resources, IPaths::Null(), Events,
                                                Input, Config, /*Actions*/ nullptr, /*UI*/ nullptr, Debug});
-            TheWorld->GetSubsystems().RegisterSubsystem<PhysicsSubsystem>(Ref(*TheWorld->GetContext()));
+            TheWorld->GetSubsystems().Add<PhysicsSubsystem>();
             TheWorld->GetSubsystems().StartupAll();
 
             Physics = TheWorld->GetSubsystems().GetSubsystem<PhysicsSubsystem>();

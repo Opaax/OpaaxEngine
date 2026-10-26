@@ -49,7 +49,7 @@ namespace Opaax
     // =========================================================================
     // Base implementation
     // =========================================================================
-    bool PhysicsSubsystem::ShouldCreate(const World& InWorld)
+    bool PhysicsSubsystem::ShouldCreate(const World& InWorld) const
     {
         return InWorld.GetMode() == EWorldMode::Play;
     }
@@ -59,7 +59,7 @@ namespace Opaax
     // =========================================================================
     bool PhysicsSubsystem::Startup()
     {
-        const PhysicsSettings& lSettings = m_Context->Config.Physics;
+        const PhysicsSettings& lSettings = GetContext().Config.Physics;
 
         PhysicsWorldDesc lDesc;
         lDesc.Gravity             = lSettings.Gravity;
@@ -112,7 +112,7 @@ namespace Opaax
 
         OPAAX_STAT_SCOPE("Physics");
 
-        World& lWorld = m_Context->OwningWorld;
+        World& lWorld = GetContext().OwningWorld;
 
         // Remove dead bodies first, so they emit no contacts.
         ReconcileDeadBodies(lWorld);
@@ -348,7 +348,7 @@ namespace Opaax
 
     BodyHandle PhysicsSubsystem::FindOrBuildDynamicBody(const EntityID InEntity)
     {
-        World& lWorld = m_Context->OwningWorld;
+        World& lWorld = GetContext().OwningWorld;
         if (m_World == nullptr || !lWorld.IsValid(InEntity))
         {
             return BodyHandle{};
@@ -486,7 +486,7 @@ namespace Opaax
 
     void PhysicsSubsystem::DispatchPhysicsEvents(World& InWorld)
     {
-        EventBus& lBus = m_Context->Events.GetEventBus();
+        EventBus& lBus = GetContext().Events.GetEventBus();
 
         m_World->GetSensorEvents(m_SensorBegan, m_SensorEnded);
         m_World->GetContactEvents(m_ContactBegan, m_ContactEnded);
@@ -642,7 +642,7 @@ namespace Opaax
             return;
         }
 
-        EventBus& lBus = m_Context->Events.GetEventBus();
+        EventBus& lBus = GetContext().Events.GetEventBus();
 
         m_BoundsExits.clear();
         m_BoundsVictims.clear();

@@ -9,12 +9,10 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxStringIDJson.h"
 #include "Resources/Asset/AssetRef.h"
-#include "Resources/ResourcePath.h"
-#include "Resources/ResourcePathJson.h"
 
 namespace Opaax
 {
-    struct AudioClipResource;
+    class AudioClip;
 
     // =============================================================================
     // AudioSourceComponent — a sound on an entity. In a Play world it starts with the entity when
@@ -29,7 +27,7 @@ namespace Opaax
         /** A clip definition. When set, Clip and the settings below it are not used. */
         TAssetRef<AudioClipDef> Sound;
 
-        TResourcePath<AudioClipResource> Clip;
+        TAssetRef<AudioClip> Clip;
 
         OpaaxStringID Bus          = AudioDefaultBus();
         float         Volume       = 1.f;   // times the definition's, with a Sound

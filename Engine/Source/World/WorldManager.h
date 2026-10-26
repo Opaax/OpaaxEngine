@@ -28,13 +28,9 @@ namespace Opaax
     //   CloneWorld makes the Play copy; the source is untouched, so Stop just re-activates it.
     //   Creates no world itself: Engine::FinishStartup creates the startup world.
     // =============================================================================
-    class WorldManager final : public EngineSubsystemBase
+    class WorldManager final : public EngineSubsystem
     {
-        // =========================================================================
-        // Base Implementation
-        // =========================================================================
-    public:
-        OPAAX_SUBSYSTEM_TYPE(WorldManager)
+        OPAAX_OBJECT(WorldManager, EngineSubsystem)
 
         // =========================================================================
         // CTORS - DTORS
@@ -57,9 +53,10 @@ namespace Opaax
         /**
          * Creates and owns a world. Does not activate it (call SetActiveWorld).
          * The first call seals the engine registries.
+         * @param InName Its object name; its Level gets the same
          * @param InMode What the world is for (cannot change)
          */
-        World* CreateWorld(OpaaxString InName = "World", EWorldMode InMode = EWorldMode::Play);
+        World* CreateWorld(OpaaxStringID InName = OPAAX_ID("World"), EWorldMode InMode = EWorldMode::Play);
 
         /**
          * Copies InSource into a new world (Play In Editor).
@@ -119,7 +116,7 @@ namespace Opaax
         // =========================================================================
         // Override
         // =========================================================================
-        //~Begin EngineSubsystemBase interface
+        //~Begin Subsystem interface
     public:
         bool Startup()  override;
 
@@ -137,7 +134,7 @@ namespace Opaax
         void TearDown() override;
 
         void Shutdown() override;
-        //~End EngineSubsystemBase interface
+        //~End Subsystem interface
 
         // =========================================================================
         // Functions
@@ -153,7 +150,7 @@ namespace Opaax
         // =========================================================================
     private:
         EngineRegistries*               m_Registries = nullptr; // owned by Engine
-        TDynArray<TUniquePtr<World>>    m_Worlds;
+        TDynArray<TStrongObjectPtr<World>> m_Worlds;
         World*                          m_ActiveWorld = nullptr; // not owned
         
         ResourceManager* m_Resources = nullptr;

@@ -2,18 +2,14 @@
 
 #include "Core/EngineAPI.h"
 
-#include "Engine/GameInstance/GameInstanceSubsystemRegistry.h"
 #include "Object/ObjectClassRegistry.h"
 #include "Resources/ResourceFormatRegistry.h"
-#include "UI/UIWidgetRegistry.h"
 #include "World/Components/ComponentRegistry.h"
-#include "Movement/Modes/MoverModeRegistry.h"
-#include "World/Systems/WorldSubsystemRegistry.h"
 
 namespace Opaax
 {
     // =============================================================================
-    // EngineRegistries — every type registry the engine owns (components, subsystems,
+    // EngineRegistries — every type registry the engine owns (object classes, components,
     //   resource formats, ...). Owned by Engine. Only ModuleRegistrar writes to it,
     //   and only before it is sealed.
     // =============================================================================
@@ -42,26 +38,13 @@ namespace Opaax
         ComponentRegistry&       Components()       noexcept { return m_Components; }
         const ComponentRegistry& Components() const noexcept { return m_Components; }
 
-        WorldSubsystemRegistry&       WorldSubsystems()       noexcept { return m_WorldSubsystems; }
-        const WorldSubsystemRegistry& WorldSubsystems() const noexcept { return m_WorldSubsystems; }
-
         // Which resource type loads a file extension.
         ResourceFormatRegistry&       Resources()       noexcept { return m_ResourceFormats; }
         const ResourceFormatRegistry& Resources() const noexcept { return m_ResourceFormats; }
 
-        // Movement modes a MoveMode asset can use.
-        MoverModeRegistry&       MoverModes()       noexcept { return m_MoverModes; }
-        const MoverModeRegistry& MoverModes() const noexcept { return m_MoverModes; }
-
-        // Subsystems every game session creates.
-        GameInstanceSubsystemRegistry&       GameInstanceSubsystems()       noexcept { return m_GameInstanceSubsystems; }
-        const GameInstanceSubsystemRegistry& GameInstanceSubsystems() const noexcept { return m_GameInstanceSubsystems; }
-
         /** Widget types a .opaaxui can use. */
-        UIWidgetRegistry&       UIWidgets()       noexcept { return m_UIWidgets; }
-        const UIWidgetRegistry& UIWidgets() const noexcept { return m_UIWidgets; }
 
-        /** Object classes a file can name. */
+        /** Object classes: what files name, and the subsystems games and worlds make. */
         ObjectClassRegistry&       ObjectClasses()       noexcept { return m_ObjectClasses; }
         const ObjectClassRegistry& ObjectClasses() const noexcept { return m_ObjectClasses; }
 
@@ -75,11 +58,7 @@ namespace Opaax
         void SealAll() noexcept
         {
             m_Components.Seal();
-            m_WorldSubsystems.Seal();
             m_ResourceFormats.Seal();
-            m_MoverModes.Seal();
-            m_GameInstanceSubsystems.Seal();
-            m_UIWidgets.Seal();
             m_ObjectClasses.Seal();
         }
 
@@ -88,11 +67,7 @@ namespace Opaax
         // =========================================================================
     private:
         ComponentRegistry             m_Components;
-        WorldSubsystemRegistry        m_WorldSubsystems;
         ResourceFormatRegistry        m_ResourceFormats;
-        MoverModeRegistry             m_MoverModes;
-        GameInstanceSubsystemRegistry m_GameInstanceSubsystems;
-        UIWidgetRegistry              m_UIWidgets;
         ObjectClassRegistry           m_ObjectClasses;
     };
 }

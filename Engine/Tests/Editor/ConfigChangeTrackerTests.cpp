@@ -11,8 +11,8 @@ using namespace Opaax::Editor;
 
 namespace
 {
-    constexpr ConfigTypeID ENGINE_ID   = 1;
-    constexpr ConfigTypeID RENDERER_ID = 2;
+    const OpaaxStringID ENGINE_ID   = OPAAX_ID("Engine");
+    const OpaaxStringID RENDERER_ID = OPAAX_ID("Renderer");
 
     constexpr bool EDITING = true;
     constexpr bool IDLE    = false;

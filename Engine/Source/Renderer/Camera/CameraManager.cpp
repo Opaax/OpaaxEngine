@@ -84,13 +84,13 @@ namespace Opaax
 
     void CameraManager::ReportResolution(World& InWorld, const CameraResolution& InResolution)
     {
-        if (InWorld.GetId() == m_ReportedWorld && InResolution.Count == m_ReportedCount
+        if (InWorld.GetHandle() == m_ReportedWorld && InResolution.Count == m_ReportedCount
             && InResolution.Entity == m_ReportedCamera)
         {
             return;
         }
 
-        m_ReportedWorld  = InWorld.GetId();
+        m_ReportedWorld  = InWorld.GetHandle();
         m_ReportedCount  = InResolution.Count;
         m_ReportedCamera = InResolution.Entity;
 

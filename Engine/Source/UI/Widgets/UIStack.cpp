@@ -50,35 +50,13 @@ namespace Opaax
     // UIWidget
     // =============================================================================
 
-    void UIStack::SaveFields(nlohmann::json& InOutJson) const
-    {
-        UIWidget::SaveFields(InOutJson);
-
-        InOutJson["Axis"]        = Axis;
-        InOutJson["Spacing"]     = Spacing;
-        InOutJson["Padding"]     = Padding;
-        InOutJson["ChildAlign"]  = ChildAlign;
-        InOutJson["bFitContent"] = bFitContent;
-    }
-
-    void UIStack::LoadFields(const nlohmann::json& InJson)
-    {
-        UIWidget::LoadFields(InJson);
-
-        Axis        = InJson.value("Axis", Axis);
-        Spacing     = InJson.value("Spacing", Spacing);
-        Padding     = InJson.value("Padding", Padding);
-        ChildAlign  = InJson.value("ChildAlign", ChildAlign);
-        bFitContent = InJson.value("bFitContent", bFitContent);
-    }
-
     float UIStack::ContentExtent() const noexcept
     {
         const bool lVertical = Axis == EUIAxis::Vertical;
 
         float lTotal = lVertical ? Padding.Top + Padding.Bottom : Padding.Left + Padding.Right;
 
-        const TDynArray<TUniquePtr<UIWidget>>& lChildren = GetChildren();
+        const TDynArray<TStrongObjectPtr<UIWidget>>& lChildren = GetChildren();
         for (Uint64 lIndex = 0; lIndex < lChildren.size(); ++lIndex)
         {
             const Vector2F& lSize = lChildren[lIndex]->Rect.SizeDelta;
@@ -124,7 +102,7 @@ namespace Opaax
 
         OutSlots.reserve(GetChildren().size());
 
-        for (const TUniquePtr<UIWidget>& lChild : GetChildren())
+        for (const TStrongObjectPtr<UIWidget>& lChild : GetChildren())
         {
             const Vector2F lSize{ Maths::Max(lChild->Rect.SizeDelta.x, 0.f), Maths::Max(lChild->Rect.SizeDelta.y, 0.f) };
 

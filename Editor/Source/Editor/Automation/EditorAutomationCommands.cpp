@@ -22,12 +22,14 @@
 #include "Editor/Operation/NewLevelPlan.hpp"
 #include "Editor/Export/GameExport.h"
 #include "Editor/Prefab/EditorPrefabDocument.h"
+#include "Editor/Resources/AssetFileClass.hpp"
 #include "Editor/Undo/ComponentUndoables.h"
 #include "Editor/Undo/EditorUndo.h"
 #include "Editor/UI/GuardedEditorDialogs.hpp"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Platform/IFileSystem.h"
 #include "Resources/Asset/AssetFile.h"
+#include "Resources/ResourceFormat.h"   // NormalizeExtension
 #include "UI/UICanvasFile.h"
 #include "World/Entity/Entity.h"
 #include "World/Level.h"
@@ -948,14 +950,28 @@ namespace Opaax::Editor::EditorAutomation
             const EditorUndo* lHistory = InContext.Assets.FindHistory(InDocument.GetAbsPath());
 
             return nlohmann::json{
-                { "path",       InContext.Paths.AbsoluteToAsset(InDocument.GetAbsPath()).CStr() },
-                { "class",      InDocument.GetClassName().CStr() },
-                { "open",       true },
-                { "known",      InDocument.IsClassKnown() },
-                { "unsaved",    InDocument.IsDirty() },
-                { "canUndo",    lHistory != nullptr && lHistory->CanUndo() },
-                { "canRedo",    lHistory != nullptr && lHistory->CanRedo() },
-                { "properties", InDocument.GetProperties() } };
+                { "path",           InContext.Paths.AbsoluteToAsset(InDocument.GetAbsPath()).CStr() },
+                { "class",          InDocument.GetClassName().CStr() },
+                { "open",           true },
+                { "known",          InDocument.IsClassKnown() },
+                { "fromSourceFile", InDocument.IsFromSourceFile() },
+                { "unsaved",        InDocument.IsDirty() },
+                { "canUndo",        lHistory != nullptr && lHistory->CanUndo() },
+                { "canRedo",        lHistory != nullptr && lHistory->CanRedo() },
+                { "properties",     InDocument.GetProperties() } };
+        }
+
+        /**
+         * What a double-click on the asset at InAbsPath does when its class opens in a document of its own
+         * (a prefab); null when it opens in an asset window.
+         */
+        const FAssetActivate* OwnDocumentOf(EditorContext& InContext, const OpaaxString& InAbsPath, OpaaxStringID& OutClass)
+        {
+            const ObjectClassRegistry& lClasses = InContext.Engine.GetRegistries().ObjectClasses();
+            OutClass = FindAssetClass(InAbsPath, &lClasses);
+
+            const ObjectClass* lClass = OutClass.IsValid() ? lClasses.FindByName(OutClass) : nullptr;
+            return lClass != nullptr ? InContext.Extensions.AssetTypes().ActivateOf(*lClass) : nullptr;
         }
 
         /** InParams["path"] opened in its window. Null (with OutError) when it is not an asset that opens. */
@@ -969,6 +985,12 @@ namespace Opaax::Editor::EditorAutomation
             if (!InContext.FileSystem.IsPathExist(lPath))
             {
                 OutError = "no file at '" + lPath + "'";
+                return nullptr;
+            }
+            if (OpaaxStringID lClass; OwnDocumentOf(InContext, lPath, lClass) != nullptr)
+            {
+                OutError = "'" + lPath + "' is a " + lClass.CStr() + ", which opens in a document of its own, not in "
+                           "an asset window: asset.open opens it there";
                 return nullptr;
             }
             if (!InContext.Assets.Open(lPath, &OutError))
@@ -991,6 +1013,12 @@ namespace Opaax::Editor::EditorAutomation
                     nlohmann::json lList = nlohmann::json::array();
                     for (const ObjectClass* lClass : lClasses.GetClassesOf(Asset::StaticClass(), /*bInConcreteOnly*/ true))
                     {
+                        // Read from files of its own: made by adding such a file, not by asset.new.
+                        if (lClass->IsReadFromSourceFiles())
+                        {
+                            continue;
+                        }
+
                         lList.push_back(nlohmann::json{
                             { "name",       lClass->GetName().CStr() },
                             { "label",      lTypes.LabelOf(*lClass).CStr() },
@@ -1040,10 +1068,32 @@ namespace Opaax::Editor::EditorAutomation
 
             InCommands.Register("asset.open",
                 "Opens the asset at {path} in a window of its own (or brings its window forward): {path, class, "
-                "properties, unsaved, canUndo, canRedo}.",
+                "properties, unsaved, canUndo, canRedo}. A class with a document of its own opens there, as a "
+                "double-click does (a prefab in the Prefab panel): {path, class, document: true}.",
                 [&InContext](const nlohmann::json& InParams)
                 {
-                    OpaaxString          lError;
+                    OpaaxString lPath;
+                    OpaaxString lError;
+                    if (!AssetPath(InContext, InParams, lPath, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    OpaaxStringID lClass;
+                    if (const FAssetActivate* lActivate = InContext.FileSystem.IsPathExist(lPath)
+                                                              ? OwnDocumentOf(InContext, lPath, lClass) : nullptr)
+                    {
+                        if (!(*lActivate)(InContext, lPath))
+                        {
+                            return AutomationResult::Fail("'" + lPath + "' did not open (see the log)");
+                        }
+
+                        return AutomationResult::Ok(nlohmann::json{
+                            { "path",     InContext.Paths.AbsoluteToAsset(lPath).CStr() },
+                            { "class",    lClass.CStr() },
+                            { "document", true } });
+                    }
+
                     const AssetDocument* lDocument = OpenAsset(InContext, InParams, lError);
                     return lDocument != nullptr ? AutomationResult::Ok(DescribeAsset(InContext, *lDocument))
                                                 : AutomationResult::Fail(lError);
@@ -1066,6 +1116,25 @@ namespace Opaax::Editor::EditorAutomation
                         return AutomationResult::Ok(DescribeAsset(InContext, *lOpen));
                     }
 
+                    // A file of a class's own format (a .png): its class, from its extension.
+                    const OpaaxStringID lExtension = NormalizeExtension(PathString::Extension(lPath));
+                    if (lExtension != NormalizeExtension(AssetFile::ASSET_EXTENSION))
+                    {
+                        const ObjectClass* lClass =
+                            InContext.Engine.GetRegistries().ObjectClasses().FindBySourceExtension(lExtension);
+                        if (lClass == nullptr || !InContext.FileSystem.IsPathExist(lPath))
+                        {
+                            return AutomationResult::Fail("no asset file at '" + lPath + "'");
+                        }
+
+                        return AutomationResult::Ok(nlohmann::json{
+                            { "path",           InContext.Paths.AbsoluteToAsset(lPath).CStr() },
+                            { "class",          lClass->GetName().CStr() },
+                            { "open",           false },
+                            { "fromSourceFile", true },
+                            { "properties",     nlohmann::json::object() } });
+                    }
+
                     AssetFile::Contents lContents;
                     if (!AssetFile::Load(lPath, lContents))
                     {
@@ -1073,10 +1142,11 @@ namespace Opaax::Editor::EditorAutomation
                     }
 
                     return AutomationResult::Ok(nlohmann::json{
-                        { "path",       InContext.Paths.AbsoluteToAsset(lPath).CStr() },
-                        { "class",      lContents.Class.CStr() },
-                        { "open",       false },
-                        { "properties", lContents.Properties } });
+                        { "path",           InContext.Paths.AbsoluteToAsset(lPath).CStr() },
+                        { "class",          lContents.Class.CStr() },
+                        { "open",           false },
+                        { "fromSourceFile", false },
+                        { "properties",     lContents.Properties } });
                 });
 
             InCommands.Register("asset.set",

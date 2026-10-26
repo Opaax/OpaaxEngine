@@ -5,6 +5,7 @@
 #include "Core/String/OpaaxStringJson.h"
 #include "Object/ObjectClassRegistry.h"
 #include "Resources/Asset/Asset.h"
+#include "Resources/Asset/AssetMigration.h"
 
 namespace Opaax
 {
@@ -102,6 +103,13 @@ namespace Opaax
         {
             OPAAX_LOG(LogAssetFile, Error, "Asset '{}' is not an asset file: {}", InAbsPath.CStr(), lError.CStr());
             return false;
+        }
+
+        const OpaaxStringID lFileClass = OutContents.Class;
+        if (AssetMigration::UpgradeSplitClass(OutContents))
+        {
+            OPAAX_LOG(LogAssetFile, Warn, "Asset '{}' is a {} of the old form: read as a {}. Start the editor once "
+                      "with --upgrade-assets to rewrite it.", InAbsPath.CStr(), lFileClass, OutContents.Class);
         }
 
         return true;

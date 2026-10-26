@@ -17,12 +17,19 @@
 // =============================================================================
 namespace Opaax
 {
+    /**
+     * Never moved by entt once built (in_place_delete: removing another leaves a hole instead of moving
+     * the last one in). A behaviour is one: an object, which cannot be moved.
+     */
+    template<typename T>
+    concept CPinnedComponent = requires { requires T::in_place_delete; };
+
     template<typename T>
     concept CComponent =
         // Default-constructible (the "Add Component" path).
         TIsDefaultConstructible<T>
-        // Movable: entt relocates components when its pool grows.
-        && TIsMoveConstructible<T>
+        // Movable: entt moves the last component into the slot of one removed. A pinned one stays put.
+        && (TIsMoveConstructible<T> || CPinnedComponent<T>)
         // The JSON part, shared with config data types (Core/Serialization/JsonConcept.h).
         && CJsonSerializable<T>;
 }

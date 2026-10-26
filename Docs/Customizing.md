@@ -8,18 +8,22 @@ extension points. The engine itself is written the same way, so its sources are 
 
 Every type registers itself with one line next to its definition, in a header or a `.cpp`
 (`Engine/Registries/AutoRegistration.h`). The engine runs the registrations at startup, before any
-world exists; a game module is linked whole, so nothing else is needed.
+world exists; a game module is linked whole, so nothing else is needed. An Object class (an asset, a
+subsystem) always registers with `OPAAX_REGISTER_OBJECT`: what the engine does with it follows from
+the class it derives from ([Objects.md](Objects.md)).
 
 | Line | Adds | Example |
 |---|---|---|
 | `OPAAX_REGISTER_COMPONENT(Health)` | Data on an entity, saved in maps, edited in the Inspector | QuickStart step 2 |
 | `OPAAX_REGISTER_BEHAVIOUR(Spinner)` | Gameplay code on an entity | QuickStart step 2, `TestWorld/Source` |
-| `OPAAX_REGISTER_WORLD_SUBSYSTEM(Score)` | Code that lives as long as a world and ticks with it | below |
-| `OPAAX_REGISTER_GAME_INSTANCE_SUBSYSTEM(Save)` | Code that lives as long as a game session (across levels) | |
+| `OPAAX_REGISTER_OBJECT(ScoreSubsystem)` | A world subsystem (`Opaax::WorldSubsystem`): code that lives as long as a world and ticks with it | below |
+| `OPAAX_REGISTER_OBJECT(SaveSubsystem)` | A game instance subsystem (`Opaax::GameInstanceSubsystem`): lives as long as a game session, across levels | below |
+| `OPAAX_REGISTER_OBJECT(MyGame)` | The game's own `Opaax::GameInstance` class, named in the project file: code run when the game starts and ends | below |
 | `OPAAX_REGISTER_OBJECT(EnemyStats)` | An asset class (an `Opaax::Asset` with `OPAAX_OBJECT`): `.opaaxasset` files, made and edited in the editor | `Renderer/Materials/Material2D.h`, `Sandbox/Source/Sandbox/Data` |
-| `OPAAX_REGISTER_RESOURCE(WaveResource)` | A file type of the game, loaded and cached | `Sandbox/Source/Sandbox/Resources` |
-| `OPAAX_REGISTER_UI_WIDGET(HealthBar)` | A UI widget for `.opaaxui` canvases | `UI/Widgets` |
-| `OPAAX_REGISTER_MOVER_MODE(Swim, "Swim")` | A movement mode of the Mover | `Movement` |
+| `OPAAX_REGISTER_OBJECT(EnemyWave)` | A file format of the game: an asset class read from its own files (`OPAAX_ASSET_SOURCE(".wave")`), loaded and cached like any asset | `Sandbox/Source/Sandbox/Data/EnemyWave.h` |
+| `OPAAX_REGISTER_OBJECT(Config_Gameplay)` | A config: settings saved in `Configs/`, edited in the Config panel | below |
+| `OPAAX_REGISTER_OBJECT(HealthBar)` | A UI widget for `.opaaxui` canvases: a `UIWidget` subclass, its fields as properties | `UI/Widgets` |
+| `OPAAX_REGISTER_OBJECT(SwimMoveMode)` | A movement mode of the Mover: a `MoveMode` subclass, its tuning as properties and its step as `Tick` | `Movement/Modes` |
 
 A component or behaviour is saved under its type name: rename the C++ type and maps no longer find
 it. `OPAAX_REGISTER_NAMED_COMPONENT(Type, "Name")` keeps a stable name, and
@@ -52,39 +56,72 @@ loads it, shared, and the `TAssetHandle` it returns reads the new values when th
 `PostEditChange` fixes values after an edit, `IsPropertyVisible` hides fields that do not apply.
 [Objects.md](Objects.md) covers the file, the hooks, custom editors and old files.
 
-### A world subsystem
+### A subsystem
 
 ```cpp
-class ScoreSubsystem final : public Opaax::WorldSubsystemBase
+class ScoreSubsystem final : public Opaax::WorldSubsystem
 {
+    OPAAX_OBJECT(ScoreSubsystem, Opaax::WorldSubsystem)
+
 public:
-    OPAAX_SUBSYSTEM_TYPE(ScoreSubsystem)
-
     // Optional: without it, every world gets one (the editor's edit worlds too).
-    static bool ShouldCreate(const Opaax::World& InWorld) { return InWorld.GetMode() == Opaax::EWorldMode::Play; }
+    bool ShouldCreate(const Opaax::World& InWorld) const override { return InWorld.GetMode() == Opaax::EWorldMode::Play; }
 
-    explicit ScoreSubsystem(Opaax::WorldContext& InContext) : m_Context(&InContext) {}
+    // Optional: Default otherwise.
+    Opaax::Int32 GetTickOrder() const override { return Opaax::WorldSubsystemOrder::Gameplay; }
 
-    bool Startup() override { return true; }
+    bool Startup() override { return true; }   // GetContext() is valid from here to Shutdown
     void Update(double InDeltaTime) override { /* the world's frame */ }
-    void Shutdown() override {}
-
-private:
-    Opaax::WorldContext* m_Context = nullptr;
 };
 
-OPAAX_REGISTER_WORLD_SUBSYSTEM_ORDERED(ScoreSubsystem, Opaax::WorldSubsystemOrder::Gameplay);
+OPAAX_REGISTER_OBJECT(ScoreSubsystem);
 ```
 
-Subsystems tick in `WorldSubsystemOrder` order: Input, Gameplay (before physics), Physics,
-PostPhysics, Default, Presentation (camera, animation, HUD), Debug. A behaviour finds one with
-`GetSubsystem<ScoreSubsystem>()`. The `WorldContext` holds the world's services: its events, input
-actions, audio, resources, and the running game (`Game`).
+Every world makes one of each registered `WorldSubsystem` class whose `ShouldCreate` accepts it
+(asked on the class's default object), then starts them all: a `Startup` can find a sibling that has
+not started yet. They tick in `GetTickOrder()` order (`WorldSubsystemOrder`: Input, Gameplay before
+physics, Physics, PostPhysics, Default, Presentation for camera, animation and HUD, Debug), equal
+orders by class name. The constructor makes nothing: the default object is built with it, outside any
+world. `GetContext()` gives the world's services (its events, input actions, audio, resources, the
+running game), and a behaviour finds the subsystem with `GetSubsystem<ScoreSubsystem>()`.
 
-A game instance subsystem derives from `Opaax::GameInstanceSubsystemBase`, takes a
-`GameInstanceContext&`, and lives from the start of a game to its end, across level changes (a
-score, a save). A behaviour finds it with `GetGameSubsystem<Save>()`, null while no game runs (in the
-editor outside Play). `TestWorld/Source/TestWorld/Probes/LevelProbes.h` has one.
+A game instance subsystem derives from `Opaax::GameInstanceSubsystem` and registers the same way.
+Every game makes one of each class, in `GetTickOrder()` order, and it lives from the start of the game
+to its end, across level changes (a score, a save); `GetContext()` gives the game's services. A
+behaviour finds it with `GetGameSubsystem<Save>()`, null while no game runs (in the editor outside
+Play). `TestWorld/Source/TestWorld/Probes/LevelProbes.h` has one.
+
+The game session itself can be a class of the game: a `GameInstance` subclass with `OPAAX_OBJECT`,
+registered, and named in the project file (`"gameInstanceClass": "MyGame"`). `OnStart` runs once its
+subsystems have started, before the first world; `OnEnd` once its Play worlds are gone, before its
+subsystems stop. A behaviour reaches it through `GetContext().Game`. Most session features are better
+as game instance subsystems, which every game makes. `ProbeGame` in
+`TestWorld/Source/TestWorld/Probes/ExtensionProbes.h` is one.
+
+### A config
+
+Settings a game reads (difficulty, a spawn rate) and edits in the editor's Config panel are a config:
+a data struct saved in `Configs/<Name>.config`, held by a `Config` class.
+
+```cpp
+struct GameplayConfigData
+{
+    float SpawnRate = 2.f;
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(GameplayConfigData, SpawnRate)
+    OPAAX_PROPERTIES(GameplayConfigData, OPAAX_PROP(SpawnRate).SetRange(0.f, 10.f))
+};
+
+DECLARE_T_CONFIG(Gameplay, GameplayConfigData)   // Config_Gameplay, saved as Gameplay.config
+
+OPAAX_REGISTER_OBJECT(Config_Gameplay);           // in a .cpp
+```
+
+`IConfigSystem::Get<Config_Gameplay>().GetData()` reads it. The engine makes one of each registered
+config class at startup and loads its file (written with the defaults when missing), so the Config
+panel lists it before the game first reads it, draws its values from their properties, and saves or
+resets them. A missing key keeps its default. Subscribe to `OnChanged()` to follow edits made while
+the game runs.
 
 ### Events, input and sound
 
@@ -176,9 +213,6 @@ void MyGameEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& InR
     // An Inspector drawer replacing the one made from the component's OPAAX_PROPERTIES.
     InRegistrar.Drawers().Register<TagsComponent, TagsComponentDrawer>();
 
-    // A file type of the game in the Resource Browser (the runtime module registers the resource).
-    InRegistrar.ResourceTypes().Register<WaveResource>().SetGlyph(Opaax::OpaaxString("[W]"));
-
     // How an asset class shows: its New Asset category, its glyph, and an editor of its own (optional:
     // without one, its window lists its properties).
     InRegistrar.AssetTypes().Register<EnemyStats>()
@@ -192,9 +226,11 @@ An asset editor derives from `IAssetEditor` and edits the asset directly in `Dra
 asset's window around it records each change as an undo step and has the Save button
 ([Objects.md](Objects.md)).
 
-Also available: `ViewportTools()` (buttons over the viewport), `EditWorldSystems()` (subsystems for
-edit worlds only), `ConfigDrawers()` and `UIWidgetDrawers()`. `Sandbox/Editor/Source/SandboxEditor`
-has a working command, drawer and resource type.
+Also available: `ViewportTools()` (buttons over the viewport). A UI widget needs no drawer: the
+UI panel draws any widget from its class's properties, and the Config panel draws any config from
+its values' properties. A subsystem for edit worlds only is a `WorldSubsystem` like any other,
+registered with `OPAAX_REGISTER_OBJECT`, whose `ShouldCreate` accepts edit worlds.
+`Sandbox/Editor/Source/SandboxEditor` has a working command, drawer and asset type (the `.wave` files).
 
 A command receives the `EditorContext`: the worlds, the selection, undo, the open documents, the
 dialogs. Edits made through `EntityOps` (create, destroy, add or remove a component) and

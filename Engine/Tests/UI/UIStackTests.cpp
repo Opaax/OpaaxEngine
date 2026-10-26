@@ -4,7 +4,7 @@
 
 #include "UI/UICanvas.h"
 #include "UI/UICanvasFile.h"
-#include "UI/UIWidgetRegistry.h"
+#include "Object/ObjectClassRegistry.h"
 #include "UI/Widgets/UIImage.h"
 #include "UI/Widgets/UIPanel.h"
 #include "UI/Widgets/UIStack.h"
@@ -20,9 +20,9 @@ namespace
     }
 
     /** A widget whose desired size is InSize; its anchors are whatever, the stack ignores them. */
-    TUniquePtr<UIImage> Sized(const Vector2F& InSize)
+    TStrongObjectPtr<UIImage> Sized(const Vector2F& InSize)
     {
-        auto lImage = MakeUnique<UIImage>();
+        auto lImage = NewObject<UIImage>();
         lImage->Rect.SizeDelta        = InSize;
         lImage->Rect.AnchoredPosition = { 999.f, 999.f };   // must have no effect under a stack
         return lImage;
@@ -31,7 +31,7 @@ namespace
     /** A stack centred on the canvas, InSize big. */
     UIStack* AddStack(UICanvas& InCanvas, const Vector2F& InSize)
     {
-        auto lStack = MakeUnique<UIStack>();
+        auto lStack = NewObject<UIStack>();
         lStack->Rect.SizeDelta = InSize;
         return static_cast<UIStack*>(InCanvas.Root().AddChild(Move(lStack)));
     }
@@ -156,7 +156,7 @@ TEST_CASE("UIStack: bFitContent sizes the stack along its axis from its children
     lCanvas.SetTargetSize(1920, 1080);
 
     // Anchored to the top-left corner, pivot there too — the row of lives.
-    auto lRow = MakeUnique<UIStack>();
+    auto lRow = NewObject<UIStack>();
     lRow->Axis        = EUIAxis::Horizontal;
     lRow->Spacing     = 4.f;
     lRow->Padding     = { 8.f, 8.f, 0.f, 0.f };
@@ -194,7 +194,7 @@ TEST_CASE("UIStack: stacks nest, and a grandchild's size change climbs through b
     UIStack* lOuter = AddStack(lCanvas, { 400.f, 400.f });
     lOuter->ChildAlign = EUIAlign::Start;
 
-    auto lInnerOwned = MakeUnique<UIStack>();
+    auto lInnerOwned = NewObject<UIStack>();
     lInnerOwned->Axis           = EUIAxis::Horizontal;
     lInnerOwned->Rect.SizeDelta = { 300.f, 50.f };
     lInnerOwned->ChildAlign     = EUIAlign::Start;
@@ -226,15 +226,15 @@ TEST_CASE("UIStack: stacks nest, and a grandchild's size change climbs through b
 
 TEST_CASE("UIStack: the file round-trips every field")
 {
-    UIWidgetRegistry lRegistry;
-    lRegistry.Register<UIPanel>(OPAAX_ID("UIPanel"));
-    lRegistry.Register<UIStack>(OPAAX_ID("UIStack"));
-    lRegistry.Register<UIImage>(OPAAX_ID("UIImage"));
+    ObjectClassRegistry lRegistry;
+    lRegistry.Register<UIPanel>();
+    lRegistry.Register<UIStack>();
+    lRegistry.Register<UIImage>();
 
     UICanvasFile::UICanvasDoc lDoc;
-    lDoc.Root = MakeUnique<UIPanel>();
+    lDoc.Root = NewObject<UIPanel>();
 
-    auto lStack = MakeUnique<UIStack>();
+    auto lStack = NewObject<UIStack>();
     lStack->Name        = "Menu";
     lStack->Axis        = EUIAxis::Horizontal;
     lStack->Spacing     = 12.f;
@@ -248,7 +248,7 @@ TEST_CASE("UIStack: the file round-trips every field")
     REQUIRE(UICanvasFile::Deserialize(UICanvasFile::Serialize(lDoc), lRegistry, lBack));
     REQUIRE(lBack.Root->GetChildren().size() == 1u);
 
-    const auto* lRead = dynamic_cast<const UIStack*>(lBack.Root->GetChildren()[0].get());
+    const auto* lRead = dynamic_cast<const UIStack*>(lBack.Root->GetChildren()[0].Get());
     REQUIRE(lRead != nullptr);
     CHECK(lRead->Axis == EUIAxis::Horizontal);
     CHECK(lRead->Spacing == doctest::Approx(12.f));

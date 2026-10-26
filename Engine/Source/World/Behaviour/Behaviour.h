@@ -17,6 +17,7 @@
 #include "Engine/Reflection/PropertyJson.h"
 #include "Input/InputCodes.h"
 #include "Input/Mapping/InputTypes.h"
+#include "Object/ObjectMacros.h"
 #include "World/Components/TransformComponent.h"   // GetTransform(): every behaviour moves something
 #include "World/Entity/Entity.h"
 #include "World/Systems/WorldContext.h"
@@ -25,11 +26,13 @@
 // =============================================================================
 // ================================== USAGE ====================================
 // =============================================================================
-// A behaviour is gameplay logic on an entity: a class with its own fields (saved like a
+// A behaviour is gameplay logic on an entity: an Object class with its own fields (saved like a
 // component's, from OPAAX_PROPERTIES) and lifecycle hooks. One of each type per entity.
 //
 //   class Coin : public Opaax::Behaviour
 //   {
+//       OPAAX_OBJECT(Coin, Opaax::Behaviour)
+//
 //   public:
 //       Opaax::Int32 Value = 1;
 //       OPAAX_PROPERTIES(Coin, OPAAX_PROP(Value))
@@ -137,12 +140,15 @@ namespace Opaax
     }
 
     // =============================================================================
-    // Behaviour — the base of every gameplay behaviour. See the usage notes above.
-    //   Stored like a component (entt): instances never move, so `this` stays valid for the
-    //   behaviour's whole life. Copies carry the fields, never the runtime binding.
+    // Behaviour — the base of every gameplay behaviour, an Object class. See the usage notes above.
+    //   Stored on its entity like a component (entt), and never moved there: `this`, and handles to it
+    //   (TWeakObjectPtr), stay valid for the behaviour's whole life. Not copyable, like every object;
+    //   the Play copy of a world goes through the saved fields.
     // =============================================================================
-    class Behaviour
+    class Behaviour : public Object
     {
+        OPAAX_ABSTRACT_OBJECT(Behaviour, Object)
+
         // =============================================================================
         // Storage
         // =============================================================================
@@ -153,16 +159,8 @@ namespace Opaax
         // =============================================================================
         // CTORS - DTORS
         // =============================================================================
-    public:
-        virtual ~Behaviour() = default;
-
     protected:
-        // Protected: a behaviour cannot be copied or moved as a plain Behaviour (no slicing).
         Behaviour() = default;
-        Behaviour(const Behaviour&) noexcept {}
-        Behaviour(Behaviour&&) noexcept {}
-        Behaviour& operator=(const Behaviour&) noexcept { return *this; }
-        Behaviour& operator=(Behaviour&&) noexcept { return *this; }
 
         // =============================================================================
         // Lifecycle
@@ -581,10 +579,10 @@ namespace Opaax
     };
 
     /**
-     * A type that can be registered as a behaviour.
+     * A type that can be registered as a behaviour: it declares its class (OPAAX_OBJECT).
      */
     template<typename T>
-    concept CBehaviour = CDerivedFrom<T, Behaviour> && CDefaultInitializable<T>;
+    concept CBehaviour = CDerivedFrom<T, Behaviour> && CDefaultInitializable<T> && CObject<T>;
 
     // =============================================================================
     // JSON — found for any behaviour type (its base is in Opaax). Written from its property list;

@@ -1,11 +1,15 @@
-// Suite: the .opaaxui format (UI/UICanvasFile.h, UI/UIWidgetRegistry.h). Every field of every type
-// and the tree shape survive a round trip; an unknown type costs one node; a missing key keeps
-// its default.
+// Suite: the .opaaxui format (UI/UICanvasFile.h). Every field of every widget class and the tree
+// shape survive a round trip; an unknown type costs one node; a missing key keeps its default. And
+// UICanvasAsset, the file loaded as an asset.
 #include <doctest.h>
 
-#include "UI/UICanvasResource.h"
+#include "../TestTempDir.h"
+#include "Core/IO/FileIO.h"
+#include "Resources/Asset/AssetResource.h"
+#include "Resources/ResourceManager.h"
+#include "UI/UICanvasAsset.h"
 #include "UI/UICanvasFile.h"
-#include "UI/UIWidgetRegistry.h"
+#include "Object/ObjectClassRegistry.h"
 #include "UI/Widgets/UIButton.h"
 #include "UI/Widgets/UIImage.h"
 #include "UI/Widgets/UIMask.h"
@@ -18,19 +22,21 @@ using namespace Opaax;
 
 namespace
 {
-    /** The native types, as Engine::RegisterNativeUIWidgets registers them. */
-    UIWidgetRegistry MakeRegistry()
+    /** The engine's widget classes, as UIRegistration.cpp registers them. */
+    struct WidgetClasses final : ObjectClassRegistry
     {
-        UIWidgetRegistry lRegistry;
-        lRegistry.Register<UIPanel>(OPAAX_ID("UIPanel"));
-        lRegistry.Register<UIImage>(OPAAX_ID("UIImage"));
-        lRegistry.Register<UIText>(OPAAX_ID("UIText"));
-        lRegistry.Register<UIButton>(OPAAX_ID("UIButton"));
-        lRegistry.Register<UIMask>(OPAAX_ID("UIMask"));
-        lRegistry.Register<UISafeArea>(OPAAX_ID("UISafeArea"));
-        lRegistry.Register<UIStack>(OPAAX_ID("UIStack"));
-        return lRegistry;
-    }
+        WidgetClasses()
+        {
+            Register<UIWidget>();
+            Register<UIPanel>();
+            Register<UIImage>();
+            Register<UIText>();
+            Register<UIButton>();
+            Register<UIMask>();
+            Register<UISafeArea>();
+            Register<UIStack>();
+        }
+    };
 
     UIRect Corner(const Vector2F& InAnchor, const Vector2F& InOffset, const Vector2F& InSize)
     {
@@ -50,20 +56,20 @@ namespace
 
 TEST_CASE("UICanvasFile: every widget type round-trips its own fields and the tree shape")
 {
-    const UIWidgetRegistry lRegistry = MakeRegistry();
+    const WidgetClasses lRegistry;
 
     UICanvasFile::UICanvasDoc lDoc;
     lDoc.ReferenceHeight = 720.f;
-    lDoc.Root            = MakeUnique<UIPanel>();
+    lDoc.Root            = NewObject<UIPanel>();
     lDoc.Root->Name      = "Root";
 
-    UIWidget* const lPanel = lDoc.Root->AddChild(MakeUnique<UIPanel>());
+    UIWidget* const lPanel = lDoc.Root->AddChild(NewObject<UIPanel>());
     lPanel->Name         = "Hud";
     lPanel->bVisible     = false;
     lPanel->bHitTestable = true;
     lPanel->SetRect(Corner({ 0.f, 1.f }, { 24.f, -24.f }, { 600.f, 60.f }));
 
-    auto lText = MakeUnique<UIText>();
+    auto lText = NewObject<UIText>();
     lText->Name            = "Jumps";
     lText->Text            = "Jumps: 0";
     lText->Font.Path       = "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf";
@@ -76,14 +82,14 @@ TEST_CASE("UICanvasFile: every widget type round-trips its own fields and the tr
     lText->bKerning        = false;
     lPanel->AddChild(Move(lText));
 
-    auto lImage = MakeUnique<UIImage>();
+    auto lImage = NewObject<UIImage>();
     lImage->Name       = "SpeedFill";
     lImage->Color      = { 0.2f, 0.85f, 0.35f, 1.f };
     lImage->Fill       = EUIFill::Horizontal;
     lImage->FillAmount = 0.5f;
     lPanel->AddChild(Move(lImage));
 
-    auto lButton = MakeUnique<UIButton>();
+    auto lButton = NewObject<UIButton>();
     lButton->Name     = "Menu";
     lButton->Normal   = { 0.11f, 0.f, 0.f, 1.f };
     lButton->Hovered  = { 0.22f, 0.f, 0.f, 1.f };
@@ -112,7 +118,7 @@ TEST_CASE("UICanvasFile: every widget type round-trips its own fields and the tr
     CheckVec(lBackPanel.Rect.SizeDelta, { 600.f, 60.f });
     CheckVec(lBackPanel.Rect.AnchoredPosition, { 24.f, -24.f });
 
-    const auto* lBackText = dynamic_cast<const UIText*>(lBackPanel.GetChildren()[0].get());
+    const auto* lBackText = dynamic_cast<const UIText*>(lBackPanel.GetChildren()[0].Get());
     REQUIRE(lBackText != nullptr);
     CHECK(lBackText->Text == OpaaxString("Jumps: 0"));
     CHECK(lBackText->Font.Path == OpaaxString("/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf"));
@@ -124,13 +130,13 @@ TEST_CASE("UICanvasFile: every widget type round-trips its own fields and the tr
     CHECK(lBackText->LineHeightScale == doctest::Approx(1.25f));
     CHECK_FALSE(lBackText->bKerning);
 
-    const auto* lBackImage = dynamic_cast<const UIImage*>(lBackPanel.GetChildren()[1].get());
+    const auto* lBackImage = dynamic_cast<const UIImage*>(lBackPanel.GetChildren()[1].Get());
     REQUIRE(lBackImage != nullptr);
     CHECK(lBackImage->Fill == EUIFill::Horizontal);
     CHECK(lBackImage->FillAmount == doctest::Approx(0.5f));
     CHECK(lBackImage->Color.g == doctest::Approx(0.85f));
 
-    const auto* lBackButton = dynamic_cast<const UIButton*>(lBack.Root->GetChildren()[1].get());
+    const auto* lBackButton = dynamic_cast<const UIButton*>(lBack.Root->GetChildren()[1].Get());
     REQUIRE(lBackButton != nullptr);
     CHECK_FALSE(lBackButton->bEnabled);
     CHECK(lBackButton->Pressed.r == doctest::Approx(0.33f));
@@ -160,14 +166,14 @@ TEST_CASE("UICanvasFile: a new canvas's root fills the screen it is mounted on")
 
     // What the file keeps is what was made.
     UICanvasFile::UICanvasDoc lRead;
-    REQUIRE(UICanvasFile::Deserialize(UICanvasFile::Serialize(lDoc), MakeRegistry(), lRead));
+    REQUIRE(UICanvasFile::Deserialize(UICanvasFile::Serialize(lDoc), WidgetClasses(), lRead));
     CHECK(lRead.Root->Rect.AnchorMax.x == doctest::Approx(1.f));
     CHECK(lRead.Root->Rect.SizeDelta.x == doctest::Approx(0.f));
 }
 
 TEST_CASE("UICanvasFile: an unknown type costs that NODE, not the file")
 {
-    const UIWidgetRegistry lRegistry = MakeRegistry();
+    const WidgetClasses lRegistry;
 
     // "UIHologram" is a type this build does not know; its SIBLING must still arrive.
     const OpaaxString lText = OpaaxString(R"({
@@ -192,7 +198,7 @@ TEST_CASE("UICanvasFile: an unknown type costs that NODE, not the file")
 
 TEST_CASE("UICanvasFile: a missing key takes the constructed default — a field may be added later")
 {
-    const UIWidgetRegistry lRegistry = MakeRegistry();
+    const WidgetClasses lRegistry;
 
     // A text node with NOTHING but its type: every field must land on its default rather than throw.
     const OpaaxString lText = OpaaxString(R"({
@@ -204,7 +210,7 @@ TEST_CASE("UICanvasFile: a missing key takes the constructed default — a field
     REQUIRE(UICanvasFile::Deserialize(lText, lRegistry, lDoc));
 
     const UIText  lFresh{};
-    const auto*   lRead = dynamic_cast<const UIText*>(lDoc.Root->GetChildren()[0].get());
+    const auto*   lRead = dynamic_cast<const UIText*>(lDoc.Root->GetChildren()[0].Get());
     REQUIRE(lRead != nullptr);
 
     CHECK(lRead->Size == doctest::Approx(lFresh.Size));
@@ -219,7 +225,7 @@ TEST_CASE("UICanvasFile: a missing key takes the constructed default — a field
 
 TEST_CASE("UICanvasFile: malformed text and a future version are REFUSED, leaving the doc untouched")
 {
-    const UIWidgetRegistry lRegistry = MakeRegistry();
+    const WidgetClasses lRegistry;
 
     UICanvasFile::UICanvasDoc lDoc;
     lDoc.ReferenceHeight = 999.f;
@@ -235,35 +241,17 @@ TEST_CASE("UICanvasFile: malformed text and a future version are REFUSED, leavin
     CHECK(lDoc.ReferenceHeight == doctest::Approx(999.f));   // untouched on every failure path
 }
 
-TEST_CASE("UIWidgetRegistry: an unknown name builds nothing, a duplicate is refused, a seal closes it")
-{
-    UIWidgetRegistry lRegistry = MakeRegistry();
-
-    CHECK(lRegistry.Count() == 7u);
-    CHECK(lRegistry.IsRegistered(OPAAX_ID("UIText")));
-    CHECK_FALSE(lRegistry.IsRegistered(OPAAX_ID("UIHologram")));
-    CHECK(lRegistry.Create(OPAAX_ID("UIHologram")) == nullptr);
-    CHECK(lRegistry.Create(OPAAX_ID("UIText")) != nullptr);
-
-    CHECK_FALSE(lRegistry.Register<UIText>(OPAAX_ID("UIText")));   // the name is taken
-    CHECK(lRegistry.Count() == 7u);
-
-    lRegistry.Seal();
-    CHECK_FALSE(lRegistry.Register<UIPanel>(OPAAX_ID("UILater")));
-    CHECK(lRegistry.Count() == 7u);
-}
-
 TEST_CASE("UIWidget: FindByName takes the FIRST match in tree order, and misses answer null")
 {
     UIPanel lRoot;
     lRoot.Name = "Root";
 
-    UIWidget* lFirst = lRoot.AddChild(MakeUnique<UIPanel>());
+    UIWidget* lFirst = lRoot.AddChild(NewObject<UIPanel>());
     lFirst->Name = "Twin";
-    UIWidget* lDeep = lFirst->AddChild(MakeUnique<UIText>());
+    UIWidget* lDeep = lFirst->AddChild(NewObject<UIText>());
     lDeep->Name = "Deep";
 
-    UIWidget* lSecond = lRoot.AddChild(MakeUnique<UIPanel>());
+    UIWidget* lSecond = lRoot.AddChild(NewObject<UIPanel>());
     lSecond->Name = "Twin";
 
     CHECK(lRoot.FindByName(OpaaxString("Root")) == &lRoot);
@@ -272,51 +260,84 @@ TEST_CASE("UIWidget: FindByName takes the FIRST match in tree order, and misses 
     CHECK(lRoot.FindByName(OpaaxString("Nobody")) == nullptr);
 }
 
-TEST_CASE("UICanvasResource: BuildTree yields an INDEPENDENT tree every time")
+TEST_CASE("UICanvasAsset: BuildTree yields an INDEPENDENT tree every time")
 {
-    const UIWidgetRegistry lRegistry = MakeRegistry();
+    const TestTempDir   lTemp("canvas_asset");
+    const WidgetClasses lRegistry;
 
-    UICanvasResource lResource;
-    lResource.Text = OpaaxString(R"({
+    const OpaaxString lPath = lTemp.Sub("Hud.opaaxui");
+    REQUIRE(FileIO::WriteAllText(lPath, OpaaxString(R"({
     "ReferenceHeight": 720.0,
     "Root": { "Type": "UIPanel", "Children": [ { "Type": "UIText", "Name": "Label" } ] },
     "Version": 1
-})");
+})")));
+
+    UICanvasAsset lCanvas;
+    REQUIRE(lCanvas.LoadSource(lPath.CStr()));
+    CHECK(lCanvas.GetResourceSize() > sizeof(UICanvasAsset));
 
     float lHeightA = 0.f;
     float lHeightB = 0.f;
-    TUniquePtr<UIWidget> lA = lResource.BuildTree(lRegistry, lHeightA);
-    TUniquePtr<UIWidget> lB = lResource.BuildTree(lRegistry, lHeightB);
+    TStrongObjectPtr<UIWidget> lA = lCanvas.BuildTree(lRegistry, lHeightA);
+    TStrongObjectPtr<UIWidget> lB = lCanvas.BuildTree(lRegistry, lHeightB);
 
     REQUIRE(lA != nullptr);
     REQUIRE(lB != nullptr);
-    CHECK(lA.get() != lB.get());
+    CHECK(lA.Get() != lB.Get());
     CHECK(lHeightA == doctest::Approx(720.f));
     CHECK(lHeightB == doctest::Approx(720.f));
 
-    // Editing one must not reach the other — the property the resource holds TEXT for.
+    // Editing one must not reach the other — the property the asset holds TEXT for.
     lA->FindByName(OpaaxString("Label"))->Name = "Renamed";
     CHECK(lB->FindByName(OpaaxString("Label")) != nullptr);
     CHECK(lB->FindByName(OpaaxString("Renamed")) == nullptr);
+}
 
-    // A placeholder builds a real (empty) tree rather than a null — a failed load still draws.
-    float lPlaceholderHeight = 0.f;
-    CHECK(UICanvasResource::Placeholder().BuildTree(lRegistry, lPlaceholderHeight) != nullptr);
+TEST_CASE("UICanvasAsset: a canvas file loads as a UICanvasAsset; a missing or empty one gives none")
+{
+    const TestTempDir lTemp("canvas_resource");
+
+    const OpaaxString lPath  = lTemp.Sub("Menu.opaaxui");
+    const OpaaxString lEmpty = lTemp.Sub("Empty.opaaxui");
+    REQUIRE(FileIO::WriteAllText(lPath,
+        OpaaxString(R"({ "ReferenceHeight": 1080.0, "Root": { "Type": "UIPanel" }, "Version": 1 })")));
+    REQUIRE(FileIO::WriteAllText(lEmpty, OpaaxString()));
+
+    ObjectClassRegistry lClasses;
+    REQUIRE(lClasses.Register<UICanvasAsset>());
+
+    ResourceManager lResources;
+    lResources.SetObjectClasses(&lClasses);
+
+    const ResourceRef<AssetResource> lRef    = lResources.Load<AssetResource>(lPath.CStr());
+    const UICanvasAsset* const       lCanvas = lRef.Get() != nullptr ? lRef.Get()->Get<UICanvasAsset>() : nullptr;
+    REQUIRE(lCanvas != nullptr);
+    CHECK(lCanvas->GetName() == OPAAX_ID("Menu"));
+
+    const WidgetClasses lWidgets;
+    float               lHeight = 0.f;
+    CHECK(lCanvas->BuildTree(lWidgets, lHeight) != nullptr);
+    CHECK(lHeight == doctest::Approx(1080.f));
+
+    CHECK_FALSE(lResources.Load<AssetResource>(lEmpty.CStr()).IsValid());
+    CHECK_FALSE(lResources.Load<AssetResource>(lTemp.Sub("Missing.opaaxui").CStr()).IsValid());
+
+    lResources.FlushAll();
 }
 
 TEST_CASE("UICanvasFile: U5b's two new fields round-trip, and a file without them keeps the defaults")
 {
-    const UIWidgetRegistry lRegistry = MakeRegistry();
+    const WidgetClasses lRegistry;
 
     UICanvasFile::UICanvasDoc lDoc;
-    lDoc.Root = MakeUnique<UIPanel>();
+    lDoc.Root = NewObject<UIPanel>();
 
-    auto lImage = MakeUnique<UIImage>();
+    auto lImage = NewObject<UIImage>();
     lImage->Name   = "Frame";
     lImage->Border = UIMargin{ 12.f, 13.f, 14.f, 15.f };
     lDoc.Root->AddChild(Move(lImage));
 
-    auto lSafe = MakeUnique<UISafeArea>();
+    auto lSafe = NewObject<UISafeArea>();
     lSafe->Name   = "Safe";
     lSafe->Insets = UIMargin{ 0.1f, 0.2f, 0.3f, 0.4f };
     lDoc.Root->AddChild(Move(lSafe));
@@ -324,8 +345,8 @@ TEST_CASE("UICanvasFile: U5b's two new fields round-trip, and a file without the
     UICanvasFile::UICanvasDoc lBack;
     REQUIRE(UICanvasFile::Deserialize(UICanvasFile::Serialize(lDoc), lRegistry, lBack));
 
-    const auto* lBackImage = dynamic_cast<const UIImage*>(lBack.Root->GetChildren()[0].get());
-    const auto* lBackSafe  = dynamic_cast<const UISafeArea*>(lBack.Root->GetChildren()[1].get());
+    const auto* lBackImage = dynamic_cast<const UIImage*>(lBack.Root->GetChildren()[0].Get());
+    const auto* lBackSafe  = dynamic_cast<const UISafeArea*>(lBack.Root->GetChildren()[1].Get());
     REQUIRE(lBackImage != nullptr);
     REQUIRE(lBackSafe  != nullptr);
 
@@ -346,17 +367,17 @@ TEST_CASE("UICanvasFile: U5b's two new fields round-trip, and a file without the
     UICanvasFile::UICanvasDoc lOld;
     REQUIRE(UICanvasFile::Deserialize(lBefore, lRegistry, lOld));
 
-    const auto* lOldImage = dynamic_cast<const UIImage*>(lOld.Root->GetChildren()[0].get());
+    const auto* lOldImage = dynamic_cast<const UIImage*>(lOld.Root->GetChildren()[0].Get());
     REQUIRE(lOldImage != nullptr);
     CHECK(lOldImage->Border.IsZero());
 }
 
 TEST_CASE("UICanvasFile: a file written when the asset fields were STRINGS still reads")
 {
-    // The zero-format-change claim, asserted rather than trusted. TResourcePath serializes as a
-    // BARE STRING (ResourcePathJson.h), so a `.opaaxui` authored before the fields became typed
+    // The zero-format-change claim, asserted rather than trusted. TAssetRef serializes as a
+    // BARE STRING (AssetRef.h), so a `.opaaxui` authored before the fields became typed
     // must load with its paths intact — no migration, no version bump.
-    const UIWidgetRegistry lRegistry = MakeRegistry();
+    const WidgetClasses lRegistry;
 
     const OpaaxString lLegacy = OpaaxString(R"({
     "ReferenceHeight": 1080.0,
@@ -376,9 +397,9 @@ TEST_CASE("UICanvasFile: a file written when the asset fields were STRINGS still
     REQUIRE(lDoc.Root != nullptr);
     REQUIRE(lDoc.Root->GetChildren().size() == 3u);
 
-    const auto* lText  = dynamic_cast<const UIText*>(lDoc.Root->GetChildren()[0].get());
-    const auto* lImage = dynamic_cast<const UIImage*>(lDoc.Root->GetChildren()[1].get());
-    const auto* lMask  = dynamic_cast<const UIMask*>(lDoc.Root->GetChildren()[2].get());
+    const auto* lText  = dynamic_cast<const UIText*>(lDoc.Root->GetChildren()[0].Get());
+    const auto* lImage = dynamic_cast<const UIImage*>(lDoc.Root->GetChildren()[1].Get());
+    const auto* lMask  = dynamic_cast<const UIMask*>(lDoc.Root->GetChildren()[2].Get());
     REQUIRE(lText  != nullptr);
     REQUIRE(lImage != nullptr);
     REQUIRE(lMask  != nullptr);
@@ -394,38 +415,38 @@ TEST_CASE("UICanvasFile: a file written when the asset fields were STRINGS still
 
 TEST_CASE("UICanvasFile: CloneWidget is a deep copy through the format, and a node's text pastes back")
 {
-    const UIWidgetRegistry lRegistry = MakeRegistry();
+    const WidgetClasses lRegistry;
 
     // A button with a label under it: two types, two levels, one field of each kind.
-    auto lButton      = MakeUnique<UIButton>();
+    auto lButton      = NewObject<UIButton>();
     lButton->Name     = "Resume";
     lButton->bEnabled = false;
     lButton->SetRect(Corner({ 0.5f, 0.f }, { 0.f, 30.f }, { 240.f, 64.f }));
 
-    auto lLabel  = MakeUnique<UIText>();
+    auto lLabel  = NewObject<UIText>();
     lLabel->Name = "ResumeLabel";
     lLabel->Text = "Resume";
     lButton->AddChild(Move(lLabel));
 
-    TUniquePtr<UIWidget> lClone = UICanvasFile::CloneWidget(*lButton, lRegistry);
+    TStrongObjectPtr<UIWidget> lClone = UICanvasFile::CloneWidget(*lButton, lRegistry);
     REQUIRE(lClone != nullptr);
-    CHECK(lClone.get() != lButton.get());
+    CHECK(lClone.Get() != lButton.Get());
     CHECK(lClone->GetParent() == nullptr);   // detached, whoever asked will place it
 
-    const auto* lCloned = dynamic_cast<const UIButton*>(lClone.get());
+    const auto* lCloned = dynamic_cast<const UIButton*>(lClone.Get());
     REQUIRE(lCloned != nullptr);
     CHECK(lCloned->Name == OpaaxString("Resume"));
     CHECK_FALSE(lCloned->bEnabled);
     CheckVec(lCloned->Rect.SizeDelta, { 240.f, 64.f });
     REQUIRE(lCloned->GetChildren().size() == 1u);
     CHECK(lCloned->GetChildren()[0]->Name == OpaaxString("ResumeLabel"));
-    CHECK(lCloned->GetChildren()[0].get() != lButton->GetChildren()[0].get());
+    CHECK(lCloned->GetChildren()[0].Get() != lButton->GetChildren()[0].Get());
 
     // The clipboard's unit: the same text the file would hold for that node, read back alone.
     const OpaaxString lText = UICanvasFile::SerializeNode(*lButton);
     CHECK(lText.Find("\"Type\": \"UIButton\"") >= 0);
 
-    TUniquePtr<UIWidget> lPasted = UICanvasFile::DeserializeNode(lText, lRegistry);
+    TStrongObjectPtr<UIWidget> lPasted = UICanvasFile::DeserializeNode(lText, lRegistry);
     REQUIRE(lPasted != nullptr);
     CHECK(lPasted->Name == OpaaxString("Resume"));
     CHECK(lPasted->GetChildren().size() == 1u);
@@ -439,15 +460,15 @@ TEST_CASE("UIWidget: AddChild at an index inserts there, and past the end append
 {
     UIPanel lParent;
 
-    UIWidget* const lA = lParent.AddChild(MakeUnique<UIPanel>());
-    UIWidget* const lC = lParent.AddChild(MakeUnique<UIPanel>());
-    UIWidget* const lB = lParent.AddChild(MakeUnique<UIPanel>(), 1);   // between A and C
-    UIWidget* const lD = lParent.AddChild(MakeUnique<UIPanel>(), 99);  // clamped to the end
+    UIWidget* const lA = lParent.AddChild(NewObject<UIPanel>());
+    UIWidget* const lC = lParent.AddChild(NewObject<UIPanel>());
+    UIWidget* const lB = lParent.AddChild(NewObject<UIPanel>(), 1);   // between A and C
+    UIWidget* const lD = lParent.AddChild(NewObject<UIPanel>(), 99);  // clamped to the end
 
     REQUIRE(lParent.GetChildren().size() == 4u);
-    CHECK(lParent.GetChildren()[0].get() == lA);
-    CHECK(lParent.GetChildren()[1].get() == lB);
-    CHECK(lParent.GetChildren()[2].get() == lC);
-    CHECK(lParent.GetChildren()[3].get() == lD);
+    CHECK(lParent.GetChildren()[0].Get() == lA);
+    CHECK(lParent.GetChildren()[1].Get() == lB);
+    CHECK(lParent.GetChildren()[2].Get() == lC);
+    CHECK(lParent.GetChildren()[3].Get() == lD);
     CHECK(lB->GetParent() == &lParent);
 }

@@ -1,20 +1,17 @@
 #include "Movement/MoverSubsystem.h"
 
-#include "Application/OpaaxApplication.h"
-#include "Application/Services/IEngine.h"
 #include "Application/Services/IPaths.h"
 #include "Core/Maths/Maths.h"
 #include "Core/Profiling/Profiler.h"
-#include "Engine/Registries/EngineRegistries.h"
 #include "Resources/ResourceManager.h"
 #include "Movement/Assets/MoveMode.h"
 #include "Movement/Assets/Mover.h"
+#include "Movement/Modes/GroundMoveMode.h"
 #include "Physics/IPhysicsWorld.h"
 #include "Movement/MoverComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Components/TransformInterpolationComponent.h"
 #include "World/Entity/EntityHierarchy.h"   // modes move the world pose
-#include "Movement/Modes/MoverModeRegistry.h"
 #include "Physics/PhysicsSubsystem.h"
 #include "World/Systems/WorldContext.h"
 #include "World/World.h"
@@ -31,24 +28,11 @@ namespace Opaax
     }
 
     // =========================================================================
-    // Base implementation
-    // =========================================================================
-    bool MoverSubsystem::ShouldCreate(const World& InWorld)
-    {
-        return InWorld.GetMode() == EWorldMode::Play;
-    }
-
-    // =========================================================================
     // Lifecycle
     // =========================================================================
-    bool MoverSubsystem::Startup()
+    bool MoverSubsystem::ShouldCreate(const World& InWorld) const
     {
-        // Found in the manager (never a lazy accessor that could re-enter startup).
-        IEngine& lEngine = OpaaxApplication::GetAppService<IEngine>();
-
-        m_Modes = &lEngine.GetRegistries().MoverModes();
-
-        return true;
+        return InWorld.GetMode() == EWorldMode::Play;
     }
 
     void MoverSubsystem::Shutdown()
@@ -64,13 +48,13 @@ namespace Opaax
     {
         OPAAX_STAT_SCOPE("Mover");
 
-        World& lWorld = m_Context->OwningWorld;
+        World& lWorld = GetContext().OwningWorld;
 
         // No physics world: nothing to sweep against, nothing moves. Not an error.
         PhysicsSubsystem* lPhysics = lWorld.GetSubsystems().GetSubsystem<PhysicsSubsystem>();
         IPhysicsWorld*    lSweep   = lPhysics != nullptr ? lPhysics->GetPhysicsWorld() : nullptr;
 
-        if (lSweep == nullptr || m_Modes == nullptr)
+        if (lSweep == nullptr)
         {
             m_LastAdvanced = 0;
             return;
@@ -109,64 +93,46 @@ namespace Opaax
                                  TransformComponent& InTransform, IPhysicsWorld& InWorld,
                                  const float InDelta)
     {
-        const Entity lOwner{ InEntity, &m_Context->OwningWorld };
+        const Entity lOwner{ InEntity, &GetContext().OwningWorld };
 
         // ---- pending mode switch, applied between steps ---------------------------------------
         if (InMover.PendingMode.IsValid() && InMover.PendingMode != InMover.ModeName)
         {
-            const MoveMode* lFromParams = ResolveMode(InMover, InMover.ModeName);
-            const MoveMode* lToParams   = ResolveMode(InMover, InMover.PendingMode);
+            const MoveMode* lFrom = ResolveMode(InMover, InMover.ModeName);
+            const MoveMode* lTo   = ResolveMode(InMover, InMover.PendingMode);
 
             // Refuse a switch to a mode that cannot be resolved.
-            if (lToParams == nullptr)
+            if (lTo == nullptr)
             {
                 InMover.PendingMode = OpaaxStringID();
             }
             else
             {
-                if (lFromParams != nullptr)
+                if (lFrom != nullptr)
                 {
-                    if (IMoverMode* lFrom = m_Modes->Find(lFromParams->Mode))
-                    {
-                        MoverTickContext lExit{ InWorld, InMover, InTransform, *lFromParams, 0.f, 0, lOwner };
-                        lFrom->OnModeExit(lExit);
-                    }
+                    MoverTickContext lExit{ InWorld, InMover, InTransform, 0.f, 0, lOwner };
+                    lFrom->OnModeExit(lExit);
                 }
 
                 InMover.ModeName    = InMover.PendingMode;
                 InMover.PendingMode = OpaaxStringID();
 
-                if (IMoverMode* lTo = m_Modes->Find(lToParams->Mode))
-                {
-                    MoverTickContext lEnter{ InWorld, InMover, InTransform, *lToParams, 0.f, 0, lOwner };
-                    lTo->OnModeEnter(lEnter);
-                }
+                MoverTickContext lEnter{ InWorld, InMover, InTransform, 0.f, 0, lOwner };
+                lTo->OnModeEnter(lEnter);
 
                 OPAAX_LOG(LogMover, Info, "Entity {} switched to mode '{}' ({})",
-                          static_cast<Uint32>(InEntity), InMover.ModeName.CStr(), lToParams->Mode.CStr());
+                          static_cast<Uint32>(InEntity), InMover.ModeName.CStr(), lTo->GetClass().GetName().CStr());
             }
         }
 
-        const MoveMode* lParams = ResolveMode(InMover, InMover.ModeName);
+        const MoveMode* lMode = ResolveMode(InMover, InMover.ModeName);
 
-        if (lParams == nullptr)
+        if (lMode == nullptr)
         {
             return;   // ResolveMode already warned
         }
 
-        IMoverMode* lMode = m_Modes->Find(lParams->Mode);
-
-        if (lMode == nullptr)
-        {
-            if (ShouldWarnOnce(lParams->Mode.GetId()))
-            {
-                OPAAX_LOG(LogMover, Warn, "No mover mode named '{}' is registered — nothing moves it",
-                          lParams->Mode.CStr());
-            }
-            return;
-        }
-
-        MoverTickContext lTick{ InWorld, InMover, InTransform, *lParams, InDelta, ToUserData(InEntity), lOwner };
+        MoverTickContext lTick{ InWorld, InMover, InTransform, InDelta, ToUserData(InEntity), lOwner };
         lMode->Tick(lTick);
     }
 
@@ -189,7 +155,7 @@ namespace Opaax
         if (lMoverIt == m_MoverCache.end())
         {
             lMoverIt = m_MoverCache.emplace(lMoverKey.GetId(),
-                                            LoadAsset(m_Context->Resources, m_Context->Paths, InMover.Mover)).first;
+                                            LoadAsset(GetContext().Resources, GetContext().Paths, InMover.Mover)).first;
 
             if (lMoverIt->second.Get() == nullptr)
             {
@@ -224,7 +190,7 @@ namespace Opaax
             return nullptr;
         }
 
-        // ---- the tuning ---------------------------------------------------------------------
+        // ---- the mode -----------------------------------------------------------------------
         const OpaaxStringID lModeKey(lEntry->ModeAsset.Path);
 
         auto lModeIt = m_ModeCache.find(lModeKey.GetId());
@@ -232,17 +198,22 @@ namespace Opaax
         if (lModeIt == m_ModeCache.end())
         {
             lModeIt = m_ModeCache.emplace(lModeKey.GetId(),
-                                          LoadAsset(m_Context->Resources, m_Context->Paths, lEntry->ModeAsset)).first;
+                                          LoadAsset(GetContext().Resources, GetContext().Paths, lEntry->ModeAsset)).first;
 
             if (lModeIt->second.Get() == nullptr)
             {
-                OPAAX_LOG(LogMover, Warn, "Move mode '{}' did not load — it moves with the default tuning",
+                OPAAX_LOG(LogMover, Warn, "Move mode '{}' did not load — it walks with the default tuning",
                           lEntry->ModeAsset.Path.CStr());
             }
         }
 
-        // A tuning that does not load still moves (the defaults are a walking mode).
-        return &lModeIt->second.GetOrDefault();
+        // A mode that does not load still moves: it walks, with the defaults.
+        if (const MoveMode* lMode = lModeIt->second.Get())
+        {
+            return lMode;
+        }
+
+        return Cast<MoveMode>(GroundMoveMode::StaticClass().GetDefaultObject());
     }
 
     bool MoverSubsystem::ShouldWarnOnce(const Uint32 InKey)

@@ -46,6 +46,7 @@ X11/Wayland/GL development packages listed in `.github/workflows/build.yml`.
 - [Docs/Automation.md](Docs/Automation.md): driving a game or the editor from scripts.
 - [Docs/AssetFormats.md](Docs/AssetFormats.md): the asset files (levels, maps, prefabs, UI, input,
   sprites, data), to write them by hand or from a tool.
+- [Docs/Porting.md](Docs/Porting.md): porting game code written before the object model.
 - [Docs/Architecture.md](Docs/Architecture.md): how the engine is built, and what each design choice
   gives and costs.
 - [Engine/Tests/README.md](Engine/Tests/README.md): writing tests.

@@ -3,6 +3,7 @@
 #include "Core/Events/Delegate.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
+#include "Core/String/OpaaxStringID.hpp"
 
 namespace Opaax::Editor
 {
@@ -13,10 +14,13 @@ namespace Opaax::Editor
     struct ResourceSavedEvent
     {
         /** ResourceTypeID::Get<T>() of the type written. */
-        Uint32      TypeId = 0;
+        Uint32        TypeId = 0;
 
-        OpaaxString AbsPath;
-        OpaaxString AssetPath;
+        /** The class of an asset file (which loads as an AssetResource, whatever its class); invalid otherwise. */
+        OpaaxStringID AssetClass;
+
+        OpaaxString   AbsPath;
+        OpaaxString   AssetPath;
     };
 
     // =============================================================================

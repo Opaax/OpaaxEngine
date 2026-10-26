@@ -13,5 +13,5 @@ namespace Opaax
     OPAAX_REGISTER_OBJECT(AnimationLibrary);
 
     // Play worlds only (its ShouldCreate decides). Reads the frame's final state.
-    OPAAX_REGISTER_NAMED_WORLD_SUBSYSTEM(SpriteAnimationSubsystem, "SpriteAnimation", WorldSubsystemOrder::Presentation);
+    OPAAX_REGISTER_OBJECT(SpriteAnimationSubsystem);
 }

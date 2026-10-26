@@ -141,7 +141,7 @@ namespace Opaax
         Bounds2D m_VisibleBounds;
         bool     m_bVisibleChanged = true;
 
-        TUniquePtr<UIWidget> m_Root;
+        TStrongObjectPtr<UIWidget> m_Root;
         UIBindingTable       m_Bindings;
         mutable bool         m_bWarnedOrderOverflow = false;
 

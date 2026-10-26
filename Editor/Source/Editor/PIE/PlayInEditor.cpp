@@ -137,7 +137,7 @@ namespace Opaax::Editor
         // Destroys the clone (every Play world) and ends the session. The edit world is untouched.
         m_Engine.EndGame();
 
-        const OpaaxString lRestored = m_EditWorld != nullptr ? m_EditWorld->GetName() : OpaaxString("<none>");
+        const OpaaxString lRestored = m_EditWorld != nullptr ? m_EditWorld->GetName().ToString() : OpaaxString("<none>");
 
         m_EditWorld = nullptr;
         m_PlayWorld = nullptr;

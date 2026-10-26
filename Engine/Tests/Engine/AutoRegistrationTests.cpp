@@ -9,6 +9,7 @@
 
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Engine/Registries/AutoRegistration.h"
+#include "Engine/GameInstance/GameInstanceSubsystem.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Renderer/Components/QuadComponent.h"
 #include "World/Components/TransformComponent.h"
@@ -32,27 +33,26 @@ namespace AutoRegistrationTestTypes
     // The same registration twice, as a macro in a header included by two .cpp files would give.
     OPAAX_REGISTER_COMPONENT(ProbeHealth);
 
-    struct ProbeLateSubsystem final : public WorldSubsystemBase
+    // Never made (ShouldCreate refuses every world): they only take a place in the tick order.
+    class ProbeLateSubsystem final : public WorldSubsystem
     {
-        OPAAX_SUBSYSTEM_TYPE(ProbeLateSubsystem)
-        explicit ProbeLateSubsystem(WorldContext&) {}
-        bool Startup() override { return true; }
-        void Shutdown() override {}
-        static bool ShouldCreate(const World&) { return false; }
+        OPAAX_OBJECT(ProbeLateSubsystem, WorldSubsystem)
+
+        Int32 GetTickOrder() const override { return WorldSubsystemOrder::Debug + 1; }
+        bool  ShouldCreate(const World&) const override { return false; }
     };
 
-    struct ProbeEarlySubsystem final : public WorldSubsystemBase
+    class ProbeEarlySubsystem final : public WorldSubsystem
     {
-        OPAAX_SUBSYSTEM_TYPE(ProbeEarlySubsystem)
-        explicit ProbeEarlySubsystem(WorldContext&) {}
-        bool Startup() override { return true; }
-        void Shutdown() override {}
-        static bool ShouldCreate(const World&) { return false; }
+        OPAAX_OBJECT(ProbeEarlySubsystem, WorldSubsystem)
+
+        Int32 GetTickOrder() const override { return WorldSubsystemOrder::Input - 1; }
+        bool  ShouldCreate(const World&) const override { return false; }
     };
 
-    // Registered in the "wrong" order on purpose: the order value decides, not the source order.
-    OPAAX_REGISTER_WORLD_SUBSYSTEM_ORDERED(ProbeLateSubsystem, WorldSubsystemOrder::Debug + 1);
-    OPAAX_REGISTER_WORLD_SUBSYSTEM_ORDERED(ProbeEarlySubsystem, WorldSubsystemOrder::Input - 1);
+    // Registered in the "wrong" order on purpose: the tick order decides, not the source order.
+    OPAAX_REGISTER_OBJECT(ProbeLateSubsystem);
+    OPAAX_REGISTER_OBJECT(ProbeEarlySubsystem);
 }
 
 using namespace AutoRegistrationTestTypes;
@@ -71,16 +71,16 @@ namespace
         return -1;
     }
 
-    Int64 IndexOfSubsystem(const WorldSubsystemRegistry& InRegistry, const char* InName)
+    Int64 IndexOfClass(const TDynArray<const ObjectClass*>& InClasses, const char* InName)
     {
-        Int64 lIndex = 0;
-        Int64 lFound = -1;
-        InRegistry.ForEach([&](const IWorldSubsystemEntry& InEntry)
+        for (Uint64 lIndex = 0; lIndex < InClasses.size(); ++lIndex)
         {
-            if (InEntry.GetName() == OpaaxStringID(InName)) { lFound = lIndex; }
-            ++lIndex;
-        });
-        return lFound;
+            if (InClasses[lIndex]->GetName() == OpaaxStringID(InName))
+            {
+                return static_cast<Int64>(lIndex);
+            }
+        }
+        return -1;
     }
 }
 
@@ -120,7 +120,7 @@ TEST_CASE("AutoRegistration: engine types and this test's types are both collect
     // Engine natives (registered in the engine's own feature folders).
     CHECK(IndexOf(lList, "Transform") >= 0);
     CHECK(IndexOf(lList, "Quad") >= 0);
-    CHECK(IndexOf(lList, "Physics") >= 0);
+    CHECK(IndexOf(lList, "PhysicsSubsystem") >= 0);
 
     // This translation unit's.
     CHECK(IndexOf(lList, "ProbeHealth") >= 0);
@@ -164,12 +164,14 @@ TEST_CASE("AutoRegistration: world subsystems tick in order, whatever the regist
     lRegistrar.BindEngineRegistries(lRegistries);
     RunAutoRegistrations(lRegistrar);
 
-    const WorldSubsystemRegistry& lSubsystems = lRegistries.WorldSubsystems();
+    const TDynArray<const ObjectClass*> lSubsystems =
+        CollectSubsystemClasses(lRegistries.ObjectClasses(), WorldSubsystem::StaticClass());
 
-    const Int64 lEarly   = IndexOfSubsystem(lSubsystems, "ProbeEarlySubsystem");
-    const Int64 lPhysics = IndexOfSubsystem(lSubsystems, "Physics");
-    const Int64 lMover   = IndexOfSubsystem(lSubsystems, "Mover");
-    const Int64 lLate    = IndexOfSubsystem(lSubsystems, "ProbeLateSubsystem");
+    // Names sort the other way (Physics after Mover, the early probe after Physics): the order decides.
+    const Int64 lEarly   = IndexOfClass(lSubsystems, "ProbeEarlySubsystem");
+    const Int64 lPhysics = IndexOfClass(lSubsystems, "PhysicsSubsystem");
+    const Int64 lMover   = IndexOfClass(lSubsystems, "MoverSubsystem");
+    const Int64 lLate    = IndexOfClass(lSubsystems, "ProbeLateSubsystem");
 
     REQUIRE(lEarly >= 0);
     REQUIRE(lPhysics >= 0);
@@ -188,15 +190,15 @@ TEST_CASE("AutoRegistration: game instance subsystems are created UI first, then
     lRegistrar.BindEngineRegistries(lRegistries);
     RunAutoRegistrations(lRegistrar);
 
-    TDynArray<OpaaxStringID> lNames;
-    lRegistries.GameInstanceSubsystems().ForEach([&](const IGameInstanceSubsystemEntry& InEntry)
-    {
-        lNames.push_back(InEntry.GetName());
-    });
+    const TDynArray<const ObjectClass*> lSubsystems =
+        CollectSubsystemClasses(lRegistries.ObjectClasses(), GameInstanceSubsystem::StaticClass());
 
-    const auto lUI    = Algo::Find(lNames, OpaaxStringID("UI"));
-    const auto lInput = Algo::Find(lNames, OpaaxStringID("InputMapping"));
-    REQUIRE(lUI != lNames.end());
-    REQUIRE(lInput != lNames.end());
+    const Int64 lBank  = IndexOfClass(lSubsystems, "AudioGlobalBank");
+    const Int64 lUI    = IndexOfClass(lSubsystems, "UISubsystem");
+    const Int64 lInput = IndexOfClass(lSubsystems, "InputMappingSubsystem");
+    REQUIRE(lBank >= 0);
+    REQUIRE(lUI >= 0);
+    REQUIRE(lInput >= 0);
+    CHECK(lBank < lUI);
     CHECK(lUI < lInput);
 }

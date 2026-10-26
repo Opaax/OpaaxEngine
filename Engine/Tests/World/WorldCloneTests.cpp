@@ -101,7 +101,7 @@ TEST_CASE("world clone: entities arrive with the same Guids, names and owner map
     CHECK_FALSE(lClonedCrate.Has<LoadoutComponent>()); // it never had one
 
     // The clone is a world in its own right: its own identity, and the manager owns both.
-    CHECK(lClone->GetId() != lSource->GetId());
+    CHECK_FALSE(lClone->GetHandle() == lSource->GetHandle());
     CHECK(lClone->GetName() == lSource->GetName()); // same level; the MODE is what tells them apart
     CHECK(lWorlds.GetWorldCount() == 2u);
 }

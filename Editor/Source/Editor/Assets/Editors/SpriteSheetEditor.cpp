@@ -11,7 +11,7 @@
 #include "Editor/Properties/PropertyDrawers.h"
 #include "Editor/UI/IEditorUIBackend.h"
 #include "Renderer/Textures/SpriteSheet.h"
-#include "Renderer/Textures/TextureResource.h"
+#include "Renderer/Textures/Texture2D.h"
 #include "Resources/ResourceManager.h"
 
 namespace Opaax::Editor
@@ -49,7 +49,7 @@ namespace Opaax::Editor
         DrawSettings(*lSheet);
         ImGui::Separator();
 
-        const TextureResource* lTexture = ClaimTexture(*lSheet);
+        const Texture2D* lTexture = ClaimTexture(*lSheet);
 
         DrawCanvas(*lSheet, lTexture);
         ImGui::Separator();
@@ -82,7 +82,7 @@ namespace Opaax::Editor
     // =============================================================================
     // The canvas
     // =============================================================================
-    void SpriteSheetEditor::DrawCanvas(SpriteSheet& InSheet, const TextureResource* InTexture)
+    void SpriteSheetEditor::DrawCanvas(SpriteSheet& InSheet, const Texture2D* InTexture)
     {
         if (InTexture == nullptr)
         {
@@ -91,7 +91,7 @@ namespace Opaax::Editor
             return;
         }
 
-        const ImVec2 lSize   = ImguiLayout::AspectFit(InTexture->Width, InTexture->Height, MAX_CANVAS_SIZE);
+        const ImVec2 lSize   = ImguiLayout::AspectFit(InTexture->GetWidth(), InTexture->GetHeight(), MAX_CANVAS_SIZE);
         const ImVec2 lImgMin = ImGui::GetCursorScreenPos();
         const ImVec2 lImgMax(lImgMin.x + lSize.x, lImgMin.y + lSize.y);
 
@@ -113,7 +113,7 @@ namespace Opaax::Editor
         }
 
         // One scale for both axes (AspectFit keeps the ratio).
-        const float lScale = (InTexture->Width > 0u) ? lSize.x / static_cast<float>(InTexture->Width) : 1.f;
+        const float lScale = (InTexture->GetWidth() > 0u) ? lSize.x / static_cast<float>(InTexture->GetWidth()) : 1.f;
 
         // Drawn from the frames, never from the grid: frames can be moved by hand.
         for (Uint32 lIndex = 0; lIndex < InSheet.FrameCount(); ++lIndex)
@@ -135,10 +135,10 @@ namespace Opaax::Editor
             UpdateFrameDrag(InSheet, *InTexture, lTexel, lScale, bClicked, bHeld);
         }
 
-        ImGui::TextDisabled("%u x %u", InTexture->Width, InTexture->Height);
+        ImGui::TextDisabled("%u x %u", InTexture->GetWidth(), InTexture->GetHeight());
     }
 
-    void SpriteSheetEditor::UpdateFrameDrag(SpriteSheet& InSheet, const TextureResource& InTexture, const Vector2F InTexel,
+    void SpriteSheetEditor::UpdateFrameDrag(SpriteSheet& InSheet, const Texture2D& InTexture, const Vector2F InTexel,
                                             const float InScale, const bool bInClicked, const bool bInHeld)
     {
         if (!m_bDraggingRect)
@@ -205,7 +205,7 @@ namespace Opaax::Editor
         }
 
         // A frame stays inside the texture.
-        lNext = ClampRectInside(lNext, static_cast<float>(InTexture.Width), static_cast<float>(InTexture.Height));
+        lNext = ClampRectInside(lNext, static_cast<float>(InTexture.GetWidth()), static_cast<float>(InTexture.GetHeight()));
 
         lFrame.Offset = { lNext.X, lNext.Y };
         lFrame.Size   = { lNext.Width, lNext.Height };
@@ -214,7 +214,7 @@ namespace Opaax::Editor
     // =============================================================================
     // Tools and fields
     // =============================================================================
-    void SpriteSheetEditor::DrawSliceTools(SpriteSheet& InSheet, const TextureResource* InTexture)
+    void SpriteSheetEditor::DrawSliceTools(SpriteSheet& InSheet, const Texture2D* InTexture)
     {
         if (!ImGui::TreeNodeEx("Grid", ImGuiTreeNodeFlags_DefaultOpen))
         {
@@ -229,7 +229,7 @@ namespace Opaax::Editor
         ImGui::BeginDisabled(InTexture == nullptr);
         if (ImGui::Button("Slice") && InTexture != nullptr)
         {
-            if (SheetEditing::Slice(InSheet, InTexture->Width, InTexture->Height))
+            if (SheetEditing::Slice(InSheet, InTexture->GetWidth(), InTexture->GetHeight()))
             {
                 m_Selected = -1;   // the selected frame was replaced
                 OPAAX_LOG(LogSpriteSheetEditor, Info, "Sliced into {} frame(s)", InSheet.FrameCount());
@@ -237,7 +237,7 @@ namespace Opaax::Editor
             else
             {
                 OPAAX_LOG(LogSpriteSheetEditor, Warn, "The grid cuts no frame from a {}x{} texture — the frames are unchanged",
-                          InTexture->Width, InTexture->Height);
+                          InTexture->GetWidth(), InTexture->GetHeight());
             }
         }
         ImGui::EndDisabled();
@@ -336,7 +336,7 @@ namespace Opaax::Editor
     // =============================================================================
     // Claim
     // =============================================================================
-    const TextureResource* SpriteSheetEditor::ClaimTexture(const SpriteSheet& InSheet)
+    const Texture2D* SpriteSheetEditor::ClaimTexture(const SpriteSheet& InSheet)
     {
         if (InSheet.Texture.IsEmpty())
         {
@@ -347,18 +347,15 @@ namespace Opaax::Editor
 
         if (InSheet.Texture.Path != m_ClaimedPath)
         {
-            const OpaaxString lAbsolute = m_Context.Paths.AssetToAbsolute(InSheet.Texture.Path);
-
-            m_Claim       = m_Context.Resources.Load<TextureResource>(lAbsolute.CStr());
+            m_Claim       = LoadAsset(m_Context.Resources, m_Context.Paths, InSheet.Texture);
             m_ClaimedPath = InSheet.Texture.Path;
 
-            if (!m_Claim.IsValid())
+            if (m_Claim.Get() == nullptr)
             {
-                OPAAX_LOG(LogSpriteSheetEditor, Warn, "Sheet image '{}' did not load", lAbsolute.CStr());
+                OPAAX_LOG(LogSpriteSheetEditor, Warn, "Sheet image '{}' did not load", InSheet.Texture.Path.CStr());
             }
         }
 
-        // IsValid, not Get() != nullptr: a failed claim gives the magenta placeholder.
-        return m_Claim.IsValid() ? m_Claim.Get() : nullptr;
+        return m_Claim.Get();
     }
 }

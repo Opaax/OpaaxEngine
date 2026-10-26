@@ -8,7 +8,7 @@
 #include "Editor/EditorContext.h"
 #include "Editor/Properties/PropertyDrawers.h"
 #include "Editor/UI/IEditorUIBackend.h"   // the atlas as an image
-#include "Renderer/Text/FontFaceResource.h"
+#include "Renderer/Text/FontFace.h"
 #include "Renderer/Text/FontFamily.h"
 #include "Renderer/Text/Text2D.h"         // Layout: the same as the viewport
 #include "Resources/ResourceManager.h"
@@ -201,15 +201,14 @@ namespace Opaax::Editor
         }
 
         m_SampleFacePath = InPath;
-        m_SampleFace     = ResourceRef<FontFaceResource>();   // released before the next is claimed
+        m_SampleFace     = TAssetHandle<FontFace>();   // released before the next is claimed
 
         if (InPath.IsEmpty())
         {
             return;
         }
 
-        const OpaaxString lAbsolute = m_Context.Paths.AssetToAbsolute(InPath);
-        m_SampleFace = m_Context.Resources.Load<FontFaceResource>(lAbsolute.CStr());
+        m_SampleFace = LoadAsset<FontFace>(m_Context.Resources, m_Context.Paths, InPath);
     }
 
     void FontFamilyEditor::DrawSample(const FontFamily& InFamily)
@@ -228,7 +227,7 @@ namespace Opaax::Editor
         ImGui::SetNextItemWidth(160.f);
         ImGui::DragFloat("Size", &m_SampleSize, 0.5f, 6.f, 200.f, "%.0f px");
 
-        const FontFaceResource* lFace = m_SampleFace.Get();
+        const FontFace* lFace = m_SampleFace.Get();
 
         if (lFace == nullptr)
         {
@@ -254,7 +253,7 @@ namespace Opaax::Editor
         TextDrawParams lParams;
         lParams.Size = m_SampleSize;
 
-        const FontFaceView lView{ &lFace->Face, lFace->GetAtlas() };
+        const FontFaceView lView{ &lFace->GetData(), lFace->GetAtlas() };
 
         const Vector2F lExtent = Text2D::Layout(
             m_SampleText.CStr(), { 0.f, 0.f }, lView, lParams,

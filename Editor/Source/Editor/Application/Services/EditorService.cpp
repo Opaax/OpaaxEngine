@@ -17,9 +17,12 @@
 #include "Editor/UI/TinyFdEditorDialogs.h"      // the concrete IEditorDialogs
 #include "Editor/Toolbar/EditorNativeViewportTools.h"
 #include "Editor/Assets/Editors/AnimationClipEditor.h"
+#include "Editor/Assets/Editors/AudioClipEditor.h"
+#include "Editor/Assets/Editors/FontFaceEditor.h"
 #include "Editor/Assets/Editors/FontFamilyEditor.h"
 #include "Editor/Assets/Editors/InputMappingContextEditor.h"
 #include "Editor/Assets/Editors/SpriteSheetEditor.h"
+#include "Editor/Assets/Editors/TextureEditor.h"
 
 #include "Editor/Operation/EditorGizmo.hpp"
 #include "Editor/Operation/EditorViewport.hpp"   // grid toggle
@@ -31,7 +34,6 @@
 #include "Editor/Panels/InspectorPanel.h"
 #include "Editor/Panels/PlayToolbarPanel.h"
 #include "Editor/Panels/ResourceBrowserPanel.h"
-#include "Editor/Panels/ResourcePreviewPanel.h"
 #include "Resources/Asset/AssetResource.h"
 #include "Editor/Panels/UICanvasPanel.h"
 #include "Editor/EditorUICanvasDocument.h"
@@ -43,37 +45,36 @@
 #include "UI/Widgets/UISafeArea.h"
 #include "UI/Widgets/UIStack.h"
 #include "UI/Widgets/UIText.h"
-#include "UI/UICanvasResource.h"
+#include "UI/UICanvasAsset.h"
 #include "Editor/Panels/PrefabPanel.h"
 #include "Renderer/RenderTarget.hpp"
 #include "Editor/Panels/LogPanel.h"
 #include "Editor/Panels/StatsPanel.h"
 #include "Editor/Panels/ViewportPanel.h"
 #include "Editor/Imgui/Configs/Config_EditorImgui.h"
-#include "Editor/Imgui/Configs/EditorImguiConfigDrawer.h"
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Renderer/Config/Config_Renderer.h"
 #include "Input/InputEvents.h"
-#include "World/Serialization/LevelResource.hpp"
-#include "World/Serialization/MapResource.hpp"
-#include "World/Prefab/PrefabResource.hpp"
+#include "World/Serialization/LevelAsset.h"
+#include "World/Serialization/MapAsset.h"
+#include "World/Prefab/PrefabAsset.h"
 #include "Editor/Operation/ResourceOperations.h"
 #include "Resources/ResourceTypeID.hpp"
-#include "Renderer/Textures/TextureResource.h"
+#include "Renderer/Textures/Texture2D.h"
 #include "Renderer/Textures/SpriteSheet.h"
 #include "Animation/Assets/AnimationClip.h"
 #include "Animation/Assets/AnimationLibrary.h"
 #include "Audio/AudioBank.h"
+#include "Audio/AudioClip.h"
 #include "Audio/AudioClipDef.h"
 #include "Input/Assets/InputActionAsset.h"
 #include "Input/Assets/InputMappingContextAsset.h"
 #include "Movement/Assets/MoveMode.h"
 #include "Movement/Assets/Mover.h"
 #include "Renderer/Materials/Material2D.h"
-#include "Renderer/Text/FontFaceResource.h"
+#include "Renderer/Text/FontFace.h"
 #include "Renderer/Text/FontFamily.h"
-#include "Editor/Resources/ResourcePreviewDrawers.h"   // what a preview draws (no ImGui here)
 #include "Editor/Properties/NativeComponentDrawers.h"
 #include "Editor/Properties/WidgetPropertyVisitor.h"
 #include "World/Components/ComponentRegistry.h"
@@ -145,7 +146,6 @@ namespace Opaax::Editor
         m_ResourceEvents    = MakeUnique<EditorResourceEvents>();
         m_PrefabDocument    = MakeUnique<EditorPrefabDocument>();
         m_Viewport          = MakeUnique<EditorViewport>();
-        m_Preview           = MakeUnique<ResourcePreview>();
         m_Camera            = MakeUnique<EditorCamera>();
         m_Gizmo             = MakeUnique<EditorGizmo>();
         m_Undo              = MakeUnique<EditorUndo>();
@@ -166,7 +166,6 @@ namespace Opaax::Editor
     {
         m_Selection.reset();
         m_Viewport.reset();
-        m_Preview.reset();
         m_Camera.reset();
         m_Gizmo.reset();
         m_Undo.reset();
@@ -204,7 +203,6 @@ namespace Opaax::Editor
             *m_UICanvasDocument,
             m_Extensions,
             m_Gui->Panels(),
-            *m_Preview,
             OpaaxApplication::GetAppService<IPaths>(),
             OpaaxApplication::GetAppService<IPlatform>().GetFileSystem(),
             OpaaxApplication::GetAppService<IConfigSystem>(),
@@ -360,7 +358,6 @@ namespace Opaax::Editor
         
         // Hidden by default
         lPanelsRegistry.Register<CameraPreviewPanel>(PanelDesc  {.Id = CameraPreviewPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden});
-        lPanelsRegistry.Register<ResourcePreviewPanel>(PanelDesc{.Id = ResourcePreviewPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden});
         // Hidden until a prefab is opened. Its SaveCommand routes Ctrl+S to the prefab.
         lPanelsRegistry.Register<PrefabPanel>(PanelDesc         {.Id = PrefabPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_PREFAB, .UndoCommand = Tags::EDITOR_COMMAND_UNDO_PREFAB, .RedoCommand = Tags::EDITOR_COMMAND_REDO_PREFAB, .DeleteCommand = Tags::EDITOR_COMMAND_DELETE_PREFAB_SELECTION});
         lPanelsRegistry.Register<UICanvasPanel>(PanelDesc{.Id = UICanvasPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_UI, .DeleteCommand = Tags::EDITOR_COMMAND_DELETE_UI_WIDGET});
@@ -469,33 +466,8 @@ namespace Opaax::Editor
     void EditorService::RegisterNativeDrawers()
     {
         // The engine's own components, through the same route a game's components use. They are all
-        // reflected, so registering is all there is to do.
-        // UI widgets too: every widget type needs a drawer or its fields are invisible in the UI panel.
-        // The count check below reports a missing one.
-        UIWidgetDrawerRegistry& lWidgetDrawers = m_Extensions.UIWidgetDrawers();
-        lWidgetDrawers.Register<UIPanel>();
-        lWidgetDrawers.Register<UIImage>();
-        lWidgetDrawers.Register<UIText>();
-        lWidgetDrawers.Register<UIButton>();
-        lWidgetDrawers.Register<UIMask>();
-        lWidgetDrawers.Register<UISafeArea>();
-        lWidgetDrawers.Register<UIStack>();
-
-        // Through the locator, not m_Context: the EditorContext does not exist yet at this point.
-        const Uint64 lWidgetTypes =
-            OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets().Count();
-        if (lWidgetDrawers.Count() != lWidgetTypes)
-        {
-            OPAAX_LOG(LogEditorService, Warn,
-                      "{} UI widget type(s) registered but {} drawer(s) — a type with no drawer shows only "
-                      "its base fields (**UI18**)", lWidgetTypes, lWidgetDrawers.Count());
-        }
-        else
-        {
-            OPAAX_LOG(LogEditorService, Trace, "UI widget drawers: {} for {} registered type(s)",
-                      lWidgetDrawers.Count(), lWidgetTypes);
-        }
-
+        // reflected, so registering is all there is to do. UI widgets need nothing: the UI panel draws
+        // any widget from its class.
         ComponentDrawerRegistry& lDrawers = m_Extensions.Drawers();
 
         // Every entity has one.
@@ -560,15 +532,6 @@ namespace Opaax::Editor
         });
     }
 
-    void EditorService::RegisterNativeConfigDrawers()
-    {
-        // Engine and editor configs, through the same route a game's config would use. Drawn from their
-        // OPAAX_PROPERTIES; only the resolver (which config) is config-specific.
-        m_Extensions.ConfigDrawers().Register<Config_Engine>();
-        m_Extensions.ConfigDrawers().Register<Config_Renderer>();
-        m_Extensions.ConfigDrawers().Register<Config_EditorImgui, EditorImguiConfigDrawer>();
-    }
-
     void EditorService::RegisterNativeAssetTypes()
     {
         // The engine's asset classes, by New Asset submenu. A class registered nowhere is offered at the
@@ -578,6 +541,15 @@ namespace Opaax::Editor
         lTypes.Register<Material2D>().SetCategory(OpaaxString("Rendering"));
         lTypes.Register<AudioClipDef>().SetCategory(OpaaxString("Audio"));
         lTypes.Register<AudioBank>().SetCategory(OpaaxString("Audio"));
+
+        // A sound file: its window plays it and tells its length and format.
+        lTypes.Register<AudioClip>()
+            .SetLabel(OpaaxString("Audio Clip"))
+            .SetCategory(OpaaxString("Audio"))
+            .SetGlyph(OpaaxString("[AU]"))
+            .SetEditor<AudioClipEditor>();
+
+        // Every mode (a MoveMode subclass, a game's too) goes with it.
         lTypes.Register<MoveMode>().SetCategory(OpaaxString("Movement"));
         lTypes.Register<Mover>().SetCategory(OpaaxString("Movement")).SetGlyph(OpaaxString("[MV]"));
 
@@ -607,88 +579,86 @@ namespace Opaax::Editor
             .SetGlyph(OpaaxString("[FF]"))
             .SetEditor<FontFamilyEditor>();
 
+        // A level opens for editing, in place of the open one. Both the icon and the glyph are set: the
+        // glyph shows if the image is missing.
+        lTypes.Register<LevelAsset>()
+            .SetLabel(OpaaxString("Level"))
+            .SetIcon(OpaaxString("Icons/T_Level_Icon.png"))
+            .SetGlyph(OpaaxString("[L]"))
+            .SetActivate([](EditorContext& InContext, const OpaaxString& InAbsPath)
+            {
+                InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_LEVEL_AT, InContext,
+                                                        LevelPathParams{InAbsPath});
+
+                // The document may hold the path in another form: compared as asset paths.
+                const OpaaxString lWanted = InContext.Paths.AbsoluteToAsset(InAbsPath);
+                return !lWanted.IsEmpty() && InContext.Paths.AbsoluteToAsset(InContext.LevelDocument.AbsPath()) == lWanted;
+            });
+
+        // A canvas opens in the UI panel (it is a document).
+        lTypes.Register<UICanvasAsset>()
+            .SetLabel(OpaaxString("UI Canvas"))
+            .SetGlyph(OpaaxString("[UI]"))
+            .SetActivate([](EditorContext& InContext, const OpaaxString& InAbsPath)
+            {
+                if (!InContext.UICanvasDocument.Open(InAbsPath, InContext.Engine.GetRegistries().ObjectClasses()))
+                {
+                    return false;
+                }
+
+                InContext.Panels.SetVisible(UICanvasPanel::PanelID(), true);
+                return true;
+            });
+
+        // A map opens for editing: focused when its level has it, else on its own.
+        lTypes.Register<MapAsset>()
+            .SetLabel(OpaaxString("Map"))
+            .SetIcon(OpaaxString("Icons/T_Map_Icon.png"))
+            .SetGlyph(OpaaxString("[M]"))
+            .SetActivate([](EditorContext& InContext, const OpaaxString& InAbsPath)
+            {
+                InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_MAP_AT, InContext,
+                                                        MapPathParams{InAbsPath});
+
+                // The document may hold the path in another form: compared as asset paths.
+                const OpaaxString lWanted = InContext.Paths.AbsoluteToAsset(InAbsPath);
+                return !lWanted.IsEmpty() && InContext.Paths.AbsoluteToAsset(InContext.MapDocument.AbsPath()) == lWanted;
+            });
+
+        // A prefab opens in the prefab editor (placing one is a drag into the Hierarchy or a viewport).
+        lTypes.Register<PrefabAsset>()
+            .SetLabel(OpaaxString("Prefab"))
+            .SetGlyph(OpaaxString("[P]"))
+            .SetActivate([](EditorContext& InContext, const OpaaxString& InAbsPath)
+            {
+                InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_PREFAB_AT,
+                                                        InContext, PrefabPathParams{InAbsPath});
+                return InContext.PrefabDocument.AbsPath() == InAbsPath && InContext.PrefabDocument.GetWorld() != nullptr;
+            });
+
+        // A font file: its window shows the baked atlas and the metrics.
+        lTypes.Register<FontFace>()
+            .SetLabel(OpaaxString("Font Face"))
+            .SetCategory(OpaaxString("Text"))
+            .SetGlyph(OpaaxString("[F]"))
+            .SetEditor<FontFaceEditor>();
+
         // A texture cut into frames, edited over its image.
         lTypes.Register<SpriteSheet>()
             .SetCategory(OpaaxString("Rendering"))
             .SetIcon(OpaaxString("Icons/T_SpriteSheet_Icon.png"))
             .SetGlyph(OpaaxString("[S]"))
             .SetEditor<SpriteSheetEditor>();
-    }
 
-    void EditorService::RegisterNativeResourceTypes()
-    {
-        // Every asset class opens in a window of its own; how each looks comes from AssetTypes().
-        m_Extensions.ResourceTypes().Register<AssetResource>()
-            .SetGlyph(OpaaxString("[A]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_ASSET, InContext,
-                                                        AssetPathParams{ InFile.AbsPath });
-            });
-
-        // Both are set: the image shows, the glyph is the fallback if the image is missing.
-        m_Extensions.ResourceTypes().Register<MapResource>()
-            .SetIcon(OpaaxString("Icons/T_Map_Icon.png"))
-            .SetGlyph(OpaaxString("[M]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_MAP_AT, InContext,
-                                                        MapPathParams{InFile.AbsPath});
-            });
-
-        // Double-click places one into the focused map (also possible from the Hierarchy and a viewport drop).
-        m_Extensions.ResourceTypes().Register<PrefabResource>()
-            .SetGlyph(OpaaxString("[P]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_PREFAB_AT,
-                                                        InContext, PrefabPathParams{InFile.AbsPath});
-            });
-
-        // Double-click opens the preview (the same route maps and levels use to open their document).
-        m_Extensions.ResourceTypes().Register<TextureResource>()
+        // An image file: its window shows it, its size and its format.
+        lTypes.Register<Texture2D>()
+            .SetLabel(OpaaxString("Texture"))
+            .SetCategory(OpaaxString("Rendering"))
             .SetIcon(OpaaxString("Icons/T_Texture_Icon.png"))
             .SetGlyph(OpaaxString("[T]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                InContext.Preview.Open(InFile, ResourceTypeID::Get<TextureResource>());
-                InContext.Panels.SetVisible(ResourcePreviewPanel::PanelID(), true);
-            })
-            .SetPreview<TextureResource>(&NativeResourcePreviews::DrawTexture);
-
-        // A .ttf previews its baked atlas: glyph count, atlas size and metrics.
-        m_Extensions.ResourceTypes().Register<FontFaceResource>()
-            .SetGlyph(OpaaxString("[F]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                InContext.Preview.Open(InFile, ResourceTypeID::Get<FontFaceResource>());
-                InContext.Panels.SetVisible(ResourcePreviewPanel::PanelID(), true);
-            })
-            .SetPreview<FontFaceResource>(&NativeResourcePreviews::DrawFontFace);
-
-        // A canvas opens its editor (it is a document).
-        m_Extensions.ResourceTypes().Register<UICanvasResource>()
-            .SetGlyph(OpaaxString("[UI]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                const UIWidgetRegistry& lRegistry =
-                    OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets();
-
-                if (InContext.UICanvasDocument.Open(InFile.AbsPath, lRegistry))
-                {
-                    InContext.Panels.SetVisible(UICanvasPanel::PanelID(), true);
-                }
-            });
-
-        m_Extensions.ResourceTypes().Register<LevelResource>()
-            .SetIcon(OpaaxString("Icons/T_Level_Icon.png"))
-            .SetGlyph(OpaaxString("[L]"))
-            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_LEVEL_AT, InContext, LevelPathParams{InFile.AbsPath});
-            });
+            .SetEditor<TextureEditor>();
     }
-    
+
     // =============================================================================
     // =============================================================================
     // World
@@ -952,17 +922,12 @@ namespace Opaax::Editor
     {
         RegisterNativePanels();
         RegisterNativeMenus();
-        RegisterNativeResourceTypes();
         RegisterNativeAssetTypes();
         RegisterNativeEditorCommand();
         RegisterNativeDrawers();
-        RegisterNativeConfigDrawers();
 
         // After the commands: the mode buttons dispatch by tag.
         RegisterNativeViewportTools();
-
-        m_Extensions.EditWorldSystems().Bind(
-            &OpaaxApplication::GetAppService<IEngine>().GetRegistries().WorldSubsystems());
 
         if (InCollect)
         {
@@ -978,11 +943,10 @@ namespace Opaax::Editor
         m_Extensions.Seal();
 
         OPAAX_LOG(LogEditorService, Info,
-                  "Editor extensions sealed (before first world): drawers={}, configDrawers={}, panels={}, resourceTypes={}, titleBar={}, editWorldSystems={}, commands={}",
-                  m_Extensions.Drawers().Count(), m_Extensions.ConfigDrawers().Count(),
-                  m_Extensions.Panels().Count(), m_Extensions.ResourceTypes().Count(),
-                  m_Extensions.TitleBar().Count(), m_Extensions.EditWorldSystems().Count(),
-                  m_Extensions.Commands().Count());
+                  "Editor extensions sealed (before first world): drawers={}, panels={}, assetTypes={}, titleBar={}, commands={}",
+                  m_Extensions.Drawers().Count(),
+                  m_Extensions.Panels().Count(), m_Extensions.AssetTypes().Entries().size(),
+                  m_Extensions.TitleBar().Count(), m_Extensions.Commands().Count());
     }
 
     void EditorService::Initialize()

@@ -1,11 +1,13 @@
 // The World module's types. Each registers itself; see Engine/Registries/AutoRegistration.h.
 #include "Engine/Registries/AutoRegistration.h"
 #include "World/Behaviour/BehaviourSubsystem.h"
+#include "World/Level.h"
+#include "World/World.h"
 #include "World/Components/PrefabInstanceComponent.h"
 #include "World/Components/TransformComponent.h"
-#include "World/Prefab/PrefabResource.hpp"
-#include "World/Serialization/LevelResource.hpp"
-#include "World/Serialization/MapResource.hpp"
+#include "World/Prefab/PrefabAsset.h"
+#include "World/Serialization/LevelAsset.h"
+#include "World/Serialization/MapAsset.h"
 
 namespace Opaax
 {
@@ -15,12 +17,16 @@ namespace Opaax
     // Which prefab an entity comes from. Saved in the map like any component.
     OPAAX_REGISTER_NAMED_COMPONENT(PrefabInstanceComponent, "PrefabInstance");
 
-    OPAAX_REGISTER_NAMED_RESOURCE(LevelResource, "Level");
-    OPAAX_REGISTER_NAMED_RESOURCE(MapResource, "Map");
+    OPAAX_REGISTER_OBJECT(LevelAsset);
+    OPAAX_REGISTER_OBJECT(MapAsset);
 
     // A prefab is loaded once, however many instances a level places.
-    OPAAX_REGISTER_NAMED_RESOURCE(PrefabResource, "Prefab");
+    OPAAX_REGISTER_OBJECT(PrefabAsset);
 
     // Runs gameplay behaviours in Play worlds, before physics so what they apply is simulated this step.
-    OPAAX_REGISTER_NAMED_WORLD_SUBSYSTEM(BehaviourSubsystem, "Behaviours", WorldSubsystemOrder::Gameplay);
+    OPAAX_REGISTER_OBJECT(BehaviourSubsystem);
+
+    // Made by WorldManager, never by name: registered so tools can name them.
+    OPAAX_REGISTER_OBJECT(World);
+    OPAAX_REGISTER_OBJECT(Level);
 }

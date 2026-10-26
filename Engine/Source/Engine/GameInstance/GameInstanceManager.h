@@ -3,12 +3,14 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/OpaaxStringID.hpp"
+#include "Engine/GameInstance/GameInstance.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
+#include "Object/ObjectPtr.h"
 
 namespace Opaax
 {
     class EngineRegistries;
-    class GameInstance;
     class WorldManager;
     class ResourceManager;
     class EngineEventBus;
@@ -19,17 +21,13 @@ namespace Opaax
     inline constexpr LogCategory LogGameInstanceManager{"GameInstanceManager"};
 
     // =============================================================================
-    // GameInstanceManager — engine subsystem that owns the GameInstance (0 or 1).
-    //   Registered before WorldManager: sessions update before worlds, and worlds are
+    // GameInstanceManager — engine subsystem that owns the GameInstance (0 or 1), of the class the
+    //   project names. Registered before WorldManager: sessions update before worlds, and worlds are
     //   destroyed before the session. The host decides when a game starts and ends.
     // =============================================================================
-    class GameInstanceManager final : public EngineSubsystemBase
+    class GameInstanceManager final : public EngineSubsystem
     {
-        // =========================================================================
-        // Base Implementation
-        // =========================================================================
-    public:
-        OPAAX_SUBSYSTEM_TYPE(GameInstanceManager)
+        OPAAX_OBJECT(GameInstanceManager, EngineSubsystem)
 
         // =========================================================================
         // CTORS - DTORS
@@ -46,8 +44,8 @@ namespace Opaax
         // =========================================================================
     public:
         /**
-         * Creates the GameInstance and starts its subsystems. Call before the first world exists.
-         * Fails with an error if a game is already running.
+         * Makes the GameInstance (of GetGameInstanceClass) and starts it. Call before the first world
+         * exists. Fails with an error if a game is already running.
          * @return True if a game is now running
          */
         bool StartGame();
@@ -64,9 +62,16 @@ namespace Opaax
         // =========================================================================
     public:
         /** The running game, or nullptr (normal in an Edit world). */
-        GameInstance* GetGameInstance() const noexcept { return m_GameInstance.get(); }
+        GameInstance* GetGameInstance() const noexcept { return m_GameInstance.Get(); }
 
-        bool IsGameRunning() const noexcept { return m_GameInstance != nullptr; }
+        bool IsGameRunning() const noexcept { return m_GameInstance.IsValid(); }
+
+        /**
+         * The class the next game is made of, by name: the project's gameInstanceClass, read at Startup.
+         * None gives a GameInstance.
+         */
+        OpaaxStringID GetGameInstanceClass() const noexcept { return m_GameInstanceClass; }
+        void          SetGameInstanceClass(const OpaaxStringID InClassName) noexcept { m_GameInstanceClass = InClassName; }
 
         /**
          * Number of games started in this run (1 after the first Play, 2 after the second, ...).
@@ -76,7 +81,7 @@ namespace Opaax
         // =========================================================================
         // Override
         // =========================================================================
-        //~Begin EngineSubsystemBase interface
+        //~Begin Subsystem interface
     public:
         bool Startup() override;
 
@@ -87,14 +92,17 @@ namespace Opaax
         void TearDown() override;
 
         void Shutdown() override;
-        //~End EngineSubsystemBase interface
+        //~End Subsystem interface
 
         // =========================================================================
         // Members
         // =========================================================================
     private:
-        EngineRegistries*      m_Registries = nullptr; // owned by Engine
-        TUniquePtr<GameInstance> m_GameInstance;
+        EngineRegistries*              m_Registries = nullptr; // owned by Engine
+        TStrongObjectPtr<GameInstance> m_GameInstance;
+
+        // See GetGameInstanceClass.
+        OpaaxStringID m_GameInstanceClass;
 
         // Used to build every GameInstanceContext. Resolved once in Startup.
         WorldManager*           m_Worlds    = nullptr;

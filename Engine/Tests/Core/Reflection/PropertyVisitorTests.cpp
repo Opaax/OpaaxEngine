@@ -9,7 +9,6 @@ using namespace Opaax;
 
 namespace
 {
-    struct VisitorTestResource {};
 
     enum class EVisitorTestMode : Uint8 { Idle, Walk, Run };
 
@@ -56,7 +55,6 @@ namespace
         LinearColor                        Tint;
         OpaaxString                        Label    = OpaaxString("hello");
         EVisitorTestMode                   Mode     = EVisitorTestMode::Walk;
-        TResourcePath<VisitorTestResource> Asset;
         TAssetRef<VisitorTestData>         Stats;
         VisitorTestInner                   Inner;
         TDynArray<Int32>                   Numbers  = { 5, 6 };
@@ -70,7 +68,6 @@ namespace
                          OPAAX_PROP(Tint),
                          OPAAX_PROP(Label),
                          OPAAX_PROP(Mode),
-                         OPAAX_PROP(Asset),
                          OPAAX_PROP(Stats),
                          OPAAX_PROP(Inner).SetRange(0.f, 10.f).SetDragStep(0.5f),
                          OPAAX_PROP(Numbers),
@@ -112,12 +109,6 @@ namespace
             InOutIndex = 2;   // pick "Run"
         }
 
-        void VisitResourcePath(const char* InName, OpaaxString&, const Uint32 InResourceTypeId,
-                               const PropertyMeta&) override
-        {
-            Add("resource", InName);
-            LastResourceTypeId = InResourceTypeId;
-        }
 
         void VisitAssetRef(const char* InName, OpaaxString&, const ObjectClass& InClass, const PropertyMeta&) override
         {
@@ -146,7 +137,6 @@ namespace
             IPropertyVisitor::VisitList(InName, InList, InMeta);
         }
 
-        Uint32 LastResourceTypeId = 0;
 
     private:
         void Add(const char* InKind, const char* InName)
@@ -177,7 +167,6 @@ TEST_CASE("PropertyVisitor: every field is visited once, in declaration order, b
         "color Tint",              // its own visit, not taken for the Vector4F it derives from
         "string Label",
         "enum Mode 3 Walk",
-        "resource Asset",
         "asset Stats VisitorTestData",       // the class it accepts, by its saved name
         "group Inner",
         "float Amount [0,10]",     // inherits the group's range
@@ -195,7 +184,6 @@ TEST_CASE("PropertyVisitor: every field is visited once, in declaration order, b
     };
 
     CHECK(lVisitor.Lines == lExpected);
-    CHECK(lVisitor.LastResourceTypeId == ResourceTypeID::Get<VisitorTestResource>());
 }
 
 TEST_CASE("PropertyVisitor: writes through the visitor land in the object")

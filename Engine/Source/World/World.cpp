@@ -10,13 +10,13 @@ namespace Opaax
     // =========================================================================
     // CTOR - DTOR
     // =========================================================================
-    World::World(OpaaxString InName, EWorldMode InMode)
-        : m_Id(Guid::New())
-        , m_Name(Move(InName))
-        , m_Mode(InMode)
+    World::World(const OpaaxStringID InName, EWorldMode InMode)
+        : m_Mode(InMode)
     {
+        SetName(InName);
+
         // Log the mode: Edit and Play worlds differ only by their subsystems.
-        OPAAX_LOG(LogWorld, Trace, "World '{}' created ({})", m_Name.CStr(), ToString(m_Mode));
+        OPAAX_LOG(LogWorld, Trace, "World '{}' created ({})", GetName().CStr(), ToString(m_Mode));
     }
 
     World::~World()
@@ -24,13 +24,13 @@ namespace Opaax
         // In case DestroyWorld did not run first. Safe to repeat.
         ShutdownSubsystems();
 
-        OPAAX_LOG(LogWorld, Trace, "World '{}' destroyed ({} entity(ies))", m_Name.CStr(), m_EntityCount);
+        OPAAX_LOG(LogWorld, Trace, "World '{}' destroyed ({} entity(ies))", GetName().CStr(), m_EntityCount);
     }
 
     // =========================================================================
     // Level
     // =========================================================================
-    void World::SetLevel(TUniquePtr<Level> InLevel)
+    void World::SetLevel(TStrongObjectPtr<Level> InLevel)
     {
         m_Level = Move(InLevel);
     }
@@ -41,6 +41,7 @@ namespace Opaax
     void World::SetContext(const WorldContext& InContext)
     {
         m_Context = MakeUnique<WorldContext>(InContext);
+        m_Subsystems.SetContext(m_Context.get());
     }
 
     void World::ShutdownSubsystems()
@@ -91,7 +92,7 @@ namespace Opaax
         if (m_Guids.Contains(InGuid))
         {
             OPAAX_LOG(LogWorld, Error, "CreateEntityWithGuid — '{}' refused: that Guid is already live in world '{}'",
-                      InName.CStr(), m_Name.CStr());
+                      InName.CStr(), GetName().CStr());
             return Entity{};
         }
 
@@ -167,14 +168,14 @@ namespace Opaax
     {
         m_bActive = true;
 
-        OPAAX_LOG(LogWorld, Trace, "World '{}' activated", m_Name.CStr());
+        OPAAX_LOG(LogWorld, Trace, "World '{}' activated", GetName().CStr());
     }
     
     void World::OnDesactive()
     {
         m_bActive = false;
 
-        OPAAX_LOG(LogWorld, Trace, "World '{}' deactivated", m_Name.CStr());
+        OPAAX_LOG(LogWorld, Trace, "World '{}' deactivated", GetName().CStr());
     }
 
     void World::Clear() noexcept
@@ -201,6 +202,6 @@ namespace Opaax
         // claiming a map would refuse to mount it again).
         if (m_Level != nullptr) { m_Level->OnWorldCleared(); }
 
-        OPAAX_LOG(LogWorld, Trace, "World '{}' cleared", m_Name.CStr());
+        OPAAX_LOG(LogWorld, Trace, "World '{}' cleared", GetName().CStr());
     }
 }

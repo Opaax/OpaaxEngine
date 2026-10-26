@@ -11,5 +11,5 @@ namespace Opaax
     OPAAX_REGISTER_OBJECT(InputMappingContextAsset);
 
     // After the UI subsystem (order 100): the UI consumes the input it used first.
-    OPAAX_REGISTER_NAMED_GAME_INSTANCE_SUBSYSTEM(InputMappingSubsystem, "InputMapping", 200);
+    OPAAX_REGISTER_OBJECT(InputMappingSubsystem);
 }

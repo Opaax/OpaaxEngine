@@ -2,13 +2,12 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/Log/Logger.h"
-#include "Engine/GameInstance/IGameInstanceSubsystem.h"
+#include "Engine/GameInstance/GameInstanceSubsystem.h"
 #include "UI/UIInputMode.h"
 #include "UI/UICanvas.h"
 
 namespace Opaax
 {
-    struct GameInstanceContext;
     struct LevelLoadFinished;
     struct LevelLoadRequested;
     class  InputMappingSubsystem;
@@ -25,20 +24,16 @@ namespace Opaax
     //
     //   Gameplay reaches it through WorldContext::UI.
     // =============================================================================
-    class UISubsystem final : public GameInstanceSubsystemBase
+    class UISubsystem final : public GameInstanceSubsystem
     {
-        // =========================================================================
-        // Base Implementation
-        // =========================================================================
-    public:
-        OPAAX_SUBSYSTEM_TYPE(UISubsystem)
+        OPAAX_OBJECT(UISubsystem, GameInstanceSubsystem)
 
         // =========================================================================
         // CTORS - DTORS
         // =========================================================================
     public:
-        explicit UISubsystem(GameInstanceContext& InContext) noexcept;
-        ~UISubsystem() override = default;
+        UISubsystem();
+        ~UISubsystem() override;
 
         // =========================================================================
         // Canvas
@@ -55,7 +50,7 @@ namespace Opaax
         UIWidget* MountAsset(const OpaaxString& InAssetPath, UIWidget* InParent = nullptr);
 
         /** Loads a .opaaxui tree without adding it (for another canvas). */
-        TUniquePtr<UIWidget> LoadTree(const OpaaxString& InAssetPath, float& OutAuthoredHeight) const;
+        TStrongObjectPtr<UIWidget> LoadTree(const OpaaxString& InAssetPath, float& OutAuthoredHeight) const;
 
         // =========================================================================
         // Loading screen
@@ -75,12 +70,17 @@ namespace Opaax
         EUIInputMode GetInputMode() const noexcept { return m_InputMode; }
 
         // =========================================================================
-        // ISubsystem
+        // Override
         // =========================================================================
     public:
+        //~Begin Subsystem interface
+        /** After the global audio bank, before the input mapping. */
+        Int32 GetTickOrder() const override { return 100; }
+
         bool Startup() override;
         void Update(double InDeltaTime) override;
         void Shutdown() override;
+        //~End Subsystem interface
 
         // =========================================================================
         // Internal
@@ -96,7 +96,6 @@ namespace Opaax
         // Members
         // =========================================================================
     private:
-        GameInstanceContext*   m_Context = nullptr;   // owned by the GameInstance
         InputMappingSubsystem* m_Mapping = nullptr;   // resolved in Startup; may be null
         UICanvas               m_Canvas;
         UICanvas               m_LoadingCanvas;

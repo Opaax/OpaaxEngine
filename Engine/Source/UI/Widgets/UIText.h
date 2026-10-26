@@ -6,15 +6,13 @@
 #include "Core/Reflection/OpaaxEnum.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
-#include "Resources/ResourcePath.h"
-#include "Resources/ResourcePathJson.h"
+#include "Renderer/Text/FontFace.h"   // complete: a widget class visits its face reference
 #include "Renderer/Text/TextDrawParams.h"
+#include "Resources/Asset/AssetRef.h"
 #include "UI/UIWidget.h"
 
 namespace Opaax
 {
-    // Forward-declared: TResourcePath only needs the name.
-    struct FontFaceResource;
 
     /** Vertical position of the lines in the rect. */
     enum class EUIVAlign : Uint8
@@ -43,6 +41,8 @@ namespace Opaax
     // =============================================================================
     class UIText final : public UIWidget
     {
+        OPAAX_OBJECT(UIText, UIWidget)
+
         // =============================================================================
         // Authored state
         // =============================================================================
@@ -51,7 +51,7 @@ namespace Opaax
         /** "Source.Property" to read the text from; empty = Text is shown. */
         OpaaxString Binding;
         /** A font face path (accepts a dropped .ttf). */
-        TResourcePath<FontFaceResource> Font;
+        TAssetRef<FontFace> Font;
         float       Size            = 32.f;
         LinearColor Color;
         ETextAlign  HAlign          = ETextAlign::Left;
@@ -82,11 +82,6 @@ namespace Opaax
         // UIWidget
         // =============================================================================
     public:
-        OpaaxStringID GetTypeName() const noexcept override { return OPAAX_ID("UIText"); }
-
-        void SaveFields(nlohmann::json& InOutJson) const override;
-        void LoadFields(const nlohmann::json& InJson) override;
-
         void OnPullBindings(UIBindingTable& InBindings) override;
 
         /** What is drawn: the formatted bound value when available, else Text. */

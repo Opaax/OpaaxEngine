@@ -13,6 +13,8 @@ namespace Opaax
     // =============================================================================
     class UISafeArea final : public UIWidget
     {
+        OPAAX_OBJECT(UISafeArea, UIWidget)
+
         // =============================================================================
         // Authored state
         // =============================================================================
@@ -33,11 +35,6 @@ namespace Opaax
          * Stretched over the parent and not hit-testable by default.
          */
         UISafeArea();
-
-        OpaaxStringID GetTypeName() const noexcept override { return OPAAX_ID("UISafeArea"); }
-
-        void SaveFields(nlohmann::json& InOutJson) const override;
-        void LoadFields(const nlohmann::json& InJson) override;
 
     protected:
         /** My rect, inset per edge. */

@@ -8,10 +8,10 @@
 #include "Renderer/Components/QuadComponent.h"
 #include "Renderer/Components/SpriteComponent.h"
 #include "Renderer/Components/TextComponent.h"
-#include "Renderer/Text/FontFaceResource.h"
+#include "Renderer/Text/FontFace.h"
 #include "Renderer/Text/FontFamily.h"
 #include "Renderer/Textures/SpriteSheet.h"
-#include "Renderer/Textures/TextureResource.h"
+#include "Renderer/Textures/Texture2D.h"
 
 namespace Opaax
 {
@@ -38,6 +38,9 @@ namespace Opaax
     // A texture cut into frames, which sprites, UI images and clips show.
     OPAAX_REGISTER_OBJECT(SpriteSheet);
 
-    OPAAX_REGISTER_NAMED_RESOURCE(TextureResource, "Texture");
-    OPAAX_REGISTER_NAMED_RESOURCE(FontFaceResource, "FontFace");
+    // An image, read from its .png (or .jpg, .tga, .bmp) file.
+    OPAAX_REGISTER_OBJECT(Texture2D);
+
+    // A font's glyphs, baked from its .ttf (or .otf) file.
+    OPAAX_REGISTER_OBJECT(FontFace);
 }

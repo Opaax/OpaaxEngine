@@ -5,7 +5,7 @@
 namespace Opaax
 {
     bool ResolveImageSource(const UIBuildContext& InContext, ITexture2D* const InRuntime,
-                            const TResourcePath<TextureResource>& InTexture,
+                            const TAssetRef<Texture2D>& InTexture,
                             const TAssetRef<SpriteSheet>& InSheet, const Int32 InFrame,
                             UIResolvedImage& Out, bool& bOutNamed)
     {

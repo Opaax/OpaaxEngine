@@ -22,7 +22,7 @@
 #include "Application/Services/IProjectManager.h"   // new UI uses the project's reference height
 #include "Engine/Registries/EngineRegistries.h"
 #include "UI/UICanvasFile.h"
-#include "UI/UIWidgetRegistry.h"
+#include "Object/ObjectClassRegistry.h"
 #include "Editor/Operation/MapOperations.h"
 #include "Editor/Operation/NewLevelPlan.hpp"
 #include "Editor/PIE/PlayInEditor.h"
@@ -774,9 +774,9 @@ namespace Opaax::Editor
             return;   // UICanvasFile logged why
         }
 
-        const UIWidgetRegistry& lRegistry = OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets();
+        const ObjectClassRegistry& lClasses = OpaaxApplication::GetAppService<IEngine>().GetRegistries().ObjectClasses();
 
-        if (InContext.UICanvasDocument.Open(InParams.AbsPath, lRegistry))
+        if (InContext.UICanvasDocument.Open(InParams.AbsPath, lClasses))
         {
             InContext.Panels.SetVisible(UICanvasPanel::PanelID(), true);
         }

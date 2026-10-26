@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
-#include "Resources/ResourcePath.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Log/Logger.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
@@ -33,12 +32,12 @@ namespace Opaax
     class IRenderTarget;
     class ITexture2D;
     struct FramebufferSpec;
-    struct TextureResource;
+    class Texture2D;
     class SpriteSheet;
     struct SpriteComponent;
     struct SpriteUVRect;
     struct WindowResize;
-    struct FontFaceResource;
+    class FontFace;
     class FontFamily;
     struct FontStyleKey;
     struct FontFaceView;
@@ -54,13 +53,9 @@ namespace Opaax
     //   config, services and paths, builds a RenderSystemDesc, owns the RenderSystem and
     //   drives its frame. The RenderSystem itself knows nothing about the engine.
     // =============================================================================
-    class RendererManager final : public EngineSubsystemBase, public IUIAssetProvider
+    class RendererManager final : public EngineSubsystem, public IUIAssetProvider
     {
-        // =============================================================================
-        // Base Implementation
-        // =============================================================================
-    public:
-        OPAAX_SUBSYSTEM_TYPE(RendererManager)
+        OPAAX_OBJECT(RendererManager, EngineSubsystem)
 
         // =============================================================================
         // CTORS - DTORS
@@ -182,10 +177,10 @@ namespace Opaax
         void SubmitRenderCounters();
 
         /**
-         * The GPU texture for an asset-relative path. Loaded once and cached.
-         * Null for an empty path or while uploading; a failed load gives the magenta placeholder.
+         * The GPU texture of the image InRef names. Loaded once and cached. Null for an empty reference
+         * or without a device; an image that did not load gives a magenta texture.
          */
-        ITexture2D* ResolveTexture(const TResourcePath<TextureResource>& InPath);
+        ITexture2D* ResolveTexture(const TAssetRef<Texture2D>& InRef);
 
         /**
          * The sprite sheet InRef names. Loaded once and cached. Null for an empty reference.
@@ -202,7 +197,7 @@ namespace Opaax
         /**
          * The font face (metrics and atlas) for an asset-relative .ttf path. Loaded once and cached.
          */
-        FontFaceView ResolveFace(const TResourcePath<FontFaceResource>& InPath);
+        FontFaceView ResolveFace(const TAssetRef<FontFace>& InRef);
 
         /** IUIAssetProvider — the same caches, for UI widgets. */
         FontFaceView     ResolveFace(const char* InAssetPath) override;
@@ -263,7 +258,7 @@ namespace Opaax
         TUniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec& InSpec);
 
         /**
-         * Uploads decoded pixels to a GPU texture (used by TextureResource::Initialize).
+         * Uploads decoded pixels to a GPU texture (used by Texture2D::InitializeOnMainThread).
          * Release it before the render core shuts down.
          * @return Null before Startup
          */
@@ -280,12 +275,12 @@ namespace Opaax
         // =============================================================================
         // Override
         // =============================================================================
-        //~Begin EngineSubsystemBase Interface
+        //~Begin Subsystem interface
     public:
         bool Startup()             override;
         void Shutdown()            override;
         void Render(double InAlpha) override;
-        //~End EngineSubsystemBase Interface
+        //~End Subsystem interface
 
         // =============================================================================
         // Types
@@ -363,9 +358,12 @@ namespace Opaax
         // Debug shapes. Owned here because the renderer consumes them.
         DebugDraw               m_DebugDraw;
 
-        // Asset path -> loaded texture. Released in Shutdown, before the ResourceManager's,
+        // Images by path, kept for the session. Released in Shutdown, before the ResourceManager's,
         // while the GL context is still alive.
-        TUnorderedMap<Uint32, ResourceRef<TextureResource>> m_TextureCache;
+        TUnorderedMap<Uint32, TAssetHandle<Texture2D>> m_TextureCache;
+
+        /** What an image that did not load draws: a magenta square, loud on purpose. */
+        TUniquePtr<ITexture2D> m_MissingTexture;
 
         /** Sprite sheets by path, kept for the session (a saved sheet reloads in place). */
         TUnorderedMap<Uint32, TAssetHandle<SpriteSheet>> m_SheetCache;
@@ -377,8 +375,8 @@ namespace Opaax
         TUnorderedSet<Uint32> m_WarnedFrameRange;
 
         /** Same caches for fonts: .ttf faces and font families. */
-        TUnorderedMap<Uint32, ResourceRef<FontFaceResource>> m_FaceCache;
-        TUnorderedMap<Uint32, TAssetHandle<FontFamily>>      m_FamilyCache;
+        TUnorderedMap<Uint32, TAssetHandle<FontFace>>   m_FaceCache;
+        TUnorderedMap<Uint32, TAssetHandle<FontFamily>> m_FamilyCache;
 
         /**
          * (family, style) pairs already warned about. Font path id and packed style in one Uint64.
