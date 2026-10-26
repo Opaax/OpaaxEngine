@@ -2,7 +2,7 @@
 
 The rules, commands and conventions for working on this repository are in AGENTS.md:
 
-@../AGENTS.md
+@AGENTS.md
 
 # Guide Lines
 
@@ -14,8 +14,8 @@ The rules, commands and conventions for working on this repository are in AGENTS
 ## Code
 
 - Use core type instead of std
-- Porpose a wrapper or new engine core type if new std code appear.
-- Follow engine nommenclature
+- Propose a wrapper or new engine core type if new std code appear.
+- Follow engine nomenclature
 
 ## Best Pratice
 
