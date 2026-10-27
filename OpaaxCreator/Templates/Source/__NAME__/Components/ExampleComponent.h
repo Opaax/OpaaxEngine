@@ -9,7 +9,8 @@ namespace __NAME__
 {
     // =============================================================================
     // ExampleComponent — plain data on an entity: editable in the Inspector, saved in map files.
-    //   The registration line below is all it takes; delete this file when you have your own.
+    //   The registration line below is all it takes; delete this file, and its test in
+    //   Tests/Unit/__NAME__Tests.cpp, when you have your own.
     // =============================================================================
     struct ExampleComponent
     {

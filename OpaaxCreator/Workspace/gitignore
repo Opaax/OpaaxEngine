@@ -1,0 +1,12 @@
+# Build trees, and the presets of this machine
+build/
+CMakeUserPresets.json
+
+# The engine's unit tests, when built here (OPAAX_BUILD_ENGINE_TESTS), write their run's files there
+/OpaaxTests/
+
+# IDE files
+*.user
+.vs/
+.vscode/
+.idea/
