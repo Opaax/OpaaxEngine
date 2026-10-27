@@ -154,6 +154,6 @@ set(OPAAX_ENGINE_ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Assets" CACHE INTERNAL 
 # ==================================
 # Unit tests
 # ==================================
-if(OPAAX_BUILD_TESTS)
+if(OPAAX_BUILD_TESTS AND OPAAX_BUILD_ENGINE_TESTS)
     add_subdirectory(Tests)
 endif()
