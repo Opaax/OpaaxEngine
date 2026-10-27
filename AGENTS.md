@@ -48,9 +48,10 @@ A change is done when it is tested and seen working, not when it compiles.
    `TestWorld/EditorTests` runs in CTest. See [Docs/Automation.md](Docs/Automation.md). Automation
    cannot click inside a window: what a custom asset editor shows for a selection is checked with a
    local build that starts selected, then reverted.
-5. **CI** (`.github/workflows/build.yml`): Windows, Ubuntu and macOS, debug-editor and release.
-   Linux also renders on Mesa's software OpenGL (stricter than desktop drivers) and runs the feature
-   tests there. A change is finished when every job is green.
+5. **CI** (`.github/workflows/build.yml`): Windows, Ubuntu and macOS, debug-editor and release, and a
+   game repository made by MakeOpaax (Windows, Ubuntu). Linux also renders on Mesa's software OpenGL
+   (stricter than desktop drivers) and runs the feature tests there. A change is finished when every
+   job is green.
 
 ## Code style
 
@@ -160,6 +161,11 @@ Match the code around you. In short:
   warning MSB8029), and stale objects then crash at run time. Keep checkouts and builds out of it.
 - A `git worktree` has no submodules: run `git submodule update --init --recursive` in it before the
   first build (the configure step says so).
+- The engine is also a subdirectory of game repositories ([Docs/GameRepository.md](Docs/GameRepository.md)),
+  where `CMAKE_SOURCE_DIR` is the game's. The engine's and the editor's files are found from their own
+  folders (`CMAKE_CURRENT_SOURCE_DIR`, `OPAAX_ENGINE_DIR`, `OPAAX_EDITOR_DIR`), and a setting games
+  need goes in `opaax_configure_target`: `add_compile_options` and `CMAKE_*` variables stop at the
+  engine's folders.
 - `OPAAX_REGISTER_*` runs only in code linked whole: the engine and the game modules. The editor
   library is not, so a registration in an editor file is dropped by the linker; the editor registers
   through its `EditorExtensionRegistrar`, and makes its config by reading it.

@@ -219,3 +219,18 @@ Windows, Linux and macOS, with the feature tests on Linux.
   every preset and runs the unit tests.
 - **Against:** feature tests need a display (a virtual one on CI) and run in game time, so a check
   after a timed event needs margin on a slow machine.
+
+### Games beside the engine, or in repositories of their own
+
+The engine's CMake works as the top-level project, its games beside it, or as a subdirectory of a
+game's own repository ([GameRepository.md](GameRepository.md)). A dev build bakes two folders: the
+workspace, the top-level project that holds the games, and the engine's own; a ship build finds both
+next to the executable. The engine's games and unit tests are built only when it is the top-level
+project.
+
+- **For:** a game keeps its history, issues and CI apart and pins the engine at a commit, as a
+  submodule; nothing is installed or registered, unlike Unreal's engine association or O3DE's
+  registered engines; MakeOpaax makes either kind, and the engine's CI builds a game repository.
+- **Against:** each game repository builds the engine from source; a setting that games need goes on
+  their targets (`opaax_configure_target`), since folder-wide CMake settings stop at the engine's
+  folders.
