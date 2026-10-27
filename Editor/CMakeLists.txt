@@ -62,3 +62,6 @@ target_link_libraries(OpaaxEditorLib
 
 target_compile_definitions(OpaaxEditorLib PUBLIC OPAAX_WITH_EDITOR=1)
 target_include_directories(OpaaxEditorLib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Source)
+
+# The editor's own content (Assets/: type icons) is found from this folder, wherever the workspace is.
+target_compile_definitions(OpaaxEditorLib PRIVATE OPAAX_EDITOR_DIR="${CMAKE_CURRENT_SOURCE_DIR}")

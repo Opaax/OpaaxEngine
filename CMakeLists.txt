@@ -9,13 +9,20 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake")
 
 # =============================================================================
 # Options
-#   OPAAX_EDITOR_SUPPORT : build the editor library and the <Game>Editor executables.
-#   OPAAX_DEV_BUILD      : assets resolve from the source tree instead of next to the executable.
-#   OPAAX_BUILD_TESTS    : build the unit tests and register them with CTest.
+#   OPAAX_EDITOR_SUPPORT     : build the editor library and the <Game>Editor executables.
+#   OPAAX_DEV_BUILD          : assets resolve from the source tree instead of next to the executable.
+#   OPAAX_BUILD_TESTS        : build the tests (the engine's, the games') and register them with CTest.
+#   OPAAX_BUILD_SAMPLES      : build this repository's games: Sandbox, TestWorld and the ones MakeOpaax
+#                              adds here.
+#   OPAAX_BUILD_ENGINE_TESTS : build the engine's own unit tests (OpaaxTests, StdUse).
+# The last two are on when the engine is the top-level project. A game repository that adds the
+# engine as a subdirectory builds the engine and its own games only (Docs/GameRepository.md).
 # =============================================================================
-option(OPAAX_EDITOR_SUPPORT "Build the editor library and editor executables" OFF)
-option(OPAAX_DEV_BUILD      "Development build: resolve assets from the source tree, not the exe dir" OFF)
-option(OPAAX_BUILD_TESTS    "Build the unit tests" ON)
+option(OPAAX_EDITOR_SUPPORT     "Build the editor library and editor executables" OFF)
+option(OPAAX_DEV_BUILD          "Development build: resolve assets from the source tree, not the exe dir" OFF)
+option(OPAAX_BUILD_TESTS        "Build the tests" ON)
+option(OPAAX_BUILD_SAMPLES      "Build the engine repository's games (Sandbox, TestWorld)" ${PROJECT_IS_TOP_LEVEL})
+option(OPAAX_BUILD_ENGINE_TESTS "Build the engine's unit tests (OpaaxTests)" ${PROJECT_IS_TOP_LEVEL})
 
 # The editor edits the source tree, so it only makes sense in a dev build.
 if(OPAAX_EDITOR_SUPPORT AND NOT OPAAX_DEV_BUILD)
@@ -40,7 +47,15 @@ if(OPAAX_EDITOR_SUPPORT)
     add_subdirectory(Editor)
 endif()
 
-# Game projects. Each one is a folder with a CMakeLists.txt calling opaax_add_game().
+# =============================================================================
+# This repository's games. Each one is a folder with a CMakeLists.txt calling opaax_add_game();
+# MakeOpaax adds a game's line at the end of this file. A game repository builds its own games, so
+# without OPAAX_BUILD_SAMPLES this file stops here.
+# =============================================================================
+if(NOT OPAAX_BUILD_SAMPLES)
+    return()
+endif()
+
 add_subdirectory(Sandbox)
 
 # Visual Studio: F5 starts the app the preset is for.

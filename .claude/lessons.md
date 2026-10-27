@@ -19,6 +19,9 @@ What working on this repository taught, kept short so the next session starts fr
   pushing; ImGui's `static_assert` errors there are clang-cl noise.
 - A failed CI job's log needs admin rights through the API, but its annotations (the compiler errors)
   are public: `api.github.com/repos/Opaax/OpaaxEngine/check-runs/<job id>/annotations`.
+- Bash calls sent together share one shell: the `cd` of one moved the other, whose `cmake -S . -B build`
+  then configured a CMake tree in the repository's `build/` itself. Give CMake absolute `-S` and `-B`
+  paths, and never count on a `cd` when calls run side by side.
 
 ## Code
 
@@ -36,6 +39,9 @@ What working on this repository taught, kept short so the next session starts fr
 - Clang refuses `const T x;` when T or one of its members has a defaulted default constructor and an
   anonymous union with an uninitialized member; MSVC and GCC accept it. OpaaxString had one, so every
   type holding a string was caught: its constructor is written out (`constexpr OpaaxString() noexcept {}`).
+- A test that a module's type is registered proves nothing about linking the module whole when the
+  test includes the type's header: a registration in a header runs in the test's own file. Check from
+  a file that does not include it; linked plainly, that check fails.
 
 ## Looking at the editor
 

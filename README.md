@@ -33,6 +33,7 @@ Clang on macOS (what CI builds with). Clone with the submodules: `git clone --re
 | `build.bat release` | `./build.sh release` | Release games, no editor |
 | `build.bat test` | `./build.sh test` | Builds and runs the tests |
 | `build.bat export <Game> <Dir>` | `./build.sh export <Game> <Dir>` | Exports a game into a folder |
+| `MakeOpaax <Name> [<Folder>]` | `./MakeOpaax.sh <Name> [<Folder>]` | Creates a game here, or in a game repository of its own |
 
 Executables land in `build/<preset>/bin/` (`bin/<Config>/` with Visual Studio). Linux needs the
 X11/Wayland/GL development packages listed in `.github/workflows/build.yml`.
@@ -40,6 +41,8 @@ X11/Wayland/GL development packages listed in `.github/workflows/build.yml`.
 ## Where to go next
 
 - [Docs/QuickStart.md](Docs/QuickStart.md): a first game, from a new project to an exported build.
+- [Docs/GameRepository.md](Docs/GameRepository.md): a game in a repository of its own, the engine as
+  a submodule, with its tests and CI.
 - [Docs/Customizing.md](Docs/Customizing.md): extending the engine and the editor.
 - [Docs/Objects.md](Docs/Objects.md): asset classes, their files and windows, custom asset editors,
   converting old asset files.

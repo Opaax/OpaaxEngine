@@ -108,3 +108,17 @@ Use `world.wait` (game time) rather than counting frames: machines and CI run at
 A probe that measures physics counts fixed steps (`OnFixedUpdate`) rather than reading the clock: on
 a slow machine one frame runs several steps.
 The commands are listed in [Docs/Automation.md](../../Docs/Automation.md).
+
+## A game's tests
+
+A game declares its own in its `CMakeLists.txt`, after `opaax_add_game` (MakeOpaax's template does):
+
+```cmake
+opaax_add_game_tests(MyGame Tests/Unit/MyGameTests.cpp)   # MyGameTests: the game module linked whole
+opaax_add_game_feature_tests(MyGame Tests)                # MyGame.<Script>, one per Tests/*.json
+```
+
+The unit tests are written as above and share `Main.cpp` (the `OpaaxTestMain` library); the feature
+tests are scripts like TestWorld's, whose `Tests/` is registered the same way. Their answers and
+screenshots go to `build/<preset>/MyGameResults/`. In a game repository, the engine's own tests are
+not built: [Docs/GameRepository.md](../../Docs/GameRepository.md#tests).

@@ -14,6 +14,7 @@ TEST_CASE("smoke: harness runs and the engine library links")
     const Opaax::ProjectLayout lLayout = Opaax::ResolveProjectLayout(
         Opaax::OpaaxString("W:/ws/bin/Game.exe"),
         Opaax::OpaaxString("W:/ws"),
+        Opaax::OpaaxString(),
         Opaax::OpaaxString());
 
     CHECK(lLayout.WorkspaceRoot == "W:/ws");

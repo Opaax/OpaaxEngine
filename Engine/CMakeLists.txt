@@ -128,11 +128,14 @@ if(APPLE)
     target_compile_definitions(OpaaxEngineLib PRIVATE GL_SILENCE_DEPRECATION)
 endif()
 
-# A dev build bakes the source-tree root, so paths resolve to the source assets and configs.
+# A dev build bakes the source roots, so paths resolve to the source assets and configs: the
+# workspace (the top-level project, which holds the games) and this folder (the engine's content).
+# They differ when a game repository adds the engine as a subdirectory (External/OpaaxEngine).
 # A ship build bakes nothing and resolves everything next to the executable.
 if(OPAAX_DEV_BUILD)
     target_compile_definitions(OpaaxEngineLib PUBLIC OPAAX_WORKSPACE_DIR="${CMAKE_SOURCE_DIR}")
-    message(STATUS "[Opaax] Dev build: workspace root ${CMAKE_SOURCE_DIR}")
+    target_compile_definitions(OpaaxEngineLib PRIVATE OPAAX_ENGINE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+    message(STATUS "[Opaax] Dev build: workspace root ${CMAKE_SOURCE_DIR}, engine ${CMAKE_CURRENT_SOURCE_DIR}")
 else()
     message(STATUS "[Opaax] Ship build: paths resolve next to the executable")
 endif()
@@ -149,7 +152,7 @@ target_link_libraries(OpaaxEngine INTERFACE "$<LINK_LIBRARY:WHOLE_ARCHIVE,OpaaxE
 set(OPAAX_ENGINE_ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Assets" CACHE INTERNAL "Engine assets folder")
 
 # ==================================
-# Unit tests
+# Unit tests: the test main every test executable links, and the engine's own suites
 # ==================================
 if(OPAAX_BUILD_TESTS)
     add_subdirectory(Tests)

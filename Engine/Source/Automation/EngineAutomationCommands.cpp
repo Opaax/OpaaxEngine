@@ -200,13 +200,14 @@ namespace Opaax::EngineAutomation
         // =========================================================================
         void RegisterApp(AutomationRunner& InRunner, IAutomationHost& InHost)
         {
-            InRunner.Register("app.info", "The app's frame and folders: {frame, workspace, project, assets, save}.",
+            InRunner.Register("app.info", "The app's frame and folders: {frame, workspace, engine, project, assets, save}.",
                 [&InHost](const nlohmann::json&)
                 {
                     const IPaths& lPaths = OpaaxApplication::GetAppService<IPaths>();
                     return AutomationResult::Ok(nlohmann::json{
                         { "frame",     InHost.GetFrameIndex() },
                         { "workspace", lPaths.WorkspaceRoot() },
+                        { "engine",    lPaths.EngineRoot() },
                         { "project",   lPaths.ProjectRoot() },
                         { "assets",    lPaths.AssetsDir() },
                         { "save",      lPaths.SaveDir() } });

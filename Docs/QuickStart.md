@@ -12,7 +12,8 @@ build
 
 `MakeOpaax` copies the templates in `OpaaxCreator/Templates` into `MyGame/` and adds
 `add_subdirectory(MyGame)` to the root `CMakeLists.txt`. `build` makes the debug build with the editor:
-`MyGameEditor` is in `build/debug-editor/bin/Debug/`.
+`MyGameEditor` is in `build/debug-editor/bin/Debug/`. To keep the game in a repository of its own,
+with the engine as a submodule, give `MakeOpaax` that folder: [GameRepository.md](GameRepository.md).
 
 ```
 MyGame/
@@ -22,7 +23,8 @@ MyGame/
   Source/MyGame/                the game's code: components, behaviours, subsystems
   Source/MyGameRuntime/         the game's executable (rarely touched)
   Editor/Source/MyGameEditor/   the game's editor extensions
-  Tests/                        automation scripts (optional, see step 5)
+  Tests/                        scripts that play the game and check it (step 5)
+  Tests/Unit/                   unit tests of the game's code (step 5)
 ```
 
 Every `.cpp` and `.h` under `Source/MyGame/` is compiled, and every type registers itself with one
@@ -123,8 +125,11 @@ A script plays the level and checks what happened; it fails (exit code 1) when a
 build\debug-editor\bin\Debug\MyGame.exe --exec MyGame\Tests\Spinner.json
 ```
 
-The answers are written to `Spinner.out.json` beside the script. To run such scripts with the tests,
-register them like `TestWorld/CMakeLists.txt` does. Every command is in
+The answers are written to `Spinner.out.json` beside the script. Every script in `MyGame/Tests` is
+also a CTest test, `MyGame.Spinner` (`opaax_add_game_feature_tests` in `MyGame/CMakeLists.txt`), beside
+the unit tests of `MyGame/Tests/Unit` (`MyGameTests`, doctest, written as in
+[Engine/Tests/README.md](../Engine/Tests/README.md)). After `build`,
+`ctest --test-dir build/debug-editor -C Debug -R MyGame` runs them all. Every command is in
 [Automation.md](Automation.md).
 
 ## 6. Export it

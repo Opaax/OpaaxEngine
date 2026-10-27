@@ -58,7 +58,7 @@ saved in `.opaaxmap` files.
 
 | Command | Params | Does |
 |---|---|---|
-| `app.info` | | Frame number and the project's folders |
+| `app.info` | | Frame number and the folders: workspace, engine, project, assets, save |
 | `app.quit` | | Closes the app at the end of the frame |
 | `frames.wait` | `count` | Lets frames run before the next request |
 | `world.wait` | `seconds` | Lets the playing world's clock advance (game time, whatever the frame rate) |

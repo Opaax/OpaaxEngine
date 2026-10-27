@@ -369,6 +369,7 @@ TEST_CASE("ResolveProjectLayout: a non-ASCII workspace survives resolution intac
     const ProjectLayout lLayout = ResolveProjectLayout(
         OpaaxString("W:/build/bin/Game.exe"),
         lWorkspace,
+        OpaaxString(),
         OpaaxString());
 
     CHECK(lLayout.WorkspaceRoot == lWorkspace);

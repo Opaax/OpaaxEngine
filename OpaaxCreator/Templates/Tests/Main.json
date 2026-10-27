@@ -1,0 +1,6 @@
+[
+    { "id": "play", "command": "level.play", "params": { "path": "Levels/Main.opaaxlevel" } },
+    { "command": "world.wait", "params": { "seconds": 0.5 } },
+    { "id": "camera", "command": "expect.entity", "params": { "entity": "Camera", "exists": true } },
+    { "command": "screenshot", "params": { "path": "Main.png" } }
+]

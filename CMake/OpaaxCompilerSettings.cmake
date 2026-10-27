@@ -1,31 +1,40 @@
 # =============================================================================
-# Compiler settings shared by every target (vendors included), plus opaax_configure_target()
-# for the engine's own targets (warnings).
+# Compiler settings shared by every target (vendors included), plus opaax_configure_target(),
+# which gives them, and the warnings, to the engine's, the editor's and the games' own targets.
 # =============================================================================
 
 # Static C runtime on Windows: a shipped game needs no Visual C++ redistributable.
 # Set before any add_subdirectory so vendors use the same runtime.
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+set(OPAAX_MSVC_RUNTIME "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE INTERNAL "C runtime of every target")
+set(CMAKE_MSVC_RUNTIME_LIBRARY "${OPAAX_MSVC_RUNTIME}")
 
 if(MSVC)
-    # One source encoding for every file, and the same execution charset.
-    add_compile_options(/utf-8)
-    # Large translation units (template-heavy registration code) exceed the default section count.
-    add_compile_options(/bigobj)
-    # Compile the files of one project in parallel.
-    add_compile_options(/MP)
-    # __cplusplus reports the real standard version.
-    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/Zc:__cplusplus>)
+    set(OPAAX_MSVC_COMPILE_OPTIONS
+        # One source encoding for every file, and the same execution charset.
+        /utf-8
+        # Large translation units (template-heavy registration code) exceed the default section count.
+        /bigobj
+        # Compile the files of one project in parallel.
+        /MP
+        # __cplusplus reports the real standard version.
+        $<$<COMPILE_LANGUAGE:CXX>:/Zc:__cplusplus>
+        # Release keeps symbols in a separate .pdb so a crash dump names functions and lines.
+        $<$<CONFIG:Release>:/Zi>
+        CACHE INTERNAL "MSVC compile options of every target")
 
-    # Release keeps symbols in a separate .pdb so a crash dump names functions and lines.
-    # /DEBUG turns off /OPT:REF and /OPT:ICF by default; they are turned back on.
-    add_compile_options("$<$<CONFIG:Release>:/Zi>")
-    add_link_options("$<$<CONFIG:Release>:/DEBUG;/OPT:REF;/OPT:ICF>")
+    set(OPAAX_MSVC_LINK_OPTIONS
+        # /DEBUG turns off /OPT:REF and /OPT:ICF by default; they are turned back on.
+        $<$<CONFIG:Release>:/DEBUG>
+        $<$<CONFIG:Release>:/OPT:REF>
+        $<$<CONFIG:Release>:/OPT:ICF>
+        # No incremental links: executables link the engine and game modules whole, and an incremental
+        # link can keep an old list of static initializers, so a type a header registers goes missing
+        # until the next full link.
+        $<$<CONFIG:Debug>:/INCREMENTAL:NO>
+        CACHE INTERNAL "MSVC link options of every target")
 
-    # No incremental links: executables link the engine and game modules whole, and an incremental
-    # link can keep an old list of static initializers, so a type a header registers goes missing
-    # until the next full link.
-    add_link_options("$<$<CONFIG:Debug>:/INCREMENTAL:NO>")
+    add_compile_options(${OPAAX_MSVC_COMPILE_OPTIONS})
+    add_link_options(${OPAAX_MSVC_LINK_OPTIONS})
 endif()
 
 # Threads (job system, audio) for every platform.
@@ -34,11 +43,21 @@ find_package(Threads REQUIRED)
 
 # =============================================================================
 # opaax_configure_target(<target>)
-#   Warnings and definitions for engine, editor, game and test targets. Not for vendors.
+#   Language level, C runtime, options and warnings for engine, editor, game and test targets. Not
+#   for vendors. Set on the target and not only for the folder: the settings above reach the
+#   engine's folders, but a game repository that adds the engine as a subdirectory makes its games
+#   in folders of its own.
 # =============================================================================
 function(opaax_configure_target InTarget)
+    set_target_properties(${InTarget} PROPERTIES
+        CXX_STANDARD          20
+        CXX_STANDARD_REQUIRED ON
+        CXX_EXTENSIONS        OFF
+        MSVC_RUNTIME_LIBRARY  "${OPAAX_MSVC_RUNTIME}")
+
     if(MSVC)
-        target_compile_options(${InTarget} PRIVATE /W3)
+        target_compile_options(${InTarget} PRIVATE /W3 ${OPAAX_MSVC_COMPILE_OPTIONS})
+        target_link_options(${InTarget} PRIVATE ${OPAAX_MSVC_LINK_OPTIONS})
     else()
         target_compile_options(${InTarget} PRIVATE
             -Wall

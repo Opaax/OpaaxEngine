@@ -1,11 +1,27 @@
 # =============================================================================
-# OpaaxTests — unit tests (doctest). Links the engine library like a game does.
-# One folder per engine module. Sources are listed explicitly, so adding a suite is a
-# deliberate edit.
+# OpaaxTestMain — doctest and its main(), which every test executable links: OpaaxTests and the
+# games' (opaax_add_game_tests).
 # =============================================================================
+add_library(OpaaxTestMain STATIC Main.cpp)
+opaax_configure_target(OpaaxTestMain)
+
+target_link_libraries(OpaaxTestMain PUBLIC OpaaxEngine)
+target_include_directories(OpaaxTestMain PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../Vendors/doctest)
+
+# doctest includes the real standard headers instead of forward-declaring std types
+# (recent MSVC rejects re-declaring standard templates).
+target_compile_definitions(OpaaxTestMain PUBLIC DOCTEST_CONFIG_USE_STD_HEADERS)
+
+# =============================================================================
+# OpaaxTests — the engine's unit tests (doctest). Links the engine library like a game does.
+# One folder per engine module. Sources are listed explicitly, so adding a suite is a
+# deliberate edit. Left out of a game repository's build (OPAAX_BUILD_ENGINE_TESTS).
+# =============================================================================
+if(NOT OPAAX_BUILD_ENGINE_TESTS)
+    return()
+endif()
 
 set(OPAAX_TEST_SOURCES
-    Main.cpp
     SmokeTest.cpp
     LegacyAssetFile.cpp
     TestTempDir.cpp
@@ -190,17 +206,10 @@ set(OPAAX_TEST_SOURCES
 add_executable(OpaaxTests ${OPAAX_TEST_SOURCES})
 opaax_configure_target(OpaaxTests)
 
-target_link_libraries(OpaaxTests PRIVATE OpaaxEngine)
+target_link_libraries(OpaaxTests PRIVATE OpaaxTestMain)
 
-target_include_directories(OpaaxTests PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../Vendors/doctest
-    # Header-only editor types only: nothing here may pull in ImGui.
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Editor/Source
-)
-
-# doctest includes the real standard headers instead of forward-declaring std types
-# (recent MSVC rejects re-declaring standard templates).
-target_compile_definitions(OpaaxTests PRIVATE DOCTEST_CONFIG_USE_STD_HEADERS)
+# Header-only editor types only: nothing here may pull in ImGui.
+target_include_directories(OpaaxTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../Editor/Source)
 
 # The engine's own asset files, read by the tests that check them (shaders), in every build.
 target_compile_definitions(OpaaxTests PRIVATE OPAAX_TEST_ENGINE_ASSETS="${CMAKE_CURRENT_SOURCE_DIR}/../Assets")

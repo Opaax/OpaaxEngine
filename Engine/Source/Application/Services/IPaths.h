@@ -13,8 +13,8 @@ namespace Opaax
     // =============================================================================
     struct ProjectLayout
     {
-        OpaaxString WorkspaceRoot;   // editor: source workspace; release: exe dir
-        OpaaxString EngineRoot;      // <WorkspaceRoot>/Engine
+        OpaaxString WorkspaceRoot;   // dev: the top-level source project, holding the games; release: exe dir
+        OpaaxString EngineRoot;      // dev: the engine's source folder; release: <exe dir>/Engine
         OpaaxString ProjectRoot;     // dir holding the .opaaxproj
         OpaaxString ProjectFile;     // the .opaaxproj itself
         OpaaxString AssetsDir;       // <ProjectRoot>/Assets
@@ -30,15 +30,20 @@ namespace Opaax
     /**
      * Resolves every engine and project directory. No OS calls.
      * @param InExePath Absolute path to the running executable
-     * @param InWorkspaceDir Source workspace in dev builds; empty in release (uses the exe directory)
+     * @param InWorkspaceDir Source workspace in dev builds (the top-level project, which holds the
+     *   games); empty in release (uses the exe directory)
+     * @param InEngineDir The engine's source folder in dev builds, wherever the workspace keeps it (a
+     *   game repository has it in a submodule); empty: <WorkspaceRoot>/Engine, where a ship build
+     *   deploys the engine's content
      * @param InProjectArg Value of --project (relative to the workspace), or empty for the default:
      *   dev build:  <WorkspaceRoot>/<ExeName>/<ExeName>.opaaxproj (the project's source folder)
      *   ship build: <WorkspaceRoot>/<ExeName>_Data/<ExeName>.opaaxproj. Not <ExeName>/: an
      *   executable has no extension on Linux and macOS, so a folder named like it cannot sit next to it.
      */
     ProjectLayout ResolveProjectLayout(const OpaaxString& InExePath,
-                                                 const OpaaxString& InWorkspaceDir,
-                                                 const OpaaxString& InProjectArg);
+                                       const OpaaxString& InWorkspaceDir,
+                                       const OpaaxString& InEngineDir,
+                                       const OpaaxString& InProjectArg);
 
     // =============================================================================
     // Mounts — an asset path without prefix is relative to the project's Assets dir.
@@ -68,8 +73,8 @@ namespace Opaax
         virtual void LogPaths() const = 0; 
 
         //----- roots ----------------------------------------------------------
-        virtual OpaaxString WorkspaceRoot() const = 0; // dev: source tree; release: exe dir
-        virtual OpaaxString EngineRoot()    const = 0; // <WorkspaceRoot>/Engine
+        virtual OpaaxString WorkspaceRoot() const = 0; // dev: the top-level source project; release: exe dir
+        virtual OpaaxString EngineRoot()    const = 0; // dev: the engine's source folder; release: <exe dir>/Engine
 
         //----- project layout -------------------------------------------------
         virtual OpaaxString ProjectRoot()   const = 0;   // dir holding the .opaaxproj
@@ -112,6 +117,9 @@ namespace Opaax
     public:
         Paths(const IPlatform& InPlatform, const CommandLine& InCommandLine,
               const OpaaxString& InProjectOverride = OpaaxString());
+
+        /** Paths over a layout the caller resolved (ResolveProjectLayout): tests and tools. */
+        explicit Paths(const ProjectLayout& InLayout) : m_Layout(InLayout) {}
 
         // =============================================================================
         // Override
