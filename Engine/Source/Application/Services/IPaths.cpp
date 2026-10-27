@@ -67,6 +67,7 @@ namespace Opaax
     // =========================================================================
     ProjectLayout ResolveProjectLayout(const OpaaxString& InExePath,
                                        const OpaaxString& InWorkspaceDir,
+                                       const OpaaxString& InEngineDir,
                                        const OpaaxString& InProjectArg)
     {
         const OpaaxString lAppName = PathString::Stem(InExePath).ToString();
@@ -94,7 +95,7 @@ namespace Opaax
 
         ProjectLayout lOut;
         lOut.WorkspaceRoot = lWorkspace;
-        lOut.EngineRoot    = PathString::Join(lWorkspace, "Engine");
+        lOut.EngineRoot    = InEngineDir.IsEmpty() ? PathString::Join(lWorkspace, "Engine") : PathString::Generic(InEngineDir);
         lOut.ProjectRoot   = lProjRoot;
         lOut.ProjectFile   = lProjFile;
         lOut.AssetsDir     = PathString::Join(lProjRoot, "Assets");
@@ -131,10 +132,15 @@ namespace Opaax
     Paths::Paths(const IPlatform& InPlatform, const CommandLine& InCommandLine,
                  const OpaaxString& InProjectOverride)
     {
+        // A dev build bakes the source workspace and the engine's folder (Engine/CMakeLists.txt).
         OpaaxString lWorkspace;
-        
+        OpaaxString lEngine;
+
 #if defined(OPAAX_WORKSPACE_DIR)
         lWorkspace = OpaaxString(OPAAX_WORKSPACE_DIR);
+#endif
+#if defined(OPAAX_ENGINE_DIR)
+        lEngine = OpaaxString(OPAAX_ENGINE_DIR);
 #endif
         const OpaaxString lExe = InPlatform.GetExecutablePath();
 
@@ -145,12 +151,13 @@ namespace Opaax
             lProjArg = InProjectOverride;
         }
 
-        m_Layout = ResolveProjectLayout(lExe, lWorkspace, lProjArg);
+        m_Layout = ResolveProjectLayout(lExe, lWorkspace, lEngine, lProjArg);
     }
 
     void Paths::LogPaths() const
     {
-        OPAAX_APP_LOG(Info, "Project root '{}', engine root '{}'", ProjectRoot().CStr(), EngineRoot().CStr());
+        OPAAX_APP_LOG(Info, "Workspace '{}', project root '{}', engine root '{}'",
+                      WorkspaceRoot().CStr(), ProjectRoot().CStr(), EngineRoot().CStr());
     }
 
     OpaaxString Paths::EngineToAbsolute(const OpaaxString& InEngineRel) const

@@ -28,11 +28,12 @@ namespace Opaax::Editor
     }
 
     // =========================================================================
-    // Tool space — <WorkspaceRoot>/Editor/* (the editor's own content, independent of the project)
+    // Tool space — the editor's own content, independent of the project and of the workspace (a game
+    // repository keeps the engine's repository in a subdirectory)
     // =========================================================================
     OpaaxString EditorPaths::ToolDir() const
     {
-        return PathString::Join(WorkspaceRoot(), "Editor");
+        return OpaaxString(OPAAX_EDITOR_DIR);
     }
 
     OpaaxString EditorPaths::ToolAssetsDir() const

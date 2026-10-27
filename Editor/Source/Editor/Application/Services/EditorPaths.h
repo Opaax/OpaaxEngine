@@ -14,12 +14,13 @@ namespace Opaax::Editor
     //       <ProjectRoot>/Editor/
     //           Assets/  Configs/  Source/  Save/  Temp/
     //
-    //   Tool space — <WorkspaceRoot>/Editor, the editor's own content:
+    //   Tool space — Editor/ in the engine's repository, the editor's own content:
     //
-    //       EditorAssetsDir()  <ProjectRoot>/Editor/Assets    this project's editor content
-    //       ToolAssetsDir()    <WorkspaceRoot>/Editor/Assets  the editor's own content (type icons)
+    //       EditorAssetsDir()  <ProjectRoot>/Editor/Assets        this project's editor content
+    //       ToolAssetsDir()    <engine repository>/Editor/Assets  the editor's own content (type icons)
     //
-    //   Tool space does not depend on the project, so it works even with no edited project.
+    //   Tool space depends on neither the project nor the workspace, so it works even with no edited
+    //   project, and in a game repository that holds the engine in a subdirectory.
     // =============================================================================
     class EditorPaths final : public Paths
     {
@@ -46,10 +47,10 @@ namespace Opaax::Editor
         OpaaxString EditorToAbsolute(const OpaaxString& InEditorRel)     const; // under <ProjectRoot>/Editor
         OpaaxString EditorAssetToAbsolute(const OpaaxString& InAssetRel) const; // under <ProjectRoot>/Editor/Assets
 
-        OpaaxString ToolDir()          const; // <WorkspaceRoot>/Editor
-        OpaaxString ToolAssetsDir()    const; // <WorkspaceRoot>/Editor/Assets
+        OpaaxString ToolDir()          const; // <engine repository>/Editor
+        OpaaxString ToolAssetsDir()    const; // <engine repository>/Editor/Assets
 
-        OpaaxString ToolAssetToAbsolute(const OpaaxString& InAssetRel) const; // under <WorkspaceRoot>/Editor/Assets
+        OpaaxString ToolAssetToAbsolute(const OpaaxString& InAssetRel) const; // under <engine repository>/Editor/Assets
 
     };
 }
