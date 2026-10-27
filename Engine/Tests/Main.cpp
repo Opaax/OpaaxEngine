@@ -1,5 +1,5 @@
-// OpaaxTests entry point. doctest's registry with our own main(). The Logger is never
-// initialized here, so engine code under test logs nothing.
+// Entry point of every test executable (OpaaxTests, a game's <Name>Tests): doctest's registry with
+// our own main(). The Logger is never initialized here, so engine code under test logs nothing.
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest.h>
 

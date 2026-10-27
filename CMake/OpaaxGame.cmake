@@ -16,6 +16,8 @@
 #   <Name>(.exe)                      the game
 #   <Name>_Data/                      <Name>.opaaxproj, Assets/, Configs/
 #   Engine/Assets/                    engine content
+#
+# The game's tests are declared after it: opaax_add_game_tests, opaax_add_game_feature_tests.
 # =============================================================================
 function(opaax_add_game InName)
     set(lRoot "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -78,6 +80,64 @@ function(opaax_add_game InName)
         set_target_properties(${InName}Editor PROPERTIES
             VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:${InName}Editor>")
     endif()
+endfunction()
+
+# =============================================================================
+# opaax_add_game_tests(<Name> <sources...>)
+#
+# The game's unit tests: one executable, <Name>Tests, of doctest cases from the sources (relative to
+# the calling folder, listed so that a new suite is a deliberate edit). It links the game module
+# whole, as the game does, so every type the module registers is there. Registered in CTest as
+# <Name>Tests; built with OPAAX_BUILD_TESTS.
+# =============================================================================
+function(opaax_add_game_tests InName)
+    if(NOT OPAAX_BUILD_TESTS)
+        return()
+    endif()
+    if(NOT TARGET ${InName}Module)
+        message(FATAL_ERROR "opaax_add_game_tests(${InName}): declare the game first, with opaax_add_game(${InName}).")
+    endif()
+    if(NOT ARGN)
+        message(FATAL_ERROR "opaax_add_game_tests(${InName}): no test sources given.")
+    endif()
+
+    add_executable(${InName}Tests ${ARGN})
+    opaax_configure_target(${InName}Tests)
+    target_link_libraries(${InName}Tests PRIVATE OpaaxTestMain "$<LINK_LIBRARY:WHOLE_ARCHIVE,${InName}Module>")
+
+    add_test(NAME ${InName}Tests COMMAND ${InName}Tests)
+endfunction()
+
+# =============================================================================
+# opaax_add_game_feature_tests(<Name> <dir>)
+#
+# A CTest test per automation script <dir>/*.json (relative to the calling folder), named
+# <Name>.<Script>: the game's runtime plays it (--exec) and fails when a check fails
+# (Docs/Automation.md). The answers and screenshots go to <build>/<Name>Results. They open a window,
+# so they need a display: labelled "feature" (`ctest -LE feature` leaves them out). Built with
+# OPAAX_BUILD_TESTS.
+# =============================================================================
+function(opaax_add_game_feature_tests InName InDir)
+    if(NOT OPAAX_BUILD_TESTS)
+        return()
+    endif()
+    if(NOT TARGET ${InName})
+        message(FATAL_ERROR "opaax_add_game_feature_tests(${InName}): declare the game first, with opaax_add_game(${InName}).")
+    endif()
+
+    get_filename_component(lDir "${InDir}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+    file(GLOB lScripts CONFIGURE_DEPENDS "${lDir}/*.json")
+
+    set(lResults "${CMAKE_BINARY_DIR}/${InName}Results")
+    file(MAKE_DIRECTORY "${lResults}")
+
+    foreach(lScript IN LISTS lScripts)
+        get_filename_component(lFeature "${lScript}" NAME_WE)
+        add_test(NAME ${InName}.${lFeature}
+                 COMMAND ${InName} --exec "${lScript}" --exec-out "${lResults}/${lFeature}.out.json"
+                 WORKING_DIRECTORY "${lResults}")
+        set_tests_properties(${InName}.${lFeature} PROPERTIES LABELS feature TIMEOUT 120)
+    endforeach()
 endfunction()
 
 # Writes <Name>ModuleTypes.cpp, which includes every header of the module, and adds it to the module.

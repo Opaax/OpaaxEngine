@@ -152,8 +152,8 @@ target_link_libraries(OpaaxEngine INTERFACE "$<LINK_LIBRARY:WHOLE_ARCHIVE,OpaaxE
 set(OPAAX_ENGINE_ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Assets" CACHE INTERNAL "Engine assets folder")
 
 # ==================================
-# Unit tests
+# Unit tests: the test main every test executable links, and the engine's own suites
 # ==================================
-if(OPAAX_BUILD_TESTS AND OPAAX_BUILD_ENGINE_TESTS)
+if(OPAAX_BUILD_TESTS)
     add_subdirectory(Tests)
 endif()
