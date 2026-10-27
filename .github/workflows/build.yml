@@ -134,3 +134,96 @@ jobs:
           name: testworld-${{ matrix.preset }}
           path: build/${{ matrix.preset }}/TestWorldResults
           if-no-files-found: ignore
+
+  # A game in a repository of its own (Docs/GameRepository.md): the engine checked out where a game
+  # repository keeps it, MakeOpaax makes the repository and its game, which is built and tested with
+  # the engine's CI helpers called from there.
+  game-repository:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+          - os: ubuntu-24.04
+            jobs: 4
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }} / game repository
+    defaults:
+      run:
+        shell: bash
+        working-directory: GameRepo
+    steps:
+      - name: Checkout the engine as the game repository's submodule
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          path: GameRepo/External/OpaaxEngine
+
+      - name: Linux packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev \
+            libwayland-dev libwayland-bin wayland-protocols libxkbcommon-dev \
+            libgl1-mesa-dev xvfb libgl1-mesa-dri
+
+      - name: Create the game repository (MakeOpaax.bat)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: External\OpaaxEngine\MakeOpaax.bat MyGame .
+
+      - name: Create the game repository (MakeOpaax.sh)
+        if: runner.os != 'Windows'
+        run: External/OpaaxEngine/MakeOpaax.sh MyGame .
+
+      - name: Configure
+        run: cmake --preset debug-editor 2>&1 | tee configure.log; exit ${PIPESTATUS[0]}
+
+      - name: Build
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cmake --build build/debug-editor --config Debug 2>&1 | tee build.log
+          else
+            cmake --build build/debug-editor --config Debug --parallel ${{ matrix.jobs }} -- -k 2>&1 | tee build.log
+          fi
+          exit ${PIPESTATUS[0]}
+
+      - name: Report errors
+        if: failure()
+        run: |
+          python3 External/OpaaxEngine/.github/scripts/report_errors.py configure.log || python External/OpaaxEngine/.github/scripts/report_errors.py configure.log
+          python3 External/OpaaxEngine/.github/scripts/report_errors.py build.log || python External/OpaaxEngine/.github/scripts/report_errors.py build.log
+
+      - name: Only the engine and the repository's game are built
+        run: |
+          ls -R build/debug-editor/bin
+          if find build/debug-editor/bin \( -iname 'Sandbox*' -o -iname 'TestWorld*' -o -iname 'OpaaxTests*' \) | grep .; then
+            echo "::error::The engine's own games or tests were built in a game repository"; exit 1
+          fi
+
+      # A matcher file is found from the workspace, where this job keeps the game repository in GameRepo/.
+      - name: Test
+        run: |
+          echo "::add-matcher::GameRepo/External/OpaaxEngine/.github/problem-matchers/doctest.json"
+          ctest --test-dir build/debug-editor -C Debug --output-on-failure -LE feature
+
+      # The game plays its level on a virtual screen: an error logged meanwhile (the engine's content
+      # not found from the game repository) fails the job.
+      - name: Feature tests
+        if: runner.os == 'Linux'
+        run: |
+          xvfb-run -a -s "-screen 0 1280x720x24" ctest --test-dir build/debug-editor -C Debug -L feature --output-on-failure
+          if grep -E "\] \[(error|critical)\]" MyGame/Save/Log/OpaaxEngine.log; then echo "::error::Errors were logged while playing"; exit 1; fi
+
+      - name: Report feature failures
+        if: runner.os == 'Linux' && failure()
+        run: python3 External/OpaaxEngine/.github/scripts/report_feature_failures.py build/debug-editor MyGame
+
+      - name: Upload feature results
+        if: runner.os == 'Linux' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: game-repository-results
+          path: GameRepo/build/debug-editor/MyGameResults
+          if-no-files-found: ignore

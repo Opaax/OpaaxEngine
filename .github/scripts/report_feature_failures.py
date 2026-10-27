@@ -1,20 +1,24 @@
-"""Turns the TestWorld feature tests' failures into GitHub annotations.
+"""Turns a game's feature test failures into GitHub annotations.
 
-Usage: python report_feature_failures.py <build folder> <TestWorld folder>
+Usage: python report_feature_failures.py <build folder> <game folder>
 
-Each game script (TestWorld/Tests/<Name>.json) writes its answers to
-<build>/TestWorldResults/<Name>.out.json, each editor script (TestWorld/EditorTests/<Name>.json) to
-Editor<Name>.out.json. A failed request is reported with its id, command and error; a script with no
-answers, or one that never finished, is reported too (the app crashed or hung). A test CTest failed
-while every request passed is reported as a failure of the app itself (a crash on exit, a timeout).
-Annotations are limited per step, so at most 10 are errors and the rest notices.
+The game is named after its folder (TestWorld, MyGame). Each game script (<game>/Tests/<Name>.json,
+registered by opaax_add_game_feature_tests) writes its answers to <build>/<Game>Results/<Name>.out.json,
+each editor script (<game>/EditorTests/<Name>.json) to Editor<Name>.out.json. A failed request is
+reported with its id, command and error; a script with no answers, or one that never finished, is
+reported too (the app crashed or hung). A test CTest failed while every request passed is reported as a
+failure of the app itself (a crash on exit, a timeout). Annotations are limited per step, so at most 10
+are errors and the rest notices. Works from the engine's repository and from a game repository that
+holds the engine in a subdirectory.
 """
 import json
 import sys
 from pathlib import Path
 
-# (scripts folder, answers file prefix, CTest name prefix)
-SUITES = (("Tests", "", "TestWorld."), ("EditorTests", "Editor", "TestWorldEditor."))
+
+def suites(game):
+    """(scripts folder, answers file prefix, CTest name prefix) for each kind of script."""
+    return (("Tests", "", f"{game}."), ("EditorTests", "Editor", f"{game}Editor."))
 
 
 def failed_in_ctest(build):
@@ -26,13 +30,14 @@ def failed_in_ctest(build):
     return names, log.stat().st_mtime
 
 
-def failures(build, testworld):
+def failures(build, game_folder):
     """(test, message) for every failure, in suite then name order."""
-    results = build / "TestWorldResults"
+    game = game_folder.resolve().name
+    results = build / f"{game}Results"
     failed, failed_at = failed_in_ctest(build)
     found = []
-    for folder, prefix, ctest_prefix in SUITES:
-        for script in sorted((testworld / folder).glob("*.json")):
+    for folder, prefix, ctest_prefix in suites(game):
+        for script in sorted((game_folder / folder).glob("*.json")):
             test = ctest_prefix + script.stem
             answers = results / f"{prefix}{script.stem}.out.json"
             if not answers.exists():
@@ -63,8 +68,8 @@ def failures(build, testworld):
 
 
 def main():
-    build, testworld = Path(sys.argv[1]), Path(sys.argv[2])
-    found = failures(build, testworld)
+    build, game_folder = Path(sys.argv[1]), Path(sys.argv[2])
+    found = failures(build, game_folder)
     print(f"{len(found)} feature test failure(s)")
 
     for index, (test, message) in enumerate(found[:30]):
