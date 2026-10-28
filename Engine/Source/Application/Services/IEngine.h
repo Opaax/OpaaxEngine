@@ -107,6 +107,14 @@ namespace Opaax
                                       World* InSource = nullptr, bool bInDrawUI = false) = 0;
 
         /**
+         * Draws a world into InTarget with the world's own view, read when the frame is drawn (after
+         * the fixed steps, where its camera frames it). For this frame only. Same parameters as
+         * SubmitRenderView.
+         */
+        virtual void SubmitWorldView(IRenderTarget& InTarget, bool bInDrawOverlays, World* InSource = nullptr,
+                                     bool bInDrawUI = false) = 0;
+
+        /**
          * Draws InCanvas for this frame only. Submit again every frame.
          * @param InCanvas Borrowed for the frame
          * @param InTarget Null draws over every view with UI enabled; otherwise only into

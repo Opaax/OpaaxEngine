@@ -96,7 +96,8 @@ namespace Opaax::Editor
 
     // =========================================================================
     // SubmitView — this panel's view, submitted every frame, hidden or not.
-    //   Uses the active world's view (a Play copy is framed by its CameraComponent).
+    //   Uses the active world's view, read when the frame is drawn: a Play copy is framed by its
+    //   CameraComponent after this frame's fixed steps, so the view cannot be copied here.
     // =========================================================================
     void ViewportPanel::SubmitView()
     {
@@ -105,12 +106,9 @@ namespace Opaax::Editor
             return;
         }
 
-        World* const lWorld = m_Context.Worlds.GetActiveWorld();
-
         // The game's UI is drawn over this view (Play is watched here).
-        m_Context.Engine.SubmitRenderView(*m_RenderTarget,
-                                          lWorld != nullptr ? lWorld->GetCameraView() : CameraView{},
-                                          /*bInDrawOverlays*/ true, /*InSource*/ nullptr, /*bInDrawUI*/ true);
+        m_Context.Engine.SubmitWorldView(*m_RenderTarget, /*bInDrawOverlays*/ true, /*InSource*/ nullptr,
+                                         /*bInDrawUI*/ true);
     }
 
     // =========================================================================

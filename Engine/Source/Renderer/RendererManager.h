@@ -252,6 +252,13 @@ namespace Opaax
         void SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget = nullptr, const CameraView* InView = nullptr);
 
         /**
+         * Draws a world into InTarget with the world's own view, read when the frame is drawn.
+         * Same parameters as SubmitRenderView.
+         */
+        void SubmitWorldView(IRenderTarget& InTarget, bool bInDrawOverlays, World* InSource = nullptr,
+                             bool bInDrawUI = false);
+
+        /**
          * Creates an offscreen framebuffer. Release it before the render core shuts down.
          * @return Null before Startup or without a device
          */
@@ -298,6 +305,9 @@ namespace Opaax
              * The world this view draws. Null means the active world.
              */
             World*         Source        = nullptr;  // not owned
+
+            /** View is ignored: the drawn world's own view is used, read at draw time. */
+            bool           bWorldView    = false;
         };
 
         // =============================================================================

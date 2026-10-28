@@ -38,6 +38,7 @@ namespace Opaax
             void PresentBackbuffer()      override {}
             bool CaptureFrame(const OpaaxString&) override { return false; }
             void SubmitRenderView(IRenderTarget&, const CameraView&, bool, World*, bool) override {}
+            void SubmitWorldView(IRenderTarget&, bool, World*, bool) override {}
             void SubmitUICanvas(UICanvas&, IRenderTarget*, const CameraView*) override {}
 
             TUniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec&) override { return nullptr; }
