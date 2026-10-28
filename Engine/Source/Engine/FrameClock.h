@@ -30,6 +30,9 @@ namespace Opaax
         /** A step owed to within this fraction of it is taken: sums of one delta land a hair under it. */
         static constexpr double STEP_EPSILON = 1.0e-6;
 
+        /** The most fixed steps a frame takes until told otherwise (Time.MaxStepsPerFrame). */
+        static constexpr Uint32 DEFAULT_MAX_STEPS = 8;
+
         explicit FrameClock(double InFixedDelta) noexcept : m_FixedDelta(InFixedDelta) {}
 
         /**
@@ -39,8 +42,22 @@ namespace Opaax
          */
         double BeginFrame(double InNow) noexcept;
 
-        /** True while the frame owes a fixed step; each true takes one. */
+        /**
+         * True while the frame owes a fixed step; each true takes one. Past the frame's most steps, the
+         * whole steps still owed are dropped (the part of one is kept, so the alpha holds) and it is false.
+         */
         bool TakeFixedStep() noexcept;
+
+        /**
+         * The most fixed steps one frame takes (at least 1). A frame owing more drops the rest: the game
+         * slows for that frame, instead of steps too slow for their own time making every frame longer.
+         */
+        void SetMaxStepsPerFrame(Uint32 InMax) noexcept;
+
+        Uint32 GetMaxStepsPerFrame() const noexcept { return m_MaxSteps; }
+
+        /** The fixed steps dropped so far, past a frame's most. */
+        Uint64 GetDroppedSteps() const noexcept { return m_DroppedSteps; }
 
         /** The next frame counts from InNow; the fixed steps owed are dropped. */
         void Restart(double InNow) noexcept;
@@ -59,6 +76,9 @@ namespace Opaax
 
         /** The refresh the deltas are snapped to (the measured one once known); 0 for none. */
         double GetRefreshInterval() const noexcept;
+
+        /** Whether this frame's delta was whole refreshes. */
+        bool IsSnapping() const noexcept { return m_RefreshInterval > 0.0 && m_bSnapping; }
 
         /**
          * Steps of InFixedDelta seconds from now on (Time.FixedRate). The time owed is kept: a shorter
@@ -105,6 +125,11 @@ namespace Opaax
         Uint32 m_OnRhythm  = 0;
         Uint32 m_OffRhythm = 0;
         bool   m_bSnapping = false;
+
+        // The most steps a frame takes, the steps this frame took, and the steps dropped so far.
+        Uint32 m_MaxSteps       = DEFAULT_MAX_STEPS;
+        Uint32 m_StepsThisFrame = 0;
+        Uint64 m_DroppedSteps   = 0;
 
         /** InMeasured as whole refreshes, the rest carried; as measured off the screen's rhythm. */
         double SnapToRefresh(double InMeasured) noexcept;

@@ -62,7 +62,10 @@ namespace Opaax
         /** With vsync, each frame counts as whole refreshes of the screen: the timer's noise does not shake motion. */
         bool bSnapToRefresh = true;
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(TimeSettings, FixedRate, bSnapToRefresh)
+        /** The most fixed steps a frame runs: a longer frame drops the rest and the game slows for it. */
+        Uint32 MaxStepsPerFrame = 8;
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(TimeSettings, FixedRate, bSnapToRefresh, MaxStepsPerFrame)
 
         OPAAX_PROPERTIES(TimeSettings,
                          OPAAX_PROP(FixedRate).SetRange(MIN_FIXED_RATE, MAX_FIXED_RATE)
@@ -71,7 +74,11 @@ namespace Opaax
                          OPAAX_PROP(bSnapToRefresh)
                              .SetTooltip("With vsync, count each frame as whole refreshes of the screen:\n"
                                          "the timer's noise no longer shakes moving things.\n"
-                                         "Off for a variable-refresh screen (G-Sync, FreeSync)."))
+                                         "Off for a variable-refresh screen (G-Sync, FreeSync)."),
+                         OPAAX_PROP(MaxStepsPerFrame).SetRange(1.f, 64.f)
+                             .SetTooltip("The most fixed steps one frame runs.\n"
+                                         "A longer frame (a stall) drops the rest: the game slows for it\n"
+                                         "instead of slow steps making every frame longer."))
     };
 
     struct RenderSettings

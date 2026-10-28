@@ -441,12 +441,19 @@ namespace Opaax
         // A paused world holds still: it is drawn as it was, and goes on from there.
         m_Clock.SetWorldTicks(m_WorldManager == nullptr || m_WorldManager->IsTickingThisFrame());
 
+        const Uint64 lDroppedBefore = m_Clock.GetDroppedSteps();
         while (m_Clock.TakeFixedStep())
         {
             // Inside the loop: the scope's Calls is the step count.
             OPAAX_STAT_SCOPE("FixedUpdate");
 
             FixedUpdate(m_Clock.GetFixedDelta());
+        }
+
+        if (m_Clock.GetDroppedSteps() != lDroppedBefore)
+        {
+            OPAAX_ENGINE_LOG(Warn, "A frame owed {} fixed steps past Time.MaxStepsPerFrame ({}): dropped, the game slowed "
+                                   "for it", m_Clock.GetDroppedSteps() - lDroppedBefore, m_Clock.GetMaxStepsPerFrame());
         }
 
         {
@@ -496,6 +503,8 @@ namespace Opaax
             m_Clock.SetFixedDelta(lDelta);
             OPAAX_ENGINE_LOG(Info, "Fixed steps: {} a second", lRate);
         }
+
+        m_Clock.SetMaxStepsPerFrame(m_EngineConfig->GetData().Time.MaxStepsPerFrame);
 
         ApplyRefresh();
     }

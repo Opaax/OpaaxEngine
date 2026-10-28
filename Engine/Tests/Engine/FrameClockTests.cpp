@@ -75,6 +75,7 @@ TEST_CASE("FrameClock: the part of a step a frame did not cover carries to the n
 TEST_CASE("FrameClock: a frame longer than MAX_FRAME_DELTA counts as MAX_FRAME_DELTA")
 {
     FrameClock lClock(FIXED);
+    lClock.SetMaxStepsPerFrame(64);   // the steps are not what this checks
     lClock.BeginFrame(0.0);
 
     CHECK(lClock.BeginFrame(3.0) == FrameClock::MAX_FRAME_DELTA);
@@ -323,4 +324,31 @@ TEST_CASE("FrameClock: frames as long as a step take exactly one step each, sums
         CHECK(lClock.GetFixedAlpha() >= 0.0);
     }
     CHECK(lOther == 0);
+}
+
+TEST_CASE("FrameClock: a frame owing more than its most steps takes them, drops the whole rest, keeps the part")
+{
+    FrameClock lClock(FIXED);
+    CHECK(lClock.GetMaxStepsPerFrame() == FrameClock::DEFAULT_MAX_STEPS);
+    lClock.BeginFrame(0.0);
+
+    // Twelve and a half steps owed: eight run, four dropped, the half kept.
+    lClock.BeginFrame(FIXED * 12.5);
+    CHECK(TakeAll(lClock) == 8);
+    CHECK(lClock.GetDroppedSteps() == 4);
+    CHECK(lClock.GetFixedAlpha() == 0.5);
+
+    // The next frame goes on from the half.
+    lClock.BeginFrame(FIXED * 13.25);
+    CHECK(TakeAll(lClock) == 1);
+    CHECK(lClock.GetFixedAlpha() == 0.25);
+
+    lClock.SetMaxStepsPerFrame(2);
+    lClock.BeginFrame(FIXED * 16.0);
+    CHECK(TakeAll(lClock) == 2);
+    CHECK(lClock.GetDroppedSteps() == 5);
+
+    // At least one.
+    lClock.SetMaxStepsPerFrame(0);
+    CHECK(lClock.GetMaxStepsPerFrame() == 1);
 }

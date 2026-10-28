@@ -84,7 +84,8 @@
                         "stillMoves": 0,
                         "zoomReversals": 0,
                         "cameraSwitches": 0,
-                        "stepsSpread": "{spread}"
+                        "stepsSpread": "{spread}",
+                        "mostSteps": 8
                     }
                 }
             },
@@ -141,7 +142,8 @@
                         "timeReversals": 0,
                         "stillMoves": 0,
                         "cameraSwitches": 0,
-                        "stepsSpread": "{spread}"
+                        "stepsSpread": "{spread}",
+                        "mostSteps": 8
                     }
                 }
             },

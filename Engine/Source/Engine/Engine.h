@@ -144,6 +144,7 @@ namespace Opaax
         //Time
         void               SetFramePacing(const FramePacing& InPacing) override;
         const FramePacing& GetFramePacing() const override { return m_Pacer.GetPacing(); }
+        const FrameClock&  GetFrameClock() const override { return m_Clock; }
 
         //Tick
         void Update(double InDeltaTime) override;

@@ -19,6 +19,8 @@ namespace Opaax
         m_Delta    = SnapToRefresh(lMeasured);
         m_Owed    += m_Delta;
 
+        m_StepsThisFrame = 0;
+
         return m_Delta;
     }
 
@@ -29,6 +31,16 @@ namespace Opaax
             return false;
         }
 
+        // Past the frame's most: the whole steps left are dropped, the part of one kept.
+        if (m_StepsThisFrame >= m_MaxSteps)
+        {
+            const Int64 lDropped = Maths::FloorToInt64(m_Owed / m_FixedDelta + STEP_EPSILON);
+            m_DroppedSteps += static_cast<Uint64>(lDropped);
+            m_Owed          = Maths::Max(m_Owed - static_cast<double>(lDropped) * m_FixedDelta, 0.0);
+            return false;
+        }
+
+        ++m_StepsThisFrame;
         m_Owed = Maths::Max(m_Owed - m_FixedDelta, 0.0);
         return true;
     }
@@ -40,6 +52,11 @@ namespace Opaax
         m_bStarted  = true;
         m_HeldAlpha = 0.0;
         m_Carried   = 0.0;
+    }
+
+    void FrameClock::SetMaxStepsPerFrame(const Uint32 InMax) noexcept
+    {
+        m_MaxSteps = Maths::Max(InMax, 1u);
     }
 
     void FrameClock::SetRefreshInterval(const double InInterval, const bool bInStated) noexcept
