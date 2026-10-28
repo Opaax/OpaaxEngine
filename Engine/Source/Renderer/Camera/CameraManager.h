@@ -34,6 +34,29 @@ namespace Opaax
     };
 
     // =============================================================================
+    // CameraFrame — how the active Play world was framed on the last frame drawn: what camera.info
+    //   answers and a trace records.
+    // =============================================================================
+    struct CameraFrame
+    {
+        ObjectHandle     World;
+        CameraResolution Resolution;
+
+        /** The frame's delta, and the fixed steps the world ran since the frame before (in that world). */
+        double FrameDelta = 0.0;
+        Uint32 Steps      = 0;
+
+        /** The alpha the world was drawn with; 1 when not blended (Render.bInterpolation off). */
+        double Alpha         = 1.0;
+        bool   bInterpolated = false;
+
+        /** The world's steps so far, the last one's length, and the game time drawn. */
+        Uint64 StepCount = 0;
+        double StepDelta = 0.0;
+        double GameTime  = 0.0;
+    };
+
+    // =============================================================================
     // CameraTraceRecording — a trace being recorded, or kept for a comparison (camera.trace.*).
     // =============================================================================
     struct CameraTraceRecording
@@ -55,10 +78,9 @@ namespace Opaax
         /** Frames past MAX_TRACE_FRAMES were not kept. */
         bool bTruncated = false;
 
-        // The world recorded, its step count at the last frame and the target found in it.
+        // The world recorded, and the target found in it.
         ObjectHandle World;
-        Uint64       LastStepCount = 0;
-        EntityID     TargetEntity  = ENTITY_NONE;
+        EntityID     TargetEntity = ENTITY_NONE;
     };
 
     // =============================================================================
@@ -130,14 +152,20 @@ namespace Opaax
         /** The trace kept under InName, or null. */
         const CameraTraceRecording* FindTrace(const OpaaxString& InName) const;
 
+        /** The name of the trace being recorded; empty when none. */
+        const OpaaxString& GetTraceName() const noexcept;
+
+        /** How the active Play world was framed on the last frame drawn (camera.info). */
+        const CameraFrame& GetLastFrame() const noexcept { return m_LastFrame; }
+
     private:
         /**
          * Logs the result only when it changes (other world, other camera count, other winner).
          */
         void ReportResolution(World& InWorld, const CameraResolution& InResolution);
 
-        /** Adds this frame to the trace: InAlpha is the alpha the world was drawn with (none: not blended). */
-        void RecordTraceFrame(World& InWorld, const CameraResolution& InResolution, TOptional<double> InAlpha);
+        /** Adds InFrame, drawn in InWorld, to the trace. */
+        void RecordTraceFrame(World& InWorld, const CameraFrame& InFrame);
 
         // =============================================================================
         // Override
@@ -168,8 +196,9 @@ namespace Opaax
         ObjectHandle m_RecordedWorld;
         EntityID     m_RecordedCamera = ENTITY_NONE;
 
-        /** The frame's delta, from Update, for the trace. */
-        double m_FrameDelta = 0.0;
+        /** The frame's delta, from Update, and how the last frame was framed. */
+        double      m_FrameDelta = 0.0;
+        CameraFrame m_LastFrame;
 
         /** The trace being recorded, and the ones kept by name. */
         TOptional<CameraTraceRecording> m_Trace;
