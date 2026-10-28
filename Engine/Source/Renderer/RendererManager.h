@@ -29,6 +29,7 @@ namespace Opaax
     struct EnvironmentComponent;
     class WorldManager;
     class IFramebuffer;
+    class IGraphicsContext;
     class IRenderTarget;
     class ITexture2D;
     struct FramebufferSpec;
@@ -87,8 +88,11 @@ namespace Opaax
          */
         void HandleRendererConfigChanged();
 
-        /** Engine.config changed: applies Render.bInterpolation. Backend needs a restart. */
+        /** Engine.config changed: applies Render.bInterpolation and Window.bVSync. Backend needs a restart. */
         void HandleEngineConfigChanged();
+
+        /** Sets the surface's vsync: Window.bVSync, off while the frames are paced. Logged when it changes. */
+        void ApplyVSync();
 
         /**
          * The actual rendering. Separate from Render() so the per-frame queues are always cleared.
@@ -225,6 +229,12 @@ namespace Opaax
         void Present();
 
         /**
+         * Whether the frames are paced (Engine::SetFramePacing): a paced run presents without waiting
+         * for the screen, so it goes as fast as it can.
+         */
+        void SetFramesPaced(bool bInPaced);
+
+        /**
          * The frame drawn so far into the backbuffer (call before Present).
          * @param OutRGBA RGBA, rows from top to bottom
          * @return False if the render core failed to start, or the frame cannot be read
@@ -357,6 +367,14 @@ namespace Opaax
 
         /** Render.bInterpolation — read at Startup, updated on Engine.config change. */
         bool m_bInterpolate = true;
+
+        /** The window's surface, for its vsync. Not owned. */
+        IGraphicsContext* m_Surface = nullptr;
+
+        /** Paced frames present without vsync; the vsync last set (logged when it changes). */
+        bool m_bFramesPaced = false;
+        bool m_bVSync       = true;
+        bool m_bVSyncSet    = false;
 
         /** Blends done last frame, and whether the first one was logged. */
         Uint64 m_BlendedThisFrame  = 0;

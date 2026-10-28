@@ -82,6 +82,7 @@ set(OPAAX_TEST_SOURCES
     Engine/EngineConfigDataTests.cpp
     Engine/EngineEventsTests.cpp
     Engine/FrameClockTests.cpp
+    Engine/FramePacerTests.cpp
     Engine/GameInstanceTests.cpp
     Engine/ModuleRegistrarTests.cpp
 

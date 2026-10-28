@@ -167,6 +167,9 @@ namespace Opaax
         m_EngineConfig = &lConfigSys.Get<Config_Engine>();
         m_EngineConfig->OnChanged().AddMember(this, &RendererManager::HandleEngineConfigChanged);
 
+        m_Surface = lSurface;
+        ApplyVSync();
+
         // The active world is the one drawn.
         m_WorldManager = &OpaaxApplication::GetAppService<IEngine>().GetWorldManager();
 
@@ -204,6 +207,7 @@ namespace Opaax
         m_MissingTexture.reset();
 
         m_RenderSystem.reset(); // waits idle, then tears down
+        m_Surface = nullptr;
     }
     
     // =========================================================================
@@ -1177,5 +1181,33 @@ namespace Opaax
         }
 
         m_bInterpolate = m_EngineConfig->GetData().Render.bInterpolation;
+        ApplyVSync();
+    }
+
+    void RendererManager::SetFramesPaced(const bool bInPaced)
+    {
+        m_bFramesPaced = bInPaced;
+        ApplyVSync();
+    }
+
+    void RendererManager::ApplyVSync()
+    {
+        if (m_Surface == nullptr)
+        {
+            return;
+        }
+
+        const bool lVSync = !m_bFramesPaced && (m_EngineConfig == nullptr || m_EngineConfig->GetData().Window.bVSync);
+        if (m_bVSyncSet && lVSync == m_bVSync)
+        {
+            return;
+        }
+
+        m_Surface->SetVSync(lVSync);
+        m_bVSync    = lVSync;
+        m_bVSyncSet = true;
+
+        OPAAX_LOG(LogRendererManager, Info, "VSync {}{}", lVSync ? "on" : "off",
+                  m_bFramesPaced ? " (paced frames)" : "");
     }
 }

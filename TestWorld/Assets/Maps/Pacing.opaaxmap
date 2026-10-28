@@ -1,0 +1,52 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "106088e859da49978bd3b804a3f9b05d",
+            "name": "Camera",
+            "ownerMap": "Pacing"
+        },
+        {
+            "components": {
+                "FrameProbe": {
+                    "Frames": 0,
+                    "MaxDelta": 0.0,
+                    "MinDelta": 1.0,
+                    "Steps": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "e8ccba7ca5994d4a8e82d566630e0389",
+            "name": "Clock",
+            "ownerMap": "Pacing"
+        }
+    ],
+    "mapId": "Pacing",
+    "version": 4
+}

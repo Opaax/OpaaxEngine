@@ -6,6 +6,7 @@
 #include "Core/Maths/MathsStatics.h"
 #include "Renderer/RendererManager.h"
 #include "Engine/FrameClock.h"
+#include "Engine/FramePacer.h"
 #include "Core/Events/EventBus.h"
 #include "Engine/Registries/EngineRegistries.h"
 
@@ -88,6 +89,14 @@ namespace Opaax
         // =============================================================================
 
         // =============================================================================
+        // Time
+    private:
+        /** The frame clock's time: the paced time while paced (SetFramePacing), else the platform's. */
+        double ClockTime() const;
+        // End Time
+        // =============================================================================
+
+        // =============================================================================
         // World event bridge
     private:
         void BindToWorldMgrEvents();
@@ -120,7 +129,11 @@ namespace Opaax
         void    Loop() override;
         void    TearDown() override;
         void    Shutdown() override;
-        
+
+        //Time
+        void               SetFramePacing(const FramePacing& InPacing) override;
+        const FramePacing& GetFramePacing() const override { return m_Pacer.GetPacing(); }
+
         //Tick
         void Update(double InDeltaTime) override;
         void FixedUpdate(double InFixedDeltaTime) override;
@@ -162,6 +175,10 @@ namespace Opaax
 
         // Frame deltas and fixed steps (60 Hz)
         FrameClock m_Clock{ D60_HZ };
+
+        // A paced run's frames (SetFramePacing), and the time they add up to.
+        FramePacer m_Pacer;
+        double     m_PacedTime = 0.0;
 
         //Handle Subsystem lifetime
         EngineSubsystemMgr m_Subsystems;

@@ -2,6 +2,7 @@
 
 #include "Audio/AudioManager.h"
 
+#include "Engine/FramePacer.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/InputManager.h"
@@ -35,6 +36,14 @@ namespace Opaax
             bool EndGame()   override { return false; }
 
             void Loop()                   override {}
+            void SetFramePacing(const FramePacing&) override {}
+
+            const FramePacing& GetFramePacing() const override
+            {
+                static const FramePacing s_Off;
+                return s_Off;
+            }
+
             void PresentBackbuffer()      override {}
             bool CaptureFrame(const OpaaxString&) override { return false; }
             void SubmitRenderView(IRenderTarget&, const CameraView&, bool, World*, bool) override {}

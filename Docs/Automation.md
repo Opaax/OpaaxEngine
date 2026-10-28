@@ -10,6 +10,7 @@ test, or by an AI agent. The commands are the same everywhere; the editor adds i
 | `--exec <script.json>` | Runs the script's requests in order, then closes the app. Each answer is written to `<script>.out.json` as it comes (`--exec-out <file>` to choose). The exit code is 1 when a request failed, or never ran because the app closed first. |
 | `--automation <folder>` | Keeps the app open and runs every `<name>.request.json` dropped in the folder (in name order), answering in `<name>.response.json`. `app.quit` closes it. |
 | `--upgrade-assets` | The editor only: before it opens, converts the asset files of older formats (`.opaaxsheet`, `.opaaxclip`...) in the project and the engine's content into `.opaaxasset` files, and rewrites the paths that named them. The log lists what changed. With `--exec` and a script that sends `app.quit`, it converts and closes ([Objects.md](Objects.md)). |
+| `--frame-pacing <pacing>` | The frames get the time of a screen rate instead of the clock's, from the first frame: `144`, `60,jitter=0.25` (each frame up to a quarter of a frame early or late, never drifting off the rate), `60,hitch=0.1@2` (a 0.1 s stall every 2 s), `60,seed=3` (another jitter), `deltas=0.016/0.033` (repeated). The same pacing gives the same frames every run, on any machine, and VSync is off so the run goes as fast as it can. A pacing that does not read fails the run. |
 
 The two can be combined. For the inbox, write a request under another name first and rename it to
 `.request.json`, so the app never reads half a file; number the names (`001`, `002`...) to keep the
@@ -62,6 +63,7 @@ saved in `.opaaxmap` files.
 | `app.quit` | | Closes the app at the end of the frame |
 | `frames.wait` | `count` | Lets frames run before the next request |
 | `world.wait` | `seconds` | Lets the playing world's clock advance (game time, whatever the frame rate) |
+| `time.pace` | `pacing` | From the next frame, the frames get the time of `pacing`, written as `--frame-pacing` takes it; `off` gives the clock back. Answers the pacing as read |
 | `screenshot` | `path` | Saves the frame as a PNG (in the editor: the whole editor) |
 | `input.key` | `key`, `action`, `frames` | `press`, `release` or `tap` a key (`Space`, `A`, `Mouse_Left`...) as if from the keyboard |
 | `input.mouse` | `x`, `y` | Moves the game's pointer (pixels of the game view) |

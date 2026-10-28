@@ -20,6 +20,7 @@ namespace Opaax
     class DebugDraw;
     class EngineRegistries;
     struct FramebufferSpec;
+    struct FramePacing;
     struct CameraView;
 
     // =============================================================================
@@ -82,6 +83,16 @@ namespace Opaax
          * Runs one engine frame.
          */
         virtual void Loop()                             = 0;
+
+        /**
+         * Gives the frames the time of InPacing instead of the platform's clock, from the next frame:
+         * a test plays at a screen rate it does not have, the same frames every run. An inactive
+         * pacing gives the clock back. VSync is off while paced, so a paced run goes as fast as it can.
+         */
+        virtual void SetFramePacing(const FramePacing& InPacing) = 0;
+
+        /** The pacing in use; inactive when the frames follow the platform's clock. */
+        virtual const FramePacing& GetFramePacing() const = 0;
 
         /**
          * Swaps the window backbuffer. Called once per frame, after rendering.

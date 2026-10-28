@@ -8,6 +8,7 @@
 #include "Core/Maths/Maths.h"
 #include "Core/String/OpaaxStringJson.h"
 #include "Core/Time/Clock.h"
+#include "Engine/FramePacer.h"
 #include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
 #include "Engine/Registries/EngineRegistries.h"
@@ -523,6 +524,35 @@ namespace Opaax::EngineAutomation
         }
 
         // =========================================================================
+        // Time: the frames a run is given
+        // =========================================================================
+        void RegisterTime(AutomationRunner& InRunner, IEngine& InEngine)
+        {
+            InRunner.Register("time.pace",
+                "Gives the frames the time of a screen rate from the next frame, whatever the machine: {pacing} as "
+                "--frame-pacing reads it (\"144\", \"60,jitter=0.25\", \"60,hitch=0.1@2\", \"deltas=0.016/0.033\"); "
+                "\"off\" gives the clock back. Answers {pacing}.",
+                [&InEngine](const nlohmann::json& InParams)
+                {
+                    const OpaaxString lText = InParams.value("pacing", OpaaxString());
+                    if (lText.IsEmpty())
+                    {
+                        return AutomationResult::Fail("give a pacing, like {\"pacing\": \"144\"} (\"off\" for the clock)");
+                    }
+
+                    FramePacing lPacing;
+                    OpaaxString lError;
+                    if (!FramePacing::Parse(lText, lPacing, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    InEngine.SetFramePacing(lPacing);
+                    return AutomationResult::Ok(nlohmann::json{ { "pacing", lPacing.ToString() } });
+                });
+        }
+
+        // =========================================================================
         // Expectations: a failed one fails the request, so a script's exit code fails a test run
         // =========================================================================
         void RegisterExpectations(AutomationRunner& InRunner, IEngine& InEngine)
@@ -622,6 +652,7 @@ namespace Opaax::EngineAutomation
         RegisterUI(InRunner, InEngine);
         RegisterWorld(InRunner, InEngine);
         RegisterLevels(InRunner, InEngine);
+        RegisterTime(InRunner, InEngine);
         RegisterExpectations(InRunner, InEngine);
     }
 

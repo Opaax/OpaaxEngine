@@ -8,6 +8,7 @@
 #include "Probes/EventProbe.h"
 #include "Probes/ExtensionProbes.h"
 #include "Probes/FollowProbe.h"
+#include "Probes/FrameProbe.h"
 #include "Probes/GameplayProbes.h"
 #include "Probes/HierarchyProbes.h"
 #include "Probes/LevelProbes.h"
@@ -52,6 +53,7 @@ namespace TestWorld
     OPAAX_REGISTER_BEHAVIOUR(UIProbe);
     OPAAX_REGISTER_BEHAVIOUR(CameraProbe);
     OPAAX_REGISTER_BEHAVIOUR(FollowProbe);
+    OPAAX_REGISTER_BEHAVIOUR(FrameProbe);
     OPAAX_REGISTER_BEHAVIOUR(WalkerProbe);
     OPAAX_REGISTER_BEHAVIOUR(ScriptProbe);
     OPAAX_REGISTER_BEHAVIOUR(HelperProbe);

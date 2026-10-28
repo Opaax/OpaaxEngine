@@ -15,6 +15,7 @@
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/EngineEvents.h"
 #include "Engine/Engine.h"
+#include "Engine/FramePacer.h"
 #include "Engine/Registries/ModuleRegistrar.h"
 #include "World/WorldManager.h"
 #include "Engine/Subsystems/EngineEventBus.h"
@@ -227,6 +228,24 @@ void OpaaxApplication::RunApplication()
         CrashHandler::TriggerTestCrash();
     }
 #endif
+
+    // --frame-pacing <pacing>: the frames get the time of a screen rate instead of the clock's
+    // ("144,jitter=0.25", FramePacing::Parse). A pacing that does not read fails the run.
+    if (const OpaaxString* lPacingText = m_CommandLine.FindValue("--frame-pacing"))
+    {
+        FramePacing lPacing;
+        OpaaxString lError;
+        if (FramePacing::Parse(*lPacingText, lPacing, lError))
+        {
+            Engine().SetFramePacing(lPacing);
+        }
+        else
+        {
+            OPAAX_APP_LOG(Error, "--frame-pacing '{}': {}", lPacingText->CStr(), lError.CStr());
+            SetExitCode(1);
+            bIsRunning = false;
+        }
+    }
 
     // --capture <file.png> [--capture-frame N]: saves frame N (default 60) as a PNG, then quits.
     // What an automated check or an agent uses to see the game.

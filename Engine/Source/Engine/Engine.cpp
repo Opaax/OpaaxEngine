@@ -210,7 +210,7 @@ namespace Opaax
         m_WorldManager->SetActiveWorld(lWorld);
 
         // The time spent opening the level is not simulated: the next frame counts from now.
-        m_Clock.Restart(m_Platform->GetTimeSeconds());
+        m_Clock.Restart(ClockTime());
 
         OPAAX_ENGINE_LOG(Info, "World '{}' ({}) opened and activated", lName.CStr(), ToString(InSpec.Mode));
 
@@ -415,7 +415,13 @@ namespace Opaax
         // 2. Time
         // ----------------------------------------------------------------
 
-        const double lDeltaTime = m_Clock.BeginFrame(m_Platform->GetTimeSeconds());
+        // A paced run makes its own frames' time; any other follows the platform's clock.
+        if (m_Pacer.GetPacing().IsActive())
+        {
+            m_PacedTime += m_Pacer.Next();
+        }
+
+        const double lDeltaTime = m_Clock.BeginFrame(ClockTime());
 
         {
             OPAAX_STAT_SCOPE("Update");
@@ -436,6 +442,31 @@ namespace Opaax
         }
     }
     
+    void Engine::SetFramePacing(const FramePacing& InPacing)
+    {
+        m_Pacer     = FramePacer(InPacing);
+        m_PacedTime = 0.0;
+
+        // The next frame counts from now, on the clock now in use.
+        m_Clock.Restart(ClockTime());
+
+        if (m_RendererManager != nullptr)
+        {
+            m_RendererManager->SetFramesPaced(InPacing.IsActive());
+        }
+
+        OPAAX_ENGINE_LOG(Info, "Frame pacing: {}", InPacing.ToString().CStr());
+    }
+
+    double Engine::ClockTime() const
+    {
+        if (m_Pacer.GetPacing().IsActive())
+        {
+            return m_PacedTime;
+        }
+        return m_Platform != nullptr ? m_Platform->GetTimeSeconds() : 0.0;
+    }
+
     void Engine::TearDown()
     {
         if (!m_bStarted)
