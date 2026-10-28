@@ -59,6 +59,24 @@
         }
     },
     {
+        "command": "expect.value",
+        "id": "chase-zoom-frames",
+        "params": {
+            "entity": "Runner",
+            "path": "FollowProbe/ZoomFrames",
+            "greater": 10
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "chase-zoom-with-pose",
+        "params": {
+            "entity": "Runner",
+            "path": "FollowProbe/MaxZoomLag",
+            "less": 0.001
+        }
+    },
+    {
         "id": "screenshot-chase",
         "command": "screenshot",
         "params": {

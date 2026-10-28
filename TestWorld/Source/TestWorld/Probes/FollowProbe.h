@@ -2,6 +2,8 @@
 
 #include "Core/Maths/Maths.h"
 #include "Core/String/OpaaxStringJson.h"
+#include "Renderer/Camera/CameraComponent.h"
+#include "Renderer/Camera/CameraInterpolationComponent.h"
 #include "World/Behaviour/Behaviour.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Components/TransformInterpolationComponent.h"
@@ -17,6 +19,9 @@ namespace TestWorld
     //   it, the view's x tells how far through the runner's last step that frame was drawn (0: the
     //   step before, 1: the last). Framed from the display pose, this is the frame's alpha: within
     //   [0, 1], and strictly inside on most frames. Framed from a raw pose it is a whole number.
+    //   With ZoomPerStep, Chase also zooms out every step: while it frames the world, the view's size
+    //   is as far through the camera's last step as its pose (MaxZoomLag near 0). Framed from the
+    //   raw size it is always at the end of the step.
     // =============================================================================
     class FollowProbe : public Opaax::Behaviour
     {
@@ -26,16 +31,20 @@ namespace TestWorld
         float              Speed  = 1800.f;
         Opaax::OpaaxString Chase;
         Opaax::Vector2F    Offset = { 0.f, 40.f };
+        float              ZoomPerStep = 0.f;   // OrthoSize Chase gains every step
 
         Opaax::Int32 Frames        = 0;     // frames read
         Opaax::Int32 FramedBetween = 0;     // frames framed strictly inside the last step
         float        MinFraction   = 1.f;
         float        MaxFraction   = 0.f;
         float        ViewOffsetY   = 0.f;   // the view's height over the runner, last frame
+        Opaax::Int32 ZoomFrames    = 0;     // frames read while Chase zooms and frames the world
+        float        MaxZoomLag    = 0.f;   // largest gap between the zoom's and the pose's fraction of the step
 
-        OPAAX_PROPERTIES(FollowProbe, OPAAX_PROP(Speed), OPAAX_PROP(Chase), OPAAX_PROP(Offset), OPAAX_PROP(Frames),
-                         OPAAX_PROP(FramedBetween), OPAAX_PROP(MinFraction), OPAAX_PROP(MaxFraction),
-                         OPAAX_PROP(ViewOffsetY))
+        OPAAX_PROPERTIES(FollowProbe, OPAAX_PROP(Speed), OPAAX_PROP(Chase), OPAAX_PROP(Offset),
+                         OPAAX_PROP(ZoomPerStep), OPAAX_PROP(Frames), OPAAX_PROP(FramedBetween),
+                         OPAAX_PROP(MinFraction), OPAAX_PROP(MaxFraction), OPAAX_PROP(ViewOffsetY),
+                         OPAAX_PROP(ZoomFrames), OPAAX_PROP(MaxZoomLag))
 
         void OnStart() override
         {
@@ -60,6 +69,7 @@ namespace TestWorld
             if (m_Camera.IsValid())
             {
                 m_Camera.Get<Opaax::TransformComponent>().Position = lLocal->Position + Offset;
+                m_Camera.Get<Opaax::CameraComponent>().OrthoSize  += ZoomPerStep;
             }
         }
 
@@ -92,6 +102,25 @@ namespace TestWorld
             }
 
             ViewOffsetY = lView.y - lLocal->Position.y;
+
+            // The zoom, while Chase frames the world (the view at its offset).
+            const Opaax::CameraInterpolationComponent* lSizes =
+                m_Camera.IsValid() ? m_Camera.TryGet<Opaax::CameraInterpolationComponent>() : nullptr;
+            if (lSizes == nullptr || !lSizes->bHasStep || Opaax::Maths::Abs(ViewOffsetY - Offset.y) > 0.01f)
+            {
+                return;
+            }
+
+            const float lZoomStep = lSizes->SteppedOrthoSize - lSizes->PreviousOrthoSize;
+            if (lZoomStep == 0.f)
+            {
+                return;
+            }
+
+            const float lZoomFraction = (GetWorld().GetCameraView().OrthoSize - lSizes->PreviousOrthoSize) / lZoomStep;
+
+            ++ZoomFrames;
+            MaxZoomLag = Opaax::Maths::Max(MaxZoomLag, Opaax::Maths::Abs(lZoomFraction - lFraction));
         }
 
     private:
