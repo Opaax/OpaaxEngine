@@ -2,8 +2,8 @@
 
 #include "Core/Algo/Algo.h"
 
-#include "Audio/AudioRandom.h"
 #include "Core/Maths/Maths.h"
+#include "Core/Maths/RandomStream.h"
 
 namespace Opaax
 {
@@ -13,7 +13,7 @@ namespace Opaax
          * A clip by weight, InExcluded left out (-1: none). Weights at or below 0 count as 0; when
          * every candidate weighs 0, they are equally likely.
          */
-        Int32 PickWeighted(const TDynArray<AudioClipEntry>& InClips, const Int32 InExcluded, AudioRandom& InRandom)
+        Int32 PickWeighted(const TDynArray<AudioClipEntry>& InClips, const Int32 InExcluded, RandomStream& InRandom)
         {
             const Int32 lCount = static_cast<Int32>(InClips.size());
 
@@ -58,7 +58,7 @@ namespace Opaax
         }
 
         /** A new shuffled order of every clip; it does not start with InAvoid when it can. */
-        void Refill(TDynArray<Uint32>& OutBag, const Uint32 InCount, const Int32 InAvoid, AudioRandom& InRandom)
+        void Refill(TDynArray<Uint32>& OutBag, const Uint32 InCount, const Int32 InAvoid, RandomStream& InRandom)
         {
             OutBag.resize(InCount);
             for (Uint32 lIndex = 0; lIndex < InCount; ++lIndex)
@@ -79,7 +79,7 @@ namespace Opaax
         }
     }
 
-    Int32 SelectAudioClip(const AudioClipDef& InDef, AudioSelectionState& InOutState, AudioRandom& InRandom)
+    Int32 SelectAudioClip(const AudioClipDef& InDef, AudioSelectionState& InOutState, RandomStream& InRandom)
     {
         const Uint32 lCount = static_cast<Uint32>(InDef.Clips.size());
         if (lCount == 0)
@@ -128,7 +128,7 @@ namespace Opaax
         return lChosen;
     }
 
-    PlaySoundParams MakePlaySoundParams(const AudioClipDef& InDef, const Int32 InIndex, AudioRandom& InRandom)
+    PlaySoundParams MakePlaySoundParams(const AudioClipDef& InDef, const Int32 InIndex, RandomStream& InRandom)
     {
         const AudioClipEntry* lEntry = (InIndex >= 0 && InIndex < static_cast<Int32>(InDef.Clips.size()))
                                      ? &InDef.Clips[InIndex] : nullptr;

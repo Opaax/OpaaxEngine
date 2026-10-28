@@ -14,7 +14,7 @@
 
 namespace Opaax
 {
-    class AudioRandom;
+    class RandomStream;
 
     // =============================================================================
     // EAudioSelection — which of a clip definition's clips plays each time.
@@ -139,8 +139,8 @@ namespace Opaax
      * The clip to play next from InDef.
      * @return Its index in InDef.Clips, or -1 when there is none
      */
-    Int32 SelectAudioClip(const AudioClipDef& InDef, AudioSelectionState& InOutState, AudioRandom& InRandom);
+    Int32 SelectAudioClip(const AudioClipDef& InDef, AudioSelectionState& InOutState, RandomStream& InRandom);
 
     /** How clip InIndex of InDef plays: its bus, volume and pitch (spread drawn from InRandom), loop, space. */
-    PlaySoundParams MakePlaySoundParams(const AudioClipDef& InDef, Int32 InIndex, AudioRandom& InRandom);
+    PlaySoundParams MakePlaySoundParams(const AudioClipDef& InDef, Int32 InIndex, RandomStream& InRandom);
 }
