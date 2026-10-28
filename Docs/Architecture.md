@@ -49,7 +49,8 @@ and the game export. A game is a module of its own types, linked into its runtim
    subsystems' fixed update in the same order, so a behaviour's `OnFixedUpdate` comes right before the
    physics step.
    Around each step the world records what a step changes for the entities that ask for it: the
-   active camera's pose and `OrthoSize` (`CameraInterpolation`), and the pose of any entity gameplay
+   cameras' poses and `OrthoSize` (`CameraInterpolation`: every camera, so one that takes the view over
+   is framed between its steps from its first frame), and the pose of any entity gameplay
    moves in a step (`TransformInterpolation::RecordSteps`).
 5. **Render:** the active camera frames the world, then each view is drawn. Moving bodies and the
    camera (its pose and its zoom) are placed between their last two steps, so motion is smooth at

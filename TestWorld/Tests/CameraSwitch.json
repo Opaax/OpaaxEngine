@@ -115,6 +115,7 @@
                 "params": {
                     "limits": {
                         "cameraSwitches": 1,
+                        "targetDrift": 0.01,
                         "timeReversals": 0,
                         "zoomReversals": 0
                     }

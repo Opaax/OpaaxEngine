@@ -118,12 +118,12 @@ namespace Opaax
         static CameraResolution Resolve(World& InWorld, TOptional<float> InAlpha = NullOpt);
 
         /**
-         * Has InWorld record InActive's pose and size around every fixed step (TransformInterpolation,
-         * CameraInterpolation), so the camera framing the world is framed between its last two steps,
-         * as bodies are drawn. Only that camera is recorded: InPrevious, the one recorded until now,
-         * stops being recorded.
+         * Has InWorld record every camera's pose and size around every fixed step
+         * (TransformInterpolation, CameraInterpolation), so the camera framing the world is framed
+         * between its last two steps, as bodies are drawn, from its first frame: one that takes the
+         * view over is already recorded. Calling it again does nothing more.
          */
-        static void RecordCameraSteps(World& InWorld, EntityID InActive, EntityID InPrevious);
+        static void RecordCameraSteps(World& InWorld);
 
         // =============================================================================
         // Trace
@@ -191,10 +191,6 @@ namespace Opaax
         ObjectHandle m_ReportedWorld;
         Uint32       m_ReportedCount  = 0;
         EntityID     m_ReportedCamera = ENTITY_NONE;
-
-        // The camera whose steps are recorded: the last frame's winner, in that world.
-        ObjectHandle m_RecordedWorld;
-        EntityID     m_RecordedCamera = ENTITY_NONE;
 
         /** The frame's delta, from Update, and how the last frame was framed. */
         double      m_FrameDelta = 0.0;
