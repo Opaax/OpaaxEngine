@@ -34,6 +34,16 @@ with whoever uses the window.
 A script is an array of requests, or `{"requests": [...]}`. A request without an id gets its
 position. In the inbox, the file's name is the id.
 
+To run the same requests several times, write them once in a repeat:
+`{ "repeat": [{ "tag": "60", "pacing": "60" }, { "tag": "144", "pacing": "144" }], "requests": [...] }`
+stands for its requests once per entry, each `{tag}` in their strings replaced by the entry's value;
+a string that is only `{name}` takes the value itself, so a number stays a number. Repeats can nest.
+
+Frame rates and timing are driven too: `time.pace` (or `--frame-pacing`) gives the frames the time of
+a screen rate, steady, noisy or stalling, the same frames every run, and `config.set` changes a
+setting for the run (`Time.FixedRate`, `Window.bVSync`, `Render.bInterpolation`). Prefer pacing in
+tests of anything that moves: a test then sees what a 144 Hz screen shows on any machine.
+
 To check that a command refuses something, add `"expectFailure": true`: the request passes when the
 command fails (its answer is `{"refused": "why"}`) and fails when the command succeeds. An unknown
 command, or a request the app closed before running, still fails.
@@ -76,6 +86,8 @@ saved in `.opaaxmap` files.
 | `ui.list` | `name` | The game UI's widgets: name, type, visible, centre and size in game-view pixels |
 | `ui.click` | `widget`, `frames` | Clicks a widget of the game's UI by name: the pointer moves to its centre, the left button is tapped |
 | `world.info` | | The active world: name, mode, paused, entities, camera |
+| `world.pause` | `paused` | Pauses the playing world (`true`) or resumes it (`false`) |
+| `world.step` | | Runs one frame of the paused world, with the fixed steps it owes |
 | `entity.list` | `name`, `component` | The entities (optionally filtered) with their components |
 | `entity.get` | `entity` | One entity with its components' values |
 | `component.set` | `entity`, `type`, `value` | Merges `value` into the component (adds it when missing) |

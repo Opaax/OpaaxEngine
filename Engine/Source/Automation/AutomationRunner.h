@@ -178,8 +178,11 @@ namespace Opaax
     bool ParseAutomationRequest(const nlohmann::json& InJson, AutomationRequest& OutRequest, OpaaxString& OutError);
 
     /**
-     * The requests of a script: a JSON array of requests, or {"requests": [...]}. A request without
-     * an id gets its position. False (with OutError) when malformed.
+     * The requests of a script: a JSON array of requests, or {"requests": [...]}. An item
+     * {"repeat": [{"tag": "60"}, ...], "requests": [...]} stands for its requests once per entry, "{tag}"
+     * in their strings replaced by the entry's value (a string that is exactly "{tag}" takes the value
+     * itself, a number staying a number). A request without an id gets its position. False (with
+     * OutError) when malformed.
      */
     bool ParseAutomationScript(const OpaaxString& InText, TDynArray<AutomationRequest>& OutRequests,
                                OpaaxString& OutError);

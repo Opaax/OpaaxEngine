@@ -520,6 +520,38 @@ namespace Opaax::EngineAutomation
                         { "camera",   { { "x", lView.Position.x }, { "y", lView.Position.y }, { "size", lView.OrthoSize } } } });
                 });
 
+            InRunner.Register("world.pause",
+                "Pauses the playing world ({paused}: true) or resumes it (false): a paused world's subsystems do not "
+                "tick. Answers {paused}.",
+                [&InEngine](const nlohmann::json& InParams)
+                {
+                    const auto lPaused = InParams.find("paused");
+                    if (lPaused == InParams.end() || !lPaused->is_boolean())
+                    {
+                        return AutomationResult::Fail("give {paused}: true pauses the world, false resumes it");
+                    }
+
+                    InEngine.GetWorldManager().SetPaused(lPaused->get<bool>());
+                    return AutomationResult::Ok(nlohmann::json{ { "paused", InEngine.GetWorldManager().IsPaused() } });
+                });
+
+            InRunner.Register("world.step",
+                "Runs one frame of the paused world: its update and the fixed steps that frame owes. The next request "
+                "runs after that frame.",
+                [&InEngine](const nlohmann::json&)
+                {
+                    if (!InEngine.GetWorldManager().IsPaused())
+                    {
+                        return AutomationResult::Fail("the world is not paused: pause it first (world.pause)");
+                    }
+
+                    InEngine.GetWorldManager().RequestStep();
+
+                    AutomationResult lResult;
+                    lResult.WaitFrames = 1;
+                    return lResult;
+                });
+
             InRunner.Register("entity.list",
                 "The active world's entities: [{id, name, parent, map, components}]. Filters: {name}, {component}.",
                 [&InEngine](const nlohmann::json& InParams)

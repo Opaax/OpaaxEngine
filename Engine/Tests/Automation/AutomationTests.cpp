@@ -403,6 +403,47 @@ TEST_CASE("Automation: a script is an array or {requests}; ids default to positi
     CHECK(lError.Contains("expectFailure"));
 }
 
+TEST_CASE("Automation: a repeat stands for its requests once per entry, its values put in")
+{
+    TDynArray<AutomationRequest> lRequests;
+    OpaaxString                  lError;
+
+    REQUIRE_MESSAGE(ParseAutomationScript(R"([
+        {"command": "first"},
+        {"repeat": [{"tag": "60", "pacing": "60", "rate": 30}, {"tag": "jitter", "pacing": "60,jitter=0.25", "rate": 120}],
+         "requests": [
+            {"id": "pace-{tag}", "command": "time.pace", "params": {"pacing": "{pacing}"}},
+            {"command": "config.set", "params": {"values": {"Time": {"FixedRate": "{rate}"}}, "note": "at {rate}"}}
+         ]},
+        {"command": "last"}
+    ])", lRequests, lError), lError.CStr());
+
+    REQUIRE(lRequests.size() == 6);
+    CHECK(lRequests[0].Command == "first");
+    CHECK(lRequests[1].Id == "pace-60");
+    CHECK(lRequests[1].Params.at("pacing") == "60");
+    CHECK(lRequests[2].Params.at("values").at("Time").at("FixedRate") == 30);   // a number stays a number
+    CHECK(lRequests[2].Params.at("note") == "at 30");
+    CHECK(lRequests[3].Id == "pace-jitter");
+    CHECK(lRequests[3].Params.at("pacing") == "60,jitter=0.25");
+    CHECK(lRequests[4].Params.at("values").at("Time").at("FixedRate") == 120);
+    CHECK(lRequests[5].Command == "last");
+    CHECK(lRequests[5].Id == "5");   // positions count the requests a repeat stands for
+
+    // A repeat inside a repeat gets both values.
+    REQUIRE(ParseAutomationScript(R"([{"repeat": [{"a": "x"}, {"a": "y"}], "requests": [
+        {"repeat": [{"b": "1"}, {"b": "2"}], "requests": [{"command": "c", "id": "{a}{b}"}]}]}])", lRequests, lError));
+    REQUIRE(lRequests.size() == 4);
+    CHECK(lRequests[0].Id == "x1");
+    CHECK(lRequests[3].Id == "y2");
+
+    CHECK_FALSE(ParseAutomationScript(R"([{"repeat": [{"a": "x"}]}])", lRequests, lError));
+    CHECK(lError.Contains("requests"));
+    CHECK_FALSE(ParseAutomationScript(R"([{"repeat": ["x"], "requests": []}])", lRequests, lError));
+    CHECK_FALSE(ParseAutomationScript(R"([{"repeat": [{"a": "x"}], "requests": [{"params": {}}]}])", lRequests, lError));
+    CHECK(lError.Contains("request 0"));
+}
+
 TEST_CASE("Automation inbox: request files run in name order and are answered beside them")
 {
     TestTempDir lDir("AutomationInbox");
