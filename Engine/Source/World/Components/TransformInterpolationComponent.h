@@ -8,8 +8,9 @@ namespace Opaax
 {
     // =============================================================================
     // TransformInterpolationComponent — the pose at the end of the previous fixed step.
-    //   Runtime only, not registered (never saved). Written by physics and the mover, read by the
-    //   renderer to smooth motion between steps. Gameplay always uses the real pose.
+    //   Runtime only, not registered (never saved). Written by physics and the mover, and by the
+    //   world around each step for the entities that ask for it (TransformInterpolation); read by
+    //   the renderer and the camera to smooth motion between steps. Gameplay always uses the real pose.
     // =============================================================================
     struct TransformInterpolationComponent
     {
@@ -22,6 +23,20 @@ namespace Opaax
          * False until a step has written it (the first step has no previous pose).
          */
         bool bHasPrevious = false;
+
+        /**
+         * The world records this entity's pose at the start and the end of every fixed step (an
+         * entity gameplay moves in a step, such as a camera). See TransformInterpolation.
+         */
+        bool bRecordSteps = false;
+
+        /**
+         * The local pose the last step left, when the world records it. A different pose was set
+         * outside the steps (in Update) and is drawn as it is.
+         */
+        Vector2F SteppedPosition = { 0.f, 0.f };
+        float    SteppedRotation = 0.f;
+        bool     bHasStepped     = false;
     };
 
     // =============================================================================
@@ -52,6 +67,14 @@ namespace Opaax
         lPose.Scale       = InCurrent.Scale;
 
         if (InPrevious == nullptr || !InPrevious->bHasPrevious)
+        {
+            return lPose;
+        }
+
+        // Moved since the last step (in Update): drawn where it was put, not pulled back toward
+        // a pose from before the move.
+        if (InPrevious->bHasStepped
+            && (InCurrent.Position != InPrevious->SteppedPosition || InCurrent.Rotation != InPrevious->SteppedRotation))
         {
             return lPose;
         }

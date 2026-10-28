@@ -149,6 +149,7 @@ set(OPAAX_TEST_SOURCES
 
     # Renderer (the parts that need no GL context)
     Renderer/BatchPlanTests.cpp
+    Renderer/CameraInterpolationTests.cpp
     Renderer/CameraResolveTests.cpp
     Renderer/CameraViewTests.cpp
     Renderer/DebugDrawTests.cpp

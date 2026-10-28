@@ -63,6 +63,12 @@ namespace Opaax
          */
         static CameraResolution Resolve(World& InWorld, TOptional<float> InAlpha = NullOpt);
 
+        /**
+         * Has InWorld record its cameras' poses around every fixed step (TransformInterpolation), so a
+         * camera moved in a step is framed between its last two, as bodies are drawn.
+         */
+        static void RecordCameraSteps(World& InWorld);
+
     private:
         /**
          * Logs the result only when it changes (other world, other camera count, other winner).
@@ -74,9 +80,10 @@ namespace Opaax
         // =============================================================================
         //~Begin Subsystem interface
     public:
-        bool Startup()              override;
-        void Shutdown()             override;
-        void Render(double InAlpha) override;
+        bool Startup()                  override;
+        void Shutdown()                 override;
+        void Update(double InDeltaTime) override;
+        void Render(double InAlpha)     override;
         //~End Subsystem interface
 
         // =============================================================================
