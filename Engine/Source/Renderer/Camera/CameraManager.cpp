@@ -10,6 +10,8 @@
 #include "World/World.h"
 #include "World/WorldManager.h"
 #include "Renderer/Camera/CameraComponent.h"
+#include "Renderer/Camera/CameraInterpolation.h"
+#include "Renderer/Camera/CameraInterpolationComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityHierarchy.h"
@@ -68,12 +70,21 @@ namespace Opaax
             return lResolution;
         }
 
-        // World transform: a camera parented to the player follows it.
-        const Entity   lCamera{ lResolution.Entity, &InWorld };
-        const Vector2F lFrom = InAlpha.has_value() ? EntityHierarchy::DisplayTransform(lCamera, *InAlpha).Position
-                                                   : EntityHierarchy::WorldTransform(lCamera).Position;
+        // World transform: a camera parented to the player follows it. With an alpha, its pose and its
+        // size are blended between its last two steps.
+        Entity lCamera{ lResolution.Entity, &InWorld };
 
-        lResolution.View = CameraView{ lFrom, lOrthoSize };
+        if (InAlpha.has_value())
+        {
+            lResolution.View = CameraView{ EntityHierarchy::DisplayTransform(lCamera, *InAlpha).Position,
+                                           ResolveDisplayOrthoSize(lOrthoSize, lCamera.TryGet<CameraInterpolationComponent>(),
+                                                                   *InAlpha) };
+        }
+        else
+        {
+            lResolution.View = CameraView{ EntityHierarchy::WorldTransform(lCamera).Position, lOrthoSize };
+        }
+
         return lResolution;
     }
 
@@ -82,9 +93,11 @@ namespace Opaax
         if (InPrevious != InActive)
         {
             TransformInterpolation::StopRecordingSteps(Entity{ InPrevious, &InWorld });
+            CameraInterpolation::StopRecordingSteps(Entity{ InPrevious, &InWorld });
         }
 
         TransformInterpolation::RecordSteps(Entity{ InActive, &InWorld });
+        CameraInterpolation::RecordSteps(Entity{ InActive, &InWorld });
     }
 
     // =========================================================================
