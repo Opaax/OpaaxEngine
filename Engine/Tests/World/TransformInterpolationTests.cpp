@@ -1,5 +1,6 @@
-// Suite: ResolveDisplayPose — the fixed-step interpolation blend. Pure, so the arithmetic can be
-// tested directly: the shortest-arc wrap, and the first step (no previous pose).
+// Suite: ResolveDisplayPose and EntityHierarchy::DisplayTransform — the fixed-step interpolation
+// blend. Pure, so the arithmetic can be tested directly: the shortest-arc wrap, the first step (no
+// previous pose), and a chain drawn with its blended parents.
 #include <doctest.h>
 
 #include "World/Components/TransformInterpolationComponent.h"
@@ -124,7 +125,7 @@ TEST_CASE("ResolveDisplayPose: the display pose carries the current SCALE, unble
     CHECK(lPose.Scale.y == doctest::Approx(0.5f));
 }
 
-TEST_CASE("ComposeChain: a child of an interpolated parent is drawn where the parent is DRAWN, not where it is")
+TEST_CASE("DisplayTransform: a child of an interpolated parent is drawn where the parent is DRAWN, not where it is")
 {
     World lWorld("Blend");
 
@@ -137,19 +138,54 @@ TEST_CASE("ComposeChain: a child of an interpolated parent is drawn where the pa
 
     lParent.Add<TransformInterpolationComponent>(Prev(0.f, 0.f));   // the body was at 0 a step ago
 
-    // The renderer's local-of: each hop blended by the frame's alpha (RendererManager::PoseFor).
-    const auto lDisplayLocal = [](Entity InHop) -> TransformComponent
-    {
-        TransformComponent lLocal = InHop.Get<TransformComponent>();
-        const DisplayPose  lBlend = ResolveDisplayPose(lLocal, InHop.TryGet<TransformInterpolationComponent>(), 0.5f);
-        lLocal.Position = lBlend.Position;
-        lLocal.Rotation = lBlend.RotationDeg;
-        return lLocal;
-    };
+    const TransformComponent lDrawn = EntityHierarchy::DisplayTransform(lChild, 0.5f);
 
-    const TransformComponent lDrawn = EntityHierarchy::ComposeChain(lChild, lDisplayLocal);
-
-    // Half a step in, the body draws at 50 — and the sprite rides it to 60, not 110.
+    // Half a step in, the body draws at 50, and the sprite rides it to 60, not 110.
     CHECK(lDrawn.Position.x == doctest::Approx(60.f));
     CHECK(EntityHierarchy::WorldTransform(lChild).Position.x == doctest::Approx(110.f));   // the RAW world, for gameplay
+}
+
+TEST_CASE("DisplayTransform: a child turns with the parent's BLENDED rotation")
+{
+    World lWorld("Turn");
+
+    Entity lParent = lWorld.CreateEntity("Body");
+    Entity lChild  = lWorld.CreateEntity("Sprite");
+
+    lParent.Get<TransformComponent>() = At(0.f, 0.f, 90.f);
+    lChild.Get<TransformComponent>()  = At(10.f, 0.f);
+    REQUIRE(EntityHierarchy::SetParent(lChild, lParent, /*bKeepWorld*/false));
+
+    lParent.Add<TransformInterpolationComponent>(Prev(0.f, 0.f, 0.f));
+
+    // Half a step in, the body draws at 45 degrees: the child sits on that diagonal.
+    const TransformComponent lDrawn = EntityHierarchy::DisplayTransform(lChild, 0.5f);
+    CHECK(lDrawn.Rotation == doctest::Approx(45.f));
+    CHECK(lDrawn.Position.x == doctest::Approx(7.0710678f));
+    CHECK(lDrawn.Position.y == doctest::Approx(7.0710678f));
+}
+
+TEST_CASE("DisplayTransform: without previous poses it is the world transform, at any alpha")
+{
+    World lWorld("Still");
+
+    Entity lRoot  = lWorld.CreateEntity("Root");
+    Entity lMid   = lWorld.CreateEntity("Mid");
+    Entity lLeaf  = lWorld.CreateEntity("Leaf");
+
+    lRoot.Get<TransformComponent>() = At(5.f, -3.f, 30.f);
+    lMid.Get<TransformComponent>()  = At(20.f, 0.f, 15.f);
+    lLeaf.Get<TransformComponent>() = At(0.f, 8.f);
+    REQUIRE(EntityHierarchy::SetParent(lMid, lRoot, /*bKeepWorld*/false));
+    REQUIRE(EntityHierarchy::SetParent(lLeaf, lMid, /*bKeepWorld*/false));
+
+    const TransformComponent lWorldXf = EntityHierarchy::WorldTransform(lLeaf);
+
+    for (const float lAlpha : { 0.f, 0.4f, 1.f })
+    {
+        const TransformComponent lDrawn = EntityHierarchy::DisplayTransform(lLeaf, lAlpha);
+        CHECK(lDrawn.Position.x == lWorldXf.Position.x);
+        CHECK(lDrawn.Position.y == lWorldXf.Position.y);
+        CHECK(lDrawn.Rotation == lWorldXf.Rotation);
+    }
 }

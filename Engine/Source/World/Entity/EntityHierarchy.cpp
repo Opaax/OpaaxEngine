@@ -1,6 +1,7 @@
 #include "World/Entity/EntityHierarchy.h"
 
 #include "Core/Log/Logger.h"
+#include "World/Components/TransformInterpolationComponent.h"
 
 namespace Opaax
 {
@@ -54,6 +55,22 @@ namespace Opaax
         {
             const TransformComponent* lLocal = InHop.TryGet<TransformComponent>();
             return lLocal != nullptr ? *lLocal : TransformComponent{};
+        });
+    }
+
+    TransformComponent EntityHierarchy::DisplayTransform(Entity InEntity, const float InAlpha)
+    {
+        return ComposeChain(InEntity, [InAlpha](Entity InHop)
+        {
+            const TransformComponent* lLocal = InHop.TryGet<TransformComponent>();
+            if (lLocal == nullptr) { return TransformComponent{}; }
+
+            const DisplayPose lBlend = ResolveDisplayPose(*lLocal, InHop.TryGet<TransformInterpolationComponent>(), InAlpha);
+
+            TransformComponent lOut = *lLocal;
+            lOut.Position = lBlend.Position;
+            lOut.Rotation = lBlend.RotationDeg;
+            return lOut;
         });
     }
 

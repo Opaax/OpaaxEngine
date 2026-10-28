@@ -50,6 +50,13 @@ namespace Opaax
         TransformComponent WorldTransform(Entity InEntity);
 
         /**
+         * The world pose drawn this frame: each link's local pose blended from its previous fixed step
+         * (ResolveDisplayPose), then the chain composed, so a child of an interpolated body moves with it.
+         * @param InAlpha Progress through the fixed step
+         */
+        TransformComponent DisplayTransform(Entity InEntity, float InAlpha);
+
+        /**
          * The chain composed root to leaf, with InLocalOf(Entity) giving each local.
          */
         template<typename TLocalOf>
