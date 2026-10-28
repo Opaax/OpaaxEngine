@@ -60,13 +60,16 @@
                     "FramedBetween": 0,
                     "Frames": 0,
                     "MaxFraction": 0.0,
+                    "MaxZoomLag": 0.0,
                     "MinFraction": 1.0,
                     "Offset": {
                         "x": 0.0,
                         "y": 40.0
                     },
                     "Speed": 1800.0,
-                    "ViewOffsetY": 0.0
+                    "ViewOffsetY": 0.0,
+                    "ZoomFrames": 0,
+                    "ZoomPerStep": 1.0
                 },
                 "Quad": {
                     "Color": {
