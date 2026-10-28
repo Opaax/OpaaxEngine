@@ -11,6 +11,7 @@
 #include "Engine/GameInstance/GameInstanceManager.h"
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/Mapping/InputMappingSubsystem.h"
+#include "Renderer/Camera/CameraInterpolation.h"
 #include "UI/UISubsystem.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "World/Entity/TransformInterpolation.h"
@@ -93,11 +94,13 @@ namespace Opaax
             return;
         }
 
-        // Around the subsystems: what a step moves for the entities that ask is recorded, so they
-        // are drawn between their last two steps.
+        // Around the subsystems: what a step moves for the entities that ask is recorded (their pose,
+        // and the zoom of the camera framing the world), so they are drawn between their last two steps.
         TransformInterpolation::BeginFixedStep(*m_ActiveWorld);
+        CameraInterpolation::BeginFixedStep(*m_ActiveWorld);
         m_ActiveWorld->GetSubsystems().FixedUpdateAll(InFixedDeltaTime);
         TransformInterpolation::EndFixedStep(*m_ActiveWorld);
+        CameraInterpolation::EndFixedStep(*m_ActiveWorld);
     }
 
     void WorldManager::TearDown()
