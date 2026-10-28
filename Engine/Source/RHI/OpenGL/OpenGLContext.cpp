@@ -28,7 +28,7 @@ namespace Opaax
             return false;
         }
 
-        // VSync on by default.
+        // VSync on until the renderer applies Window.bVSync.
         SetVSync(true);
 
         LogAdapterInfo();
@@ -48,7 +48,7 @@ namespace Opaax
         glGetIntegerv(GL_MAX_TEXTURE_SIZE,        &lMaxTexSize);
         
         // One line with the GPU and driver info.
-        OPAAX_LOG(LogOpenGLContext, Info, "OpenGL {} on {} ({}) — GLSL {}, {} texture units, max texture {}, VSync on",
+        OPAAX_LOG(LogOpenGLContext, Info, "OpenGL {} on {} ({}) — GLSL {}, {} texture units, max texture {}",
                   lStr(GL_VERSION), lStr(GL_RENDERER), lStr(GL_VENDOR), lStr(GL_SHADING_LANGUAGE_VERSION),
                   lMaxTexUnits, lMaxTexSize);
     }

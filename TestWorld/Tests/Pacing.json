@@ -1,0 +1,227 @@
+[
+    {
+        "id": "pace-240",
+        "command": "time.pace",
+        "params": {
+            "pacing": "240"
+        },
+        "expect": {
+            "pacing": "240"
+        }
+    },
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Pacing.opaaxlevel"
+        }
+    },
+    {
+        "id": "reset-240",
+        "command": "component.set",
+        "params": {
+            "entity": "Clock",
+            "type": "FrameProbe",
+            "value": {
+                "Frames": 0,
+                "Steps": 0,
+                "MinDelta": 1.0,
+                "MaxDelta": 0.0
+            }
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 2.0
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "240-frames",
+        "params": {
+            "entity": "Clock",
+            "path": "FrameProbe/Frames",
+            "near": 480,
+            "tolerance": 3
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "240-steps",
+        "params": {
+            "entity": "Clock",
+            "path": "FrameProbe/Steps",
+            "near": 120,
+            "tolerance": 2
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "240-shortest",
+        "params": {
+            "entity": "Clock",
+            "path": "FrameProbe/MinDelta",
+            "near": 0.0041667,
+            "tolerance": 0.000001
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "240-longest",
+        "params": {
+            "entity": "Clock",
+            "path": "FrameProbe/MaxDelta",
+            "near": 0.0041667,
+            "tolerance": 0.000001
+        }
+    },
+    {
+        "id": "pace-jitter",
+        "command": "time.pace",
+        "params": {
+            "pacing": "60,jitter=0.25,seed=5"
+        }
+    },
+    {
+        "id": "reset-jitter",
+        "command": "component.set",
+        "params": {
+            "entity": "Clock",
+            "type": "FrameProbe",
+            "value": {
+                "Frames": 0,
+                "Steps": 0,
+                "MinDelta": 1.0,
+                "MaxDelta": 0.0
+            }
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 2.0
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "jitter-frames",
+        "params": {
+            "entity": "Clock",
+            "path": "FrameProbe/Frames",
+            "near": 120,
+            "tolerance": 2
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "jitter-steps",
+        "params": {
+            "entity": "Clock",
+            "path": "FrameProbe/Steps",
+            "near": 120,
+            "tolerance": 2
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "jitter-shortest-bound",
+        "params": {
+            "entity": "Clock",
+            "path": "FrameProbe/MinDelta",
+            "greater": 0.00833
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "jitter-shortest-spread",
+        "params": {
+            "entity": "Clock",
+            "path": "FrameProbe/MinDelta",
+            "less": 0.0158
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "jitter-longest-bound",
+        "params": {
+            "entity": "Clock",
+            "path": "FrameProbe/MaxDelta",
+            "less": 0.02501
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "jitter-longest-spread",
+        "params": {
+            "entity": "Clock",
+            "path": "FrameProbe/MaxDelta",
+            "greater": 0.0175
+        }
+    },
+    {
+        "id": "pace-hitch",
+        "command": "time.pace",
+        "params": {
+            "pacing": "60,hitch=0.1@1"
+        }
+    },
+    {
+        "id": "reset-hitch",
+        "command": "component.set",
+        "params": {
+            "entity": "Clock",
+            "type": "FrameProbe",
+            "value": {
+                "Frames": 0,
+                "Steps": 0,
+                "MinDelta": 1.0,
+                "MaxDelta": 0.0
+            }
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 2.0
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "hitch-longest",
+        "params": {
+            "entity": "Clock",
+            "path": "FrameProbe/MaxDelta",
+            "near": 0.116667,
+            "tolerance": 0.0001
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "hitch-steps",
+        "params": {
+            "entity": "Clock",
+            "path": "FrameProbe/Steps",
+            "near": 120,
+            "tolerance": 2
+        }
+    },
+    {
+        "id": "refuse-bad-pacing",
+        "command": "time.pace",
+        "params": {
+            "pacing": "60,jitter=2"
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "pace-off",
+        "command": "time.pace",
+        "params": {
+            "pacing": "off"
+        },
+        "expect": {
+            "pacing": "off"
+        }
+    }
+]

@@ -35,13 +35,19 @@ namespace Opaax
 
         EWindowMode Mode = EWindowMode::Windowed;
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(WindowSettings, Title, Width, Height, Mode)
+        /** Waits for the screen's refresh before showing a frame: no tearing, one frame a refresh. */
+        bool bVSync = true;
 
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(WindowSettings, Title, Width, Height, Mode, bVSync)
+
+        // The window is made with the others at startup; vsync applies at once.
         OPAAX_PROPERTIES(WindowSettings,
-                         OPAAX_PROP(Title),
-                         OPAAX_PROP(Width).SetRange(320.f, 7680.f),
-                         OPAAX_PROP(Height).SetRange(240.f, 4320.f),
-                         OPAAX_PROP(Mode))
+                         OPAAX_PROP(Title).SetFlags(EPropertyFlags::NeedRestart),
+                         OPAAX_PROP(Width).SetRange(320.f, 7680.f).SetFlags(EPropertyFlags::NeedRestart),
+                         OPAAX_PROP(Height).SetRange(240.f, 4320.f).SetFlags(EPropertyFlags::NeedRestart),
+                         OPAAX_PROP(Mode).SetFlags(EPropertyFlags::NeedRestart),
+                         OPAAX_PROP(bVSync).SetTooltip("Wait for the screen's refresh: no tearing.\n"
+                                                       "Off in a run paced by --frame-pacing."))
     };
 
     struct RenderSettings
@@ -179,7 +185,7 @@ namespace Opaax
 
         // NeedRestart on groups read at startup. Render and Audio are mixed, so only some fields have it.
         OPAAX_PROPERTIES(EngineConfigData,
-                         OPAAX_PROP(Window).SetFlags(EPropertyFlags::NeedRestart),
+                         OPAAX_PROP(Window),
                          OPAAX_PROP(Render),
                          OPAAX_PROP(Physics).SetFlags(EPropertyFlags::NeedRestart),
                          OPAAX_PROP(Audio),

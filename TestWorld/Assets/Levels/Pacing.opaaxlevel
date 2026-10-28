@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/Pacing.opaaxmap"
+    ],
+    "name": "Pacing",
+    "persistentMap": "Maps/Pacing.opaaxmap",
+    "version": 1
+}

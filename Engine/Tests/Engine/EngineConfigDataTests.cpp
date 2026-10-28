@@ -274,7 +274,21 @@ TEST_CASE("EngineConfigData: Render.Backend needs a restart, Render.bInterpolati
     // The GROUP no longer claims it for both fields; the all-boot groups still do.
     const auto lEngine = EngineConfigData::GetProperties();
     CHECK_FALSE(HasFlag(FlagsOf(lEngine, "Render"), EPropertyFlags::NeedRestart));
-    CHECK(HasFlag(FlagsOf(lEngine, "Window"), EPropertyFlags::NeedRestart));
+    CHECK_FALSE(HasFlag(FlagsOf(lEngine, "Window"), EPropertyFlags::NeedRestart));
+    CHECK(HasFlag(FlagsOf(lEngine, "Physics"), EPropertyFlags::NeedRestart));
+}
+
+TEST_CASE("EngineConfigData: the window needs a restart, except its vsync")
+{
+    const auto lWindow = WindowSettings::GetProperties();
+    for (const char* lName : { "Title", "Width", "Height", "Mode" })
+    {
+        CAPTURE(lName);
+        CHECK(HasFlag(FlagsOf(lWindow, lName), EPropertyFlags::NeedRestart));
+    }
+    CHECK_FALSE(HasFlag(FlagsOf(lWindow, "bVSync"), EPropertyFlags::NeedRestart));
+
+    CHECK(WindowSettings{}.bVSync);
 }
 
 TEST_CASE("RendererConfigData: ClearColor is live, the batch limits need a restart")
