@@ -131,6 +131,8 @@ namespace Opaax
         void                        SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView,
                                                      bool bInDrawOverlays, World* InSource = nullptr,
                                                      bool bInDrawUI = false) override;
+        void                        SubmitWorldView(IRenderTarget& InTarget, bool bInDrawOverlays,
+                                                    World* InSource = nullptr, bool bInDrawUI = false) override;
         void                        SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget = nullptr,
                                                    const CameraView* InView = nullptr) override;
         bool                        CaptureFrame(const OpaaxString& InPngPath) override;

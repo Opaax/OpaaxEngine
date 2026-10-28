@@ -345,8 +345,12 @@ namespace Opaax
             }
 
             // The view's own world if it named one, else the active world.
-            RenderPass(*lRequest.Target, lRequest.Source != nullptr ? lRequest.Source : lWorld,
-                       lRequest.View, lRequest.bDrawOverlays);
+            World* const lDrawn = lRequest.Source != nullptr ? lRequest.Source : lWorld;
+
+            const CameraView lView = (lRequest.bWorldView && lDrawn != nullptr) ? lDrawn->GetCameraView()
+                                                                              : lRequest.View;
+
+            RenderPass(*lRequest.Target, lDrawn, lView, lRequest.bDrawOverlays);
 
             if (lRequest.bDrawUI && !m_SubmittedCanvases.empty())
             {
@@ -1089,6 +1093,12 @@ namespace Opaax
                                            World* InSource, bool bInDrawUI)
     {
         m_SubmittedViews.emplace_back(RenderPassRequest{ &InTarget, InView, bInDrawOverlays, bInDrawUI, InSource });
+    }
+
+    void RendererManager::SubmitWorldView(IRenderTarget& InTarget, bool bInDrawOverlays, World* InSource, bool bInDrawUI)
+    {
+        m_SubmittedViews.emplace_back(RenderPassRequest{ &InTarget, CameraView{}, bInDrawOverlays, bInDrawUI, InSource,
+                                                         /*bWorldView*/ true });
     }
 
     void RendererManager::SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget, const CameraView* InView)
