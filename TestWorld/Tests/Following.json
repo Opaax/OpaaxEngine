@@ -1,0 +1,152 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Following.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 1.0
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "chase-frames",
+        "params": {
+            "entity": "Runner",
+            "path": "FollowProbe/Frames",
+            "greater": 10
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "chase-between-steps",
+        "params": {
+            "entity": "Runner",
+            "path": "FollowProbe/FramedBetween",
+            "greater": 0
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "chase-within-step-min",
+        "params": {
+            "entity": "Runner",
+            "path": "FollowProbe/MinFraction",
+            "greater": -0.001
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "chase-within-step-max",
+        "params": {
+            "entity": "Runner",
+            "path": "FollowProbe/MaxFraction",
+            "less": 1.001
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "chase-camera",
+        "params": {
+            "entity": "Runner",
+            "path": "FollowProbe/ViewOffsetY",
+            "near": 40,
+            "tolerance": 0.01
+        }
+    },
+    {
+        "id": "screenshot-chase",
+        "command": "screenshot",
+        "params": {
+            "path": "Following.png"
+        }
+    },
+    {
+        "id": "switch-camera",
+        "command": "component.set",
+        "params": {
+            "entity": "ParentCam",
+            "type": "Camera",
+            "value": {
+                "Priority": 5
+            }
+        }
+    },
+    {
+        "id": "reset-probe",
+        "command": "component.set",
+        "params": {
+            "entity": "Runner",
+            "type": "FollowProbe",
+            "value": {
+                "Frames": 0,
+                "FramedBetween": 0,
+                "MinFraction": 1.0,
+                "MaxFraction": 0.0
+            }
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 1.0
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "parented-frames",
+        "params": {
+            "entity": "Runner",
+            "path": "FollowProbe/Frames",
+            "greater": 10
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "parented-between-steps",
+        "params": {
+            "entity": "Runner",
+            "path": "FollowProbe/FramedBetween",
+            "greater": 0
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "parented-within-step-min",
+        "params": {
+            "entity": "Runner",
+            "path": "FollowProbe/MinFraction",
+            "greater": -0.001
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "parented-within-step-max",
+        "params": {
+            "entity": "Runner",
+            "path": "FollowProbe/MaxFraction",
+            "less": 1.001
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "parented-camera",
+        "params": {
+            "entity": "Runner",
+            "path": "FollowProbe/ViewOffsetY",
+            "near": -40,
+            "tolerance": 0.01
+        }
+    },
+    {
+        "id": "screenshot-parented",
+        "command": "screenshot",
+        "params": {
+            "path": "FollowingParented.png"
+        }
+    }
+]

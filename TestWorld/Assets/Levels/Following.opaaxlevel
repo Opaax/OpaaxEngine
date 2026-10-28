@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/Following.opaaxmap"
+    ],
+    "name": "Following",
+    "persistentMap": "Maps/Following.opaaxmap",
+    "version": 1
+}
