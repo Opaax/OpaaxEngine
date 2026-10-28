@@ -22,6 +22,8 @@ namespace TestWorld
     //   With ZoomPerStep, Chase also zooms out every step: while it frames the world, the view's size
     //   is as far through the camera's last step as its pose (MaxZoomLag near 0). Framed from the
     //   raw size it is always at the end of the step.
+    //   With WrapAfter, the runner jumps back to where it started every WrapAfter seconds of steps, and
+    //   Chase with it: a respawn.
     // =============================================================================
     class FollowProbe : public Opaax::Behaviour
     {
@@ -32,6 +34,7 @@ namespace TestWorld
         Opaax::OpaaxString Chase;
         Opaax::Vector2F    Offset = { 0.f, 40.f };
         float              ZoomPerStep = 0.f;   // OrthoSize Chase gains every step
+        float              WrapAfter   = 0.f;   // seconds of steps between two jumps back to the start; 0: never
 
         Opaax::Int32 Frames        = 0;     // frames read
         Opaax::Int32 FramedBetween = 0;     // frames framed strictly inside the last step
@@ -42,13 +45,17 @@ namespace TestWorld
         float        MaxZoomLag    = 0.f;   // largest gap between the zoom's and the pose's fraction of the step
 
         OPAAX_PROPERTIES(FollowProbe, OPAAX_PROP(Speed), OPAAX_PROP(Chase), OPAAX_PROP(Offset),
-                         OPAAX_PROP(ZoomPerStep), OPAAX_PROP(Frames), OPAAX_PROP(FramedBetween),
+                         OPAAX_PROP(ZoomPerStep), OPAAX_PROP(WrapAfter), OPAAX_PROP(Frames), OPAAX_PROP(FramedBetween),
                          OPAAX_PROP(MinFraction), OPAAX_PROP(MaxFraction), OPAAX_PROP(ViewOffsetY),
                          OPAAX_PROP(ZoomFrames), OPAAX_PROP(MaxZoomLag))
 
         void OnStart() override
         {
             Opaax::TransformInterpolation::RecordSteps(GetEntity());
+            if (const Opaax::TransformComponent* lLocal = TryGet<Opaax::TransformComponent>())
+            {
+                m_StartX = lLocal->Position.x;
+            }
 
             if (!Chase.IsEmpty())
             {
@@ -65,6 +72,13 @@ namespace TestWorld
             }
 
             lLocal->Position.x += Speed * InFixedDeltaTime;
+
+            m_SinceWrap += InFixedDeltaTime;
+            if (WrapAfter > 0.f && m_SinceWrap >= WrapAfter)
+            {
+                lLocal->Position.x = m_StartX;
+                m_SinceWrap        = 0.f;
+            }
 
             if (m_Camera.IsValid())
             {
@@ -125,5 +139,7 @@ namespace TestWorld
 
     private:
         Opaax::Entity m_Camera;
+        float         m_StartX    = 0.f;
+        float         m_SinceWrap = 0.f;
     };
 }

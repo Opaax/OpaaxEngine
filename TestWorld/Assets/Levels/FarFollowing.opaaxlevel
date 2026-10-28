@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/FarFollowing.opaaxmap"
+    ],
+    "name": "FarFollowing",
+    "persistentMap": "Maps/FarFollowing.opaaxmap",
+    "version": 1
+}

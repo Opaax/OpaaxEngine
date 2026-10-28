@@ -38,6 +38,7 @@ To run the same requests several times, write them once in a repeat:
 `{ "repeat": [{ "tag": "60", "pacing": "60" }, { "tag": "144", "pacing": "144" }], "requests": [...] }`
 stands for its requests once per entry, each `{tag}` in their strings replaced by the entry's value;
 a string that is only `{name}` takes the value itself, so a number stays a number. Repeats can nest.
+`TestWorld/Tests/CameraFollowing.json` plays one level at eleven frame rates this way.
 
 Frame rates and timing are driven too: `time.pace` (or `--frame-pacing`) gives the frames the time of
 a screen rate, steady, noisy or stalling, the same frames every run, and `config.set` changes a

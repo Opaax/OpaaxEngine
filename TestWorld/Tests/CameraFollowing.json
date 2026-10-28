@@ -1,0 +1,213 @@
+[
+    {
+        "repeat": [
+            {
+                "tag": "60",
+                "pacing": "60",
+                "rate": 60,
+                "reference": "60",
+                "jitter": 0.05
+            },
+            {
+                "tag": "30at30",
+                "pacing": "30",
+                "rate": 30,
+                "reference": "30at30",
+                "jitter": 0.05
+            },
+            {
+                "tag": "120at120",
+                "pacing": "120",
+                "rate": 120,
+                "reference": "120at120",
+                "jitter": 0.05
+            },
+            {
+                "tag": "30",
+                "pacing": "30",
+                "rate": 60,
+                "reference": "60",
+                "jitter": 0.05
+            },
+            {
+                "tag": "75",
+                "pacing": "75",
+                "rate": 60,
+                "reference": "60",
+                "jitter": 0.05
+            },
+            {
+                "tag": "144",
+                "pacing": "144",
+                "rate": 60,
+                "reference": "60",
+                "jitter": 0.05
+            },
+            {
+                "tag": "240",
+                "pacing": "240",
+                "rate": 60,
+                "reference": "60",
+                "jitter": 0.05
+            },
+            {
+                "tag": "60jitter",
+                "pacing": "60,jitter=0.25,seed=3",
+                "rate": 60,
+                "reference": "60",
+                "jitter": 1000.0
+            },
+            {
+                "tag": "144hitch",
+                "pacing": "144,hitch=0.1@0.5",
+                "rate": 60,
+                "reference": "60",
+                "jitter": 1000.0
+            },
+            {
+                "tag": "144at30",
+                "pacing": "144",
+                "rate": 30,
+                "reference": "30at30",
+                "jitter": 0.05
+            },
+            {
+                "tag": "144at120",
+                "pacing": "144",
+                "rate": 120,
+                "reference": "120at120",
+                "jitter": 0.05
+            }
+        ],
+        "requests": [
+            {
+                "id": "rate-{tag}",
+                "command": "config.set",
+                "params": {
+                    "config": "Engine",
+                    "values": {
+                        "Time": {
+                            "FixedRate": "{rate}"
+                        }
+                    }
+                }
+            },
+            {
+                "id": "pace-{tag}",
+                "command": "time.pace",
+                "params": {
+                    "pacing": "{pacing}"
+                }
+            },
+            {
+                "id": "play-{tag}",
+                "command": "level.play",
+                "params": {
+                    "path": "Levels/Following.opaaxlevel"
+                }
+            },
+            {
+                "command": "world.wait",
+                "params": {
+                    "seconds": 0.25
+                }
+            },
+            {
+                "id": "trace-CameraFollowing-chase-{tag}",
+                "command": "camera.trace.start",
+                "params": {
+                    "name": "CameraFollowing-chase-{tag}",
+                    "target": "Runner"
+                }
+            },
+            {
+                "command": "world.wait",
+                "params": {
+                    "seconds": 1.0
+                }
+            },
+            {
+                "id": "CameraFollowing-chase-{tag}",
+                "command": "camera.trace.stop",
+                "params": {
+                    "limits": {
+                        "targetDrift": 0.5,
+                        "motionJitter": "{jitter}",
+                        "timeReversals": 0,
+                        "stillMoves": 0,
+                        "zoomReversals": 0,
+                        "cameraSwitches": 0
+                    }
+                }
+            },
+            {
+                "id": "CameraFollowing-chase-{tag}-path",
+                "command": "camera.trace.compare",
+                "params": {
+                    "reference": "CameraFollowing-chase-{reference}",
+                    "trace": "CameraFollowing-chase-{tag}",
+                    "limits": {
+                        "position": 0.001,
+                        "size": 0.001
+                    }
+                }
+            },
+            {
+                "id": "priority-ParentCam-{tag}",
+                "command": "component.set",
+                "params": {
+                    "entity": "ParentCam",
+                    "type": "Camera",
+                    "value": {
+                        "Priority": 5
+                    }
+                }
+            },
+            {
+                "command": "frames.wait",
+                "params": {
+                    "count": 2
+                }
+            },
+            {
+                "id": "trace-CameraFollowing-parent-{tag}",
+                "command": "camera.trace.start",
+                "params": {
+                    "name": "CameraFollowing-parent-{tag}",
+                    "target": "Runner"
+                }
+            },
+            {
+                "command": "world.wait",
+                "params": {
+                    "seconds": 1.0
+                }
+            },
+            {
+                "id": "CameraFollowing-parent-{tag}",
+                "command": "camera.trace.stop",
+                "params": {
+                    "limits": {
+                        "targetDrift": 0.01,
+                        "motionJitter": "{jitter}",
+                        "timeReversals": 0,
+                        "stillMoves": 0,
+                        "cameraSwitches": 0
+                    }
+                }
+            },
+            {
+                "id": "CameraFollowing-parent-{tag}-path",
+                "command": "camera.trace.compare",
+                "params": {
+                    "reference": "CameraFollowing-parent-{reference}",
+                    "trace": "CameraFollowing-parent-{tag}",
+                    "limits": {
+                        "position": 0.001,
+                        "size": 0.001
+                    }
+                }
+            }
+        ]
+    }
+]

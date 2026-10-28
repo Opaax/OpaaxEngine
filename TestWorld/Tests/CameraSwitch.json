@@ -1,0 +1,121 @@
+[
+    {
+        "repeat": [
+            {
+                "tag": "60",
+                "pacing": "60",
+                "rate": 60,
+                "reference": "60",
+                "jitter": 0.05
+            },
+            {
+                "tag": "144",
+                "pacing": "144",
+                "rate": 60,
+                "reference": "60",
+                "jitter": 0.05
+            },
+            {
+                "tag": "240",
+                "pacing": "240",
+                "rate": 60,
+                "reference": "60",
+                "jitter": 0.05
+            },
+            {
+                "tag": "60jitter",
+                "pacing": "60,jitter=0.25,seed=3",
+                "rate": 60,
+                "reference": "60",
+                "jitter": 1000.0
+            }
+        ],
+        "requests": [
+            {
+                "id": "rate-{tag}",
+                "command": "config.set",
+                "params": {
+                    "config": "Engine",
+                    "values": {
+                        "Time": {
+                            "FixedRate": "{rate}"
+                        }
+                    }
+                }
+            },
+            {
+                "id": "pace-{tag}",
+                "command": "time.pace",
+                "params": {
+                    "pacing": "{pacing}"
+                }
+            },
+            {
+                "id": "play-{tag}",
+                "command": "level.play",
+                "params": {
+                    "path": "Levels/Following.opaaxlevel"
+                }
+            },
+            {
+                "id": "priority-ParentCam-parent-{tag}",
+                "command": "component.set",
+                "params": {
+                    "entity": "ParentCam",
+                    "type": "Camera",
+                    "value": {
+                        "Priority": 5
+                    }
+                }
+            },
+            {
+                "command": "world.wait",
+                "params": {
+                    "seconds": 0.25
+                }
+            },
+            {
+                "id": "trace-CameraSwitch-{tag}",
+                "command": "camera.trace.start",
+                "params": {
+                    "name": "CameraSwitch-{tag}",
+                    "target": "Runner"
+                }
+            },
+            {
+                "command": "world.wait",
+                "params": {
+                    "seconds": 0.25
+                }
+            },
+            {
+                "id": "priority-ParentCam-chase-{tag}",
+                "command": "component.set",
+                "params": {
+                    "entity": "ParentCam",
+                    "type": "Camera",
+                    "value": {
+                        "Priority": 0
+                    }
+                }
+            },
+            {
+                "command": "world.wait",
+                "params": {
+                    "seconds": 0.5
+                }
+            },
+            {
+                "id": "CameraSwitch-{tag}",
+                "command": "camera.trace.stop",
+                "params": {
+                    "limits": {
+                        "cameraSwitches": 1,
+                        "timeReversals": 0,
+                        "zoomReversals": 0
+                    }
+                }
+            }
+        ]
+    }
+]

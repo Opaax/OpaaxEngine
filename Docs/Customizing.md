@@ -169,6 +169,14 @@ entity that gameplay moves in a fixed step is drawn between its steps once it as
 `TransformInterpolation::RecordSteps(GetEntity())` in `OnStart` (`World/Entity/TransformInterpolation.h`).
 `TestWorld/Tests/Following.json` checks both cameras, and the zoom of the chased one.
 
+To see how smooth a camera is, trace it: `camera.trace.start` and `camera.trace.stop` record every
+frame's time, view and followed entity into a JSON and a CSV file and measure them (how far the
+entity moves on screen, how unevenly the view moves, time running back), and `camera.trace.compare`
+checks that a level played at another frame rate draws the same path ([Automation.md](Automation.md)).
+The `TestWorld/Tests/Camera*.json` scripts play the Following level at 30 to 240 frames a second,
+steady, noisy and stalling, at fixed rates of 30, 60 and 120, far from the origin, through a camera
+switch, a pause and a respawn.
+
 A level is lit when it has an **Environment** (any entity): it is then drawn in HDR, lit by its
 **Light2D**s and the ambient light, then bloomed, exposed and tonemapped. Without one, sprites are
 drawn as they are and lights do nothing (the log says so once).
