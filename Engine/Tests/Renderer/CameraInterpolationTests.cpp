@@ -9,6 +9,7 @@
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/InputManager.h"
 #include "Renderer/Camera/CameraComponent.h"
+#include "Renderer/Camera/CameraInterpolationComponent.h"
 #include "Renderer/Camera/CameraManager.h"
 #include "Renderer/DebugDraw.h"
 #include "Resources/ResourceManager.h"
@@ -289,4 +290,32 @@ TEST_CASE("Camera interpolation: only the camera framing the world is recorded, 
     CHECK_FALSE(lOld.bRecordSteps);
     CHECK_FALSE(lOld.bHasPrevious);
     CHECK_FALSE(lOld.bHasStepped);
+}
+
+TEST_CASE("ResolveDisplayOrthoSize: no step recorded answers the current size")
+{
+    CHECK(ResolveDisplayOrthoSize(400.f, nullptr, 0.5f) == 400.f);
+
+    // Recorded but no step yet: blending from a default size would zoom in from 0.
+    const CameraInterpolationComponent lUnwritten{};
+    CHECK(ResolveDisplayOrthoSize(400.f, &lUnwritten, 0.5f) == 400.f);
+}
+
+TEST_CASE("ResolveDisplayOrthoSize: alpha 0 is the size before the step, 1 the size it left, clamped")
+{
+    CameraInterpolationComponent lHistory;
+    lHistory.PreviousOrthoSize = 300.f;
+    lHistory.SteppedOrthoSize  = 340.f;
+    lHistory.bHasStep          = true;
+
+    CHECK(ResolveDisplayOrthoSize(340.f, &lHistory, 0.f) == doctest::Approx(300.f));
+    CHECK(ResolveDisplayOrthoSize(340.f, &lHistory, 0.25f) == doctest::Approx(310.f));
+    CHECK(ResolveDisplayOrthoSize(340.f, &lHistory, 1.f) == doctest::Approx(340.f));
+
+    CHECK(ResolveDisplayOrthoSize(340.f, &lHistory, 2.f) == doctest::Approx(340.f));
+    CHECK(ResolveDisplayOrthoSize(340.f, &lHistory, -1.f) == doctest::Approx(300.f));
+
+    // Set since the step (in Update): the size as it is, at any alpha.
+    CHECK(ResolveDisplayOrthoSize(500.f, &lHistory, 0.f) == 500.f);
+    CHECK(ResolveDisplayOrthoSize(500.f, &lHistory, 0.6f) == 500.f);
 }
