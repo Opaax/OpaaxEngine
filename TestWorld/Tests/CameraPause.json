@@ -111,7 +111,10 @@
                 "command": "camera.trace.stop",
                 "params": {
                     "limits": {
-                        "cameraSwitches": 0
+                        "cameraSwitches": 0,
+                        "timeReversals": 0,
+                        "zoomReversals": 0,
+                        "stillMoves": 0
                     }
                 }
             }

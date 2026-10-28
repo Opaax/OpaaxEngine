@@ -46,7 +46,9 @@ and the game export. A game is a module of its own types, linked into its runtim
    camera (its pose and its zoom) are placed between their last two steps, so motion is smooth at
    any frame rate and a camera following a body keeps it still on screen.
 
-A paused world (in the editor) skips its part of 3 and 4; a step runs it for one frame.
+A paused world (in the editor) skips its part of 3 and 4; a step runs it for one frame. It is drawn
+as it was on its last frame (the same alpha), so it holds still, and once resumed it goes on from
+that picture: the time spent paused is not simulated.
 
 Sound is mixed on its own thread, a few milliseconds ahead of the audio device: during the frame the
 game only sends it commands (play, stop, move, fade), and the audio update frees the sounds that
