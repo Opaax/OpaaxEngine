@@ -31,6 +31,7 @@ namespace
 
         bool VisitValues(IPropertyVisitor&) override { return false; }
         void ResetToDefaults() override {}
+        bool MergeText(const OpaaxString&, OpaaxString&) override { return false; }
 
         const OpaaxString& LoadedPath() const { return m_LoadedPath; }
         int LoadCount() const { return m_LoadCount; }
@@ -59,6 +60,7 @@ namespace
 
         bool VisitValues(IPropertyVisitor&) override { return false; }
         void ResetToDefaults() override {}
+        bool MergeText(const OpaaxString&, OpaaxString&) override { return false; }
     };
 
     // A base a game could share between its configs: never made.

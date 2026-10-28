@@ -32,4 +32,12 @@ namespace Opaax
         m_Owed     = 0.0;
         m_bStarted = true;
     }
+
+    void FrameClock::SetFixedDelta(const double InFixedDelta) noexcept
+    {
+        if (InFixedDelta > 0.0)
+        {
+            m_FixedDelta = InFixedDelta;
+        }
+    }
 }

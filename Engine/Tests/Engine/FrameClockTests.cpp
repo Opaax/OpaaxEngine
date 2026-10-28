@@ -80,3 +80,27 @@ TEST_CASE("FrameClock: a clock going backwards gives a zero delta")
     CHECK(lClock.BeginFrame(9.0) == 0.0);
     CHECK(lClock.BeginFrame(9.0 + FIXED) == FIXED);
 }
+
+TEST_CASE("FrameClock: a new fixed delta keeps the time owed, in steps of the new length")
+{
+    FrameClock lClock(FIXED);
+    lClock.BeginFrame(0.0);
+
+    lClock.BeginFrame(FIXED * 0.5);
+    CHECK(TakeAll(lClock) == 0);
+
+    // Half a long step owed is two quarter steps.
+    lClock.SetFixedDelta(FIXED / 4.0);
+    CHECK(lClock.GetFixedDelta() == FIXED / 4.0);
+    CHECK(TakeAll(lClock) == 2);
+    CHECK(lClock.GetFixedAlpha() == 0.0);
+
+    lClock.BeginFrame(FIXED * 0.875);
+    CHECK(TakeAll(lClock) == 1);
+    CHECK(lClock.GetFixedAlpha() == 0.5);
+
+    // Nothing above zero: kept.
+    lClock.SetFixedDelta(0.0);
+    lClock.SetFixedDelta(-1.0);
+    CHECK(lClock.GetFixedDelta() == FIXED / 4.0);
+}

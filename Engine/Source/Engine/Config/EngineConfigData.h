@@ -50,6 +50,23 @@ namespace Opaax
                                                        "Off in a run paced by --frame-pacing."))
     };
 
+    struct TimeSettings
+    {
+        /** The range FixedRate is kept in, steps a second. */
+        static constexpr float MIN_FIXED_RATE = 10.f;
+        static constexpr float MAX_FIXED_RATE = 1000.f;
+
+        /** Fixed steps a second: physics, movement and every OnFixedUpdate run at this rate. */
+        float FixedRate = 60.f;
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(TimeSettings, FixedRate)
+
+        OPAAX_PROPERTIES(TimeSettings,
+                         OPAAX_PROP(FixedRate).SetRange(MIN_FIXED_RATE, MAX_FIXED_RATE)
+                             .SetTooltip("Fixed steps a second: physics, movement, OnFixedUpdate.\n"
+                                         "Moving things are drawn between steps, smooth at any screen rate."))
+    };
+
     struct RenderSettings
     {
         // Requested backend. Unsupported backends (e.g. Vulkan without SDK) fall back, with a warning.
@@ -176,16 +193,18 @@ namespace Opaax
     struct EngineConfigData
     {
         WindowSettings  Window;
+        TimeSettings    Time;
         RenderSettings  Render;
         PhysicsSettings Physics;
         AudioSettings   Audio;
         StatsSettings   Stats;
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(EngineConfigData, Window, Render, Physics, Audio, Stats)
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(EngineConfigData, Window, Time, Render, Physics, Audio, Stats)
 
         // NeedRestart on groups read at startup. Render and Audio are mixed, so only some fields have it.
         OPAAX_PROPERTIES(EngineConfigData,
                          OPAAX_PROP(Window),
+                         OPAAX_PROP(Time),
                          OPAAX_PROP(Render),
                          OPAAX_PROP(Physics).SetFlags(EPropertyFlags::NeedRestart),
                          OPAAX_PROP(Audio),

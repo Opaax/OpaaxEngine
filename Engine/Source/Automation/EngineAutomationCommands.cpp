@@ -1,6 +1,7 @@
 #include "Automation/EngineAutomationCommands.h"
 
 #include "Application/OpaaxApplication.h"
+#include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IEngine.h"
 #include "Application/Services/IPaths.h"
 #include "Core/Algo/Algo.h"
@@ -8,6 +9,7 @@
 #include "Core/Maths/Maths.h"
 #include "Core/String/OpaaxStringJson.h"
 #include "Core/Time/Clock.h"
+#include "Engine/Config/Config.h"
 #include "Engine/FramePacer.h"
 #include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
@@ -122,6 +124,32 @@ namespace Opaax::EngineAutomation
                 OutError = "no active world";
             }
             return lWorld;
+        }
+
+        /** The registered config named InName (its file's name: "Engine"), or null with OutError naming them. */
+        Config* FindConfig(const OpaaxString& InName, OpaaxString& OutError)
+        {
+            OpaaxString lNames;
+            for (const TStrongObjectPtr<Config>& lConfig : OpaaxApplication::GetAppService<IConfigSystem>().GetConfigs())
+            {
+                const OpaaxString lName = Config::NameFromFile(lConfig->FileName()).ToString();
+                if (lName == InName)
+                {
+                    return lConfig.Get();
+                }
+                lNames += lNames.IsEmpty() ? lName : ", " + lName;
+            }
+
+            OutError = "no config '" + InName + "': the configs are " + lNames;
+            return nullptr;
+        }
+
+        /** A config's values as its file holds them: JSON, or the text itself for a format of its own. */
+        nlohmann::json ConfigValues(const Config& InConfig)
+        {
+            const OpaaxString    lText   = InConfig.ToText();
+            const nlohmann::json lValues = nlohmann::json::parse(lText.CStr(), nullptr, false);
+            return lValues.is_discarded() ? nlohmann::json(lText) : lValues;
         }
 
         /** How far apart two numbers can be and still be "equal" (floats written back and forth). */
@@ -553,6 +581,56 @@ namespace Opaax::EngineAutomation
         }
 
         // =========================================================================
+        // Configs: read, and changed for this run
+        // =========================================================================
+        void RegisterConfig(AutomationRunner& InRunner)
+        {
+            InRunner.Register("config.get",
+                "A config's values as its file holds them: {config}, its file's name (\"Engine\", \"Renderer\"...). "
+                "Answers {config, values}.",
+                [](const nlohmann::json& InParams)
+                {
+                    const OpaaxString lName = InParams.value("config", OpaaxString());
+                    OpaaxString       lError;
+                    const Config*     lConfig = FindConfig(lName, lError);
+                    if (lConfig == nullptr)
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    return AutomationResult::Ok(nlohmann::json{ { "config", lName }, { "values", ConfigValues(*lConfig) } });
+                });
+
+            InRunner.Register("config.set",
+                "Merges {values}, shaped like the config's file ({\"Time\": {\"FixedRate\": 30}}), into {config} for "
+                "this run, without saving; applied at once, as the Config panel does. A value the config does not have, "
+                "or of the wrong type, is refused. Answers {config, values} after.",
+                [](const nlohmann::json& InParams)
+                {
+                    const OpaaxString lName = InParams.value("config", OpaaxString());
+                    OpaaxString       lError;
+                    Config*           lConfig = FindConfig(lName, lError);
+                    if (lConfig == nullptr)
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    const auto lValues = InParams.find("values");
+                    if (lValues == InParams.end() || !lValues->is_object())
+                    {
+                        return AutomationResult::Fail("give {values} shaped like the file, like {\"Time\": {\"FixedRate\": 30}}");
+                    }
+
+                    if (!lConfig->MergeText(OpaaxString(lValues->dump().c_str()), lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    return AutomationResult::Ok(nlohmann::json{ { "config", lName }, { "values", ConfigValues(*lConfig) } });
+                });
+        }
+
+        // =========================================================================
         // Expectations: a failed one fails the request, so a script's exit code fails a test run
         // =========================================================================
         void RegisterExpectations(AutomationRunner& InRunner, IEngine& InEngine)
@@ -653,6 +731,7 @@ namespace Opaax::EngineAutomation
         RegisterWorld(InRunner, InEngine);
         RegisterLevels(InRunner, InEngine);
         RegisterTime(InRunner, InEngine);
+        RegisterConfig(InRunner);
         RegisterExpectations(InRunner, InEngine);
     }
 

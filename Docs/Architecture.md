@@ -35,8 +35,10 @@ and the game export. A game is a module of its own types, linked into its runtim
    used), and the active world's subsystems run once, in their order: input (100), gameplay (200,
    the behaviours' `OnUpdate`), physics (300), after physics (400, the movers), the default (500),
    presentation (600: animation, audio), then debug drawing (700).
-4. **Fixed steps:** as many 1/60 s steps as the time owed, each running the subsystems' fixed
-   update in the same order, so a behaviour's `OnFixedUpdate` comes right before the physics step.
+4. **Fixed steps:** as many steps as the time owed (`Time.FixedRate` in `Engine.config`, 60 a second by
+   default; a test plays at a screen rate of its choice with `--frame-pacing`), each running the
+   subsystems' fixed update in the same order, so a behaviour's `OnFixedUpdate` comes right before the
+   physics step.
    Around each step the world records what a step changes for the entities that ask for it: the
    active camera's pose and `OrthoSize` (`CameraInterpolation`), and the pose of any entity gameplay
    moves in a step (`TransformInterpolation::RecordSteps`).

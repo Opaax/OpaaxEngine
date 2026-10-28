@@ -12,7 +12,9 @@
 #include "Platform/IPlatform.h"
 
 #include "Core/Image/PngWriter.h"
+#include "Core/Maths/Maths.h"
 #include "Core/Maths/MathsStatics.h"
+#include "Engine/Config/Config_Engine.h"
 #include "Engine/EngineEvents.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
 #include "Engine/Registries/AutoRegistration.h"
@@ -340,6 +342,11 @@ namespace Opaax
 
         // Every config class has its config from now on, read or not: the editor lists them all.
         OpaaxApplication::GetAppService<IConfigSystem>().RegisterClasses(m_Registries.ObjectClasses());
+
+        // The fixed rate now and whenever Engine.config changes.
+        m_EngineConfig = &OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>();
+        m_EngineConfig->OnChanged().AddMember(this, &Engine::HandleEngineConfigChanged);
+        HandleEngineConfigChanged();
         
         BindToWorldMgrEvents();
 
@@ -467,6 +474,25 @@ namespace Opaax
         return m_Platform != nullptr ? m_Platform->GetTimeSeconds() : 0.0;
     }
 
+    void Engine::HandleEngineConfigChanged()
+    {
+        if (m_EngineConfig == nullptr)
+        {
+            return;
+        }
+
+        const float  lRate  = Maths::Clamp(m_EngineConfig->GetData().Time.FixedRate, TimeSettings::MIN_FIXED_RATE,
+                                           TimeSettings::MAX_FIXED_RATE);
+        const double lDelta = 1.0 / static_cast<double>(lRate);
+        if (lDelta == m_Clock.GetFixedDelta())
+        {
+            return;
+        }
+
+        m_Clock.SetFixedDelta(lDelta);
+        OPAAX_ENGINE_LOG(Info, "Fixed steps: {} a second", lRate);
+    }
+
     void Engine::TearDown()
     {
         if (!m_bStarted)
@@ -490,6 +516,13 @@ namespace Opaax
         }
         
         UnbindFromWorldMgrEvents();
+
+        // The config outlives the engine.
+        if (m_EngineConfig != nullptr)
+        {
+            m_EngineConfig->OnChanged().RemoveAll(this);
+            m_EngineConfig = nullptr;
+        }
 
         m_Subsystems.ShutdownAll();
         

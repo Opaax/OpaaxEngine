@@ -62,6 +62,47 @@ namespace Opaax
         }
     };
 
+    namespace ConfigMerge
+    {
+        /**
+         * The first key of InPatch that InValues does not have at the same place.
+         * @param OutPath Its dotted path ("Time.FixRate")
+         * @param OutKnown The keys InValues has there ("FixedRate")
+         * @return False when every key of InPatch is known
+         */
+        inline bool FindUnknownKey(const nlohmann::json& InValues, const nlohmann::json& InPatch, OpaaxString& OutPath,
+                                   OpaaxString& OutKnown, const OpaaxString& InPrefix = OpaaxString())
+        {
+            if (!InPatch.is_object() || !InValues.is_object())
+            {
+                return false;
+            }
+
+            for (const auto& lEntry : InPatch.items())
+            {
+                const OpaaxString lPath = InPrefix.IsEmpty() ? OpaaxString(lEntry.key().c_str())
+                                                             : InPrefix + "." + lEntry.key().c_str();
+                const auto        lKnown = InValues.find(lEntry.key());
+                if (lKnown == InValues.end())
+                {
+                    OutPath  = lPath;
+                    OutKnown = OpaaxString();
+                    for (const auto& lHas : InValues.items())
+                    {
+                        OutKnown += OutKnown.IsEmpty() ? OpaaxString(lHas.key().c_str()) : ", " + OpaaxString(lHas.key().c_str());
+                    }
+                    return true;
+                }
+
+                if (FindUnknownKey(*lKnown, lEntry.value(), OutPath, OutKnown, lPath))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
     // =============================================================================
     // TConfig — a config whose values are a TData. A concrete config derives from it, declares
     //   OPAAX_OBJECT(Class, Config) and its file name; the base handles Load, Save, the default file and
@@ -131,6 +172,41 @@ namespace Opaax
 
         // Same codec as Save.
         OpaaxString ToText() const override { return TConfigCodec<TData>::ToText(m_Data); }
+
+        // Through the codec's text, so a value it would refuse in the file is refused here.
+        bool MergeText(const OpaaxString& InValues, OpaaxString& OutError) override
+        {
+            try
+            {
+                nlohmann::json       lValues = nlohmann::json::parse(ToText().CStr());
+                const nlohmann::json lPatch  = nlohmann::json::parse(InValues.CStr());
+
+                if (!lPatch.is_object())
+                {
+                    OutError = "the values are an object shaped like the file, like {\"Time\": {\"FixedRate\": 30}}";
+                    return false;
+                }
+
+                OpaaxString lUnknown;
+                OpaaxString lKnown;
+                if (ConfigMerge::FindUnknownKey(lValues, lPatch, lUnknown, lKnown))
+                {
+                    OutError = "no value '" + lUnknown + "' in this config; there: " + lKnown;
+                    return false;
+                }
+
+                lValues.merge_patch(lPatch);
+                m_Data = TConfigCodec<TData>::FromText(OpaaxString(lValues.dump().c_str()));
+            }
+            catch (const nlohmann::json::exception& InError)
+            {
+                OutError = InError.what();
+                return false;
+            }
+
+            NotifyChanged();
+            return true;
+        }
 
         bool VisitValues(IPropertyVisitor& InVisitor) override
         {
