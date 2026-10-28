@@ -43,6 +43,13 @@ What working on this repository taught, kept short so the next session starts fr
   test includes the type's header: a registration in a header runs in the test's own file. Check from
   a file that does not include it; linked plainly, that check fails.
 
+## Running the games
+
+- A game run with `--exec` writes a screenshot's relative path into its working directory: run it from
+  `build/debug-editor/TestWorldResults`, as CTest does, or a run from the repository root leaves PNGs there.
+- A map written by hand (Python's `json`) re-serializes differently (floats as typed, not as the engine
+  writes them), and the editor warns on open. Resave it once: `level.open`, then `level.save` with `all`.
+
 ## Looking at the editor
 
 - The editor's layout is local (`TestWorld/Editor/Save/imgui.ini`) and can hide a panel in a
