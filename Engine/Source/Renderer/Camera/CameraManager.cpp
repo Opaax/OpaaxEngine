@@ -160,8 +160,9 @@ namespace Opaax
         lFrame.Resolution    = lResolution;
         lFrame.FrameDelta    = m_FrameDelta;
         lFrame.StepCount     = lWorld->GetStepCount();
-        lFrame.Steps         = static_cast<Uint32>(lFrame.World == m_LastFrame.World ? lFrame.StepCount - m_LastFrame.StepCount
-                                                                                    : lFrame.StepCount);
+        lFrame.Steps         = static_cast<Uint32>(lFrame.World == m_LastFrame.World
+                                                       ? lFrame.StepCount - m_LastFrame.StepCount
+                                                       : lFrame.StepCount);
         lFrame.Alpha         = lInterpolate ? InAlpha : 1.0;
         lFrame.bInterpolated = lInterpolate;
         lFrame.StepDelta     = lWorld->GetLastStepDelta();
@@ -290,10 +291,12 @@ namespace Opaax
 
         if (lTarget.IsValid() && lTarget.Has<TransformComponent>())
         {
+            const TransformComponent lDrawn = InFrame.bInterpolated
+                                                  ? EntityHierarchy::DisplayTransform(lTarget, static_cast<float>(InFrame.Alpha))
+                                                  : EntityHierarchy::WorldTransform(lTarget);
+
             lSample.bHasTarget     = true;
-            lSample.TargetPosition = InFrame.bInterpolated
-                                         ? EntityHierarchy::DisplayTransform(lTarget, static_cast<float>(InFrame.Alpha)).Position
-                                         : EntityHierarchy::WorldTransform(lTarget).Position;
+            lSample.TargetPosition = lDrawn.Position;
         }
 
         lTrace.Samples.push_back(Move(lSample));

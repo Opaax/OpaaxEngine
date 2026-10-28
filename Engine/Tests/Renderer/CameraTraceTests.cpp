@@ -107,6 +107,21 @@ TEST_CASE("CameraTrace: game time running back, and a view moving while time sta
     CHECK(CameraTrace::Summarize(lPaused, HEIGHT_PX).StillMoves == 0);
 }
 
+TEST_CASE("CameraTrace: a camera zooming out while it pans locked on its target has no drift and no jitter")
+{
+    TDynArray<CameraTraceSample> lSamples = Pan(60.0, 60);
+    for (Uint64 lIndex = 0; lIndex < lSamples.size(); ++lIndex)
+    {
+        lSamples[lIndex].ViewSize = SIZE + static_cast<float>(lIndex);
+    }
+
+    // The target nears the centre on screen, and the pan slows there: the zoom, not a move.
+    const CameraTraceSummary lSummary = CameraTrace::Summarize(lSamples, HEIGHT_PX);
+    CHECK(lSummary.TargetDrift == doctest::Approx(0.f).epsilon(1e-4));
+    CHECK(lSummary.MotionJitter == doctest::Approx(0.f).epsilon(1e-3));
+    CHECK(lSummary.ZoomReversals == 0);
+}
+
 TEST_CASE("CameraTrace: a zoom turning back is counted each time")
 {
     TDynArray<CameraTraceSample> lSamples;

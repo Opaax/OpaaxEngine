@@ -34,17 +34,21 @@ namespace Opaax
 
     // =============================================================================
     // CameraTraceSummary — what a trace says about the camera's smoothness, in pixels of a view
-    //   HeightPx tall. Each "largest" comes with the frame it happened on.
+    //   HeightPx tall. The drift and the jitter measure moves in the world, at the frame's scale: a
+    //   zoom alone moves nothing. Each "largest" comes with the frame it happened on.
     // =============================================================================
     struct CameraTraceSummary
     {
         Uint32 Frames = 0;
 
-        /** The largest move of the target on screen from one frame to the next (0 for a camera locked on it). */
+        /** The largest move of the target against the view from one frame to the next: 0 for a camera locked on it. */
         float  TargetDrift      = 0.f;
         Uint32 TargetDriftFrame = 0;
 
-        /** The largest change of the view's move from one frame to the next: 0 for a steady pan at a steady rate. */
+        /**
+         * The largest change of the view's move in the world from one frame to the next: 0 for a steady
+         * pan at a steady rate.
+         */
         float  MotionJitter      = 0.f;
         Uint32 MotionJitterFrame = 0;
 
@@ -99,7 +103,8 @@ namespace Opaax
          * alpha (a view drawn between steps is a blend of the two). The reference is a steady pacing at
          * the fixed rate or a multiple of it, so it draws every step's end; InTrace may be any pacing.
          */
-        CameraTraceGap Compare(const TDynArray<CameraTraceSample>& InReference, const TDynArray<CameraTraceSample>& InTrace);
+        CameraTraceGap Compare(const TDynArray<CameraTraceSample>& InReference,
+                               const TDynArray<CameraTraceSample>& InTrace);
 
         /** InSamples as CSV, a row a frame, the target also in pixels from the view's centre (InHeightPx tall). */
         OpaaxString ToCsv(const TDynArray<CameraTraceSample>& InSamples, float InHeightPx);

@@ -27,6 +27,12 @@ namespace Opaax::CameraTrace
             return (InSample.TargetPosition - InSample.ViewPosition) * PixelsPerUnit(InSample.ViewSize, InHeightPx);
         }
 
+        /** Where the target was from the view's centre, world units. */
+        Vector2F TargetFromView(const CameraTraceSample& InSample)
+        {
+            return InSample.TargetPosition - InSample.ViewPosition;
+        }
+
         /** Keeps the larger of InValue and InOutLargest, with the frame it came from. */
         void KeepLargest(const float InValue, const Uint32 InFrame, float& InOutLargest, Uint32& OutFrame)
         {
@@ -43,7 +49,7 @@ namespace Opaax::CameraTrace
         CameraTraceSummary lSummary;
         lSummary.Frames = static_cast<Uint32>(InSamples.size());
 
-        // The view's move on the frame before, for the jitter; none after a switch.
+        // The view's move in the world on the frame before, for the jitter; none after a switch.
         Vector2F lLastMove      = { 0.f, 0.f };
         bool     bHasLastMove   = false;
         Int32    lZoomDirection = 0;
@@ -68,14 +74,16 @@ namespace Opaax::CameraTrace
                 continue;
             }
 
-            const Vector2F lMove = (lSample.ViewPosition - lBefore.ViewPosition)
-                                   * PixelsPerUnit(lSample.ViewSize, InHeightPx);
-            const float    lMoved = Length(lMove);
+            // Moves in the world, shown at this frame's scale.
+            const float    lPixels = PixelsPerUnit(lSample.ViewSize, InHeightPx);
+            const Vector2F lMove   = lSample.ViewPosition - lBefore.ViewPosition;
+            const float    lMoved  = Length(lMove) * lPixels;
             KeepLargest(lMoved, lFrame, lSummary.LargestMove, lSummary.LargestMoveFrame);
 
             if (bHasLastMove)
             {
-                KeepLargest(Length(lMove - lLastMove), lFrame, lSummary.MotionJitter, lSummary.MotionJitterFrame);
+                KeepLargest(Length(lMove - lLastMove) * lPixels, lFrame, lSummary.MotionJitter,
+                            lSummary.MotionJitterFrame);
             }
             lLastMove    = lMove;
             bHasLastMove = true;
@@ -87,7 +95,7 @@ namespace Opaax::CameraTrace
 
             if (lSample.bHasTarget && lBefore.bHasTarget)
             {
-                const float lDrift = Length(TargetOnScreen(lSample, InHeightPx) - TargetOnScreen(lBefore, InHeightPx));
+                const float lDrift = Length(TargetFromView(lSample) - TargetFromView(lBefore)) * lPixels;
                 KeepLargest(lDrift, lFrame, lSummary.TargetDrift, lSummary.TargetDriftFrame);
             }
 
@@ -122,10 +130,12 @@ namespace Opaax::CameraTrace
 
         const auto lFindAt = [&lByTime](const double InTime, const OpaaxString& InCamera) -> const CameraTraceSample*
         {
-            auto lAt = Algo::LowerBound(lByTime, InTime - SAME_TIME, [](const CameraTraceSample* InOther, const double InValue)
+            const auto lEarlier = [](const CameraTraceSample* InOther, const double InValue)
             {
                 return InOther->GameTime < InValue;
-            });
+            };
+
+            auto lAt = Algo::LowerBound(lByTime, InTime - SAME_TIME, lEarlier);
 
             for (; lAt != lByTime.end() && (*lAt)->GameTime <= InTime + SAME_TIME; ++lAt)
             {
@@ -152,8 +162,9 @@ namespace Opaax::CameraTrace
             {
                 // Between two steps: the reference's view at both ends of the step, blended as this frame was.
                 const double             lStart = lSample.GameTime - lSample.Alpha * lSample.StepDelta;
-                const CameraTraceSample* lFrom  = lSample.StepDelta > 0.0 ? lFindAt(lStart, lSample.Camera) : nullptr;
-                const CameraTraceSample* lTo    = lFrom != nullptr ? lFindAt(lStart + lSample.StepDelta, lSample.Camera) : nullptr;
+                const CameraTraceSample* lFrom = lSample.StepDelta > 0.0 ? lFindAt(lStart, lSample.Camera) : nullptr;
+                const CameraTraceSample* lTo   = lFrom != nullptr ? lFindAt(lStart + lSample.StepDelta, lSample.Camera)
+                                                                  : nullptr;
                 if (lTo == nullptr)
                 {
                     continue;
