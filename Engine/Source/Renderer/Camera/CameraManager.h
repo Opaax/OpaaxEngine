@@ -12,6 +12,7 @@ namespace Opaax
 {
     class World;
     class WorldManager;
+    class Config_Engine;
     struct CameraComponent;
 
     OPAAX_LOG_CATEGORY(CameraManager);
@@ -34,7 +35,8 @@ namespace Opaax
     // =============================================================================
     // CameraManager — sets the view of the active Play world from its CameraComponents: the highest
     //   Priority wins (among equals, the first found, with a warning). Edit worlds use the editor's
-    //   camera instead.
+    //   camera instead. The view is resolved in the render pass, after the frame's fixed steps, from
+    //   the camera's display pose: it frames a body where the body is drawn.
     // =============================================================================
     class CameraManager final : public EngineSubsystem
     {
@@ -56,8 +58,10 @@ namespace Opaax
         /**
          * The view InWorld's cameras give: the highest priority wins, the first found among equals; no
          * camera gives the default view. Static and pure (testable with a bare World).
+         * @param InAlpha Progress through the fixed step: the camera is placed at its display pose
+         *   (EntityHierarchy::DisplayTransform), as bodies are drawn. None: at its current pose.
          */
-        static CameraResolution Resolve(World& InWorld);
+        static CameraResolution Resolve(World& InWorld, TOptional<float> InAlpha = NullOpt);
 
     private:
         /**
@@ -70,16 +74,19 @@ namespace Opaax
         // =============================================================================
         //~Begin Subsystem interface
     public:
-        bool Startup()                override;
-        void Shutdown()               override;
-        void Update(double DeltaTime) override;
+        bool Startup()              override;
+        void Shutdown()             override;
+        void Render(double InAlpha) override;
         //~End Subsystem interface
 
         // =============================================================================
         // Members
         // =============================================================================
     private:
-        WorldManager* m_WorldManager = nullptr; // not owned
+        WorldManager*  m_WorldManager = nullptr; // not owned
+
+        /** Render.bInterpolation: off frames the camera at its current pose. Not owned. */
+        Config_Engine* m_EngineConfig = nullptr;
 
         // Last reported result. The handle starts invalid, so every new world reports once.
         ObjectHandle m_ReportedWorld;

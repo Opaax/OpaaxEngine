@@ -97,7 +97,8 @@ namespace Opaax
         m_Subsystems.Add<GameInstanceManager>(&m_Registries);
         m_Subsystems.Add<WorldManager>(&m_Registries);
 
-        // Order does not matter: Loop runs UpdateAll and RenderAll as separate passes.
+        // The camera before the renderer: CameraManager sets the world's view in the render pass,
+        // after the fixed steps, and the renderer draws with it.
         m_Subsystems.Add<CameraManager>();
         m_Subsystems.Add<RendererManager>();
     }

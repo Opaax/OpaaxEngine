@@ -1,11 +1,13 @@
-// Suite: CameraManager::Resolve — which camera frames a world. Resolve is static and pure,
-// so it only needs a World.
+// Suite: CameraManager::Resolve — which camera frames a world, and where: at its current pose, or at
+// its display pose for a frame's alpha. Resolve is static and pure, so it only needs a World.
 #include <doctest.h>
 
 #include "Renderer/Camera/CameraManager.h"
 #include "Renderer/Camera/CameraComponent.h"
 #include "World/Components/TransformComponent.h"
+#include "World/Components/TransformInterpolationComponent.h"
 #include "World/Entity/Entity.h"
+#include "World/Entity/EntityHierarchy.h"
 #include "World/World.h"
 
 using namespace Opaax;
@@ -146,7 +148,7 @@ TEST_CASE("Camera: a camera saved before Priority loads at priority 0, and Prior
 
 TEST_CASE("Resolve: a camera REMOVED falls back to the default rather than the last value")
 {
-    // Update always writes the resolved view, so a deleted camera does not freeze the frame.
+    // The render pass always writes the resolved view, so a deleted camera does not freeze the frame.
     World lWorld("Transient");
 
     Entity lCamera = lWorld.CreateEntity("MainCamera");
@@ -160,4 +162,35 @@ TEST_CASE("Resolve: a camera REMOVED falls back to the default rather than the l
     const CameraResolution lAfter = CameraManager::Resolve(lWorld);
     CHECK(lAfter.Count == 0u);
     CHECK(lAfter.View.OrthoSize == doctest::Approx(300.f));
+}
+
+TEST_CASE("Resolve: with an alpha, a camera parented to an interpolated body frames it where it is DRAWN")
+{
+    World lWorld("Riding");
+
+    // The body is at 100 and was at 40 a step ago (as the mover records it).
+    Entity lBody = lWorld.CreateEntity("Body");
+    lBody.Get<TransformComponent>().Position = Vector2F{ 100.f, 20.f };
+
+    TransformInterpolationComponent lPrevious;
+    lPrevious.Position     = Vector2F{ 40.f, 20.f };
+    lPrevious.bHasPrevious = true;
+    lBody.Add<TransformInterpolationComponent>(lPrevious);
+
+    Entity lCamera = lWorld.CreateEntity("Camera");
+    lCamera.Add<CameraComponent>();
+    lCamera.Get<TransformComponent>().Position = Vector2F{ 0.f, 50.f };   // local: above the body
+    REQUIRE(EntityHierarchy::SetParent(lCamera, lBody, /*bKeepWorld*/ false));
+
+    for (const float lAlpha : { 0.f, 0.25f, 0.5f, 1.f })
+    {
+        const Vector2F lView  = CameraManager::Resolve(lWorld, lAlpha).View.Position;
+        const Vector2F lDrawn = EntityHierarchy::DisplayTransform(lBody, lAlpha).Position;
+
+        CHECK(lView.x == doctest::Approx(lDrawn.x));
+        CHECK(lView.y == doctest::Approx(lDrawn.y + 50.f));
+    }
+
+    // Without an alpha, the current pose: what gameplay sees.
+    CHECK(CameraManager::Resolve(lWorld).View.Position.x == doctest::Approx(100.f));
 }
