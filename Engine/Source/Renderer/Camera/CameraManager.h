@@ -6,6 +6,7 @@
 #include "Engine/Subsystems/EngineSubsystem.h"
 #include "Object/ObjectHandle.h"
 #include "Renderer/CameraView.h"
+#include "Renderer/Camera/CameraTrace.h"
 #include "World/Entity/EntityTypes.h"
 
 namespace Opaax
@@ -33,11 +34,40 @@ namespace Opaax
     };
 
     // =============================================================================
+    // CameraTraceRecording — a trace being recorded, or kept for a comparison (camera.trace.*).
+    // =============================================================================
+    struct CameraTraceRecording
+    {
+        OpaaxString Name;
+
+        /** The entity whose drawn position is recorded beside the view, by name; empty for none. */
+        OpaaxString Target;
+
+        /** The height of the view the summary measures pixels in. */
+        float HeightPx = 720.f;
+
+        /** The run it was made in, for whoever reads it: the frame pacing and the fixed rate. */
+        OpaaxString Pacing;
+        float       FixedRate = 60.f;
+
+        TDynArray<CameraTraceSample> Samples;
+
+        /** Frames past MAX_TRACE_FRAMES were not kept. */
+        bool bTruncated = false;
+
+        // The world recorded, its step count at the last frame and the target found in it.
+        ObjectHandle World;
+        Uint64       LastStepCount = 0;
+        EntityID     TargetEntity  = ENTITY_NONE;
+    };
+
+    // =============================================================================
     // CameraManager — sets the view of the active Play world from its CameraComponents: the highest
     //   Priority wins (among equals, the first found, with a warning). Edit worlds use the editor's
     //   camera instead. The view is resolved in the render pass, after the frame's fixed steps, from
     //   the camera's display pose and size: it frames a body where the body is drawn, and a zoom
-    //   changed in fixed steps moves smoothly.
+    //   changed in fixed steps moves smoothly. It also records camera traces (camera.trace.*): each
+    //   frame's time and view, measured by CameraTrace.
     // =============================================================================
     class CameraManager final : public EngineSubsystem
     {
@@ -73,11 +103,41 @@ namespace Opaax
          */
         static void RecordCameraSteps(World& InWorld, EntityID InActive, EntityID InPrevious);
 
+        // =============================================================================
+        // Trace
+        // =============================================================================
+    public:
+        /** The most frames a trace keeps: a trace left running stops growing there. */
+        static constexpr Uint64 MAX_TRACE_FRAMES = 200000;
+
+        /** The most stopped traces kept for a comparison; the oldest goes first. */
+        static constexpr Uint64 MAX_KEPT_TRACES = 16;
+
+        /**
+         * Records every frame of the Play world from the next one: the view, its time and the target
+         * InSetup names (camera.trace.start). Replaces a recording under way.
+         */
+        void StartTrace(const CameraTraceRecording& InSetup);
+
+        bool IsTracing() const noexcept { return m_Trace.has_value(); }
+
+        /**
+         * Ends the recording, and keeps it under its name for a comparison (FindTrace).
+         * @return False when nothing was recorded
+         */
+        bool StopTrace(CameraTraceRecording& OutTrace);
+
+        /** The trace kept under InName, or null. */
+        const CameraTraceRecording* FindTrace(const OpaaxString& InName) const;
+
     private:
         /**
          * Logs the result only when it changes (other world, other camera count, other winner).
          */
         void ReportResolution(World& InWorld, const CameraResolution& InResolution);
+
+        /** Adds this frame to the trace: InAlpha is the alpha the world was drawn with (none: not blended). */
+        void RecordTraceFrame(World& InWorld, const CameraResolution& InResolution, TOptional<double> InAlpha);
 
         // =============================================================================
         // Override
@@ -107,5 +167,12 @@ namespace Opaax
         // The camera whose steps are recorded: the last frame's winner, in that world.
         ObjectHandle m_RecordedWorld;
         EntityID     m_RecordedCamera = ENTITY_NONE;
+
+        /** The frame's delta, from Update, for the trace. */
+        double m_FrameDelta = 0.0;
+
+        /** The trace being recorded, and the ones kept by name. */
+        TOptional<CameraTraceRecording> m_Trace;
+        TDynArray<CameraTraceRecording> m_Traces;
     };
 }

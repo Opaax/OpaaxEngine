@@ -105,8 +105,10 @@ namespace Opaax
     //   fixed steps. Only the camera that framed the last frame is recorded: a camera that wins the
     //   view is framed at its pose on that frame, then between its steps from the next one.
     // =========================================================================
-    void CameraManager::Update(double /*InDeltaTime*/)
+    void CameraManager::Update(const double InDeltaTime)
     {
+        m_FrameDelta = InDeltaTime;
+
         World* lWorld = (m_WorldManager != nullptr) ? m_WorldManager->GetActiveWorld() : nullptr;
 
         if (lWorld == nullptr || lWorld->GetMode() != EWorldMode::Play)
@@ -151,6 +153,135 @@ namespace Opaax
         lWorld->SetCameraView(lResolution.View);
 
         ReportResolution(*lWorld, lResolution);
+
+        if (m_Trace.has_value())
+        {
+            RecordTraceFrame(*lWorld, lResolution, lInterpolate ? TOptional<double>(InAlpha) : NullOpt);
+        }
+    }
+
+    // =========================================================================
+    // Trace
+    // =========================================================================
+    void CameraManager::StartTrace(const CameraTraceRecording& InSetup)
+    {
+        m_Trace = InSetup;
+        m_Trace->Samples.clear();
+        m_Trace->bTruncated   = false;
+        m_Trace->World        = ObjectHandle();
+        m_Trace->TargetEntity = ENTITY_NONE;
+
+        OPAAX_LOG(LogCameraManager, Info, "Camera trace '{}' started (target '{}')", InSetup.Name.CStr(),
+                  InSetup.Target.CStr());
+    }
+
+    bool CameraManager::StopTrace(CameraTraceRecording& OutTrace)
+    {
+        if (!m_Trace.has_value())
+        {
+            return false;
+        }
+
+        OutTrace = Move(*m_Trace);
+        m_Trace.reset();
+
+        // A trace of the same name is replaced.
+        for (Uint64 lIndex = 0; lIndex < m_Traces.size(); ++lIndex)
+        {
+            if (m_Traces[lIndex].Name == OutTrace.Name)
+            {
+                m_Traces.erase(m_Traces.begin() + static_cast<Int64>(lIndex));
+                break;
+            }
+        }
+        if (m_Traces.size() >= MAX_KEPT_TRACES)
+        {
+            m_Traces.erase(m_Traces.begin());
+        }
+        m_Traces.push_back(OutTrace);
+
+        OPAAX_LOG(LogCameraManager, Info, "Camera trace '{}' stopped: {} frame(s)", OutTrace.Name.CStr(),
+                  OutTrace.Samples.size());
+        return true;
+    }
+
+    const CameraTraceRecording* CameraManager::FindTrace(const OpaaxString& InName) const
+    {
+        for (const CameraTraceRecording& lTrace : m_Traces)
+        {
+            if (lTrace.Name == InName)
+            {
+                return &lTrace;
+            }
+        }
+        return nullptr;
+    }
+
+    void CameraManager::RecordTraceFrame(World& InWorld, const CameraResolution& InResolution,
+                                         const TOptional<double> InAlpha)
+    {
+        CameraTraceRecording& lTrace = *m_Trace;
+
+        // A new world (a level opened): its steps count from here, and its target is found again.
+        if (lTrace.World != InWorld.GetHandle())
+        {
+            lTrace.World         = InWorld.GetHandle();
+            lTrace.LastStepCount = InWorld.GetStepCount();
+            lTrace.TargetEntity  = ENTITY_NONE;
+        }
+
+        if (lTrace.Samples.size() >= MAX_TRACE_FRAMES)
+        {
+            if (!lTrace.bTruncated)
+            {
+                lTrace.bTruncated = true;
+                OPAAX_LOG(LogCameraManager, Warn, "Camera trace '{}' keeps its first {} frames: stop it sooner",
+                          lTrace.Name.CStr(), MAX_TRACE_FRAMES);
+            }
+            return;
+        }
+
+        CameraTraceSample lSample;
+        lSample.FrameDelta = m_FrameDelta;
+        lSample.Steps      = static_cast<Uint32>(InWorld.GetStepCount() - lTrace.LastStepCount);
+        lSample.Alpha      = InAlpha.value_or(1.0);
+        lSample.StepDelta  = InWorld.GetLastStepDelta();
+
+        // Blended, the world is drawn between the last step's start and its end; else at its end.
+        lSample.GameTime = InWorld.GetSteppedTime() - (1.0 - lSample.Alpha) * InWorld.GetLastStepDelta();
+
+        if (InResolution.Count > 0)
+        {
+            const EntityMeta* lMeta = Entity(InResolution.Entity, &InWorld).TryGet<EntityMeta>();
+            lSample.Camera = lMeta != nullptr ? lMeta->Name : OpaaxString("<unnamed>");
+        }
+        lSample.ViewPosition = InResolution.View.Position;
+        lSample.ViewSize     = InResolution.View.OrthoSize;
+
+        // The target where the renderer draws it.
+        Entity lTarget(lTrace.TargetEntity, &InWorld);
+        if (!lTrace.Target.IsEmpty() && !lTarget.IsValid())
+        {
+            InWorld.Each<EntityMeta>([&](const EntityID InEntity, const EntityMeta& InMeta)
+            {
+                if (lTrace.TargetEntity == ENTITY_NONE && InMeta.Name == lTrace.Target)
+                {
+                    lTrace.TargetEntity = InEntity;
+                }
+            });
+            lTarget = Entity(lTrace.TargetEntity, &InWorld);
+        }
+
+        if (lTarget.IsValid() && lTarget.Has<TransformComponent>())
+        {
+            lSample.bHasTarget     = true;
+            lSample.TargetPosition = InAlpha.has_value()
+                                         ? EntityHierarchy::DisplayTransform(lTarget, static_cast<float>(*InAlpha)).Position
+                                         : EntityHierarchy::WorldTransform(lTarget).Position;
+        }
+
+        lTrace.LastStepCount = InWorld.GetStepCount();
+        lTrace.Samples.push_back(Move(lSample));
     }
 
     void CameraManager::ReportResolution(World& InWorld, const CameraResolution& InResolution)

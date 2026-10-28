@@ -114,6 +114,7 @@ namespace Opaax
         m_InputManager    = m_Subsystems.GetSubsystem<InputManager>();
         m_AudioManager    = m_Subsystems.GetSubsystem<AudioManager>();
         m_GameInstances   = m_Subsystems.GetSubsystem<GameInstanceManager>();
+        m_CameraManager   = m_Subsystems.GetSubsystem<CameraManager>();
     }
     
     void Engine::CacheAppServices()
@@ -529,6 +530,7 @@ namespace Opaax
         m_Resources         = nullptr;
         m_EngineEventBus    = nullptr;
         m_RendererManager   = nullptr;
+        m_CameraManager     = nullptr;
         m_WorldManager      = nullptr;
         m_InputManager      = nullptr;
         

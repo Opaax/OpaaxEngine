@@ -4,18 +4,23 @@
 #include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IEngine.h"
 #include "Application/Services/IPaths.h"
+#include "Application/Services/IWindowManager.h"
 #include "Core/Algo/Algo.h"
+#include "Core/IO/FileIO.h"
 #include "Core/IO/FileSystem.h"
 #include "Core/Maths/Maths.h"
 #include "Core/String/OpaaxStringJson.h"
 #include "Core/Time/Clock.h"
 #include "Engine/Config/Config.h"
+#include "Engine/Config/Config_Engine.h"
 #include "Engine/FramePacer.h"
 #include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Input/InputKeyNames.h"
 #include "Input/InputManager.h"
+#include "Platform/Window/Window.h"
+#include "Renderer/Camera/CameraManager.h"
 #include "UI/UICanvas.h"
 #include "UI/UISubsystem.h"
 #include "UI/UIWidget.h"
@@ -150,6 +155,102 @@ namespace Opaax::EngineAutomation
             const OpaaxString    lText   = InConfig.ToText();
             const nlohmann::json lValues = nlohmann::json::parse(lText.CStr(), nullptr, false);
             return lValues.is_discarded() ? nlohmann::json(lText) : lValues;
+        }
+
+        /** The engine's camera manager, or null with OutError. */
+        CameraManager* Cameras(IEngine& InEngine, OpaaxString& OutError)
+        {
+            CameraManager* lCameras = InEngine.GetCameras();
+            if (lCameras == nullptr)
+            {
+                OutError = "this app has no camera manager";
+            }
+            return lCameras;
+        }
+
+        nlohmann::json SummaryToJson(const CameraTraceSummary& InSummary)
+        {
+            return nlohmann::json{
+                { "frames",            InSummary.Frames },
+                { "targetDrift",       InSummary.TargetDrift },
+                { "targetDriftFrame",  InSummary.TargetDriftFrame },
+                { "motionJitter",      InSummary.MotionJitter },
+                { "motionJitterFrame", InSummary.MotionJitterFrame },
+                { "largestMove",       InSummary.LargestMove },
+                { "largestMoveFrame",  InSummary.LargestMoveFrame },
+                { "timeReversals",     InSummary.TimeReversals },
+                { "stillMoves",        InSummary.StillMoves },
+                { "zoomReversals",     InSummary.ZoomReversals },
+                { "cameraSwitches",    InSummary.CameraSwitches } };
+        }
+
+        /** A trace and its summary, as the .camera.json file holds them. */
+        nlohmann::json TraceToJson(const CameraTraceRecording& InTrace, const CameraTraceSummary& InSummary)
+        {
+            nlohmann::json lSamples = nlohmann::json::array();
+            for (Uint64 lIndex = 0; lIndex < InTrace.Samples.size(); ++lIndex)
+            {
+                const CameraTraceSample& lSample = InTrace.Samples[lIndex];
+
+                nlohmann::json lFrame{
+                    { "frame",     lIndex },
+                    { "delta",     lSample.FrameDelta },
+                    { "steps",     lSample.Steps },
+                    { "alpha",     lSample.Alpha },
+                    { "stepDelta", lSample.StepDelta },
+                    { "gameTime",  lSample.GameTime },
+                    { "camera",    lSample.Camera },
+                    { "view",      { { "x", lSample.ViewPosition.x }, { "y", lSample.ViewPosition.y },
+                                     { "size", lSample.ViewSize } } } };
+                if (lSample.bHasTarget)
+                {
+                    lFrame["target"] = { { "x", lSample.TargetPosition.x }, { "y", lSample.TargetPosition.y } };
+                }
+                lSamples.push_back(Move(lFrame));
+            }
+
+            return nlohmann::json{
+                { "name",      InTrace.Name },
+                { "target",    InTrace.Target },
+                { "heightPx",  InTrace.HeightPx },
+                { "pacing",    InTrace.Pacing },
+                { "fixedRate", InTrace.FixedRate },
+                { "truncated", InTrace.bTruncated },
+                { "summary",   SummaryToJson(InSummary) },
+                { "samples",   Move(lSamples) } };
+        }
+
+        /**
+         * Checks the numbers of InValues against InLimits, each the most it may be ({"targetDrift": 0.01}).
+         * False with OutError naming each value past its limit (and its frame), or a limit naming nothing.
+         */
+        bool CheckLimits(const nlohmann::json& InValues, const nlohmann::json& InLimits, OpaaxString& OutError)
+        {
+            for (const auto& lLimit : InLimits.items())
+            {
+                const OpaaxString lName(lLimit.key().c_str());
+                const auto        lValue = InValues.find(lLimit.key());
+                const OpaaxString lSeparator = OutError.IsEmpty() ? OpaaxString() : OpaaxString("; ");
+
+                if (lValue == InValues.end() || !lValue->is_number() || !lLimit.value().is_number())
+                {
+                    OutError += lSeparator + "no measure '" + lName + "' to limit: " + OpaaxString(InValues.dump().c_str());
+                    continue;
+                }
+
+                if (lValue->get<double>() > lLimit.value().get<double>())
+                {
+                    OutError += lSeparator + OpaaxString::Format("{} is {}, past {}", lName, lValue->get<double>(),
+                                                                 lLimit.value().get<double>());
+
+                    const auto lFrame = InValues.find(lLimit.key() + "Frame");
+                    if (lFrame != InValues.end())
+                    {
+                        OutError += OpaaxString::Format(" (frame {})", lFrame->get<Uint64>());
+                    }
+                }
+            }
+            return OutError.IsEmpty();
         }
 
         /** How far apart two numbers can be and still be "equal" (floats written back and forth). */
@@ -581,6 +682,136 @@ namespace Opaax::EngineAutomation
         }
 
         // =========================================================================
+        // Camera: traces of what it framed, measured
+        // =========================================================================
+        void RegisterCamera(AutomationRunner& InRunner, IEngine& InEngine)
+        {
+            InRunner.Register("camera.trace.start",
+                "Records every frame of the playing world from the next one: the frame's time, the view, and where "
+                "{target} (an entity's name, optional) is drawn; {name} names the files. {heightPx}: the view's height "
+                "the pixels are measured in (the window's by default).",
+                [&InEngine](const nlohmann::json& InParams)
+                {
+                    OpaaxString    lError;
+                    CameraManager* lCameras = Cameras(InEngine, lError);
+                    if (lCameras == nullptr)
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    CameraTraceRecording lSetup;
+                    lSetup.Name   = InParams.value("name", OpaaxString());
+                    lSetup.Target = InParams.value("target", OpaaxString());
+                    if (lSetup.Name.IsEmpty())
+                    {
+                        return AutomationResult::Fail("give the trace a {name}: its files are <name>.camera.json and .csv");
+                    }
+
+                    const Window* lWindow = OpaaxApplication::GetAppService<IWindowManager>().GetMainWindow();
+                    lSetup.HeightPx  = InParams.value("heightPx", lWindow != nullptr ? static_cast<float>(lWindow->GetHeight()) : 720.f);
+                    lSetup.Pacing    = InEngine.GetFramePacing().ToString();
+                    lSetup.FixedRate = OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>().GetData().Time.FixedRate;
+                    if (!(lSetup.HeightPx > 0.f))
+                    {
+                        return AutomationResult::Fail("heightPx is the view's height in pixels, above 0");
+                    }
+
+                    lCameras->StartTrace(lSetup);
+                    return AutomationResult::Ok(nlohmann::json{ { "name", lSetup.Name }, { "target", lSetup.Target },
+                                                                { "heightPx", lSetup.HeightPx } });
+                });
+
+            InRunner.Register("camera.trace.stop",
+                "Ends the trace, writes <name>.camera.json and <name>.camera.csv in the working folder and answers "
+                "{name, frames, files, summary}: the target's largest move on screen (targetDrift), the largest change "
+                "of the view's move (motionJitter), largestMove (pixels), timeReversals, stillMoves, zoomReversals, "
+                "cameraSwitches. {limits}, like {\"targetDrift\": 0.01}, fails the request past any of them.",
+                [&InEngine](const nlohmann::json& InParams)
+                {
+                    OpaaxString    lError;
+                    CameraManager* lCameras = Cameras(InEngine, lError);
+                    if (lCameras == nullptr)
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    CameraTraceRecording lTrace;
+                    if (!lCameras->StopTrace(lTrace))
+                    {
+                        return AutomationResult::Fail("no camera trace is recording: start one with camera.trace.start");
+                    }
+
+                    const CameraTraceSummary lSummary = CameraTrace::Summarize(lTrace.Samples, lTrace.HeightPx);
+                    const OpaaxString        lJson    = FileSystem::MakeAbsolute(lTrace.Name + ".camera.json");
+                    const OpaaxString        lCsv     = FileSystem::MakeAbsolute(lTrace.Name + ".camera.csv");
+
+                    if (!FileIO::WriteAllText(lJson, OpaaxString(TraceToJson(lTrace, lSummary).dump(1).c_str()))
+                        || !FileIO::WriteAllText(lCsv, CameraTrace::ToCsv(lTrace.Samples, lTrace.HeightPx)))
+                    {
+                        return AutomationResult::Fail("cannot write the trace's files at '" + lJson + "'");
+                    }
+
+                    const nlohmann::json lMeasures = SummaryToJson(lSummary);
+                    const auto           lLimits   = InParams.find("limits");
+                    if (lLimits != InParams.end() && !CheckLimits(lMeasures, *lLimits, lError))
+                    {
+                        return AutomationResult::Fail(lError + " — see " + lCsv);
+                    }
+
+                    return AutomationResult::Ok(nlohmann::json{
+                        { "name",      lTrace.Name },
+                        { "frames",    lTrace.Samples.size() },
+                        { "truncated", lTrace.bTruncated },
+                        { "files",     { { "json", lJson }, { "csv", lCsv } } },
+                        { "summary",   lMeasures } });
+                });
+
+            InRunner.Register("camera.trace.compare",
+                "How far the stopped trace {trace} is from where the stopped trace {reference} says its camera was at "
+                "each of its game times (the reference's frame then, or both ends of the step blended): {shared, "
+                "position, size, atTime}, world units. The reference is a steady pacing at the fixed rate or a multiple, "
+                "so one level played at any rate must match it. {limits}, like {\"position\": 0.001}, fails past them.",
+                [&InEngine](const nlohmann::json& InParams)
+                {
+                    OpaaxString    lError;
+                    CameraManager* lCameras = Cameras(InEngine, lError);
+                    if (lCameras == nullptr)
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    const OpaaxString           lReferenceName = InParams.value("reference", OpaaxString());
+                    const OpaaxString           lTraceName     = InParams.value("trace", OpaaxString());
+                    const CameraTraceRecording* lReference     = lCameras->FindTrace(lReferenceName);
+                    const CameraTraceRecording* lTrace         = lCameras->FindTrace(lTraceName);
+                    if (lReference == nullptr || lTrace == nullptr)
+                    {
+                        return AutomationResult::Fail("no stopped trace '" + (lReference == nullptr ? lReferenceName : lTraceName)
+                                                      + "': stop one under that name first (camera.trace.stop)");
+                    }
+
+                    const CameraTraceGap lGap      = CameraTrace::Compare(lReference->Samples, lTrace->Samples);
+                    const nlohmann::json lMeasures = nlohmann::json{
+                        { "reference", lReferenceName }, { "trace", lTraceName }, { "shared", lGap.Shared },
+                        { "position", lGap.Position }, { "size", lGap.Size }, { "atTime", lGap.AtTime } };
+
+                    if (lGap.Shared == 0)
+                    {
+                        return AutomationResult::Fail("the reference '" + lReferenceName + "' places no frame of '" + lTraceName
+                                                      + "': same camera, and a reference drawing every step's end");
+                    }
+
+                    const auto lLimits = InParams.find("limits");
+                    if (lLimits != InParams.end() && !CheckLimits(lMeasures, *lLimits, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    return AutomationResult::Ok(lMeasures);
+                });
+        }
+
+        // =========================================================================
         // Configs: read, and changed for this run
         // =========================================================================
         void RegisterConfig(AutomationRunner& InRunner)
@@ -732,6 +963,7 @@ namespace Opaax::EngineAutomation
         RegisterLevels(InRunner, InEngine);
         RegisterTime(InRunner, InEngine);
         RegisterConfig(InRunner);
+        RegisterCamera(InRunner, InEngine);
         RegisterExpectations(InRunner, InEngine);
     }
 

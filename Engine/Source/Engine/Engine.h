@@ -14,6 +14,7 @@ namespace Opaax
 {
     class IPlatform;
     class IPaths;
+    class CameraManager;
     class Config_Engine;
     class ResourceManager;
     class AudioManager;
@@ -166,6 +167,7 @@ namespace Opaax
         DebugDraw&          GetDebugDraw()      override;
         InputManager&       GetInput()          override;
         AudioManager&       GetAudio()          override;
+        CameraManager*      GetCameras()        override { return m_CameraManager; }
         //~End IEngine interface
 
         // =============================================================================
@@ -197,6 +199,7 @@ namespace Opaax
         EngineEventBus*     m_EngineEventBus = nullptr;
         ResourceManager*    m_Resources = nullptr;
         RendererManager*    m_RendererManager = nullptr;
+        CameraManager*      m_CameraManager = nullptr;
         WorldManager*       m_WorldManager = nullptr;
         InputManager*       m_InputManager = nullptr;
         AudioManager*       m_AudioManager = nullptr;

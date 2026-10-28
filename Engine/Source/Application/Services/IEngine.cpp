@@ -44,6 +44,8 @@ namespace Opaax
                 return s_Off;
             }
 
+            CameraManager* GetCameras() override { return nullptr; }
+
             void PresentBackbuffer()      override {}
             bool CaptureFrame(const OpaaxString&) override { return false; }
             void SubmitRenderView(IRenderTarget&, const CameraView&, bool, World*, bool) override {}
