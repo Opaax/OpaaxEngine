@@ -737,7 +737,8 @@ namespace Opaax::EngineAutomation
             InRunner.Register("camera.info",
                 "How the active world is framed: {world, mode, paused, view, fixedRate, pacing, tracing, clock (fixedDelta, "
                 "refreshHz snapped to, snapping, maxSteps, droppedSteps), cameras} with "
-                "each camera's {name, id, priority, x, y, size, recorded} (recorded: framed between its steps), and in a "
+                "each camera's {name, id, priority, x, y, size, framed (the view it gives on that frame: x, y, size), "
+                "recorded (framed between its steps)}, and in a "
                 "Play world the last frame's {live: {name, id, count, tied}, frame: {delta, steps, alpha, interpolated, "
                 "stepDelta, gameTime}}. An Edit world is framed by the editor's camera.",
                 [&InEngine](const nlohmann::json&)
@@ -750,18 +751,27 @@ namespace Opaax::EngineAutomation
                         return AutomationResult::Fail(lError);
                     }
 
+                    // Each camera's view as the last frame would have framed it with that camera.
+                    const CameraFrame&     lFrame  = lCameras->GetLastFrame();
+                    const TOptional<float> lAlpha  = (lFrame.World == lWorld->GetHandle() && lFrame.bInterpolated)
+                                                         ? TOptional<float>(static_cast<float>(lFrame.Alpha))
+                                                         : NullOpt;
+
                     nlohmann::json lList = nlohmann::json::array();
                     lWorld->Each<TransformComponent, CameraComponent>(
                         [&](const EntityID InEntity, TransformComponent&, CameraComponent& InCamera)
                         {
-                            const Entity   lEntity(InEntity, lWorld);
-                            const Vector2F lAt = EntityHierarchy::WorldTransform(lEntity).Position;
+                            const Entity     lEntity(InEntity, lWorld);
+                            const Vector2F   lAt     = EntityHierarchy::WorldTransform(lEntity).Position;
+                            const CameraView lFramed = CameraManager::ResolveCamera(lEntity, lAlpha);
 
                             nlohmann::json lCamera = NameAndId(lEntity);
                             lCamera["priority"] = InCamera.Priority;
                             lCamera["x"]        = lAt.x;
                             lCamera["y"]        = lAt.y;
                             lCamera["size"]     = InCamera.OrthoSize;
+                            lCamera["framed"]   = { { "x", lFramed.Position.x }, { "y", lFramed.Position.y },
+                                                    { "size", lFramed.OrthoSize } };
                             lCamera["recorded"] = lEntity.Has<CameraInterpolationComponent>();
                             lList.push_back(Move(lCamera));
                         });
@@ -785,7 +795,6 @@ namespace Opaax::EngineAutomation
                         { "cameras",   Move(lList) } };
 
                     // The last frame drawn of this world, when the camera manager framed it.
-                    const CameraFrame& lFrame = lCameras->GetLastFrame();
                     if (lWorld->GetMode() == EWorldMode::Play && lFrame.World == lWorld->GetHandle())
                     {
                         nlohmann::json lLive = lFrame.Resolution.Count > 0 ? NameAndId(Entity(lFrame.Resolution.Entity, lWorld))

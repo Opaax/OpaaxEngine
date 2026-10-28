@@ -42,7 +42,6 @@ namespace Opaax
     {
         CameraResolution lResolution;
         Int32            lBestPriority = 0;
-        float            lOrthoSize    = 0.f;
 
         // Priorities only: the pose is computed once, for the winner.
         InWorld.Each<TransformComponent, CameraComponent>(
@@ -61,7 +60,6 @@ namespace Opaax
                     lResolution.Entity = InEntity;
                     lResolution.Tied   = 1;
                     lBestPriority      = InCamera.Priority;
-                    lOrthoSize         = InCamera.OrthoSize;
                 }
             });
 
@@ -70,22 +68,29 @@ namespace Opaax
             return lResolution;
         }
 
-        // World transform: a camera parented to the player follows it. With an alpha, its pose and its
-        // size are blended between its last two steps.
-        Entity lCamera{ lResolution.Entity, &InWorld };
-
-        if (InAlpha.has_value())
-        {
-            lResolution.View = CameraView{ EntityHierarchy::DisplayTransform(lCamera, *InAlpha).Position,
-                                           ResolveDisplayOrthoSize(lOrthoSize, lCamera.TryGet<CameraInterpolationComponent>(),
-                                                                   *InAlpha) };
-        }
-        else
-        {
-            lResolution.View = CameraView{ EntityHierarchy::WorldTransform(lCamera).Position, lOrthoSize };
-        }
-
+        lResolution.View = ResolveCamera(Entity{ lResolution.Entity, &InWorld }, InAlpha);
         return lResolution;
+    }
+
+    // =========================================================================
+    // ResolveCamera — the world transform: a camera parented to the player follows it. With an
+    //   alpha, its pose and its size are blended between its last two steps.
+    // =========================================================================
+    CameraView CameraManager::ResolveCamera(Entity InCamera, const TOptional<float> InAlpha)
+    {
+        const CameraComponent* lCamera = InCamera.IsValid() ? InCamera.TryGet<CameraComponent>() : nullptr;
+        if (lCamera == nullptr)
+        {
+            return CameraView{};
+        }
+
+        if (!InAlpha.has_value())
+        {
+            return CameraView{ EntityHierarchy::WorldTransform(InCamera).Position, lCamera->OrthoSize };
+        }
+
+        return CameraView{ EntityHierarchy::DisplayTransform(InCamera, *InAlpha).Position,
+                           ResolveDisplayOrthoSize(lCamera->OrthoSize, InCamera.TryGet<CameraInterpolationComponent>(), *InAlpha) };
     }
 
     void CameraManager::RecordCameraSteps(World& InWorld)
