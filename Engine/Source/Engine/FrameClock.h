@@ -29,6 +29,12 @@ namespace Opaax
         /** The next frame counts from InNow; the fixed steps owed are dropped. */
         void Restart(double InNow) noexcept;
 
+        /**
+         * Steps of InFixedDelta seconds from now on (Time.FixedRate). The time owed is kept: a shorter
+         * step owes more of them. A delta that is not above zero is ignored.
+         */
+        void SetFixedDelta(double InFixedDelta) noexcept;
+
         /** How far into the next fixed step the clock is, from 0 to 1 (render interpolation). */
         double GetFixedAlpha() const noexcept { return m_Owed / m_FixedDelta; }
 

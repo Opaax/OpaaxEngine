@@ -414,3 +414,57 @@ TEST_CASE("Config: a config is an Object class under Config, named after its fil
     CHECK(Config::NameFromFile("Engine.config") == OPAAX_ID("Engine"));
     CHECK(Config::NameFromFile("test.config.json") == OPAAX_ID("test.config"));
 }
+
+// =============================================================================
+// Time.FixedRate, and values changed for one run (config.set)
+// =============================================================================
+TEST_CASE("EngineConfigData: Time.FixedRate is 60 a second, and a file written before it keeps 60")
+{
+    CHECK(EngineConfigData{}.Time.FixedRate == 60.f);
+    CHECK(Parse(R"({"Window":{"Width":900}})").Time.FixedRate == 60.f);
+    CHECK(Parse(R"({"Time":{"FixedRate":120}})").Time.FixedRate == 120.f);
+}
+
+TEST_CASE("TConfig::MergeText: merges the values given, keeps the others, announces once")
+{
+    ProbeConfig   lProbe;
+    ChangeCounter lMember;
+    lProbe.OnChanged().AddMember(&lMember, &ChangeCounter::OnChanged);
+
+    OpaaxString lError;
+    REQUIRE(lProbe.MergeText(OpaaxString(R"({"Time":{"FixedRate":30},"Window":{"bVSync":false}})"), lError));
+
+    CHECK(lProbe.GetData().Time.FixedRate == 30.f);
+    CHECK_FALSE(lProbe.GetData().Window.bVSync);
+    CHECK(lProbe.GetData().Window.Width == 1280u);
+    CHECK(lProbe.GetData().Render.bInterpolation);
+    CHECK(lMember.Calls == 1);
+
+    lProbe.OnChanged().RemoveAll(&lMember);
+}
+
+TEST_CASE("TConfig::MergeText: a value it does not have, the wrong type or no JSON change nothing")
+{
+    ProbeConfig   lProbe;
+    ChangeCounter lMember;
+    lProbe.OnChanged().AddMember(&lMember, &ChangeCounter::OnChanged);
+
+    // A misspelled key would otherwise be dropped without a word: the error names it, and what is there.
+    OpaaxString lError;
+    CHECK_FALSE(lProbe.MergeText(OpaaxString(R"({"Time":{"FixRate":30}})"), lError));
+    CHECK(lError.Contains("'Time.FixRate'"));
+    CHECK(lError.Contains("there: FixedRate"));
+
+    lError = OpaaxString();
+    CHECK_FALSE(lProbe.MergeText(OpaaxString(R"({"Time":{"FixedRate":"fast"},"Window":{"Width":900}})"), lError));
+    CHECK_FALSE(lError.IsEmpty());
+
+    CHECK_FALSE(lProbe.MergeText(OpaaxString("{ not json"), lError));
+    CHECK_FALSE(lProbe.MergeText(OpaaxString("[30]"), lError));
+
+    CHECK(lProbe.GetData().Time.FixedRate == 60.f);
+    CHECK(lProbe.GetData().Window.Width == 1280u);
+    CHECK(lMember.Calls == 0);
+
+    lProbe.OnChanged().RemoveAll(&lMember);
+}

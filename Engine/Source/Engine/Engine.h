@@ -14,6 +14,7 @@ namespace Opaax
 {
     class IPlatform;
     class IPaths;
+    class Config_Engine;
     class ResourceManager;
     class AudioManager;
     class EngineEventBus;
@@ -93,6 +94,9 @@ namespace Opaax
     private:
         /** The frame clock's time: the paced time while paced (SetFramePacing), else the platform's. */
         double ClockTime() const;
+
+        /** Engine.config changed: applies Time.FixedRate to the clock from the next step. */
+        void HandleEngineConfigChanged();
         // End Time
         // =============================================================================
 
@@ -173,8 +177,11 @@ namespace Opaax
         IPlatform*  m_Platform  = nullptr;
         IPaths*     m_Paths     = nullptr;
 
-        // Frame deltas and fixed steps (60 Hz)
+        // Frame deltas and fixed steps (Time.FixedRate, 60 a second until the config is read)
         FrameClock m_Clock{ D60_HZ };
+
+        /** Read at Startup, followed on change. Not owned. */
+        Config_Engine* m_EngineConfig = nullptr;
 
         // A paced run's frames (SetFramePacing), and the time they add up to.
         FramePacer m_Pacer;

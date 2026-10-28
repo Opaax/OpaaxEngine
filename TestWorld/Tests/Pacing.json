@@ -207,6 +207,160 @@
         }
     },
     {
+        "id": "pace-120",
+        "command": "time.pace",
+        "params": {
+            "pacing": "120"
+        }
+    },
+    {
+        "id": "rate-30",
+        "command": "config.set",
+        "params": {
+            "config": "Engine",
+            "values": {
+                "Time": {
+                    "FixedRate": 30
+                }
+            }
+        },
+        "expect": {
+            "values": {
+                "Time": {
+                    "FixedRate": 30
+                }
+            }
+        }
+    },
+    {
+        "id": "reset-rate-30",
+        "command": "component.set",
+        "params": {
+            "entity": "Clock",
+            "type": "FrameProbe",
+            "value": {
+                "Frames": 0,
+                "Steps": 0,
+                "MinDelta": 1.0,
+                "MaxDelta": 0.0
+            }
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 2.0
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "rate-30-steps",
+        "params": {
+            "entity": "Clock",
+            "path": "FrameProbe/Steps",
+            "near": 60,
+            "tolerance": 2
+        }
+    },
+    {
+        "id": "rate-120",
+        "command": "config.set",
+        "params": {
+            "config": "Engine",
+            "values": {
+                "Time": {
+                    "FixedRate": 120
+                }
+            }
+        },
+        "expect": {
+            "values": {
+                "Time": {
+                    "FixedRate": 120
+                }
+            }
+        }
+    },
+    {
+        "id": "reset-rate-120",
+        "command": "component.set",
+        "params": {
+            "entity": "Clock",
+            "type": "FrameProbe",
+            "value": {
+                "Frames": 0,
+                "Steps": 0,
+                "MinDelta": 1.0,
+                "MaxDelta": 0.0
+            }
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 2.0
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "rate-120-steps",
+        "params": {
+            "entity": "Clock",
+            "path": "FrameProbe/Steps",
+            "near": 240,
+            "tolerance": 2
+        }
+    },
+    {
+        "id": "refuse-unknown-setting",
+        "command": "config.set",
+        "params": {
+            "config": "Engine",
+            "values": {
+                "Time": {
+                    "FixRate": 30
+                }
+            }
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "rate-60",
+        "command": "config.set",
+        "params": {
+            "config": "Engine",
+            "values": {
+                "Time": {
+                    "FixedRate": 60
+                }
+            }
+        },
+        "expect": {
+            "values": {
+                "Time": {
+                    "FixedRate": 60
+                }
+            }
+        }
+    },
+    {
+        "id": "config-get",
+        "command": "config.get",
+        "params": {
+            "config": "Engine"
+        },
+        "expect": {
+            "values": {
+                "Time": {
+                    "FixedRate": 60
+                },
+                "Window": {
+                    "bVSync": true
+                }
+            }
+        }
+    },
+    {
         "id": "refuse-bad-pacing",
         "command": "time.pace",
         "params": {

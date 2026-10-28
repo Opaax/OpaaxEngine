@@ -63,6 +63,8 @@ saved in `.opaaxmap` files.
 | `app.quit` | | Closes the app at the end of the frame |
 | `frames.wait` | `count` | Lets frames run before the next request |
 | `world.wait` | `seconds` | Lets the playing world's clock advance (game time, whatever the frame rate) |
+| `config.get` | `config` | A config's values as its file holds them (`Engine`, `Renderer`...) |
+| `config.set` | `config`, `values` | Merges `values`, shaped like the file (`{"Time": {"FixedRate": 30}}`), into the config for this run, without saving, and applies them as the Config panel does. A value the config does not have, or of the wrong type, is refused with the names it has there |
 | `time.pace` | `pacing` | From the next frame, the frames get the time of `pacing`, written as `--frame-pacing` takes it; `off` gives the clock back. Answers the pacing as read |
 | `screenshot` | `path` | Saves the frame as a PNG (in the editor: the whole editor) |
 | `input.key` | `key`, `action`, `frames` | `press`, `release` or `tap` a key (`Space`, `A`, `Mouse_Left`...) as if from the keyboard |

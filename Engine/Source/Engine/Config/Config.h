@@ -62,6 +62,14 @@ namespace Opaax
         virtual void ResetToDefaults() = 0;
 
         /**
+         * Merges InValues, JSON shaped like the file ({"Time": {"FixedRate": 30}}), into the values,
+         * without saving: what a test or an agent changes for one run. Announced when it applies.
+         * @return False with OutError, nothing changed, when InValues is not JSON, names a value the
+         *   config does not have, or gives one of the wrong type
+         */
+        virtual bool MergeText(const OpaaxString& InValues, OpaaxString& OutError) = 0;
+
+        /**
          * Fired after the values changed. Subscribe with AddMember(this, ...) and call RemoveAll(this)
          * before the subscriber is destroyed. Main thread only.
          */
