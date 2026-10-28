@@ -22,6 +22,9 @@ namespace Opaax
         /** The game time drawn: the time the world's steps simulated, plus alpha of a step. */
         double GameTime = 0.0;
 
+        /** The frame was a cut (CameraManager::Cut): the camera jumped, on purpose. */
+        bool bCut = false;
+
         /** The camera that framed the world (its entity's name), and the view it gave. */
         OpaaxString Camera;
         Vector2F    ViewPosition = { 0.f, 0.f };
@@ -67,6 +70,9 @@ namespace Opaax
 
         /** Frames where another camera framed the world. Moves across a switch are not counted above. */
         Uint32 CameraSwitches = 0;
+
+        /** Cut frames (CameraManager::Cut). The jump into one is not counted above. */
+        Uint32 Cuts = 0;
 
         /** The most and the fewest fixed steps a frame took: at a screen rate the fixed rate divides, equal. */
         Uint32 MostSteps   = 0;

@@ -4,6 +4,7 @@
 #include "Core/String/OpaaxStringJson.h"
 #include "Renderer/Camera/CameraComponent.h"
 #include "Renderer/Camera/CameraInterpolationComponent.h"
+#include "Renderer/Camera/CameraManager.h"
 #include "World/Behaviour/Behaviour.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Components/TransformInterpolationComponent.h"
@@ -23,7 +24,7 @@ namespace TestWorld
     //   is as far through the camera's last step as its pose (MaxZoomLag near 0). Framed from the
     //   raw size it is always at the end of the step.
     //   With WrapAfter, the runner jumps back to where it started every WrapAfter seconds of steps, and
-    //   Chase with it: a respawn.
+    //   Chase with it: a respawn, teleported and cut, so nothing slides across the level.
     // =============================================================================
     class FollowProbe : public Opaax::Behaviour
     {
@@ -74,7 +75,8 @@ namespace TestWorld
             lLocal->Position.x += Speed * InFixedDeltaTime;
 
             m_SinceWrap += InFixedDeltaTime;
-            if (WrapAfter > 0.f && m_SinceWrap >= WrapAfter)
+            const bool bWrapped = WrapAfter > 0.f && m_SinceWrap >= WrapAfter;
+            if (bWrapped)
             {
                 lLocal->Position.x = m_StartX;
                 m_SinceWrap        = 0.f;
@@ -84,6 +86,13 @@ namespace TestWorld
             {
                 m_Camera.Get<Opaax::TransformComponent>().Position = lLocal->Position + Offset;
                 m_Camera.Get<Opaax::CameraComponent>().OrthoSize  += ZoomPerStep;
+            }
+
+            // Placed: the runner teleported, the cameras cut.
+            if (bWrapped)
+            {
+                Opaax::TransformInterpolation::Teleport(GetEntity());
+                Opaax::CameraManager::Cut(GetWorld());
             }
         }
 

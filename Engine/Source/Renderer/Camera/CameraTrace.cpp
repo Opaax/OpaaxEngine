@@ -71,10 +71,11 @@ namespace Opaax::CameraTrace
                 ++lSummary.TimeReversals;
             }
 
-            // Another camera: a cut, not a move of this one.
-            if (lSample.Camera != lBefore.Camera)
+            // Another camera, or a cut: a jump on purpose, not a move.
+            if (lSample.Camera != lBefore.Camera || lSample.bCut)
             {
-                ++lSummary.CameraSwitches;
+                lSummary.CameraSwitches += lSample.Camera != lBefore.Camera ? 1 : 0;
+                lSummary.Cuts           += lSample.bCut ? 1 : 0;
                 bHasLastMove   = false;
                 lZoomDirection = 0;
                 continue;
@@ -198,16 +199,16 @@ namespace Opaax::CameraTrace
 
     OpaaxString ToCsv(const TDynArray<CameraTraceSample>& InSamples, const float InHeightPx)
     {
-        OpaaxString lText("frame,delta,steps,alpha,stepDelta,gameTime,camera,viewX,viewY,viewSize,targetX,targetY,targetPxX,"
-                          "targetPxY\n");
+        OpaaxString lText("frame,delta,steps,alpha,stepDelta,gameTime,cut,camera,viewX,viewY,viewSize,targetX,targetY,"
+                          "targetPxX,targetPxY\n");
 
         for (Uint64 lIndex = 0; lIndex < InSamples.size(); ++lIndex)
         {
             const CameraTraceSample& lSample = InSamples[lIndex];
 
-            lText += OpaaxString::Format("{},{},{},{},{},{},{},{},{},{}", lIndex, lSample.FrameDelta, lSample.Steps,
-                                         lSample.Alpha, lSample.StepDelta, lSample.GameTime, lSample.Camera,
-                                         lSample.ViewPosition.x, lSample.ViewPosition.y, lSample.ViewSize);
+            lText += OpaaxString::Format("{},{},{},{},{},{},{},{},{},{},{}", lIndex, lSample.FrameDelta, lSample.Steps,
+                                         lSample.Alpha, lSample.StepDelta, lSample.GameTime, lSample.bCut ? 1 : 0,
+                                         lSample.Camera, lSample.ViewPosition.x, lSample.ViewPosition.y, lSample.ViewSize);
             if (lSample.bHasTarget)
             {
                 const Vector2F lOnScreen = TargetOnScreen(lSample, InHeightPx);

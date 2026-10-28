@@ -425,6 +425,54 @@ TEST_CASE("ResolveCamera: the camera framing the world gives Resolve's view; ano
     CHECK(CameraManager::ResolveCamera(lChase.Body).OrthoSize == CameraView{}.OrthoSize);
 }
 
+TEST_CASE("Cut: cameras placed in a step and cut are framed where they are at every alpha, then move on")
+{
+    World lWorld("Respawn");
+
+    Entity lBody   = lWorld.CreateEntity("Body");
+    Entity lCamera = lWorld.CreateEntity("Camera");
+    lCamera.Add<CameraComponent>();
+    TransformInterpolation::RecordSteps(lBody);
+    CameraManager::RecordCameraSteps(lWorld);
+
+    const auto lStep = [&](const float InX, const float InSize, const bool bInRespawn)
+    {
+        TransformInterpolation::BeginFixedStep(lWorld);
+        CameraInterpolation::BeginFixedStep(lWorld);
+        lBody.Get<TransformComponent>().Position.x   = InX;
+        lCamera.Get<TransformComponent>().Position.x = InX;
+        lCamera.Get<CameraComponent>().OrthoSize     = InSize;
+        if (bInRespawn)
+        {
+            TransformInterpolation::Teleport(lBody);
+            CameraManager::Cut(lWorld);
+        }
+        TransformInterpolation::EndFixedStep(lWorld);
+        CameraInterpolation::EndFixedStep(lWorld);
+    };
+
+    lStep(30.f, 310.f, false);
+    CHECK(CameraManager::Resolve(lWorld, 0.5f).View.Position.x == doctest::Approx(15.f));
+    CHECK_FALSE(lCamera.Get<CameraInterpolationComponent>().bCut);
+
+    // The respawn: framed at the new place and size, the body still in the middle, the frame marked.
+    lStep(-900.f, 300.f, true);
+    for (const float lAlpha : { 0.f, 0.5f, 1.f })
+    {
+        CAPTURE(lAlpha);
+        const CameraView lView = CameraManager::Resolve(lWorld, lAlpha).View;
+        CHECK(lView.Position.x == doctest::Approx(-900.f));
+        CHECK(lView.OrthoSize == doctest::Approx(300.f));
+        CHECK(EntityHierarchy::DisplayTransform(lBody, lAlpha).Position.x - lView.Position.x == doctest::Approx(0.f));
+    }
+    CHECK(lCamera.Get<CameraInterpolationComponent>().bCut);
+
+    // On from there.
+    lStep(-870.f, 320.f, false);
+    CHECK(CameraManager::Resolve(lWorld, 0.5f).View.Position.x == doctest::Approx(-885.f));
+    CHECK(CameraManager::Resolve(lWorld, 0.5f).View.OrthoSize == doctest::Approx(310.f));
+}
+
 TEST_CASE("Camera interpolation: every camera is recorded, however many there are")
 {
     World lWorld("Crowd");

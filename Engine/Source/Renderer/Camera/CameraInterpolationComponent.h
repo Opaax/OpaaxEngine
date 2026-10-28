@@ -23,6 +23,9 @@ namespace Opaax
 
         /** False until a step was recorded. */
         bool bHasStep = false;
+
+        /** The next frame is a cut (CameraManager::Cut): framed where it is, marked in traces. */
+        bool bCut = false;
     };
 
     // =============================================================================

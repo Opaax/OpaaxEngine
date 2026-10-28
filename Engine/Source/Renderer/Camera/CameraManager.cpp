@@ -109,6 +109,20 @@ namespace Opaax
         }
     }
 
+    void CameraManager::Cut(World& InWorld)
+    {
+        TDynArray<EntityID> lCameras;
+        InWorld.Each<TransformComponent, CameraComponent>([&lCameras](const EntityID InEntity, TransformComponent&, CameraComponent&)
+        {
+            lCameras.push_back(InEntity);
+        });
+
+        for (const EntityID lCamera : lCameras)
+        {
+            CameraInterpolation::Cut(Entity{ lCamera, &InWorld });
+        }
+    }
+
     // =========================================================================
     // Update — after the world's update (this subsystem is added after WorldManager), before the
     //   fixed steps. Every camera is recorded, so one that takes the view over is framed between its
@@ -165,7 +179,15 @@ namespace Opaax
         lFrame.bInterpolated = lInterpolate;
         lFrame.StepDelta     = lWorld->GetLastStepDelta();
         lFrame.GameTime      = lWorld->GetSteppedTime() - (1.0 - lFrame.Alpha) * lFrame.StepDelta;
-        m_LastFrame          = lFrame;
+
+        // A cut is this frame's: marked, then cleared on every camera.
+        lWorld->Each<CameraComponent, CameraInterpolationComponent>(
+            [&lFrame, &lResolution](const EntityID InEntity, CameraComponent&, CameraInterpolationComponent& InSizes)
+            {
+                lFrame.bCut  = lFrame.bCut || (InSizes.bCut && InEntity == lResolution.Entity);
+                InSizes.bCut = false;
+            });
+        m_LastFrame = lFrame;
 
         if (m_Trace.has_value())
         {
@@ -264,6 +286,7 @@ namespace Opaax
         lSample.Alpha        = InFrame.Alpha;
         lSample.StepDelta    = InFrame.StepDelta;
         lSample.GameTime     = InFrame.GameTime;
+        lSample.bCut         = InFrame.bCut;
         lSample.ViewPosition = InFrame.Resolution.View.Position;
         lSample.ViewSize     = InFrame.Resolution.View.OrthoSize;
 

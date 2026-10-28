@@ -195,6 +195,7 @@ namespace Opaax::EngineAutomation
                 { "stillMoves",        InSummary.StillMoves },
                 { "zoomReversals",     InSummary.ZoomReversals },
                 { "cameraSwitches",    InSummary.CameraSwitches },
+                { "cuts",              InSummary.Cuts },
                 { "mostSteps",         InSummary.MostSteps },
                 { "fewestSteps",       InSummary.FewestSteps },
                 { "stepsSpread",       InSummary.MostSteps - InSummary.FewestSteps } };
@@ -215,6 +216,7 @@ namespace Opaax::EngineAutomation
                     { "alpha",     lSample.Alpha },
                     { "stepDelta", lSample.StepDelta },
                     { "gameTime",  lSample.GameTime },
+                    { "cut",       lSample.bCut },
                     { "camera",    lSample.Camera },
                     { "view",      { { "x", lSample.ViewPosition.x }, { "y", lSample.ViewPosition.y },
                                      { "size", lSample.ViewSize } } } };
@@ -809,7 +811,8 @@ namespace Opaax::EngineAutomation
                             { "alpha",        lFrame.Alpha },
                             { "interpolated", lFrame.bInterpolated },
                             { "stepDelta",    lFrame.StepDelta },
-                            { "gameTime",     lFrame.GameTime } };
+                            { "gameTime",     lFrame.GameTime },
+                            { "cut",          lFrame.bCut } };
                     }
 
                     return AutomationResult::Ok(lAnswer);
@@ -854,7 +857,7 @@ namespace Opaax::EngineAutomation
                 "Ends the trace, writes <name>.camera.json and <name>.camera.csv in the working folder and answers "
                 "{name, frames, files, summary}: the target's largest move on screen (targetDrift), the largest change "
                 "of the view's move (motionJitter), largestMove (pixels), timeReversals, stillMoves, zoomReversals, "
-                "cameraSwitches, and the most and fewest steps a frame took (mostSteps, fewestSteps, stepsSpread). {limits}, like {\"targetDrift\": 0.01}, fails the request past any of them.",
+                "cameraSwitches, cuts, and the most and fewest steps a frame took (mostSteps, fewestSteps, stepsSpread). {limits}, like {\"targetDrift\": 0.01}, fails the request past any of them.",
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     OpaaxString    lError;

@@ -169,6 +169,14 @@ entity that gameplay moves in a fixed step is drawn between its steps once it as
 `TransformInterpolation::RecordSteps(GetEntity())` in `OnStart` (`World/Entity/TransformInterpolation.h`).
 `TestWorld/Tests/Following.json` checks both cameras, and the zoom of the chased one.
 
+Every camera is recorded, so one that takes the view over (a raised `Priority`) keeps what it frames
+still from its first frame. A jump is said: after placing an entity somewhere else (a respawn, a
+door), `TransformInterpolation::Teleport(entity)` draws it there at once instead of sliding it
+across the level over a step, and `CameraManager::Cut(world)`, after placing the cameras, frames them
+where they are and marks the frame as a cut. A body that physics or the mover moves, placed in
+`Update`, is drawn where it was put without either. The world is drawn a step behind, so on a frame
+with no step after a cut the new place shows again.
+
 To see how smooth a camera is, trace it: `camera.trace.start` and `camera.trace.stop` record every
 frame's time, view and followed entity into a JSON and a CSV file and measure them (how far the
 entity moves on screen, how unevenly the view moves, time running back), and `camera.trace.compare`
