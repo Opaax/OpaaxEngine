@@ -133,7 +133,7 @@ namespace Opaax
         static constexpr Uint64 MAX_TRACE_FRAMES = 200000;
 
         /** The most stopped traces kept for a comparison; the oldest goes first. */
-        static constexpr Uint64 MAX_KEPT_TRACES = 16;
+        static constexpr Uint64 MAX_KEPT_TRACES = 64;
 
         /**
          * Records every frame of the Play world from the next one: the view, its time and the target
