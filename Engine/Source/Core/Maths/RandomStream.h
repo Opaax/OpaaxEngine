@@ -5,13 +5,14 @@
 namespace Opaax
 {
     // =============================================================================
-    // AudioRandom — the random numbers sounds draw (which variation, how much louder or higher).
-    //   Seeded, so a test or a replay gets the same sounds every time. PCG32.
+    // RandomStream — random numbers that replay: the same seed gives the same numbers, on every
+    //   platform (which sound variation plays, a frame pacing's jitter). PCG32. For numbers nobody
+    //   may predict (identities), Random instead.
     // =============================================================================
-    class AudioRandom
+    class RandomStream
     {
     public:
-        explicit AudioRandom(const Uint64 InSeed = 0x853C49E6748FEA9Bull) noexcept { Seed(InSeed); }
+        explicit RandomStream(const Uint64 InSeed = 0x853C49E6748FEA9Bull) noexcept { Seed(InSeed); }
 
         void Seed(const Uint64 InSeed) noexcept
         {

@@ -1,13 +1,13 @@
-// Suite: clip definitions — the seeded random, each way of choosing a variation (never twice in a
-// row, weights, in order, shuffled), the volume and pitch spread, the asset's format, a sound
-// whose clip is still loading (it starts once loaded), and a Play world playing definitions by path
-// and from sources.
+// Suite: clip definitions — each way of choosing a variation (never twice in a row, weights, in
+// order, shuffled), the volume and pitch spread, the asset's format, a sound whose clip is still
+// loading (it starts once loaded), and a Play world playing definitions by path and from sources.
 #include <doctest.h>
 
 #include "../TestTempDir.h"
 #include "Core/Algo/Algo.h"
 #include "Core/IO/FileSystem.h"
 #include "Core/Maths/Maths.h"
+#include "Core/Maths/RandomStream.h"
 #include "Core/OpaaxTypes.h"
 
 #include "Application/Services/IJobSystem.h"
@@ -16,7 +16,6 @@
 #include "Audio/AudioClip.h"
 #include "Audio/AudioClipDef.h"
 #include "Audio/AudioManager.h"
-#include "Audio/AudioRandom.h"
 #include "Audio/AudioSubsystem.h"
 #include "Audio/Components/AudioBanksComponent.h"
 #include "Audio/Components/AudioListenerComponent.h"
@@ -59,7 +58,7 @@ namespace
 
     TDynArray<Int32> Picks(const AudioClipDef& InDef, const Uint32 InCount, const Uint64 InSeed = 7)
     {
-        AudioRandom         lRandom(InSeed);
+        RandomStream        lRandom(InSeed);
         AudioSelectionState lState;
 
         TDynArray<Int32> lPicks;
@@ -94,33 +93,6 @@ namespace
 // =============================================================================
 // Random and selection
 // =============================================================================
-TEST_CASE("AudioRandom: the same seed gives the same numbers; ranges hold")
-{
-    AudioRandom lA(42);
-    AudioRandom lB(42);
-    AudioRandom lC(43);
-
-    bool bSame      = true;
-    bool bDifferent = false;
-    for (int lIndex = 0; lIndex < 100; ++lIndex)
-    {
-        const Uint32 lValue = lA.NextUint32();
-        bSame      = bSame && lValue == lB.NextUint32();
-        bDifferent = bDifferent || lValue != lC.NextUint32();
-    }
-    CHECK(bSame);
-    CHECK(bDifferent);
-
-    for (int lIndex = 0; lIndex < 1000; ++lIndex)
-    {
-        const float lFloat = lA.Range(-0.1f, 0.1f);
-        CHECK(lFloat >= -0.1f);
-        CHECK(lFloat < 0.1f);
-        CHECK(lA.Below(5) < 5);
-    }
-    CHECK(lA.Below(0) == 0);
-}
-
 TEST_CASE("AudioClipDef: five footsteps in RandomNoRepeat never play the same one twice in a row")
 {
     const TDynArray<Int32> lPicks = Picks(*MakeDef(EAudioSelection::RandomNoRepeat, 5), 1000);
@@ -208,7 +180,7 @@ TEST_CASE("AudioClipDef: each play takes the definition's settings, the clip's s
     lDef.Priority             = 300;   // above 255: the highest
     lDef.Clips[0].VolumeScale = 0.5f;
 
-    AudioRandom lRandom(11);
+    RandomStream lRandom(11);
     float lLowest  = 10.f;
     float lHighest = 0.f;
     for (int lIndex = 0; lIndex < 500; ++lIndex)

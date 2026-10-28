@@ -3,6 +3,7 @@
 #include "Core/Algo/Algo.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/Maths.h"
+#include "Core/Maths/RandomStream.h"
 #include "Core/Memory/Memory.h"
 
 #include "Application/OpaaxApplication.h"
@@ -10,7 +11,6 @@
 #include "Audio/AudioAPI.h"
 #include "Audio/AudioClip.h"
 #include "Audio/AudioClipDef.h"
-#include "Audio/AudioRandom.h"
 #include "Audio/Mixer/AudioMixer.h"
 #include "Audio/Mixer/AudioRingBuffer.h"
 #include "Audio/Mixer/AudioSpatial.h"
@@ -128,7 +128,7 @@ namespace Opaax
         TDynArray<PendingPlay> Pending;
         Uint64                 NextStartOrder = 1;
 
-        AudioRandom                                       Random;
+        RandomStream                                      Random;
         TUnorderedMap<OpaaxStringID, AudioSelectionState> Selections;   // by clip definition
 
         /** The game thread's view of a bus: what the mixer was last told. */
