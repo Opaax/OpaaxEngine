@@ -159,6 +159,14 @@ A level is framed by a **Camera** entity: its world position and `OrthoSize` (ha
 height, in world units). A camera parented to the player follows it. With several cameras, the
 highest `Priority` frames the level: raise another's (a map view, a cutscene) to switch to it.
 
+The view is framed when the frame is drawn, after its fixed steps, from where the camera is drawn:
+between its last two steps, like the bodies. A camera parented to a moving body, or moved in a
+fixed step (a world subsystem's `FixedUpdate`, a behaviour's `OnFixedUpdate`), keeps the body still
+on screen at any frame rate; a camera moved in `Update` is framed where it was put. Another entity
+that gameplay moves in a fixed step is drawn between its steps once it asks for it:
+`TransformInterpolation::RecordSteps(GetEntity())` in `OnStart` (`World/Entity/TransformInterpolation.h`).
+`TestWorld/Tests/Following.json` checks both cameras.
+
 A level is lit when it has an **Environment** (any entity): it is then drawn in HDR, lit by its
 **Light2D**s and the ambient light, then bloomed, exposed and tonemapped. Without one, sprites are
 drawn as they are and lights do nothing (the log says so once).
