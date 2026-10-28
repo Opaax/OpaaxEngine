@@ -11,8 +11,13 @@ What working on this repository taught, kept short so the next session starts fr
   build again before changing anything.
 - Run `build.bat` from the PowerShell tool as `& .\build.bat fast OpaaxTests` (with
   `$env:OPAAX_NO_PAUSE = '1'`): `cmd /c build.bat` from either shell answers "not recognized".
-- A Python edit script with `'''` strings breaks the Bash tool's heredoc ("unexpected EOF"): write the
-  script to the scratchpad and run it with `python -I <file>`.
+- A Python edit script with `'''` strings breaks the Bash tool's heredoc ("unexpected EOF"), and a
+  heredoc eats backslashes (a C++ `"\n"` in the script lands as a line break): write edit scripts with
+  the Write tool into the scratchpad and run them with `python -I <file>`.
+- `TestWorld --exec <script>` writes its answers beside the script unless `--exec-out` says where: by
+  hand, give `--exec-out` (and run from `TestWorldResults`), or `TestWorld/Tests` gets an `.out.json`.
+- Vsync does not hold back this machine's test runs (an unpaced Following runs at about 3000 frames a
+  second): pace anything that depends on timing (`time.pace`, `--frame-pacing`).
 - CI cancels a branch's running workflow when a newer commit is pushed: push the last commit, then
   watch that run (`Scratch/tools/ci_watch.py <sha>`).
 - A full build once hung on one `cl.exe` (log stopped, CPU flat for minutes): stop the build's
@@ -52,7 +57,8 @@ What working on this repository taught, kept short so the next session starts fr
 - A game run with `--exec` writes a screenshot's relative path into its working directory: run it from
   `build/debug-editor/TestWorldResults`, as CTest does, or a run from the repository root leaves PNGs there.
 - A map written by hand (Python's `json`) re-serializes differently (floats as typed, not as the engine
-  writes them), and the editor warns on open. Resave it once: `level.open`, then `level.save` with `all`.
+  writes them; entities in another order than their guids'), and the editor warns on open. Resave it
+  once: `level.open`, then `level.save` with `all`.
 
 ## Looking at the editor
 
