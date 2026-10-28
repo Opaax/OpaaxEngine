@@ -25,6 +25,13 @@ namespace Opaax
          */
         void StopRecordingSteps(Entity InEntity);
 
+        /**
+         * InEntity jumped (a respawn, a door): call it after placing the entity. Its steps are
+         * forgotten, so it is drawn at its new pose at once instead of sliding there over a step,
+         * whether it was placed in a fixed step or in Update; its children follow it.
+         */
+        void Teleport(Entity InEntity);
+
         /** Start of a fixed step: the pose of each entity recorded becomes its previous pose. */
         void BeginFixedStep(World& InWorld);
 
