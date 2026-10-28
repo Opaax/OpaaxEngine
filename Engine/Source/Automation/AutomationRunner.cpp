@@ -415,6 +415,84 @@ namespace Opaax
         return true;
     }
 
+    namespace
+    {
+        /**
+         * InValue with "{key}" replaced by InEntry's value for every key of InEntry, in every string it
+         * holds. A string that is exactly "{key}" becomes the value itself, so a number stays a number.
+         */
+        nlohmann::json Substitute(const nlohmann::json& InValue, const nlohmann::json& InEntry)
+        {
+            if (InValue.is_string())
+            {
+                OpaaxString lText = InValue.get<OpaaxString>();
+                for (const auto& lPair : InEntry.items())
+                {
+                    const OpaaxString lPlaceholder = "{" + OpaaxString(lPair.key().c_str()) + "}";
+                    if (lText == lPlaceholder)
+                    {
+                        return lPair.value();
+                    }
+
+                    const OpaaxString lWith = lPair.value().is_string() ? lPair.value().get<OpaaxString>()
+                                                                        : OpaaxString(lPair.value().dump().c_str());
+                    lText = lText.Replace(lPlaceholder, lWith);
+                }
+                return nlohmann::json(lText);
+            }
+
+            if (InValue.is_object() || InValue.is_array())
+            {
+                nlohmann::json lCopy = InValue;
+                for (auto& lChild : lCopy)
+                {
+                    lChild = Substitute(lChild, InEntry);
+                }
+                return lCopy;
+            }
+
+            return InValue;
+        }
+
+        /** Appends InItems to OutItems, each repeat replaced by its requests, once per entry. */
+        bool ExpandItems(const nlohmann::json& InItems, nlohmann::json& OutItems, OpaaxString& OutError)
+        {
+            for (const nlohmann::json& lItem : InItems)
+            {
+                const auto lRepeat = lItem.is_object() ? lItem.find("repeat") : lItem.end();
+                if (!lItem.is_object() || lRepeat == lItem.end())
+                {
+                    OutItems.push_back(lItem);
+                    continue;
+                }
+
+                const auto lRequests = lItem.find("requests");
+                if (!lRepeat->is_array() || lRequests == lItem.end() || !lRequests->is_array())
+                {
+                    OutError = "a repeat is {\"repeat\": [{\"tag\": \"60\"}, ...], \"requests\": [...]}: its requests "
+                               "once per entry, \"{tag}\" in their strings replaced";
+                    return false;
+                }
+
+                for (const nlohmann::json& lEntry : *lRepeat)
+                {
+                    if (!lEntry.is_object())
+                    {
+                        OutError = "each entry of a repeat is an object of names and values, like {\"tag\": \"60\"}";
+                        return false;
+                    }
+
+                    // A repeat inside is expanded with this entry's values already in.
+                    if (!ExpandItems(Substitute(*lRequests, lEntry), OutItems, OutError))
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+    }
+
     bool ParseAutomationScript(const OpaaxString& InText, TDynArray<AutomationRequest>& OutRequests, OpaaxString& OutError)
     {
         OutRequests.clear();
@@ -444,6 +522,13 @@ namespace Opaax
             OutError = "a script's requests are an array";
             return false;
         }
+
+        nlohmann::json lExpanded = nlohmann::json::array();
+        if (!ExpandItems(*lList, lExpanded, OutError))
+        {
+            return false;
+        }
+        lList = &lExpanded;
 
         for (Uint64 lIndex = 0; lIndex < lList->size(); ++lIndex)
         {
