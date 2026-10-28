@@ -154,9 +154,23 @@ namespace Opaax
 
         ReportResolution(*lWorld, lResolution);
 
+        // Blended, the world is drawn between its last step's start and its end; else at its end.
+        CameraFrame lFrame;
+        lFrame.World         = lWorld->GetHandle();
+        lFrame.Resolution    = lResolution;
+        lFrame.FrameDelta    = m_FrameDelta;
+        lFrame.StepCount     = lWorld->GetStepCount();
+        lFrame.Steps         = static_cast<Uint32>(lFrame.World == m_LastFrame.World ? lFrame.StepCount - m_LastFrame.StepCount
+                                                                                    : lFrame.StepCount);
+        lFrame.Alpha         = lInterpolate ? InAlpha : 1.0;
+        lFrame.bInterpolated = lInterpolate;
+        lFrame.StepDelta     = lWorld->GetLastStepDelta();
+        lFrame.GameTime      = lWorld->GetSteppedTime() - (1.0 - lFrame.Alpha) * lFrame.StepDelta;
+        m_LastFrame          = lFrame;
+
         if (m_Trace.has_value())
         {
-            RecordTraceFrame(*lWorld, lResolution, lInterpolate ? TOptional<double>(InAlpha) : NullOpt);
+            RecordTraceFrame(*lWorld, m_LastFrame);
         }
     }
 
@@ -205,6 +219,12 @@ namespace Opaax
         return true;
     }
 
+    const OpaaxString& CameraManager::GetTraceName() const noexcept
+    {
+        static const OpaaxString s_None;
+        return m_Trace.has_value() ? m_Trace->Name : s_None;
+    }
+
     const CameraTraceRecording* CameraManager::FindTrace(const OpaaxString& InName) const
     {
         for (const CameraTraceRecording& lTrace : m_Traces)
@@ -217,17 +237,15 @@ namespace Opaax
         return nullptr;
     }
 
-    void CameraManager::RecordTraceFrame(World& InWorld, const CameraResolution& InResolution,
-                                         const TOptional<double> InAlpha)
+    void CameraManager::RecordTraceFrame(World& InWorld, const CameraFrame& InFrame)
     {
         CameraTraceRecording& lTrace = *m_Trace;
 
-        // A new world (a level opened): its steps count from here, and its target is found again.
+        // A new world (a level opened): its target is found again.
         if (lTrace.World != InWorld.GetHandle())
         {
-            lTrace.World         = InWorld.GetHandle();
-            lTrace.LastStepCount = InWorld.GetStepCount();
-            lTrace.TargetEntity  = ENTITY_NONE;
+            lTrace.World        = InWorld.GetHandle();
+            lTrace.TargetEntity = ENTITY_NONE;
         }
 
         if (lTrace.Samples.size() >= MAX_TRACE_FRAMES)
@@ -242,21 +260,19 @@ namespace Opaax
         }
 
         CameraTraceSample lSample;
-        lSample.FrameDelta = m_FrameDelta;
-        lSample.Steps      = static_cast<Uint32>(InWorld.GetStepCount() - lTrace.LastStepCount);
-        lSample.Alpha      = InAlpha.value_or(1.0);
-        lSample.StepDelta  = InWorld.GetLastStepDelta();
+        lSample.FrameDelta   = InFrame.FrameDelta;
+        lSample.Steps        = InFrame.Steps;
+        lSample.Alpha        = InFrame.Alpha;
+        lSample.StepDelta    = InFrame.StepDelta;
+        lSample.GameTime     = InFrame.GameTime;
+        lSample.ViewPosition = InFrame.Resolution.View.Position;
+        lSample.ViewSize     = InFrame.Resolution.View.OrthoSize;
 
-        // Blended, the world is drawn between the last step's start and its end; else at its end.
-        lSample.GameTime = InWorld.GetSteppedTime() - (1.0 - lSample.Alpha) * InWorld.GetLastStepDelta();
-
-        if (InResolution.Count > 0)
+        if (InFrame.Resolution.Count > 0)
         {
-            const EntityMeta* lMeta = Entity(InResolution.Entity, &InWorld).TryGet<EntityMeta>();
+            const EntityMeta* lMeta = Entity(InFrame.Resolution.Entity, &InWorld).TryGet<EntityMeta>();
             lSample.Camera = lMeta != nullptr ? lMeta->Name : OpaaxString("<unnamed>");
         }
-        lSample.ViewPosition = InResolution.View.Position;
-        lSample.ViewSize     = InResolution.View.OrthoSize;
 
         // The target where the renderer draws it.
         Entity lTarget(lTrace.TargetEntity, &InWorld);
@@ -275,12 +291,11 @@ namespace Opaax
         if (lTarget.IsValid() && lTarget.Has<TransformComponent>())
         {
             lSample.bHasTarget     = true;
-            lSample.TargetPosition = InAlpha.has_value()
-                                         ? EntityHierarchy::DisplayTransform(lTarget, static_cast<float>(*InAlpha)).Position
+            lSample.TargetPosition = InFrame.bInterpolated
+                                         ? EntityHierarchy::DisplayTransform(lTarget, static_cast<float>(InFrame.Alpha)).Position
                                          : EntityHierarchy::WorldTransform(lTarget).Position;
         }
 
-        lTrace.LastStepCount = InWorld.GetStepCount();
         lTrace.Samples.push_back(Move(lSample));
     }
 

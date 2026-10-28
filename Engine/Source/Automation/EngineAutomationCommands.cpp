@@ -20,13 +20,17 @@
 #include "Input/InputKeyNames.h"
 #include "Input/InputManager.h"
 #include "Platform/Window/Window.h"
+#include "Renderer/Camera/CameraComponent.h"
+#include "Renderer/Camera/CameraInterpolationComponent.h"
 #include "Renderer/Camera/CameraManager.h"
 #include "UI/UICanvas.h"
 #include "UI/UISubsystem.h"
 #include "UI/UIWidget.h"
 #include "World/Behaviour/BehaviourSubsystem.h"
 #include "World/Components/ComponentRegistry.h"
+#include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
+#include "World/Entity/EntityHierarchy.h"
 #include "World/Entity/EntityMeta.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
@@ -166,6 +170,14 @@ namespace Opaax::EngineAutomation
                 OutError = "this app has no camera manager";
             }
             return lCameras;
+        }
+
+        /** An entity's name and id, as the camera commands give them. */
+        nlohmann::json NameAndId(Entity InEntity)
+        {
+            const EntityMeta* lMeta = InEntity.TryGet<EntityMeta>();
+            return nlohmann::json{ { "name", lMeta != nullptr ? lMeta->Name : OpaaxString("<unnamed>") },
+                                   { "id",   lMeta != nullptr ? nlohmann::json(lMeta->Id.ToString()) : nlohmann::json() } };
         }
 
         nlohmann::json SummaryToJson(const CameraTraceSummary& InSummary)
@@ -686,6 +698,70 @@ namespace Opaax::EngineAutomation
         // =========================================================================
         void RegisterCamera(AutomationRunner& InRunner, IEngine& InEngine)
         {
+            InRunner.Register("camera.info",
+                "How the active world is framed: {world, mode, paused, view, fixedRate, pacing, tracing, cameras} with "
+                "each camera's {name, id, priority, x, y, size, recorded} (recorded: framed between its steps), and in a "
+                "Play world the last frame's {live: {name, id, count, tied}, frame: {delta, steps, alpha, interpolated, "
+                "stepDelta, gameTime}}. An Edit world is framed by the editor's camera.",
+                [&InEngine](const nlohmann::json&)
+                {
+                    OpaaxString    lError;
+                    World* const   lWorld   = ActiveWorld(InEngine, lError);
+                    CameraManager* lCameras = lWorld != nullptr ? Cameras(InEngine, lError) : nullptr;
+                    if (lCameras == nullptr)
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    nlohmann::json lList = nlohmann::json::array();
+                    lWorld->Each<TransformComponent, CameraComponent>(
+                        [&](const EntityID InEntity, TransformComponent&, CameraComponent& InCamera)
+                        {
+                            const Entity   lEntity(InEntity, lWorld);
+                            const Vector2F lAt = EntityHierarchy::WorldTransform(lEntity).Position;
+
+                            nlohmann::json lCamera = NameAndId(lEntity);
+                            lCamera["priority"] = InCamera.Priority;
+                            lCamera["x"]        = lAt.x;
+                            lCamera["y"]        = lAt.y;
+                            lCamera["size"]     = InCamera.OrthoSize;
+                            lCamera["recorded"] = lEntity.Has<CameraInterpolationComponent>();
+                            lList.push_back(Move(lCamera));
+                        });
+
+                    const CameraView& lView = lWorld->GetCameraView();
+                    nlohmann::json    lAnswer{
+                        { "world",     lWorld->GetName().CStr() },
+                        { "mode",      ToString(lWorld->GetMode()) },
+                        { "paused",    InEngine.GetWorldManager().IsPaused() },
+                        { "view",      { { "x", lView.Position.x }, { "y", lView.Position.y }, { "size", lView.OrthoSize } } },
+                        { "fixedRate", OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>().GetData().Time.FixedRate },
+                        { "pacing",    InEngine.GetFramePacing().ToString() },
+                        { "tracing",   lCameras->GetTraceName() },
+                        { "cameras",   Move(lList) } };
+
+                    // The last frame drawn of this world, when the camera manager framed it.
+                    const CameraFrame& lFrame = lCameras->GetLastFrame();
+                    if (lWorld->GetMode() == EWorldMode::Play && lFrame.World == lWorld->GetHandle())
+                    {
+                        nlohmann::json lLive = lFrame.Resolution.Count > 0 ? NameAndId(Entity(lFrame.Resolution.Entity, lWorld))
+                                                                           : nlohmann::json::object();
+                        lLive["count"] = lFrame.Resolution.Count;
+                        lLive["tied"]  = lFrame.Resolution.Tied;
+
+                        lAnswer["live"]  = Move(lLive);
+                        lAnswer["frame"] = nlohmann::json{
+                            { "delta",        lFrame.FrameDelta },
+                            { "steps",        lFrame.Steps },
+                            { "alpha",        lFrame.Alpha },
+                            { "interpolated", lFrame.bInterpolated },
+                            { "stepDelta",    lFrame.StepDelta },
+                            { "gameTime",     lFrame.GameTime } };
+                    }
+
+                    return AutomationResult::Ok(lAnswer);
+                });
+
             InRunner.Register("camera.trace.start",
                 "Records every frame of the playing world from the next one: the frame's time, the view, and where "
                 "{target} (an entity's name, optional) is drawn; {name} names the files. {heightPx}: the view's height "

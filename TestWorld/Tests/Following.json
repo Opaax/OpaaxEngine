@@ -59,6 +59,22 @@
         }
     },
     {
+        "id": "chase-info",
+        "command": "camera.info",
+        "expect": {
+            "mode": "Play",
+            "live": {
+                "name": "ChaseCam",
+                "count": 2,
+                "tied": 1
+            },
+            "frame": {
+                "interpolated": true
+            },
+            "tracing": ""
+        }
+    },
+    {
         "command": "expect.value",
         "id": "chase-zoom-frames",
         "params": {
@@ -178,6 +194,17 @@
             "path": "FollowProbe/ViewOffsetY",
             "near": -40,
             "tolerance": 0.01
+        }
+    },
+    {
+        "id": "parented-info",
+        "command": "camera.info",
+        "expect": {
+            "live": {
+                "name": "ParentCam",
+                "count": 2,
+                "tied": 1
+            }
         }
     },
     {
