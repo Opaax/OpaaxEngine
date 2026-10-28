@@ -68,6 +68,7 @@
                     },
                     "Speed": 1800.0,
                     "ViewOffsetY": 0.0,
+                    "WrapAfter": 0.0,
                     "ZoomFrames": 0,
                     "ZoomPerStep": 1.0
                 },

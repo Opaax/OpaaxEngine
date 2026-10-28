@@ -1,0 +1,90 @@
+[
+    {
+        "repeat": [
+            {
+                "tag": "60",
+                "pacing": "60",
+                "rate": 60,
+                "reference": "60",
+                "jitter": 0.05
+            },
+            {
+                "tag": "144",
+                "pacing": "144",
+                "rate": 60,
+                "reference": "60",
+                "jitter": 0.05
+            }
+        ],
+        "requests": [
+            {
+                "id": "rate-{tag}",
+                "command": "config.set",
+                "params": {
+                    "config": "Engine",
+                    "values": {
+                        "Time": {
+                            "FixedRate": "{rate}"
+                        }
+                    }
+                }
+            },
+            {
+                "id": "pace-{tag}",
+                "command": "time.pace",
+                "params": {
+                    "pacing": "{pacing}"
+                }
+            },
+            {
+                "id": "play-{tag}",
+                "command": "level.play",
+                "params": {
+                    "path": "Levels/Following.opaaxlevel"
+                }
+            },
+            {
+                "id": "wrap-{tag}",
+                "command": "component.set",
+                "params": {
+                    "entity": "Runner",
+                    "type": "FollowProbe",
+                    "value": {
+                        "WrapAfter": 0.5
+                    }
+                }
+            },
+            {
+                "command": "world.wait",
+                "params": {
+                    "seconds": 0.1
+                }
+            },
+            {
+                "id": "trace-CameraTeleport-{tag}",
+                "command": "camera.trace.start",
+                "params": {
+                    "name": "CameraTeleport-{tag}",
+                    "target": "Runner"
+                }
+            },
+            {
+                "command": "world.wait",
+                "params": {
+                    "seconds": 1.2
+                }
+            },
+            {
+                "id": "CameraTeleport-{tag}",
+                "command": "camera.trace.stop",
+                "params": {
+                    "limits": {
+                        "cameraSwitches": 0,
+                        "timeReversals": 0,
+                        "stillMoves": 0
+                    }
+                }
+            }
+        ]
+    }
+]

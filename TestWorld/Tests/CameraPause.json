@@ -1,0 +1,120 @@
+[
+    {
+        "repeat": [
+            {
+                "tag": "60",
+                "pacing": "60",
+                "rate": 60,
+                "reference": "60",
+                "jitter": 0.05
+            },
+            {
+                "tag": "144",
+                "pacing": "144",
+                "rate": 60,
+                "reference": "60",
+                "jitter": 0.05
+            },
+            {
+                "tag": "240",
+                "pacing": "240",
+                "rate": 60,
+                "reference": "60",
+                "jitter": 0.05
+            }
+        ],
+        "requests": [
+            {
+                "id": "rate-{tag}",
+                "command": "config.set",
+                "params": {
+                    "config": "Engine",
+                    "values": {
+                        "Time": {
+                            "FixedRate": "{rate}"
+                        }
+                    }
+                }
+            },
+            {
+                "id": "pace-{tag}",
+                "command": "time.pace",
+                "params": {
+                    "pacing": "{pacing}"
+                }
+            },
+            {
+                "id": "play-{tag}",
+                "command": "level.play",
+                "params": {
+                    "path": "Levels/Following.opaaxlevel"
+                }
+            },
+            {
+                "command": "world.wait",
+                "params": {
+                    "seconds": 0.25
+                }
+            },
+            {
+                "id": "trace-CameraPause-{tag}",
+                "command": "camera.trace.start",
+                "params": {
+                    "name": "CameraPause-{tag}",
+                    "target": "Runner"
+                }
+            },
+            {
+                "command": "world.wait",
+                "params": {
+                    "seconds": 0.1
+                }
+            },
+            {
+                "id": "pause-{tag}",
+                "command": "world.pause",
+                "params": {
+                    "paused": true
+                }
+            },
+            {
+                "command": "frames.wait",
+                "params": {
+                    "count": 30
+                }
+            },
+            {
+                "id": "step-{tag}",
+                "command": "world.step"
+            },
+            {
+                "command": "frames.wait",
+                "params": {
+                    "count": 30
+                }
+            },
+            {
+                "id": "resume-{tag}",
+                "command": "world.pause",
+                "params": {
+                    "paused": false
+                }
+            },
+            {
+                "command": "world.wait",
+                "params": {
+                    "seconds": 0.25
+                }
+            },
+            {
+                "id": "CameraPause-{tag}",
+                "command": "camera.trace.stop",
+                "params": {
+                    "limits": {
+                        "cameraSwitches": 0
+                    }
+                }
+            }
+        ]
+    }
+]

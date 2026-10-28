@@ -1,0 +1,128 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": -40.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "01468a1303c84919ad3402753eeb6200",
+            "name": "ParentCam",
+            "ownerMap": "FarFollowing",
+            "parent": "020f345ba8384a82b8910be0c3fa7294"
+        },
+        {
+            "components": {
+                "FollowProbe": {
+                    "Chase": "ChaseCam",
+                    "FramedBetween": 0,
+                    "Frames": 0,
+                    "MaxFraction": 0.0,
+                    "MaxZoomLag": 0.0,
+                    "MinFraction": 1.0,
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 40.0
+                    },
+                    "Speed": 1800.0,
+                    "ViewOffsetY": 0.0,
+                    "WrapAfter": 0.0,
+                    "ZoomFrames": 0,
+                    "ZoomPerStep": 1.0
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.949999988079071,
+                        "y": 0.550000011920929,
+                        "z": 0.20000000298023224
+                    },
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 50000.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "020f345ba8384a82b8910be0c3fa7294",
+            "name": "Runner",
+            "ownerMap": "FarFollowing"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 1
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 50000.0,
+                        "y": 40.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "bea6f52c0ba54512b5fcebbffd846d3b",
+            "name": "ChaseCam",
+            "ownerMap": "FarFollowing"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3499999940395355,
+                        "y": 0.30000001192092896,
+                        "z": 0.25
+                    },
+                    "Size": {
+                        "x": 40000.0,
+                        "y": 20.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 69000.0,
+                        "y": -100.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "f1c1e3e9d39f45c1b756a32ff620347d",
+            "name": "Ground",
+            "ownerMap": "FarFollowing"
+        }
+    ],
+    "mapId": "FarFollowing",
+    "version": 4
+}
