@@ -392,6 +392,39 @@ TEST_CASE("Camera interpolation: a camera taking the view over keeps the body st
     }
 }
 
+TEST_CASE("ResolveCamera: the camera framing the world gives Resolve's view; another gives its own")
+{
+    ChaseWorld lChase(EFollow::Chased);
+    Entity     lOther = lChase.AddOtherCamera();
+    lChase.ZoomEachStep(ZOOM_PER_STEP);
+    lChase.Tick(1);
+
+    for (const Frame& lFrame : FRAMES)
+    {
+        CAPTURE(lFrame.Steps);
+        CAPTURE(lFrame.Alpha);
+        lChase.Tick(lFrame.Steps);
+
+        for (const TOptional<float> lAlpha : { TOptional<float>(lFrame.Alpha), TOptional<float>() })
+        {
+            const CameraResolution lWorld = CameraManager::Resolve(*lChase.TheWorld, lAlpha);
+            const CameraView       lMain  = CameraManager::ResolveCamera(lChase.Camera, lAlpha);
+            REQUIRE(lWorld.Entity == lChase.Camera.GetHandle());
+            CHECK(lMain.Position.x == lWorld.View.Position.x);
+            CHECK(lMain.Position.y == lWorld.View.Position.y);
+            CHECK(lMain.OrthoSize == lWorld.View.OrthoSize);
+        }
+
+        // The other camera, not framing the world, keeps the body still in its own view too.
+        const Vector2F lOtherView = CameraManager::ResolveCamera(lOther, lFrame.Alpha).Position;
+        const Vector2F lDrawn     = EntityHierarchy::DisplayTransform(lChase.Body, lFrame.Alpha).Position;
+        CHECK(lDrawn.y - lOtherView.y == doctest::Approx(-OTHER_OFFSET.y));
+        CHECK(lDrawn.x - lOtherView.x == doctest::Approx(0.f).epsilon(1e-4));
+    }
+
+    CHECK(CameraManager::ResolveCamera(lChase.Body).OrthoSize == CameraView{}.OrthoSize);
+}
+
 TEST_CASE("Camera interpolation: every camera is recorded, however many there are")
 {
     World lWorld("Crowd");

@@ -11,6 +11,7 @@
 
 namespace Opaax
 {
+    class Entity;
     class World;
     class WorldManager;
     class Config_Engine;
@@ -116,6 +117,14 @@ namespace Opaax
          *   size (ResolveDisplayOrthoSize). None: at its current pose and size.
          */
         static CameraResolution Resolve(World& InWorld, TOptional<float> InAlpha = NullOpt);
+
+        /**
+         * The view one camera gives, framing the world or not: with an alpha, at its display pose and
+         * size (as bodies are drawn); without, at its current ones. Resolve frames the world with it,
+         * and every other view of a camera (an editor preview, camera.info) comes from it. An entity
+         * with no CameraComponent gives the default view.
+         */
+        static CameraView ResolveCamera(Entity InCamera, TOptional<float> InAlpha = NullOpt);
 
         /**
          * Has InWorld record every camera's pose and size around every fixed step
