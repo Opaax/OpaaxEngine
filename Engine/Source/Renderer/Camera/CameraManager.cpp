@@ -40,7 +40,9 @@ namespace Opaax
     {
         CameraResolution lResolution;
         Int32            lBestPriority = 0;
+        float            lOrthoSize    = 0.f;
 
+        // Priorities only: the pose is computed once, for the winner.
         InWorld.Each<TransformComponent, CameraComponent>(
             [&](EntityID InEntity, TransformComponent&, CameraComponent& InCamera)
             {
@@ -54,41 +56,63 @@ namespace Opaax
 
                 if (lResolution.Count == 1 || InCamera.Priority > lBestPriority)
                 {
-                    // World transform: a camera parented to the player follows it.
-                    const Entity   lCamera{ InEntity, &InWorld };
-                    const Vector2F lFrom = InAlpha.has_value() ? EntityHierarchy::DisplayTransform(lCamera, *InAlpha).Position
-                                                               : EntityHierarchy::WorldTransform(lCamera).Position;
-
-                    lResolution.View   = CameraView{ lFrom, InCamera.OrthoSize };
                     lResolution.Entity = InEntity;
                     lResolution.Tied   = 1;
                     lBestPriority      = InCamera.Priority;
+                    lOrthoSize         = InCamera.OrthoSize;
                 }
             });
 
+        if (lResolution.Count == 0)
+        {
+            return lResolution;
+        }
+
+        // World transform: a camera parented to the player follows it.
+        const Entity   lCamera{ lResolution.Entity, &InWorld };
+        const Vector2F lFrom = InAlpha.has_value() ? EntityHierarchy::DisplayTransform(lCamera, *InAlpha).Position
+                                                   : EntityHierarchy::WorldTransform(lCamera).Position;
+
+        lResolution.View = CameraView{ lFrom, lOrthoSize };
         return lResolution;
     }
 
-    void CameraManager::RecordCameraSteps(World& InWorld)
+    void CameraManager::RecordCameraSteps(World& InWorld, const EntityID InActive, const EntityID InPrevious)
     {
-        InWorld.Each<CameraComponent>([&InWorld](EntityID InEntity, CameraComponent&)
+        if (InPrevious != InActive)
         {
-            TransformInterpolation::RecordSteps(Entity{ InEntity, &InWorld });
-        });
+            TransformInterpolation::StopRecordingSteps(Entity{ InPrevious, &InWorld });
+        }
+
+        TransformInterpolation::RecordSteps(Entity{ InActive, &InWorld });
     }
 
     // =========================================================================
     // Update — after the world's update (this subsystem is added after WorldManager), before the
-    //   fixed steps: a camera added this frame is recorded from its first step.
+    //   fixed steps. Only the camera that framed the last frame is recorded: a camera that wins the
+    //   view is framed at its pose on that frame, then between its steps from the next one.
     // =========================================================================
     void CameraManager::Update(double /*InDeltaTime*/)
     {
         World* lWorld = (m_WorldManager != nullptr) ? m_WorldManager->GetActiveWorld() : nullptr;
 
-        if (lWorld != nullptr && lWorld->GetMode() == EWorldMode::Play)
+        if (lWorld == nullptr || lWorld->GetMode() != EWorldMode::Play)
         {
-            RecordCameraSteps(*lWorld);
+            return;
         }
+
+        // A new world: the camera recorded belonged to the old one.
+        if (lWorld->GetHandle() != m_RecordedWorld)
+        {
+            m_RecordedWorld  = lWorld->GetHandle();
+            m_RecordedCamera = ENTITY_NONE;
+        }
+
+        // The last frame's winner, once a frame of this world was drawn.
+        const EntityID lActive = (m_ReportedWorld == lWorld->GetHandle()) ? m_ReportedCamera : ENTITY_NONE;
+
+        RecordCameraSteps(*lWorld, lActive, m_RecordedCamera);
+        m_RecordedCamera = lActive;
     }
 
     // =========================================================================

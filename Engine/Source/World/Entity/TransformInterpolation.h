@@ -19,6 +19,12 @@ namespace Opaax
         /** Has InEntity's world record its pose around every fixed step. Calling it again does nothing. */
         void RecordSteps(Entity InEntity);
 
+        /**
+         * Stops recording InEntity's steps and forgets the poses recorded, so it is drawn where it is
+         * until something records it again (physics, the mover, RecordSteps).
+         */
+        void StopRecordingSteps(Entity InEntity);
+
         /** Start of a fixed step: the pose of each entity recorded becomes its previous pose. */
         void BeginFixedStep(World& InWorld);
 

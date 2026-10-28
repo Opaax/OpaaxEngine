@@ -16,6 +16,7 @@
 #include "World/Components/TransformInterpolationComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityHierarchy.h"
+#include "World/Entity/TransformInterpolation.h"
 #include "World/Systems/WorldContext.h"
 #include "World/Systems/WorldSubsystem.h"
 #include "World/World.h"
@@ -98,9 +99,10 @@ namespace
         InputManager     Input;
         WorldManager     Worlds;
 
-        World* TheWorld = nullptr;
-        Entity Body;
-        Entity Camera;
+        World*   TheWorld = nullptr;
+        Entity   Body;
+        Entity   Camera;
+        EntityID Recorded = ENTITY_NONE;
 
         explicit ChaseWorld(const EFollow InFollow)
         {
@@ -141,11 +143,17 @@ namespace
             REQUIRE(Worlds.SetActiveWorld(TheWorld));
         }
 
-        /** Update, then the camera manager's update (it runs after the worlds'), then InSteps steps. */
+        /**
+         * Update, then the camera manager's update (it runs after the worlds' and records the camera
+         * framing the world), then InSteps steps.
+         */
         void Tick(const Uint32 InSteps)
         {
             Worlds.Update(STEP_SECONDS);
-            CameraManager::RecordCameraSteps(*TheWorld);
+
+            const EntityID lActive = CameraManager::Resolve(*TheWorld).Entity;
+            CameraManager::RecordCameraSteps(*TheWorld, lActive, Recorded);
+            Recorded = lActive;
 
             for (Uint32 lStep = 0; lStep < InSteps; ++lStep)
             {
@@ -236,4 +244,49 @@ TEST_CASE("Camera interpolation: a camera moved in Update is framed where Update
     lChase.Camera.Get<TransformComponent>().Position.x += 25.f;
     lChase.Tick(1);
     CHECK(CameraManager::Resolve(*lChase.TheWorld, 0.4f).View.Position.x == doctest::Approx(lMovedTo + 25.f));
+}
+
+TEST_CASE("Camera interpolation: only the camera framing the world is recorded, however many there are")
+{
+    World lWorld("Crowd");
+
+    Entity lActive = lWorld.CreateEntity("Active");
+    lActive.Add<CameraComponent>().Priority = 1;
+
+    TDynArray<Entity> lIdle;
+    for (int lIndex = 0; lIndex < 100; ++lIndex)
+    {
+        Entity lCamera = lWorld.CreateEntity("Idle");
+        lCamera.Add<CameraComponent>();
+        lIdle.push_back(lCamera);
+    }
+
+    EntityID lRecorded = CameraManager::Resolve(lWorld).Entity;
+    REQUIRE(lRecorded == lActive.GetHandle());
+    CameraManager::RecordCameraSteps(lWorld, lRecorded, ENTITY_NONE);
+
+    CHECK(lActive.Get<TransformInterpolationComponent>().bRecordSteps);
+    for (Entity& lCamera : lIdle)
+    {
+        CHECK(lCamera.TryGet<TransformInterpolationComponent>() == nullptr);
+    }
+
+    // A step records the active camera.
+    lActive.Get<TransformComponent>().Position.x = 10.f;
+    TransformInterpolation::BeginFixedStep(lWorld);
+    TransformInterpolation::EndFixedStep(lWorld);
+    REQUIRE(lActive.Get<TransformInterpolationComponent>().bHasPrevious);
+
+    // Another wins the view: it is recorded, and the old one forgets its poses.
+    lIdle[7].Get<CameraComponent>().Priority = 5;
+    const EntityID lNext = CameraManager::Resolve(lWorld).Entity;
+    REQUIRE(lNext == lIdle[7].GetHandle());
+    CameraManager::RecordCameraSteps(lWorld, lNext, lRecorded);
+
+    CHECK(lIdle[7].Get<TransformInterpolationComponent>().bRecordSteps);
+
+    const TransformInterpolationComponent& lOld = lActive.Get<TransformInterpolationComponent>();
+    CHECK_FALSE(lOld.bRecordSteps);
+    CHECK_FALSE(lOld.bHasPrevious);
+    CHECK_FALSE(lOld.bHasStepped);
 }

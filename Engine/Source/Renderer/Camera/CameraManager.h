@@ -64,10 +64,11 @@ namespace Opaax
         static CameraResolution Resolve(World& InWorld, TOptional<float> InAlpha = NullOpt);
 
         /**
-         * Has InWorld record its cameras' poses around every fixed step (TransformInterpolation), so a
-         * camera moved in a step is framed between its last two, as bodies are drawn.
+         * Has InWorld record InActive's pose around every fixed step (TransformInterpolation), so the
+         * camera framing the world is framed between its last two steps, as bodies are drawn. Only
+         * that camera is recorded: InPrevious, the one recorded until now, stops being recorded.
          */
-        static void RecordCameraSteps(World& InWorld);
+        static void RecordCameraSteps(World& InWorld, EntityID InActive, EntityID InPrevious);
 
     private:
         /**
@@ -99,5 +100,9 @@ namespace Opaax
         ObjectHandle m_ReportedWorld;
         Uint32       m_ReportedCount  = 0;
         EntityID     m_ReportedCamera = ENTITY_NONE;
+
+        // The camera whose steps are recorded: the last frame's winner, in that world.
+        ObjectHandle m_RecordedWorld;
+        EntityID     m_RecordedCamera = ENTITY_NONE;
     };
 }

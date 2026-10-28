@@ -37,7 +37,7 @@ and the game export. A game is a module of its own types, linked into its runtim
    presentation (600: animation, audio), then debug drawing (700).
 4. **Fixed steps:** as many 1/60 s steps as the time owed, each running the subsystems' fixed
    update in the same order, so a behaviour's `OnFixedUpdate` comes right before the physics step.
-   Around each step the world records the pose of the entities that ask for it: the cameras, and
+   Around each step the world records the pose of the entities that ask for it: the active camera, and
    any entity gameplay moves in a step (`TransformInterpolation::RecordSteps`).
 5. **Render:** the active camera frames the world, then each view is drawn. Moving bodies and the
    camera are placed between their last two steps, so motion is smooth at any frame rate and a
