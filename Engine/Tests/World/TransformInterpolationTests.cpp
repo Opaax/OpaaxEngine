@@ -6,6 +6,7 @@
 #include "World/Components/TransformInterpolationComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityHierarchy.h"
+#include "World/Entity/TransformInterpolation.h"
 #include "World/World.h"
 
 using namespace Opaax;
@@ -188,4 +189,72 @@ TEST_CASE("DisplayTransform: without previous poses it is the world transform, a
         CHECK(lDrawn.Position.y == lWorldXf.Position.y);
         CHECK(lDrawn.Rotation == lWorldXf.Rotation);
     }
+}
+
+// =============================================================================
+// Poses the world records around each fixed step (TransformInterpolation)
+// =============================================================================
+TEST_CASE("ResolveDisplayPose: a pose the last step left blends; a pose moved since (in Update) is drawn as it is")
+{
+    TransformInterpolationComponent lHistory = Prev(0.f, 0.f);
+    lHistory.SteppedPosition = { 100.f, 0.f };
+    lHistory.bHasStepped     = true;
+
+    // Where the step left it: half way between the two steps.
+    CHECK(ResolveDisplayPose(At(100.f, 0.f), &lHistory, 0.5f).Position.x == doctest::Approx(50.f));
+
+    // Moved to 130 after the step: drawn at 130, not pulled back toward 0.
+    CHECK(ResolveDisplayPose(At(130.f, 0.f), &lHistory, 0.5f).Position.x == doctest::Approx(130.f));
+
+    // Turned after the step: the same.
+    CHECK(ResolveDisplayPose(At(100.f, 0.f, 20.f), &lHistory, 0.5f).RotationDeg == doctest::Approx(20.f));
+}
+
+TEST_CASE("TransformInterpolation: the world records the pose at the start and the end of a step, for the entities that ask")
+{
+    World lWorld("Recorded");
+
+    Entity lCamera = lWorld.CreateEntity("Camera");
+    lCamera.Get<TransformComponent>() = At(10.f, 0.f, 5.f);
+    TransformInterpolation::RecordSteps(lCamera);
+    TransformInterpolation::RecordSteps(lCamera);   // again: nothing changes
+
+    REQUIRE(lCamera.TryGet<TransformInterpolationComponent>() != nullptr);
+    CHECK_FALSE(lCamera.Get<TransformInterpolationComponent>().bHasPrevious);
+
+    TransformInterpolation::BeginFixedStep(lWorld);
+    lCamera.Get<TransformComponent>() = At(40.f, 0.f, 15.f);   // moved by the step
+    TransformInterpolation::EndFixedStep(lWorld);
+
+    const TransformInterpolationComponent& lHistory = lCamera.Get<TransformInterpolationComponent>();
+    CHECK(lHistory.bHasPrevious);
+    CHECK(lHistory.Position.x == doctest::Approx(10.f));
+    CHECK(lHistory.Rotation == doctest::Approx(5.f));
+    CHECK(lHistory.bHasStepped);
+    CHECK(lHistory.SteppedPosition.x == doctest::Approx(40.f));
+    CHECK(lHistory.SteppedRotation == doctest::Approx(15.f));
+
+    // Drawn between the two steps.
+    CHECK(EntityHierarchy::DisplayTransform(lCamera, 0.5f).Position.x == doctest::Approx(25.f));
+}
+
+TEST_CASE("TransformInterpolation: what physics or the mover records is left alone")
+{
+    World lWorld("Bodies");
+
+    // A body: its previous pose is written by the physics step, not by the world.
+    Entity lBody = lWorld.CreateEntity("Body");
+    lBody.Get<TransformComponent>() = At(100.f, 0.f);
+    lBody.Add<TransformInterpolationComponent>(Prev(70.f, 0.f));
+
+    TransformInterpolation::BeginFixedStep(lWorld);
+    TransformInterpolation::EndFixedStep(lWorld);
+
+    const TransformInterpolationComponent& lHistory = lBody.Get<TransformInterpolationComponent>();
+    CHECK(lHistory.Position.x == doctest::Approx(70.f));
+    CHECK_FALSE(lHistory.bHasStepped);
+
+    // A body that also asks keeps its previous pose until the next step records one.
+    TransformInterpolation::RecordSteps(lBody);
+    CHECK(lBody.Get<TransformInterpolationComponent>().Position.x == doctest::Approx(70.f));
 }

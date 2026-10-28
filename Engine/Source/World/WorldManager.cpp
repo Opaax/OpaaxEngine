@@ -13,6 +13,7 @@
 #include "Input/Mapping/InputMappingSubsystem.h"
 #include "UI/UISubsystem.h"
 #include "Engine/Registries/EngineRegistries.h"
+#include "World/Entity/TransformInterpolation.h"
 #include "World/Level.h"
 #include "World/Serialization/MapFactory.h"
 #include "World/Serialization/MapSerializer.h"
@@ -92,7 +93,11 @@ namespace Opaax
             return;
         }
 
+        // Around the subsystems: what a step moves for the entities that ask is recorded, so they
+        // are drawn between their last two steps.
+        TransformInterpolation::BeginFixedStep(*m_ActiveWorld);
         m_ActiveWorld->GetSubsystems().FixedUpdateAll(InFixedDeltaTime);
+        TransformInterpolation::EndFixedStep(*m_ActiveWorld);
     }
 
     void WorldManager::TearDown()

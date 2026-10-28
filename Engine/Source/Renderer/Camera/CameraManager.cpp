@@ -14,6 +14,7 @@
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityHierarchy.h"
 #include "World/Entity/EntityMeta.h"
+#include "World/Entity/TransformInterpolation.h"
 
 namespace Opaax
 {
@@ -66,6 +67,28 @@ namespace Opaax
             });
 
         return lResolution;
+    }
+
+    void CameraManager::RecordCameraSteps(World& InWorld)
+    {
+        InWorld.Each<CameraComponent>([&InWorld](EntityID InEntity, CameraComponent&)
+        {
+            TransformInterpolation::RecordSteps(Entity{ InEntity, &InWorld });
+        });
+    }
+
+    // =========================================================================
+    // Update — after the world's update (this subsystem is added after WorldManager), before the
+    //   fixed steps: a camera added this frame is recorded from its first step.
+    // =========================================================================
+    void CameraManager::Update(double /*InDeltaTime*/)
+    {
+        World* lWorld = (m_WorldManager != nullptr) ? m_WorldManager->GetActiveWorld() : nullptr;
+
+        if (lWorld != nullptr && lWorld->GetMode() == EWorldMode::Play)
+        {
+            RecordCameraSteps(*lWorld);
+        }
     }
 
     // =========================================================================
