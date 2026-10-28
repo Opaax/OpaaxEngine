@@ -436,6 +436,9 @@ namespace Opaax
             Update(lDeltaTime);
         }
 
+        // A paused world holds still: it is drawn as it was, and goes on from there.
+        m_Clock.SetWorldTicks(m_WorldManager == nullptr || m_WorldManager->IsTickingThisFrame());
+
         while (m_Clock.TakeFixedStep())
         {
             // Inside the loop: the scope's Calls is the step count.
@@ -446,7 +449,7 @@ namespace Opaax
 
         {
             OPAAX_STAT_SCOPE("Render");
-            Render(m_Clock.GetFixedAlpha());
+            Render(m_Clock.GetDisplayAlpha());
         }
     }
     
