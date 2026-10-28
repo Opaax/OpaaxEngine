@@ -43,7 +43,9 @@ and the game export. A game is a module of its own types, linked into its runtim
    the behaviours' `OnUpdate`), physics (300), after physics (400, the movers), the default (500),
    presentation (600: animation, audio), then debug drawing (700).
 4. **Fixed steps:** as many steps as the time owed (`Time.FixedRate` in `Engine.config`, 60 a second by
-   default; a test plays at a screen rate of its choice with `--frame-pacing`), each running the
+   default; a test plays at a screen rate of its choice with `--frame-pacing`), at most
+   `Time.MaxStepsPerFrame` (8): a frame owing more drops the rest and the game slows for it, instead
+   of slow steps making every frame longer (the spiral). Each step runs the
    subsystems' fixed update in the same order, so a behaviour's `OnFixedUpdate` comes right before the
    physics step.
    Around each step the world records what a step changes for the entities that ask for it: the

@@ -22,6 +22,7 @@ namespace Opaax
     class EngineRegistries;
     struct FramebufferSpec;
     struct FramePacing;
+    class FrameClock;
     struct CameraView;
 
     // =============================================================================
@@ -94,6 +95,9 @@ namespace Opaax
 
         /** The pacing in use; inactive when the frames follow the platform's clock. */
         virtual const FramePacing& GetFramePacing() const = 0;
+
+        /** The frame clock: the fixed step, the refresh it snaps to, the steps dropped. */
+        virtual const FrameClock& GetFrameClock() const = 0;
 
         /**
          * Swaps the window backbuffer. Called once per frame, after rendering.

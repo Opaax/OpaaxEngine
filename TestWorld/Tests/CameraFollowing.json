@@ -74,6 +74,14 @@
                 "spread": 1000.0
             },
             {
+                "tag": "144stall",
+                "pacing": "144,hitch=0.25@0.5",
+                "rate": 60,
+                "reference": "60",
+                "jitter": 1000.0,
+                "spread": 1000.0
+            },
+            {
                 "tag": "144at30",
                 "pacing": "144",
                 "rate": 30,
@@ -148,7 +156,8 @@
                         "stillMoves": 0,
                         "zoomReversals": 0,
                         "cameraSwitches": 0,
-                        "stepsSpread": "{spread}"
+                        "stepsSpread": "{spread}",
+                        "mostSteps": 8
                     }
                 }
             },
@@ -205,7 +214,8 @@
                         "timeReversals": 0,
                         "stillMoves": 0,
                         "cameraSwitches": 0,
-                        "stepsSpread": "{spread}"
+                        "stepsSpread": "{spread}",
+                        "mostSteps": 8
                     }
                 }
             },

@@ -2,6 +2,7 @@
 
 #include "Audio/AudioManager.h"
 
+#include "Engine/FrameClock.h"
 #include "Engine/FramePacer.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
 #include "Engine/Subsystems/EngineEventBus.h"
@@ -45,6 +46,12 @@ namespace Opaax
             }
 
             CameraManager* GetCameras() override { return nullptr; }
+
+            const FrameClock& GetFrameClock() const override
+            {
+                static const FrameClock s_Clock(1.0 / 60.0);
+                return s_Clock;
+            }
 
             void PresentBackbuffer()      override {}
             bool CaptureFrame(const OpaaxString&) override { return false; }

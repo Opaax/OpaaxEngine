@@ -240,6 +240,17 @@
         }
     },
     {
+        "id": "clock-info",
+        "command": "camera.info",
+        "expect": {
+            "clock": {
+                "refreshHz": 60,
+                "snapping": true,
+                "maxSteps": 8
+            }
+        }
+    },
+    {
         "id": "pace-hitch",
         "command": "time.pace",
         "params": {

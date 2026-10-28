@@ -13,6 +13,7 @@
 #include "Core/Time/Clock.h"
 #include "Engine/Config/Config.h"
 #include "Engine/Config/Config_Engine.h"
+#include "Engine/FrameClock.h"
 #include "Engine/FramePacer.h"
 #include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
@@ -734,7 +735,8 @@ namespace Opaax::EngineAutomation
         void RegisterCamera(AutomationRunner& InRunner, IEngine& InEngine)
         {
             InRunner.Register("camera.info",
-                "How the active world is framed: {world, mode, paused, view, fixedRate, pacing, tracing, cameras} with "
+                "How the active world is framed: {world, mode, paused, view, fixedRate, pacing, tracing, clock (fixedDelta, "
+                "refreshHz snapped to, snapping, maxSteps, droppedSteps), cameras} with "
                 "each camera's {name, id, priority, x, y, size, recorded} (recorded: framed between its steps), and in a "
                 "Play world the last frame's {live: {name, id, count, tied}, frame: {delta, steps, alpha, interpolated, "
                 "stepDelta, gameTime}}. An Edit world is framed by the editor's camera.",
@@ -764,7 +766,9 @@ namespace Opaax::EngineAutomation
                             lList.push_back(Move(lCamera));
                         });
 
-                    const CameraView& lView = lWorld->GetCameraView();
+                    const FrameClock& lClock    = InEngine.GetFrameClock();
+                    const double      lRefresh  = lClock.GetRefreshInterval();
+                    const CameraView& lView     = lWorld->GetCameraView();
                     nlohmann::json    lAnswer{
                         { "world",     lWorld->GetName().CStr() },
                         { "mode",      ToString(lWorld->GetMode()) },
@@ -773,6 +777,11 @@ namespace Opaax::EngineAutomation
                         { "fixedRate", OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>().GetData().Time.FixedRate },
                         { "pacing",    InEngine.GetFramePacing().ToString() },
                         { "tracing",   lCameras->GetTraceName() },
+                        { "clock",     { { "fixedDelta", lClock.GetFixedDelta() },
+                                         { "refreshHz", lRefresh > 0.0 ? 1.0 / lRefresh : 0.0 },
+                                         { "snapping", lClock.IsSnapping() },
+                                         { "maxSteps", lClock.GetMaxStepsPerFrame() },
+                                         { "droppedSteps", lClock.GetDroppedSteps() } } },
                         { "cameras",   Move(lList) } };
 
                     // The last frame drawn of this world, when the camera manager framed it.
