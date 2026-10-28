@@ -20,6 +20,19 @@ namespace Opaax
         lHistory->bRecordSteps = true;
     }
 
+    void TransformInterpolation::StopRecordingSteps(Entity InEntity)
+    {
+        if (!InEntity.IsValid()) { return; }
+
+        TransformInterpolationComponent* lHistory = InEntity.TryGet<TransformInterpolationComponent>();
+        if (lHistory == nullptr || !lHistory->bRecordSteps) { return; }
+
+        // Stale poses would blend it toward where it was when the recording stopped.
+        lHistory->bRecordSteps = false;
+        lHistory->bHasPrevious = false;
+        lHistory->bHasStepped  = false;
+    }
+
     void TransformInterpolation::BeginFixedStep(World& InWorld)
     {
         InWorld.Each<TransformComponent, TransformInterpolationComponent>(
