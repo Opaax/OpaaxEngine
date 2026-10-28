@@ -122,6 +122,21 @@ TEST_CASE("CameraTrace: a camera zooming out while it pans locked on its target 
     CHECK(lSummary.ZoomReversals == 0);
 }
 
+TEST_CASE("CameraTrace: the most and the fewest steps a frame took")
+{
+    TDynArray<CameraTraceSample> lSamples = Pan(60.0, 5);
+    const Uint32 lSteps[] = { 1, 1, 2, 1, 0 };
+    for (Uint32 lIndex = 0; lIndex < 5; ++lIndex)
+    {
+        lSamples[lIndex].Steps = lSteps[lIndex];
+    }
+
+    const CameraTraceSummary lSummary = CameraTrace::Summarize(lSamples, HEIGHT_PX);
+    CHECK(lSummary.MostSteps == 2);
+    CHECK(lSummary.FewestSteps == 0);
+    CHECK(CameraTrace::Summarize({}, HEIGHT_PX).MostSteps == 0);
+}
+
 TEST_CASE("CameraTrace: a zoom turning back is counted each time")
 {
     TDynArray<CameraTraceSample> lSamples;

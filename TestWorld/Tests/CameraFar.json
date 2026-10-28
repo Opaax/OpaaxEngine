@@ -6,21 +6,24 @@
                 "pacing": "60",
                 "rate": 60,
                 "reference": "60",
-                "jitter": 0.05
+                "jitter": 0.05,
+                "spread": 0
             },
             {
                 "tag": "144",
                 "pacing": "144",
                 "rate": 60,
                 "reference": "60",
-                "jitter": 0.05
+                "jitter": 0.05,
+                "spread": 1
             },
             {
                 "tag": "60jitter",
                 "pacing": "60,jitter=0.25,seed=3",
                 "rate": 60,
                 "reference": "60",
-                "jitter": 1000.0
+                "jitter": 0.05,
+                "spread": 0
             }
         ],
         "requests": [
@@ -80,7 +83,8 @@
                         "timeReversals": 0,
                         "stillMoves": 0,
                         "zoomReversals": 0,
-                        "cameraSwitches": 0
+                        "cameraSwitches": 0,
+                        "stepsSpread": "{spread}"
                     }
                 }
             },
@@ -136,7 +140,8 @@
                         "motionJitter": "{jitter}",
                         "timeReversals": 0,
                         "stillMoves": 0,
-                        "cameraSwitches": 0
+                        "cameraSwitches": 0,
+                        "stepsSpread": "{spread}"
                     }
                 }
             },

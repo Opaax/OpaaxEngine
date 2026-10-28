@@ -115,6 +115,9 @@ namespace Opaax
         virtual void*   GetNativeWindow()   const = 0;
         virtual Uint32  GetWidth()          const = 0;
         virtual Uint32  GetHeight()         const = 0;
+
+        /** How many times a second the window's screen refreshes, as the screen states it; 0 when unknown. */
+        virtual Uint32  GetRefreshRate()    const = 0;
         
         /*-------------------------------------------------------------------------*/
         // Window Mode

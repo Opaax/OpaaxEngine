@@ -7,9 +7,11 @@
 #include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IJobSystem.h"
 #include "Application/Services/IPaths.h"
+#include "Application/Services/IWindowManager.h"
 #include "Audio/AudioManager.h"
 #include "Core/Profiling/Profiler.h"
 #include "Platform/IPlatform.h"
+#include "Platform/Window/Window.h"
 
 #include "Core/Image/PngWriter.h"
 #include "Core/Maths/Maths.h"
@@ -467,6 +469,7 @@ namespace Opaax
         }
 
         OPAAX_ENGINE_LOG(Info, "Frame pacing: {}", InPacing.ToString().CStr());
+        ApplyRefresh();
     }
 
     double Engine::ClockTime() const
@@ -488,13 +491,54 @@ namespace Opaax
         const float  lRate  = Maths::Clamp(m_EngineConfig->GetData().Time.FixedRate, TimeSettings::MIN_FIXED_RATE,
                                            TimeSettings::MAX_FIXED_RATE);
         const double lDelta = 1.0 / static_cast<double>(lRate);
-        if (lDelta == m_Clock.GetFixedDelta())
+        if (lDelta != m_Clock.GetFixedDelta())
+        {
+            m_Clock.SetFixedDelta(lDelta);
+            OPAAX_ENGINE_LOG(Info, "Fixed steps: {} a second", lRate);
+        }
+
+        ApplyRefresh();
+    }
+
+    void Engine::ApplyRefresh()
+    {
+        const FramePacing& lPacing = m_Pacer.GetPacing();
+        double             lHertz  = 0.0;
+        bool               bStated = false;
+
+        // A pacing is its own screen, at its exact rate; else the window's, which only vsync keeps to.
+        if (m_EngineConfig == nullptr || m_EngineConfig->GetData().Time.bSnapToRefresh)
+        {
+            if (lPacing.IsActive())
+            {
+                lHertz = lPacing.Deltas.empty() ? lPacing.Rate : 0.0;
+            }
+            else if (m_EngineConfig == nullptr || m_EngineConfig->GetData().Window.bVSync)
+            {
+                const Window* lWindow = OpaaxApplication::GetAppService<IWindowManager>().GetMainWindow();
+                lHertz  = lWindow != nullptr ? static_cast<double>(lWindow->GetRefreshRate()) : 0.0;
+                bStated = true;
+            }
+        }
+
+        const double lInterval = lHertz > 0.0 ? 1.0 / lHertz : 0.0;
+        if (lInterval == m_SnappedInterval)
         {
             return;
         }
 
-        m_Clock.SetFixedDelta(lDelta);
-        OPAAX_ENGINE_LOG(Info, "Fixed steps: {} a second", lRate);
+        m_SnappedInterval = lInterval;
+        m_Clock.SetRefreshInterval(lInterval, bStated);
+
+        if (lInterval > 0.0)
+        {
+            OPAAX_ENGINE_LOG(Info, "Frame deltas snapped to a {} Hz refresh{}", lHertz,
+                             bStated ? " (the screen's stated rate: the real one is measured)" : "");
+        }
+        else
+        {
+            OPAAX_ENGINE_LOG(Info, "Frame deltas as measured");
+        }
     }
 
     void Engine::TearDown()

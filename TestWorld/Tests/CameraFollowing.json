@@ -6,77 +6,88 @@
                 "pacing": "60",
                 "rate": 60,
                 "reference": "60",
-                "jitter": 0.05
+                "jitter": 0.05,
+                "spread": 0
             },
             {
                 "tag": "30at30",
                 "pacing": "30",
                 "rate": 30,
                 "reference": "30at30",
-                "jitter": 0.05
+                "jitter": 0.05,
+                "spread": 0
             },
             {
                 "tag": "120at120",
                 "pacing": "120",
                 "rate": 120,
                 "reference": "120at120",
-                "jitter": 0.05
+                "jitter": 0.05,
+                "spread": 0
             },
             {
                 "tag": "30",
                 "pacing": "30",
                 "rate": 60,
                 "reference": "60",
-                "jitter": 0.05
+                "jitter": 0.05,
+                "spread": 0
             },
             {
                 "tag": "75",
                 "pacing": "75",
                 "rate": 60,
                 "reference": "60",
-                "jitter": 0.05
+                "jitter": 0.05,
+                "spread": 1
             },
             {
                 "tag": "144",
                 "pacing": "144",
                 "rate": 60,
                 "reference": "60",
-                "jitter": 0.05
+                "jitter": 0.05,
+                "spread": 1
             },
             {
                 "tag": "240",
                 "pacing": "240",
                 "rate": 60,
                 "reference": "60",
-                "jitter": 0.05
+                "jitter": 0.05,
+                "spread": 1
             },
             {
                 "tag": "60jitter",
                 "pacing": "60,jitter=0.25,seed=3",
                 "rate": 60,
                 "reference": "60",
-                "jitter": 1000.0
+                "jitter": 0.05,
+                "spread": 0
             },
             {
                 "tag": "144hitch",
                 "pacing": "144,hitch=0.1@0.5",
                 "rate": 60,
                 "reference": "60",
-                "jitter": 1000.0
+                "jitter": 1000.0,
+                "spread": 1000.0
             },
             {
                 "tag": "144at30",
                 "pacing": "144",
                 "rate": 30,
                 "reference": "30at30",
-                "jitter": 0.05
+                "jitter": 0.05,
+                "spread": 1
             },
             {
                 "tag": "144at120",
                 "pacing": "144",
                 "rate": 120,
                 "reference": "120at120",
-                "jitter": 0.05
+                "jitter": 0.05,
+                "spread": 1
             }
         ],
         "requests": [
@@ -136,7 +147,8 @@
                         "timeReversals": 0,
                         "stillMoves": 0,
                         "zoomReversals": 0,
-                        "cameraSwitches": 0
+                        "cameraSwitches": 0,
+                        "stepsSpread": "{spread}"
                     }
                 }
             },
@@ -192,7 +204,8 @@
                         "motionJitter": "{jitter}",
                         "timeReversals": 0,
                         "stillMoves": 0,
-                        "cameraSwitches": 0
+                        "cameraSwitches": 0,
+                        "stepsSpread": "{spread}"
                     }
                 }
             },

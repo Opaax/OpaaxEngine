@@ -193,7 +193,10 @@ namespace Opaax::EngineAutomation
                 { "timeReversals",     InSummary.TimeReversals },
                 { "stillMoves",        InSummary.StillMoves },
                 { "zoomReversals",     InSummary.ZoomReversals },
-                { "cameraSwitches",    InSummary.CameraSwitches } };
+                { "cameraSwitches",    InSummary.CameraSwitches },
+                { "mostSteps",         InSummary.MostSteps },
+                { "fewestSteps",       InSummary.FewestSteps },
+                { "stepsSpread",       InSummary.MostSteps - InSummary.FewestSteps } };
         }
 
         /** A trace and its summary, as the .camera.json file holds them. */
@@ -833,7 +836,7 @@ namespace Opaax::EngineAutomation
                 "Ends the trace, writes <name>.camera.json and <name>.camera.csv in the working folder and answers "
                 "{name, frames, files, summary}: the target's largest move on screen (targetDrift), the largest change "
                 "of the view's move (motionJitter), largestMove (pixels), timeReversals, stillMoves, zoomReversals, "
-                "cameraSwitches. {limits}, like {\"targetDrift\": 0.01}, fails the request past any of them.",
+                "cameraSwitches, and the most and fewest steps a frame took (mostSteps, fewestSteps, stepsSpread). {limits}, like {\"targetDrift\": 0.01}, fails the request past any of them.",
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     OpaaxString    lError;

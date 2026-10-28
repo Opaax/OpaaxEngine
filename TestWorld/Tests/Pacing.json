@@ -77,6 +77,18 @@
         }
     },
     {
+        "id": "snap-off",
+        "command": "config.set",
+        "params": {
+            "config": "Engine",
+            "values": {
+                "Time": {
+                    "bSnapToRefresh": false
+                }
+            }
+        }
+    },
+    {
         "id": "pace-jitter",
         "command": "time.pace",
         "params": {
@@ -157,6 +169,74 @@
             "entity": "Clock",
             "path": "FrameProbe/MaxDelta",
             "greater": 0.0175
+        }
+    },
+    {
+        "id": "snap-on",
+        "command": "config.set",
+        "params": {
+            "config": "Engine",
+            "values": {
+                "Time": {
+                    "bSnapToRefresh": true
+                }
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 8
+        }
+    },
+    {
+        "id": "reset-snapped",
+        "command": "component.set",
+        "params": {
+            "entity": "Clock",
+            "type": "FrameProbe",
+            "value": {
+                "Frames": 0,
+                "Steps": 0,
+                "MinDelta": 1.0,
+                "MaxDelta": 0.0
+            }
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 2.0
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "snapped-shortest",
+        "params": {
+            "entity": "Clock",
+            "path": "FrameProbe/MinDelta",
+            "near": 0.0166667,
+            "tolerance": 0.000001
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "snapped-longest",
+        "params": {
+            "entity": "Clock",
+            "path": "FrameProbe/MaxDelta",
+            "near": 0.0166667,
+            "tolerance": 0.000001
+        }
+    },
+    {
+        "command": "expect.value",
+        "id": "snapped-steps",
+        "params": {
+            "entity": "Clock",
+            "path": "FrameProbe/Steps",
+            "near": 120,
+            "tolerance": 1
         }
     },
     {

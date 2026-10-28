@@ -37,6 +37,7 @@ namespace Opaax
     public:
         Uint32 GetWidth() const override { return m_Data.Width; }
         Uint32 GetHeight() const override { return m_Data.Height; }
+        Uint32 GetRefreshRate() const override;
 
 		virtual void PollEvents() override;
         virtual bool ShouldClose() const override;
