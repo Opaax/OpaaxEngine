@@ -242,35 +242,24 @@ namespace Opaax
     DisplayPose RendererManager::PoseFor(World& InWorld, const EntityID InEntity,
                                          const TransformComponent& InTransform)
     {
-        // Each parent's local pose is blended, then the chain is composed, so a child of an
-        // interpolated body is drawn with it.
-        const auto lDisplayLocal = [this, &InWorld, InEntity, &InTransform](Entity InHop) -> TransformComponent
+        Entity lEntity{ InEntity, &InWorld };
+
+        // Off means no blend (alpha 0 would be the previous pose, one step behind).
+        if (!m_bInterpolate)
         {
-            const TransformComponent* lLocal = InHop.GetHandle() == InEntity ? &InTransform
-                                                                             : InHop.TryGet<TransformComponent>();
-            if (lLocal == nullptr) { return TransformComponent{}; }
+            const TransformComponent lWorld = EntityHierarchy::WorldTransform(lEntity);
+            return DisplayPose{ lWorld.Position, lWorld.Rotation, lWorld.Scale };
+        }
 
-            // Off means no blend (alpha 0 would be the previous pose, one step behind).
-            if (!m_bInterpolate) { return *lLocal; }
+        // Counted only when the entity itself has moved since its previous step.
+        const TransformInterpolationComponent* lPrevious = lEntity.TryGet<TransformInterpolationComponent>();
+        if (lPrevious != nullptr && lPrevious->bHasPrevious
+            && (lPrevious->Position != InTransform.Position || lPrevious->Rotation != InTransform.Rotation))
+        {
+            ++m_BlendedThisFrame;
+        }
 
-            const auto* lPrevious = InWorld.GetRegistry().try_get<TransformInterpolationComponent>(InHop.GetHandle());
-
-            const DisplayPose lBlend = ResolveDisplayPose(*lLocal, lPrevious, m_FrameAlpha);
-
-            // Counted only when the blend actually moved the entity.
-            if (InHop.GetHandle() == InEntity && lPrevious != nullptr && lPrevious->bHasPrevious
-                && (lBlend.Position != lLocal->Position || lBlend.RotationDeg != lLocal->Rotation))
-            {
-                ++m_BlendedThisFrame;
-            }
-
-            TransformComponent lOut = *lLocal;
-            lOut.Position = lBlend.Position;
-            lOut.Rotation = lBlend.RotationDeg;
-            return lOut;
-        };
-
-        const TransformComponent lWorld = EntityHierarchy::ComposeChain(Entity{ InEntity, &InWorld }, lDisplayLocal);
+        const TransformComponent lWorld = EntityHierarchy::DisplayTransform(lEntity, m_FrameAlpha);
 
         return DisplayPose{ lWorld.Position, lWorld.Rotation, lWorld.Scale };
     }
