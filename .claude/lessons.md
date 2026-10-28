@@ -9,6 +9,10 @@ What working on this repository taught, kept short so the next session starts fr
   cut by a nearby line, never by the escaped text.
 - MSVC's "compiler is out of heap space" (C1060) during `build.bat` is memory pressure, not the code:
   build again before changing anything.
+- Run `build.bat` from the PowerShell tool as `& .\build.bat fast OpaaxTests` (with
+  `$env:OPAAX_NO_PAUSE = '1'`): `cmd /c build.bat` from either shell answers "not recognized".
+- A Python edit script with `'''` strings breaks the Bash tool's heredoc ("unexpected EOF"): write the
+  script to the scratchpad and run it with `python -I <file>`.
 - CI cancels a branch's running workflow when a newer commit is pushed: push the last commit, then
   watch that run (`Scratch/tools/ci_watch.py <sha>`).
 - A full build once hung on one `cl.exe` (log stopped, CPU flat for minutes): stop the build's
