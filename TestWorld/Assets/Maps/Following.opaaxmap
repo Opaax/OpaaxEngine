@@ -1,0 +1,124 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3499999940395355,
+                        "y": 0.30000001192092896,
+                        "z": 0.25
+                    },
+                    "Size": {
+                        "x": 40000.0,
+                        "y": 20.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 19000.0,
+                        "y": -100.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "15beb4138b7f45f6af9ac9abd5216433",
+            "name": "Ground",
+            "ownerMap": "Following"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": -40.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "1c8d7c71c4e5493ab6b9d13d69d4fa0d",
+            "name": "ParentCam",
+            "ownerMap": "Following",
+            "parent": "5fc525549c9b46cfbe08f76c92fe433b"
+        },
+        {
+            "components": {
+                "FollowProbe": {
+                    "Chase": "ChaseCam",
+                    "FramedBetween": 0,
+                    "Frames": 0,
+                    "MaxFraction": 0.0,
+                    "MinFraction": 1.0,
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 40.0
+                    },
+                    "Speed": 1800.0,
+                    "ViewOffsetY": 0.0
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.949999988079071,
+                        "y": 0.550000011920929,
+                        "z": 0.20000000298023224
+                    },
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "5fc525549c9b46cfbe08f76c92fe433b",
+            "name": "Runner",
+            "ownerMap": "Following"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 1
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 40.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "adb0d448f6bd40d384de001724c482df",
+            "name": "ChaseCam",
+            "ownerMap": "Following"
+        }
+    ],
+    "mapId": "Following",
+    "version": 4
+}
