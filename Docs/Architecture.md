@@ -30,7 +30,14 @@ and the game export. A game is a module of its own types, linked into its runtim
 
 1. Finished background jobs report, the frame's queued events are delivered, and a level asked for
    during the last frame replaces the current one.
-2. The frame clock measures the frame, capped at 0.25 s so a stall never becomes a jump.
+2. The frame clock measures the frame, capped at 0.25 s so a stall never becomes a jump. With vsync,
+   it counts the frame as whole refreshes of the screen: a timer reads a steady screen with noise, and
+   motion drawn at the noisy time shakes. What a frame of whole refreshes leaves carries to the next,
+   so the game's time keeps to the screen's; the screen's real rate is measured, not taken from its
+   stated one (60 Hz for 59.94). A frame that is no whole number of refreshes (a stall) counts as
+   measured, and a few in a row (frames far shorter than a refresh: vsync not holding) stop the
+   snapping until the frames keep to the refresh again. `Time.bSnapToRefresh` turns it off, for
+   variable-refresh screens.
 3. **Update:** the engine's own subsystems update (the resource manager collects what is no longer
    used), and the active world's subsystems run once, in their order: input (100), gameplay (200,
    the behaviours' `OnUpdate`), physics (300), after physics (400, the movers), the default (500),

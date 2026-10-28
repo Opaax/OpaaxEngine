@@ -59,12 +59,19 @@ namespace Opaax
         /** Fixed steps a second: physics, movement and every OnFixedUpdate run at this rate. */
         float FixedRate = 60.f;
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(TimeSettings, FixedRate)
+        /** With vsync, each frame counts as whole refreshes of the screen: the timer's noise does not shake motion. */
+        bool bSnapToRefresh = true;
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(TimeSettings, FixedRate, bSnapToRefresh)
 
         OPAAX_PROPERTIES(TimeSettings,
                          OPAAX_PROP(FixedRate).SetRange(MIN_FIXED_RATE, MAX_FIXED_RATE)
                              .SetTooltip("Fixed steps a second: physics, movement, OnFixedUpdate.\n"
-                                         "Moving things are drawn between steps, smooth at any screen rate."))
+                                         "Moving things are drawn between steps, smooth at any screen rate."),
+                         OPAAX_PROP(bSnapToRefresh)
+                             .SetTooltip("With vsync, count each frame as whole refreshes of the screen:\n"
+                                         "the timer's noise no longer shakes moving things.\n"
+                                         "Off for a variable-refresh screen (G-Sync, FreeSync)."))
     };
 
     struct RenderSettings

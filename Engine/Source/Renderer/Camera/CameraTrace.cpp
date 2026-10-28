@@ -49,6 +49,12 @@ namespace Opaax::CameraTrace
         CameraTraceSummary lSummary;
         lSummary.Frames = static_cast<Uint32>(InSamples.size());
 
+        for (Uint64 lIndex = 0; lIndex < InSamples.size(); ++lIndex)
+        {
+            lSummary.MostSteps   = Maths::Max(lSummary.MostSteps, InSamples[lIndex].Steps);
+            lSummary.FewestSteps = lIndex == 0 ? InSamples[lIndex].Steps : Maths::Min(lSummary.FewestSteps, InSamples[lIndex].Steps);
+        }
+
         // The view's move in the world on the frame before, for the jitter; none after a switch.
         Vector2F lLastMove      = { 0.f, 0.f };
         bool     bHasLastMove   = false;

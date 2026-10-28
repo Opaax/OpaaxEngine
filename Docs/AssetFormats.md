@@ -370,7 +370,8 @@ text in the selected face and what a style request resolves to.
 
 ## Configs (`Configs/*.config`)
 
-`Engine.config` holds the window (vsync included), the fixed steps' rate (`Time.FixedRate`), rendering
+`Engine.config` holds the window (vsync included), time (the fixed steps' rate `Time.FixedRate`, and
+`Time.bSnapToRefresh` to count frames as whole refreshes of the screen), rendering
 backend, physics (gravity, world bounds) and audio settings; `Renderer.config` the renderer's;
 `EditorImgui.config` the editor's look. They are edited in the editor's Config panel; a missing key
 keeps its default. Automation reads them with `config.get` and changes one for a run with `config.set`.

@@ -67,6 +67,10 @@ namespace Opaax
 
         /** Frames where another camera framed the world. Moves across a switch are not counted above. */
         Uint32 CameraSwitches = 0;
+
+        /** The most and the fewest fixed steps a frame took: at a screen rate the fixed rate divides, equal. */
+        Uint32 MostSteps   = 0;
+        Uint32 FewestSteps = 0;
     };
 
     // =============================================================================

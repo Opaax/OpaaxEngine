@@ -6,21 +6,24 @@
                 "pacing": "60",
                 "rate": 60,
                 "reference": "60",
-                "jitter": 0.05
+                "jitter": 0.05,
+                "spread": 0
             },
             {
                 "tag": "144",
                 "pacing": "144",
                 "rate": 60,
                 "reference": "60",
-                "jitter": 0.05
+                "jitter": 0.05,
+                "spread": 1
             },
             {
                 "tag": "240",
                 "pacing": "240",
                 "rate": 60,
                 "reference": "60",
-                "jitter": 0.05
+                "jitter": 0.05,
+                "spread": 1
             }
         ],
         "requests": [

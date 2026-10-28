@@ -96,8 +96,14 @@ namespace Opaax
         /** The frame clock's time: the paced time while paced (SetFramePacing), else the platform's. */
         double ClockTime() const;
 
-        /** Engine.config changed: applies Time.FixedRate to the clock from the next step. */
+        /** Engine.config changed: applies Time.FixedRate to the clock from the next step, and the refresh. */
         void HandleEngineConfigChanged();
+
+        /**
+         * The refresh the frame clock snaps deltas to: a pacing's rate, else the window's screen with
+         * vsync on; none with Time.bSnapToRefresh off. Logged when it changes.
+         */
+        void ApplyRefresh();
         // End Time
         // =============================================================================
 
@@ -184,6 +190,9 @@ namespace Opaax
 
         /** Read at Startup, followed on change. Not owned. */
         Config_Engine* m_EngineConfig = nullptr;
+
+        /** The refresh interval given to the clock (ApplyRefresh); 0 for none. */
+        double m_SnappedInterval = 0.0;
 
         // A paced run's frames (SetFramePacing), and the time they add up to.
         FramePacer m_Pacer;

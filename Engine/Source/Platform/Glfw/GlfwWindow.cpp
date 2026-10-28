@@ -401,6 +401,19 @@ namespace Opaax
 		m_Data.Mode = EWindowMode::Fullscreen;
 	}
 
+	Uint32 GlfwWindow::GetRefreshRate() const
+	{
+		// A windowed window has no monitor of its own: the primary one shows it.
+		GLFWmonitor* lMonitor = (m_Window != nullptr) ? glfwGetWindowMonitor(m_Window) : nullptr;
+		if (lMonitor == nullptr)
+		{
+			lMonitor = glfwGetPrimaryMonitor();
+		}
+
+		const GLFWvidmode* lMode = (lMonitor != nullptr) ? glfwGetVideoMode(lMonitor) : nullptr;
+		return (lMode != nullptr && lMode->refreshRate > 0) ? static_cast<Uint32>(lMode->refreshRate) : 0u;
+	}
+
 	void GlfwWindow::SaveWindowedState()
 	{
 		GLFWmonitor* monitor = glfwGetWindowMonitor(m_Window);
