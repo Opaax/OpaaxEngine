@@ -1,7 +1,8 @@
-// Suite: a camera following a moving body keeps it at the same place on screen, and a camera zoomed
-// in fixed steps is framed with its size between its last two steps, for any alpha and any number
-// of fixed steps in a frame. Driven through WorldManager the way Engine::Loop runs a frame:
-// Update, CameraManager's Update, the steps, then the view resolved at the frame's alpha.
+// Suite: a camera following a moving body keeps it at the same place on screen, also on the frame
+// another camera takes the view over, and a camera zoomed in fixed steps is framed with its size
+// between its last two steps, for any alpha and any number of fixed steps in a frame. Driven through
+// WorldManager the way Engine::Loop runs a frame: Update, CameraManager's Update, the steps, then the
+// view resolved at the frame's alpha.
 #include <doctest.h>
 
 #include "Application/Services/IPaths.h"
@@ -34,8 +35,9 @@ namespace
     /** Full momentum: 30 units a step. */
     constexpr float SPEED = 1800.f;
 
-    /** Where the camera sits from the body. */
+    /** Where the camera sits from the body, and a second camera chasing it. */
     const Vector2F CAMERA_OFFSET{ 0.f, 40.f };
+    const Vector2F OTHER_OFFSET{ 0.f, -40.f };
 
     /** OrthoSize a zooming camera gains every step. */
     constexpr float ZOOM_PER_STEP = 6.f;
@@ -82,10 +84,17 @@ namespace
             if (!lBody.IsValid() || !lCamera.IsValid()) { return; }
 
             lCamera.Get<TransformComponent>().Position = lBody.Get<TransformComponent>().Position + CAMERA_OFFSET;
+
+            Entity lOther{ Other, &GetWorld() };
+            if (lOther.IsValid())
+            {
+                lOther.Get<TransformComponent>().Position = lBody.Get<TransformComponent>().Position + OTHER_OFFSET;
+            }
         }
 
         EntityID Body   = ENTITY_NONE;
         EntityID Camera = ENTITY_NONE;
+        EntityID Other  = ENTITY_NONE;   // a second chased camera, when asked
     };
 
     // Grows the camera's OrthoSize every fixed step, as a game's zoom eased in its steps does.
@@ -128,7 +137,6 @@ namespace
         World*   TheWorld = nullptr;
         Entity   Body;
         Entity   Camera;
-        EntityID Recorded = ENTITY_NONE;
 
         explicit ChaseWorld(const EFollow InFollow)
         {
@@ -182,17 +190,26 @@ namespace
 
         float CameraSize() { return Camera.Get<CameraComponent>().OrthoSize; }
 
+        /** A second camera, chased at OTHER_OFFSET in every step, below the first in priority. */
+        Entity AddOtherCamera()
+        {
+            Camera.Get<CameraComponent>().Priority = 1;
+
+            Entity lOther = TheWorld->CreateEntity("Other");
+            lOther.Add<CameraComponent>();
+            lOther.Get<TransformComponent>().Position = OTHER_OFFSET;
+            TheWorld->GetSubsystems().GetSubsystem<ChaseCameraSubsystem>()->Other = lOther.GetHandle();
+            return lOther;
+        }
+
         /**
-         * Update, then the camera manager's update (it runs after the worlds' and records the camera
-         * framing the world), then InSteps steps.
+         * Update, then the camera manager's update (it runs after the worlds' and records the
+         * cameras), then InSteps steps.
          */
         void Tick(const Uint32 InSteps)
         {
             Worlds.Update(STEP_SECONDS);
-
-            const EntityID lActive = CameraManager::Resolve(*TheWorld).Entity;
-            CameraManager::RecordCameraSteps(*TheWorld, lActive, Recorded);
-            Recorded = lActive;
+            CameraManager::RecordCameraSteps(*TheWorld);
 
             for (Uint32 lStep = 0; lStep < InSteps; ++lStep)
             {
@@ -345,61 +362,70 @@ TEST_CASE("Camera interpolation: a size set in Update is framed as it is")
     }
 }
 
-TEST_CASE("Camera interpolation: only the camera framing the world is recorded, however many there are")
+TEST_CASE("Camera interpolation: a camera taking the view over keeps the body still from its first frame")
+{
+    // The switch lands on every frame of FRAMES in turn: a frame of steps or none, any alpha.
+    for (Uint64 lSwitchAt = 0; lSwitchAt < sizeof(FRAMES) / sizeof(FRAMES[0]); ++lSwitchAt)
+    {
+        CAPTURE(lSwitchAt);
+        ChaseWorld lChase(EFollow::Chased);
+        Entity     lOther = lChase.AddOtherCamera();
+        lChase.Tick(1);
+
+        for (Uint64 lIndex = 0; lIndex < sizeof(FRAMES) / sizeof(FRAMES[0]); ++lIndex)
+        {
+            const Frame& lFrame = FRAMES[lIndex];
+            CAPTURE(lIndex);
+
+            // Gameplay raises the other camera in its update, as a cutscene trigger would.
+            if (lIndex == lSwitchAt)
+            {
+                lOther.Get<CameraComponent>().Priority = 2;
+            }
+            lChase.Tick(lFrame.Steps);
+
+            const Vector2F lOffset   = lIndex >= lSwitchAt ? OTHER_OFFSET : CAMERA_OFFSET;
+            const Vector2F lOnScreen = lChase.OnScreen(lFrame.Alpha);
+            CHECK(lOnScreen.x == doctest::Approx(-lOffset.x).epsilon(1e-4));
+            CHECK(lOnScreen.y == doctest::Approx(-lOffset.y).epsilon(1e-4));
+        }
+    }
+}
+
+TEST_CASE("Camera interpolation: every camera is recorded, however many there are")
 {
     World lWorld("Crowd");
 
-    Entity lActive = lWorld.CreateEntity("Active");
-    lActive.Add<CameraComponent>().Priority = 1;
-
-    TDynArray<Entity> lIdle;
+    TDynArray<Entity> lCameras;
     for (int lIndex = 0; lIndex < 100; ++lIndex)
     {
-        Entity lCamera = lWorld.CreateEntity("Idle");
-        lCamera.Add<CameraComponent>();
-        lIdle.push_back(lCamera);
+        Entity lCamera = lWorld.CreateEntity("Camera");
+        lCamera.Add<CameraComponent>().Priority = lIndex == 42 ? 1 : 0;
+        lCameras.push_back(lCamera);
     }
 
-    EntityID lRecorded = CameraManager::Resolve(lWorld).Entity;
-    REQUIRE(lRecorded == lActive.GetHandle());
-    CameraManager::RecordCameraSteps(lWorld, lRecorded, ENTITY_NONE);
+    CameraManager::RecordCameraSteps(lWorld);
+    CameraManager::RecordCameraSteps(lWorld);   // again: nothing more
 
-    CHECK(lActive.Get<TransformInterpolationComponent>().bRecordSteps);
-    CHECK(lActive.Has<CameraInterpolationComponent>());
-    for (Entity& lCamera : lIdle)
+    for (Entity& lCamera : lCameras)
     {
-        CHECK(lCamera.TryGet<TransformInterpolationComponent>() == nullptr);
-        CHECK_FALSE(lCamera.Has<CameraInterpolationComponent>());
+        CHECK(lCamera.Get<TransformInterpolationComponent>().bRecordSteps);
+        CHECK(lCamera.Has<CameraInterpolationComponent>());
     }
 
-    // A step records the active camera.
-    lActive.Get<TransformComponent>().Position.x = 10.f;
+    // A step records them all, framing the world or not.
+    lCameras[7].Get<TransformComponent>().Position.x = 10.f;
     TransformInterpolation::BeginFixedStep(lWorld);
     CameraInterpolation::BeginFixedStep(lWorld);
-    lActive.Get<CameraComponent>().OrthoSize = 320.f;
+    lCameras[7].Get<CameraComponent>().OrthoSize = 320.f;
     TransformInterpolation::EndFixedStep(lWorld);
     CameraInterpolation::EndFixedStep(lWorld);
-    REQUIRE(lActive.Get<TransformInterpolationComponent>().bHasPrevious);
 
-    const CameraInterpolationComponent& lSizes = lActive.Get<CameraInterpolationComponent>();
+    CHECK(lCameras[7].Get<TransformInterpolationComponent>().bHasPrevious);
+    const CameraInterpolationComponent& lSizes = lCameras[7].Get<CameraInterpolationComponent>();
     CHECK(lSizes.bHasStep);
     CHECK(lSizes.PreviousOrthoSize == doctest::Approx(300.f));
     CHECK(lSizes.SteppedOrthoSize == doctest::Approx(320.f));
-
-    // Another wins the view: it is recorded, and the old one forgets its poses.
-    lIdle[7].Get<CameraComponent>().Priority = 5;
-    const EntityID lNext = CameraManager::Resolve(lWorld).Entity;
-    REQUIRE(lNext == lIdle[7].GetHandle());
-    CameraManager::RecordCameraSteps(lWorld, lNext, lRecorded);
-
-    CHECK(lIdle[7].Get<TransformInterpolationComponent>().bRecordSteps);
-    CHECK(lIdle[7].Has<CameraInterpolationComponent>());
-
-    const TransformInterpolationComponent& lOld = lActive.Get<TransformInterpolationComponent>();
-    CHECK_FALSE(lOld.bRecordSteps);
-    CHECK_FALSE(lOld.bHasPrevious);
-    CHECK_FALSE(lOld.bHasStepped);
-    CHECK_FALSE(lActive.Has<CameraInterpolationComponent>());
 }
 
 TEST_CASE("ResolveDisplayOrthoSize: no step recorded answers the current size")

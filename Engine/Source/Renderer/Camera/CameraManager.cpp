@@ -88,22 +88,26 @@ namespace Opaax
         return lResolution;
     }
 
-    void CameraManager::RecordCameraSteps(World& InWorld, const EntityID InActive, const EntityID InPrevious)
+    void CameraManager::RecordCameraSteps(World& InWorld)
     {
-        if (InPrevious != InActive)
+        // Gathered first: recording adds components while the cameras are walked.
+        TDynArray<EntityID> lCameras;
+        InWorld.Each<TransformComponent, CameraComponent>([&lCameras](const EntityID InEntity, TransformComponent&, CameraComponent&)
         {
-            TransformInterpolation::StopRecordingSteps(Entity{ InPrevious, &InWorld });
-            CameraInterpolation::StopRecordingSteps(Entity{ InPrevious, &InWorld });
-        }
+            lCameras.push_back(InEntity);
+        });
 
-        TransformInterpolation::RecordSteps(Entity{ InActive, &InWorld });
-        CameraInterpolation::RecordSteps(Entity{ InActive, &InWorld });
+        for (const EntityID lCamera : lCameras)
+        {
+            TransformInterpolation::RecordSteps(Entity{ lCamera, &InWorld });
+            CameraInterpolation::RecordSteps(Entity{ lCamera, &InWorld });
+        }
     }
 
     // =========================================================================
     // Update — after the world's update (this subsystem is added after WorldManager), before the
-    //   fixed steps. Only the camera that framed the last frame is recorded: a camera that wins the
-    //   view is framed at its pose on that frame, then between its steps from the next one.
+    //   fixed steps. Every camera is recorded, so one that takes the view over is framed between its
+    //   steps from its first frame, as the bodies it frames are.
     // =========================================================================
     void CameraManager::Update(const double InDeltaTime)
     {
@@ -116,18 +120,7 @@ namespace Opaax
             return;
         }
 
-        // A new world: the camera recorded belonged to the old one.
-        if (lWorld->GetHandle() != m_RecordedWorld)
-        {
-            m_RecordedWorld  = lWorld->GetHandle();
-            m_RecordedCamera = ENTITY_NONE;
-        }
-
-        // The last frame's winner, once a frame of this world was drawn.
-        const EntityID lActive = (m_ReportedWorld == lWorld->GetHandle()) ? m_ReportedCamera : ENTITY_NONE;
-
-        RecordCameraSteps(*lWorld, lActive, m_RecordedCamera);
-        m_RecordedCamera = lActive;
+        RecordCameraSteps(*lWorld);
     }
 
     // =========================================================================

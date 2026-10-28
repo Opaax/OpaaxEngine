@@ -13,14 +13,6 @@ namespace Opaax
         InCamera.Add<CameraInterpolationComponent>();
     }
 
-    void CameraInterpolation::StopRecordingSteps(Entity InCamera)
-    {
-        if (!InCamera.IsValid()) { return; }
-
-        // Only the cameras recorded carry it: stale sizes would blend toward a zoom from before.
-        InCamera.Remove<CameraInterpolationComponent>();
-    }
-
     void CameraInterpolation::BeginFixedStep(World& InWorld)
     {
         InWorld.Each<CameraComponent, CameraInterpolationComponent>(
