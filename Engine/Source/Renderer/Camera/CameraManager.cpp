@@ -5,6 +5,7 @@
 #include "Application/Services/IEngine.h"
 #include "Engine/Config/Config_Engine.h"
 
+#include "Core/Maths/Maths.h"
 #include "Renderer/CameraView.h"
 
 #include "World/World.h"
@@ -158,8 +159,22 @@ namespace Opaax
         // Interpolation off: the camera is where it is, like the bodies.
         const bool lInterpolate = m_EngineConfig == nullptr || m_EngineConfig->GetData().Render.bInterpolation;
 
-        const CameraResolution lResolution = lInterpolate ? Resolve(*lWorld, static_cast<float>(InAlpha))
-                                                          : Resolve(*lWorld);
+        CameraResolution lResolution = lInterpolate ? Resolve(*lWorld, static_cast<float>(InAlpha)) : Resolve(*lWorld);
+
+        // Nothing that is not a number reaches the renderer: the last good view of this world instead.
+        if (m_GoodViewWorld != lWorld->GetHandle())
+        {
+            m_GoodViewWorld = lWorld->GetHandle();
+            m_LastGoodView  = CameraView{};
+        }
+
+        const CameraView lAsResolved = lResolution.View;
+        const EViewGuard lGuard      = GuardView(lResolution.View, m_LastGoodView);
+        ReportGuard(*lWorld, lResolution.Entity, lGuard, lAsResolved);
+        if (lGuard != EViewGuard::Replaced)
+        {
+            m_LastGoodView = lResolution.View;
+        }
 
         // Always written, so removing the last camera resets to the default view.
         lWorld->SetCameraView(lResolution.View);
@@ -321,6 +336,63 @@ namespace Opaax
         }
 
         lTrace.Samples.push_back(Move(lSample));
+    }
+
+    EViewGuard CameraManager::GuardView(CameraView& InOutView, const CameraView& InLastGood) noexcept
+    {
+        if (!Maths::IsFinite(InOutView.Position.x) || !Maths::IsFinite(InOutView.Position.y)
+            || !Maths::IsFinite(InOutView.OrthoSize))
+        {
+            InOutView = InLastGood;
+            return EViewGuard::Replaced;
+        }
+
+        const float lSize = Maths::Clamp(InOutView.OrthoSize, CameraComponent::MIN_ORTHO_SIZE, CameraComponent::MAX_ORTHO_SIZE);
+        if (lSize != InOutView.OrthoSize)
+        {
+            InOutView.OrthoSize = lSize;
+            return EViewGuard::SizeClamped;
+        }
+        return EViewGuard::Good;
+    }
+
+    void CameraManager::ReportGuard(World& InWorld, const EntityID InCamera, const EViewGuard InGuard, const CameraView& InBad)
+    {
+        if (InGuard == EViewGuard::Good)
+        {
+            if (InCamera == m_GuardedCamera)
+            {
+                m_GuardedCamera = ENTITY_NONE;
+                m_GuardReported = EViewGuard::Good;
+            }
+            return;
+        }
+
+        // Once per camera and kind: a camera giving a bad view every frame logs it once.
+        if (InCamera == m_GuardedCamera && InGuard == m_GuardReported)
+        {
+            return;
+        }
+
+        m_GuardedCamera = InCamera;
+        m_GuardReported = InGuard;
+
+        const EntityMeta* lMeta = Entity(InCamera, &InWorld).TryGet<EntityMeta>();
+        const char*       lName = lMeta != nullptr ? lMeta->Name.CStr() : "<unnamed>";
+        if (InGuard == EViewGuard::Replaced)
+        {
+            OPAAX_LOG(LogCameraManager, Error, "Camera '{}' in '{}' gives a view that is not a number (position {}, {}, "
+                                               "size {}): the last good view is drawn instead. Find what writes its "
+                                               "Transform or its OrthoSize.",
+                      lName, InWorld.GetName().CStr(), InBad.Position.x, InBad.Position.y, InBad.OrthoSize);
+        }
+        else
+        {
+            OPAAX_LOG(LogCameraManager, Warn, "Camera '{}' in '{}' has an OrthoSize of {}, outside {} to {}: drawn "
+                                              "clamped into it.",
+                      lName, InWorld.GetName().CStr(), InBad.OrthoSize, CameraComponent::MIN_ORTHO_SIZE,
+                      CameraComponent::MAX_ORTHO_SIZE);
+        }
     }
 
     void CameraManager::ReportResolution(World& InWorld, const CameraResolution& InResolution)

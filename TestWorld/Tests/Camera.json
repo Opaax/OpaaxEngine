@@ -84,5 +84,86 @@
         "params": {
             "path": "Camera.png"
         }
+    },
+    {
+        "id": "guard-set-zero",
+        "command": "component.set",
+        "params": {
+            "entity": "Overview",
+            "type": "Camera",
+            "value": {
+                "OrthoSize": 0
+            }
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.1
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Director",
+            "path": "CameraProbe/ViewSize",
+            "near": 1,
+            "tolerance": 0.01
+        },
+        "id": "guard-zero"
+    },
+    {
+        "id": "guard-set-huge",
+        "command": "component.set",
+        "params": {
+            "entity": "Overview",
+            "type": "Camera",
+            "value": {
+                "OrthoSize": 1e9
+            }
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.1
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Director",
+            "path": "CameraProbe/ViewSize",
+            "near": 100000,
+            "tolerance": 0.01
+        },
+        "id": "guard-huge"
+    },
+    {
+        "id": "guard-set-back",
+        "command": "component.set",
+        "params": {
+            "entity": "Overview",
+            "type": "Camera",
+            "value": {
+                "OrthoSize": 600
+            }
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.1
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Director",
+            "path": "CameraProbe/ViewSize",
+            "near": 600,
+            "tolerance": 0.01
+        },
+        "id": "guard-back"
     }
 ]
