@@ -109,9 +109,29 @@
         }
     },
     {
+        "id": "trace-parented",
+        "command": "camera.trace.start",
+        "params": {
+            "name": "FollowingParented",
+            "target": "Runner"
+        }
+    },
+    {
         "command": "world.wait",
         "params": {
             "seconds": 1.0
+        }
+    },
+    {
+        "id": "parented-locked",
+        "command": "camera.trace.stop",
+        "params": {
+            "limits": {
+                "targetDrift": 0.01,
+                "timeReversals": 0,
+                "stillMoves": 0,
+                "cameraSwitches": 0
+            }
         }
     },
     {

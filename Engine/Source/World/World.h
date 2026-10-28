@@ -169,6 +169,29 @@ namespace Opaax
         // =========================================================================
 
         // =========================================================================
+        // Steps
+    public:
+        /** Counts a fixed step of InFixedDelta seconds this world ran (WorldManager::FixedUpdate). */
+        void AddStep(const double InFixedDelta) noexcept
+        {
+            ++m_StepCount;
+            m_SteppedTime   += InFixedDelta;
+            m_LastStepDelta  = InFixedDelta;
+        }
+
+        /** The fixed steps this world ran. */
+        Uint64 GetStepCount() const noexcept { return m_StepCount; }
+
+        /** The game time its steps simulated, seconds: where the last step ended. */
+        double GetSteppedTime() const noexcept { return m_SteppedTime; }
+
+        /** The last step's length, seconds; 0 before the first. */
+        double GetLastStepDelta() const noexcept { return m_LastStepDelta; }
+
+        // End Steps
+        // =========================================================================
+
+        // =========================================================================
         // Subsystems
     public:
         /**
@@ -234,6 +257,11 @@ namespace Opaax
 
         // Default: the centred view (see GetCameraView).
         CameraView               m_CameraView;
+
+        // The fixed steps run (see AddStep).
+        Uint64 m_StepCount     = 0;
+        double m_SteppedTime   = 0.0;
+        double m_LastStepDelta = 0.0;
 
         bool                    m_bSubsystemsShutdown = false;
 

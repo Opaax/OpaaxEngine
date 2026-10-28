@@ -7,6 +7,7 @@
 namespace Opaax
 {
     class AudioManager;
+    class CameraManager;
     class EngineEventBus;
     class ResourceManager;
     class WorldManager;
@@ -209,6 +210,9 @@ namespace Opaax
          * The sound mixer and audio device. Headless (silent) when there is no device.
          */
         virtual AudioManager& GetAudio() = 0;
+
+        /** What frames the Play worlds and records camera traces; null without it (a bare engine). */
+        virtual CameraManager* GetCameras() = 0;
 
         // End Foundation subsystems
         // =============================================================================

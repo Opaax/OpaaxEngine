@@ -101,6 +101,8 @@ namespace Opaax
         m_ActiveWorld->GetSubsystems().FixedUpdateAll(InFixedDeltaTime);
         TransformInterpolation::EndFixedStep(*m_ActiveWorld);
         CameraInterpolation::EndFixedStep(*m_ActiveWorld);
+
+        m_ActiveWorld->AddStep(InFixedDeltaTime);
     }
 
     void WorldManager::TearDown()
