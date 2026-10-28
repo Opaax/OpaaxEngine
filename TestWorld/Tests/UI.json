@@ -69,6 +69,13 @@
         "id": "ui-kept-the-click"
     },
     {
+        "id": "binding-refresh",
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
         "command": "expect.value",
         "params": {
             "entity": "Hud",
