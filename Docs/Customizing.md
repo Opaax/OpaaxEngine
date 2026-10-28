@@ -177,6 +177,11 @@ where they are and marks the frame as a cut. A body that physics or the mover mo
 `Update`, is drawn where it was put without either. The world is drawn a step behind, so on a frame
 with no step after a cut the new place shows again.
 
+A broken view is never drawn: a camera whose position or `OrthoSize` is not a number (a division by
+zero in a follow script) is replaced by the last good view and logged as an error naming it, and an
+`OrthoSize` outside 1 to 100000 is drawn clamped into that range, with a warning. Each is logged
+once until the camera gives a good view again.
+
 To see how smooth a camera is, trace it: `camera.trace.start` and `camera.trace.stop` record every
 frame's time, view and followed entity into a JSON and a CSV file and measure them (how far the
 entity moves on screen, how unevenly the view moves, time running back), and `camera.trace.compare`

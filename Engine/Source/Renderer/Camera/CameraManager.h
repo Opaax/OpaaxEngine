@@ -34,6 +34,14 @@ namespace Opaax
         Uint32     Tied   = 0;
     };
 
+    /** What GuardView did to a view. */
+    enum class EViewGuard : Uint8
+    {
+        Good,          // drawn as it is
+        SizeClamped,   // its size brought into CameraComponent's range
+        Replaced       // not a number somewhere: the last good view instead
+    };
+
     // =============================================================================
     // CameraFrame — how the active Play world was framed on the last frame drawn: what camera.info
     //   answers and a trace records.
@@ -130,6 +138,12 @@ namespace Opaax
         static CameraView ResolveCamera(Entity InCamera, TOptional<float> InAlpha = NullOpt);
 
         /**
+         * InOutView made safe to draw: a position or a size that is not a finite number gives
+         * InLastGood back; a size out of CameraComponent's range is clamped into it. Pure.
+         */
+        static EViewGuard GuardView(CameraView& InOutView, const CameraView& InLastGood) noexcept;
+
+        /**
          * Has InWorld record every camera's pose and size around every fixed step
          * (TransformInterpolation, CameraInterpolation), so the camera framing the world is framed
          * between its last two steps, as bodies are drawn, from its first frame: one that takes the
@@ -183,6 +197,9 @@ namespace Opaax
          */
         void ReportResolution(World& InWorld, const CameraResolution& InResolution);
 
+        /** Logs a view GuardView changed, naming the camera, once until that camera gives a good one. */
+        void ReportGuard(World& InWorld, EntityID InCamera, EViewGuard InGuard, const CameraView& InBad);
+
         /** Adds InFrame, drawn in InWorld, to the trace. */
         void RecordTraceFrame(World& InWorld, const CameraFrame& InFrame);
 
@@ -214,6 +231,12 @@ namespace Opaax
         /** The frame's delta, from Update, and how the last frame was framed. */
         double      m_FrameDelta = 0.0;
         CameraFrame m_LastFrame;
+
+        /** The last view drawn that was a number, in its world, and the camera last reported by ReportGuard. */
+        ObjectHandle m_GoodViewWorld;
+        CameraView   m_LastGoodView;
+        EntityID     m_GuardedCamera = ENTITY_NONE;
+        EViewGuard   m_GuardReported = EViewGuard::Good;
 
         /** The trace being recorded, and the ones kept by name. */
         TOptional<CameraTraceRecording> m_Trace;

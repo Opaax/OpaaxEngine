@@ -171,6 +171,16 @@ namespace Opaax
         }
 
         /**
+         * Whether Value is a number that is neither infinite nor NaN.
+         */
+        template <CFloatingPoint T>
+        [[nodiscard]] static FORCEINLINE bool IsFinite(T Value)
+        {
+            // An infinity minus itself is NaN, as is NaN minus anything; any finite number gives 0.
+            return Value - Value == T(0);
+        }
+
+        /**
          * Check whether the given float value is equal to zero.
          *
          * @param Value The float value to be checked.

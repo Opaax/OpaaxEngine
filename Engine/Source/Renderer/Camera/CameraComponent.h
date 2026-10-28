@@ -17,6 +17,10 @@ namespace Opaax
     // =============================================================================
     struct CameraComponent
     {
+        /** The range OrthoSize is kept in: a zero or negative size would break the projection. */
+        static constexpr float MIN_ORTHO_SIZE = 1.f;
+        static constexpr float MAX_ORTHO_SIZE = 100000.f;
+
         /** Vertical half-extent in world units. Smaller = zoomed in. */
         float OrthoSize = 300.f;
 
@@ -28,7 +32,7 @@ namespace Opaax
 
         // Range: a zero or negative size would break the projection.
         OPAAX_PROPERTIES(CameraComponent,
-                         OPAAX_PROP(OrthoSize).SetRange(1.f, 100000.f),
+                         OPAAX_PROP(OrthoSize).SetRange(MIN_ORTHO_SIZE, MAX_ORTHO_SIZE),
                          OPAAX_PROP(Priority).SetDragStep(1.f).SetTooltip("With several cameras, the highest frames the world."))
     };
 }

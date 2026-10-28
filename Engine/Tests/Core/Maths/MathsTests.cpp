@@ -50,6 +50,16 @@ TEST_CASE("Maths::Max / Min: the larger and the smaller, NaN as std")
     static_assert(Maths::Min({ 4, 2, 8 }) == 2);
 }
 
+TEST_CASE("Maths::IsFinite: numbers are, infinities and NaN are not")
+{
+    CHECK(Maths::IsFinite(0.f));
+    CHECK(Maths::IsFinite(-1.5e30f));
+    CHECK(Maths::IsFinite(TNumericLimits<double>::max()));
+    CHECK_FALSE(Maths::IsFinite(NAN_F));
+    CHECK_FALSE(Maths::IsFinite(TNumericLimits<float>::infinity()));
+    CHECK_FALSE(Maths::IsFinite(-TNumericLimits<double>::infinity()));
+}
+
 TEST_CASE("Maths::Clamp: inside, below, above, and NaN passes through")
 {
     CHECK(Maths::Clamp(0.5f, 0.f, 1.f) == 0.5f);

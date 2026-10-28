@@ -2,6 +2,7 @@
 // its display pose for a frame's alpha. Resolve is static and pure, so it only needs a World.
 #include <doctest.h>
 
+#include "Core/Templates/TypeTraits.h"
 #include "Renderer/Camera/CameraManager.h"
 #include "Renderer/Camera/CameraComponent.h"
 #include "World/Components/TransformComponent.h"
@@ -193,4 +194,35 @@ TEST_CASE("Resolve: with an alpha, a camera parented to an interpolated body fra
 
     // Without an alpha, the current pose: what gameplay sees.
     CHECK(CameraManager::Resolve(lWorld).View.Position.x == doctest::Approx(100.f));
+}
+
+TEST_CASE("GuardView: a view that is not a number is the last good one; a size out of range is clamped")
+{
+    const CameraView lGood{ { 10.f, 20.f }, 300.f };
+    const float      lNaN = TNumericLimits<float>::quiet_NaN();
+    const float      lInf = TNumericLimits<float>::infinity();
+
+    CameraView lView{ { 1.f, 2.f }, 250.f };
+    CHECK(CameraManager::GuardView(lView, lGood) == EViewGuard::Good);
+    CHECK(lView.OrthoSize == 250.f);
+
+    for (const CameraView lBad : { CameraView{ { lNaN, 0.f }, 300.f }, CameraView{ { 0.f, -lInf }, 300.f },
+                                   CameraView{ { 0.f, 0.f }, lNaN }, CameraView{ { 0.f, 0.f }, lInf } })
+    {
+        CameraView lGuarded = lBad;
+        CHECK(CameraManager::GuardView(lGuarded, lGood) == EViewGuard::Replaced);
+        CHECK(lGuarded.Position.x == 10.f);
+        CHECK(lGuarded.Position.y == 20.f);
+        CHECK(lGuarded.OrthoSize == 300.f);
+    }
+
+    for (const float lSize : { 0.f, -50.f, 1.0e9f })
+    {
+        CAPTURE(lSize);
+        CameraView lGuarded{ { 3.f, 4.f }, lSize };
+        CHECK(CameraManager::GuardView(lGuarded, lGood) == EViewGuard::SizeClamped);
+        CHECK(lGuarded.Position.x == 3.f);
+        CHECK(lGuarded.OrthoSize >= CameraComponent::MIN_ORTHO_SIZE);
+        CHECK(lGuarded.OrthoSize <= CameraComponent::MAX_ORTHO_SIZE);
+    }
 }
