@@ -55,6 +55,9 @@ namespace Opaax
         Uint64 StepCount = 0;
         double StepDelta = 0.0;
         double GameTime  = 0.0;
+
+        /** The frame was a cut (Cut): the camera framing it jumped. */
+        bool bCut = false;
     };
 
     // =============================================================================
@@ -133,6 +136,13 @@ namespace Opaax
          * view over is already recorded. Calling it again does nothing more.
          */
         static void RecordCameraSteps(World& InWorld);
+
+        /**
+         * The next frame of InWorld is a cut (a respawn, a scene change): every camera is framed
+         * where it is, with nothing in between, and a trace marks the frame. Call it after placing
+         * the cameras; bodies that jumped too are placed with TransformInterpolation::Teleport.
+         */
+        static void Cut(World& InWorld);
 
         // =============================================================================
         // Trace

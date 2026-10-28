@@ -164,6 +164,27 @@ TEST_CASE("CameraTrace: a camera switch is a cut, not a move or a drift")
     CHECK(lSummary.LargestMove == doctest::Approx(2.f));   // the pan, not the cut
 }
 
+TEST_CASE("CameraTrace: a cut is a jump on purpose: counted, not a move")
+{
+    TDynArray<CameraTraceSample> lSamples = Pan(60.0, 10);
+    for (Uint64 lIndex = 5; lIndex < lSamples.size(); ++lIndex)
+    {
+        lSamples[lIndex].ViewPosition.x   -= 900.f;
+        lSamples[lIndex].TargetPosition.x -= 900.f;
+    }
+    lSamples[5].bCut = true;
+
+    const CameraTraceSummary lSummary = CameraTrace::Summarize(lSamples, HEIGHT_PX);
+    CHECK(lSummary.Cuts == 1);
+    CHECK(lSummary.CameraSwitches == 0);
+    CHECK(lSummary.LargestMove == doctest::Approx(2.f));
+    CHECK(lSummary.MotionJitter == doctest::Approx(0.f).epsilon(1e-3));
+
+    // The same jump not marked as a cut is a move.
+    lSamples[5].bCut = false;
+    CHECK(CameraTrace::Summarize(lSamples, HEIGHT_PX).LargestMove > 800.f);
+}
+
 TEST_CASE("CameraTrace: one path drawn at 60 and 120 frames a second matches its reference")
 {
     const TDynArray<CameraTraceSample> lReference = Pan(60.0, 60);
@@ -228,9 +249,9 @@ TEST_CASE("CameraTrace: the CSV has a header and a row a frame, the target in pi
         lLines += lChar == '\n' ? 1 : 0;
     }
     CHECK(lLines == 4);
-    CHECK(lCsv.View().StartsWith("frame,delta,steps,alpha,stepDelta,gameTime,camera,viewX,viewY,viewSize,targetX,targetY,"
-                                 "targetPxX,targetPxY\n"));
-    CHECK(lCsv.Contains(",Cam,"));
+    CHECK(lCsv.View().StartsWith("frame,delta,steps,alpha,stepDelta,gameTime,cut,camera,viewX,viewY,viewSize,targetX,"
+                                 "targetY,targetPxX,targetPxY\n"));
+    CHECK(lCsv.Contains(",0,Cam,"));
     CHECK(lCsv.Contains(",0,40\n"));     // 40 units above the centre: 40 pixels
     CHECK(lCsv.View().EndsWith(",,,,\n"));
 }

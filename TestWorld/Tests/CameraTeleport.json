@@ -7,7 +7,8 @@
                 "rate": 60,
                 "reference": "60",
                 "jitter": 0.05,
-                "spread": 0
+                "spread": 0,
+                "move": 40.0
             },
             {
                 "tag": "144",
@@ -15,7 +16,8 @@
                 "rate": 60,
                 "reference": "60",
                 "jitter": 0.05,
-                "spread": 1
+                "spread": 1,
+                "move": 20.0
             }
         ],
         "requests": [
@@ -83,7 +85,14 @@
                     "limits": {
                         "cameraSwitches": 0,
                         "timeReversals": 0,
-                        "stillMoves": 0
+                        "stillMoves": 0,
+                        "targetDrift": 0.01,
+                        "largestMove": "{move}"
+                    }
+                },
+                "expect": {
+                    "summary": {
+                        "cuts": 2
                     }
                 }
             }
