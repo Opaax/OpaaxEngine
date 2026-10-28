@@ -61,6 +61,24 @@ The order that works for a game made without help (a Tetris was made this way):
    the screenshots.
 5. `project.export`, then the same script on the exported game.
 
+## Timing and the camera
+
+Anything that moves is checked at the screen rates it will meet, not at this machine's:
+
+- `time.pace` (or `--frame-pacing`) gives the frames a screen's time: `"144"`, `"60,jitter=0.25"`
+  (timer noise), `"144,hitch=0.1@0.5"` (stalls), `"off"`. The same frames every run, without vsync.
+- `config.set` changes a setting for the run: `{"config": "Engine", "values": {"Time": {"FixedRate": 30}}}`
+  (`Window.bVSync`, `Render.bInterpolation` too); `config.get` reads one.
+- `camera.info` says how the world is framed: the live camera, every camera and whether it is drawn
+  between its steps, the last frame's alpha, steps and game time.
+- `camera.trace.start` (`name`, `target`: an entity) then `camera.trace.stop` (`limits`) measure every
+  frame in pixels (`targetDrift`, `motionJitter`, `largestMove`, `timeReversals`, `stillMoves`,
+  `zoomReversals`) and write `<name>.camera.csv` to open; `camera.trace.compare` (`reference`, `trace`)
+  checks a run at another rate draws the same path as a steady one.
+- `world.pause` / `world.step` pause and step a game's world.
+- `{"repeat": [{"tag": "60", "pacing": "60"}, ...], "requests": [...]}` runs requests once per entry,
+  `{tag}` replaced: `TestWorld/Tests/CameraFollowing.json` is a whole matrix this way.
+
 ## A live session
 
 `--automation <folder>` keeps the app open: write `001.request.json` (one request, written under
