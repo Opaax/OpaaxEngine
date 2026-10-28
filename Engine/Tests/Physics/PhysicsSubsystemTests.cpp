@@ -13,6 +13,7 @@
 #include "Physics/Components/ColliderComponent.h"
 #include "Physics/Components/RigidbodyComponent.h"
 #include "World/Components/TransformComponent.h"
+#include "World/Components/TransformInterpolationComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityHierarchy.h"
 #include "World/Entity/EntityMeta.h"
@@ -195,6 +196,33 @@ TEST_CASE("PhysicsSubsystem: adding a Rigidbody AFTER the body exists rebuilds i
 // =============================================================================
 // It falls, and it lands
 // =============================================================================
+
+TEST_CASE("PhysicsSubsystem: a body placed between steps is drawn where it was put, then falls from there")
+{
+    PhysicsFixture lFixture;
+    Entity         lFaller = lFixture.SpawnBox(500.f, { 50.f, 50.f }, /*dynamic*/ true);
+    lFixture.TickFrames(10);
+
+    // Falling: drawn between the pose before the step and the one it left.
+    const TransformInterpolationComponent& lHistory = lFaller.Get<TransformInterpolationComponent>();
+    REQUIRE(lHistory.bHasStepped);
+    CHECK(lHistory.SteppedPosition.y == lFixture.PositionY(lFaller));
+    CHECK(EntityHierarchy::DisplayTransform(lFaller, 0.5f).Position.y > lFixture.PositionY(lFaller));
+
+    // Gameplay puts it back up between two steps (a respawn in Update): drawn there, no slide.
+    lFaller.Get<TransformComponent>().Position.y = 900.f;
+    for (const float lAlpha : { 0.f, 0.5f, 1.f })
+    {
+        CAPTURE(lAlpha);
+        CHECK(EntityHierarchy::DisplayTransform(lFaller, lAlpha).Position.y == doctest::Approx(900.f));
+    }
+
+    // The next step simulates it from there.
+    lFixture.TickFrames(1);
+    CHECK(lFixture.PositionY(lFaller) < 900.f);
+    CHECK(lFixture.PositionY(lFaller) > 890.f);
+    CHECK(EntityHierarchy::DisplayTransform(lFaller, 0.f).Position.y == doctest::Approx(900.f));
+}
 
 TEST_CASE("PhysicsSubsystem: a dynamic box falls and comes to rest on static geometry")
 {

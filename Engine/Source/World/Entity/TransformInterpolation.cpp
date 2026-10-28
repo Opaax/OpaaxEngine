@@ -33,6 +33,24 @@ namespace Opaax
         lHistory->bHasStepped  = false;
     }
 
+    void TransformInterpolation::Teleport(Entity InEntity)
+    {
+        if (!InEntity.IsValid()) { return; }
+
+        // Never blended: already drawn where it is.
+        TransformInterpolationComponent* lHistory = InEntity.TryGet<TransformInterpolationComponent>();
+        if (lHistory == nullptr) { return; }
+
+        // The new pose as both ends of the step: nothing in between to draw.
+        const TransformComponent& lLocal = InEntity.Get<TransformComponent>();
+        lHistory->Position        = lLocal.Position;
+        lHistory->Rotation        = lLocal.Rotation;
+        lHistory->bHasPrevious    = true;
+        lHistory->SteppedPosition = lLocal.Position;
+        lHistory->SteppedRotation = lLocal.Rotation;
+        lHistory->bHasStepped     = true;
+    }
+
     void TransformInterpolation::BeginFixedStep(World& InWorld)
     {
         InWorld.Each<TransformComponent, TransformInterpolationComponent>(

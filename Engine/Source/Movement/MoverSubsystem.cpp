@@ -80,6 +80,11 @@ namespace Opaax
                 Advance(InEntity, InMover, lWorldXf, *lSweep, lDelta);
 
                 EntityHierarchy::SetWorldTransform(lLive, lWorldXf);
+
+                // The pose this step left: placed again before the next step, it is drawn where it was put.
+                lPrevious.SteppedPosition = InLocal.Position;
+                lPrevious.SteppedRotation = InLocal.Rotation;
+                lPrevious.bHasStepped     = true;
                 ++lAdvanced;
             });
 

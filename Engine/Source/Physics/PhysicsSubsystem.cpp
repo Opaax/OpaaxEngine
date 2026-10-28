@@ -327,6 +327,12 @@ namespace Opaax
             lWorldXf.Rotation = Maths::RadiansToDegrees(lRotation);
             EntityHierarchy::SetWorldTransform(lLive, lWorldXf);
 
+            // And the pose this step left: placed again before the next step (a teleport in Update),
+            // the body is drawn where it was put, not slid toward it.
+            lPrevious.SteppedPosition = lTransform->Position;
+            lPrevious.SteppedRotation = lTransform->Rotation;
+            lPrevious.bHasStepped     = true;
+
             lRecord.SyncedPosition = lWorldXf.Position;
             lRecord.SyncedRotation = lWorldXf.Rotation;
         }

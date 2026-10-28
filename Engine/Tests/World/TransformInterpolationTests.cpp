@@ -258,3 +258,62 @@ TEST_CASE("TransformInterpolation: what physics or the mover records is left alo
     TransformInterpolation::RecordSteps(lBody);
     CHECK(lBody.Get<TransformInterpolationComponent>().Position.x == doctest::Approx(70.f));
 }
+
+TEST_CASE("Teleport: an entity jumping in a step is drawn at its new pose at once, then moves on from it")
+{
+    World lWorld("Jumps");
+
+    Entity lRunner = lWorld.CreateEntity("Runner");
+    Entity lChild  = lWorld.CreateEntity("Child");
+    lChild.Get<TransformComponent>() = At(0.f, 40.f);
+    REQUIRE(EntityHierarchy::SetParent(lChild, lRunner, /*bKeepWorld*/ false));
+    TransformInterpolation::RecordSteps(lRunner);
+
+    // A step of 30.
+    TransformInterpolation::BeginFixedStep(lWorld);
+    lRunner.Get<TransformComponent>().Position.x = 30.f;
+    TransformInterpolation::EndFixedStep(lWorld);
+    CHECK(EntityHierarchy::DisplayTransform(lRunner, 0.5f).Position.x == doctest::Approx(15.f));
+
+    // A respawn in the next step: drawn there at every alpha, its child with it.
+    TransformInterpolation::BeginFixedStep(lWorld);
+    lRunner.Get<TransformComponent>().Position.x = 5000.f;
+    TransformInterpolation::Teleport(lRunner);
+    TransformInterpolation::EndFixedStep(lWorld);
+    for (const float lAlpha : { 0.f, 0.5f, 1.f })
+    {
+        CAPTURE(lAlpha);
+        CHECK(EntityHierarchy::DisplayTransform(lRunner, lAlpha).Position.x == doctest::Approx(5000.f));
+        CHECK(EntityHierarchy::DisplayTransform(lChild, lAlpha).Position.x == doctest::Approx(5000.f));
+    }
+
+    // Then on from there.
+    TransformInterpolation::BeginFixedStep(lWorld);
+    lRunner.Get<TransformComponent>().Position.x = 5030.f;
+    TransformInterpolation::EndFixedStep(lWorld);
+    CHECK(EntityHierarchy::DisplayTransform(lRunner, 0.5f).Position.x == doctest::Approx(5015.f));
+}
+
+TEST_CASE("Teleport: a body placed between steps is drawn there; one never blended is left alone")
+{
+    World lWorld("Bodies");
+
+    // A body physics recorded: previous 70, the step left it at 100.
+    Entity lBody = lWorld.CreateEntity("Body");
+    lBody.Get<TransformComponent>() = At(100.f, 0.f);
+    TransformInterpolationComponent lHistory = Prev(70.f, 0.f);
+    lHistory.SteppedPosition = { 100.f, 0.f };
+    lHistory.bHasStepped     = true;
+    lBody.Add<TransformInterpolationComponent>(lHistory);
+    CHECK(EntityHierarchy::DisplayTransform(lBody, 0.5f).Position.x == doctest::Approx(85.f));
+
+    // Gameplay puts it elsewhere before the next step, teleporting it or not: drawn there.
+    lBody.Get<TransformComponent>().Position.x = -400.f;
+    CHECK(EntityHierarchy::DisplayTransform(lBody, 0.5f).Position.x == doctest::Approx(-400.f));
+    TransformInterpolation::Teleport(lBody);
+    CHECK(EntityHierarchy::DisplayTransform(lBody, 0.f).Position.x == doctest::Approx(-400.f));
+
+    Entity lStill = lWorld.CreateEntity("Still");
+    TransformInterpolation::Teleport(lStill);
+    CHECK(lStill.TryGet<TransformInterpolationComponent>() == nullptr);
+}
