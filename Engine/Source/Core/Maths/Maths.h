@@ -960,6 +960,77 @@ namespace Opaax
         // Conversion
         
         // =============================================================================
+        // Smoothing — toward a target over a frame's time, the same at any frame rate. Lerp(A, B, K)
+        //   once a frame is not: it moves further in a second at 144 frames than at 60.
+        // =============================================================================
+        /**
+         * Current moved toward Target over DeltaTime seconds: the gap shrinks by exp(-Decay * DeltaTime),
+         * so one call over DeltaTime gives what two over half of it give. Decay is per second (higher
+         * is snappier); ln(2) / H halves the gap every H seconds. Never passes the target. T is a float
+         * or a vector.
+         */
+        template <typename T>
+        [[nodiscard]] static FORCEINLINE T ExpDecay(const T& Current, const T& Target, const float Decay,
+                                                    const float DeltaTime)
+        {
+            return Target + (Current - Target) * Exp(-Decay * DeltaTime);
+        }
+
+        /**
+         * Current moved toward Target as a critically damped spring moves, Velocity carried from call
+         * to call (start it at zero): it eases in and out and settles about SmoothTime seconds after the
+         * target stops. The spring is solved exactly, so one call over DeltaTime gives what two over half
+         * of it give, and it never passes the target. T is a float or a 2D vector.
+         */
+        template <typename T>
+        [[nodiscard]] static T SmoothDamp(const T& Current, const T& Target, T& Velocity, const float SmoothTime,
+                                          const float DeltaTime)
+        {
+            if (DeltaTime <= 0.f)
+            {
+                return Current;
+            }
+
+            // The spring's rate: settled in about SmoothTime.
+            const float lOmega = 2.f / Max(SmoothTime, 1.0e-4f);
+            const float lDecay = Exp(-lOmega * DeltaTime);
+
+            // For x, the gap to the target: x'' = -w^2 x - 2w x', so x(t) = (x0 + (v0 + w x0) t) e^(-wt)
+            // and v(t) = (v0 - w (v0 + w x0) t) e^(-wt).
+            const T lGap  = Current - Target;
+            const T lTerm = (Velocity + lGap * lOmega) * DeltaTime;
+            T       lLeft = (lGap + lTerm) * lDecay;
+            Velocity      = (Velocity - lTerm * lOmega) * lDecay;
+
+            // A velocity carried from an earlier target can swing it past this one: it stops on it.
+            if (Along(lGap, lLeft) < 0.f)
+            {
+                lLeft    = lGap * 0.f;
+                Velocity = lGap * 0.f;
+            }
+            return Target + lLeft;
+        }
+
+    private:
+        /** A times B for numbers, their dot product for 2D vectors: negative when they point apart. */
+        template <typename T>
+        [[nodiscard]] static FORCEINLINE float Along(const T& A, const T& B)
+        {
+            if constexpr (TIsFloatingPoint<T>)
+            {
+                return static_cast<float>(A * B);
+            }
+            else
+            {
+                return A.x * B.x + A.y * B.y;
+            }
+        }
+
+    public:
+        // End Smoothing
+        // =============================================================================
+
+        // =============================================================================
         // Angle
         /**
          * Converts an angle given in radians to degrees.
