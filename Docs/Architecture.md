@@ -60,6 +60,8 @@ and the game export. A game is a module of its own types, linked into its runtim
    any frame rate and a camera following a body keeps it still on screen. A view that shows another
    camera (the editor's Camera Preview) names it, and the renderer frames it as it draws, at the
    same alpha as the poses (`SubmitCameraView`): it matches the game's view of that camera exactly.
+   What the editor draws on entities (the selection outline, icons, light gizmos) is queued just
+   before the frame is drawn (`IEngine::AddBeforeDraw`), at that alpha, so it sits on the sprites.
 
 A paused world (in the editor) skips its part of 3 and 4; a step runs it for one frame. It is drawn
 as it was on its last frame (the same alpha), so it holds still, and once resumed it goes on from

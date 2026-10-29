@@ -1422,6 +1422,37 @@ namespace Opaax::Editor::EditorAutomation
                     return AutomationResult::Ok(lAnswer);
                 });
 
+            InCommands.Register("editor.viewport",
+                "The level viewport: {width, height} in pixels, the active world's {view} (x, y, size), and "
+                "{outline}: the selection outline's box drawn on the last frame (x, y its centre, width, height, "
+                "world units; null when nothing is outlined) with {fromView}, its centre from the view's centre "
+                "(constant for an entity the camera follows).",
+                [&InContext](const nlohmann::json&)
+                {
+                    Vector2F    lViewport;
+                    OpaaxString lError;
+                    World* const lWorld = ActiveWorld(InContext, lError);
+                    if (lWorld == nullptr || !ViewportSize(InContext, lViewport, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    const CameraView&          lView     = lWorld->GetCameraView();
+                    const TOptional<Bounds2D>& lOutlined = InContext.Viewport.GetOutlined();
+
+                    nlohmann::json lAnswer{ { "width", lViewport.x }, { "height", lViewport.y }, { "view", ViewToJson(lView) },
+                                            { "outline", nullptr }, { "fromView", nullptr } };
+                    if (lOutlined.has_value())
+                    {
+                        lAnswer["outline"]  = { { "x", lOutlined->Center.x }, { "y", lOutlined->Center.y },
+                                                { "width", lOutlined->HalfExtent.x * 2.f },
+                                                { "height", lOutlined->HalfExtent.y * 2.f } };
+                        lAnswer["fromView"] = { { "x", lOutlined->Center.x - lView.Position.x },
+                                                { "y", lOutlined->Center.y - lView.Position.y } };
+                    }
+                    return AutomationResult::Ok(lAnswer);
+                });
+
             InCommands.Register("editor.camera.focus",
                 "Frames the selection with the editor's camera, as Focus Selected (F) does. Fails while playing (the "
                 "game's camera frames a Play world) or with nothing selected. Answers as editor.camera.",

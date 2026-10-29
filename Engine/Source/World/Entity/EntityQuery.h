@@ -20,14 +20,17 @@ namespace Opaax
          * The axis-aligned box covering everything the entity draws, in world units.
          * An entity with nothing to draw gets a box of InAnchorHalfExtent (so it can be clicked).
          * @param InAnchorHalfExtent Half-size of that box. Zero = no fallback.
+         * @param InAlpha With a value, the box where the entity is drawn on a frame at that alpha of
+         *   a fixed step (EntityHierarchy::DisplayTransform), not where it is
          * @return False if the entity is invalid, has no transform, or has no bounds.
          *   OutBounds is untouched then.
          */
-        bool TryGetBounds(Entity InEntity, Bounds2D& OutBounds, float InAnchorHalfExtent = 0.f);
+        bool TryGetBounds(Entity InEntity, Bounds2D& OutBounds, float InAnchorHalfExtent = 0.f,
+                          TOptional<float> InAlpha = NullOpt);
 
         /** The box covering all of InIds. False if none had bounds. */
         bool TryGetBounds(World& InWorld, const TDynArray<EntityID>& InIds, Bounds2D& OutBounds,
-                                    float InAnchorHalfExtent = 0.f);
+                          float InAnchorHalfExtent = 0.f, TOptional<float> InAlpha = NullOpt);
 
         /**
          * The topmost entity at InWorldPoint (in draw order), or an invalid Entity.

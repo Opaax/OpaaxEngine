@@ -142,6 +142,17 @@ namespace Opaax
                                       CameraView* OutDrawnView = nullptr, World* InSource = nullptr) = 0;
 
         /**
+         * Runs InHook on every frame just before it is drawn: after the fixed steps and the camera,
+         * with the alpha the poses are drawn at (none when they are drawn as they are). Debug shapes
+         * queued there sit on what is drawn (the editor's selection outline in Play).
+         * @return The handle RemoveBeforeDraw takes; 0 without a renderer
+         */
+        virtual Uint64 AddBeforeDraw(TFunction<void(TOptional<float>)> InHook) = 0;
+
+        /** Stops the hook InHandle names. */
+        virtual void RemoveBeforeDraw(Uint64 InHandle) = 0;
+
+        /**
          * Draws InCanvas for this frame only. Submit again every frame.
          * @param InCanvas Borrowed for the frame
          * @param InTarget Null draws over every view with UI enabled; otherwise only into

@@ -55,7 +55,8 @@ namespace Opaax
         }
     }
 
-    bool EntityQuery::TryGetBounds(Entity InEntity, Bounds2D& OutBounds, float InAnchorHalfExtent)
+    bool EntityQuery::TryGetBounds(Entity InEntity, Bounds2D& OutBounds, float InAnchorHalfExtent,
+                                   const TOptional<float> InAlpha)
     {
         if (!InEntity.IsValid())
         {
@@ -68,8 +69,9 @@ namespace Opaax
             return false;
         }
 
-        // World pose: a child is clicked where it is drawn.
-        const TransformComponent lWorldXf = EntityHierarchy::WorldTransform(InEntity);
+        // World pose: a child is clicked where it is drawn. With an alpha, between its last two steps.
+        const TransformComponent lWorldXf = InAlpha.has_value() ? EntityHierarchy::DisplayTransform(InEntity, *InAlpha)
+                                                                : EntityHierarchy::WorldTransform(InEntity);
 
         const float lRotation = Maths::DegreesToRadians(lWorldXf.Rotation);
 
@@ -132,7 +134,7 @@ namespace Opaax
     }
 
     bool EntityQuery::TryGetBounds(World& InWorld, const TDynArray<EntityID>& InIds, Bounds2D& OutBounds,
-                                   float InAnchorHalfExtent)
+                                   float InAnchorHalfExtent, const TOptional<float> InAlpha)
     {
         bool     lAny = false;
         Bounds2D lCombined;
@@ -140,7 +142,7 @@ namespace Opaax
         for (const EntityID lId : InIds)
         {
             Bounds2D lBounds;
-            if (!TryGetBounds(Entity{ lId, &InWorld }, lBounds, InAnchorHalfExtent))
+            if (!TryGetBounds(Entity{ lId, &InWorld }, lBounds, InAnchorHalfExtent, InAlpha))
             {
                 continue;
             }

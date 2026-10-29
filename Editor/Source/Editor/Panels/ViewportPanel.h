@@ -73,9 +73,17 @@ namespace Opaax::Editor
         void SubmitView();
 
         /**
-         * Queues an outline around every selected entity for this frame (see ViewportOverlays).
+         * Queues what sits on entities (the selection outline, light gizmos, icons) for the frame about
+         * to be drawn, where the renderer draws them: InAlpha is its alpha, none for poses drawn as
+         * they are. Run by the engine just before each frame is drawn (IEngine::AddBeforeDraw).
          */
-        void EnqueueSelectionOutline();
+        void EnqueueEntityOverlays(TOptional<float> InAlpha);
+
+        /**
+         * Queues an outline around every selected entity, and keeps its box for automation (see
+         * ViewportOverlays).
+         */
+        void EnqueueSelectionOutline(TOptional<float> InAlpha);
 
         /**
          * The grid's drawn spacing: the translate snap step, raised by decades until a cell is at least
@@ -96,7 +104,7 @@ namespace Opaax::Editor
         /**
          * Queues a small box at each entity that draws nothing, so it is visible and clickable. Edit only.
          */
-        void EnqueueEntityIcons();
+        void EnqueueEntityIcons(TOptional<float> InAlpha);
 
         /**
          * Applies the click or marquee the pick gesture stored. First in OnPreRender, so it uses the
@@ -171,6 +179,9 @@ namespace Opaax::Editor
 
         TUniquePtr<IFramebuffer>          m_Framebuffer;
         TUniquePtr<OffscreenRenderTarget> m_RenderTarget;
+
+        // The hook that queues the entity overlays before each frame is drawn (0: none).
+        Uint64 m_BeforeDraw = 0;
         
         Vector2F   m_viewportSizeDefault  = {960.f, 600.f};
         Vector2u32 m_viewportSize         = {1,1};
