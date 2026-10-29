@@ -190,6 +190,10 @@ zero in a follow script) is replaced by the last good view and logged as an erro
 `OrthoSize` outside 1 to 100000 is drawn clamped into that range, with a warning. Each is logged
 once until the camera gives a good view again.
 
+To zoom at a point of the screen (the cursor), `ZoomAround(view, size, viewportPx, anchorPx)`
+(`Renderer/CameraView.h`) gives the view with the world point under the anchor kept there: the
+editor's wheel zoom is built on it.
+
 To see how smooth a camera is, trace it: `camera.trace.start` and `camera.trace.stop` record every
 frame's time, view and followed entity into a JSON and a CSV file and measure them (how far the
 entity moves on screen, how unevenly the view moves, time running back), and `camera.trace.compare`
