@@ -259,3 +259,68 @@ TEST_CASE("Maths::SmoothDamp: from rest it eases toward the target and settles, 
     CHECK(lVector.x == doctest::Approx(Maths::SmoothDamp(0.f, 100.f, lScalarVelocity, 0.5f, 0.1f)));
     CHECK(lVector.y == doctest::Approx(-0.5f * lVector.x));
 }
+
+TEST_CASE("Maths::Noise1D: replays, stays in [-1, 1] and uses the range, 0 at every whole X")
+{
+    float lLowest  = 0.f;
+    float lHighest = 0.f;
+    double lSum    = 0.0;
+    for (Int32 lIndex = 0; lIndex < 20000; ++lIndex)
+    {
+        const double lX     = lIndex * 0.0137 - 50.0;
+        const float  lValue = Maths::Noise1D(7u, lX);
+        CHECK(lValue == Maths::Noise1D(7u, lX));
+        lLowest  = Maths::Min(lLowest, lValue);
+        lHighest = Maths::Max(lHighest, lValue);
+        lSum    += lValue;
+    }
+    CHECK(lLowest >= -1.f);
+    CHECK(lHighest <= 1.f);
+    CHECK(lLowest < -0.5f);
+    CHECK(lHighest > 0.5f);
+    CHECK(Maths::Abs(lSum / 20000.0) < 0.1);
+
+    for (const double lWhole : { -3.0, 0.0, 1.0, 42.0, 100000.0 })
+    {
+        CHECK(Maths::Noise1D(7u, lWhole) == 0.f);
+    }
+}
+
+TEST_CASE("Maths::Noise1D: smooth, across whole X too, and far from 0")
+{
+    // Its slope stays bounded: no step anywhere, including where one cell meets the next.
+    constexpr double STEP = 1.0e-4;
+    for (Int32 lIndex = 0; lIndex < 5000; ++lIndex)
+    {
+        const double lX     = lIndex * 0.0211 - 20.0;
+        const float  lSlope = (Maths::Noise1D(3u, lX + STEP) - Maths::Noise1D(3u, lX)) / static_cast<float>(STEP);
+        CHECK(Maths::Abs(lSlope) < 4.f);
+    }
+    for (const double lWhole : { -1.0, 2.0, 17.0 })
+    {
+        CHECK(Maths::Abs(Maths::Noise1D(3u, lWhole - 1.0e-6)) < 1.0e-5f);
+        CHECK(Maths::Abs(Maths::Noise1D(3u, lWhole + 1.0e-6)) < 1.0e-5f);
+    }
+
+    // Hours of game time at 20 Hz: still a smooth wobble, not a staircase.
+    const double lFar = 3600.0 * 5.0 * 20.0 + 0.25;
+    CHECK(Maths::Abs(Maths::Noise1D(3u, lFar + STEP) - Maths::Noise1D(3u, lFar)) < 4.f * static_cast<float>(STEP));
+    CHECK(Maths::Noise1D(3u, lFar) != Maths::Noise1D(3u, lFar + 0.25));
+}
+
+TEST_CASE("Maths::Noise1D: another seed is another wobble")
+{
+    double lProduct = 0.0;
+    double lSquaresA = 0.0;
+    double lSquaresB = 0.0;
+    for (Int32 lIndex = 0; lIndex < 20000; ++lIndex)
+    {
+        const double lX = lIndex * 0.0137;
+        const double lA = Maths::Noise1D(1u, lX);
+        const double lB = Maths::Noise1D(2u, lX);
+        lProduct  += lA * lB;
+        lSquaresA += lA * lA;
+        lSquaresB += lB * lB;
+    }
+    CHECK(Maths::Abs(lProduct / Maths::Sqrt(lSquaresA * lSquaresB)) < 0.2);
+}

@@ -87,3 +87,39 @@ double Maths::FMod(double X, double Y)
 
     return std::fmod(X, Y);
 }
+
+namespace
+{
+    // A 32-bit hash that spreads every input bit over the output (the lowbias32 finalizer).
+    Uint32 Mix(Uint32 InValue)
+    {
+        InValue ^= InValue >> 16;
+        InValue *= 0x7FEB352Du;
+        InValue ^= InValue >> 15;
+        InValue *= 0x846CA68Bu;
+        InValue ^= InValue >> 16;
+        return InValue;
+    }
+
+    // The noise's slope at a whole X, in [-1, 1], from the seed and the point alone.
+    double Gradient(const Uint32 InSeed, const Int64 InPoint)
+    {
+        const Uint32 lHash = Mix(static_cast<Uint32>(InPoint) + Mix(InSeed));
+        return static_cast<double>(lHash) / 2147483647.5 - 1.0;
+    }
+}
+
+float Maths::Noise1D(const Uint32 Seed, const double X)
+{
+    const double lCell     = Floor(X);
+    const double lFraction = X - lCell;
+    const Int64  lPoint    = static_cast<Int64>(lCell);
+
+    // Each whole X's slope carried to here, blended by a quintic fade: smooth to the curvature.
+    const double lFade = lFraction * lFraction * lFraction * (lFraction * (lFraction * 6.0 - 15.0) + 10.0);
+    const double lFrom = Gradient(Seed, lPoint) * lFraction;
+    const double lTo   = Gradient(Seed, lPoint + 1) * (lFraction - 1.0);
+
+    // Along a line it reaches half its slope at most: doubled to fill [-1, 1].
+    return static_cast<float>(2.0 * (lFrom + (lTo - lFrom) * lFade));
+}
