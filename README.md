@@ -44,6 +44,8 @@ X11/Wayland/GL development packages listed in `.github/workflows/build.yml`.
 - [Docs/GameRepository.md](Docs/GameRepository.md): a game in a repository of its own, the engine as
   a submodule, with its tests and CI.
 - [Docs/Customizing.md](Docs/Customizing.md): extending the engine and the editor.
+- [Docs/Cameras.md](Docs/Cameras.md): cameras smooth at any frame rate: the rules, recipes, and how to
+  check one.
 - [Docs/Objects.md](Docs/Objects.md): asset classes, their files and windows, custom asset editors,
   converting old asset files.
 - [Docs/Automation.md](Docs/Automation.md): driving a game or the editor from scripts.

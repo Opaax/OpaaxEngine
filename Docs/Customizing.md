@@ -159,54 +159,8 @@ A level is framed by a **Camera** entity: its world position and `OrthoSize` (ha
 height, in world units). A camera parented to the player follows it. With several cameras, the
 highest `Priority` frames the level: raise another's (a map view, a cutscene) to switch to it.
 
-The view is framed when the frame is drawn, after its fixed steps, from where the camera is drawn:
-between its last two steps, like the bodies. A camera parented to a moving body, or moved in a
-fixed step (a world subsystem's `FixedUpdate`, a behaviour's `OnFixedUpdate`), keeps the body still
-on screen at any frame rate; a camera moved in `Update` is framed where it was put. Its `OrthoSize`
-follows the same rules: a zoom changed in a fixed step is framed between its last two steps, so it
-moves smoothly on screens faster than the steps; a size set in `Update` is framed as it is. Another
-entity that gameplay moves in a fixed step is drawn between its steps once it asks for it:
-`TransformInterpolation::RecordSteps(GetEntity())` in `OnStart` (`World/Entity/TransformInterpolation.h`).
-`TestWorld/Tests/Following.json` checks both cameras, and the zoom of the chased one.
-
-Every camera is recorded, so one that takes the view over (a raised `Priority`) keeps what it frames
-still from its first frame. A jump is said: after placing an entity somewhere else (a respawn, a
-door), `TransformInterpolation::Teleport(entity)` draws it there at once instead of sliding it
-across the level over a step, and `CameraManager::Cut(world)`, after placing the cameras, frames them
-where they are and marks the frame as a cut. A body that physics or the mover moves, placed in
-`Update`, is drawn where it was put without either. The world is drawn a step behind, so on a frame
-with no step after a cut the new place shows again.
-
-Move a camera in one place. One moved both in fixed steps and in `Update` is drawn between its
-steps on some frames and where `Update` put it on others: it jitters on screens faster than the
-steps, though it looks fine at 60 frames a second. The engine counts it (`camera.info` gives each
-camera's `rhythm`: `steps`, `update` or `mixed`) and warns once, naming the entity moved both ways,
-which can be a parent of the camera; the same goes for an `OrthoSize` changed both ways. A shake or
-an offset made in `Update` goes on the camera under a parent that follows in the steps: each entity
-then moves one way. `TestWorld/Tests/Following.json` checks both rhythms.
-
-A broken view is never drawn: a camera whose position or `OrthoSize` is not a number (a division by
-zero in a follow script) is replaced by the last good view and logged as an error naming it, and an
-`OrthoSize` outside 1 to 100000 is drawn clamped into that range, with a warning. Each is logged
-once until the camera gives a good view again.
-
-To zoom at a point of the screen (the cursor), `ZoomAround(view, size, viewportPx, anchorPx)`
-(`Renderer/CameraView.h`) gives the view with the world point under the anchor kept there: the
-editor's wheel zoom is built on it.
-
-In the editor, **Panels > Camera Stats** shows how the playing world's camera framed the last
-frames: the live camera and how it moves, the frame's time, steps and alpha, the frame clock, and a
-graph of the selected entity's drift on screen (0 for an entity the camera follows), measured as a
-trace measures it.
-
-To see how smooth a camera is, trace it: `camera.trace.start` and `camera.trace.stop` record every
-frame's time, view and followed entity into a JSON and a CSV file and measure them (how far the
-entity moves on screen, how unevenly the view moves, time running back), and `camera.trace.compare`
-checks that a level played at another frame rate draws the same path ([Automation.md](Automation.md)).
-The `TestWorld/Tests/Camera*.json` scripts play the Following level at 30 to 240 frames a second,
-steady, noisy and stalling, at fixed rates of 30, 60 and 120, far from the origin, through a camera
-switch, a pause and a respawn. `TestWorld/EditorTests/Camera*.json` play the same rows in the editor
-(Play In Editor, paused and stepped with its own commands) at 60 and 144 frames a second.
+How a camera moves smoothly at any frame rate (follows, zooms, shakes, respawns), the rules it
+follows and how to check one: [Cameras.md](Cameras.md).
 
 A level is lit when it has an **Environment** (any entity): it is then drawn in HDR, lit by its
 **Light2D**s and the ambient light, then bloomed, exposed and tonemapped. Without one, sprites are
