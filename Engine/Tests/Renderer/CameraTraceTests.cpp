@@ -236,6 +236,42 @@ TEST_CASE("CameraTrace: a jittery trace of the same path matches; one drawn at i
     CHECK(CameraTrace::Compare(lReference, lUnblended).Position > 0.5f);
 }
 
+TEST_CASE("CameraTrace: a view curving within a step is placed by a reference drawing within the step")
+{
+    // A view easing along a curve of game time (as a blend does), drawn at 60 Hz 0.3 of a step late.
+    const auto lCurve = [](const double InTime) { return static_cast<float>(300.0 * InTime * InTime); };
+    const auto lFrames = [&lCurve](const double InRate, const double InPhase, const Uint32 InCount)
+    {
+        TDynArray<CameraTraceSample> lSamples;
+        for (Uint32 lIndex = 0; lIndex < InCount; ++lIndex)
+        {
+            const double lTime = (lIndex + InPhase) / InRate;
+            lSamples.push_back(Frame(lTime, { lCurve(lTime), 0.f }, { 0.f, 0.f }));
+        }
+        return lSamples;
+    };
+    const TDynArray<CameraTraceSample> lLate = lFrames(60.0, 0.3, 59);
+
+    // A reference at the fixed rate gives a line between the step's ends: off the curve by its bend.
+    const CameraTraceGap lCoarse = CameraTrace::Compare(lFrames(60.0, 0.0, 61), lLate);
+    CHECK(lCoarse.Shared == 59);
+    CHECK(lCoarse.Position > 0.01f);
+
+    // At 720 Hz, its two frames around each are 1/720 s apart: on the curve within a thousandth.
+    const CameraTraceGap lFine = CameraTrace::Compare(lFrames(720.0, 0.0, 721), lLate);
+    CHECK(lFine.Shared == 59);
+    CHECK(lFine.Position < 0.001f);
+
+    // Not placed across a cut, nor between frames further apart than a step.
+    TDynArray<CameraTraceSample> lCutReference = lFrames(720.0, 0.0, 721);
+    for (CameraTraceSample& lSample : lCutReference)
+    {
+        lSample.bCut = true;
+    }
+    CHECK(CameraTrace::Compare(lCutReference, lLate).Shared == 0);
+    CHECK(CameraTrace::Compare(lFrames(30.0, 0.0, 31), lLate).Shared == 0);
+}
+
 TEST_CASE("CameraTrace: a rolling view is compared the short way round, and its target measured on screen")
 {
     // A roll from 170 to -170 degrees over a step goes through 180, not back through 0.
@@ -320,4 +356,26 @@ TEST_CASE("CameraTrace::Drift: the target's move against the view in a frame, th
     CameraTraceSample lCut = lSlid;
     lCut.bCut = true;
     CHECK(CameraTrace::Drift(lBefore, lCut, HEIGHT_PX) == 0.f);
+}
+
+TEST_CASE("CameraTrace: a switch's jump tells a cut from a blend")
+{
+    // A pan handed to camera "Next" on frame 30: a cut jumps 200 units, a blend goes on as it was.
+    TDynArray<CameraTraceSample> lCut     = Pan(60.0, 60);
+    TDynArray<CameraTraceSample> lBlended = Pan(60.0, 60);
+    for (Uint64 lIndex = 30; lIndex < 60; ++lIndex)
+    {
+        lCut[lIndex].Camera          = OpaaxString("Next");
+        lCut[lIndex].ViewPosition.y += 200.f;
+        lBlended[lIndex].Camera      = OpaaxString("Next");
+    }
+
+    const CameraTraceSummary lCutSummary = CameraTrace::Summarize(lCut, HEIGHT_PX);
+    CHECK(lCutSummary.CameraSwitches == 1);
+    CHECK(lCutSummary.SwitchJump == doctest::Approx(200.f));
+    CHECK(lCutSummary.SwitchJumpFrame == 30);
+
+    const CameraTraceSummary lBlendSummary = CameraTrace::Summarize(lBlended, HEIGHT_PX);
+    CHECK(lBlendSummary.CameraSwitches == 1);
+    CHECK(lBlendSummary.SwitchJump == doctest::Approx(0.f).epsilon(1e-3));
 }

@@ -97,7 +97,8 @@
                     "trace": "CameraFar-chase-{tag}",
                     "limits": {
                         "position": 0.001,
-                        "size": 0.001
+                        "size": 0.001,
+                        "rotation": 0.001
                     }
                 }
             },
@@ -155,7 +156,8 @@
                     "trace": "CameraFar-parent-{tag}",
                     "limits": {
                         "position": 0.001,
-                        "size": 0.001
+                        "size": 0.001,
+                        "rotation": 0.001
                     }
                 }
             }

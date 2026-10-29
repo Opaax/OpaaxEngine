@@ -209,6 +209,8 @@ namespace Opaax::EngineAutomation
                 { "stillMoves",        InSummary.StillMoves },
                 { "zoomReversals",     InSummary.ZoomReversals },
                 { "cameraSwitches",    InSummary.CameraSwitches },
+                { "switchJump",        InSummary.SwitchJump },
+                { "switchJumpFrame",   InSummary.SwitchJumpFrame },
                 { "cuts",              InSummary.Cuts },
                 { "mostSteps",         InSummary.MostSteps },
                 { "fewestSteps",       InSummary.FewestSteps },
@@ -876,7 +878,9 @@ namespace Opaax::EngineAutomation
                 "Ends the trace, writes <name>.camera.json and <name>.camera.csv in the working folder and answers "
                 "{name, frames, files, summary}: the target's largest move on screen (targetDrift), the largest change "
                 "of the view's move (motionJitter), largestMove (pixels), timeReversals, stillMoves, zoomReversals, "
-                "cameraSwitches, cuts, and the most and fewest steps a frame took (mostSteps, fewestSteps, stepsSpread). {limits}, like {\"targetDrift\": 0.01}, fails the request past any of them.",
+                "cameraSwitches, switchJump (how much a switch changed the view's move: a cut's jump, near 0 for a "
+                "blend), cuts, and the most and fewest steps a frame took (mostSteps, fewestSteps, stepsSpread). "
+                "{limits}, like {\"targetDrift\": 0.01}, fails the request past any of them.",
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     OpaaxString    lError;
@@ -919,9 +923,11 @@ namespace Opaax::EngineAutomation
 
             InRunner.Register("camera.trace.compare",
                 "How far the stopped trace {trace} is from where the stopped trace {reference} says its camera was at "
-                "each of its game times (the reference's frame then, or both ends of the step blended): {shared, "
-                "position, size (world units), rotation (degrees), atTime}. The reference is a steady pacing at the fixed rate or a multiple, "
-                "so one level played at any rate must match it. {limits}, like {\"position\": 0.001}, fails past them.",
+                "each of its game times (the reference's frame then, or its two frames around it blended by time): "
+                "{shared, position, size (world units), rotation (degrees), atTime}. The reference is a steady pacing "
+                "at the fixed rate or a multiple, so one level played at any rate must match it; a view curving "
+                "within a step (a blend, a shake) needs a reference drawing within the step (720 places 60, 144 and "
+                "240 exactly). {limits}, like {\"position\": 0.001}, fails past them.",
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     OpaaxString    lError;

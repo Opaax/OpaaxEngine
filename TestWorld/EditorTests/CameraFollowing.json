@@ -77,7 +77,8 @@
                     "trace": "EditorCameraFollowing-chase-{tag}",
                     "limits": {
                         "position": 0.001,
-                        "size": 0.001
+                        "size": 0.001,
+                        "rotation": 0.001
                     }
                 }
             },
@@ -135,7 +136,8 @@
                     "trace": "EditorCameraFollowing-parent-{tag}",
                     "limits": {
                         "position": 0.001,
-                        "size": 0.001
+                        "size": 0.001,
+                        "rotation": 0.001
                     }
                 }
             },

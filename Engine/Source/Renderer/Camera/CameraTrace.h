@@ -72,6 +72,13 @@ namespace Opaax
         /** Frames where another camera framed the world. Moves across a switch are not counted above. */
         Uint32 CameraSwitches = 0;
 
+        /**
+         * The largest change of the view's move on a switch frame against the frame before: a cut
+         * shows the distance between the two cameras, a blend about nothing.
+         */
+        float  SwitchJump      = 0.f;
+        Uint32 SwitchJumpFrame = 0;
+
         /** Cut frames (CameraManager::Cut). The jump into one is not counted above. */
         Uint32 Cuts = 0;
 
@@ -87,7 +94,7 @@ namespace Opaax
     {
         /**
          * Frames of the trace the reference could place: same camera, and the reference drew that time or
-         * both ends of the frame's step.
+         * two frames around it no more than a step apart.
          */
         Uint32 Shared = 0;
 
@@ -118,9 +125,11 @@ namespace Opaax
 
         /**
          * How far each frame of InTrace is from where InReference says its camera was at that game time:
-         * the reference's frame at that time, or its frames at both ends of the frame's step blended by its
-         * alpha (a view drawn between steps is a blend of the two). The reference is a steady pacing at
-         * the fixed rate or a multiple of it, so it draws every step's end; InTrace may be any pacing.
+         * the reference's frame at that time, or its two frames around it blended by time. The reference
+         * is a steady pacing at the fixed rate or a multiple of it. At the fixed rate it draws every
+         * step's end, which places any frame of a view drawn between its steps (a line between two
+         * steps); a view that curves within a step (a blend, a shake) needs a reference drawing every
+         * time the trace does, or close to it (720 Hz places 60, 144 and 240 exactly).
          */
         CameraTraceGap Compare(const TDynArray<CameraTraceSample>& InReference,
                                const TDynArray<CameraTraceSample>& InTrace);
