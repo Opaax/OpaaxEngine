@@ -108,6 +108,13 @@ namespace Opaax
         CameraTraceSummary Summarize(const TDynArray<CameraTraceSample>& InSamples, float InHeightPx);
 
         /**
+         * How far the target moved against the view from InBefore to InSample, pixels of a view
+         * InHeightPx tall at InSample's scale: Summarize's TargetDrift for one frame. 0 without a
+         * target in both, or across a camera switch or a cut (a jump on purpose).
+         */
+        float Drift(const CameraTraceSample& InBefore, const CameraTraceSample& InSample, float InHeightPx);
+
+        /**
          * How far each frame of InTrace is from where InReference says its camera was at that game time:
          * the reference's frame at that time, or its frames at both ends of the frame's step blended by its
          * alpha (a view drawn between steps is a blend of the two). The reference is a steady pacing at

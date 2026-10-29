@@ -44,6 +44,17 @@ namespace Opaax::CameraTrace
         }
     }
 
+    float Drift(const CameraTraceSample& InBefore, const CameraTraceSample& InSample, const float InHeightPx)
+    {
+        if (!InBefore.bHasTarget || !InSample.bHasTarget || InSample.Camera != InBefore.Camera || InSample.bCut)
+        {
+            return 0.f;
+        }
+
+        // A move in the world, shown at this frame's scale: a zoom alone moves nothing.
+        return Length(TargetFromView(InSample) - TargetFromView(InBefore)) * PixelsPerUnit(InSample.ViewSize, InHeightPx);
+    }
+
     CameraTraceSummary Summarize(const TDynArray<CameraTraceSample>& InSamples, const float InHeightPx)
     {
         CameraTraceSummary lSummary;
@@ -100,11 +111,7 @@ namespace Opaax::CameraTrace
                 ++lSummary.StillMoves;
             }
 
-            if (lSample.bHasTarget && lBefore.bHasTarget)
-            {
-                const float lDrift = Length(TargetFromView(lSample) - TargetFromView(lBefore)) * lPixels;
-                KeepLargest(lDrift, lFrame, lSummary.TargetDrift, lSummary.TargetDriftFrame);
-            }
+            KeepLargest(Drift(lBefore, lSample, InHeightPx), lFrame, lSummary.TargetDrift, lSummary.TargetDriftFrame);
 
             const float lZoom      = lSample.ViewSize - lBefore.ViewSize;
             const Int32 lDirection = lZoom > ZOOM_EPSILON ? 1 : (lZoom < -ZOOM_EPSILON ? -1 : 0);

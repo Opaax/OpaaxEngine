@@ -188,6 +188,38 @@
         }
     },
     {
+        "id": "open-stats",
+        "command": "editor.panel",
+        "params": {
+            "panel": "Camera Stats"
+        },
+        "expect": {
+            "visible": true
+        }
+    },
+    {
+        "id": "select-target",
+        "command": "entity.select",
+        "params": {
+            "entities": [
+                "Runner"
+            ]
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 1.2
+        }
+    },
+    {
+        "id": "screenshot-stats",
+        "command": "screenshot",
+        "params": {
+            "path": "EditorCameraStats.png"
+        }
+    },
+    {
         "id": "focus-playing",
         "command": "editor.camera.focus",
         "expectFailure": true
@@ -209,11 +241,8 @@
         "id": "edit-preview",
         "command": "editor.camera.preview",
         "expect": {
-            "camera": {
-                "name": "ParentCam"
-            },
-            "drawn": true,
-            "live": false
+            "camera": null,
+            "drawn": false
         }
     },
     {
