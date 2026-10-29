@@ -255,3 +255,39 @@ TEST_CASE("CameraTrace: the CSV has a header and a row a frame, the target in pi
     CHECK(lCsv.Contains(",0,40\n"));     // 40 units above the centre: 40 pixels
     CHECK(lCsv.View().EndsWith(",,,,\n"));
 }
+
+TEST_CASE("CameraTrace::Drift: the target's move against the view in a frame, the summary's measure")
+{
+    CameraTraceSample lBefore;
+    lBefore.Camera         = "Cam";
+    lBefore.ViewPosition   = { 100.f, 0.f };
+    lBefore.ViewSize       = HEIGHT_PX * 0.5f;   // one unit is one pixel
+    lBefore.bHasTarget     = true;
+    lBefore.TargetPosition = { 100.f, 40.f };
+
+    // Locked: both moved together.
+    CameraTraceSample lLocked = lBefore;
+    lLocked.ViewPosition.x   += 30.f;
+    lLocked.TargetPosition.x += 30.f;
+    CHECK(CameraTrace::Drift(lBefore, lLocked, HEIGHT_PX) == doctest::Approx(0.f));
+
+    // The target slid 6 units on screen, at a zoom of two pixels a unit.
+    CameraTraceSample lSlid = lLocked;
+    lSlid.TargetPosition.x += 6.f;
+    lSlid.ViewSize          = HEIGHT_PX * 0.25f;
+    CHECK(CameraTrace::Drift(lBefore, lSlid, HEIGHT_PX) == doctest::Approx(12.f));
+    CHECK(CameraTrace::Summarize({ lBefore, lSlid }, HEIGHT_PX).TargetDrift == doctest::Approx(12.f));
+
+    // No target, another camera, or a cut: not a drift.
+    CameraTraceSample lNoTarget = lSlid;
+    lNoTarget.bHasTarget = false;
+    CHECK(CameraTrace::Drift(lBefore, lNoTarget, HEIGHT_PX) == 0.f);
+
+    CameraTraceSample lOther = lSlid;
+    lOther.Camera = "Other";
+    CHECK(CameraTrace::Drift(lBefore, lOther, HEIGHT_PX) == 0.f);
+
+    CameraTraceSample lCut = lSlid;
+    lCut.bCut = true;
+    CHECK(CameraTrace::Drift(lBefore, lCut, HEIGHT_PX) == 0.f);
+}

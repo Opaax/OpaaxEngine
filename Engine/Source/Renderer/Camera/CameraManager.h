@@ -144,6 +144,12 @@ namespace Opaax
         static EViewGuard GuardView(CameraView& InOutView, const CameraView& InLastGood) noexcept;
 
         /**
+         * InFrame, framed in InWorld, as a camera trace records it, with where InTarget was drawn when
+         * it is valid: what traces and the editor's Camera Stats read.
+         */
+        static CameraTraceSample SampleFrame(World& InWorld, const CameraFrame& InFrame, Entity InTarget);
+
+        /**
          * Has InWorld record every camera's pose and size around every fixed step
          * (TransformInterpolation, CameraInterpolation), so the camera framing the world is framed
          * between its last two steps, as bodies are drawn, from its first frame: one that takes the

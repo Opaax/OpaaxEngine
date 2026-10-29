@@ -194,6 +194,11 @@ To zoom at a point of the screen (the cursor), `ZoomAround(view, size, viewportP
 (`Renderer/CameraView.h`) gives the view with the world point under the anchor kept there: the
 editor's wheel zoom is built on it.
 
+In the editor, **Panels > Camera Stats** shows how the playing world's camera framed the last
+frames: the live camera and how it moves, the frame's time, steps and alpha, the frame clock, and a
+graph of the selected entity's drift on screen (0 for an entity the camera follows), measured as a
+trace measures it.
+
 To see how smooth a camera is, trace it: `camera.trace.start` and `camera.trace.stop` record every
 frame's time, view and followed entity into a JSON and a CSV file and measure them (how far the
 entity moves on screen, how unevenly the view moves, time running back), and `camera.trace.compare`

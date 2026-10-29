@@ -28,6 +28,7 @@
 #include "Editor/Operation/EditorViewport.hpp"   // grid toggle
 #include "Editor/Operation/LevelOperations.h"
 #include "Editor/Panels/CameraPreviewPanel.h"
+#include "Editor/Panels/CameraStatsPanel.h"
 #include "Editor/Panels/ConfigPanel.h"
 #include "Editor/Panels/HierarchyPanel.h"
 #include "Editor/Panels/InputPanel.h"
@@ -360,6 +361,7 @@ namespace Opaax::Editor
         
         // Hidden by default
         lPanelsRegistry.Register<CameraPreviewPanel>(PanelDesc  {.Id = CameraPreviewPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden});
+        lPanelsRegistry.Register<CameraStatsPanel>(PanelDesc    {.Id = CameraStatsPanel::PanelID(),     .DefaultVisibility = EPanelVisibility::Hidden});
         // Hidden until a prefab is opened. Its SaveCommand routes Ctrl+S to the prefab.
         lPanelsRegistry.Register<PrefabPanel>(PanelDesc         {.Id = PrefabPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_PREFAB, .UndoCommand = Tags::EDITOR_COMMAND_UNDO_PREFAB, .RedoCommand = Tags::EDITOR_COMMAND_REDO_PREFAB, .DeleteCommand = Tags::EDITOR_COMMAND_DELETE_PREFAB_SELECTION});
         lPanelsRegistry.Register<UICanvasPanel>(PanelDesc{.Id = UICanvasPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_UI, .DeleteCommand = Tags::EDITOR_COMMAND_DELETE_UI_WIDGET});

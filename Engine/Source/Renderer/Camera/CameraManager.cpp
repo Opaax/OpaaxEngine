@@ -295,6 +295,25 @@ namespace Opaax
             return;
         }
 
+        // The target, found by name once per world.
+        Entity lTarget(lTrace.TargetEntity, &InWorld);
+        if (!lTrace.Target.IsEmpty() && !lTarget.IsValid())
+        {
+            InWorld.Each<EntityMeta>([&](const EntityID InEntity, const EntityMeta& InMeta)
+            {
+                if (lTrace.TargetEntity == ENTITY_NONE && InMeta.Name == lTrace.Target)
+                {
+                    lTrace.TargetEntity = InEntity;
+                }
+            });
+            lTarget = Entity(lTrace.TargetEntity, &InWorld);
+        }
+
+        lTrace.Samples.push_back(SampleFrame(InWorld, InFrame, lTarget));
+    }
+
+    CameraTraceSample CameraManager::SampleFrame(World& InWorld, const CameraFrame& InFrame, Entity InTarget)
+    {
         CameraTraceSample lSample;
         lSample.FrameDelta   = InFrame.FrameDelta;
         lSample.Steps        = InFrame.Steps;
@@ -312,30 +331,17 @@ namespace Opaax
         }
 
         // The target where the renderer draws it.
-        Entity lTarget(lTrace.TargetEntity, &InWorld);
-        if (!lTrace.Target.IsEmpty() && !lTarget.IsValid())
-        {
-            InWorld.Each<EntityMeta>([&](const EntityID InEntity, const EntityMeta& InMeta)
-            {
-                if (lTrace.TargetEntity == ENTITY_NONE && InMeta.Name == lTrace.Target)
-                {
-                    lTrace.TargetEntity = InEntity;
-                }
-            });
-            lTarget = Entity(lTrace.TargetEntity, &InWorld);
-        }
-
-        if (lTarget.IsValid() && lTarget.Has<TransformComponent>())
+        if (InTarget.IsValid() && InTarget.Has<TransformComponent>())
         {
             const TransformComponent lDrawn = InFrame.bInterpolated
-                                                  ? EntityHierarchy::DisplayTransform(lTarget, static_cast<float>(InFrame.Alpha))
-                                                  : EntityHierarchy::WorldTransform(lTarget);
+                                                  ? EntityHierarchy::DisplayTransform(InTarget, static_cast<float>(InFrame.Alpha))
+                                                  : EntityHierarchy::WorldTransform(InTarget);
 
             lSample.bHasTarget     = true;
             lSample.TargetPosition = lDrawn.Position;
         }
 
-        lTrace.Samples.push_back(Move(lSample));
+        return lSample;
     }
 
     EViewGuard CameraManager::GuardView(CameraView& InOutView, const CameraView& InLastGood) noexcept
