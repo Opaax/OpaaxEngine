@@ -200,7 +200,8 @@ entity moves on screen, how unevenly the view moves, time running back), and `ca
 checks that a level played at another frame rate draws the same path ([Automation.md](Automation.md)).
 The `TestWorld/Tests/Camera*.json` scripts play the Following level at 30 to 240 frames a second,
 steady, noisy and stalling, at fixed rates of 30, 60 and 120, far from the origin, through a camera
-switch, a pause and a respawn.
+switch, a pause and a respawn. `TestWorld/EditorTests/Camera*.json` play the same rows in the editor
+(Play In Editor, paused and stepped with its own commands) at 60 and 144 frames a second.
 
 A level is lit when it has an **Environment** (any entity): it is then drawn in HDR, lit by its
 **Light2D**s and the ambient light, then bloomed, exposed and tonemapped. Without one, sprites are
