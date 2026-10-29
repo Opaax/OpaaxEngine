@@ -1,6 +1,7 @@
 // The Renderer module's types. Each registers itself; see Engine/Registries/AutoRegistration.h.
 #include "Engine/Registries/AutoRegistration.h"
 #include "Renderer/Camera/CameraComponent.h"
+#include "Renderer/Camera/CameraDirector.h"
 #include "Renderer/Components/EnvironmentComponent.h"
 #include "Renderer/Components/Light2DComponent.h"
 #include "Renderer/Components/ShadowCaster2DComponent.h"
@@ -23,6 +24,9 @@ namespace Opaax
     OPAAX_REGISTER_NAMED_COMPONENT(SpriteComponent, "Sprite");
     OPAAX_REGISTER_NAMED_COMPONENT(CameraComponent, "Camera");
     OPAAX_REGISTER_NAMED_COMPONENT(TextComponent, "Text");
+
+    // Which camera frames a Play world, and the blend from one to the next.
+    OPAAX_REGISTER_OBJECT(CameraDirector);
 
     // How a world's picture is made (HDR, ambient, exposure, tonemap): one per level.
     OPAAX_REGISTER_NAMED_COMPONENT(EnvironmentComponent, "Environment");

@@ -1,0 +1,218 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "BlendCurve": "EaseInOut",
+                    "BlendIn": 1.0,
+                    "OrthoSize": 600.0,
+                    "Priority": 0,
+                    "bRotateView": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 200.0,
+                        "y": 100.0
+                    },
+                    "Rotation": 15.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "0ee67d0377e2435c80930ad2b3643021",
+            "name": "WideCam",
+            "ownerMap": "CameraBlend",
+            "parent": "84eb78f073d74f7ead99c878c40db480"
+        },
+        {
+            "components": {
+                "CameraProbe": {
+                    "Raise": "WideCam",
+                    "RaiseAfter": 0.5,
+                    "RaiseOnStep": 30,
+                    "RaiseTo": 5,
+                    "ViewSize": 0.0,
+                    "ViewX": 0.0,
+                    "ViewY": 0.0,
+                    "bRaised": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "4ac29e6e4d144c05bd7670fe9020fd4c",
+            "name": "WideCue",
+            "ownerMap": "CameraBlend"
+        },
+        {
+            "components": {
+                "CameraProbe": {
+                    "Raise": "CloseCam",
+                    "RaiseAfter": 0.5,
+                    "RaiseOnStep": 75,
+                    "RaiseTo": 9,
+                    "ViewSize": 0.0,
+                    "ViewX": 0.0,
+                    "ViewY": 0.0,
+                    "bRaised": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "4ee492bb784f408e99db57c436dc2601",
+            "name": "CloseCue",
+            "ownerMap": "CameraBlend"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "BlendCurve": "Linear",
+                    "BlendIn": 0.5,
+                    "OrthoSize": 150.0,
+                    "Priority": 0,
+                    "bRotateView": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "81d286f5cf1945fe98164393b8158fa0",
+            "name": "CloseCam",
+            "ownerMap": "CameraBlend",
+            "parent": "84eb78f073d74f7ead99c878c40db480"
+        },
+        {
+            "components": {
+                "FollowProbe": {
+                    "Chase": "ChaseCam",
+                    "FramedBetween": 0,
+                    "Frames": 0,
+                    "MaxFraction": 0.0,
+                    "MaxZoomLag": 0.0,
+                    "MinFraction": 1.0,
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 40.0
+                    },
+                    "SmoothTime": 0.0,
+                    "Speed": 1800.0,
+                    "UpdateNudge": 0.0,
+                    "ViewOffsetY": 0.0,
+                    "WrapAfter": 0.0,
+                    "ZoomFrames": 0,
+                    "ZoomPerStep": 0.0
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.949999988079071,
+                        "y": 0.550000011920929,
+                        "z": 0.20000000298023224
+                    },
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "84eb78f073d74f7ead99c878c40db480",
+            "name": "Runner",
+            "ownerMap": "CameraBlend"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "BlendCurve": "EaseInOut",
+                    "BlendIn": 0.0,
+                    "OrthoSize": 300.0,
+                    "Priority": 1,
+                    "bRotateView": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 40.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "9d3bb09dd2bb41919be90420c4d5bd96",
+            "name": "ChaseCam",
+            "ownerMap": "CameraBlend"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3499999940395355,
+                        "y": 0.30000001192092896,
+                        "z": 0.25
+                    },
+                    "Size": {
+                        "x": 40000.0,
+                        "y": 20.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 19000.0,
+                        "y": -100.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "c212f605256f44cca8bbc1b812f1a60c",
+            "name": "Ground",
+            "ownerMap": "CameraBlend"
+        }
+    ],
+    "mapId": "CameraBlend",
+    "version": 4
+}

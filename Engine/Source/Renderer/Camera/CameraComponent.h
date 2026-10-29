@@ -5,7 +5,9 @@
 #include "Core/Maths/MathTypes.h"
 #include "Core/Maths/MathsJson.hpp"
 #include "Core/OpaaxTypes.h"
+#include "Core/Reflection/OpaaxEnumJson.h"
 #include "Core/Reflection/OpaaxProperty.h"
+#include "Renderer/Camera/CameraBlend.h"
 
 namespace Opaax
 {
@@ -13,7 +15,8 @@ namespace Opaax
     // CameraComponent — how the world is framed. CameraManager turns it into the world's CameraView.
     //   OrthoSize is the vertical half-extent in world units (a bigger window scales the view).
     //   The position is the entity's world position (a camera parented to the player follows it).
-    //   With several cameras, the highest Priority frames the world: raise one to switch to it.
+    //   With several cameras, the highest Priority frames the world: raise one to switch to it. The
+    //   view then cuts to it, or blends to it over its BlendIn (CameraDirector).
     //   The view stays upright unless bRotateView: then it rolls with the entity's world rotation.
     // =============================================================================
     struct CameraComponent
@@ -31,14 +34,24 @@ namespace Opaax
         /** Roll the view with the entity's world rotation. Off, a camera under a turning body stays upright. */
         bool bRotateView = false;
 
+        /** Seconds the view takes to blend to this camera when it takes over. 0: a cut. */
+        float BlendIn = 0.f;
+
+        /** How that blend eases. */
+        ECameraBlend BlendCurve = ECameraBlend::EaseInOut;
+
         // _WITH_DEFAULT: a missing key keeps its default, so maps saved before a new field still load.
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(CameraComponent, OrthoSize, Priority, bRotateView)
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(CameraComponent, OrthoSize, Priority, bRotateView, BlendIn, BlendCurve)
 
         // Range: a zero or negative size would break the projection.
         OPAAX_PROPERTIES(CameraComponent,
                          OPAAX_PROP(OrthoSize).SetRange(MIN_ORTHO_SIZE, MAX_ORTHO_SIZE),
                          OPAAX_PROP(Priority).SetDragStep(1.f).SetTooltip("With several cameras, the highest frames the world."),
                          OPAAX_PROP(bRotateView).SetTooltip("Roll the view with the camera's rotation.\n"
-                                                            "Off: the view stays upright, even under a turning body."))
+                                                            "Off: the view stays upright, even under a turning body."),
+                         OPAAX_PROP(BlendIn).SetRange(0.f, 30.f).SetDragStep(0.05f)
+                                            .SetTooltip("Seconds the view takes to blend to this camera when it\n"
+                                                        "takes over. 0: a cut."),
+                         OPAAX_PROP(BlendCurve).SetTooltip("How the blend to this camera eases."))
     };
 }

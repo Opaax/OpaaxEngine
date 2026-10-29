@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/CameraBlend.opaaxmap"
+    ],
+    "name": "CameraBlend",
+    "persistentMap": "Maps/CameraBlend.opaaxmap",
+    "version": 1
+}
