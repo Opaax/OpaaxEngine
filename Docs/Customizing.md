@@ -177,6 +177,14 @@ where they are and marks the frame as a cut. A body that physics or the mover mo
 `Update`, is drawn where it was put without either. The world is drawn a step behind, so on a frame
 with no step after a cut the new place shows again.
 
+Move a camera in one place. One moved both in fixed steps and in `Update` is drawn between its
+steps on some frames and where `Update` put it on others: it jitters on screens faster than the
+steps, though it looks fine at 60 frames a second. The engine counts it (`camera.info` gives each
+camera's `rhythm`: `steps`, `update` or `mixed`) and warns once, naming the entity moved both ways,
+which can be a parent of the camera; the same goes for an `OrthoSize` changed both ways. A shake or
+an offset made in `Update` goes on the camera under a parent that follows in the steps: each entity
+then moves one way. `TestWorld/Tests/Following.json` checks both rhythms.
+
 A broken view is never drawn: a camera whose position or `OrthoSize` is not a number (a division by
 zero in a follow script) is replaced by the last good view and logged as an error naming it, and an
 `OrthoSize` outside 1 to 100000 is drawn clamped into that range, with a warning. Each is logged

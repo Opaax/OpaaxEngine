@@ -14,6 +14,7 @@
 #include "Renderer/Camera/CameraInterpolation.h"
 #include "Renderer/Camera/CameraInterpolationComponent.h"
 #include "Renderer/Camera/CameraManager.h"
+#include "Renderer/Camera/CameraRhythm.h"
 #include "Renderer/DebugDraw.h"
 #include "Resources/ResourceManager.h"
 #include "World/Components/TransformComponent.h"
@@ -535,4 +536,223 @@ TEST_CASE("ResolveDisplayOrthoSize: alpha 0 is the size before the step, 1 the s
     // Set since the step (in Update): the size as it is, at any alpha.
     CHECK(ResolveDisplayOrthoSize(500.f, &lHistory, 0.f) == 500.f);
     CHECK(ResolveDisplayOrthoSize(500.f, &lHistory, 0.6f) == 500.f);
+}
+
+// =============================================================================
+// Rhythm: a camera moved both in the steps and between them is found, at any frame rate
+// =============================================================================
+namespace
+{
+    /** The steps each frame takes, repeating: 60, about 144 and 30 frames a second at 60 steps. */
+    struct StepPattern
+    {
+        const char*       Name;
+        TDynArray<Uint32> Steps;
+    };
+
+    const StepPattern PATTERNS[] = { { "60", { 1 } }, { "144", { 1, 0, 1, 0, 0 } }, { "30", { 2 } } };
+
+    constexpr Uint32 THREE_WINDOWS = 3 * CameraRhythm::WINDOW_STEPS;
+
+    /** Plays frames of InPattern until InSteps steps ran, InUpdate(frame) run before each as gameplay's Update. */
+    template <typename TUpdate>
+    void PlaySteps(ChaseWorld& InChase, const StepPattern& InPattern, const Uint32 InSteps, TUpdate&& InUpdate)
+    {
+        Uint32 lSteps = 0;
+        for (Uint32 lFrame = 0; lSteps < InSteps; ++lFrame)
+        {
+            InUpdate(lFrame);
+            const Uint32 lFrameSteps = InPattern.Steps[lFrame % InPattern.Steps.size()];
+            InChase.Tick(lFrameSteps);
+            lSteps += lFrameSteps;
+        }
+    }
+
+    const CameraRhythm& RhythmOf(Entity InCamera) { return InCamera.Get<CameraInterpolationComponent>().Rhythm; }
+}
+
+TEST_CASE("ObserveCameraRhythm: each window of steps gives the rhythm; a mixed one warns once")
+{
+    const EntityID lMover = static_cast<EntityID>(3);
+
+    CameraRhythm lRhythm;
+    const auto lWindow = [&lRhythm](const CameraStepMotion& InMotion, const Uint32 InTimes, const CameraStepMotion& InRest)
+    {
+        bool bWarn = false;
+        for (Uint32 lStep = 0; lStep < CameraRhythm::WINDOW_STEPS; ++lStep)
+        {
+            bWarn = ObserveCameraRhythm(lRhythm, lStep < InTimes ? InMotion : InRest) || bWarn;
+        }
+        return bWarn;
+    };
+
+    const CameraStepMotion lStill;
+    const CameraStepMotion lInStep{ true, false };
+    const CameraStepMotion lSince{ false, true };
+    const CameraStepMotion lBoth{ true, true, lMover, false };
+
+    // Nothing said before a full window.
+    for (Uint32 lStep = 1; lStep < CameraRhythm::WINDOW_STEPS; ++lStep)
+    {
+        CHECK_FALSE(ObserveCameraRhythm(lRhythm, lInStep));
+    }
+    CHECK(lRhythm.Last == ECameraRhythm::Still);
+    CHECK_FALSE(ObserveCameraRhythm(lRhythm, lInStep));
+    CHECK(lRhythm.Last == ECameraRhythm::Steps);
+
+    CHECK_FALSE(lWindow(lSince, CameraRhythm::WINDOW_STEPS, lSince));
+    CHECK(lRhythm.Last == ECameraRhythm::Update);
+
+    CHECK_FALSE(lWindow(lStill, CameraRhythm::WINDOW_STEPS, lStill));
+    CHECK(lRhythm.Last == ECameraRhythm::Still);
+
+    // A few steps moved both ways (a respawn, a hand-over) are not a habit.
+    CHECK_FALSE(lWindow(lBoth, CameraRhythm::MIXED_STEPS - 1, lInStep));
+    CHECK(lRhythm.Last == ECameraRhythm::Steps);
+
+    // Enough are: warned once, named.
+    CHECK(lWindow(lBoth, CameraRhythm::MIXED_STEPS, lInStep));
+    CHECK(lRhythm.Last == ECameraRhythm::Mixed);
+    CHECK(lRhythm.MovedBoth == lMover);
+    CHECK_FALSE(lRhythm.bSizeBoth);
+    CHECK_FALSE(lWindow(lBoth, CameraRhythm::WINDOW_STEPS, lBoth));
+    CHECK(lRhythm.Last == ECameraRhythm::Mixed);
+    CHECK(lRhythm.bWarned);
+
+    CHECK(OpaaxStringView(ToString(ECameraRhythm::Mixed)) == OpaaxStringView("mixed"));
+}
+
+TEST_CASE("Camera rhythm: a camera chased in the steps is 'steps', one moved in Update is 'update'; neither warns")
+{
+    for (const StepPattern& lPattern : PATTERNS)
+    {
+        CAPTURE(lPattern.Name);
+
+        for (const EFollow lFollow : { EFollow::Parented, EFollow::Chased })
+        {
+            CAPTURE(static_cast<int>(lFollow));
+            ChaseWorld lChase(lFollow);
+            PlaySteps(lChase, lPattern, THREE_WINDOWS, [](Uint32) {});
+
+            CHECK(RhythmOf(lChase.Camera).Last == ECameraRhythm::Steps);
+            CHECK_FALSE(RhythmOf(lChase.Camera).bWarned);
+        }
+
+        // Not chased: put somewhere else in every Update.
+        ChaseWorld lChase(EFollow::Chased);
+        lChase.TheWorld->GetSubsystems().GetSubsystem<ChaseCameraSubsystem>()->Camera = ENTITY_NONE;
+        PlaySteps(lChase, lPattern, THREE_WINDOWS, [&lChase](Uint32) { lChase.Camera.Get<TransformComponent>().Position.x += 4.f; });
+
+        CHECK(RhythmOf(lChase.Camera).Last == ECameraRhythm::Update);
+        CHECK_FALSE(RhythmOf(lChase.Camera).bWarned);
+    }
+}
+
+TEST_CASE("Camera rhythm: a camera moved both in the steps and in Update is 'mixed' and warns, at any frame rate")
+{
+    for (const StepPattern& lPattern : PATTERNS)
+    {
+        CAPTURE(lPattern.Name);
+
+        // Chased in the steps, and shaken in Update.
+        ChaseWorld lChase(EFollow::Chased);
+        PlaySteps(lChase, lPattern, THREE_WINDOWS, [&lChase](const Uint32 InFrame)
+        {
+            lChase.Camera.Get<TransformComponent>().Position.y += (InFrame % 2 == 0) ? 3.f : -2.f;
+        });
+
+        const CameraRhythm& lRhythm = RhythmOf(lChase.Camera);
+        CHECK(lRhythm.Last == ECameraRhythm::Mixed);
+        CHECK(lRhythm.bWarned);
+        CHECK(lRhythm.MovedBoth == lChase.Camera.GetHandle());
+        CHECK_FALSE(lRhythm.bSizeBoth);
+    }
+}
+
+TEST_CASE("Camera rhythm: the entity moved both ways is found up the chain; a rig moved in the steps with the camera offset in Update is not")
+{
+    for (const StepPattern& lPattern : PATTERNS)
+    {
+        CAPTURE(lPattern.Name);
+
+        // The body the camera hangs from runs in the steps and is nudged in Update.
+        {
+            ChaseWorld lChase(EFollow::Parented);
+            TransformInterpolation::RecordSteps(lChase.Body);
+            PlaySteps(lChase, lPattern, THREE_WINDOWS, [&lChase](Uint32) { lChase.Body.Get<TransformComponent>().Position.y += 1.f; });
+
+            CHECK(RhythmOf(lChase.Camera).Last == ECameraRhythm::Mixed);
+            CHECK(RhythmOf(lChase.Camera).MovedBoth == lChase.Body.GetHandle());
+        }
+
+        // The body runs in the steps, the camera under it is offset in Update: each moves one way.
+        {
+            ChaseWorld lChase(EFollow::Parented);
+            TransformInterpolation::RecordSteps(lChase.Body);
+            PlaySteps(lChase, lPattern, THREE_WINDOWS, [&lChase](const Uint32 InFrame)
+            {
+                lChase.Camera.Get<TransformComponent>().Position.y = CAMERA_OFFSET.y + static_cast<float>(InFrame % 3);
+            });
+
+            CHECK(RhythmOf(lChase.Camera).Last != ECameraRhythm::Mixed);
+            CHECK_FALSE(RhythmOf(lChase.Camera).bWarned);
+        }
+    }
+}
+
+TEST_CASE("Camera rhythm: a size changed both in the steps and in Update is 'mixed', the size named")
+{
+    for (const StepPattern& lPattern : PATTERNS)
+    {
+        CAPTURE(lPattern.Name);
+
+        ChaseWorld lChase(EFollow::Chased);
+        lChase.ZoomEachStep(ZOOM_PER_STEP);
+        PlaySteps(lChase, lPattern, THREE_WINDOWS, [&lChase](Uint32) { lChase.Camera.Get<CameraComponent>().OrthoSize -= 1.f; });
+
+        const CameraRhythm& lRhythm = RhythmOf(lChase.Camera);
+        CHECK(lRhythm.Last == ECameraRhythm::Mixed);
+        CHECK(lRhythm.MovedBoth == lChase.Camera.GetHandle());
+        CHECK(lRhythm.bSizeBoth);
+    }
+}
+
+TEST_CASE("Camera rhythm: a respawn now and then, or a hand-over from Update to the steps, is never 'mixed'")
+{
+    for (const StepPattern& lPattern : PATTERNS)
+    {
+        CAPTURE(lPattern.Name);
+
+        // Chased, and put elsewhere in Update without a cut every 40 frames.
+        {
+            ChaseWorld lChase(EFollow::Chased);
+            Uint32     lSteps = 0;
+            for (Uint32 lFrame = 0; lSteps < THREE_WINDOWS; ++lFrame)
+            {
+                if (lFrame % 40 == 39)
+                {
+                    lChase.Camera.Get<TransformComponent>().Position.x -= 500.f;
+                }
+                const Uint32 lFrameSteps = lPattern.Steps[lFrame % lPattern.Steps.size()];
+                lChase.Tick(lFrameSteps);
+                lSteps += lFrameSteps;
+                CHECK(RhythmOf(lChase.Camera).Last != ECameraRhythm::Mixed);
+            }
+            CHECK(RhythmOf(lChase.Camera).Last == ECameraRhythm::Steps);
+        }
+
+        // Driven in Update for a while, then chased in the steps.
+        {
+            ChaseWorld            lChase(EFollow::Chased);
+            ChaseCameraSubsystem* lChaser = lChase.TheWorld->GetSubsystems().GetSubsystem<ChaseCameraSubsystem>();
+            lChaser->Camera = ENTITY_NONE;
+            PlaySteps(lChase, lPattern, THREE_WINDOWS, [&lChase](Uint32) { lChase.Camera.Get<TransformComponent>().Position.x += 4.f; });
+            CHECK(RhythmOf(lChase.Camera).Last == ECameraRhythm::Update);
+
+            lChaser->Camera = lChase.Camera.GetHandle();
+            PlaySteps(lChase, lPattern, THREE_WINDOWS, [](Uint32) {});
+            CHECK(RhythmOf(lChase.Camera).Last == ECameraRhythm::Steps);
+            CHECK_FALSE(RhythmOf(lChase.Camera).bWarned);
+        }
+    }
 }

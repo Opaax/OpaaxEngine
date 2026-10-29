@@ -181,6 +181,13 @@ namespace Opaax::EngineAutomation
                                    { "id",   lMeta != nullptr ? nlohmann::json(lMeta->Id.ToString()) : nlohmann::json() } };
         }
 
+        /** How a camera's view moves against the steps, as camera.info gives it ("still" when not recorded). */
+        const char* RhythmOf(Entity InCamera)
+        {
+            const CameraInterpolationComponent* lHistory = InCamera.TryGet<CameraInterpolationComponent>();
+            return ToString(lHistory != nullptr ? lHistory->Rhythm.Last : ECameraRhythm::Still);
+        }
+
         nlohmann::json SummaryToJson(const CameraTraceSummary& InSummary)
         {
             return nlohmann::json{
@@ -740,8 +747,9 @@ namespace Opaax::EngineAutomation
                 "How the active world is framed: {world, mode, paused, view, fixedRate, pacing, tracing, clock (fixedDelta, "
                 "refreshHz snapped to, snapping, maxSteps, droppedSteps), cameras} with "
                 "each camera's {name, id, priority, x, y, size, framed (the view it gives on that frame: x, y, size), "
-                "recorded (framed between its steps)}, and in a "
-                "Play world the last frame's {live: {name, id, count, tied}, frame: {delta, steps, alpha, interpolated, "
+                "recorded (framed between its steps), rhythm (over the last 60 steps: still, steps, update, or mixed "
+                "when one entity moves it both in the steps and in Update)}, and in a "
+                "Play world the last frame's {live: {name, id, rhythm, count, tied}, frame: {delta, steps, alpha, interpolated, "
                 "stepDelta, gameTime}}. An Edit world is framed by the editor's camera.",
                 [&InEngine](const nlohmann::json&)
                 {
@@ -775,6 +783,7 @@ namespace Opaax::EngineAutomation
                             lCamera["framed"]   = { { "x", lFramed.Position.x }, { "y", lFramed.Position.y },
                                                     { "size", lFramed.OrthoSize } };
                             lCamera["recorded"] = lEntity.Has<CameraInterpolationComponent>();
+                            lCamera["rhythm"]   = RhythmOf(lEntity);
                             lList.push_back(Move(lCamera));
                         });
 
@@ -801,6 +810,10 @@ namespace Opaax::EngineAutomation
                     {
                         nlohmann::json lLive = lFrame.Resolution.Count > 0 ? NameAndId(Entity(lFrame.Resolution.Entity, lWorld))
                                                                            : nlohmann::json::object();
+                        if (lFrame.Resolution.Count > 0)
+                        {
+                            lLive["rhythm"] = RhythmOf(Entity(lFrame.Resolution.Entity, lWorld));
+                        }
                         lLive["count"] = lFrame.Resolution.Count;
                         lLive["tied"]  = lFrame.Resolution.Tied;
 

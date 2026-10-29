@@ -9,7 +9,7 @@
     {
         "command": "world.wait",
         "params": {
-            "seconds": 1.0
+            "seconds": 1.5
         }
     },
     {
@@ -66,7 +66,8 @@
             "live": {
                 "name": "ChaseCam",
                 "count": 2,
-                "tied": 1
+                "tied": 1,
+                "rhythm": "steps"
             },
             "frame": {
                 "interpolated": true
@@ -203,7 +204,8 @@
             "live": {
                 "name": "ParentCam",
                 "count": 2,
-                "tied": 1
+                "tied": 1,
+                "rhythm": "steps"
             }
         }
     },
@@ -212,6 +214,44 @@
         "command": "screenshot",
         "params": {
             "path": "FollowingParented.png"
+        }
+    },
+    {
+        "id": "mixed-camera",
+        "command": "component.set",
+        "params": {
+            "entity": "ParentCam",
+            "type": "Camera",
+            "value": {
+                "Priority": 0
+            }
+        }
+    },
+    {
+        "id": "mixed-nudge",
+        "command": "component.set",
+        "params": {
+            "entity": "Runner",
+            "type": "FollowProbe",
+            "value": {
+                "UpdateNudge": 2.0
+            }
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 1.5
+        }
+    },
+    {
+        "id": "mixed-info",
+        "command": "camera.info",
+        "expect": {
+            "live": {
+                "name": "ChaseCam",
+                "rhythm": "mixed"
+            }
         }
     }
 ]

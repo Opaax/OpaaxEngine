@@ -1,10 +1,13 @@
 #pragma once
 
+#include "Core/Log/Logger.h"
 #include "World/Entity/Entity.h"
 
 namespace Opaax
 {
     class World;
+
+    OPAAX_LOG_CATEGORY(CameraInterpolation);
 
     // =============================================================================
     // CameraInterpolation — the OrthoSize a camera changed in fixed steps is framed with between
@@ -23,7 +26,11 @@ namespace Opaax
          */
         void Cut(Entity InCamera);
 
-        /** Start of a fixed step: the size of each camera recorded becomes its previous size. */
+        /**
+         * Start of a fixed step, after TransformInterpolation's: what the last step and the time since
+         * did to each camera recorded is counted into its Rhythm (a camera moved both in the steps and
+         * in Update warns once), then its size becomes its previous size.
+         */
         void BeginFixedStep(World& InWorld);
 
         /** End of a fixed step: the size of each camera recorded is kept as the one the step left. */
