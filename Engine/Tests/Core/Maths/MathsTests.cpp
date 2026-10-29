@@ -2,6 +2,7 @@
 // edge cases included (equal values, -0, NaN), so engine code can use Maths everywhere.
 #include <doctest.h>
 
+#include "Core/Maths/MathTypes.h"
 #include "Core/Maths/Maths.h"
 #include "Core/Templates/TypeTraits.h"
 
@@ -137,4 +138,124 @@ TEST_CASE("Maths::Lerp: same-type and mixed-type forms")
     CHECK(Maths::Lerp(0.f, 10.f, 0.25f) == doctest::Approx(2.5f));
     CHECK(Maths::Lerp(2.0, 4.0, 0.5f) == doctest::Approx(3.0));
     CHECK(Maths::Lerp(0, 10.0, 0.5f) == doctest::Approx(5.0));
+}
+
+// =============================================================================
+// Smoothing: the same at any frame rate
+// =============================================================================
+namespace
+{
+    /** Where a value starting at 0 is after one second of frames at InRate a second, each moving it by InStep. */
+    template <typename TStep>
+    float OneSecond(const int InRate, TStep&& InStep)
+    {
+        float lValue = 0.f;
+        for (int lFrame = 0; lFrame < InRate; ++lFrame)
+        {
+            lValue = InStep(lValue, 1.f / static_cast<float>(InRate));
+        }
+        return lValue;
+    }
+}
+
+TEST_CASE("Maths::ExpDecay: the same after a second at 30, 60 or 144 frames; Lerp once a frame is not")
+{
+    const auto lDecay = [](const float InValue, const float InDelta) { return Maths::ExpDecay(InValue, 100.f, 5.f, InDelta); };
+    const float lExpected = 100.f * (1.f - Maths::Exp(-5.f));
+
+    CHECK(OneSecond(30, lDecay) == doctest::Approx(lExpected).epsilon(1e-5));
+    CHECK(OneSecond(60, lDecay) == doctest::Approx(lExpected).epsilon(1e-5));
+    CHECK(OneSecond(144, lDecay) == doctest::Approx(lExpected).epsilon(1e-5));
+
+    // The habit it replaces: a fixed factor a frame goes further on a faster screen.
+    const auto lLerp = [](const float InValue, float) { return Maths::Lerp(InValue, 100.f, 0.01f); };
+    CHECK(OneSecond(144, lLerp) > OneSecond(60, lLerp) + 25.f);
+}
+
+TEST_CASE("Maths::ExpDecay: one step of dt is two of dt / 2; never past the target; vectors")
+{
+    const float lOnce  = Maths::ExpDecay(10.f, -40.f, 3.f, 0.1f);
+    const float lTwice = Maths::ExpDecay(Maths::ExpDecay(10.f, -40.f, 3.f, 0.05f), -40.f, 3.f, 0.05f);
+    CHECK(lOnce == doctest::Approx(lTwice).epsilon(1e-6));
+
+    // Any frame time, even a stall of seconds: toward the target, never past it.
+    for (const float lDelta : { 0.f, 1.f / 240.f, 0.5f, 10.f })
+    {
+        CAPTURE(lDelta);
+        const float lMoved = Maths::ExpDecay(10.f, -40.f, 3.f, lDelta);
+        CHECK(lMoved <= 10.f);
+        CHECK(lMoved >= -40.f);
+    }
+    CHECK(Maths::ExpDecay(10.f, -40.f, 0.f, 1.f) == 10.f);
+
+    // ln(2) a second halves the gap every second.
+    CHECK(Maths::ExpDecay(0.f, 100.f, 0.6931472f, 1.f) == doctest::Approx(50.f));
+
+    const Vector2F lVector = Maths::ExpDecay(Vector2F{ 0.f, 10.f }, Vector2F{ 100.f, -10.f }, 0.6931472f, 1.f);
+    CHECK(lVector.x == doctest::Approx(50.f));
+    CHECK(lVector.y == doctest::Approx(0.f).epsilon(1e-5));
+}
+
+TEST_CASE("Maths::SmoothDamp: one step of dt is two of dt / 2, at rest or moving")
+{
+    for (const float lStartVelocity : { 0.f, -300.f, 120.f })
+    {
+        CAPTURE(lStartVelocity);
+
+        float       lOnceVelocity = lStartVelocity;
+        const float lOnce         = Maths::SmoothDamp(100.f, 0.f, lOnceVelocity, 0.3f, 1.f / 30.f);
+
+        float       lTwiceVelocity = lStartVelocity;
+        const float lHalf          = Maths::SmoothDamp(100.f, 0.f, lTwiceVelocity, 0.3f, 1.f / 60.f);
+        const float lTwice         = Maths::SmoothDamp(lHalf, 0.f, lTwiceVelocity, 0.3f, 1.f / 60.f);
+
+        CHECK(lOnce == doctest::Approx(lTwice).epsilon(1e-5));
+        CHECK(lOnceVelocity == doctest::Approx(lTwiceVelocity).epsilon(1e-4));
+    }
+
+    // And a second of 60 frames lands where one of 144 does.
+    float lVelocity60  = 0.f;
+    float lVelocity144 = 0.f;
+    const float l60  = OneSecond(60, [&lVelocity60](const float InValue, const float InDelta)
+    {
+        return Maths::SmoothDamp(InValue, 100.f, lVelocity60, 0.4f, InDelta);
+    });
+    const float l144 = OneSecond(144, [&lVelocity144](const float InValue, const float InDelta)
+    {
+        return Maths::SmoothDamp(InValue, 100.f, lVelocity144, 0.4f, InDelta);
+    });
+    CHECK(l60 == doctest::Approx(l144).epsilon(1e-4));
+}
+
+TEST_CASE("Maths::SmoothDamp: from rest it eases toward the target and settles, never past it")
+{
+    for (const float lDelta : { 1.f / 240.f, 1.f / 60.f, 0.1f, 0.5f, 2.f })
+    {
+        CAPTURE(lDelta);
+
+        float lValue    = 0.f;
+        float lVelocity = 0.f;
+        float lBefore   = 0.f;
+        for (float lTime = 0.f; lTime < 3.f; lTime += lDelta)
+        {
+            lValue = Maths::SmoothDamp(lValue, 100.f, lVelocity, 0.5f, lDelta);
+            CHECK(lValue >= lBefore);
+            CHECK(lValue <= 100.f);
+            lBefore = lValue;
+        }
+        CHECK(lValue == doctest::Approx(100.f).epsilon(1e-3));
+    }
+
+    // Thrown at the target faster than the spring holds: it stops on it rather than past it.
+    float       lVelocity = 5000.f;
+    const float lValue    = Maths::SmoothDamp(0.f, 10.f, lVelocity, 0.5f, 0.1f);
+    CHECK(lValue == 10.f);
+    CHECK(lVelocity == 0.f);
+
+    // Vectors: the same spring on each axis.
+    Vector2F       lVectorVelocity{ 0.f, 0.f };
+    const Vector2F lVector = Maths::SmoothDamp(Vector2F{ 0.f, 0.f }, Vector2F{ 100.f, -50.f }, lVectorVelocity, 0.5f, 0.1f);
+    float          lScalarVelocity = 0.f;
+    CHECK(lVector.x == doctest::Approx(Maths::SmoothDamp(0.f, 100.f, lScalarVelocity, 0.5f, 0.1f)));
+    CHECK(lVector.y == doctest::Approx(-0.5f * lVector.x));
 }
