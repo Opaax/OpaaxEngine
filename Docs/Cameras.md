@@ -125,6 +125,15 @@ jitters, and the offset is drawn as it is, on top of the follow drawn between it
 offset a function of time (the trauma it decays by `InDeltaTime`, a noise or a wave of the time
 elapsed), never of the frame count.
 
+### A camera modifier
+
+A modifier changes the view every frame draws, after the blend: a recoil, a lean toward the cursor.
+Subclass `CameraModifier` (`Renderer/Camera/CameraModifier.h`, its USAGE block), give it to the
+world's director (`GetWorld().GetSubsystems().GetSubsystem<CameraDirector>()->AddModifier<T>()`),
+and work out the view from `InContext.GameTime`, never from frames: it is then the same at any
+frame rate and holds while paused. It moves no entity, so no camera's rhythm turns mixed. Modifiers
+run by `Priority`, the lowest first; `camera.info` gives the view before them (`unmodified`).
+
 ### A respawn
 
 ```cpp

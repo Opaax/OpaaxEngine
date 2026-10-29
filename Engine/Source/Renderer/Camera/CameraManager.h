@@ -27,6 +27,9 @@ namespace Opaax
         /** The winning camera's view, or the default view when Count is 0. */
         CameraView View;
 
+        /** The view before the director's modifiers (a shake) changed it: View without them. */
+        CameraView Unmodified;
+
         EntityID   Entity = ENTITY_NONE;
         Uint32     Count  = 0;
 
