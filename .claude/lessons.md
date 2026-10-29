@@ -16,6 +16,10 @@ What working on this repository taught, kept short so the next session starts fr
   the Write tool into the scratchpad and run them with `python -I <file>`.
 - `TestWorld --exec <script>` writes its answers beside the script unless `--exec-out` says where: by
   hand, give `--exec-out` (and run from `TestWorldResults`), or `TestWorld/Tests` gets an `.out.json`.
+  Screenshots and traces go to the working directory: from PowerShell, `Push-Location` into
+  `build/debug-editor/TestWorldResults` first, or they land in the repo root.
+- A probe that moves something back and forth on alternate frames cancels out over an even number of
+  frames: at 120 Hz every step sees it unmoved. Move it one way and let the step reset it.
 - Vsync does not hold back this machine's test runs (an unpaced Following runs at about 3000 frames a
   second): pace anything that depends on timing (`time.pace`, `--frame-pacing`).
 - CI cancels a branch's running workflow when a newer commit is pushed: push the last commit, then
