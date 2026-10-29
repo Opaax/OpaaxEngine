@@ -1299,7 +1299,8 @@ namespace Opaax::Editor::EditorAutomation
         // =========================================================================
         nlohmann::json ViewToJson(const CameraView& InView)
         {
-            return nlohmann::json{ { "x", InView.Position.x }, { "y", InView.Position.y }, { "size", InView.OrthoSize } };
+            return nlohmann::json{ { "x", InView.Position.x }, { "y", InView.Position.y }, { "size", InView.OrthoSize },
+                                   { "rotation", InView.Rotation } };
         }
 
         /** The viewport's size in pixels, or false (with OutError) before the viewport was drawn. */
@@ -1510,7 +1511,8 @@ namespace Opaax::Editor::EditorAutomation
                     const CameraView& lSeen  = lWorld->GetCameraView();
                     const float       lGap   = Maths::Max(Maths::Max(Maths::Abs(lDrawn.Position.x - lSeen.Position.x),
                                                                      Maths::Abs(lDrawn.Position.y - lSeen.Position.y)),
-                                                          Maths::Abs(lDrawn.OrthoSize - lSeen.OrthoSize));
+                                                          Maths::Max(Maths::Abs(lDrawn.OrthoSize - lSeen.OrthoSize),
+                                                                     Maths::Abs(lDrawn.Rotation - lSeen.Rotation)));
 
                     return AutomationResult::Ok(nlohmann::json{
                         { "camera", { { "name", lCamera.GetName() }, { "id", lCamera.GetGuid().ToString() } } },

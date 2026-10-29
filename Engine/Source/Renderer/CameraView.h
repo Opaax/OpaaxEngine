@@ -2,6 +2,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
+#include "Core/Maths/Bounds2D.h"
 #include "Core/Maths/MathTypes.h"
 
 namespace Opaax
@@ -10,12 +11,16 @@ namespace Opaax
     // CameraView — where a world is viewed from, in world units. Set on the World
     //   (World::SetCameraView); RendererManager turns it into matrices for the target.
     //   OrthoSize is the vertical half-extent; width follows the target's aspect, so resizing
-    //   scales the view instead of showing more world. Default: centred, 600 units tall.
+    //   scales the view instead of showing more world. Default: centred, 600 units tall, upright.
+    //   Rotation rolls the view: the world is drawn turned the other way.
     // =============================================================================
     struct CameraView
     {
         Vector2F Position  = { 0.f, 0.f };
         float    OrthoSize = 300.f;
+
+        /** Degrees, counter-clockwise. */
+        float    Rotation  = 0.f;
     };
 
     // =============================================================================
@@ -23,7 +28,7 @@ namespace Opaax
     // =============================================================================
 
     /**
-     * The view matrix: a translation by -Position.
+     * The view matrix: a translation by -Position, then a turn by -Rotation.
      */
     Matrix44F MakeView(const CameraView& InView);
 
@@ -55,6 +60,12 @@ namespace Opaax
      * World units per viewport pixel: (2 * OrthoSize) / height. 1 for a zero height.
      */
     float WorldPerPixel(const CameraView& InView, float InViewportHeightPx);
+
+    /**
+     * The part of the world InView shows on a target InAspect wide for 1 tall, as an axis-aligned
+     * box: a rolled view reaches further than its own rectangle (lights and shadows are gathered over it).
+     */
+    Bounds2D ViewBounds(const CameraView& InView, float InAspect);
 
     /**
      * InView zoomed to InOrthoSize around a viewport point: the world point under InAnchorPx stays

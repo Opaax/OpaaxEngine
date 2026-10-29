@@ -207,7 +207,8 @@ TEST_CASE("GuardView: a view that is not a number is the last good one; a size o
     CHECK(lView.OrthoSize == 250.f);
 
     for (const CameraView lBad : { CameraView{ { lNaN, 0.f }, 300.f }, CameraView{ { 0.f, -lInf }, 300.f },
-                                   CameraView{ { 0.f, 0.f }, lNaN }, CameraView{ { 0.f, 0.f }, lInf } })
+                                   CameraView{ { 0.f, 0.f }, lNaN }, CameraView{ { 0.f, 0.f }, lInf },
+                                   CameraView{ { 0.f, 0.f }, 300.f, lNaN } })
     {
         CameraView lGuarded = lBad;
         CHECK(CameraManager::GuardView(lGuarded, lGood) == EViewGuard::Replaced);
@@ -225,4 +226,45 @@ TEST_CASE("GuardView: a view that is not a number is the last good one; a size o
         CHECK(lGuarded.OrthoSize >= CameraComponent::MIN_ORTHO_SIZE);
         CHECK(lGuarded.OrthoSize <= CameraComponent::MAX_ORTHO_SIZE);
     }
+}
+
+TEST_CASE("ResolveCamera: the view rolls with the camera only when it asks, drawn between its steps")
+{
+    World lWorld("Rolled");
+
+    Entity lCamera = lWorld.CreateEntity("Camera");
+    lCamera.Add<CameraComponent>();
+    lCamera.Get<TransformComponent>().Rotation = 30.f;
+
+    // Upright by default: a camera under a turning body does not roll the view.
+    CHECK(CameraManager::ResolveCamera(lCamera).Rotation == 0.f);
+
+    lCamera.Get<CameraComponent>().bRotateView = true;
+    CHECK(CameraManager::ResolveCamera(lCamera).Rotation == doctest::Approx(30.f));
+
+    // Under a turned parent, the world rotation.
+    Entity lBody = lWorld.CreateEntity("Body");
+    lBody.Get<TransformComponent>().Rotation = 15.f;
+    EntityHierarchy::SetParent(lCamera, lBody, /*bInKeepWorld*/ false);
+    CHECK(CameraManager::ResolveCamera(lCamera).Rotation == doctest::Approx(45.f));
+
+    // With an alpha, between the rotations around the last step.
+    TransformInterpolationComponent& lHistory = lBody.Add<TransformInterpolationComponent>();
+    lHistory.Position        = Vector2F{ 0.f, 0.f };
+    lHistory.Rotation        = 5.f;
+    lHistory.SteppedPosition = Vector2F{ 0.f, 0.f };
+    lHistory.SteppedRotation = 15.f;
+    lHistory.bHasPrevious    = true;
+    lHistory.bHasStepped     = true;
+    CHECK(CameraManager::ResolveCamera(lCamera, 0.5f).Rotation == doctest::Approx(40.f));
+}
+
+TEST_CASE("Camera: a camera saved before bRotateView stays upright, and bRotateView round-trips")
+{
+    const CameraComponent lOld = nlohmann::json{ { "OrthoSize", 120.f }, { "Priority", 2 } }.get<CameraComponent>();
+    CHECK_FALSE(lOld.bRotateView);
+
+    CameraComponent lCamera;
+    lCamera.bRotateView = true;
+    CHECK(nlohmann::json(lCamera).get<CameraComponent>().bRotateView);
 }

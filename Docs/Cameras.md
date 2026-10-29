@@ -8,7 +8,10 @@ only chooses which moments of its path are shown.
 
 A level is framed by a **Camera** entity: its world position and `OrthoSize` (half the visible
 height, in world units). A camera parented to the player follows it. With several cameras, the
-highest `Priority` frames the level: raise another's (a map view, a cutscene) to switch to it.
+highest `Priority` frames the level: raise another's (a map view, a cutscene) to switch to it. The
+view stays upright unless the camera's `bRotateView` is on: then it rolls with the entity's world
+rotation (counter-clockwise, so the world is drawn turned the other way), and a camera under a
+turning body turns with it.
 
 The world is simulated in fixed steps (`Time.FixedRate`, 60 a second by default) and drawn once a
 frame, at the screen's rate. Everything gameplay moves in the steps is drawn between its last two

@@ -29,6 +29,7 @@ namespace Opaax
         OpaaxString Camera;
         Vector2F    ViewPosition = { 0.f, 0.f };
         float       ViewSize     = 0.f;
+        float       ViewRotation = 0.f;
 
         /** Where the target was drawn, world units; only with bHasTarget. */
         bool     bHasTarget     = false;
@@ -90,9 +91,10 @@ namespace Opaax
          */
         Uint32 Shared = 0;
 
-        /** The largest distance between their views (world units) and sizes, and where. */
+        /** The largest distance between their views (world units), sizes and rolls (degrees), and where. */
         float  Position = 0.f;
         float  Size     = 0.f;
+        float  Rotation = 0.f;
         double AtTime   = 0.0;
     };
 

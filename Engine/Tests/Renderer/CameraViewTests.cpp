@@ -218,3 +218,85 @@ TEST_CASE("ZoomAround: at the centre only the size changes; off centre the view 
     CHECK(lEmpty.Position.x == 10.f);
     CHECK(lEmpty.OrthoSize == 150.f);
 }
+
+TEST_CASE("CameraView: a rolled view turns the world the other way about its centre")
+{
+    // Rolled 90 degrees counter-clockwise: what lies to the camera's right (+x) is drawn above the centre.
+    const CameraView lView{ { 10.f, 20.f }, 100.f, 90.f };
+
+    const glm::vec4 lRight = MakeView(lView) * glm::vec4(10.f + 30.f, 20.f, 0.f, 1.f);
+    CHECK(lRight.x == doctest::Approx(0.f).epsilon(1e-5));
+    CHECK(lRight.y == doctest::Approx(-30.f));
+
+    const glm::vec4 lAbove = MakeView(lView) * glm::vec4(10.f, 20.f + 30.f, 0.f, 1.f);
+    CHECK(lAbove.x == doctest::Approx(30.f));
+    CHECK(lAbove.y == doctest::Approx(0.f).epsilon(1e-5));
+
+    // Unrolled, the view is the plain translation it always was.
+    CheckMatrixEqual(MakeView(CameraView{ { 10.f, 20.f }, 100.f, 0.f }),
+                     glm::translate(Matrix44F(1.f), glm::vec3(-10.f, -20.f, 0.f)));
+}
+
+TEST_CASE("ScreenToWorld and WorldToScreen: a rolled view round-trips, and its screen axes turn with it")
+{
+    const Vector2F lViewport{ 960.f, 600.f };
+
+    for (const float lRoll : { 0.f, 30.f, -75.f, 90.f, 180.f, 359.f })
+    {
+        CAPTURE(lRoll);
+        const CameraView lView{ { 12.f, -34.f }, 300.f, lRoll };
+
+        for (const Vector2F lPx : { Vector2F{ 0.f, 0.f }, lViewport, Vector2F{ 123.f, 456.f }, lViewport * 0.5f })
+        {
+            const Vector2F lBack = WorldToScreen(lView, lViewport, ScreenToWorld(lView, lViewport, lPx));
+            CHECK(lBack.x == doctest::Approx(lPx.x).epsilon(1e-4));
+            CHECK(lBack.y == doctest::Approx(lPx.y).epsilon(1e-4));
+        }
+    }
+
+    // Rolled 90 degrees: the top of the screen looks toward the world's -x.
+    const CameraView lQuarter{ { 0.f, 0.f }, 300.f, 90.f };
+    const Vector2F   lTop = ScreenToWorld(lQuarter, lViewport, { 480.f, 0.f });
+    CHECK(lTop.x == doctest::Approx(-300.f));
+    CHECK(lTop.y == doctest::Approx(0.f).epsilon(1e-4));
+}
+
+TEST_CASE("ViewBounds: the world a view covers, a rolled one reaching into its corners")
+{
+    const Bounds2D lUpright = ViewBounds(CameraView{ { 5.f, 6.f }, 100.f }, 2.f);
+    CHECK(lUpright.Center.x == 5.f);
+    CHECK(lUpright.Center.y == 6.f);
+    CHECK(lUpright.HalfExtent.x == doctest::Approx(200.f));
+    CHECK(lUpright.HalfExtent.y == doctest::Approx(100.f));
+
+    // A quarter turn swaps width and height.
+    const Bounds2D lQuarter = ViewBounds(CameraView{ { 5.f, 6.f }, 100.f, 90.f }, 2.f);
+    CHECK(lQuarter.HalfExtent.x == doctest::Approx(100.f));
+    CHECK(lQuarter.HalfExtent.y == doctest::Approx(200.f));
+
+    // Every corner of the rolled view lies inside its bounds.
+    const CameraView lRolled{ { 5.f, 6.f }, 100.f, 30.f };
+    const Bounds2D   lBounds = ViewBounds(lRolled, 1.6f);
+    const Vector2F   lViewport{ 1600.f, 1000.f };
+    for (const Vector2F lCorner : { Vector2F{ 0.f, 0.f }, Vector2F{ 1600.f, 0.f }, Vector2F{ 0.f, 1000.f }, lViewport })
+    {
+        const Vector2F lWorld = ScreenToWorld(lRolled, lViewport, lCorner);
+        CHECK(Maths::Abs(lWorld.x - lBounds.Center.x) <= lBounds.HalfExtent.x + 1e-3f);
+        CHECK(Maths::Abs(lWorld.y - lBounds.Center.y) <= lBounds.HalfExtent.y + 1e-3f);
+    }
+}
+
+TEST_CASE("ZoomAround: a rolled view keeps its roll and its anchor")
+{
+    const CameraView lView{ { 123.f, -45.f }, 300.f, 40.f };
+    const Vector2F   lViewport{ 1280.f, 720.f };
+    const Vector2F   lAnchor{ 1000.f, 90.f };
+
+    const CameraView lZoomed = ZoomAround(lView, 120.f, lViewport, lAnchor);
+    CHECK(lZoomed.Rotation == 40.f);
+
+    const Vector2F lBefore = ScreenToWorld(lView, lViewport, lAnchor);
+    const Vector2F lAfter  = ScreenToWorld(lZoomed, lViewport, lAnchor);
+    CHECK(lAfter.x == doctest::Approx(lBefore.x).epsilon(1e-5));
+    CHECK(lAfter.y == doctest::Approx(lBefore.y).epsilon(1e-5));
+}

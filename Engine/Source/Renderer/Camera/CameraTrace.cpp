@@ -21,16 +21,31 @@ namespace Opaax::CameraTrace
             return Maths::Sqrt(InVector.x * InVector.x + InVector.y * InVector.y);
         }
 
+        /** Where the target was from the view's centre, world units along the view's own axes (its roll undone). */
+        Vector2F TargetFromView(const CameraTraceSample& InSample)
+        {
+            const Vector2F lFromView = InSample.TargetPosition - InSample.ViewPosition;
+            if (InSample.ViewRotation == 0.f)
+            {
+                return lFromView;
+            }
+
+            const float lRad = Maths::DegreesToRadians(-InSample.ViewRotation);
+            const float lCos = Maths::Cos(lRad);
+            const float lSin = Maths::Sin(lRad);
+            return { lCos * lFromView.x - lSin * lFromView.y, lSin * lFromView.x + lCos * lFromView.y };
+        }
+
         /** Where the target was drawn from the view's centre, pixels. */
         Vector2F TargetOnScreen(const CameraTraceSample& InSample, const float InHeightPx)
         {
-            return (InSample.TargetPosition - InSample.ViewPosition) * PixelsPerUnit(InSample.ViewSize, InHeightPx);
+            return TargetFromView(InSample) * PixelsPerUnit(InSample.ViewSize, InHeightPx);
         }
 
-        /** Where the target was from the view's centre, world units. */
-        Vector2F TargetFromView(const CameraTraceSample& InSample)
+        /** InTo - InFrom the short way round, degrees in [-180, 180]. */
+        float AngleBetween(const float InFrom, const float InTo)
         {
-            return InSample.TargetPosition - InSample.ViewPosition;
+            return Maths::Remainder(InTo - InFrom, 360.f);
         }
 
         /** Keeps the larger of InValue and InOutLargest, with the frame it came from. */
@@ -164,13 +179,15 @@ namespace Opaax::CameraTrace
         CameraTraceGap lGap;
         for (const CameraTraceSample& lSample : InTrace)
         {
-            Vector2F lExpected     = { 0.f, 0.f };
-            float    lExpectedSize = 0.f;
+            Vector2F lExpected         = { 0.f, 0.f };
+            float    lExpectedSize     = 0.f;
+            float    lExpectedRotation = 0.f;
 
             if (const CameraTraceSample* lSame = lFindAt(lSample.GameTime, lSample.Camera))
             {
-                lExpected     = lSame->ViewPosition;
-                lExpectedSize = lSame->ViewSize;
+                lExpected         = lSame->ViewPosition;
+                lExpectedSize     = lSame->ViewSize;
+                lExpectedRotation = lSame->ViewRotation;
             }
             else
             {
@@ -185,20 +202,23 @@ namespace Opaax::CameraTrace
                 }
 
                 const float lAlpha = static_cast<float>(lSample.Alpha);
-                lExpected     = lFrom->ViewPosition + (lTo->ViewPosition - lFrom->ViewPosition) * lAlpha;
-                lExpectedSize = lFrom->ViewSize + (lTo->ViewSize - lFrom->ViewSize) * lAlpha;
+                lExpected         = lFrom->ViewPosition + (lTo->ViewPosition - lFrom->ViewPosition) * lAlpha;
+                lExpectedSize     = lFrom->ViewSize + (lTo->ViewSize - lFrom->ViewSize) * lAlpha;
+                lExpectedRotation = lFrom->ViewRotation + AngleBetween(lFrom->ViewRotation, lTo->ViewRotation) * lAlpha;
             }
 
             ++lGap.Shared;
 
             const float lPosition = Length(lSample.ViewPosition - lExpected);
             const float lSize     = Maths::Abs(lSample.ViewSize - lExpectedSize);
-            if (lPosition > lGap.Position || lSize > lGap.Size)
+            const float lRotation = Maths::Abs(AngleBetween(lExpectedRotation, lSample.ViewRotation));
+            if (lPosition > lGap.Position || lSize > lGap.Size || lRotation > lGap.Rotation)
             {
                 lGap.AtTime = lSample.GameTime;
             }
             lGap.Position = Maths::Max(lGap.Position, lPosition);
             lGap.Size     = Maths::Max(lGap.Size, lSize);
+            lGap.Rotation = Maths::Max(lGap.Rotation, lRotation);
         }
 
         return lGap;
@@ -206,16 +226,17 @@ namespace Opaax::CameraTrace
 
     OpaaxString ToCsv(const TDynArray<CameraTraceSample>& InSamples, const float InHeightPx)
     {
-        OpaaxString lText("frame,delta,steps,alpha,stepDelta,gameTime,cut,camera,viewX,viewY,viewSize,targetX,targetY,"
-                          "targetPxX,targetPxY\n");
+        OpaaxString lText("frame,delta,steps,alpha,stepDelta,gameTime,cut,camera,viewX,viewY,viewSize,viewRotation,"
+                          "targetX,targetY,targetPxX,targetPxY\n");
 
         for (Uint64 lIndex = 0; lIndex < InSamples.size(); ++lIndex)
         {
             const CameraTraceSample& lSample = InSamples[lIndex];
 
-            lText += OpaaxString::Format("{},{},{},{},{},{},{},{},{},{},{}", lIndex, lSample.FrameDelta, lSample.Steps,
+            lText += OpaaxString::Format("{},{},{},{},{},{},{},{},{},{},{},{}", lIndex, lSample.FrameDelta, lSample.Steps,
                                          lSample.Alpha, lSample.StepDelta, lSample.GameTime, lSample.bCut ? 1 : 0,
-                                         lSample.Camera, lSample.ViewPosition.x, lSample.ViewPosition.y, lSample.ViewSize);
+                                         lSample.Camera, lSample.ViewPosition.x, lSample.ViewPosition.y, lSample.ViewSize,
+                                         lSample.ViewRotation);
             if (lSample.bHasTarget)
             {
                 const Vector2F lOnScreen = TargetOnScreen(lSample, InHeightPx);

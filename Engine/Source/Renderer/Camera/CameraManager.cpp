@@ -75,7 +75,8 @@ namespace Opaax
 
     // =========================================================================
     // ResolveCamera — the world transform: a camera parented to the player follows it. With an
-    //   alpha, its pose and its size are blended between its last two steps.
+    //   alpha, its pose and its size are blended between its last two steps. Its rotation rolls the
+    //   view only when it asks (bRotateView).
     // =========================================================================
     CameraView CameraManager::ResolveCamera(Entity InCamera, const TOptional<float> InAlpha)
     {
@@ -87,11 +88,14 @@ namespace Opaax
 
         if (!InAlpha.has_value())
         {
-            return CameraView{ EntityHierarchy::WorldTransform(InCamera).Position, lCamera->OrthoSize };
+            const TransformComponent lPose = EntityHierarchy::WorldTransform(InCamera);
+            return CameraView{ lPose.Position, lCamera->OrthoSize, lCamera->bRotateView ? lPose.Rotation : 0.f };
         }
 
-        return CameraView{ EntityHierarchy::DisplayTransform(InCamera, *InAlpha).Position,
-                           ResolveDisplayOrthoSize(lCamera->OrthoSize, InCamera.TryGet<CameraInterpolationComponent>(), *InAlpha) };
+        const TransformComponent lPose = EntityHierarchy::DisplayTransform(InCamera, *InAlpha);
+        return CameraView{ lPose.Position,
+                           ResolveDisplayOrthoSize(lCamera->OrthoSize, InCamera.TryGet<CameraInterpolationComponent>(), *InAlpha),
+                           lCamera->bRotateView ? lPose.Rotation : 0.f };
     }
 
     void CameraManager::RecordCameraSteps(World& InWorld)
@@ -323,6 +327,7 @@ namespace Opaax
         lSample.bCut         = InFrame.bCut;
         lSample.ViewPosition = InFrame.Resolution.View.Position;
         lSample.ViewSize     = InFrame.Resolution.View.OrthoSize;
+        lSample.ViewRotation = InFrame.Resolution.View.Rotation;
 
         if (InFrame.Resolution.Count > 0)
         {
@@ -347,7 +352,7 @@ namespace Opaax
     EViewGuard CameraManager::GuardView(CameraView& InOutView, const CameraView& InLastGood) noexcept
     {
         if (!Maths::IsFinite(InOutView.Position.x) || !Maths::IsFinite(InOutView.Position.y)
-            || !Maths::IsFinite(InOutView.OrthoSize))
+            || !Maths::IsFinite(InOutView.OrthoSize) || !Maths::IsFinite(InOutView.Rotation))
         {
             InOutView = InLastGood;
             return EViewGuard::Replaced;
@@ -388,9 +393,9 @@ namespace Opaax
         if (InGuard == EViewGuard::Replaced)
         {
             OPAAX_LOG(LogCameraManager, Error, "Camera '{}' in '{}' gives a view that is not a number (position {}, {}, "
-                                               "size {}): the last good view is drawn instead. Find what writes its "
-                                               "Transform or its OrthoSize.",
-                      lName, InWorld.GetName().CStr(), InBad.Position.x, InBad.Position.y, InBad.OrthoSize);
+                                               "size {}, rotation {}): the last good view is drawn instead. Find what "
+                                               "writes its Transform or its OrthoSize.",
+                      lName, InWorld.GetName().CStr(), InBad.Position.x, InBad.Position.y, InBad.OrthoSize, InBad.Rotation);
         }
         else
         {
