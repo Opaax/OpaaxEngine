@@ -58,6 +58,14 @@ Engine types go in their module (`Engine/Source/<Module>/`) and register in the 
   (or a `TConfig<Data>` subclass with `OPAAX_OBJECT(T, Opaax::Config)` and `FileName()`) and
   `OPAAX_REGISTER_OBJECT(Config_Name)` in a .cpp. Read with `IConfigSystem::Get<T>().GetData()`; the
   Config panel draws it. Registrations in editor code never run (the editor library is not linked whole).
+- Cameras, and anything that moves one (Docs/Cameras.md): move the camera, or the rig entity it
+  hangs from, in `OnFixedUpdate` / `FixedUpdate`, and in one place only (a shake is an offset in
+  `OnUpdate` on a camera under a rig that follows in the steps; a camera moved both ways is reported
+  `mixed` with a warning). Smooth with `Maths::ExpDecay` or `Maths::SmoothDamp` and the step's delta,
+  never `Lerp(a, b, k)` once a frame. After a jump: `TransformInterpolation::Teleport(entity)` and
+  `CameraManager::Cut(world)`. Never `World::SetCameraView` on a Play world (the camera manager sets
+  it); a view of another camera is `IEngine::SubmitCameraView`. Another entity moved in the steps is
+  drawn between them after `TransformInterpolation::RecordSteps(GetEntity())` in `OnStart`.
 - Style: AGENTS.md (prefixes, banners, short plain comments).
 
 ## Test it
@@ -75,3 +83,12 @@ Engine types go in their module (`Engine/Source/<Module>/`) and register in the 
    (`Engine/Tests/LegacyAssetFile.h`). Objects cannot be copied: build them in place. In the editor,
    steps in `TestWorld/EditorTests/Assets.json`: `asset.open` or `asset.new`, `asset.set` and
    `expect`, a screenshot of its window, `asset.close` with `discard`.
+5. A camera feature: unit tests driving a world through `WorldManager` at 0 to 3 steps a frame
+   (`Engine/Tests/Renderer/CameraInterpolationTests.cpp`), and its own level set up from the first
+   step (a value set by a request after `level.play` lands a step apart at different rates) with rows
+   in the camera matrix, as `TestWorld/Tests/CameraSmooth.json`: per pacing (`time.pace` 60, 144,
+   240, `60,jitter=0.25,seed=3`) a trace whose `camera.trace.stop` limits hold `timeReversals`,
+   `stillMoves` and `zoomReversals` at 0 (and `targetDrift` for a locked follow),
+   `camera.trace.compare` against the 60 Hz row within 0.001, and `camera.info` expecting its
+   `rhythm`. A copied map needs its own `mapId` (its entities' `ownerMap`) and new guids; resave it
+   with an editor built after any new field (`level.open`, `level.save` with `all`).

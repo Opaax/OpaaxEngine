@@ -74,3 +74,8 @@ What working on this repository taught, kept short so the next session starts fr
   local build that starts with a selection, then reverted.
 - An automation step checking a `PostEditChange` fix-up must end on values that differ from the
   file: a fix-up that gives back the file's own values leaves the asset clean (`unsaved` false).
+- A path compared across frame rates needs a run that is the same from step 0: a value set by a
+  request after `level.play` lands a step apart at 60 and 144 Hz. Put it in the level instead.
+- A copied map keeps the original's `mapId`: its entities (`ownerMap` renamed) are then dropped on
+  load. Give it its own id. And resave a map only with an editor built after a new field: an older
+  one drops what it does not know.
