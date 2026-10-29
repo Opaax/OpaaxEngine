@@ -168,7 +168,7 @@ In `Engine.config` (the Config panel):
 - **The camera matrix:** `TestWorld/Tests/Camera*.json` play the Following levels at 30 to 240 frames
   a second, steady, noisy and stalling, at fixed rates of 30, 60 and 120, far from the origin,
   smoothed, through a camera switch, a blended hand-over, a pause and a respawn.
-  `TestWorld/EditorTests/Camera*.json` play them in the editor at 60 and 144.
+  `TestWorld/EditorTests/Camera*.json` play them in the editor at 60, 144 and 240.
 - **In the editor:** **Panels > Camera Stats** shows the live camera and how it moves, the blend
   under way, the frame's time, steps and alpha, the frame clock, and a graph of the selected entity's
   drift on screen; **Camera Preview** shows what the selected camera frames; `editor.camera*`,

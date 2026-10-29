@@ -24,6 +24,14 @@
                 "reference": "720",
                 "jitter": 0.05,
                 "spread": 1
+            },
+            {
+                "tag": "240",
+                "pacing": "240",
+                "rate": 60,
+                "reference": "720",
+                "jitter": 0.05,
+                "spread": 1
             }
         ],
         "requests": [
