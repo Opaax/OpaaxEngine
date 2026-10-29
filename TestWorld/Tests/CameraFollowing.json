@@ -169,7 +169,8 @@
                     "trace": "CameraFollowing-chase-{tag}",
                     "limits": {
                         "position": 0.001,
-                        "size": 0.001
+                        "size": 0.001,
+                        "rotation": 0.001
                     }
                 }
             },
@@ -227,7 +228,8 @@
                     "trace": "CameraFollowing-parent-{tag}",
                     "limits": {
                         "position": 0.001,
-                        "size": 0.001
+                        "size": 0.001,
+                        "rotation": 0.001
                     }
                 }
             }

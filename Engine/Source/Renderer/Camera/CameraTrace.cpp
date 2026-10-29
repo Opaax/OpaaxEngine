@@ -97,20 +97,25 @@ namespace Opaax::CameraTrace
                 ++lSummary.TimeReversals;
             }
 
-            // Another camera, or a cut: a jump on purpose, not a move.
+            // Moves in the world, shown at this frame's scale.
+            const float    lPixels = PixelsPerUnit(lSample.ViewSize, InHeightPx);
+            const Vector2F lMove   = lSample.ViewPosition - lBefore.ViewPosition;
+            const float    lMoved  = Length(lMove) * lPixels;
+
+            // Another camera, or a cut: a jump on purpose, not a move. How much a switch changed the
+            // view's move tells a cut from a blend.
             if (lSample.Camera != lBefore.Camera || lSample.bCut)
             {
+                if (lSample.Camera != lBefore.Camera && !lSample.bCut && bHasLastMove)
+                {
+                    KeepLargest(Length(lMove - lLastMove) * lPixels, lFrame, lSummary.SwitchJump, lSummary.SwitchJumpFrame);
+                }
                 lSummary.CameraSwitches += lSample.Camera != lBefore.Camera ? 1 : 0;
                 lSummary.Cuts           += lSample.bCut ? 1 : 0;
                 bHasLastMove   = false;
                 lZoomDirection = 0;
                 continue;
             }
-
-            // Moves in the world, shown at this frame's scale.
-            const float    lPixels = PixelsPerUnit(lSample.ViewSize, InHeightPx);
-            const Vector2F lMove   = lSample.ViewPosition - lBefore.ViewPosition;
-            const float    lMoved  = Length(lMove) * lPixels;
             KeepLargest(lMoved, lFrame, lSummary.LargestMove, lSummary.LargestMoveFrame);
 
             if (bHasLastMove)
@@ -157,13 +162,13 @@ namespace Opaax::CameraTrace
             return InLeft->GameTime < InRight->GameTime;
         });
 
-        const auto lFindAt = [&lByTime](const double InTime, const OpaaxString& InCamera) -> const CameraTraceSample*
+        const auto lEarlier = [](const CameraTraceSample* InOther, const double InValue)
         {
-            const auto lEarlier = [](const CameraTraceSample* InOther, const double InValue)
-            {
-                return InOther->GameTime < InValue;
-            };
+            return InOther->GameTime < InValue;
+        };
 
+        const auto lFindAt = [&lByTime, &lEarlier](const double InTime, const OpaaxString& InCamera) -> const CameraTraceSample*
+        {
             auto lAt = Algo::LowerBound(lByTime, InTime - SAME_TIME, lEarlier);
 
             for (; lAt != lByTime.end() && (*lAt)->GameTime <= InTime + SAME_TIME; ++lAt)
@@ -174,6 +179,26 @@ namespace Opaax::CameraTrace
                 }
             }
             return nullptr;
+        };
+
+        // The reference's frames of InCamera nearest before and after InTime, looked for within InSpan.
+        const auto lFindAround = [&lByTime, &lEarlier](const double InTime, const OpaaxString& InCamera, const double InSpan,
+                                                       const CameraTraceSample*& OutBefore, const CameraTraceSample*& OutAfter)
+        {
+            const auto lAt = Algo::LowerBound(lByTime, InTime, lEarlier);
+
+            OutAfter = nullptr;
+            for (auto lIt = lAt; lIt != lByTime.end() && (*lIt)->GameTime <= InTime + InSpan; ++lIt)
+            {
+                if ((*lIt)->Camera == InCamera) { OutAfter = *lIt; break; }
+            }
+
+            OutBefore = nullptr;
+            for (auto lIt = lAt; lIt != lByTime.begin() && (*(lIt - 1))->GameTime >= InTime - InSpan;)
+            {
+                --lIt;
+                if ((*lIt)->Camera == InCamera) { OutBefore = *lIt; break; }
+            }
         };
 
         CameraTraceGap lGap;
@@ -191,17 +216,17 @@ namespace Opaax::CameraTrace
             }
             else
             {
-                // Between two steps: the reference's view at both ends of the step, blended as this frame was.
-                const double             lStart = lSample.GameTime - lSample.Alpha * lSample.StepDelta;
-                const CameraTraceSample* lFrom = lSample.StepDelta > 0.0 ? lFindAt(lStart, lSample.Camera) : nullptr;
-                const CameraTraceSample* lTo   = lFrom != nullptr ? lFindAt(lStart + lSample.StepDelta, lSample.Camera)
-                                                                  : nullptr;
-                if (lTo == nullptr)
+                // Between two frames of the reference no more than a step apart (a reference at the fixed
+                // rate draws each step's end; a faster one draws within it), blended by time. Not across a cut.
+                const CameraTraceSample* lFrom = nullptr;
+                const CameraTraceSample* lTo   = nullptr;
+                lFindAround(lSample.GameTime, lSample.Camera, lSample.StepDelta + SAME_TIME, lFrom, lTo);
+                if (lFrom == nullptr || lTo == nullptr || lTo->bCut || lTo->GameTime - lFrom->GameTime > lSample.StepDelta + SAME_TIME)
                 {
                     continue;
                 }
 
-                const float lAlpha = static_cast<float>(lSample.Alpha);
+                const float lAlpha = static_cast<float>((lSample.GameTime - lFrom->GameTime) / (lTo->GameTime - lFrom->GameTime));
                 lExpected         = lFrom->ViewPosition + (lTo->ViewPosition - lFrom->ViewPosition) * lAlpha;
                 lExpectedSize     = lFrom->ViewSize + (lTo->ViewSize - lFrom->ViewSize) * lAlpha;
                 lExpectedRotation = lFrom->ViewRotation + AngleBetween(lFrom->ViewRotation, lTo->ViewRotation) * lAlpha;
