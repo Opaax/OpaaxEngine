@@ -1,0 +1,105 @@
+[
+    {
+        "repeat": [
+            {
+                "tag": "60",
+                "pacing": "60",
+                "rate": 60,
+                "reference": "60",
+                "jitter": 0.05,
+                "spread": 0
+            },
+            {
+                "tag": "144",
+                "pacing": "144",
+                "rate": 60,
+                "reference": "60",
+                "jitter": 0.05,
+                "spread": 1
+            }
+        ],
+        "requests": [
+            {
+                "id": "pace-{tag}",
+                "command": "time.pace",
+                "params": {
+                    "pacing": "{pacing}"
+                }
+            },
+            {
+                "id": "play-{tag}",
+                "command": "level.play",
+                "params": {
+                    "path": "Levels/Following.opaaxlevel"
+                }
+            },
+            {
+                "id": "priority-ParentCam-parent-{tag}",
+                "command": "component.set",
+                "params": {
+                    "entity": "ParentCam",
+                    "type": "Camera",
+                    "value": {
+                        "Priority": 5
+                    }
+                }
+            },
+            {
+                "command": "world.wait",
+                "params": {
+                    "seconds": 0.25
+                }
+            },
+            {
+                "id": "trace-EditorCameraSwitch-{tag}",
+                "command": "camera.trace.start",
+                "params": {
+                    "name": "EditorCameraSwitch-{tag}",
+                    "target": "Runner"
+                }
+            },
+            {
+                "command": "world.wait",
+                "params": {
+                    "seconds": 0.25
+                }
+            },
+            {
+                "id": "priority-ParentCam-chase-{tag}",
+                "command": "component.set",
+                "params": {
+                    "entity": "ParentCam",
+                    "type": "Camera",
+                    "value": {
+                        "Priority": 0
+                    }
+                }
+            },
+            {
+                "command": "world.wait",
+                "params": {
+                    "seconds": 0.5
+                }
+            },
+            {
+                "id": "EditorCameraSwitch-{tag}",
+                "command": "camera.trace.stop",
+                "params": {
+                    "limits": {
+                        "cameraSwitches": 1,
+                        "targetDrift": 0.01,
+                        "timeReversals": 0,
+                        "zoomReversals": 0
+                    }
+                }
+            },
+            {
+                "id": "stop-{tag}",
+                "command": "editor.stop",
+                "expect": {
+                    "mode": "Edit"
+                }
+            }
+        ]
+    }
+]
