@@ -7,7 +7,9 @@
 #include <doctest.h>
 
 #include "Application/Services/IPaths.h"
+#include "Core/Maths/Maths.h"
 #include "Core/OpaaxTypes.h"
+#include "Core/Templates/TypeTraits.h"
 #include "Engine/Config/EngineConfigData.h"
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/InputManager.h"
@@ -87,6 +89,52 @@ namespace
             Int32    Priority = 0;
         };
         TDynArray<Raise> Raises;
+    };
+
+    // Moves the view by Offset.
+    class NudgeModifier final : public CameraModifier
+    {
+        OPAAX_OBJECT(NudgeModifier, CameraModifier)
+
+    public:
+        Vector2F Offset = { 0.f, 0.f };
+
+        void Modify(const CameraModifierContext&, CameraView& InOutView) const override { InOutView.Position += Offset; }
+    };
+
+    // Doubles the view's distance from the origin.
+    class DoubleModifier final : public CameraModifier
+    {
+        OPAAX_OBJECT(DoubleModifier, CameraModifier)
+
+    public:
+        void Modify(const CameraModifierContext&, CameraView& InOutView) const override { InOutView.Position *= 2.f; }
+    };
+
+    // Sways the view sideways with game time, as a shake does: 10 units at 1 Hz.
+    class SwayModifier final : public CameraModifier
+    {
+        OPAAX_OBJECT(SwayModifier, CameraModifier)
+
+    public:
+        static float At(const double InTime) { return 10.f * static_cast<float>(Maths::Sin(2.0 * DPI * InTime)); }
+
+        void Modify(const CameraModifierContext& InContext, CameraView& InOutView) const override
+        {
+            InOutView.Position.x += At(InContext.GameTime);
+        }
+    };
+
+    // Breaks the view, as a division by zero in a modifier would.
+    class BrokenModifier final : public CameraModifier
+    {
+        OPAAX_OBJECT(BrokenModifier, CameraModifier)
+
+    public:
+        void Modify(const CameraModifierContext&, CameraView& InOutView) const override
+        {
+            InOutView.OrthoSize = TNumericLimits<float>::quiet_NaN();
+        }
     };
 
     // A Play world with a director: Chase (chased, priority 1), Wide and Close (fixed, below it).
@@ -367,4 +415,70 @@ TEST_CASE("Camera: a camera saved before BlendIn cuts, and its blend round-trips
     const CameraComponent lBack = nlohmann::json(lCamera).get<CameraComponent>();
     CHECK(lBack.BlendIn == 1.25f);
     CHECK(lBack.BlendCurve == ECameraBlend::EaseOut);
+}
+
+TEST_CASE("CameraDirector: modifiers change the blended view by priority; the view before them is kept")
+{
+    DirectorWorld lWorld;
+    lWorld.Tick(5);
+
+    lWorld.Director->AddModifier<NudgeModifier>().Offset = Vector2F{ 10.f, 0.f };
+    lWorld.Director->GetModifiers().back()->Priority     = 0;
+    DoubleModifier& lDouble = lWorld.Director->AddModifier<DoubleModifier>();
+    REQUIRE(lWorld.Director->GetModifiers().size() == 2);
+
+    // Added later at the same priority: runs after the nudge.
+    const CameraView       lChase = DirectorWorld::ChaseAt(lWorld.GameTime(0.5f));
+    const CameraResolution lBoth  = lWorld.Draw(0.5f);
+    CheckView(lBoth.Unmodified, lChase);
+    CHECK(lBoth.View.Position.x == doctest::Approx((lChase.Position.x + 10.f) * 2.f));
+
+    // A lower priority runs first.
+    lWorld.Director->RemoveModifier(lDouble);
+    lWorld.Director->AddModifier<DoubleModifier>().Priority = -1;
+    REQUIRE(lWorld.Director->GetModifiers().size() == 2);
+    CHECK(lWorld.Draw(0.5f).View.Position.x == doctest::Approx(lChase.Position.x * 2.f + 10.f));
+
+    // The camera itself, as a preview shows it, is not modified.
+    CheckView(CameraManager::ResolveCamera(lWorld.Chase, 0.5f), lChase);
+}
+
+TEST_CASE("CameraDirector: a modifier of game time draws the same at any frames, and holds when paused")
+{
+    for (const bool bSteady : { false, true })
+    {
+        CAPTURE(bSteady);
+        DirectorWorld lWorld;
+        lWorld.Director->AddModifier<SwayModifier>();
+        lWorld.Tick(1);
+
+        for (Uint32 lFrame = 0; lFrame < 40; ++lFrame)
+        {
+            const Frame lPaced = bSteady ? Frame{ 1, 0.37f } : FRAMES[lFrame % 10];
+            lWorld.Tick(lPaced.Steps);
+
+            const double lTime     = lWorld.GameTime(lPaced.Alpha);
+            CameraView   lExpected = DirectorWorld::ChaseAt(lTime);
+            lExpected.Position.x  += SwayModifier::At(lTime);
+            CAPTURE(lTime);
+            CheckView(lWorld.Draw(lPaced.Alpha).View, lExpected);
+        }
+
+        // No step, the same alpha: the same view.
+        const CameraView lHeld = lWorld.Draw(0.2f).View;
+        lWorld.Tick(0);
+        CheckView(lWorld.Draw(0.2f).View, lHeld);
+    }
+}
+
+TEST_CASE("CameraDirector: a view a modifier breaks is caught by the guard")
+{
+    DirectorWorld lWorld;
+    lWorld.Tick(2);
+    const CameraView lGood = lWorld.Draw(0.5f).View;
+
+    lWorld.Director->AddModifier<BrokenModifier>();
+    CameraView lBroken = lWorld.Draw(0.5f).View;
+    CHECK(CameraManager::GuardView(lBroken, lGood) == EViewGuard::Replaced);
+    CheckView(lBroken, lGood);
 }

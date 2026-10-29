@@ -83,7 +83,8 @@ namespace Opaax
             return lResolution;
         }
 
-        lResolution.View = ResolveCamera(Entity{ lResolution.Entity, &InWorld }, InAlpha);
+        lResolution.View       = ResolveCamera(Entity{ lResolution.Entity, &InWorld }, InAlpha);
+        lResolution.Unmodified = lResolution.View;
         return lResolution;
     }
 

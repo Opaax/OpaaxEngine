@@ -1,8 +1,10 @@
 #pragma once
 
 #include "Core/OpaaxTypes.h"
+#include "Object/ObjectPtr.h"
 #include "Renderer/Camera/CameraBlend.h"
 #include "Renderer/Camera/CameraManager.h"
+#include "Renderer/Camera/CameraModifier.h"
 #include "Renderer/CameraView.h"
 #include "World/Entity/EntityTypes.h"
 #include "World/Systems/WorldSubsystem.h"
@@ -36,6 +38,7 @@ namespace Opaax
     //   A change is stamped on the steps' timeline: made in a fixed step, at that step's start, so it
     //   is drawn the same at any frame rate; made between steps, at the last step's end. A frame draws
     //   the blend at its own game time, so a paused world holds still. CameraManager::Cut ends it.
+    //   Then its modifiers (CameraModifier: a shake) change the view, by priority.
     // =============================================================================
     class CameraDirector final : public WorldSubsystem
     {
@@ -58,8 +61,8 @@ namespace Opaax
 
         /**
          * The view a frame drawn at InAlpha shows: each shot at its display pose (its current pose
-         * without an alpha), blended at the frame's game time (GameTimeAt). Before the first Direct,
-         * the live camera alone.
+         * without an alpha), blended at the frame's game time (GameTimeAt), then changed by the
+         * modifiers. Before the first Direct, the live camera alone.
          */
         CameraResolution Frame(TOptional<float> InAlpha) const;
 
@@ -68,6 +71,30 @@ namespace Opaax
 
         /** The game time a frame of InWorld drawn at InAlpha shows: its stepped time less the rest of its last step. */
         static double GameTimeAt(const World& InWorld, TOptional<float> InAlpha) noexcept;
+
+        // =============================================================================
+        // Modifiers
+        // =============================================================================
+    public:
+        /**
+         * Gives the director InModifier to run on every frame from the next, by its Priority (among
+         * equals, in the order added). A priority changed later counts from the next Direct.
+         */
+        CameraModifier& AddModifier(TStrongObjectPtr<CameraModifier> InModifier);
+
+        /** A new modifier of class T, run from the next frame. */
+        template<typename T>
+        requires CDerivedFrom<T, CameraModifier>
+        T& AddModifier()
+        {
+            return static_cast<T&>(AddModifier(TStrongObjectPtr<CameraModifier>(NewObject<T>())));
+        }
+
+        /** Stops running InModifier and lets it go. */
+        void RemoveModifier(const CameraModifier& InModifier);
+
+        /** The modifiers, in the order they run (as of the last Direct). */
+        const TDynArray<TStrongObjectPtr<CameraModifier>>& GetModifiers() const noexcept { return m_Modifiers; }
 
         // =============================================================================
         // Get
@@ -97,7 +124,13 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
+        /** Frame without the modifiers: the shots blended. */
+        CameraResolution Blend(TOptional<float> InAlpha) const;
+
         TDynArray<CameraShot> m_Shots;
+
+        /** Sorted by Priority, the lowest first, at every Direct. */
+        TDynArray<TStrongObjectPtr<CameraModifier>> m_Modifiers;
 
         /** Cameras found and tied at the top on the last Direct. */
         Uint32 m_Count = 0;

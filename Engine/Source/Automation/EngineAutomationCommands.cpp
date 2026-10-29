@@ -23,6 +23,7 @@
 #include "Platform/Window/Window.h"
 #include "Renderer/Camera/CameraComponent.h"
 #include "Renderer/Camera/CameraInterpolationComponent.h"
+#include "Renderer/Camera/CameraDirector.h"
 #include "Renderer/Camera/CameraManager.h"
 #include "UI/UICanvas.h"
 #include "UI/UISubsystem.h"
@@ -759,7 +760,8 @@ namespace Opaax::EngineAutomation
                 "recorded (framed between its steps), rhythm (over the last 60 steps: still, steps, update, or mixed "
                 "when one entity moves it both in the steps and in Update; unknown before 60 steps)}, and in a "
                 "Play world the last frame's {live: {name, id, rhythm, count, tied, blends (blends under way), blend "
-                "(the newest: from, the camera it leaves, null for a view held; weight toward the live camera)}, "
+                "(the newest: from, the camera it leaves, null for a view held; weight toward the live camera), "
+                "unmodified (the view before the modifiers)}, modifiers (each {class, priority}, in the order they run), "
                 "frame: {delta, steps, alpha, interpolated, "
                 "stepDelta, gameTime}}. An Edit world is framed by the editor's camera.",
                 [&InEngine](const nlohmann::json&)
@@ -826,9 +828,10 @@ namespace Opaax::EngineAutomation
                         {
                             lLive["rhythm"] = RhythmOf(Entity(lFrame.Resolution.Entity, lWorld));
                         }
-                        lLive["count"]  = lFrame.Resolution.Count;
-                        lLive["tied"]   = lFrame.Resolution.Tied;
-                        lLive["blends"] = lFrame.Resolution.Blends;
+                        lLive["count"]      = lFrame.Resolution.Count;
+                        lLive["tied"]       = lFrame.Resolution.Tied;
+                        lLive["blends"]     = lFrame.Resolution.Blends;
+                        lLive["unmodified"] = ViewToJson(lFrame.Resolution.Unmodified);
                         if (lFrame.Resolution.Blends > 0)
                         {
                             const Entity lFrom(lFrame.Resolution.BlendFrom, lWorld);
@@ -838,6 +841,18 @@ namespace Opaax::EngineAutomation
                         }
 
                         lAnswer["live"]  = Move(lLive);
+
+                        // What changes the view after the blend, in the order it runs.
+                        nlohmann::json lModifiers = nlohmann::json::array();
+                        if (const CameraDirector* lDirector = lWorld->GetSubsystems().GetSubsystem<CameraDirector>())
+                        {
+                            for (const TStrongObjectPtr<CameraModifier>& lModifier : lDirector->GetModifiers())
+                            {
+                                lModifiers.push_back(nlohmann::json{ { "class", lModifier->GetClass().GetName().CStr() },
+                                                                     { "priority", lModifier->Priority } });
+                            }
+                        }
+                        lAnswer["modifiers"] = Move(lModifiers);
                         lAnswer["frame"] = nlohmann::json{
                             { "delta",        lFrame.FrameDelta },
                             { "steps",        lFrame.Steps },

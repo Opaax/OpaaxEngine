@@ -1,5 +1,6 @@
 #include "Renderer/Camera/CameraDirector.h"
 
+#include "Core/Algo/Algo.h"
 #include "Renderer/Camera/CameraComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/World.h"
@@ -47,6 +48,13 @@ namespace Opaax
     // =========================================================================
     void CameraDirector::Direct()
     {
+        // By priority, equals in the order added: a priority changed since counts from this frame.
+        Algo::StableSort(m_Modifiers, [](const TStrongObjectPtr<CameraModifier>& InLeft,
+                                         const TStrongObjectPtr<CameraModifier>& InRight)
+        {
+            return InLeft->Priority < InRight->Priority;
+        });
+
         World&                 lWorld = GetWorld();
         const CameraResolution lFound = CameraManager::FindLiveCamera(lWorld);
         m_Count = lFound.Count;
@@ -123,6 +131,19 @@ namespace Opaax
 
     CameraResolution CameraDirector::Frame(const TOptional<float> InAlpha) const
     {
+        CameraResolution lResolution = Blend(InAlpha);
+        lResolution.Unmodified = lResolution.View;
+
+        const CameraModifierContext lContext{ GetWorld(), GameTimeAt(GetWorld(), InAlpha), lResolution.Entity };
+        for (const TStrongObjectPtr<CameraModifier>& lModifier : m_Modifiers)
+        {
+            lModifier->Modify(lContext, lResolution.View);
+        }
+        return lResolution;
+    }
+
+    CameraResolution CameraDirector::Blend(const TOptional<float> InAlpha) const
+    {
         World& lWorld = GetWorld();
         if (m_Shots.empty())
         {
@@ -158,6 +179,21 @@ namespace Opaax
             lResolution.BlendFrom = Entity(lFrom, &lWorld).IsValid() ? lFrom : ENTITY_NONE;
         }
         return lResolution;
+    }
+
+    CameraModifier& CameraDirector::AddModifier(TStrongObjectPtr<CameraModifier> InModifier)
+    {
+        CameraModifier& lAdded = *InModifier;
+        m_Modifiers.push_back(Move(InModifier));
+        return lAdded;
+    }
+
+    void CameraDirector::RemoveModifier(const CameraModifier& InModifier)
+    {
+        Algo::RemoveIf(m_Modifiers, [&InModifier](const TStrongObjectPtr<CameraModifier>& InOwned)
+        {
+            return InOwned.Get() == &InModifier;
+        });
     }
 
     void CameraDirector::Cut()
