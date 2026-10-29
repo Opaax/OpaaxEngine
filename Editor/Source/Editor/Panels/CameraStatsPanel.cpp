@@ -121,10 +121,25 @@ namespace Opaax::Editor
             {
                 ImGui::TextDisabled("%s", RhythmLabel(lRhythm));
             }
+
+            // The hand-over under way: the camera the view leaves (none once destroyed) and how far it is.
+            if (InFrame.Resolution.Blends > 0)
+            {
+                const Entity lFrom{ InFrame.Resolution.BlendFrom, &InWorld };
+                ImGui::Text("Blend   from %s   %.0f%%", lFrom.IsValid() ? lFrom.GetName().CStr() : "a view held",
+                            InFrame.Resolution.BlendWeight * 100.f);
+                if (InFrame.Resolution.Blends > 1)
+                {
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("(%u blends under way)", InFrame.Resolution.Blends);
+                }
+                ImGui::ProgressBar(InFrame.Resolution.BlendWeight, ImVec2(-1.f, 0.f), "");
+            }
         }
 
         const CameraView& lView = InFrame.Resolution.View;
-        ImGui::Text("View    (%.2f, %.2f)  size %.2f", lView.Position.x, lView.Position.y, lView.OrthoSize);
+        ImGui::Text("View    (%.2f, %.2f)  size %.2f  roll %.1f", lView.Position.x, lView.Position.y, lView.OrthoSize,
+                    lView.Rotation);
         ImGui::Text("Frame   %.2f ms   %u step%s   alpha %.3f   %s%s", InFrame.FrameDelta * 1000.0, InFrame.Steps,
                     InFrame.Steps == 1 ? "" : "s", InFrame.Alpha,
                     InFrame.bInterpolated ? "between steps" : "as is", InFrame.bCut ? "   cut" : "");
