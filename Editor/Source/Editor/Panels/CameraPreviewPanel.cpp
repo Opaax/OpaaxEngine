@@ -1,5 +1,6 @@
 #include "Editor/Panels/CameraPreviewPanel.h"
 
+#include "Editor/Camera/CameraPreview.hpp"
 #include "Editor/EditorContext.h"
 #include "Editor/ImguiLibrary/ImguiWidgets.h"
 #include "Editor/Operation/EditorSelection.hpp"
@@ -9,14 +10,12 @@
 #include "Application/Services/IEngine.h"
 #include "Core/Log/Logger.h"
 
-#include "Renderer/CameraView.h"
 #include "Renderer/RenderTarget.hpp"        // OffscreenRenderTarget
 #include "RHI/Framebuffer.h"                // IFramebuffer + FramebufferSpec
 
 #include "Renderer/Camera/CameraComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
-#include "World/Entity/EntityHierarchy.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
 
@@ -83,73 +82,61 @@ namespace Opaax::Editor
             return;
         }
 
-        m_Previewed = lSelected.GetHandle();
+        m_Context.Preview.SetCamera(lSelected.GetHandle());
     }
 
     // =========================================================================
-    // TryResolveCameraView — the previewed entity, if it is still a camera in the active world.
-    //   Reads the same values as CameraManager::Resolve.
+    // GetPreviewedCamera — the previewed entity, if it is still a camera in the active world.
     // =========================================================================
-    bool CameraPreviewPanel::TryResolveCameraView(CameraView& OutView) const
+    Entity CameraPreviewPanel::GetPreviewedCamera() const
     {
-        World* const lWorld = m_Context.Worlds.GetActiveWorld();
+        World* const   lWorld  = m_Context.Worlds.GetActiveWorld();
+        const EntityID lCamera = m_Context.Preview.GetCamera();
 
-        if (lWorld == nullptr || m_Previewed == ENTITY_NONE)
+        if (lWorld == nullptr || lCamera == ENTITY_NONE)
         {
-            return false;
+            return Entity{};
         }
 
-        // Resolved in the active world (TrackSelection only stores entities of the active world).
-        Entity lEntity{ m_Previewed, lWorld };
+        // In the active world: TrackSelection only stores entities of the active world.
+        const Entity lEntity{ lCamera, lWorld };
 
-        if (!lEntity.IsValid())
+        if (!lEntity.IsValid() || !lEntity.Has<TransformComponent>() || !lEntity.Has<CameraComponent>())
         {
-            return false;
+            return Entity{};
         }
 
-        const TransformComponent* lTransform = lEntity.TryGet<TransformComponent>();
-        const CameraComponent*    lCamera    = lEntity.TryGet<CameraComponent>();
-
-        if (lTransform == nullptr || lCamera == nullptr)
-        {
-            return false;
-        }
-
-        // World pose, like CameraManager::Resolve.
-        OutView = CameraView{ EntityHierarchy::WorldTransform(lEntity).Position, lCamera->OrthoSize };
-
-        return true;
+        return lEntity;
     }
 
     void CameraPreviewPanel::OnActiveWorldChanged(World* /*InOld*/, World* /*InNew*/)
     {
-        m_Previewed = ENTITY_NONE;
+        m_Context.Preview.Forget();
     }
 
     void CameraPreviewPanel::SubmitView()
     {
         // A hidden preview draws nothing and costs no pass.
-        if (m_RenderTarget == nullptr || !m_Context.Panels.IsVisible(PanelID()))
+        const Entity lCamera  = GetPreviewedCamera();
+        const bool   bSubmits = m_RenderTarget != nullptr && m_Context.Panels.IsVisible(PanelID()) && lCamera.IsValid();
+
+        m_Context.Preview.MarkSubmitted(bSubmits);
+        if (!bSubmits)
         {
             return;
         }
 
-        CameraView lView;
-
-        if (!TryResolveCameraView(lView))
-        {
-            return;
-        }
-
-        // No overlays: the preview shows what the game shows.
-        m_Context.Engine.SubmitRenderView(*m_RenderTarget, lView, /*bInDrawOverlays*/ false);
+        // Panels run before the frame's steps: the renderer frames the camera when it draws, at the
+        // alpha the world's poses are drawn with. No overlays: the preview shows what the game shows.
+        m_Context.Engine.SubmitCameraView(*m_RenderTarget, lCamera.GetHandle(), /*bInDrawOverlays*/ false,
+                                          m_Context.Preview.DrawnViewSlot(), lCamera.GetWorld());
 
         if (!m_bPreviewLogged)
         {
             m_bPreviewLogged = true;
 
-            OPAAX_LOG(LogCameraPreviewPanel, Info, "Previewing a camera at ({}, {}), orthoSize {} — into a {}x{} target",
-                      lView.Position.x, lView.Position.y, lView.OrthoSize, m_Size.x, m_Size.y);
+            OPAAX_LOG(LogCameraPreviewPanel, Info, "Previewing camera '{}' into a {}x{} target",
+                      lCamera.GetName().CStr(), m_Size.x, m_Size.y);
         }
     }
 
@@ -186,9 +173,7 @@ namespace Opaax::Editor
         m_PendingSize.x = static_cast<Uint32>(lAvail.x);
         m_PendingSize.y = static_cast<Uint32>(lAvail.y);
 
-        CameraView lView;
-
-        if (!TryResolveCameraView(lView))
+        if (!GetPreviewedCamera().IsValid())
         {
             // Say why there is no picture (a stale image would look like a frozen camera).
             ImGui::TextDisabled("No camera");

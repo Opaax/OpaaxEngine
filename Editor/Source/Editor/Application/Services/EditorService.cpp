@@ -147,6 +147,7 @@ namespace Opaax::Editor
         m_PrefabDocument    = MakeUnique<EditorPrefabDocument>();
         m_Viewport          = MakeUnique<EditorViewport>();
         m_Camera            = MakeUnique<EditorCamera>();
+        m_CameraPreview     = MakeUnique<CameraPreview>();
         m_Gizmo             = MakeUnique<EditorGizmo>();
         m_Undo              = MakeUnique<EditorUndo>();
         m_PIE               = MakeUnique<PlayInEditor>(*m_WorldMgr, InEngine);
@@ -209,7 +210,8 @@ namespace Opaax::Editor
             *InWindow,
             m_EditorPaths,
             *m_Export,
-            *m_AssetEditors
+            *m_AssetEditors,
+            *m_CameraPreview
         });
 
         m_AssetEditors->Bind(*m_Context);

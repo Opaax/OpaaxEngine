@@ -16,6 +16,7 @@ namespace Opaax
         class IEditorUIBackend;         // passed to panels by constructor
         class IEditorDialogs;           // file pickers and message boxes
         class IEditorWidgets;           // value editors used by drawers
+        class CameraPreview;            // the camera the Camera Preview panel shows
         class EditorCamera;             // the editor camera for Edit worlds
         class EditorSelection;          // what is selected (Hierarchy + viewport write, Inspector reads)
         class EditorResourceEvents;     // "a document was saved", two-phase
@@ -121,6 +122,7 @@ namespace Opaax
 
             // The open assets, whatever their class: one window, one history and one Save each.
             AssetEditors& Assets;
+            CameraPreview& Preview;
         };
     }
 }

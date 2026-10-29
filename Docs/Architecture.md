@@ -57,7 +57,9 @@ and the game export. A game is a module of its own types, linked into its runtim
    mixed (its `rhythm`) with a warning: it would jitter on screens faster than the steps.
 5. **Render:** the active camera frames the world, then each view is drawn. Moving bodies and the
    camera (its pose and its zoom) are placed between their last two steps, so motion is smooth at
-   any frame rate and a camera following a body keeps it still on screen.
+   any frame rate and a camera following a body keeps it still on screen. A view that shows another
+   camera (the editor's Camera Preview) names it, and the renderer frames it as it draws, at the
+   same alpha as the poses (`SubmitCameraView`): it matches the game's view of that camera exactly.
 
 A paused world (in the editor) skips its part of 3 and 4; a step runs it for one frame. It is drawn
 as it was on its last frame (the same alpha), so it holds still, and once resumed it goes on from
