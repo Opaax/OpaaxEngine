@@ -591,12 +591,13 @@ TEST_CASE("ObserveCameraRhythm: each window of steps gives the rhythm; a mixed o
     const CameraStepMotion lSince{ false, true };
     const CameraStepMotion lBoth{ true, true, lMover, false };
 
-    // Nothing said before a full window.
+    // Unknown before a full window: not "still".
     for (Uint32 lStep = 1; lStep < CameraRhythm::WINDOW_STEPS; ++lStep)
     {
         CHECK_FALSE(ObserveCameraRhythm(lRhythm, lInStep));
     }
-    CHECK(lRhythm.Last == ECameraRhythm::Still);
+    CHECK(lRhythm.Last == ECameraRhythm::Unknown);
+    CHECK(OpaaxStringView(ToString(lRhythm.Last)) == OpaaxStringView("unknown"));
     CHECK_FALSE(ObserveCameraRhythm(lRhythm, lInStep));
     CHECK(lRhythm.Last == ECameraRhythm::Steps);
 
