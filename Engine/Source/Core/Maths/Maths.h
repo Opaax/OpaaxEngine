@@ -1028,6 +1028,17 @@ namespace Opaax
 
     public:
         // End Smoothing
+
+        // =============================================================================
+        // Noise — smooth values that replay: a seed and a coordinate always give the same number.
+        // =============================================================================
+        /**
+         * Gradient (Perlin) noise along a line: in [-1, 1], 0 at every whole X, smooth in between (its
+         * slope and its curvature too). Sampled at a time times a frequency, it wobbles the same way at
+         * any frame rate (a camera shake); another Seed gives an unrelated wobble. X is a double so a
+         * game running for hours keeps its detail.
+         */
+        [[nodiscard]] static float Noise1D(Uint32 Seed, double X);
         // =============================================================================
 
         // =============================================================================
