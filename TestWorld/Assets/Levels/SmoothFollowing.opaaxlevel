@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/SmoothFollowing.opaaxmap"
+    ],
+    "name": "SmoothFollowing",
+    "persistentMap": "Maps/SmoothFollowing.opaaxmap",
+    "version": 1
+}

@@ -27,6 +27,8 @@ namespace TestWorld
     //   Chase with it: a respawn, teleported and cut, so nothing slides across the level.
     //   With UpdateNudge, Chase is also moved up by that much in every Update (each step puts it back on
     //   the runner): a camera moved both in the steps and between them, reported as mixed.
+    //   With SmoothTime, Chase eases after the runner (Maths::SmoothDamp, in the steps) instead of
+    //   being put on it: the smoothed follow the camera docs describe.
     // =============================================================================
     class FollowProbe : public Opaax::Behaviour
     {
@@ -39,6 +41,7 @@ namespace TestWorld
         float              ZoomPerStep = 0.f;   // OrthoSize Chase gains every step
         float              WrapAfter   = 0.f;   // seconds of steps between two jumps back to the start; 0: never
         float              UpdateNudge = 0.f;   // how far Chase is also moved up in every Update; 0: not moved there
+        float              SmoothTime  = 0.f;   // seconds Chase takes to settle on the runner; 0: put on it
 
         Opaax::Int32 Frames        = 0;     // frames read
         Opaax::Int32 FramedBetween = 0;     // frames framed strictly inside the last step
@@ -49,7 +52,8 @@ namespace TestWorld
         float        MaxZoomLag    = 0.f;   // largest gap between the zoom's and the pose's fraction of the step
 
         OPAAX_PROPERTIES(FollowProbe, OPAAX_PROP(Speed), OPAAX_PROP(Chase), OPAAX_PROP(Offset),
-                         OPAAX_PROP(ZoomPerStep), OPAAX_PROP(WrapAfter), OPAAX_PROP(UpdateNudge), OPAAX_PROP(Frames),
+                         OPAAX_PROP(ZoomPerStep), OPAAX_PROP(WrapAfter), OPAAX_PROP(UpdateNudge), OPAAX_PROP(SmoothTime),
+                         OPAAX_PROP(Frames),
                          OPAAX_PROP(FramedBetween), OPAAX_PROP(MinFraction), OPAAX_PROP(MaxFraction),
                          OPAAX_PROP(ViewOffsetY), OPAAX_PROP(ZoomFrames), OPAAX_PROP(MaxZoomLag))
 
@@ -87,7 +91,10 @@ namespace TestWorld
 
             if (m_Camera.IsValid())
             {
-                m_Camera.Get<Opaax::TransformComponent>().Position = lLocal->Position + Offset;
+                Opaax::Vector2F& lCamera = m_Camera.Get<Opaax::TransformComponent>().Position;
+                lCamera = SmoothTime > 0.f ? Opaax::Maths::SmoothDamp(lCamera, lLocal->Position + Offset, m_CameraVelocity,
+                                                                      SmoothTime, InFixedDeltaTime)
+                                           : lLocal->Position + Offset;
                 m_Camera.Get<Opaax::CameraComponent>().OrthoSize  += ZoomPerStep;
             }
 
@@ -159,5 +166,8 @@ namespace TestWorld
         Opaax::Entity m_Camera;
         float         m_StartX    = 0.f;
         float         m_SinceWrap = 0.f;
+
+        // Chase's speed while it eases after the runner (SmoothTime).
+        Opaax::Vector2F m_CameraVelocity = { 0.f, 0.f };
     };
 }
