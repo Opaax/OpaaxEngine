@@ -181,11 +181,11 @@ namespace Opaax::EngineAutomation
                                    { "id",   lMeta != nullptr ? nlohmann::json(lMeta->Id.ToString()) : nlohmann::json() } };
         }
 
-        /** How a camera's view moves against the steps, as camera.info gives it ("still" when not recorded). */
+        /** How a camera's view moves against the steps, as camera.info gives it ("unknown" when not recorded). */
         const char* RhythmOf(Entity InCamera)
         {
             const CameraInterpolationComponent* lHistory = InCamera.TryGet<CameraInterpolationComponent>();
-            return ToString(lHistory != nullptr ? lHistory->Rhythm.Last : ECameraRhythm::Still);
+            return ToString(lHistory != nullptr ? lHistory->Rhythm.Last : ECameraRhythm::Unknown);
         }
 
         nlohmann::json SummaryToJson(const CameraTraceSummary& InSummary)
@@ -748,7 +748,7 @@ namespace Opaax::EngineAutomation
                 "refreshHz snapped to, snapping, maxSteps, droppedSteps), cameras} with "
                 "each camera's {name, id, priority, x, y, size, framed (the view it gives on that frame: x, y, size), "
                 "recorded (framed between its steps), rhythm (over the last 60 steps: still, steps, update, or mixed "
-                "when one entity moves it both in the steps and in Update)}, and in a "
+                "when one entity moves it both in the steps and in Update; unknown before 60 steps)}, and in a "
                 "Play world the last frame's {live: {name, id, rhythm, count, tied}, frame: {delta, steps, alpha, interpolated, "
                 "stepDelta, gameTime}}. An Edit world is framed by the editor's camera.",
                 [&InEngine](const nlohmann::json&)

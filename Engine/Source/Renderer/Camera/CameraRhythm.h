@@ -8,6 +8,7 @@ namespace Opaax
     /** How a camera's view moves against the fixed steps. */
     enum class ECameraRhythm : Uint8
     {
+        Unknown,  // fewer steps seen than a window
         Still,    // not moved
         Steps,    // moved in fixed steps: framed between its last two
         Update,   // moved between the steps (in Update): framed where it was put
@@ -21,7 +22,8 @@ namespace Opaax
             case ECameraRhythm::Steps:  return "steps";
             case ECameraRhythm::Update: return "update";
             case ECameraRhythm::Mixed:  return "mixed";
-            default:                    return "still";
+            case ECameraRhythm::Still:  return "still";
+            default:                    return "unknown";
         }
     }
 
@@ -62,8 +64,8 @@ namespace Opaax
         EntityID MovedBoth = ENTITY_NONE;
         bool     bSizeBoth = false;
 
-        /** What the last full window said, and whether a Mixed one was warned about. */
-        ECameraRhythm Last    = ECameraRhythm::Still;
+        /** What the last full window said (Unknown before the first), and whether a Mixed one was warned about. */
+        ECameraRhythm Last    = ECameraRhythm::Unknown;
         bool          bWarned = false;
     };
 
