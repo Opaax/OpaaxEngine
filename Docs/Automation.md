@@ -117,6 +117,7 @@ The editor adds:
 | `editor.camera.set` | `x`, `y`, `size` | Places the editor's camera (a value left out is kept) |
 | `editor.camera.pan` | `dx`, `dy` | Pans as a drag of that many viewport pixels: the content follows the drag |
 | `editor.camera.zoom` | `wheel`, `x`, `y` | Zooms by wheel steps (positive zooms in) at a viewport pixel (the centre by default): the world point there stays there; answers it (`under`) and how far it moved (`shift`, 0) |
+| `editor.viewport` | | The level viewport's size, the world's `view`, and the selection `outline` drawn on the last frame (its centre and size, world units; null when nothing is outlined) with `fromView`, its centre from the view's: constant for an entity the camera follows |
 | `editor.camera.focus` | | Frames the selection, as Focus Selected does; fails while playing or with nothing selected |
 | `editor.camera.preview` | | The camera the Camera Preview shows (select one to preview it): `camera` (`name`, `id`), `drawn` (on the last frame: the panel is open), `view` as drawn, the world's view that frame, `live` (it frames the playing world) and `gap` between the two views (0 for the live camera) |
 | `level.open`, `map.open` | `path`, `discard` | Opens a level or a map (relative to the project's assets) |

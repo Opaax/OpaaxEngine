@@ -33,6 +33,7 @@
 #include "Renderer/CameraView.h"            // ScreenToWorld
 
 #include "World/Entity/Entity.h"
+#include "World/Entity/EntityQuery.h"     // the outline's box
 #include "World/World.h"
 #include "World/WorldManager.h"
 
@@ -51,6 +52,13 @@ namespace Opaax::Editor
 
     void ViewportPanel::Startup()
     {
+        // The overlays on entities are queued after the frame's steps, where the renderer draws them:
+        // in OnPreRender they would sit on poses a step away from the drawn ones, in Play.
+        m_BeforeDraw = m_Context.Engine.AddBeforeDraw([this](const TOptional<float> InAlpha)
+        {
+            EnqueueEntityOverlays(InAlpha);
+        });
+
         // The engine's device creates the FBO; the panel owns it.
         m_Framebuffer = m_Context.Engine.CreateFramebuffer(
             FramebufferSpec{ m_viewportSize.x, m_viewportSize.y, /*DepthStencil*/ true });
@@ -68,8 +76,8 @@ namespace Opaax::Editor
 
     // =========================================================================
     // OnPreRender — runs in EditorService::BeginFrame, before Engine().Loop() renders the world,
-    //   so everything here reaches this frame's render. The resize and the outline are separate
-    //   steps (ApplyPendingResize returns early when nothing is pending).
+    //   so everything here reaches this frame's render. The overlays on entities are queued later,
+    //   just before the frame is drawn (EnqueueEntityOverlays).
     // =========================================================================
     void ViewportPanel::OnPreRender()
     {
@@ -84,11 +92,8 @@ namespace Opaax::Editor
         ApplyPendingResize();
         ApplyCameraGesture();
 
-        // First overlay: it uses the camera just set, and it is the only one on the Background layer.
+        // It uses the camera just set, and it is the only overlay on the Background layer.
         EnqueueGrid();
-
-        EnqueueSelectionOutline();
-        EnqueueEntityIcons();
 
         // Last: publish the view once everything that could move it has run.
         SubmitView();
@@ -305,24 +310,38 @@ namespace Opaax::Editor
     }
 
     // =========================================================================
-    // EnqueueSelectionOutline / EnqueueEntityIcons — submitted every frame (DebugDraw is cleared
-    //   each frame). Both log once when they draw something.
+    // EnqueueEntityOverlays / EnqueueSelectionOutline / EnqueueEntityIcons — submitted every frame
+    //   (DebugDraw is cleared each frame), just before it is drawn, at its alpha.
     // =========================================================================
-    void ViewportPanel::EnqueueSelectionOutline()
+    void ViewportPanel::EnqueueEntityOverlays(const TOptional<float> InAlpha)
+    {
+        EnqueueSelectionOutline(InAlpha);
+        EnqueueEntityIcons(InAlpha);
+    }
+
+    void ViewportPanel::EnqueueSelectionOutline(const TOptional<float> InAlpha)
     {
         World* const lWorld = m_Context.Selection.GetWorld();
         if (lWorld == nullptr)
         {
+            m_Context.Viewport.SetOutlined(NullOpt);
             return;
         }
 
-        ViewportOverlays::EnqueueSelectionOutline(
-            m_Context.Engine.GetDebugDraw(), *lWorld, m_Context.Selection.Ids(), AnchorHalfExtent());
-        ViewportOverlays::EnqueueLightGizmos(
-            m_Context.Engine.GetDebugDraw(), *lWorld, m_Context.Selection.Ids(), AnchorHalfExtent());
+        const TDynArray<EntityID>& lIds    = m_Context.Selection.Ids();
+        const float                lAnchor = AnchorHalfExtent();
+
+        const bool bOutlined =
+            ViewportOverlays::EnqueueSelectionOutline(m_Context.Engine.GetDebugDraw(), *lWorld, lIds, lAnchor, InAlpha) > 0;
+        ViewportOverlays::EnqueueLightGizmos(m_Context.Engine.GetDebugDraw(), *lWorld, lIds, lAnchor, InAlpha);
+
+        Bounds2D lOutlined;
+        m_Context.Viewport.SetOutlined(bOutlined && EntityQuery::TryGetBounds(*lWorld, lIds, lOutlined, lAnchor, InAlpha)
+                                           ? TOptional<Bounds2D>(lOutlined)
+                                           : NullOpt);
     }
 
-    void ViewportPanel::EnqueueEntityIcons()
+    void ViewportPanel::EnqueueEntityIcons(const TOptional<float> InAlpha)
     {
         World* lWorld = m_Context.Worlds.GetActiveWorld();
 
@@ -332,7 +351,7 @@ namespace Opaax::Editor
             return;
         }
 
-        ViewportOverlays::EnqueueEntityIcons(m_Context.Engine.GetDebugDraw(), *lWorld, AnchorHalfExtent());
+        ViewportOverlays::EnqueueEntityIcons(m_Context.Engine.GetDebugDraw(), *lWorld, AnchorHalfExtent(), InAlpha);
     }
 
     // =========================================================================
@@ -459,7 +478,10 @@ namespace Opaax::Editor
 
     void ViewportPanel::Shutdown()
     {
-        // Nothing to unregister: the view is submitted per frame.
+        // The view is submitted per frame; only the overlays' hook is registered.
+        m_Context.Engine.RemoveBeforeDraw(m_BeforeDraw);
+        m_BeforeDraw = 0;
+
         m_RenderTarget.reset();
         m_Framebuffer.reset();
     }

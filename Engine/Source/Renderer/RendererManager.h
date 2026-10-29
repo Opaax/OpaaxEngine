@@ -276,6 +276,16 @@ namespace Opaax
                               CameraView* OutDrawnView = nullptr, World* InSource = nullptr);
 
         /**
+         * Runs InHook on every frame just before it is drawn, after the fixed steps and the camera.
+         * See IEngine::AddBeforeDraw. A hook does not add or remove hooks.
+         * @return The handle RemoveBeforeDraw takes
+         */
+        Uint64 AddBeforeDraw(TFunction<void(TOptional<float>)> InHook);
+
+        /** Stops the hook InHandle names. An unknown handle does nothing. */
+        void RemoveBeforeDraw(Uint64 InHandle);
+
+        /**
          * Creates an offscreen framebuffer. Release it before the render core shuts down.
          * @return Null before Startup or without a device
          */
@@ -339,6 +349,15 @@ namespace Opaax
          */
         CameraView FrameCamera(World& InWorld, EntityID InCamera) const;
 
+        /** The alpha this frame's poses are drawn at (PoseFor); none when they are drawn as they are. */
+        TOptional<float> DrawAlpha() const noexcept { return m_bInterpolate ? TOptional<float>(m_FrameAlpha) : NullOpt; }
+
+        struct BeforeDrawHook
+        {
+            Uint64                            Handle = 0;
+            TFunction<void(TOptional<float>)> Hook;
+        };
+
         // =============================================================================
         // Members
         // =============================================================================
@@ -383,6 +402,10 @@ namespace Opaax
          * Progress through the fixed step, for display only. Zero when interpolation is off.
          */
         float m_FrameAlpha = 0.f;
+
+        /** Run before each frame is drawn, in the order they were added. */
+        TDynArray<BeforeDrawHook> m_BeforeDraw;
+        Uint64                    m_NextBeforeDraw = 1;
 
         /** Render.bInterpolation — read at Startup, updated on Engine.config change. */
         bool m_bInterpolate = true;

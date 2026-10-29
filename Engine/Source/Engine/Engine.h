@@ -161,6 +161,8 @@ namespace Opaax
         void                        SubmitCameraView(IRenderTarget& InTarget, EntityID InCamera, bool bInDrawOverlays,
                                                      CameraView* OutDrawnView = nullptr,
                                                      World* InSource = nullptr) override;
+        Uint64                      AddBeforeDraw(TFunction<void(TOptional<float>)> InHook) override;
+        void                        RemoveBeforeDraw(Uint64 InHandle) override;
         void                        SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget = nullptr,
                                                    const CameraView* InView = nullptr) override;
         bool                        CaptureFrame(const OpaaxString& InPngPath) override;

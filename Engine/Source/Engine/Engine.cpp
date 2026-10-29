@@ -676,6 +676,19 @@ namespace Opaax
         }
     }
 
+    Uint64 Engine::AddBeforeDraw(TFunction<void(TOptional<float>)> InHook)
+    {
+        return m_RendererManager != nullptr ? m_RendererManager->AddBeforeDraw(Move(InHook)) : 0;
+    }
+
+    void Engine::RemoveBeforeDraw(const Uint64 InHandle)
+    {
+        if (m_RendererManager != nullptr)
+        {
+            m_RendererManager->RemoveBeforeDraw(InHandle);
+        }
+    }
+
     void Engine::SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget, const CameraView* InView)
     {
         if (m_RendererManager != nullptr)

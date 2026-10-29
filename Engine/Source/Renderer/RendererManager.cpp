@@ -222,6 +222,12 @@ namespace Opaax
         // Fraction of a fixed step past the last one, for display interpolation only.
         m_FrameAlpha = static_cast<float>(InAlpha);
 
+        // After the steps and the camera: what is queued now sits on the poses drawn.
+        for (const BeforeDrawHook& lHook : m_BeforeDraw)
+        {
+            lHook.Hook(DrawAlpha());
+        }
+
         {
             // Around RenderFrame only: the clears below must run even if nothing rendered.
             OPAAX_STAT_SCOPE("Renderer");
@@ -1137,9 +1143,28 @@ namespace Opaax
         }
 
         // The alpha the poses of this pass are drawn with (PoseFor), so the camera matches them.
-        CameraView lView = CameraManager::ResolveCamera(lCamera, m_bInterpolate ? TOptional<float>(m_FrameAlpha) : NullOpt);
+        CameraView lView = CameraManager::ResolveCamera(lCamera, DrawAlpha());
         CameraManager::GuardView(lView, InWorld.GetCameraView());
         return lView;
+    }
+
+    Uint64 RendererManager::AddBeforeDraw(TFunction<void(TOptional<float>)> InHook)
+    {
+        const Uint64 lHandle = m_NextBeforeDraw++;
+        m_BeforeDraw.push_back(BeforeDrawHook{ lHandle, Move(InHook) });
+        return lHandle;
+    }
+
+    void RendererManager::RemoveBeforeDraw(const Uint64 InHandle)
+    {
+        for (Uint64 lIndex = 0; lIndex < m_BeforeDraw.size(); ++lIndex)
+        {
+            if (m_BeforeDraw[lIndex].Handle == InHandle)
+            {
+                m_BeforeDraw.erase(m_BeforeDraw.begin() + static_cast<Int64>(lIndex));
+                return;
+            }
+        }
     }
 
     void RendererManager::SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget, const CameraView* InView)

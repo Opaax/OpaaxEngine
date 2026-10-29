@@ -52,14 +52,14 @@ namespace Opaax::Editor::ViewportOverlays
     }
 
     Uint64 EnqueueSelectionOutline(DebugDraw& InDraw, World& InWorld, const TDynArray<EntityID>& InIds,
-                                   const float InAnchorHalfExtent)
+                                   const float InAnchorHalfExtent, const TOptional<float> InAlpha)
     {
         Uint64 lDrawn = 0;
 
         for (const EntityID lId : InIds)
         {
             Bounds2D lBounds;
-            if (!EntityQuery::TryGetBounds(Entity{ lId, &InWorld }, lBounds, InAnchorHalfExtent))
+            if (!EntityQuery::TryGetBounds(Entity{ lId, &InWorld }, lBounds, InAnchorHalfExtent, InAlpha))
             {
                 continue;
             }
@@ -73,7 +73,8 @@ namespace Opaax::Editor::ViewportOverlays
         return lDrawn;
     }
 
-    Uint64 EnqueueEntityIcons(DebugDraw& InDraw, World& InWorld, const float InAnchorHalfExtent)
+    Uint64 EnqueueEntityIcons(DebugDraw& InDraw, World& InWorld, const float InAnchorHalfExtent,
+                              const TOptional<float> InAlpha)
     {
         Uint64 lDrawn = 0;
 
@@ -87,7 +88,7 @@ namespace Opaax::Editor::ViewportOverlays
             }
 
             Bounds2D lIcon;
-            if (!EntityQuery::TryGetBounds(Entity{ InId, &InWorld }, lIcon, InAnchorHalfExtent))
+            if (!EntityQuery::TryGetBounds(Entity{ InId, &InWorld }, lIcon, InAnchorHalfExtent, InAlpha))
             {
                 return;   // no transform at all
             }
@@ -101,7 +102,7 @@ namespace Opaax::Editor::ViewportOverlays
     }
 
     Uint64 EnqueueLightGizmos(DebugDraw& InDraw, World& InWorld, const TDynArray<EntityID>& InIds,
-                              const float InAnchorHalfExtent)
+                              const float InAnchorHalfExtent, const TOptional<float> InAlpha)
     {
         // The anchor is k_IconHalfPx pixels: the gizmo keeps its on-screen size at any zoom.
         const float lPixel = InAnchorHalfExtent / k_IconHalfPx;
@@ -118,7 +119,8 @@ namespace Opaax::Editor::ViewportOverlays
                 continue;
             }
 
-            const TransformComponent lPose = EntityHierarchy::WorldTransform(lEntity);
+            const TransformComponent lPose = InAlpha.has_value() ? EntityHierarchy::DisplayTransform(lEntity, *InAlpha)
+                                                                 : EntityHierarchy::WorldTransform(lEntity);
             BuildLight2DGizmo(*lLight, lPose.Position, lPose.Rotation, k_LightArrowPx * lPixel, lLines);
 
             const Vector4F lColor = GizmoColor(*lLight);

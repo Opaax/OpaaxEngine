@@ -8,6 +8,7 @@
 #include "Renderer/Components/SpriteComponent.h"
 #include "Renderer/Components/TextComponent.h"
 #include "World/Components/TransformComponent.h"
+#include "World/Components/TransformInterpolationComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityHierarchy.h"
 #include "World/Entity/EntityQuery.h"
@@ -444,4 +445,37 @@ TEST_CASE("Bounds2D: FromCenterSize is unsigned, so a mirrored size is the same 
     const Bounds2D lRotated = Bounds2D::FromCenterSizeRotated({ 0.f, 0.f }, { -10.f, -6.f }, 0.f);
     CHECK(lRotated.HalfExtent.x == doctest::Approx(5.f));
     CHECK(lRotated.HalfExtent.y == doctest::Approx(3.f));
+}
+
+TEST_CASE("EntityQuery: with an alpha, the bounds are where the entity is DRAWN between its steps")
+{
+    World lWorld("Drawn");
+
+    // Moved from x = 0 to 30 by its last step; its child hangs 10 above it.
+    Entity lMover = MakeQuad(lWorld, "Mover", { 30.f, 0.f }, { 20.f, 20.f });
+    TransformInterpolationComponent lHistory;
+    lHistory.Position        = { 0.f, 0.f };
+    lHistory.bHasPrevious    = true;
+    lHistory.SteppedPosition = { 30.f, 0.f };
+    lHistory.bHasStepped     = true;
+    lMover.Add<TransformInterpolationComponent>(lHistory);
+
+    Entity lChild = MakeQuad(lWorld, "Child", { 0.f, 10.f }, { 4.f, 4.f });
+    REQUIRE(EntityHierarchy::SetParent(lChild, lMover, /*bKeepWorld*/ false));
+
+    Bounds2D lBounds;
+    REQUIRE(EntityQuery::TryGetBounds(lMover, lBounds));
+    CHECK(lBounds.Center.x == doctest::Approx(30.f));
+
+    REQUIRE(EntityQuery::TryGetBounds(lMover, lBounds, 0.f, 0.25f));
+    CHECK(lBounds.Center.x == doctest::Approx(7.5f));
+    CHECK(lBounds.HalfExtent.x == doctest::Approx(10.f));
+
+    REQUIRE(EntityQuery::TryGetBounds(lChild, lBounds, 0.f, 0.25f));
+    CHECK(lBounds.Center.x == doctest::Approx(7.5f));
+    CHECK(lBounds.Center.y == doctest::Approx(10.f));
+
+    // Both, as the selection outline asks.
+    REQUIRE(EntityQuery::TryGetBounds(lWorld, { lMover.GetHandle(), lChild.GetHandle() }, lBounds, 0.f, 0.5f));
+    CHECK(lBounds.Center.x == doctest::Approx(15.f));
 }
