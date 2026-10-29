@@ -11,6 +11,7 @@
 #include "World/World.h"
 #include "World/WorldManager.h"
 #include "Renderer/Camera/CameraComponent.h"
+#include "Renderer/Camera/CameraDirector.h"
 #include "Renderer/Camera/CameraInterpolation.h"
 #include "Renderer/Camera/CameraInterpolationComponent.h"
 #include "World/Components/TransformComponent.h"
@@ -36,10 +37,9 @@ namespace Opaax
     }
 
     // =========================================================================
-    // Resolve — the highest priority wins, the first found among equals; no camera gives the
-    //   default view.
+    // FindLiveCamera — the highest priority wins, the first found among equals.
     // =========================================================================
-    CameraResolution CameraManager::Resolve(World& InWorld, const TOptional<float> InAlpha)
+    CameraResolution CameraManager::FindLiveCamera(World& InWorld)
     {
         CameraResolution lResolution;
         Int32            lBestPriority = 0;
@@ -64,6 +64,20 @@ namespace Opaax
                 }
             });
 
+        return lResolution;
+    }
+
+    // =========================================================================
+    // Resolve — the director's frame, or the live camera's view; no camera gives the default view.
+    // =========================================================================
+    CameraResolution CameraManager::Resolve(World& InWorld, const TOptional<float> InAlpha)
+    {
+        if (const CameraDirector* lDirector = InWorld.GetSubsystems().GetSubsystem<CameraDirector>())
+        {
+            return lDirector->Frame(InAlpha);
+        }
+
+        CameraResolution lResolution = FindLiveCamera(InWorld);
         if (lResolution.Count == 0)
         {
             return lResolution;
@@ -126,6 +140,11 @@ namespace Opaax
         {
             CameraInterpolation::Cut(Entity{ lCamera, &InWorld });
         }
+
+        if (CameraDirector* lDirector = InWorld.GetSubsystems().GetSubsystem<CameraDirector>())
+        {
+            lDirector->Cut();
+        }
     }
 
     // =========================================================================
@@ -162,6 +181,12 @@ namespace Opaax
 
         // Interpolation off: the camera is where it is, like the bodies.
         const bool lInterpolate = m_EngineConfig == nullptr || m_EngineConfig->GetData().Render.bInterpolation;
+
+        // A camera raised since the last step (in Update, by a tool) takes over from this frame.
+        if (CameraDirector* lDirector = lWorld->GetSubsystems().GetSubsystem<CameraDirector>())
+        {
+            lDirector->Direct();
+        }
 
         CameraResolution lResolution = lInterpolate ? Resolve(*lWorld, static_cast<float>(InAlpha)) : Resolve(*lWorld);
 
@@ -428,10 +453,20 @@ namespace Opaax
         Entity            lEntity = Entity(InResolution.Entity, &InWorld);
         const EntityMeta* lMeta   = lEntity.TryGet<EntityMeta>();
 
-        OPAAX_LOG(LogCameraManager, Info, "Active camera in '{}': entity '{}' at ({}, {}), orthoSize {}",
-                  InWorld.GetName().CStr(),
-                  lMeta != nullptr ? lMeta->Name.CStr() : "<unnamed>",
-                  InResolution.View.Position.x, InResolution.View.Position.y, InResolution.View.OrthoSize);
+        const CameraComponent* lCamera = lEntity.TryGet<CameraComponent>();
+        if (InResolution.Blends > 0 && lCamera != nullptr)
+        {
+            OPAAX_LOG(LogCameraManager, Info, "Active camera in '{}': entity '{}', blending in over {} s ({})",
+                      InWorld.GetName().CStr(), lMeta != nullptr ? lMeta->Name.CStr() : "<unnamed>", lCamera->BlendIn,
+                      ToString(lCamera->BlendCurve));
+        }
+        else
+        {
+            OPAAX_LOG(LogCameraManager, Info, "Active camera in '{}': entity '{}' at ({}, {}), orthoSize {}",
+                      InWorld.GetName().CStr(),
+                      lMeta != nullptr ? lMeta->Name.CStr() : "<unnamed>",
+                      InResolution.View.Position.x, InResolution.View.Position.y, InResolution.View.OrthoSize);
+        }
 
         if (InResolution.Tied > 1)
         {

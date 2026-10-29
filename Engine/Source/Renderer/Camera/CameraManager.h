@@ -32,6 +32,14 @@ namespace Opaax
 
         /** The cameras at the winning priority: more than one leaves the choice to storage order. */
         Uint32     Tied   = 0;
+
+        /**
+         * While the view blends to Entity (CameraDirector): the blends in flight, the camera the newest
+         * leaves (ENTITY_NONE: a view held), and how far it is toward Entity, 0 to 1.
+         */
+        Uint32   Blends      = 0;
+        EntityID BlendFrom   = ENTITY_NONE;
+        float    BlendWeight = 1.f;
     };
 
     /** What GuardView did to a view. */
@@ -97,8 +105,8 @@ namespace Opaax
 
     // =============================================================================
     // CameraManager — sets the view of the active Play world from its CameraComponents: the highest
-    //   Priority wins (among equals, the first found, with a warning). Edit worlds use the editor's
-    //   camera instead. The view is resolved in the render pass, after the frame's fixed steps, from
+    //   Priority wins (among equals, the first found, with a warning), and its CameraDirector blends
+    //   from one camera to the next. Edit worlds use the editor's camera instead. The view is resolved in the render pass, after the frame's fixed steps, from
     //   the camera's display pose and size: it frames a body where the body is drawn, and a zoom
     //   changed in fixed steps moves smoothly. It also records camera traces (camera.trace.*): each
     //   frame's time and view, measured by CameraTrace.
@@ -121,8 +129,15 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * The view InWorld's cameras give: the highest priority wins, the first found among equals; no
-         * camera gives the default view. Static and pure (testable with a bare World).
+         * Which camera frames InWorld: the highest priority, the first found among equals. The view
+         * is left at the default: ResolveCamera gives it.
+         */
+        static CameraResolution FindLiveCamera(World& InWorld);
+
+        /**
+         * The view InWorld's cameras give: its CameraDirector's frame (a blend between two cameras),
+         * or, in a world without one, the live camera's view (FindLiveCamera); no camera gives the
+         * default view. Static and pure (testable with a bare World).
          * @param InAlpha Progress through the fixed step: the camera is placed at its display pose
          *   (EntityHierarchy::DisplayTransform), as bodies are drawn, and framed with its display
          *   size (ResolveDisplayOrthoSize). None: at its current pose and size.
@@ -159,8 +174,9 @@ namespace Opaax
 
         /**
          * The next frame of InWorld is a cut (a respawn, a scene change): every camera is framed
-         * where it is, with nothing in between, and a trace marks the frame. Call it after placing
-         * the cameras; bodies that jumped too are placed with TransformInterpolation::Teleport.
+         * where it is, with nothing in between, a blend under way ends on the live camera, and a
+         * trace marks the frame. Call it after placing the cameras; bodies that jumped too are placed
+         * with TransformInterpolation::Teleport.
          */
         static void Cut(World& InWorld);
 
