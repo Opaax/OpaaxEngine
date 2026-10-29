@@ -46,13 +46,10 @@ namespace Opaax::Editor
             return;
         }
 
-        const Vector2F lBefore = ScreenToWorld(CameraView{ m_Position, m_OrthoSize }, InViewportPx, InCursorLocalPx);
+        const CameraView lZoomed = ZoomAround(CameraView{ m_Position, m_OrthoSize }, lNewSize, InViewportPx, InCursorLocalPx);
 
-        m_OrthoSize = lNewSize;
-
-        const Vector2F lAfter = ScreenToWorld(CameraView{ m_Position, m_OrthoSize }, InViewportPx, InCursorLocalPx);
-
-        m_Position += lBefore - lAfter;
+        m_Position  = lZoomed.Position;
+        m_OrthoSize = lZoomed.OrthoSize;
 
         LogFirstMove("zoom");
     }

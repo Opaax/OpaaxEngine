@@ -11,6 +11,7 @@
 #include "Core/Tag/OpaaxTag.h"
 #include "Editor/Assets/AssetEditors.h"
 #include "Editor/Camera/CameraPreview.hpp"
+#include "Editor/Camera/EditorCamera.h"
 #include "Editor/Commands/EditorNativeCommands.h"
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
 #include "Editor/EditorContext.h"
@@ -18,11 +19,13 @@
 #include "Editor/EditorMapDocument.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/Operation/EditorSelection.hpp"
-#include "Editor/Panels/EditorPanels.h"
+#include "Editor/Operation/EditorViewport.hpp"
 #include "Editor/Operation/EntityOps.h"
 #include "Editor/Operation/ExportOperations.h"
 #include "Editor/Operation/MapOperations.h"
 #include "Editor/Operation/NewLevelPlan.hpp"
+#include "Editor/Panels/EditorPanels.h"
+#include "Editor/PIE/PlayInEditor.h"
 #include "Editor/Export/GameExport.h"
 #include "Editor/Prefab/EditorPrefabDocument.h"
 #include "Editor/Resources/AssetFileClass.hpp"
@@ -32,6 +35,7 @@
 #include "Engine/Registries/EngineRegistries.h"
 #include "Platform/IFileSystem.h"
 #include "Renderer/Camera/CameraManager.h"
+#include "Renderer/CameraView.h"
 #include "Resources/Asset/AssetFile.h"
 #include "Resources/ResourceFormat.h"   // NormalizeExtension
 #include "UI/UICanvasFile.h"
@@ -1291,15 +1295,157 @@ namespace Opaax::Editor::EditorAutomation
     namespace
     {
         // =========================================================================
-        // Cameras: the preview
+        // Cameras: the editor's, and the preview
         // =========================================================================
         nlohmann::json ViewToJson(const CameraView& InView)
         {
             return nlohmann::json{ { "x", InView.Position.x }, { "y", InView.Position.y }, { "size", InView.OrthoSize } };
         }
 
+        /** The viewport's size in pixels, or false (with OutError) before the viewport was drawn. */
+        bool ViewportSize(EditorContext& InContext, Vector2F& OutSize, OpaaxString& OutError)
+        {
+            if (!InContext.Viewport.IsValid())
+            {
+                OutError = "the viewport has not been drawn yet: wait a frame (frames.wait)";
+                return false;
+            }
+            OutSize = InContext.Viewport.GetSizePx();
+            return true;
+        }
+
+        /** A viewport pixel from {x, y} in InParams, or the viewport's centre. */
+        Vector2F ViewportPoint(const nlohmann::json& InParams, const Vector2F& InViewportPx)
+        {
+            return Vector2F{ InParams.value("x", InViewportPx.x * 0.5f), InParams.value("y", InViewportPx.y * 0.5f) };
+        }
+
+        /**
+         * The editor camera as commands answer it: its view, the viewport, whether it frames the active
+         * world (an Edit world), and with InAnchor the world point under that viewport pixel.
+         */
+        nlohmann::json EditorCameraToJson(EditorContext& InContext, const Vector2F& InViewportPx,
+                                          const TOptional<Vector2F>& InAnchor = NullOpt)
+        {
+            const EditorCamera& lCamera = InContext.Camera;
+            const CameraView    lView{ lCamera.GetPosition(), lCamera.GetOrthoSize() };
+
+            nlohmann::json lAnswer = ViewToJson(lView);
+            lAnswer["viewport"] = { { "width", InViewportPx.x }, { "height", InViewportPx.y } };
+            lAnswer["framing"]  = InContext.PIE.IsEdit();
+            if (InAnchor.has_value())
+            {
+                const Vector2F lUnder = ScreenToWorld(lView, InViewportPx, *InAnchor);
+                lAnswer["under"] = { { "x", lUnder.x }, { "y", lUnder.y } };
+            }
+            return lAnswer;
+        }
+
         void RegisterCamera(Commands& InCommands, EditorContext& InContext)
         {
+            InCommands.Register("editor.camera",
+                "The editor's camera, which frames the edit world: {x, y, size, viewport (width, height in pixels), "
+                "framing (it frames the active world: not while playing)}; with a viewport pixel {x, y} (from the "
+                "top left), also {under}: the world point under it.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    Vector2F    lViewport;
+                    OpaaxString lError;
+                    if (!ViewportSize(InContext, lViewport, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    const bool bPoint = InParams.contains("x") || InParams.contains("y");
+                    return AutomationResult::Ok(EditorCameraToJson(
+                        InContext, lViewport, bPoint ? TOptional<Vector2F>(ViewportPoint(InParams, lViewport)) : NullOpt));
+                });
+
+            InCommands.Register("editor.camera.set",
+                "Places the editor's camera: {x, y} (world units) and {size} (OrthoSize, clamped to the editor's "
+                "range); a value left out is kept. Answers as editor.camera.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    Vector2F    lViewport;
+                    OpaaxString lError;
+                    if (!ViewportSize(InContext, lViewport, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    EditorCamera&  lCamera = InContext.Camera;
+                    const Vector2F lAt{ InParams.value("x", lCamera.GetPosition().x), InParams.value("y", lCamera.GetPosition().y) };
+                    lCamera.Set(lAt, InParams.value("size", lCamera.GetOrthoSize()));
+                    return AutomationResult::Ok(EditorCameraToJson(InContext, lViewport));
+                });
+
+            InCommands.Register("editor.camera.pan",
+                "Pans the editor's camera as a drag of {dx, dy} viewport pixels would: the content follows the "
+                "drag. Answers as editor.camera.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    Vector2F    lViewport;
+                    OpaaxString lError;
+                    if (!ViewportSize(InContext, lViewport, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    InContext.Camera.Pan(Vector2F{ InParams.value("dx", 0.f), InParams.value("dy", 0.f) }, lViewport);
+                    return AutomationResult::Ok(EditorCameraToJson(InContext, lViewport));
+                });
+
+            InCommands.Register("editor.camera.zoom",
+                "Zooms the editor's camera by {wheel} steps (positive zooms in) at the viewport pixel {x, y} (the "
+                "centre by default), as the mouse wheel there does: the world point under it stays. Answers as "
+                "editor.camera, {under} the point at that pixel and {shift} how far it moved (0).",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    Vector2F    lViewport;
+                    OpaaxString lError;
+                    if (!ViewportSize(InContext, lViewport, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    EditorCamera&  lCamera = InContext.Camera;
+                    const Vector2F lAnchor = ViewportPoint(InParams, lViewport);
+                    const Vector2F lBefore = ScreenToWorld(CameraView{ lCamera.GetPosition(), lCamera.GetOrthoSize() },
+                                                           lViewport, lAnchor);
+
+                    lCamera.ZoomAtCursor(InParams.value("wheel", 0.f), lAnchor, lViewport);
+
+                    const Vector2F lAfter = ScreenToWorld(CameraView{ lCamera.GetPosition(), lCamera.GetOrthoSize() },
+                                                          lViewport, lAnchor);
+                    nlohmann::json lAnswer = EditorCameraToJson(InContext, lViewport, lAnchor);
+                    lAnswer["shift"] = Maths::Max(Maths::Abs(lAfter.x - lBefore.x), Maths::Abs(lAfter.y - lBefore.y));
+                    return AutomationResult::Ok(lAnswer);
+                });
+
+            InCommands.Register("editor.camera.focus",
+                "Frames the selection with the editor's camera, as Focus Selected (F) does. Fails while playing (the "
+                "game's camera frames a Play world) or with nothing selected. Answers as editor.camera.",
+                [&InContext](const nlohmann::json&)
+                {
+                    Vector2F    lViewport;
+                    OpaaxString lError;
+                    if (!ViewportSize(InContext, lViewport, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+                    if (!InContext.PIE.IsEdit())
+                    {
+                        return AutomationResult::Fail("a playing world is framed by its own camera: stop first (editor.stop)");
+                    }
+                    if (!InContext.Selection.HasSelection())
+                    {
+                        return AutomationResult::Fail("nothing is selected: select what to frame first (entity.select)");
+                    }
+
+                    EntityOps::FocusSelected(InContext);
+                    return AutomationResult::Ok(EditorCameraToJson(InContext, lViewport));
+                });
+
             InCommands.Register("editor.camera.preview",
                 "The camera the Camera Preview panel shows: {camera: {name, id} (null when none), drawn (it was "
                 "drawn last frame: the panel is open), view (x, y, size, as drawn), world (the world's view that "

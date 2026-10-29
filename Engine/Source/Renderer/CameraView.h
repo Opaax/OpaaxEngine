@@ -55,4 +55,12 @@ namespace Opaax
      * World units per viewport pixel: (2 * OrthoSize) / height. 1 for a zero height.
      */
     float WorldPerPixel(const CameraView& InView, float InViewportHeightPx);
+
+    /**
+     * InView zoomed to InOrthoSize around a viewport point: the world point under InAnchorPx stays
+     * under it (the editor's wheel zoom, a game zooming at the cursor). An empty viewport only
+     * changes the size.
+     */
+    CameraView ZoomAround(const CameraView& InView, float InOrthoSize, const Vector2F& InViewportPx,
+                          const Vector2F& InAnchorPx);
 }

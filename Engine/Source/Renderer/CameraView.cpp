@@ -71,4 +71,18 @@ namespace Opaax
     {
         return InViewportHeightPx > 0.f ? (InView.OrthoSize * 2.f) / InViewportHeightPx : 1.f;
     }
+
+    CameraView ZoomAround(const CameraView& InView, const float InOrthoSize, const Vector2F& InViewportPx,
+                          const Vector2F& InAnchorPx)
+    {
+        CameraView lZoomed{ InView.Position, InOrthoSize };
+
+        // The anchor's world point before and after the size changes; moving by the difference puts
+        // it back under the anchor.
+        const Vector2F lBefore = ScreenToWorld(InView, InViewportPx, InAnchorPx);
+        const Vector2F lAfter  = ScreenToWorld(lZoomed, InViewportPx, InAnchorPx);
+        lZoomed.Position += lBefore - lAfter;
+
+        return lZoomed;
+    }
 }

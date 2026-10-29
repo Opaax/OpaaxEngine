@@ -113,6 +113,11 @@ The editor adds:
 | `editor.undo`, `editor.redo` | | Undo and redo, as the Edit menu does |
 | `editor.command` | `tag` | Any editor command without arguments, by tag (`Editor.Command.FocusSelected`) |
 | `editor.panel` | `panel`, `visible` | Shows a panel by its window title (`Camera Preview`), or hides it with `visible: false`; an unknown title fails with the list |
+| `editor.camera` | `x`, `y` | The editor's camera, which frames the edit world: `x`, `y`, `size`, the `viewport` in pixels, `framing` (false while playing); with a viewport pixel `x`, `y` (from the top left), the world point `under` it |
+| `editor.camera.set` | `x`, `y`, `size` | Places the editor's camera (a value left out is kept) |
+| `editor.camera.pan` | `dx`, `dy` | Pans as a drag of that many viewport pixels: the content follows the drag |
+| `editor.camera.zoom` | `wheel`, `x`, `y` | Zooms by wheel steps (positive zooms in) at a viewport pixel (the centre by default): the world point there stays there; answers it (`under`) and how far it moved (`shift`, 0) |
+| `editor.camera.focus` | | Frames the selection, as Focus Selected does; fails while playing or with nothing selected |
 | `editor.camera.preview` | | The camera the Camera Preview shows (select one to preview it): `camera` (`name`, `id`), `drawn` (on the last frame: the panel is open), `view` as drawn, the world's view that frame, `live` (it frames the playing world) and `gap` between the two views (0 for the live camera) |
 | `level.open`, `map.open` | `path`, `discard` | Opens a level or a map (relative to the project's assets) |
 | `level.new` | `path`, `map`, `discard` | Creates a level with one new, empty map (`map`; default `Maps/<level name>.opaaxmap`) and opens it; refuses files that exist |

@@ -173,3 +173,48 @@ TEST_CASE("WorldToScreen: the exact inverse of ScreenToWorld, corners and an off
 
     CHECK(WorldToScreen(lView, { 0.f, 600.f }, { 1.f, 1.f }).x == doctest::Approx(0.f));   // degenerate
 }
+
+TEST_CASE("ZoomAround: the world point under the anchor stays under it, for any anchor and size")
+{
+    const CameraView lView{ { 123.f, -45.f }, 300.f };
+    const Vector2F   lViewport{ 1280.f, 720.f };
+
+    for (const Vector2F lAnchor : { Vector2F{ 640.f, 360.f }, Vector2F{ 0.f, 0.f }, Vector2F{ 1280.f, 720.f },
+                                    Vector2F{ 1000.f, 90.f } })
+    {
+        for (const float lSize : { 12.f, 250.f, 300.f, 4000.f })
+        {
+            CAPTURE(lAnchor.x);
+            CAPTURE(lAnchor.y);
+            CAPTURE(lSize);
+
+            const CameraView lZoomed = ZoomAround(lView, lSize, lViewport, lAnchor);
+            const Vector2F   lBefore = ScreenToWorld(lView, lViewport, lAnchor);
+            const Vector2F   lAfter  = ScreenToWorld(lZoomed, lViewport, lAnchor);
+
+            CHECK(lZoomed.OrthoSize == lSize);
+            CHECK(lAfter.x == doctest::Approx(lBefore.x).epsilon(1e-5));
+            CHECK(lAfter.y == doctest::Approx(lBefore.y).epsilon(1e-5));
+        }
+    }
+}
+
+TEST_CASE("ZoomAround: at the centre only the size changes; off centre the view moves toward the anchor")
+{
+    const CameraView lView{ { 10.f, 20.f }, 300.f };
+    const Vector2F   lViewport{ 800.f, 600.f };
+
+    const CameraView lCentred = ZoomAround(lView, 150.f, lViewport, lViewport * 0.5f);
+    CHECK(lCentred.Position.x == doctest::Approx(10.f));
+    CHECK(lCentred.Position.y == doctest::Approx(20.f));
+
+    // Zooming in at the top right corner: the view moves halfway there (to the right, up).
+    const CameraView lCorner = ZoomAround(lView, 150.f, lViewport, { 800.f, 0.f });
+    CHECK(lCorner.Position.x == doctest::Approx(10.f + 200.f));
+    CHECK(lCorner.Position.y == doctest::Approx(20.f + 150.f));
+
+    // Nothing to anchor on: the size alone.
+    const CameraView lEmpty = ZoomAround(lView, 150.f, { 0.f, 0.f }, { 3.f, 4.f });
+    CHECK(lEmpty.Position.x == 10.f);
+    CHECK(lEmpty.OrthoSize == 150.f);
+}

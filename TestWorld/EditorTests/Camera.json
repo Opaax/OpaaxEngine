@@ -188,6 +188,11 @@
         }
     },
     {
+        "id": "focus-playing",
+        "command": "editor.camera.focus",
+        "expectFailure": true
+    },
+    {
         "id": "stop",
         "command": "editor.stop",
         "expect": {
@@ -209,6 +214,98 @@
             },
             "drawn": true,
             "live": false
+        }
+    },
+    {
+        "id": "select-runner",
+        "command": "entity.select",
+        "params": {
+            "entities": [
+                "Runner"
+            ]
+        }
+    },
+    {
+        "id": "focus",
+        "command": "editor.camera.focus",
+        "expect": {
+            "x": 0,
+            "y": 0,
+            "size": 100,
+            "framing": true
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "screenshot-focus",
+        "command": "screenshot",
+        "params": {
+            "path": "EditorCameraFocus.png"
+        }
+    },
+    {
+        "id": "set",
+        "command": "editor.camera.set",
+        "params": {
+            "x": 0,
+            "y": 0,
+            "size": 300
+        },
+        "expect": {
+            "x": 0,
+            "y": 0,
+            "size": 300
+        }
+    },
+    {
+        "id": "zoom-centre",
+        "command": "editor.camera.zoom",
+        "params": {
+            "wheel": 2
+        },
+        "expect": {
+            "x": 0,
+            "y": 0,
+            "size": 247.93388,
+            "shift": 0
+        }
+    },
+    {
+        "id": "pan-there",
+        "command": "editor.camera.pan",
+        "params": {
+            "dx": 120,
+            "dy": -45
+        }
+    },
+    {
+        "id": "pan-back",
+        "command": "editor.camera.pan",
+        "params": {
+            "dx": -120,
+            "dy": 45
+        },
+        "expect": {
+            "x": 0,
+            "y": 0
+        }
+    },
+    {
+        "id": "zoom-corner",
+        "command": "editor.camera.zoom",
+        "params": {
+            "wheel": -2,
+            "x": 10,
+            "y": 10
+        },
+        "expect": {
+            "size": 300,
+            "shift": 0
         }
     }
 ]
