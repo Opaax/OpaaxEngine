@@ -52,5 +52,49 @@
         "params": {
             "path": "Lighting.png"
         }
+    },
+    {
+        "id": "roll",
+        "command": "component.set",
+        "params": {
+            "entity": "Camera",
+            "type": "Camera",
+            "value": {
+                "bRotateView": true
+            }
+        }
+    },
+    {
+        "id": "roll-transform",
+        "command": "component.set",
+        "params": {
+            "entity": "Camera",
+            "type": "Transform",
+            "value": {
+                "Rotation": 25
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "frames": 3
+        }
+    },
+    {
+        "id": "rolled-info",
+        "command": "camera.info",
+        "expect": {
+            "view": {
+                "rotation": 25
+            }
+        }
+    },
+    {
+        "id": "rolled-screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "Lighting-rolled.png"
+        }
     }
 ]

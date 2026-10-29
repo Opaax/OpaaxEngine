@@ -173,6 +173,13 @@ namespace Opaax::EngineAutomation
             return lCameras;
         }
 
+        /** A view as the commands give it: {x, y, size, rotation}. */
+        nlohmann::json ViewToJson(const CameraView& InView)
+        {
+            return nlohmann::json{ { "x", InView.Position.x }, { "y", InView.Position.y }, { "size", InView.OrthoSize },
+                                   { "rotation", InView.Rotation } };
+        }
+
         /** An entity's name and id, as the camera commands give them. */
         nlohmann::json NameAndId(Entity InEntity)
         {
@@ -226,7 +233,7 @@ namespace Opaax::EngineAutomation
                     { "cut",       lSample.bCut },
                     { "camera",    lSample.Camera },
                     { "view",      { { "x", lSample.ViewPosition.x }, { "y", lSample.ViewPosition.y },
-                                     { "size", lSample.ViewSize } } } };
+                                     { "size", lSample.ViewSize }, { "rotation", lSample.ViewRotation } } } };
                 if (lSample.bHasTarget)
                 {
                     lFrame["target"] = { { "x", lSample.TargetPosition.x }, { "y", lSample.TargetPosition.y } };
@@ -530,7 +537,7 @@ namespace Opaax::EngineAutomation
                         { "mode",     ToString(lWorld->GetMode()) },
                         { "paused",   InEngine.GetWorldManager().IsPaused() },
                         { "entities", lWorld->GetEntityCount() },
-                        { "camera",   { { "x", lView.Position.x }, { "y", lView.Position.y }, { "size", lView.OrthoSize } } } });
+                        { "camera",   ViewToJson(lView) } });
                 });
 
             InRunner.Register("world.pause",
@@ -744,9 +751,9 @@ namespace Opaax::EngineAutomation
         void RegisterCamera(AutomationRunner& InRunner, IEngine& InEngine)
         {
             InRunner.Register("camera.info",
-                "How the active world is framed: {world, mode, paused, view, fixedRate, pacing, tracing, clock (fixedDelta, "
-                "refreshHz snapped to, snapping, maxSteps, droppedSteps), cameras} with "
-                "each camera's {name, id, priority, x, y, size, framed (the view it gives on that frame: x, y, size), "
+                "How the active world is framed: {world, mode, paused, view (x, y, size, rotation), fixedRate, pacing, "
+                "tracing, clock (fixedDelta, refreshHz snapped to, snapping, maxSteps, droppedSteps), cameras} with "
+                "each camera's {name, id, priority, x, y, size, framed (the view it gives on that frame), "
                 "recorded (framed between its steps), rhythm (over the last 60 steps: still, steps, update, or mixed "
                 "when one entity moves it both in the steps and in Update; unknown before 60 steps)}, and in a "
                 "Play world the last frame's {live: {name, id, rhythm, count, tied}, frame: {delta, steps, alpha, interpolated, "
@@ -780,8 +787,7 @@ namespace Opaax::EngineAutomation
                             lCamera["x"]        = lAt.x;
                             lCamera["y"]        = lAt.y;
                             lCamera["size"]     = InCamera.OrthoSize;
-                            lCamera["framed"]   = { { "x", lFramed.Position.x }, { "y", lFramed.Position.y },
-                                                    { "size", lFramed.OrthoSize } };
+                            lCamera["framed"]   = ViewToJson(lFramed);
                             lCamera["recorded"] = lEntity.Has<CameraInterpolationComponent>();
                             lCamera["rhythm"]   = RhythmOf(lEntity);
                             lList.push_back(Move(lCamera));
@@ -794,7 +800,7 @@ namespace Opaax::EngineAutomation
                         { "world",     lWorld->GetName().CStr() },
                         { "mode",      ToString(lWorld->GetMode()) },
                         { "paused",    InEngine.GetWorldManager().IsPaused() },
-                        { "view",      { { "x", lView.Position.x }, { "y", lView.Position.y }, { "size", lView.OrthoSize } } },
+                        { "view",      ViewToJson(lView) },
                         { "fixedRate", OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>().GetData().Time.FixedRate },
                         { "pacing",    InEngine.GetFramePacing().ToString() },
                         { "tracing",   lCameras->GetTraceName() },
@@ -914,7 +920,7 @@ namespace Opaax::EngineAutomation
             InRunner.Register("camera.trace.compare",
                 "How far the stopped trace {trace} is from where the stopped trace {reference} says its camera was at "
                 "each of its game times (the reference's frame then, or both ends of the step blended): {shared, "
-                "position, size, atTime}, world units. The reference is a steady pacing at the fixed rate or a multiple, "
+                "position, size (world units), rotation (degrees), atTime}. The reference is a steady pacing at the fixed rate or a multiple, "
                 "so one level played at any rate must match it. {limits}, like {\"position\": 0.001}, fails past them.",
                 [&InEngine](const nlohmann::json& InParams)
                 {
@@ -938,7 +944,8 @@ namespace Opaax::EngineAutomation
                     const CameraTraceGap lGap      = CameraTrace::Compare(lReference->Samples, lTrace->Samples);
                     const nlohmann::json lMeasures = nlohmann::json{
                         { "reference", lReferenceName }, { "trace", lTraceName }, { "shared", lGap.Shared },
-                        { "position", lGap.Position }, { "size", lGap.Size }, { "atTime", lGap.AtTime } };
+                        { "position", lGap.Position }, { "size", lGap.Size }, { "rotation", lGap.Rotation },
+                        { "atTime", lGap.AtTime } };
 
                     if (lGap.Shared == 0)
                     {

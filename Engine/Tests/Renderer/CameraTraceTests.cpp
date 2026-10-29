@@ -236,6 +236,36 @@ TEST_CASE("CameraTrace: a jittery trace of the same path matches; one drawn at i
     CHECK(CameraTrace::Compare(lReference, lUnblended).Position > 0.5f);
 }
 
+TEST_CASE("CameraTrace: a rolling view is compared the short way round, and its target measured on screen")
+{
+    // A roll from 170 to -170 degrees over a step goes through 180, not back through 0.
+    TDynArray<CameraTraceSample> lReference = Pan(60.0, 2);
+    lReference[0].ViewRotation = 170.f;
+    lReference[1].ViewRotation = -170.f;
+
+    TDynArray<CameraTraceSample> lHalfway = { Frame(0.5 / 60.0, { PanAt(0.5 / 60.0), 0.f }, { 0.f, 0.f }) };
+    lHalfway[0].ViewRotation = 180.f;
+    const CameraTraceGap lSame = CameraTrace::Compare(lReference, lHalfway);
+    CHECK(lSame.Shared == 1);
+    CHECK(lSame.Rotation == doctest::Approx(0.f).epsilon(1e-4));
+
+    lHalfway[0].ViewRotation = -175.f;
+    CHECK(CameraTrace::Compare(lReference, lHalfway).Rotation == doctest::Approx(5.f));
+
+    // A view rolling about its target, which stays 40 units above the centre along the view's own up:
+    // locked on screen, though the target turns in the world.
+    TDynArray<CameraTraceSample> lRolling;
+    for (Uint32 lIndex = 0; lIndex < 30; ++lIndex)
+    {
+        const float lRoll = 3.f * static_cast<float>(lIndex);
+        const float lRad  = Maths::DegreesToRadians(lRoll);
+        CameraTraceSample lSample = Frame(lIndex / 60.0, { 0.f, 0.f }, { -40.f * Maths::Sin(lRad), 40.f * Maths::Cos(lRad) });
+        lSample.ViewRotation = lRoll;
+        lRolling.push_back(lSample);
+    }
+    CHECK(CameraTrace::Summarize(lRolling, HEIGHT_PX).TargetDrift == doctest::Approx(0.f).epsilon(1e-3));
+}
+
 TEST_CASE("CameraTrace: the CSV has a header and a row a frame, the target in pixels from the centre")
 {
     TDynArray<CameraTraceSample> lSamples = Pan(60.0, 3);
@@ -249,8 +279,8 @@ TEST_CASE("CameraTrace: the CSV has a header and a row a frame, the target in pi
         lLines += lChar == '\n' ? 1 : 0;
     }
     CHECK(lLines == 4);
-    CHECK(lCsv.View().StartsWith("frame,delta,steps,alpha,stepDelta,gameTime,cut,camera,viewX,viewY,viewSize,targetX,"
-                                 "targetY,targetPxX,targetPxY\n"));
+    CHECK(lCsv.View().StartsWith("frame,delta,steps,alpha,stepDelta,gameTime,cut,camera,viewX,viewY,viewSize,"
+                                 "viewRotation,targetX,targetY,targetPxX,targetPxY\n"));
     CHECK(lCsv.Contains(",0,Cam,"));
     CHECK(lCsv.Contains(",0,40\n"));     // 40 units above the centre: 40 pixels
     CHECK(lCsv.View().EndsWith(",,,,\n"));

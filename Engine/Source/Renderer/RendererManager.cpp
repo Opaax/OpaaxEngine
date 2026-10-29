@@ -423,10 +423,8 @@ namespace Opaax
             const Vector4F  lLinearClear{ Maths::Pow(lClear.r, 2.2f), Maths::Pow(lClear.g, 2.2f),
                                           Maths::Pow(lClear.b, 2.2f), lClear.a };
 
-            // The lights that reach this view.
-            const float    lHalfHeight = InView.OrthoSize;
-            const float    lHalfWidth  = lHalfHeight * (static_cast<float>(lWidth) / static_cast<float>(Maths::Max(lHeight, 1u)));
-            const Bounds2D lViewBounds{ InView.Position, { lHalfWidth, lHalfHeight } };
+            // The lights that reach this view (a rolled view reaches into its corners).
+            const Bounds2D lViewBounds = ViewBounds(InView, static_cast<float>(lWidth) / static_cast<float>(Maths::Max(lHeight, 1u)));
             const Vector3F lAmbient{ lEnvironment->AmbientColor.r, lEnvironment->AmbientColor.g, lEnvironment->AmbientColor.b };
 
             LightsBlock2D lLights;

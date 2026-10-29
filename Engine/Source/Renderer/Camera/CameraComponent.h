@@ -14,6 +14,7 @@ namespace Opaax
     //   OrthoSize is the vertical half-extent in world units (a bigger window scales the view).
     //   The position is the entity's world position (a camera parented to the player follows it).
     //   With several cameras, the highest Priority frames the world: raise one to switch to it.
+    //   The view stays upright unless bRotateView: then it rolls with the entity's world rotation.
     // =============================================================================
     struct CameraComponent
     {
@@ -27,12 +28,17 @@ namespace Opaax
         /** With several cameras, the highest frames the world (among equals, the first found). */
         Int32 Priority = 0;
 
+        /** Roll the view with the entity's world rotation. Off, a camera under a turning body stays upright. */
+        bool bRotateView = false;
+
         // _WITH_DEFAULT: a missing key keeps its default, so maps saved before a new field still load.
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(CameraComponent, OrthoSize, Priority)
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(CameraComponent, OrthoSize, Priority, bRotateView)
 
         // Range: a zero or negative size would break the projection.
         OPAAX_PROPERTIES(CameraComponent,
                          OPAAX_PROP(OrthoSize).SetRange(MIN_ORTHO_SIZE, MAX_ORTHO_SIZE),
-                         OPAAX_PROP(Priority).SetDragStep(1.f).SetTooltip("With several cameras, the highest frames the world."))
+                         OPAAX_PROP(Priority).SetDragStep(1.f).SetTooltip("With several cameras, the highest frames the world."),
+                         OPAAX_PROP(bRotateView).SetTooltip("Roll the view with the camera's rotation.\n"
+                                                            "Off: the view stays upright, even under a turning body."))
     };
 }
