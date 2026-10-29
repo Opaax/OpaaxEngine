@@ -269,6 +269,13 @@ namespace Opaax
                              bool bInDrawUI = false);
 
         /**
+         * Draws a world into InTarget framed by InCamera, resolved when the frame is drawn at the alpha
+         * its poses are drawn with. See IEngine::SubmitCameraView.
+         */
+        void SubmitCameraView(IRenderTarget& InTarget, EntityID InCamera, bool bInDrawOverlays,
+                              CameraView* OutDrawnView = nullptr, World* InSource = nullptr);
+
+        /**
          * Creates an offscreen framebuffer. Release it before the render core shuts down.
          * @return Null before Startup or without a device
          */
@@ -318,7 +325,19 @@ namespace Opaax
 
             /** View is ignored: the drawn world's own view is used, read at draw time. */
             bool           bWorldView    = false;
+
+            /** View is ignored: this camera of the drawn world frames it, resolved at draw time. */
+            EntityID       Camera        = ENTITY_NONE;
+
+            /** Receives the view drawn. Not owned. */
+            CameraView*    OutDrawnView  = nullptr;
         };
+
+        /**
+         * InCamera's view in InWorld on this frame: at the alpha the poses are drawn with, guarded
+         * (InWorld's own view stands in for one that is not a number).
+         */
+        CameraView FrameCamera(World& InWorld, EntityID InCamera) const;
 
         // =============================================================================
         // Members

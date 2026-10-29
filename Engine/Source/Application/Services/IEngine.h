@@ -2,6 +2,7 @@
 
 #include "Application/Services/IAppService.h"
 #include "Core/OpaaxTypes.h"
+#include "World/Entity/EntityTypes.h"
 #include "World/WorldSpec.h"
 
 namespace Opaax
@@ -129,6 +130,16 @@ namespace Opaax
          */
         virtual void SubmitWorldView(IRenderTarget& InTarget, bool bInDrawOverlays, World* InSource = nullptr,
                                      bool bInDrawUI = false) = 0;
+
+        /**
+         * Draws a world into InTarget framed by InCamera, its view resolved when the frame is drawn: at
+         * the alpha the world's poses are drawn with, as the game frames that camera
+         * (CameraManager::ResolveCamera, guarded). For this frame only.
+         * @param OutDrawnView Optional: receives the view drawn, when the frame is drawn
+         * @param InSource The world InCamera is in; null means the active world
+         */
+        virtual void SubmitCameraView(IRenderTarget& InTarget, EntityID InCamera, bool bInDrawOverlays,
+                                      CameraView* OutDrawnView = nullptr, World* InSource = nullptr) = 0;
 
         /**
          * Draws InCanvas for this frame only. Submit again every frame.

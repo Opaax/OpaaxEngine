@@ -4,13 +4,12 @@
 #include "Core/OpaaxTypes.h"             // TUniquePtr, Uint32
 #include "Core/Maths/MathTypes.h"
 #include "Editor/Panels/IEditorPanel.h"
-#include "World/Entity/EntityTypes.h"    // EntityID
+#include "World/Entity/Entity.h"
 
 namespace Opaax
 {
     class IFramebuffer;
     class OffscreenRenderTarget;
-    struct CameraView;
 
     OPAAX_LOG_CATEGORY(CameraPreviewPanel);
 }
@@ -23,7 +22,9 @@ namespace Opaax::Editor
     // =============================================================================
     // CameraPreviewPanel — what the selected camera sees, rendered into this panel's own FBO
     //   (like Unity's Camera Preview). A second view: read-only, it never writes World::SetCameraView.
-    //   No overlays (grid, outlines, icons): it shows what the game shows.
+    //   No overlays (grid, outlines, icons): it shows what the game shows, framed by the renderer when
+    //   it draws the frame, after the fixed steps, exactly as the game frames that camera.
+    //   The camera and the view drawn are kept in CameraPreview, which automation reads.
     //   The preview is sticky: selecting a camera shows it, selecting something else keeps it.
     //   "No camera" is a normal state (nothing picked yet, or the camera is gone).
     // =============================================================================
@@ -60,14 +61,14 @@ namespace Opaax::Editor
         void TrackSelection();
 
         /**
-         * The previewed camera's view, resolved every frame (camera edits show at once).
-         * @return False when there is nothing to preview: no world, nothing picked, or the entity is
-         *   gone, no longer a camera, or not in the active world
+         * The previewed camera, or an invalid entity when there is nothing to preview: no world,
+         * nothing picked, or the entity is gone, no longer a camera, or not in the active world.
          */
-        bool TryResolveCameraView(CameraView& OutView) const;
+        Entity GetPreviewedCamera() const;
 
         /**
-         * Submits a view for this frame, if there is a camera and the panel is visible.
+         * Submits the camera for this frame, if there is one and the panel is visible; its view is
+         * resolved when the frame is drawn.
          */
         void SubmitView();
 
@@ -109,9 +110,6 @@ namespace Opaax::Editor
         Vector2F   m_DefaultSize = { 400.f, 260.f };
         Vector2u32 m_Size        = { 1, 1 };
         Vector2u32 m_PendingSize = { 1, 1 };
-
-        // Which camera is previewed. Only TrackSelection writes it, always with an active-world entity.
-        EntityID m_Previewed = ENTITY_NONE;
 
         // Log once, the first time a camera is previewed.
         bool m_bPreviewLogged = false;

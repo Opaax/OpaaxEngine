@@ -79,6 +79,9 @@ namespace Opaax::Editor
         OpaaxStringID FocusedPanel() const noexcept { return m_Focused; }
 
         Uint64 Count() const noexcept { return static_cast<Uint64>(m_Panels.size()); }
+
+        /** Every panel's id (its window title), in registration order. */
+        TDynArray<OpaaxStringID> GetIds() const;
         // End Get - Set
         // =============================================================================
 

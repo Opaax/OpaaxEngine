@@ -112,6 +112,8 @@ The editor adds:
 | `level.play` | `path`, `discard` | Opens a level, then plays it in the editor |
 | `editor.undo`, `editor.redo` | | Undo and redo, as the Edit menu does |
 | `editor.command` | `tag` | Any editor command without arguments, by tag (`Editor.Command.FocusSelected`) |
+| `editor.panel` | `panel`, `visible` | Shows a panel by its window title (`Camera Preview`), or hides it with `visible: false`; an unknown title fails with the list |
+| `editor.camera.preview` | | The camera the Camera Preview shows (select one to preview it): `camera` (`name`, `id`), `drawn` (on the last frame: the panel is open), `view` as drawn, the world's view that frame, `live` (it frames the playing world) and `gap` between the two views (0 for the live camera) |
 | `level.open`, `map.open` | `path`, `discard` | Opens a level or a map (relative to the project's assets) |
 | `level.new` | `path`, `map`, `discard` | Creates a level with one new, empty map (`map`; default `Maps/<level name>.opaaxmap`) and opens it; refuses files that exist |
 | `map.new` | `path` | Creates an empty map, adds it to the open level and focuses it: entities created next go there |

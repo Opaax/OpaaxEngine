@@ -5,10 +5,12 @@
 #include "Automation/AutomationRunner.h"
 #include "Automation/EngineAutomationCommands.h"
 #include "Core/IO/FileSystem.h"
+#include "Core/Maths/Maths.h"
 #include "Core/String/OpaaxPathString.h"
 #include "Core/String/OpaaxStringJson.h"
 #include "Core/Tag/OpaaxTag.h"
 #include "Editor/Assets/AssetEditors.h"
+#include "Editor/Camera/CameraPreview.hpp"
 #include "Editor/Commands/EditorNativeCommands.h"
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
 #include "Editor/EditorContext.h"
@@ -16,6 +18,7 @@
 #include "Editor/EditorMapDocument.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/Operation/EditorSelection.hpp"
+#include "Editor/Panels/EditorPanels.h"
 #include "Editor/Operation/EntityOps.h"
 #include "Editor/Operation/ExportOperations.h"
 #include "Editor/Operation/MapOperations.h"
@@ -28,6 +31,7 @@
 #include "Editor/UI/GuardedEditorDialogs.hpp"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Platform/IFileSystem.h"
+#include "Renderer/Camera/CameraManager.h"
 #include "Resources/Asset/AssetFile.h"
 #include "Resources/ResourceFormat.h"   // NormalizeExtension
 #include "UI/UICanvasFile.h"
@@ -289,6 +293,31 @@ namespace Opaax::Editor::EditorAutomation
             lCommand("editor.step",  "Runs one frame of a paused game.",                     Tags::EDITOR_COMMAND_STEP);
             lCommand("editor.undo",  "Undoes the last edit.",                                Tags::EDITOR_COMMAND_UNDO);
             lCommand("editor.redo",  "Redoes the last undone edit.",                         Tags::EDITOR_COMMAND_REDO);
+
+            InCommands.Register("editor.panel",
+                "Shows the panel named {panel} (its window title: \"Camera Preview\"), or hides it with {visible}: "
+                "false. Answers {panel, visible}.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    const OpaaxString   lName = InParams.value("panel", OpaaxString());
+                    const OpaaxStringID lId(lName.CStr());
+
+                    OpaaxString lKnown;
+                    bool        bFound = false;
+                    for (const OpaaxStringID lPanel : InContext.Panels.GetIds())
+                    {
+                        bFound = bFound || lPanel == lId;
+                        lKnown += (lKnown.IsEmpty() ? "" : ", ") + OpaaxString(lPanel.CStr());
+                    }
+                    if (!bFound)
+                    {
+                        return AutomationResult::Fail("no panel named '" + lName + "'; the panels are: " + lKnown);
+                    }
+
+                    InContext.Panels.SetVisible(lId, InParams.value("visible", true));
+                    return AutomationResult::Ok(nlohmann::json{ { "panel", lName },
+                                                                { "visible", InContext.Panels.IsVisible(lId) } });
+                });
 
             InCommands.Register("editor.command",
                 "Runs an editor command that takes no arguments by its {tag} (\"Editor.Command.FocusSelected\"...).",
@@ -1259,6 +1288,64 @@ namespace Opaax::Editor::EditorAutomation
         }
     }
 
+    namespace
+    {
+        // =========================================================================
+        // Cameras: the preview
+        // =========================================================================
+        nlohmann::json ViewToJson(const CameraView& InView)
+        {
+            return nlohmann::json{ { "x", InView.Position.x }, { "y", InView.Position.y }, { "size", InView.OrthoSize } };
+        }
+
+        void RegisterCamera(Commands& InCommands, EditorContext& InContext)
+        {
+            InCommands.Register("editor.camera.preview",
+                "The camera the Camera Preview panel shows: {camera: {name, id} (null when none), drawn (it was "
+                "drawn last frame: the panel is open), view (x, y, size, as drawn), world (the world's view that "
+                "frame), live (it frames the playing world), gap (the largest difference between view and world; 0 "
+                "when the preview shows the camera framing the world)}. Select a camera to preview it.",
+                [&InContext](const nlohmann::json&)
+                {
+                    OpaaxString  lError;
+                    World* const lWorld = ActiveWorld(InContext, lError);
+                    if (lWorld == nullptr)
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    const CameraPreview& lPreview = InContext.Preview;
+                    const Entity         lCamera{ lPreview.GetCamera(), lWorld };
+                    if (lPreview.GetCamera() == ENTITY_NONE || !lCamera.IsValid())
+                    {
+                        return AutomationResult::Ok(nlohmann::json{ { "camera", nullptr }, { "drawn", false } });
+                    }
+
+                    // The camera that framed the playing world on the last frame drawn.
+                    const CameraManager* lCameras = InContext.Engine.GetCameras();
+                    const CameraFrame*   lFrame   = lCameras != nullptr ? &lCameras->GetLastFrame() : nullptr;
+                    const bool           bLive    = lWorld->GetMode() == EWorldMode::Play && lFrame != nullptr
+                                                    && lFrame->World == lWorld->GetHandle()
+                                                    && lFrame->Resolution.Count > 0
+                                                    && lFrame->Resolution.Entity == lCamera.GetHandle();
+
+                    const CameraView& lDrawn = lPreview.GetDrawnView();
+                    const CameraView& lSeen  = lWorld->GetCameraView();
+                    const float       lGap   = Maths::Max(Maths::Max(Maths::Abs(lDrawn.Position.x - lSeen.Position.x),
+                                                                     Maths::Abs(lDrawn.Position.y - lSeen.Position.y)),
+                                                          Maths::Abs(lDrawn.OrthoSize - lSeen.OrthoSize));
+
+                    return AutomationResult::Ok(nlohmann::json{
+                        { "camera", { { "name", lCamera.GetName() }, { "id", lCamera.GetGuid().ToString() } } },
+                        { "drawn",  lPreview.WasSubmitted() },
+                        { "view",   ViewToJson(lDrawn) },
+                        { "world",  ViewToJson(lSeen) },
+                        { "live",   bLive },
+                        { "gap",    lGap } });
+                });
+        }
+    }
+
     void Register(AutomationRunner& InRunner, EditorContext& InContext, GuardedEditorDialogs& InDialogs)
     {
         Commands lCommands(InRunner, InDialogs);
@@ -1268,5 +1355,6 @@ namespace Opaax::Editor::EditorAutomation
         RegisterPrefabs(lCommands, InContext);
         RegisterUI(lCommands, InContext);
         RegisterAssets(lCommands, InContext);
+        RegisterCamera(lCommands, InContext);
     }
 }

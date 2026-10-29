@@ -18,6 +18,8 @@
 #include "RHI/Texture.h"
 
 #include "Renderer/CameraView.h"
+#include "Renderer/Camera/CameraComponent.h"
+#include "Renderer/Camera/CameraManager.h"
 #include "Renderer/RenderSystem.h"
 #include "Renderer/RenderSystemDesc.h"
 #include "Renderer/RenderView.h"
@@ -351,8 +353,20 @@ namespace Opaax
             // The view's own world if it named one, else the active world.
             World* const lDrawn = lRequest.Source != nullptr ? lRequest.Source : lWorld;
 
-            const CameraView lView = (lRequest.bWorldView && lDrawn != nullptr) ? lDrawn->GetCameraView()
-                                                                              : lRequest.View;
+            CameraView lView = lRequest.View;
+            if (lDrawn != nullptr && lRequest.bWorldView)
+            {
+                lView = lDrawn->GetCameraView();
+            }
+            else if (lDrawn != nullptr && lRequest.Camera != ENTITY_NONE)
+            {
+                lView = FrameCamera(*lDrawn, lRequest.Camera);
+            }
+
+            if (lRequest.OutDrawnView != nullptr)
+            {
+                *lRequest.OutDrawnView = lView;
+            }
 
             RenderPass(*lRequest.Target, lDrawn, lView, lRequest.bDrawOverlays);
 
@@ -1103,6 +1117,29 @@ namespace Opaax
     {
         m_SubmittedViews.emplace_back(RenderPassRequest{ &InTarget, CameraView{}, bInDrawOverlays, bInDrawUI, InSource,
                                                          /*bWorldView*/ true });
+    }
+
+    void RendererManager::SubmitCameraView(IRenderTarget& InTarget, const EntityID InCamera, const bool bInDrawOverlays,
+                                           CameraView* OutDrawnView, World* InSource)
+    {
+        RenderPassRequest lRequest{ &InTarget, CameraView{}, bInDrawOverlays, /*bDrawUI*/ false, InSource };
+        lRequest.Camera       = InCamera;
+        lRequest.OutDrawnView = OutDrawnView;
+        m_SubmittedViews.emplace_back(lRequest);
+    }
+
+    CameraView RendererManager::FrameCamera(World& InWorld, const EntityID InCamera) const
+    {
+        const Entity lCamera{ InCamera, &InWorld };
+        if (!lCamera.IsValid() || !lCamera.Has<CameraComponent>())
+        {
+            return InWorld.GetCameraView();
+        }
+
+        // The alpha the poses of this pass are drawn with (PoseFor), so the camera matches them.
+        CameraView lView = CameraManager::ResolveCamera(lCamera, m_bInterpolate ? TOptional<float>(m_FrameAlpha) : NullOpt);
+        CameraManager::GuardView(lView, InWorld.GetCameraView());
+        return lView;
     }
 
     void RendererManager::SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget, const CameraView* InView)

@@ -667,6 +667,15 @@ namespace Opaax
         }
     }
 
+    void Engine::SubmitCameraView(IRenderTarget& InTarget, const EntityID InCamera, const bool bInDrawOverlays,
+                                  CameraView* OutDrawnView, World* InSource)
+    {
+        if (m_RendererManager != nullptr)
+        {
+            m_RendererManager->SubmitCameraView(InTarget, InCamera, bInDrawOverlays, OutDrawnView, InSource);
+        }
+    }
+
     void Engine::SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget, const CameraView* InView)
     {
         if (m_RendererManager != nullptr)

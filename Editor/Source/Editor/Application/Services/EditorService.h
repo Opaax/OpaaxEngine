@@ -4,6 +4,7 @@
 #include "Editor/Assets/AssetEditors.h"
 #include "Editor/EditorContext.h"
 #include "Editor/Application/Services/EditorPaths.h"
+#include "Editor/Camera/CameraPreview.hpp"
 #include "Editor/Camera/EditorCamera.h"
 #include "Editor/Operation/EditorGizmo.hpp"
 #include "Editor/Operation/EditorSelection.hpp"
@@ -302,6 +303,7 @@ namespace Opaax::Editor
         TUniquePtr<PrefabReconciler>     m_PrefabReconciler;   
         TUniquePtr<EditorViewport>      m_Viewport;    
         TUniquePtr<EditorCamera>        m_Camera;      
+        TUniquePtr<CameraPreview>       m_CameraPreview;
         TUniquePtr<EditorGizmo>         m_Gizmo;       
         TUniquePtr<EditorUndo>          m_Undo;
         TUniquePtr<PlayInEditor>        m_PIE;         

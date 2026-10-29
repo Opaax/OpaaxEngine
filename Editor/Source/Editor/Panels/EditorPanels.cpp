@@ -70,6 +70,17 @@ namespace Opaax::Editor
         }
     }
 
+    TDynArray<OpaaxStringID> EditorPanels::GetIds() const
+    {
+        TDynArray<OpaaxStringID> lIds;
+        lIds.reserve(m_Panels.size());
+        for (const LivePanel& lLive : m_Panels)
+        {
+            lIds.push_back(lLive.Desc.Id);
+        }
+        return lIds;
+    }
+
     void EditorPanels::OnActiveWorldChanged(World* InOld, World* InNew)
     {
         for (const LivePanel& lLive : m_Panels)
