@@ -56,6 +56,15 @@ namespace Opaax
         InWorld.Each<TransformComponent, TransformInterpolationComponent>(
             [](EntityID, const TransformComponent& InLocal, TransformInterpolationComponent& InHistory)
             {
+                // Whoever records the poses (the world, physics, the mover): the last step's two ends are
+                // still here. Without the pose it left, the current one stands for it.
+                const Vector2F lStepEnd    = InHistory.bHasStepped ? InHistory.SteppedPosition : InLocal.Position;
+                const float    lStepEndRot = InHistory.bHasStepped ? InHistory.SteppedRotation : InLocal.Rotation;
+                InHistory.bMovedInLastStep = InHistory.bHasPrevious
+                                             && (lStepEnd != InHistory.Position || lStepEndRot != InHistory.Rotation);
+                InHistory.bMovedSinceStep  = InHistory.bHasStepped
+                                             && (InLocal.Position != lStepEnd || InLocal.Rotation != lStepEndRot);
+
                 if (!InHistory.bRecordSteps) { return; }
 
                 InHistory.Position     = InLocal.Position;

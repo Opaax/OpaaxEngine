@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Maths/Maths.h"
+#include "Renderer/Camera/CameraRhythm.h"
 
 namespace Opaax
 {
@@ -26,6 +27,9 @@ namespace Opaax
 
         /** The next frame is a cut (CameraManager::Cut): framed where it is, marked in traces. */
         bool bCut = false;
+
+        /** How its view moves against the steps, counted at the start of each (CameraInterpolation). */
+        CameraRhythm Rhythm;
     };
 
     // =============================================================================

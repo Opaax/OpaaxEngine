@@ -38,6 +38,14 @@ namespace Opaax
         Vector2F SteppedPosition = { 0.f, 0.f };
         float    SteppedRotation = 0.f;
         bool     bHasStepped     = false;
+
+        /**
+         * Seen by the world at the start of each step, before the poses above move on: the last step
+         * moved the entity, and it was moved since (in Update). Both on every step makes it jump
+         * between where the steps put it and where it was put, on screens faster than the steps.
+         */
+        bool bMovedInLastStep = false;
+        bool bMovedSinceStep  = false;
     };
 
     // =============================================================================

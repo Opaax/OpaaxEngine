@@ -25,6 +25,8 @@ namespace TestWorld
     //   raw size it is always at the end of the step.
     //   With WrapAfter, the runner jumps back to where it started every WrapAfter seconds of steps, and
     //   Chase with it: a respawn, teleported and cut, so nothing slides across the level.
+    //   With UpdateNudge, Chase is also moved up and down by that much in every Update: a camera moved
+    //   both in the steps and between them, which the camera manager reports as mixed.
     // =============================================================================
     class FollowProbe : public Opaax::Behaviour
     {
@@ -36,6 +38,7 @@ namespace TestWorld
         Opaax::Vector2F    Offset = { 0.f, 40.f };
         float              ZoomPerStep = 0.f;   // OrthoSize Chase gains every step
         float              WrapAfter   = 0.f;   // seconds of steps between two jumps back to the start; 0: never
+        float              UpdateNudge = 0.f;   // how far Chase is also moved in every Update; 0: not moved there
 
         Opaax::Int32 Frames        = 0;     // frames read
         Opaax::Int32 FramedBetween = 0;     // frames framed strictly inside the last step
@@ -46,9 +49,9 @@ namespace TestWorld
         float        MaxZoomLag    = 0.f;   // largest gap between the zoom's and the pose's fraction of the step
 
         OPAAX_PROPERTIES(FollowProbe, OPAAX_PROP(Speed), OPAAX_PROP(Chase), OPAAX_PROP(Offset),
-                         OPAAX_PROP(ZoomPerStep), OPAAX_PROP(WrapAfter), OPAAX_PROP(Frames), OPAAX_PROP(FramedBetween),
-                         OPAAX_PROP(MinFraction), OPAAX_PROP(MaxFraction), OPAAX_PROP(ViewOffsetY),
-                         OPAAX_PROP(ZoomFrames), OPAAX_PROP(MaxZoomLag))
+                         OPAAX_PROP(ZoomPerStep), OPAAX_PROP(WrapAfter), OPAAX_PROP(UpdateNudge), OPAAX_PROP(Frames),
+                         OPAAX_PROP(FramedBetween), OPAAX_PROP(MinFraction), OPAAX_PROP(MaxFraction),
+                         OPAAX_PROP(ViewOffsetY), OPAAX_PROP(ZoomFrames), OPAAX_PROP(MaxZoomLag))
 
         void OnStart() override
         {
@@ -99,6 +102,12 @@ namespace TestWorld
         // Before this frame's steps: the runner's last step is the one the last frame was drawn in.
         void OnUpdate(float) override
         {
+            if (UpdateNudge != 0.f && m_Camera.IsValid())
+            {
+                m_bNudgeUp = !m_bNudgeUp;
+                m_Camera.Get<Opaax::TransformComponent>().Position.y += m_bNudgeUp ? UpdateNudge : -UpdateNudge;
+            }
+
             const Opaax::TransformComponent*              lLocal   = TryGet<Opaax::TransformComponent>();
             const Opaax::TransformInterpolationComponent* lHistory = TryGet<Opaax::TransformInterpolationComponent>();
             if (lLocal == nullptr || lHistory == nullptr || !lHistory->bHasPrevious || !lHistory->bHasStepped)
@@ -150,5 +159,6 @@ namespace TestWorld
         Opaax::Entity m_Camera;
         float         m_StartX    = 0.f;
         float         m_SinceWrap = 0.f;
+        bool          m_bNudgeUp  = false;
     };
 }

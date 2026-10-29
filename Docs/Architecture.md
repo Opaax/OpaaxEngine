@@ -51,7 +51,10 @@ and the game export. A game is a module of its own types, linked into its runtim
    Around each step the world records what a step changes for the entities that ask for it: the
    cameras' poses and `OrthoSize` (`CameraInterpolation`: every camera, so one that takes the view over
    is framed between its steps from its first frame), and the pose of any entity gameplay
-   moves in a step (`TransformInterpolation::RecordSteps`).
+   moves in a step (`TransformInterpolation::RecordSteps`). At the start of a step, before those
+   move on, each entity drawn between steps notes whether the last step moved it and whether it
+   moved since; a camera whose view one entity moves both ways, step after step, is reported as
+   mixed (its `rhythm`) with a warning: it would jitter on screens faster than the steps.
 5. **Render:** the active camera frames the world, then each view is drawn. Moving bodies and the
    camera (its pose and its zoom) are placed between their last two steps, so motion is smooth at
    any frame rate and a camera following a body keeps it still on screen.

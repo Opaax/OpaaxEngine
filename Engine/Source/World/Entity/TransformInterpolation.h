@@ -32,7 +32,11 @@ namespace Opaax
          */
         void Teleport(Entity InEntity);
 
-        /** Start of a fixed step: the pose of each entity recorded becomes its previous pose. */
+        /**
+         * Start of a fixed step: every entity drawn between steps notes whether the last step moved it
+         * and whether it moved since (bMovedInLastStep, bMovedSinceStep); then the pose of each entity
+         * recorded becomes its previous pose.
+         */
         void BeginFixedStep(World& InWorld);
 
         /** End of a fixed step: the pose of each entity recorded is kept as the one the step left. */
