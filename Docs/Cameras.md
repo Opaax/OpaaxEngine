@@ -24,6 +24,19 @@ entity that gameplay moves in a fixed step is drawn between its steps once it as
 Every camera is recorded, so one that takes the view over keeps what it frames still from its first
 frame. A paused world is drawn as it was on its last frame; a step moves it by one step.
 
+### Switching cameras
+
+When another camera takes over (its `Priority` raised above the live one's), the view cuts to it,
+or blends to it over its `BlendIn` seconds, eased by its `BlendCurve` (`Linear`, `EaseIn`,
+`EaseOut`, `EaseInOut`, or `Cut`). The position blends along a line, the size in log space (so the
+zoom feels even) and the roll the short way round. The camera left keeps moving while the view
+leaves it; another switch during a blend blends from where the view is, and
+`CameraManager::Cut(world)` ends a blend on the live camera. A world's `CameraDirector` does this.
+
+A blend runs on game time, like everything drawn: raised in a fixed step (`OnFixedUpdate`), it starts
+at that step and is drawn the same at any frame rate; raised in `Update` or by a tool, it starts at
+the next step. A paused world holds a blend where it is.
+
 ## The rules
 
 1. **Move a camera in the fixed steps** (a behaviour's `OnFixedUpdate`, a world subsystem's
@@ -141,21 +154,22 @@ In `Engine.config` (the Config panel):
 ## Seeing it
 
 - **`camera.info`** ([Automation.md](Automation.md)): the view, the frame clock (the refresh frames
-  are snapped to, dropped steps), each camera's framed view and rhythm, and the last frame's steps
-  and alpha.
+  are snapped to, dropped steps), each camera's framed view, blend and rhythm, the blends under way,
+  and the last frame's steps and alpha.
 - **Traces:** `camera.trace.start` and `camera.trace.stop` record every frame's time, view and
   followed entity into a JSON and a CSV file and measure them: how far the followed entity moves on
   screen (`targetDrift`), how unevenly the view moves (`motionJitter`), time running back, moves
-  while paused, zoom turning back. `camera.trace.compare` checks that a run at another frame rate
-  draws the same path.
+  while paused, zoom turning back, how much a camera switch jumped (`switchJump`: a cut's distance,
+  nothing for a blend). `camera.trace.compare` checks that a run at another frame rate draws the
+  same path; a view that curves within a step (a blend) is placed against a 720 Hz run.
 - **Frame pacing:** `--frame-pacing 144` (or `time.pace`) plays a level with the frame times of a
   144 Hz screen on any machine, steady (`144`), noisy (`60,jitter=0.25`) or stalling
   (`144,hitch=0.1@2`), the same frames every run.
 - **The camera matrix:** `TestWorld/Tests/Camera*.json` play the Following levels at 30 to 240 frames
   a second, steady, noisy and stalling, at fixed rates of 30, 60 and 120, far from the origin,
-  smoothed, through a camera switch, a pause and a respawn. `TestWorld/EditorTests/Camera*.json` play
-  them in the editor at 60 and 144.
-- **In the editor:** **Panels > Camera Stats** shows the live camera and how it moves, the frame's
-  time, steps and alpha, the frame clock, and a graph of the selected entity's drift on screen;
-  **Camera Preview** shows what the selected camera frames; `editor.camera*`, `editor.viewport` and
-  `editor.camera.preview` drive and read them from scripts.
+  smoothed, through a camera switch, a blended hand-over, a pause and a respawn.
+  `TestWorld/EditorTests/Camera*.json` play them in the editor at 60 and 144.
+- **In the editor:** **Panels > Camera Stats** shows the live camera and how it moves, the blend
+  under way, the frame's time, steps and alpha, the frame clock, and a graph of the selected entity's
+  drift on screen; **Camera Preview** shows what the selected camera frames; `editor.camera*`,
+  `editor.viewport` and `editor.camera.preview` drive and read them from scripts.
