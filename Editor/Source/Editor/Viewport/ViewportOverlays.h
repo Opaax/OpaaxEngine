@@ -43,4 +43,12 @@ namespace Opaax::Editor::ViewportOverlays
      */
     Uint64 EnqueueLightGizmos(DebugDraw& InDraw, World& InWorld, const TDynArray<EntityID>& InIds,
                               float InAnchorHalfExtent, TOptional<float> InAlpha = NullOpt);
+
+    /**
+     * What each camera of InIds is rigged to frame by: its follow's dead zone around it, its
+     * confiner's bounds, its group's targets with their padding, and every zone of the world when it
+     * has a zone stage; a zone of InIds draws itself. @return How many were drawn.
+     */
+    Uint64 EnqueueCameraRigGizmos(DebugDraw& InDraw, World& InWorld, const TDynArray<EntityID>& InIds,
+                                  float InAnchorHalfExtent, TOptional<float> InAlpha = NullOpt);
 }
