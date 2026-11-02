@@ -173,7 +173,8 @@ The engine's stages, added to a camera like any behaviour:
 | `CameraFollowStage` | Body | Follows the entity named `Target` (found again once it is gone), aiming at it plus `Offset`. The aim moves inside `DeadZone` (a fraction of the view's width and height, the screen's aspect counted) without the camera; outside it the camera moves by the overshoot, eased per axis over `Damping` seconds (`SmoothDamp`; 0 keeps it on). `LookAhead` leads the aim by that many seconds of the target's velocity, measured over the steps, eased over `LookAheadDamping` |
 
 The screen's aspect is the one the world's view was last drawn at (`World::GetViewAspect`, 16:9
-before the first frame).
+before the first frame). `TestWorld/Tests/CameraRig.json` plays `Levels/CameraRig.opaaxlevel`: an
+eased follow drawing one path at every frame rate, and a locked one with no drift.
 
 ### A respawn
 
