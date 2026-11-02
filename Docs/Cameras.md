@@ -118,12 +118,31 @@ A zoom is the same: change `OrthoSize` in the steps, toward a target size with `
 
 ### A shake
 
-A shake is made every frame, so it goes in `Update`, and rule 2 keeps it off an entity moved in the
-steps. Split the camera: a parent entity follows in the steps (`CameraFollow` above, without a
-`Camera`), and the camera under it is offset in `Update`. Each entity moves one way, so neither
-jitters, and the offset is drawn as it is, on top of the follow drawn between its steps. Make the
-offset a function of time (the trauma it decays by `InDeltaTime`, a noise or a wave of the time
-elapsed), never of the frame count.
+A **Camera Shake** asset (New Asset > Rendering) says how the view shakes: its `Pattern` (`Wave`, a
+steady sine; `Noise`, smooth noise), how far it moves (`Amplitude`, world units) and turns
+(`RollAmplitude`, degrees), how fast (`Frequency`), how long (`Duration`; 0 until stopped) and how it
+fades in and out (`BlendIn`, `BlendOut`). Play one from a fixed step:
+
+```cpp
+#include "Renderer/Camera/CameraShakeSubsystem.h"
+
+// HitShake: a TAssetRef<Opaax::CameraShake> field. The id stops it (Stop), for an endless shake.
+if (auto* lShakes = GetWorld().GetSubsystems().GetSubsystem<Opaax::CameraShakeSubsystem>())
+{
+    const Opaax::Uint32 lId = lShakes->Play(HitShake, /*Scale*/ 1.f, /*Seed*/ 3);
+}
+```
+
+Or put a **CameraShakeSource** on the entity a shake comes from (an explosion): it is at full strength
+within `InnerRadius` of the view's centre, gone from `OuterRadius` (0: everywhere), plays when the
+entity starts (`bPlayOnStart`) or on `PlaySource(entity)`, and stops with the entity. With
+`bUseTrauma` it shakes at its trauma squared: each hit raises it (`AddTrauma(entity, 0.4f)`), it falls
+by `TraumaDecay` a second, and it plays for as long as the entity lives (give it an endless shake).
+
+A shake is a function of game time and its `Seed`: played in a fixed step it starts at that step and
+is drawn the same at any frame rate; played in `Update`, at the next step; a paused world holds it.
+It moves the drawn view (a modifier of the director, below), never an entity, so no camera's rhythm
+turns mixed. Its offset is along the view's axes, and its roll shows even without `bRotateView`.
 
 ### A camera modifier
 
@@ -170,13 +189,13 @@ In `Engine.config` (the Config panel):
   screen (`targetDrift`), how unevenly the view moves (`motionJitter`), time running back, moves
   while paused, zoom turning back, how much a camera switch jumped (`switchJump`: a cut's distance,
   nothing for a blend). `camera.trace.compare` checks that a run at another frame rate draws the
-  same path; a view that curves within a step (a blend) is placed against a 720 Hz run.
+  same path; a view that curves within a step (a blend, a shake) is placed against a 720 Hz run.
 - **Frame pacing:** `--frame-pacing 144` (or `time.pace`) plays a level with the frame times of a
   144 Hz screen on any machine, steady (`144`), noisy (`60,jitter=0.25`) or stalling
   (`144,hitch=0.1@2`), the same frames every run.
 - **The camera matrix:** `TestWorld/Tests/Camera*.json` play the Following levels at 30 to 240 frames
   a second, steady, noisy and stalling, at fixed rates of 30, 60 and 120, far from the origin,
-  smoothed, through a camera switch, a blended hand-over, a pause and a respawn.
+  smoothed, through a camera switch, a blended hand-over, a pause, a respawn and two shakes.
   `TestWorld/EditorTests/Camera*.json` play them in the editor at 60, 144 and 240.
 - **In the editor:** **Panels > Camera Stats** shows the live camera and how it moves, the blend
   under way, the frame's time, steps and alpha, the frame clock, and a graph of the selected entity's

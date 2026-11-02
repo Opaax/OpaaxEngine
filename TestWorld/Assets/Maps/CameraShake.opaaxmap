@@ -1,0 +1,254 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.30000001192092896,
+                        "y": 0.6000000238418579,
+                        "z": 0.8999999761581421
+                    },
+                    "Size": {
+                        "x": 20.0,
+                        "y": 100.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 700.0,
+                        "y": -40.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "0cee03573c34a96fc2b0f3dea85657ec",
+            "name": "Post2",
+            "ownerMap": "CameraShake"
+        },
+        {
+            "components": {
+                "FollowProbe": {
+                    "Chase": "ChaseCam",
+                    "FramedBetween": 0,
+                    "Frames": 0,
+                    "MaxFraction": 0.0,
+                    "MaxZoomLag": 0.0,
+                    "MinFraction": 1.0,
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 40.0
+                    },
+                    "SmoothTime": 0.0,
+                    "Speed": 400.0,
+                    "UpdateNudge": 0.0,
+                    "ViewOffsetY": 0.0,
+                    "WrapAfter": 0.0,
+                    "ZoomFrames": 0,
+                    "ZoomPerStep": 0.0
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.949999988079071,
+                        "y": 0.550000011920929,
+                        "z": 0.20000000298023224
+                    },
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "23b5b04c58aca3e2e18d17fedac63a19",
+            "name": "Runner",
+            "ownerMap": "CameraShake"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.30000001192092896,
+                        "y": 0.6000000238418579,
+                        "z": 0.8999999761581421
+                    },
+                    "Size": {
+                        "x": 20.0,
+                        "y": 100.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 300.0,
+                        "y": -40.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "484d645584548c1414d8d986ce0eb936",
+            "name": "Post1",
+            "ownerMap": "CameraShake"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3499999940395355,
+                        "y": 0.30000001192092896,
+                        "z": 0.25
+                    },
+                    "Size": {
+                        "x": 4000.0,
+                        "y": 20.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 1500.0,
+                        "y": -100.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "96edae9d40fe6ec07ec439abcd7736cb",
+            "name": "Ground",
+            "ownerMap": "CameraShake"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "BlendCurve": "EaseInOut",
+                    "BlendIn": 0.0,
+                    "OrthoSize": 300.0,
+                    "Priority": 1,
+                    "bRotateView": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 40.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "b3a88a49d04bbb3d43df6b1f7aa6c675",
+            "name": "ChaseCam",
+            "ownerMap": "CameraShake"
+        },
+        {
+            "components": {
+                "CameraShakeSource": {
+                    "InnerRadius": 0.0,
+                    "OuterRadius": 0.0,
+                    "Scale": 1.0,
+                    "Seed": 2,
+                    "Shake": "Shakes/Rumble.opaaxasset",
+                    "TraumaDecay": 0.800000011920929,
+                    "bPlayOnStart": false,
+                    "bUseTrauma": true
+                },
+                "ShakeProbe": {
+                    "PlayOnStep": -1,
+                    "Trauma": 1.0,
+                    "TraumaNow": 0.0,
+                    "TraumaOnStep": 75,
+                    "bHit": false,
+                    "bPlayed": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "dc179f0a444cef10fd716feea762ca7d",
+            "name": "Quake",
+            "ownerMap": "CameraShake"
+        },
+        {
+            "components": {
+                "CameraShakeSource": {
+                    "InnerRadius": 300.0,
+                    "OuterRadius": 1500.0,
+                    "Scale": 1.0,
+                    "Seed": 7,
+                    "Shake": "Shakes/Hit.opaaxasset",
+                    "TraumaDecay": 1.0,
+                    "bPlayOnStart": false,
+                    "bUseTrauma": false
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.8999999761581421,
+                        "y": 0.20000000298023224,
+                        "z": 0.15000000596046448
+                    },
+                    "Size": {
+                        "x": 30.0,
+                        "y": 30.0
+                    }
+                },
+                "ShakeProbe": {
+                    "PlayOnStep": 30,
+                    "Trauma": 1.0,
+                    "TraumaNow": 0.0,
+                    "TraumaOnStep": -1,
+                    "bHit": false,
+                    "bPlayed": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 1200.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "f8201c8ed4e1f5b9b290dfa5d66e4efa",
+            "name": "Blast",
+            "ownerMap": "CameraShake"
+        }
+    ],
+    "mapId": "CameraShake",
+    "version": 4
+}

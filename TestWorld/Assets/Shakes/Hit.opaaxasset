@@ -1,0 +1,13 @@
+{
+    "Class": "CameraShake",
+    "Properties": {
+        "Amplitude": 24.0,
+        "BlendIn": 0.05000000074505806,
+        "BlendOut": 0.6000000238418579,
+        "Duration": 1.2000000476837158,
+        "Frequency": 14.0,
+        "Pattern": "Noise",
+        "RollAmplitude": 4.0
+    },
+    "Version": 1
+}

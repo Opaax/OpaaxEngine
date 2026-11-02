@@ -2,6 +2,7 @@
 
 #include "Core/String/OpaaxStringJson.h"
 #include "Renderer/Camera/CameraComponent.h"
+#include "Renderer/Camera/CameraShakeSubsystem.h"
 #include "World/Behaviour/Behaviour.h"
 #include "World/World.h"
 
@@ -68,6 +69,51 @@ namespace TestWorld
             ViewX    = lView.Position.x;
             ViewY    = lView.Position.y;
             ViewSize = lView.OrthoSize;
+        }
+    };
+
+    // =============================================================================
+    // ShakeProbe — on its entity's CameraShakeSource: plays it in the fixed step after the world's
+    //   PlayOnStep-th, and raises its trauma by Trauma in the one after TraumaOnStep (-1: never). Made
+    //   in steps, so drawn the same at any frame rate. Records the trauma at each step.
+    // =============================================================================
+    class ShakeProbe : public Opaax::Behaviour
+    {
+        OPAAX_OBJECT(ShakeProbe, Opaax::Behaviour)
+
+    public:
+        Opaax::Int32 PlayOnStep   = -1;
+        Opaax::Int32 TraumaOnStep = -1;
+        float        Trauma       = 1.f;
+
+        bool  bPlayed   = false;
+        bool  bHit      = false;
+        float TraumaNow = 0.f;
+
+        OPAAX_PROPERTIES(ShakeProbe, OPAAX_PROP(PlayOnStep), OPAAX_PROP(TraumaOnStep), OPAAX_PROP(Trauma),
+                         OPAAX_PROP(bPlayed), OPAAX_PROP(bHit), OPAAX_PROP(TraumaNow))
+
+        void OnFixedUpdate(float) override
+        {
+            Opaax::CameraShakeSubsystem* lShakes = GetWorld().GetSubsystems().GetSubsystem<Opaax::CameraShakeSubsystem>();
+            if (lShakes == nullptr)
+            {
+                return;
+            }
+
+            const Opaax::Uint64 lStep = GetWorld().GetStepCount();
+            if (!bPlayed && PlayOnStep >= 0 && lStep >= static_cast<Opaax::Uint64>(PlayOnStep))
+            {
+                bPlayed = lShakes->PlaySource(GetEntity().GetHandle()) != 0;
+            }
+
+            if (!bHit && TraumaOnStep >= 0 && lStep >= static_cast<Opaax::Uint64>(TraumaOnStep))
+            {
+                lShakes->AddTrauma(GetEntity().GetHandle(), Trauma);
+                bHit = true;
+            }
+
+            TraumaNow = lShakes->GetTrauma(GetEntity().GetHandle());
         }
     };
 }
