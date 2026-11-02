@@ -95,7 +95,8 @@ namespace
 
 namespace Opaax::Editor
 {
-    Entity EntityOps::Create(EditorContext& InContext, MapId InOwnerMap, const OpaaxString& InName)
+    Entity EntityOps::Create(EditorContext& InContext, MapId InOwnerMap, const OpaaxString& InName,
+                             const TFunction<bool(Entity)>& InFill)
     {
         if (!MapOps::CanEdit(InContext, "Create Entity")) { return Entity{}; }
 
@@ -113,6 +114,13 @@ namespace Opaax::Editor
 
         Entity lEntity = lWorld->CreateEntity(lName, InOwnerMap);
         if (!lEntity.IsValid()) { return Entity{}; }
+
+        // Filled before the capture, so the step brings the entity back whole; a failed fill leaves nothing.
+        if (InFill && !InFill(lEntity))
+        {
+            lWorld->DestroyEntity(lEntity);
+            return Entity{};
+        }
 
         InContext.Selection.Select(lEntity);
         lWorld->MarkChanged();

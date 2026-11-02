@@ -485,8 +485,8 @@ namespace Opaax::Editor::EditorAutomation
 
             InCommands.Register("level.info",
                 "The open level: its file ({level}; null for a map opened on its own), its maps ({id, path, "
-                "persistent, focused, unsaved}) and whether anything is {unsaved}. Entities created next go to the "
-                "focused map.",
+                "persistent, focused, unsaved}), whether anything is {unsaved}, and whether its edits have a step "
+                "to undo or redo ({canUndo}, {canRedo}). Entities created next go to the focused map.",
                 [&InContext](const nlohmann::json&)
                 {
                     OpaaxString lError;
@@ -521,7 +521,9 @@ namespace Opaax::Editor::EditorAutomation
                         { "level", lFile.IsEmpty() ? nlohmann::json()
                                                    : nlohmann::json(InContext.Paths.AbsoluteToAsset(lFile).CStr()) },
                         { "maps", lMaps },
-                        { "unsaved", InContext.LevelDocument.IsDirty(*lWorld, lTypes, *lLevel) } });
+                        { "unsaved", InContext.LevelDocument.IsDirty(*lWorld, lTypes, *lLevel) },
+                        { "canUndo", InContext.Undo.CanUndo() },
+                        { "canRedo", InContext.Undo.CanRedo() } });
                 });
 
             InCommands.Register("level.save",
@@ -640,30 +642,39 @@ namespace Opaax::Editor::EditorAutomation
         {
             InCommands.Register("entity.create",
                 "Creates an entity in the edit world: {name}, {map} (default: the focused one), {components}: "
-                "{type: values}. Undoable; returns the entity.",
+                "{type: values}. One undo step; returns the entity. A request that fails creates nothing.",
                 [&InContext](const nlohmann::json& InParams)
                 {
                     const OpaaxString lName = InParams.value("name", OpaaxString("Entity"));
                     const OpaaxString lMap  = InParams.value("map", OpaaxString());
                     const MapId       lOwner = lMap.IsEmpty() ? InContext.MapDocument.GetMapId() : MapId(lMap);
 
-                    Entity lEntity = EntityOps::Create(InContext, lOwner, lName);
-                    if (!lEntity.IsValid())
+                    const ComponentRegistry& lTypes      = InContext.Engine.GetRegistries().Components();
+                    const nlohmann::json     lComponents = InParams.value("components", nlohmann::json::object());
+                    OpaaxString              lError;
+                    if (!EngineAutomation::CheckComponents(lTypes, lComponents, lError))
                     {
-                        return AutomationResult::Fail("the entity was not created (Play running, or no map: see the log)");
+                        return AutomationResult::Fail(lError);
                     }
 
-                    const auto lComponents = InParams.find("components");
-                    if (lComponents != InParams.end() && lComponents->is_object())
+                    // A field of the wrong type is only found as it loads: the fill then fails and the entity goes.
+                    const Entity lEntity = EntityOps::Create(InContext, lOwner, lName, [&](const Entity InEntity)
                     {
-                        for (const auto& [lType, lValue] : lComponents->items())
+                        for (const auto& [lType, lValue] : lComponents.items())
                         {
-                            OpaaxString lError;
-                            if (!EditComponent(InContext, lEntity, nlohmann::json{ { "type", lType }, { "value", lValue } }, lError))
+                            const nlohmann::json lPatch{ { "type", lType }, { "value", lValue } };
+                            if (!EngineAutomation::PatchComponent(InEntity, lTypes, lPatch, lError))
                             {
-                                return AutomationResult::Fail(lError);
+                                return false;
                             }
                         }
+                        return true;
+                    });
+                    if (!lEntity.IsValid())
+                    {
+                        return AutomationResult::Fail(lError.IsEmpty()
+                            ? OpaaxString("the entity was not created (Play running, or no map: see the log)")
+                            : lError);
                     }
 
                     return AutomationResult::Ok(Describe(InContext, lEntity));
@@ -789,7 +800,7 @@ namespace Opaax::Editor::EditorAutomation
             // Replaces the engine's: in the edit world, an edit is an undo step.
             InCommands.Register("component.set",
                 "Changes fields of {entity}'s component {type}: {value} is merged into it (added when missing). "
-                "Undoable in the edit world.",
+                "Undoable in the edit world. A field of the wrong type changes nothing.",
                 [&InContext](const nlohmann::json& InParams)
                 {
                     OpaaxString  lError;

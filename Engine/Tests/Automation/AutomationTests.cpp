@@ -12,6 +12,7 @@
 #include "Core/IO/FileSystem.h"
 #include "Core/String/OpaaxPathString.h"
 #include "Core/String/OpaaxStringJson.h"
+#include "Renderer/Components/QuadComponent.h"
 #include "UI/UICanvas.h"
 #include "UI/UIRect.h"
 #include "UI/Widgets/UIButton.h"
@@ -544,6 +545,66 @@ TEST_CASE("Automation entities: described with their components, and patched fie
     CHECK(lError.Contains("unknown component"));
     CHECK_FALSE(EngineAutomation::PatchComponent(
         lHero, lTypes, nlohmann::json{ { "type", "Transform" }, { "value", 3 } }, lError));
+}
+
+TEST_CASE("Automation entities: a patch with a field of the wrong type leaves the component as it was")
+{
+    ComponentRegistry lTypes;
+    REQUIRE(lTypes.Register<TransformComponent>("Transform", /*bInEssential*/ true));
+    REQUIRE(lTypes.Register<QuadComponent>("Quad"));
+
+    World  lWorld("Automation");
+    Entity lHero = lWorld.CreateEntity("Hero");
+    lHero.Get<TransformComponent>().Rotation = 45.f;
+
+    // Position loads before Scale fails: it is put back.
+    OpaaxString lError;
+    CHECK_FALSE(EngineAutomation::PatchComponent(
+        lHero, lTypes,
+        nlohmann::json{ { "type", "Transform" },
+                        { "value", { { "Position", { { "x", 12.0 } } }, { "Scale", "big" } } } },
+        lError));
+    CHECK(lError.Contains("'Transform' did not take"));
+
+    const TransformComponent& lTransform = lHero.Get<TransformComponent>();
+    CHECK(lTransform.Position.x == doctest::Approx(0.f));
+    CHECK(lTransform.Rotation == doctest::Approx(45.f));
+    CHECK(lTransform.Scale.x == doctest::Approx(1.f));
+
+    // A component that was missing is not added.
+    CHECK_FALSE(EngineAutomation::PatchComponent(
+        lHero, lTypes,
+        nlohmann::json{ { "type", "Quad" },
+                        { "value", { { "Size", { { "x", 5.0 }, { "y", 5.0 } } }, { "Color", 3 } } } },
+        lError));
+    CHECK_FALSE(lHero.Has<QuadComponent>());
+}
+
+TEST_CASE("Automation entities: the components to create an entity with are all checked before it is made")
+{
+    ComponentRegistry lTypes;
+    REQUIRE(lTypes.Register<TransformComponent>("Transform", /*bInEssential*/ true));
+    REQUIRE(lTypes.Register<QuadComponent>("Quad"));
+
+    OpaaxString lError;
+    CHECK(EngineAutomation::CheckComponents(lTypes, nlohmann::json::object(), lError));
+    CHECK(EngineAutomation::CheckComponents(
+        lTypes,
+        nlohmann::json{ { "Quad", { { "Size", { { "x", 5.0 } } } } }, { "Transform", nlohmann::json::object() } },
+        lError));
+
+    // Named after a known type: the unknown one is still found.
+    CHECK_FALSE(EngineAutomation::CheckComponents(
+        lTypes, nlohmann::json{ { "Quad", nlohmann::json::object() }, { "ShakeProbe", nlohmann::json::object() } },
+        lError));
+    CHECK(lError.Contains("unknown component type 'ShakeProbe'"));
+    CHECK(lError.Contains("rebuild"));
+
+    CHECK_FALSE(EngineAutomation::CheckComponents(lTypes, nlohmann::json{ { "Quad", 3 } }, lError));
+    CHECK(lError.Contains("'Quad'"));
+
+    CHECK_FALSE(EngineAutomation::CheckComponents(lTypes, nlohmann::json::array({ "Quad" }), lError));
+    CHECK(lError.Contains("\"components\""));
 }
 
 TEST_CASE("Automation expectations: equals, near, greater, less and between, with what was found")
