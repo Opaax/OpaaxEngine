@@ -16,9 +16,8 @@ namespace Opaax
             [&](const EntityID InEntity, TransformComponent&, CameraZoneComponent& InZone)
             {
                 const TransformComponent lPlace = EntityHierarchy::WorldTransform(Entity(InEntity, &lWorld));
-                m_Zones.push_back(CameraZone{ InEntity,
-                                              Bounds2D::FromCenterSize(lPlace.Position, InZone.HalfExtent * 2.f * lPlace.Scale),
-                                              InZone.OrthoSize, InZone.bConfine, InZone.Priority, InZone.BlendTime });
+                m_Zones.push_back(CameraZone{ InEntity, CameraZoneBounds(InZone, lPlace), InZone.OrthoSize,
+                                              InZone.bConfine, InZone.Priority, InZone.BlendTime });
             });
 
         // The target's zone, or the camera's; a target named and not found keeps the zone applied.

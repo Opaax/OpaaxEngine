@@ -178,6 +178,14 @@ TEST_CASE("CameraRigSubsystem: a camera's stages run by stage, whatever order th
 
     REQUIRE(Ran().size() == 3);
     CHECK(Ran()[0] == ECameraStage::Body);
+
+    // camera.info lists them the same way.
+    const TDynArray<CameraStage*> lStages = lRig.TheWorld->GetSubsystems().GetSubsystem<CameraRigSubsystem>()->GetStages(
+        lCamera.GetHandle());
+    REQUIRE(lStages.size() == 3);
+    CHECK(OpaaxStringView(ToString(lStages[0]->GetStage())) == OpaaxStringView("Body"));
+    CHECK(lStages[1]->GetStage() == ECameraStage::Size);
+    CHECK(lStages[2]->GetStage() == ECameraStage::Constraint);
     CHECK(Ran()[1] == ECameraStage::Size);
     CHECK(Ran()[2] == ECameraStage::Constraint);
 
@@ -269,9 +277,16 @@ TEST_CASE("StepCameraFollow: holds while the aim is in the dead zone, follows by
 
     lCamera = StepCameraFollow(lCamera, { 150.f, -100.f }, HALF_VIEW, lSettings, lState, DT);
     CheckNear(lCamera, { 0.f, 0.f });
+    CHECK(lState.bInDeadZone);
 
     lCamera = StepCameraFollow(lCamera, { 250.f, -100.f }, HALF_VIEW, lSettings, lState, DT);
     CheckNear(lCamera, { 50.f, 0.f });
+    CHECK_FALSE(lState.bInDeadZone);
+
+    // The dead zone drawn around the camera: half of 400 by 300 each side.
+    const Bounds2D lDeadZone = CameraDeadZoneBounds(lCamera, lSettings.DeadZone, HALF_VIEW);
+    CheckNear(lDeadZone.Center, { 50.f, 0.f });
+    CheckNear(lDeadZone.HalfExtent, { 200.f, 150.f });
 
     lCamera = StepCameraFollow(lCamera, { 250.f, -200.f }, HALF_VIEW, lSettings, lState, DT);
     CheckNear(lCamera, { 50.f, -50.f });
@@ -387,6 +402,17 @@ TEST_CASE("ConfineCameraView: the view kept inside, centred when wider than the 
     // No height: y is free.
     const Bounds2D WALLS = Bounds2D::FromCenterSize({ 0.f, 0.f }, { 1000.f, 0.f });
     CheckNear(ConfineCameraView({ 900.f, 5000.f }, { 200.f, 100.f }, WALLS), { 300.f, 5000.f });
+
+    // A confiner's rectangle placed on an entity, and a zone's: moved and scaled with it.
+    TransformComponent lPlace;
+    lPlace.Position = { 1000.f, 50.f };
+    lPlace.Scale    = { 2.f, 2.f };
+    const Bounds2D lPlaced = CameraConfinerBounds({ 10.f, 0.f }, { 300.f, 100.f }, &lPlace);
+    CheckNear(lPlaced.Center, { 1020.f, 50.f });
+    CheckNear(lPlaced.HalfExtent, { 300.f, 100.f });
+    CameraZoneComponent lZone;
+    lZone.HalfExtent = { 100.f, 40.f };
+    CheckNear(CameraZoneBounds(lZone, lPlace).HalfExtent, { 200.f, 80.f });
 }
 
 TEST_CASE("CameraConfinerStage: after the body stages; the size, the aspect and a roll counted; placed on an entity")

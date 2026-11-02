@@ -24,7 +24,13 @@
 #include "Renderer/Camera/CameraComponent.h"
 #include "Renderer/Camera/CameraInterpolationComponent.h"
 #include "Renderer/Camera/CameraDirector.h"
+#include "Renderer/Camera/CameraConfinerStage.h"
+#include "Renderer/Camera/CameraFollowStage.h"
+#include "Renderer/Camera/CameraGroupStage.h"
 #include "Renderer/Camera/CameraManager.h"
+#include "Renderer/Camera/CameraRigSubsystem.h"
+#include "Renderer/Camera/CameraSpeedZoomStage.h"
+#include "Renderer/Camera/CameraZoneStage.h"
 #include "Renderer/Camera/CameraShakeSourceComponent.h"
 #include "Renderer/Camera/CameraShakeSubsystem.h"
 #include "UI/UICanvas.h"
@@ -189,6 +195,59 @@ namespace Opaax::EngineAutomation
             const EntityMeta* lMeta = InEntity.TryGet<EntityMeta>();
             return nlohmann::json{ { "name", lMeta != nullptr ? lMeta->Name : OpaaxString("<unnamed>") },
                                    { "id",   lMeta != nullptr ? nlohmann::json(lMeta->Id.ToString()) : nlohmann::json() } };
+        }
+
+        nlohmann::json BoundsToJson(const TOptional<Bounds2D>& InBounds)
+        {
+            return InBounds.has_value() ? nlohmann::json{ { "center", InBounds->Center }, { "halfExtent", InBounds->HalfExtent } }
+                                        : nlohmann::json();
+        }
+
+        /**
+         * InCamera's rig as camera.info gives it: each stage in the order it runs, {class, stage}, and
+         * what it holds (a follow's dead zone and lead, a confiner's or a group's bounds, the zone and its
+         * blend, a speed zoom's size). Empty without a rig.
+         */
+        nlohmann::json StagesToJson(World& InWorld, const EntityID InCamera)
+        {
+            nlohmann::json            lList = nlohmann::json::array();
+            const CameraRigSubsystem* lRig  = InWorld.GetSubsystems().GetSubsystem<CameraRigSubsystem>();
+            if (lRig == nullptr)
+            {
+                return lList;
+            }
+
+            for (CameraStage* lStage : lRig->GetStages(InCamera))
+            {
+                nlohmann::json lJson{ { "class", lStage->GetClass().GetName().CStr() }, { "stage", ToString(lStage->GetStage()) } };
+                if (const CameraFollowStage* lFollow = Cast<CameraFollowStage>(lStage))
+                {
+                    lJson["target"]     = lFollow->Target.CStr();
+                    lJson["inDeadZone"] = lFollow->GetState().bInDeadZone;
+                    lJson["lead"]       = lFollow->GetState().Lead;
+                }
+                else if (CameraConfinerStage* lConfiner = Cast<CameraConfinerStage>(lStage))
+                {
+                    lJson["bounds"] = BoundsToJson(lConfiner->GetBounds());
+                }
+                else if (const CameraGroupStage* lGroup = Cast<CameraGroupStage>(lStage))
+                {
+                    lJson["bounds"] = BoundsToJson(lGroup->GetTargetBounds());
+                }
+                else if (const CameraZoneStage* lZoneStage = Cast<CameraZoneStage>(lStage))
+                {
+                    const CameraZoneState& lState = lZoneStage->GetState();
+                    const Entity           lZone  = lState.Zone.has_value() ? Entity(lState.Zone->Entity, &InWorld) : Entity();
+                    lJson["zone"]  = lZone.IsValid() ? nlohmann::json(lZone.GetName().CStr()) : nlohmann::json();
+                    lJson["blend"] = CameraZoneBlendWeight(lState);
+                }
+                else if (const CameraSpeedZoomStage* lZoom = Cast<CameraSpeedZoomStage>(lStage))
+                {
+                    lJson["size"] = lZoom->GetState().Size;
+                }
+                lList.push_back(Move(lJson));
+            }
+            return lList;
         }
 
         /** The active world's shakes, or null with OutError: only a Play world has them. */
@@ -798,8 +857,11 @@ namespace Opaax::EngineAutomation
                 "tracing, clock (fixedDelta, refreshHz snapped to, snapping, maxSteps, droppedSteps), cameras} with "
                 "each camera's {name, id, priority, x, y, size, blendIn, blendCurve, framed (the view it gives on that frame), "
                 "recorded (framed between its steps), rhythm (over the last 60 steps: still, steps, update, or mixed "
-                "when one entity moves it both in the steps and in Update; unknown before 60 steps)}, and in a "
-                "Play world the last frame's {live: {name, id, rhythm, count, tied, blends (blends under way), blend "
+                "when one entity moves it both in the steps and in Update; unknown before 60 steps), stages (its rig, "
+                "in the order the stages run: {class, stage (Body, Size, Constraint)} and what each holds: a follow's "
+                "target, inDeadZone and lead, a confiner's or a group's bounds {center, halfExtent}, a zone stage's zone "
+                "and blend, a speed zoom's size)}, and in a "
+                "Play world the last frame's {live: {name, id, rhythm, stages, count, tied, blends (blends under way), blend "
                 "(the newest: from, the camera it leaves, null for a view held; weight toward the live camera), "
                 "unmodified (the view before the modifiers)}, modifiers (each {class, priority}, in the order they run), "
                 "shakes (each under way {id, shake (its asset), scale, seed, start and stopped (game times), source (its "
@@ -840,6 +902,7 @@ namespace Opaax::EngineAutomation
                             lCamera["blendCurve"] = ToString(InCamera.BlendCurve);
                             lCamera["recorded"]   = lEntity.Has<CameraInterpolationComponent>();
                             lCamera["rhythm"]     = RhythmOf(lEntity);
+                            lCamera["stages"]     = StagesToJson(*lWorld, InEntity);
                             lList.push_back(Move(lCamera));
                         });
 
@@ -869,6 +932,7 @@ namespace Opaax::EngineAutomation
                         if (lFrame.Resolution.Count > 0)
                         {
                             lLive["rhythm"] = RhythmOf(Entity(lFrame.Resolution.Entity, lWorld));
+                            lLive["stages"] = StagesToJson(*lWorld, lFrame.Resolution.Entity);
                         }
                         lLive["count"]      = lFrame.Resolution.Count;
                         lLive["tied"]       = lFrame.Resolution.Tied;

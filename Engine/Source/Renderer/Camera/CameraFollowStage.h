@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/Maths/Bounds2D.h"
 #include "Core/Maths/MathTypes.h"
 #include "Core/Maths/Maths.h"
 #include "Core/OpaaxTypes.h"
@@ -46,6 +47,9 @@ namespace Opaax
         /** Where the last step saw the target: its velocity is measured over the steps. */
         Vector2F LastTarget = { 0.f, 0.f };
         bool     bHasTarget = false;
+
+        /** The last step held the camera: the aim was inside the dead zone both ways. */
+        bool bInDeadZone = false;
     };
 
     // =============================================================================
@@ -71,7 +75,8 @@ namespace Opaax
         InOutState.LastTarget = InTarget;
         InOutState.bHasTarget = true;
 
-        Vector2F lCamera = InCamera;
+        Vector2F lCamera       = InCamera;
+        InOutState.bInDeadZone = true;
         for (Int32 lAxis = 0; lAxis < 2; ++lAxis)
         {
             InOutState.Lead[lAxis] = DampCameraAxis(InOutState.Lead[lAxis], lTargetVelocity[lAxis] * InSettings.LookAhead,
@@ -85,16 +90,25 @@ namespace Opaax
             float lGoal = InCamera[lAxis];
             if (lGap > lHalf)
             {
-                lGoal = lAim - lHalf;
+                lGoal                  = lAim - lHalf;
+                InOutState.bInDeadZone = false;
             }
             else if (lGap < -lHalf)
             {
-                lGoal = lAim + lHalf;
+                lGoal                  = lAim + lHalf;
+                InOutState.bInDeadZone = false;
             }
             lCamera[lAxis] = DampCameraAxis(InCamera[lAxis], lGoal, InOutState.Velocity[lAxis],
                                             InSettings.Damping[lAxis], InDeltaTime);
         }
         return lCamera;
+    }
+
+    /** Where the aim moves without a camera at InCamera: InDeadZone of a view InViewHalfExtent each side. */
+    inline Bounds2D CameraDeadZoneBounds(const Vector2F InCamera, const Vector2F InDeadZone, const Vector2F InViewHalfExtent)
+    {
+        return Bounds2D{ InCamera, { Maths::Max(InDeadZone.x, 0.f) * InViewHalfExtent.x,
+                                     Maths::Max(InDeadZone.y, 0.f) * InViewHalfExtent.y } };
     }
 
     // =============================================================================

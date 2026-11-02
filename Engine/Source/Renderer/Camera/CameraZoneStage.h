@@ -42,6 +42,13 @@ namespace Opaax
     // =============================================================================
     // Zones (pure functions)
     // =============================================================================
+    /** How far the blend into the zone applied is: 0 where it started, 1 done. */
+    inline float CameraZoneBlendWeight(const CameraZoneState& InState)
+    {
+        return InState.BlendTime > 0.f ? CameraBlendWeight(ECameraBlend::EaseInOut, InState.Elapsed / InState.BlendTime)
+                                       : 1.f;
+    }
+
     /** The highest-priority zone of InZones holding InPoint (among equals, the first), or null. */
     inline const CameraZone* PickCameraZone(const TDynArray<CameraZone>& InZones, const Vector2F InPoint)
     {
@@ -92,9 +99,7 @@ namespace Opaax
                                const float InAspect, const float InDeltaTime)
     {
         InOutState.Elapsed += InDeltaTime;
-        const float lWeight = InOutState.BlendTime > 0.f
-                                  ? CameraBlendWeight(ECameraBlend::EaseInOut, InOutState.Elapsed / InOutState.BlendTime)
-                                  : 1.f;
+        const float lWeight = CameraZoneBlendWeight(InOutState);
 
         const bool bSame = InZone != nullptr ? (InOutState.Zone.has_value() && InOutState.Zone->Entity == InZone->Entity)
                                              : !InOutState.Zone.has_value();

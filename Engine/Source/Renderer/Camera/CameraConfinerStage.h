@@ -7,6 +7,7 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Object/ObjectMacros.h"
 #include "Renderer/Camera/CameraStage.h"
+#include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
 
 namespace Opaax
@@ -36,6 +37,14 @@ namespace Opaax
                                                             InBounds.Center[lAxis] + lRoom);
         }
         return lPosition;
+    }
+
+    /** A confiner's rectangle: InCenter and InSize in the world, or on InPlace (its position and scale). */
+    inline Bounds2D CameraConfinerBounds(const Vector2F InCenter, const Vector2F InSize, const TransformComponent* InPlace)
+    {
+        return InPlace != nullptr
+                   ? Bounds2D::FromCenterSize(InPlace->Position + InCenter * InPlace->Scale, InSize * InPlace->Scale)
+                   : Bounds2D::FromCenterSize(InCenter, InSize);
     }
 
     // =============================================================================

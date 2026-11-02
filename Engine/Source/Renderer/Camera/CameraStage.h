@@ -45,6 +45,17 @@ namespace Opaax
         Constraint
     };
 
+    constexpr const char* ToString(const ECameraStage InStage) noexcept
+    {
+        switch (InStage)
+        {
+            case ECameraStage::Body:       return "Body";
+            case ECameraStage::Size:       return "Size";
+            case ECameraStage::Constraint: return "Constraint";
+        }
+        return "Unknown";
+    }
+
     // =============================================================================
     // CameraRigPose — what a camera's stages work on in a step: its pose in the world and its size.
     // =============================================================================

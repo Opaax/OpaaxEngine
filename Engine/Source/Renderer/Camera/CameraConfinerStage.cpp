@@ -12,7 +12,7 @@ namespace Opaax
     {
         if (BoundsEntity.IsEmpty())
         {
-            return Bounds2D::FromCenterSize(Center, Size);
+            return CameraConfinerBounds(Center, Size, nullptr);
         }
 
         if (!m_BoundsEntity.IsValid())
@@ -25,7 +25,7 @@ namespace Opaax
         }
 
         const TransformComponent lPlace = EntityHierarchy::WorldTransform(m_BoundsEntity);
-        return Bounds2D::FromCenterSize(lPlace.Position + Center * lPlace.Scale, Size * lPlace.Scale);
+        return CameraConfinerBounds(Center, Size, &lPlace);
     }
 
     void CameraConfinerStage::Step(CameraRigPose& InOutPose, float)

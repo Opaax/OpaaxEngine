@@ -114,7 +114,29 @@
                 "expect": {
                     "live": {
                         "name": "RigCam",
-                        "rhythm": "steps"
+                        "rhythm": "steps",
+                        "stages": [
+                            {
+                                "class": "CameraFollowStage",
+                                "stage": "Body",
+                                "target": "Runner",
+                                "inDeadZone": false
+                            },
+                            {
+                                "class": "CameraConfinerStage",
+                                "stage": "Constraint",
+                                "bounds": {
+                                    "center": {
+                                        "x": 0.0,
+                                        "y": 0.0
+                                    },
+                                    "halfExtent": {
+                                        "x": 900.0,
+                                        "y": 0.0
+                                    }
+                                }
+                            }
+                        ]
                     }
                 }
             },
@@ -260,6 +282,21 @@
                 }
             },
             {
+                "id": "group-stages-{tag}",
+                "command": "camera.info",
+                "expect": {
+                    "live": {
+                        "name": "GroupCam",
+                        "stages": [
+                            {
+                                "class": "CameraGroupStage",
+                                "stage": "Body"
+                            }
+                        ]
+                    }
+                }
+            },
+            {
                 "id": "priority-ZoneCam-{tag}",
                 "command": "component.set",
                 "params": {
@@ -346,6 +383,28 @@
                 }
             },
             {
+                "id": "zone-stages-{tag}",
+                "command": "camera.info",
+                "expect": {
+                    "live": {
+                        "name": "ZoneCam",
+                        "stages": [
+                            {
+                                "class": "CameraFollowStage",
+                                "stage": "Body",
+                                "target": "Runner"
+                            },
+                            {
+                                "class": "CameraZoneStage",
+                                "stage": "Constraint",
+                                "zone": "RoomB",
+                                "blend": 1.0
+                            }
+                        ]
+                    }
+                }
+            },
+            {
                 "id": "priority-SpeedCam-{tag}",
                 "command": "component.set",
                 "params": {
@@ -409,7 +468,18 @@
                 "expect": {
                     "live": {
                         "name": "SpeedCam",
-                        "rhythm": "steps"
+                        "rhythm": "steps",
+                        "stages": [
+                            {
+                                "class": "CameraFollowStage",
+                                "stage": "Body",
+                                "target": "Runner"
+                            },
+                            {
+                                "class": "CameraSpeedZoomStage",
+                                "stage": "Size"
+                            }
+                        ]
                     }
                 }
             }
