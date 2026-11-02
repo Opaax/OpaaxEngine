@@ -74,6 +74,7 @@
 #include "Movement/Assets/MoveMode.h"
 #include "Movement/Assets/Mover.h"
 #include "Renderer/Materials/Material2D.h"
+#include "Renderer/Camera/CameraShake.h"
 #include "Renderer/Text/FontFace.h"
 #include "Renderer/Text/FontFamily.h"
 #include "Editor/Properties/NativeComponentDrawers.h"
@@ -543,6 +544,10 @@ namespace Opaax::Editor
         AssetTypeRegistry& lTypes = m_Extensions.AssetTypes();
 
         lTypes.Register<Material2D>().SetCategory(OpaaxString("Rendering"));
+        lTypes.Register<CameraShake>()
+            .SetLabel(OpaaxString("Camera Shake"))
+            .SetCategory(OpaaxString("Rendering"))
+            .SetGlyph(OpaaxString("[CS]"));
         lTypes.Register<AudioClipDef>().SetCategory(OpaaxString("Audio"));
         lTypes.Register<AudioBank>().SetCategory(OpaaxString("Audio"));
 
