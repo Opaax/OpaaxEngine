@@ -344,6 +344,74 @@
                 "params": {
                     "path": "CameraRigZone-{tag}.png"
                 }
+            },
+            {
+                "id": "priority-SpeedCam-{tag}",
+                "command": "component.set",
+                "params": {
+                    "entity": "SpeedCam",
+                    "type": "Camera",
+                    "value": {
+                        "Priority": 8
+                    }
+                }
+            },
+            {
+                "command": "frames.wait",
+                "params": {
+                    "count": 2
+                }
+            },
+            {
+                "id": "trace-CameraRigSpeed-{tag}",
+                "command": "camera.trace.start",
+                "params": {
+                    "name": "CameraRigSpeed-{tag}",
+                    "target": "Runner"
+                }
+            },
+            {
+                "command": "world.wait",
+                "params": {
+                    "seconds": 0.5
+                }
+            },
+            {
+                "id": "CameraRigSpeed-{tag}",
+                "command": "camera.trace.stop",
+                "params": {
+                    "limits": {
+                        "timeReversals": 0,
+                        "stillMoves": 0,
+                        "zoomReversals": 0,
+                        "cameraSwitches": 0,
+                        "motionJitter": 1000.0,
+                        "mostSteps": 8
+                    }
+                }
+            },
+            {
+                "id": "CameraRigSpeed-{tag}-path",
+                "command": "camera.trace.compare",
+                "params": {
+                    "reference": "CameraRigSpeed-{reference}",
+                    "trace": "CameraRigSpeed-{tag}",
+                    "limits": {
+                        "position": 0.001,
+                        "size": 0.001,
+                        "rotation": 0.001
+                    }
+                }
+            },
+            {
+                "id": "speed-rhythm-{tag}",
+                "command": "camera.info",
+                "expect": {
+                    "live": {
+                        "name": "SpeedCam",
+                        "rhythm": "steps"
+                    }
+                }
             }
         ]
     }
