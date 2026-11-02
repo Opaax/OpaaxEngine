@@ -153,6 +153,7 @@ set(OPAAX_TEST_SOURCES
     Renderer/BatchPlanTests.cpp
     Renderer/CameraBlendTests.cpp
     Renderer/CameraDirectorTests.cpp
+    Renderer/CameraShakeTests.cpp
     Renderer/CameraInterpolationTests.cpp
     Renderer/CameraResolveTests.cpp
     Renderer/CameraTraceTests.cpp

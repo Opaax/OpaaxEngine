@@ -2,6 +2,7 @@
 
 #include "Core/OpaaxTypes.h"
 #include "Object/Object.h"
+#include "Object/ObjectMacros.h"
 #include "Renderer/CameraView.h"
 #include "World/Entity/EntityTypes.h"
 

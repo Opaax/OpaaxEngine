@@ -2,6 +2,9 @@
 #include "Engine/Registries/AutoRegistration.h"
 #include "Renderer/Camera/CameraComponent.h"
 #include "Renderer/Camera/CameraDirector.h"
+#include "Renderer/Camera/CameraShake.h"   // complete: the source visits its shake reference
+#include "Renderer/Camera/CameraShakeSourceComponent.h"
+#include "Renderer/Camera/CameraShakeSubsystem.h"
 #include "Renderer/Components/EnvironmentComponent.h"
 #include "Renderer/Components/Light2DComponent.h"
 #include "Renderer/Components/ShadowCaster2DComponent.h"
@@ -27,6 +30,11 @@ namespace Opaax
 
     // Which camera frames a Play world, and the blend from one to the next.
     OPAAX_REGISTER_OBJECT(CameraDirector);
+
+    // How a view shakes, the entities a shake comes from, and the shakes under way (the director's modifier).
+    OPAAX_REGISTER_OBJECT(CameraShake);
+    OPAAX_REGISTER_NAMED_COMPONENT(CameraShakeSourceComponent, "CameraShakeSource");
+    OPAAX_REGISTER_OBJECT(CameraShakeSubsystem);
 
     // How a world's picture is made (HDR, ambient, exposure, tonemap): one per level.
     OPAAX_REGISTER_NAMED_COMPONENT(EnvironmentComponent, "Environment");
