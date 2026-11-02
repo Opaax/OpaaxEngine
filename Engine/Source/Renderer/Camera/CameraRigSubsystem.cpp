@@ -82,4 +82,24 @@ namespace Opaax
         }
         m_Stages.clear();
     }
+
+    TDynArray<CameraStage*> CameraRigSubsystem::GetStages(const EntityID InCamera) const
+    {
+        TDynArray<CameraStage*>   lStages;
+        const BehaviourSubsystem* lBehaviours = GetWorld().GetSubsystems().GetSubsystem<BehaviourSubsystem>();
+        if (lBehaviours == nullptr)
+        {
+            return lStages;
+        }
+
+        lBehaviours->ForEachStarted(CameraStage::StaticClass(), [&lStages, InCamera](const EntityID InEntity, Behaviour& InStage)
+        {
+            if (InEntity == InCamera)
+            {
+                lStages.push_back(static_cast<CameraStage*>(&InStage));
+            }
+        });
+        Algo::StableSort(lStages, [](const CameraStage* InA, const CameraStage* InB) { return InA->GetStage() < InB->GetStage(); });
+        return lStages;
+    }
 }

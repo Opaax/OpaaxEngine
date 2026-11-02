@@ -2,10 +2,12 @@
 
 #include <nlohmann/json.hpp>
 
+#include "Core/Maths/Bounds2D.h"
 #include "Core/Maths/MathTypes.h"
 #include "Core/Maths/MathsJson.hpp"
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxProperty.h"
+#include "World/Components/TransformComponent.h"
 
 namespace Opaax
 {
@@ -45,4 +47,10 @@ namespace Opaax
                          OPAAX_PROP(BlendTime).SetRange(0.f, 10.f).SetTooltip("Seconds the camera takes to blend in "
                                                                               "when the zone starts to apply."))
     };
+
+    /** InZone's rectangle, its entity at InPlace in the world. */
+    inline Bounds2D CameraZoneBounds(const CameraZoneComponent& InZone, const TransformComponent& InPlace)
+    {
+        return Bounds2D::FromCenterSize(InPlace.Position, InZone.HalfExtent * 2.f * InPlace.Scale);
+    }
 }
