@@ -3,6 +3,7 @@
 // result is written to the camera once, in the world: a rigged camera moves in the steps only, so
 // its rhythm is "steps" at any frames. Driven through WorldManager the way Engine::Loop runs a frame.
 // CameraFollowStage: a dead zone, damping per axis and a look-ahead, the same over one step or two halves.
+// CameraConfinerStage: the whole view kept inside its bounds, its size, the aspect and its roll counted.
 #include <doctest.h>
 
 #include "Application/Services/IPaths.h"
@@ -12,6 +13,7 @@
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/InputManager.h"
 #include "Renderer/Camera/CameraComponent.h"
+#include "Renderer/Camera/CameraConfinerStage.h"
 #include "Renderer/Camera/CameraFollowStage.h"
 #include "Renderer/Camera/CameraInterpolationComponent.h"
 #include "Renderer/Camera/CameraManager.h"
@@ -121,6 +123,7 @@ namespace
             REQUIRE(Components.Register<WidenStage>(OpaaxStringID("WidenStage")));
             REQUIRE(Components.Register<PushStage>(OpaaxStringID("PushStage")));
             REQUIRE(Components.Register<CameraFollowStage>(OpaaxStringID("CameraFollowStage")));
+            REQUIRE(Components.Register<CameraConfinerStage>(OpaaxStringID("CameraConfinerStage")));
 
             TheWorld = Worlds.CreateWorld("Rig", EWorldMode::Play);
             REQUIRE(TheWorld != nullptr);
@@ -354,4 +357,75 @@ TEST_CASE("CameraFollowStage: locked on its target without damping or a dead zon
     lNext.Get<TransformComponent>().Position = { -50.f, 0.f };
     lRig.Tick(1);
     CheckNear(lLocked.Get<TransformComponent>().Position, { -50.f, 40.f });
+}
+
+// =============================================================================
+// Confiner
+// =============================================================================
+TEST_CASE("ConfineCameraView: the view kept inside, centred when wider than the bounds; an axis of no extent is free")
+{
+    const Bounds2D ROOM = Bounds2D::FromCenterSize({ 100.f, 0.f }, { 1000.f, 600.f });   // x -400..600, y -300..300
+
+    // A view 200 by 100 each side moves within x -200..400, y -200..200.
+    CheckNear(ConfineCameraView({ 50.f, 10.f }, { 200.f, 100.f }, ROOM), { 50.f, 10.f });
+    CheckNear(ConfineCameraView({ 900.f, -250.f }, { 200.f, 100.f }, ROOM), { 400.f, -200.f });
+    CheckNear(ConfineCameraView({ -900.f, 250.f }, { 200.f, 100.f }, ROOM), { -200.f, 200.f });
+
+    // Wider than the room on x only: centred on x, still kept on y.
+    CheckNear(ConfineCameraView({ 900.f, 250.f }, { 600.f, 100.f }, ROOM), { 100.f, 200.f });
+
+    // No height: y is free.
+    const Bounds2D WALLS = Bounds2D::FromCenterSize({ 0.f, 0.f }, { 1000.f, 0.f });
+    CheckNear(ConfineCameraView({ 900.f, 5000.f }, { 200.f, 100.f }, WALLS), { 300.f, 5000.f });
+}
+
+TEST_CASE("CameraConfinerStage: after the body stages; the size, the aspect and a roll counted; placed on an entity")
+{
+    RigWorld lRig;
+    lRig.TheWorld->SetViewAspect(2.f);
+
+    // OrthoSize 100 at aspect 2: 200 by 100 each side, so x stops at 500 - 200.
+    Entity lCamera = lRig.MakeCamera("Walled");
+    lCamera.Get<CameraComponent>().OrthoSize = 100.f;
+    CameraConfinerStage& lConfiner = lCamera.Add<CameraConfinerStage>();
+    lConfiner.Size                 = { 1000.f, 600.f };
+    lCamera.Add<PushStage>().Speed = 6000.f;   // 100 a step, added after the confiner
+
+    for (Int32 lStep = 0; lStep < 5; ++lStep)
+    {
+        lRig.Tick(1);
+    }
+    CheckNear(lCamera.Get<TransformComponent>().Position, { 300.f, 0.f });
+
+    // Zoomed out past the room's width: centred on it.
+    lCamera.Get<CameraComponent>().OrthoSize = 300.f;
+    lRig.Tick(1);
+    CheckNear(lCamera.Get<TransformComponent>().Position, { 0.f, 0.f });
+
+    // Rolled a quarter turn, it reaches 100 sideways and 200 up: x stops at 400.
+    lCamera.Get<CameraComponent>().OrthoSize   = 100.f;
+    lCamera.Get<CameraComponent>().bRotateView = true;
+    lCamera.Get<TransformComponent>().Rotation = 90.f;
+    for (Int32 lStep = 0; lStep < 5; ++lStep)
+    {
+        lRig.Tick(1);
+    }
+    CHECK(lCamera.Get<TransformComponent>().Position.x == doctest::Approx(400.f).epsilon(1e-4));
+
+    // On an entity: moved to 1000 and doubled, the room is 2000 wide from 1000: x stops at 1800.
+    Entity lRoom = lRig.TheWorld->CreateEntity("Room");
+    lRoom.Get<TransformComponent>().Position = { 1000.f, 0.f };
+    lRoom.Get<TransformComponent>().Scale    = { 2.f, 2.f };
+    lConfiner.BoundsEntity                   = "Room";
+    lCamera.Get<CameraComponent>().bRotateView = false;
+    for (Int32 lStep = 0; lStep < 20; ++lStep)
+    {
+        lRig.Tick(1);
+    }
+    CHECK(lCamera.Get<TransformComponent>().Position.x == doctest::Approx(1800.f));
+
+    // Its entity gone, it confines nothing until another of its name comes.
+    lRoom.Destroy();
+    lRig.Tick(1);
+    CHECK(lCamera.Get<TransformComponent>().Position.x == doctest::Approx(1900.f));
 }
