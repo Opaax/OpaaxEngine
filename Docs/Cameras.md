@@ -171,6 +171,7 @@ The engine's stages, added to a camera like any behaviour:
 | Stage | Runs | Does |
 |---|---|---|
 | `CameraFollowStage` | Body | Follows the entity named `Target` (found again once it is gone), aiming at it plus `Offset`. The aim moves inside `DeadZone` (a fraction of the view's width and height, the screen's aspect counted) without the camera; outside it the camera moves by the overshoot, eased per axis over `Damping` seconds (`SmoothDamp`; 0 keeps it on). `LookAhead` leads the aim by that many seconds of the target's velocity, measured over the steps, eased over `LookAheadDamping` |
+| `CameraConfinerStage` | Constraint | Keeps the whole view inside a rectangle (`Center`, `Size`; a size of 0 leaves that axis free, for walls only), its size, the screen's aspect and, with `bRotateView`, its roll counted. A view wider than the rectangle is centred on it. Placed on the entity named `BoundsEntity` when one is: it moves and scales with it |
 
 The screen's aspect is the one the world's view was last drawn at (`World::GetViewAspect`, 16:9
 before the first frame). `TestWorld/Tests/CameraRig.json` plays `Levels/CameraRig.opaaxlevel`: an

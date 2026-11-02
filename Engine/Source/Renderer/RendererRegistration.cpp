@@ -1,6 +1,7 @@
 // The Renderer module's types. Each registers itself; see Engine/Registries/AutoRegistration.h.
 #include "Engine/Registries/AutoRegistration.h"
 #include "Renderer/Camera/CameraComponent.h"
+#include "Renderer/Camera/CameraConfinerStage.h"
 #include "Renderer/Camera/CameraDirector.h"
 #include "Renderer/Camera/CameraFollowStage.h"
 #include "Renderer/Camera/CameraRigSubsystem.h"
@@ -36,6 +37,7 @@ namespace Opaax
     // Runs the cameras' stages (CameraStage) in the steps: a rig's follow, zoom and bounds.
     OPAAX_REGISTER_OBJECT(CameraRigSubsystem);
     OPAAX_REGISTER_BEHAVIOUR(CameraFollowStage);
+    OPAAX_REGISTER_BEHAVIOUR(CameraConfinerStage);
 
     // How a view shakes, the entities a shake comes from, and the shakes under way (the director's modifier).
     OPAAX_REGISTER_OBJECT(CameraShake);
