@@ -123,6 +123,48 @@
         },
         {
             "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
+                "CameraFollowStage": {
+                    "Damping": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "DeadZone": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "LookAhead": 0.0,
+                    "LookAheadDamping": 0.0,
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 40.0
+                    },
+                    "Target": "Runner"
+                },
+                "CameraZoneStage": {
+                    "Target": "Runner"
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 40.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "ed4d026c9c5a4cee8f33a526cb1c0726",
+            "name": "ZoneCam",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
                 "FollowProbe": {
                     "Chase": "",
                     "FramedBetween": 0,
@@ -588,6 +630,62 @@
             },
             "guid": "f4a33cebfb4c4d8196b7dc18696fdeca",
             "name": "Wall",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "CameraZone": {
+                    "BlendTime": 0.4,
+                    "HalfExtent": {
+                        "x": 180.0,
+                        "y": 300.0
+                    },
+                    "OrthoSize": 150.0,
+                    "Priority": 0,
+                    "bConfine": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 1080.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "cdb31fa247df4575883824592dfb6d1a",
+            "name": "RoomA",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "CameraZone": {
+                    "BlendTime": 0.5,
+                    "HalfExtent": {
+                        "x": 570.0,
+                        "y": 300.0
+                    },
+                    "OrthoSize": 250.0,
+                    "Priority": 0,
+                    "bConfine": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 1830.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "27e9e398e55a482fb6f18a4e832c47aa",
+            "name": "RoomB",
             "ownerMap": "CameraRig"
         }
     ],
