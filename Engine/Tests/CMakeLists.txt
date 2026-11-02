@@ -156,6 +156,7 @@ set(OPAAX_TEST_SOURCES
     Renderer/CameraShakeTests.cpp
     Renderer/CameraInterpolationTests.cpp
     Renderer/CameraResolveTests.cpp
+    Renderer/CameraRigTests.cpp
     Renderer/CameraTraceTests.cpp
     Renderer/CameraViewTests.cpp
     Renderer/DebugDrawTests.cpp
