@@ -33,6 +33,17 @@
                         "x": 1.0,
                         "y": 1.0
                     }
+                },
+                "CameraConfinerStage": {
+                    "BoundsEntity": "",
+                    "Center": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Size": {
+                        "x": 1800.0,
+                        "y": 0.0
+                    }
                 }
             },
             "guid": "32ff64025f3b4025bf0be24423b75a53",
@@ -515,6 +526,36 @@
             },
             "guid": "cd72ca4938c9460c86f183f81a103479",
             "name": "Post12",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.8,
+                        "y": 0.25,
+                        "z": 0.25
+                    },
+                    "Size": {
+                        "x": 20.0,
+                        "y": 600.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 890.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "f4a33cebfb4c4d8196b7dc18696fdeca",
+            "name": "Wall",
             "ownerMap": "CameraRig"
         }
     ],
