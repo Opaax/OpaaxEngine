@@ -165,6 +165,13 @@ namespace Opaax
         const CameraView& GetCameraView() const noexcept { return m_CameraView; }
         void              SetCameraView(const CameraView& InView) noexcept { m_CameraView = InView; }
 
+        /**
+         * Width over height of what this world's own view was last drawn into (the window, the editor's
+         * viewport), set by RendererManager: what a camera rig frames with. Before the first draw, 16:9.
+         */
+        float GetViewAspect() const noexcept { return m_ViewAspect; }
+        void  SetViewAspect(const float InAspect) noexcept { m_ViewAspect = InAspect; }
+
         // End Camera
         // =========================================================================
 
@@ -257,6 +264,7 @@ namespace Opaax
 
         // Default: the centred view (see GetCameraView).
         CameraView               m_CameraView;
+        float                    m_ViewAspect = 16.f / 9.f;
 
         // The fixed steps run (see AddStep).
         Uint64 m_StepCount     = 0;

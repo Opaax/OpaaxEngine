@@ -316,10 +316,9 @@ namespace Opaax
 
         if (m_SubmittedViews.empty())
         {
-            // No camera view for this world: use the default CameraView.
-            SubmitRenderView(m_RenderSystem->GetBackbuffer(),
-                             lWorld != nullptr ? lWorld->GetCameraView() : CameraView{},
-                             /*bInDrawOverlays*/ true, /*InSource*/ nullptr, /*bInDrawUI*/ true);
+            // Its own view (the default CameraView without a world).
+            SubmitWorldView(m_RenderSystem->GetBackbuffer(), /*bInDrawOverlays*/ true, /*InSource*/ nullptr,
+                            /*bInDrawUI*/ true);
         }
 
         // Counted before opening the device frame, so a frame with nothing to draw opens none.
@@ -363,6 +362,8 @@ namespace Opaax
             if (lDrawn != nullptr && lRequest.bWorldView)
             {
                 lView = lDrawn->GetCameraView();
+                lDrawn->SetViewAspect(static_cast<float>(lRequest.Target->GetWidth())
+                                      / static_cast<float>(lRequest.Target->GetHeight()));
             }
             else if (lDrawn != nullptr && lRequest.Camera != ENTITY_NONE)
             {
