@@ -6,6 +6,7 @@
 // CameraConfinerStage: the whole view kept inside its bounds, its size, the aspect and its roll counted.
 // CameraGroupStage: several entities framed with their padding at the aspect, the size clamped.
 // CameraZoneStage: the zone holding the target sets the size and bounds, blended in without a jump.
+// CameraSpeedZoomStage: zoomed out with the target's speed, eased by its half-life.
 #include <doctest.h>
 
 #include "Application/Services/IPaths.h"
@@ -24,6 +25,7 @@
 #include "Renderer/Camera/CameraManager.h"
 #include "Renderer/Camera/CameraRhythm.h"
 #include "Renderer/Camera/CameraRigSubsystem.h"
+#include "Renderer/Camera/CameraSpeedZoomStage.h"
 #include "Renderer/Camera/CameraStage.h"
 #include "Renderer/DebugDraw.h"
 #include "Resources/ResourceManager.h"
@@ -131,6 +133,7 @@ namespace
             REQUIRE(Components.Register<CameraConfinerStage>(OpaaxStringID("CameraConfinerStage")));
             REQUIRE(Components.Register<CameraGroupStage>(OpaaxStringID("CameraGroupStage")));
             REQUIRE(Components.Register<CameraZoneStage>(OpaaxStringID("CameraZoneStage")));
+            REQUIRE(Components.Register<CameraSpeedZoomStage>(OpaaxStringID("CameraSpeedZoomStage")));
 
             TheWorld = Worlds.CreateWorld("Rig", EWorldMode::Play);
             REQUIRE(TheWorld != nullptr);
@@ -630,4 +633,73 @@ TEST_CASE("CameraZoneStage: the zone holding its target sizes and bounds the vie
     CHECK(lCamera.Get<CameraComponent>().OrthoSize == doctest::Approx(200.f));
     CHECK(lAt(2500.f) == doctest::Approx(2500.f));
     CHECK(lCamera.Get<CameraComponent>().OrthoSize == doctest::Approx(200.f));
+}
+
+// =============================================================================
+// Speed zoom
+// =============================================================================
+TEST_CASE("StepCameraSpeedZoom: at a steady speed the size closes half its gap every half-life; one step is two halves")
+{
+    // Bhop's momentum camera: 270 more at full speed, half-life 0.35 s.
+    const CameraSpeedZoomSettings SETTINGS{ 300.f, 270.f, 1000.f, 0.35f };
+    CHECK(CameraSpeedZoomGoal(SETTINGS, 0.f) == doctest::Approx(300.f));
+    CHECK(CameraSpeedZoomGoal(SETTINGS, 600.f) == doctest::Approx(462.f));
+    CHECK(CameraSpeedZoomGoal(SETTINGS, 5000.f) == doctest::Approx(570.f));
+
+    // 10 units a step is 600 a second. The first step measures nothing; 21 more (0.35 s) halve the gap.
+    CameraSpeedZoomState lState;
+    lState.Size = 300.f;
+    Vector2F lTarget{ 0.f, 0.f };
+    CHECK(StepCameraSpeedZoom(lTarget, SETTINGS, lState, DT) == doctest::Approx(300.f));
+    for (Int32 lStep = 0; lStep < 21; ++lStep)
+    {
+        lTarget.x += 10.f;
+        StepCameraSpeedZoom(lTarget, SETTINGS, lState, DT);
+    }
+    CHECK(lState.Size == doctest::Approx(462.f - 162.f / 2.f).epsilon(1e-4));
+
+    // Running on, it settles on the size the speed asks for.
+    for (Int32 lStep = 0; lStep < 600; ++lStep)
+    {
+        lTarget.x += 10.f;
+        StepCameraSpeedZoom(lTarget, SETTINGS, lState, DT);
+    }
+    CHECK(lState.Size == doctest::Approx(462.f).epsilon(1e-4));
+
+    // The same over one step or two halves of it, the speed steady.
+    CameraSpeedZoomState lOne = lState;
+    CameraSpeedZoomState lTwo = lState;
+    lOne.Size = lTwo.Size = 350.f;
+    StepCameraSpeedZoom(lTarget + Vector2F{ 10.f, 0.f }, SETTINGS, lOne, DT);
+    StepCameraSpeedZoom(lTarget + Vector2F{ 5.f, 0.f }, SETTINGS, lTwo, DT / 2.f);
+    StepCameraSpeedZoom(lTarget + Vector2F{ 10.f, 0.f }, SETTINGS, lTwo, DT / 2.f);
+    CHECK(lTwo.Size == doctest::Approx(lOne.Size).epsilon(1e-5));
+}
+
+TEST_CASE("CameraSpeedZoomStage: after the body stages; its base is the camera's size when it starts")
+{
+    RigWorld lRig;
+    Entity   lRunner = lRig.TheWorld->CreateEntity("Runner");
+
+    Entity lCamera = lRig.MakeCamera("Zoomed");
+    lCamera.Get<CameraComponent>().OrthoSize = 250.f;
+    CameraSpeedZoomStage& lZoom = lCamera.Add<CameraSpeedZoomStage>();
+    lZoom.Target                = "Runner";
+    lZoom.ZoomOut               = 100.f;
+    lZoom.FullSpeed             = 1200.f;
+    lZoom.HalfLife              = 0.f;
+    lCamera.Add<CameraFollowStage>().Target = "Runner";
+
+    // 10 units a step, 600 a second: half the zoom-out on the base of 250.
+    for (Int32 lStep = 0; lStep < 3; ++lStep)
+    {
+        lRunner.Get<TransformComponent>().Position.x += 10.f;
+        lRig.Tick(1);
+    }
+    CHECK(lCamera.Get<CameraComponent>().OrthoSize == doctest::Approx(300.f));
+    CHECK(lCamera.Get<TransformComponent>().Position.x == doctest::Approx(30.f));
+
+    // Stopped, back to the base.
+    lRig.Tick(1);
+    CHECK(lCamera.Get<CameraComponent>().OrthoSize == doctest::Approx(250.f));
 }
