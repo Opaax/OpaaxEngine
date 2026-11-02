@@ -803,6 +803,22 @@ namespace Opaax
         return lCount;
     }
 
+    void BehaviourSubsystem::ForEachStarted(const ObjectClass& InClass,
+                                            const TFunction<void(EntityID, Behaviour&)>& InFunc) const
+    {
+        for (const TypeBucket& lBucket : m_Buckets)
+        {
+            for (const Instance& lInstance : lBucket.Instances)
+            {
+                if (lInstance.Ptr != nullptr && lInstance.Ptr->IsStarted() && lInstance.Ptr->IsA(InClass)
+                    && !IsDestroyPending(lInstance.Entity))
+                {
+                    InFunc(lInstance.Entity, *lInstance.Ptr);
+                }
+            }
+        }
+    }
+
     Uint64 BehaviourSubsystem::GetTimerCount() const noexcept
     {
         return static_cast<Uint64>(Algo::CountIf(m_Timers,

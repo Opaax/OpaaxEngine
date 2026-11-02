@@ -155,6 +155,17 @@ and work out the view from `InContext.GameTime`, never from frames: it is then t
 frame rate and holds while paused. It moves no entity, so no camera's rhythm turns mixed. Modifiers
 run by `Priority`, the lowest first; `camera.info` gives the view before them (`unmodified`).
 
+### A camera rig
+
+A rig builds a camera's motion from stages: behaviours on the camera that each place it, zoom it or
+bound it. Subclass `CameraStage` (`Renderer/Camera/CameraStage.h`, its USAGE block): say when it
+runs with `GetStage` (`Body` places, `Size` zooms, `Constraint` bounds) and change the pose it is
+given in `Step`. The world's `CameraRigSubsystem` runs every camera's stages in each fixed step,
+`Body` first and `Constraint` last whatever order they were added in, each on the pose the ones
+before it left, then writes the camera once: its pose in the world and its `OrthoSize`. A rigged
+camera so keeps rules 1 and 2 by itself. Move it with stages only: a behaviour that moves it too
+makes it mixed.
+
 ### A respawn
 
 ```cpp

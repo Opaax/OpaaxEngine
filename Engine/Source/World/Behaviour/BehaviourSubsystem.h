@@ -138,6 +138,13 @@ namespace Opaax
         /** Behaviours started and not ended. */
         Uint64 GetStartedCount() const noexcept;
 
+        /**
+         * Calls InFunc for every started behaviour of InClass or a class derived from it (a camera's
+         * stages), type by type in registration order, each type's in the order added. InFunc adds and
+         * removes no behaviour.
+         */
+        void ForEachStarted(const ObjectClass& InClass, const TFunction<void(EntityID, Behaviour&)>& InFunc) const;
+
         /** Behaviours waiting for OnStart. */
         Uint64 GetPendingCount() const noexcept { return static_cast<Uint64>(m_Pending.size()); }
 
