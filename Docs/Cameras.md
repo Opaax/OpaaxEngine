@@ -173,6 +173,11 @@ The engine's stages, added to a camera like any behaviour:
 | `CameraFollowStage` | Body | Follows the entity named `Target` (found again once it is gone), aiming at it plus `Offset`. The aim moves inside `DeadZone` (a fraction of the view's width and height, the screen's aspect counted) without the camera; outside it the camera moves by the overshoot, eased per axis over `Damping` seconds (`SmoothDamp`; 0 keeps it on). `LookAhead` leads the aim by that many seconds of the target's velocity, measured over the steps, eased over `LookAheadDamping` |
 | `CameraConfinerStage` | Constraint | Keeps the whole view inside a rectangle (`Center`, `Size`; a size of 0 leaves that axis free, for walls only), its size, the screen's aspect and, with `bRotateView`, its roll counted. A view wider than the rectangle is centred on it. Placed on the entity named `BoundsEntity` when one is: it moves and scales with it |
 | `CameraGroupStage` | Body | Frames the entities named in `Targets` (those not found are left out): centred on them, zoomed to fit them with `Padding` units each side at the screen's aspect, its `OrthoSize` kept between `MinSize` and `MaxSize`, eased over `Damping` seconds. It places and zooms the camera: with another Body stage, the one run last wins |
+| `CameraZoneStage` | Constraint | Applies the level's zones: the highest-priority `CameraZone` holding `Target` (empty: the camera itself) sets the camera's size and keeps the upright view inside it. When the zone changes, the view blends from where the last one put it, eased over the new zone's `BlendTime` (0 cuts), so a hand-over never jumps. Out of every zone the camera keeps its size: a level that zooms in a room and out again gives the outside a large zone of a lower priority |
+
+A `CameraZone` component marks a part of a level (a room): a rectangle `HalfExtent` each side of its
+entity (times its scale), the `OrthoSize` a camera takes there (0 keeps its size), `bConfine` (the
+view kept inside), `Priority` and `BlendTime`.
 
 The screen's aspect is the one the world's view was last drawn at (`World::GetViewAspect`, 16:9
 before the first frame). `TestWorld/Tests/CameraRig.json` plays `Levels/CameraRig.opaaxlevel`: an

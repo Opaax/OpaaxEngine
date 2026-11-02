@@ -5,6 +5,7 @@
 // CameraFollowStage: a dead zone, damping per axis and a look-ahead, the same over one step or two halves.
 // CameraConfinerStage: the whole view kept inside its bounds, its size, the aspect and its roll counted.
 // CameraGroupStage: several entities framed with their padding at the aspect, the size clamped.
+// CameraZoneStage: the zone holding the target sets the size and bounds, blended in without a jump.
 #include <doctest.h>
 
 #include "Application/Services/IPaths.h"
@@ -17,6 +18,8 @@
 #include "Renderer/Camera/CameraConfinerStage.h"
 #include "Renderer/Camera/CameraFollowStage.h"
 #include "Renderer/Camera/CameraGroupStage.h"
+#include "Renderer/Camera/CameraZoneComponent.h"
+#include "Renderer/Camera/CameraZoneStage.h"
 #include "Renderer/Camera/CameraInterpolationComponent.h"
 #include "Renderer/Camera/CameraManager.h"
 #include "Renderer/Camera/CameraRhythm.h"
@@ -127,6 +130,7 @@ namespace
             REQUIRE(Components.Register<CameraFollowStage>(OpaaxStringID("CameraFollowStage")));
             REQUIRE(Components.Register<CameraConfinerStage>(OpaaxStringID("CameraConfinerStage")));
             REQUIRE(Components.Register<CameraGroupStage>(OpaaxStringID("CameraGroupStage")));
+            REQUIRE(Components.Register<CameraZoneStage>(OpaaxStringID("CameraZoneStage")));
 
             TheWorld = Worlds.CreateWorld("Rig", EWorldMode::Play);
             REQUIRE(TheWorld != nullptr);
@@ -501,4 +505,129 @@ TEST_CASE("CameraGroupStage: frames the targets found as they move; one gone is 
     const float lX = lCamera.Get<TransformComponent>().Position.x;
     CHECK(lX < 900.f);
     CHECK(lX > 0.f);
+}
+
+// =============================================================================
+// Zones
+// =============================================================================
+namespace
+{
+    CameraZone MakeZone(const Vector2F InCenter, const Vector2F InHalfExtent, const float InOrthoSize,
+                        const Int32 InPriority, const float InBlendTime, const Uint32 InId)
+    {
+        return CameraZone{ static_cast<EntityID>(InId), Bounds2D{ InCenter, InHalfExtent }, InOrthoSize,
+                           /*bConfine*/ true, InPriority, InBlendTime };
+    }
+}
+
+TEST_CASE("PickCameraZone: the highest priority holding the point, the first among equals; none outside")
+{
+    const TDynArray<CameraZone> lZones{ MakeZone({ 0.f, 0.f }, { 500.f, 300.f }, 0.f, 0, 0.5f, 1),
+                                        MakeZone({ 400.f, 0.f }, { 200.f, 300.f }, 0.f, 2, 0.5f, 2),
+                                        MakeZone({ 400.f, 0.f }, { 200.f, 300.f }, 2.f, 2, 0.5f, 3) };
+
+    REQUIRE(PickCameraZone(lZones, { -100.f, 0.f }) != nullptr);
+    CHECK(PickCameraZone(lZones, { -100.f, 0.f })->Entity == static_cast<EntityID>(1));
+    CHECK(PickCameraZone(lZones, { 450.f, 0.f })->Entity == static_cast<EntityID>(2));
+    CHECK(PickCameraZone(lZones, { 5000.f, 0.f }) == nullptr);
+}
+
+TEST_CASE("StepCameraZone: a zone eases in and out over its BlendTime, ending exact; a zone changed mid-blend never jumps")
+{
+    constexpr float WIDE = 16.f / 9.f;
+
+    // Given at 5000 every step, as a body stage locked on a target far right would give it.
+    const CameraRigPose GIVEN{ { 5000.f, 0.f }, 0.f, 300.f };
+    const CameraZone    ROOM = MakeZone({ 0.f, 0.f }, { 1000.f, 600.f }, 500.f, 0, 0.5f, 1);
+
+    CameraZoneState lState;
+    CameraRigPose   lLast = GIVEN;
+    float           lMostMove = 0.f;
+    float           lMostZoom = 0.f;
+    for (Int32 lStep = 0; lStep < 40; ++lStep)
+    {
+        CameraRigPose lPose = GIVEN;
+        StepCameraZone(lPose, &ROOM, lState, WIDE, DT);
+        lMostMove = Maths::Max(lMostMove, Maths::Abs(lPose.Position.x - lLast.Position.x));
+        lMostZoom = Maths::Max(lMostZoom, Maths::Abs(lPose.OrthoSize - lLast.OrthoSize));
+        CHECK(lPose.OrthoSize >= lLast.OrthoSize);
+        lLast = lPose;
+    }
+
+    // In 0.5 s: sized and confined exactly, 1000 - 500 * 16 / 9 at most. Eased in and out, no step
+    // moves more than 1.5 times an even share (30 steps).
+    CHECK(lLast.OrthoSize == doctest::Approx(500.f));
+    CHECK(lLast.Position.x == doctest::Approx(1000.f - 500.f * WIDE));
+    CHECK(lMostZoom < 1.5f * 200.f / 30.f + 0.01f);
+    CHECK(lMostMove < 1.5f * (5000.f - lLast.Position.x) / 30.f + 0.01f);
+
+    // Left for none: back over the room's BlendTime to the size and place given.
+    for (Int32 lStep = 0; lStep < 40; ++lStep)
+    {
+        lLast = GIVEN;
+        StepCameraZone(lLast, nullptr, lState, WIDE, DT);
+    }
+    CHECK(lLast.OrthoSize == doctest::Approx(300.f));
+    CHECK(lLast.Position.x == doctest::Approx(5000.f));
+
+    // Into the room, then into a smaller one a third of the way: the hand-over step is where the room
+    // alone puts the view, and the closet's blend starts from there, easing in.
+    const CameraZone CLOSET = MakeZone({ 4000.f, 0.f }, { 200.f, 600.f }, 150.f, 1, 0.5f, 2);
+    TDynArray<float> lXs;
+    CameraZoneState  lRoomOnly;
+    for (Int32 lStep = 0; lStep < 60; ++lStep)
+    {
+        if (lStep == 10)
+        {
+            lRoomOnly = lState;
+        }
+        CameraRigPose lPose = GIVEN;
+        StepCameraZone(lPose, lStep < 10 ? &ROOM : &CLOSET, lState, WIDE, DT);
+        lXs.push_back(lPose.Position.x);
+    }
+    CameraRigPose lRoomStep = GIVEN;
+    StepCameraZone(lRoomStep, &ROOM, lRoomOnly, WIDE, DT);
+    CHECK(lXs[10] == doctest::Approx(lRoomStep.Position.x));
+    CHECK(Maths::Abs(lXs[11] - lXs[10]) < Maths::Abs(lXs[10] - lXs[9]));
+    CHECK(lXs.back() == doctest::Approx(4000.f));   // the closet is narrower than the view: centred on it
+}
+
+TEST_CASE("CameraZoneStage: the zone holding its target sizes and bounds the view; out of every zone, it keeps the size")
+{
+    RigWorld lRig;
+    Entity   lRunner = lRig.TheWorld->CreateEntity("Runner");
+
+    // Two rooms side by side, cut to (BlendTime 0): 0 to 1000 at size 100, 1000 to 2000 at size 200.
+    const auto lRoom = [&lRig](const char* InName, const float InX, const float InSize)
+    {
+        Entity lEntity = lRig.TheWorld->CreateEntity(InName);
+        lEntity.Get<TransformComponent>().Position = { InX, 0.f };
+        CameraZoneComponent& lZone = lEntity.Add<CameraZoneComponent>();
+        lZone.HalfExtent           = { 500.f, 300.f };
+        lZone.OrthoSize            = InSize;
+        lZone.BlendTime            = 0.f;
+        return lEntity;
+    };
+    lRoom("Small", 500.f, 100.f);
+    lRoom("Large", 1500.f, 200.f);
+
+    Entity lCamera = lRig.MakeCamera("Roomed");
+    lCamera.Add<CameraFollowStage>().Target = "Runner";
+    lCamera.Add<CameraZoneStage>().Target   = "Runner";
+
+    const auto lAt = [&](const float InX)
+    {
+        lRunner.Get<TransformComponent>().Position = { InX, 0.f };
+        lRig.Tick(1);
+        return lCamera.Get<TransformComponent>().Position.x;
+    };
+
+    // 16:9 before any frame: half a size-100 view is 177.8 wide.
+    CHECK(lAt(300.f) == doctest::Approx(300.f));
+    CHECK(lCamera.Get<CameraComponent>().OrthoSize == doctest::Approx(100.f));
+    CHECK(lAt(900.f) == doctest::Approx(1000.f - 100.f * 16.f / 9.f));
+    CHECK(lAt(1100.f) == doctest::Approx(1000.f + 200.f * 16.f / 9.f));
+    CHECK(lCamera.Get<CameraComponent>().OrthoSize == doctest::Approx(200.f));
+    CHECK(lAt(2500.f) == doctest::Approx(2500.f));
+    CHECK(lCamera.Get<CameraComponent>().OrthoSize == doctest::Approx(200.f));
 }
