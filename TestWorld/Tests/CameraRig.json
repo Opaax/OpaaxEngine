@@ -1,0 +1,189 @@
+[
+    {
+        "repeat": [
+            {
+                "tag": "60",
+                "pacing": "60",
+                "rate": 60,
+                "reference": "60",
+                "jitter": 0.05,
+                "spread": 0
+            },
+            {
+                "tag": "144",
+                "pacing": "144",
+                "rate": 60,
+                "reference": "60",
+                "jitter": 0.05,
+                "spread": 1
+            },
+            {
+                "tag": "240",
+                "pacing": "240",
+                "rate": 60,
+                "reference": "60",
+                "jitter": 0.05,
+                "spread": 1
+            },
+            {
+                "tag": "60jitter",
+                "pacing": "60,jitter=0.25,seed=3",
+                "rate": 60,
+                "reference": "60",
+                "jitter": 0.05,
+                "spread": 0
+            }
+        ],
+        "requests": [
+            {
+                "id": "rate-{tag}",
+                "command": "config.set",
+                "params": {
+                    "config": "Engine",
+                    "values": {
+                        "Time": {
+                            "FixedRate": "{rate}"
+                        }
+                    }
+                }
+            },
+            {
+                "id": "pace-{tag}",
+                "command": "time.pace",
+                "params": {
+                    "pacing": "{pacing}"
+                }
+            },
+            {
+                "id": "play-{tag}",
+                "command": "level.play",
+                "params": {
+                    "path": "Levels/CameraRig.opaaxlevel"
+                }
+            },
+            {
+                "command": "world.wait",
+                "params": {
+                    "seconds": 0.25
+                }
+            },
+            {
+                "id": "trace-CameraRig-{tag}",
+                "command": "camera.trace.start",
+                "params": {
+                    "name": "CameraRig-{tag}",
+                    "target": "Runner"
+                }
+            },
+            {
+                "command": "world.wait",
+                "params": {
+                    "seconds": 1.0
+                }
+            },
+            {
+                "id": "CameraRig-{tag}",
+                "command": "camera.trace.stop",
+                "params": {
+                    "limits": {
+                        "timeReversals": 0,
+                        "stillMoves": 0,
+                        "zoomReversals": 0,
+                        "cameraSwitches": 0,
+                        "motionJitter": 1000.0,
+                        "mostSteps": 8
+                    }
+                }
+            },
+            {
+                "id": "CameraRig-{tag}-path",
+                "command": "camera.trace.compare",
+                "params": {
+                    "reference": "CameraRig-{reference}",
+                    "trace": "CameraRig-{tag}",
+                    "limits": {
+                        "position": 0.001,
+                        "size": 0.001,
+                        "rotation": 0.001
+                    }
+                }
+            },
+            {
+                "id": "rhythm-{tag}",
+                "command": "camera.info",
+                "expect": {
+                    "live": {
+                        "name": "RigCam",
+                        "rhythm": "steps"
+                    }
+                }
+            },
+            {
+                "id": "screenshot-{tag}",
+                "command": "screenshot",
+                "params": {
+                    "path": "CameraRig-{tag}.png"
+                }
+            },
+            {
+                "id": "priority-LockCam-{tag}",
+                "command": "component.set",
+                "params": {
+                    "entity": "LockCam",
+                    "type": "Camera",
+                    "value": {
+                        "Priority": 5
+                    }
+                }
+            },
+            {
+                "command": "frames.wait",
+                "params": {
+                    "count": 2
+                }
+            },
+            {
+                "id": "trace-CameraRigLock-{tag}",
+                "command": "camera.trace.start",
+                "params": {
+                    "name": "CameraRigLock-{tag}",
+                    "target": "Runner"
+                }
+            },
+            {
+                "command": "world.wait",
+                "params": {
+                    "seconds": 0.5
+                }
+            },
+            {
+                "id": "CameraRigLock-{tag}",
+                "command": "camera.trace.stop",
+                "params": {
+                    "limits": {
+                        "targetDrift": 0.01,
+                        "motionJitter": "{jitter}",
+                        "timeReversals": 0,
+                        "stillMoves": 0,
+                        "cameraSwitches": 0,
+                        "stepsSpread": "{spread}",
+                        "mostSteps": 8
+                    }
+                }
+            },
+            {
+                "id": "CameraRigLock-{tag}-path",
+                "command": "camera.trace.compare",
+                "params": {
+                    "reference": "CameraRigLock-{reference}",
+                    "trace": "CameraRigLock-{tag}",
+                    "limits": {
+                        "position": 0.001,
+                        "size": 0.001,
+                        "rotation": 0.001
+                    }
+                }
+            }
+        ]
+    }
+]

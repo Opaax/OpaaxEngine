@@ -1,0 +1,523 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 1
+                },
+                "CameraFollowStage": {
+                    "Damping": {
+                        "x": 0.3,
+                        "y": 0.3
+                    },
+                    "DeadZone": {
+                        "x": 0.1,
+                        "y": 0.2
+                    },
+                    "LookAhead": 0.25,
+                    "LookAheadDamping": 0.3,
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 40.0
+                    },
+                    "Target": "Runner"
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 40.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "32ff64025f3b4025bf0be24423b75a53",
+            "name": "RigCam",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
+                "CameraFollowStage": {
+                    "Damping": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "DeadZone": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "LookAhead": 0.0,
+                    "LookAheadDamping": 0.0,
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 40.0
+                    },
+                    "Target": "Runner"
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 40.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "ad8e256fdc1940de95fe7a1324c3e4b1",
+            "name": "LockCam",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "FollowProbe": {
+                    "Chase": "",
+                    "FramedBetween": 0,
+                    "Frames": 0,
+                    "MaxFraction": 0.0,
+                    "MaxZoomLag": 0.0,
+                    "MinFraction": 1.0,
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 40.0
+                    },
+                    "SmoothTime": 0.0,
+                    "Speed": 400.0,
+                    "UpdateNudge": 0.0,
+                    "ViewOffsetY": 0.0,
+                    "WrapAfter": 0.0,
+                    "ZoomFrames": 0,
+                    "ZoomPerStep": 0.0
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.95,
+                        "y": 0.55,
+                        "z": 0.2
+                    },
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "ce5a348713d64c1091474a587fa307df",
+            "name": "Runner",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.35,
+                        "y": 0.3,
+                        "z": 0.25
+                    },
+                    "Size": {
+                        "x": 40000.0,
+                        "y": 20.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 19000.0,
+                        "y": -100.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "0917dd4a26e1490d990c2e8ed7be51b8",
+            "name": "Ground",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3,
+                        "y": 0.45,
+                        "z": 0.7
+                    },
+                    "Size": {
+                        "x": 12.0,
+                        "y": 120.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -400.0,
+                        "y": -30.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "b421abed79614157aaf4abc10f3a5f7c",
+            "name": "Post1",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3,
+                        "y": 0.45,
+                        "z": 0.7
+                    },
+                    "Size": {
+                        "x": 12.0,
+                        "y": 120.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -200.0,
+                        "y": -30.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "6d77eff6661c4b2c9fd3887057705e1c",
+            "name": "Post2",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3,
+                        "y": 0.45,
+                        "z": 0.7
+                    },
+                    "Size": {
+                        "x": 12.0,
+                        "y": 120.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": -30.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "856e9b18a6ff4d6599fd5e7126fa1f1b",
+            "name": "Post3",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3,
+                        "y": 0.45,
+                        "z": 0.7
+                    },
+                    "Size": {
+                        "x": 12.0,
+                        "y": 120.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 200.0,
+                        "y": -30.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "1abe4fce9e7643b9af06d69c74847fde",
+            "name": "Post4",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3,
+                        "y": 0.45,
+                        "z": 0.7
+                    },
+                    "Size": {
+                        "x": 12.0,
+                        "y": 120.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 400.0,
+                        "y": -30.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "f674aaa32c524594910c4aecdafa638b",
+            "name": "Post5",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3,
+                        "y": 0.45,
+                        "z": 0.7
+                    },
+                    "Size": {
+                        "x": 12.0,
+                        "y": 120.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 600.0,
+                        "y": -30.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "98117a0ded60432c9745a1ff9ee325f1",
+            "name": "Post6",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3,
+                        "y": 0.45,
+                        "z": 0.7
+                    },
+                    "Size": {
+                        "x": 12.0,
+                        "y": 120.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 800.0,
+                        "y": -30.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "bb5e9c579b3d492496dcf144a8892fc9",
+            "name": "Post7",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3,
+                        "y": 0.45,
+                        "z": 0.7
+                    },
+                    "Size": {
+                        "x": 12.0,
+                        "y": 120.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 1000.0,
+                        "y": -30.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "823df38e0c7c4145a10d9bab925b4544",
+            "name": "Post8",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3,
+                        "y": 0.45,
+                        "z": 0.7
+                    },
+                    "Size": {
+                        "x": 12.0,
+                        "y": 120.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 1200.0,
+                        "y": -30.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "004227634fed4471a90f6cedb2e0d2c5",
+            "name": "Post9",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3,
+                        "y": 0.45,
+                        "z": 0.7
+                    },
+                    "Size": {
+                        "x": 12.0,
+                        "y": 120.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 1400.0,
+                        "y": -30.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "8bdf4083c4a24bf28cacf32ed7aa9075",
+            "name": "Post10",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3,
+                        "y": 0.45,
+                        "z": 0.7
+                    },
+                    "Size": {
+                        "x": 12.0,
+                        "y": 120.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 1600.0,
+                        "y": -30.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "92ea362b72a84e51b9616681ca40534e",
+            "name": "Post11",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3,
+                        "y": 0.45,
+                        "z": 0.7
+                    },
+                    "Size": {
+                        "x": 12.0,
+                        "y": 120.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 1800.0,
+                        "y": -30.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "cd72ca4938c9460c86f183f81a103479",
+            "name": "Post12",
+            "ownerMap": "CameraRig"
+        }
+    ],
+    "mapId": "CameraRig",
+    "version": 4
+}
