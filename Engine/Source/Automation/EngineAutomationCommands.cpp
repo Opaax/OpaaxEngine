@@ -668,7 +668,8 @@ namespace Opaax::EngineAutomation
                 });
 
             InRunner.Register("component.set",
-                "Changes fields of {entity}'s component {type}: {value} is merged into it (added when missing).",
+                "Changes fields of {entity}'s component {type}: {value} is merged into it (added when missing). "
+                "A field of the wrong type changes nothing.",
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     OpaaxString  lError;
@@ -1264,6 +1265,33 @@ namespace Opaax::EngineAutomation
                     return AutomationResult::Ok(nlohmann::json{ { "exists", bFound } });
                 });
         }
+
+        // =========================================================================
+        // Component patches
+        // =========================================================================
+
+        /**
+         * InType's entry, when InValue (null when none is given) is a patch it takes: an object of
+         * fields. Null otherwise, with OutError saying what to do.
+         */
+        const IComponentEntry* FindPatchTarget(const ComponentRegistry& InTypes, const OpaaxString& InType,
+                                               const nlohmann::json* InValue, OpaaxString& OutError)
+        {
+            const IComponentEntry* lEntry = InTypes.FindByName(OpaaxStringID(InType));
+            if (lEntry == nullptr)
+            {
+                OutError = "unknown component type '" + InType + "': check its name (entity.get lists an entity's), "
+                           "or rebuild if the type was added since this build";
+                return nullptr;
+            }
+            if (InValue != nullptr && !InValue->is_object())
+            {
+                OutError = "the values of '" + InType + "' are an object of the fields to change, not "
+                           + ToJsonText(*InValue);
+                return nullptr;
+            }
+            return lEntry;
+        }
     }
 
     void Register(AutomationRunner& InRunner, IEngine& InEngine, IAutomationHost& InHost)
@@ -1442,38 +1470,70 @@ namespace Opaax::EngineAutomation
         return lJson;
     }
 
+    bool CheckComponents(const ComponentRegistry& InTypes, const nlohmann::json& InComponents, OpaaxString& OutError)
+    {
+        if (!InComponents.is_object())
+        {
+            OutError = "\"components\" is an object: {type: values}";
+            return false;
+        }
+
+        for (const auto& [lType, lValue] : InComponents.items())
+        {
+            if (FindPatchTarget(InTypes, FromJsonString(lType), &lValue, OutError) == nullptr)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
     bool PatchComponent(Entity InEntity, const ComponentRegistry& InTypes, const nlohmann::json& InParams,
                         OpaaxString& OutError)
     {
         const OpaaxString      lType  = InParams.value("type", OpaaxString());
-        const IComponentEntry* lEntry = InTypes.FindByName(OpaaxStringID(lType));
+        const auto             lValue = InParams.find("value");
+        const bool             bValue = lValue != InParams.end();
+        const IComponentEntry* lEntry = FindPatchTarget(InTypes, lType, bValue ? &*lValue : nullptr, OutError);
         if (lEntry == nullptr)
         {
-            OutError = "unknown component type '" + lType + "'";
-            return false;
-        }
-
-        const auto lValue = InParams.find("value");
-        if (lValue != InParams.end() && !lValue->is_object())
-        {
-            OutError = "\"value\" is an object of the fields to change";
             return false;
         }
 
         EntityRegistry& lRegistry = InEntity.GetWorld()->GetRegistry();
-        nlohmann::json  lData     = lEntry->Has(lRegistry, InEntity.GetHandle())
-                                        ? lEntry->Save(lRegistry, InEntity.GetHandle())
-                                        : nlohmann::json::object();
-        if (lData.is_null())
+        const EntityID  lHandle   = InEntity.GetHandle();
+        const bool      bHad      = lEntry->Has(lRegistry, lHandle);
+        nlohmann::json  lBefore   = bHad ? lEntry->Save(lRegistry, lHandle) : nlohmann::json::object();
+        if (lBefore.is_null())
         {
-            lData = nlohmann::json::object();
+            lBefore = nlohmann::json::object();
         }
-        if (lValue != InParams.end())
+
+        nlohmann::json lData = lBefore;
+        if (bValue)
         {
             lData.merge_patch(*lValue);
         }
 
-        lEntry->Load(lRegistry, InEntity.GetHandle(), lData);
+        try
+        {
+            lEntry->Load(lRegistry, lHandle, lData);
+        }
+        catch (const nlohmann::json::exception& lError)
+        {
+            // A field of the wrong type stops the load part way: the component goes back to what it was.
+            if (bHad)
+            {
+                lEntry->Load(lRegistry, lHandle, lBefore);
+            }
+            else
+            {
+                lEntry->Remove(lRegistry, lHandle);
+            }
+            OutError = OpaaxString::Format("'{}' did not take these values ({}): give each field the type "
+                                           "entity.get shows for it", lType, lError.what());
+            return false;
+        }
         return true;
     }
 }

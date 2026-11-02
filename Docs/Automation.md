@@ -93,7 +93,7 @@ saved in `.opaaxmap` files.
 | `world.step` | | Runs one frame of the paused world, with the fixed steps it owes |
 | `entity.list` | `name`, `component` | The entities (optionally filtered) with their components |
 | `entity.get` | `entity` | One entity with its components' values |
-| `component.set` | `entity`, `type`, `value` | Merges `value` into the component (adds it when missing) |
+| `component.set` | `entity`, `type`, `value` | Merges `value` into the component (adds it when missing). A field of the wrong type changes nothing |
 | `level.play` | `path` | Opens a level (relative to the project's assets) in a new play world |
 | `expect.value` | `entity`, `path`, check | Fails unless the value at `path` (`Transform/Position/x`) passes the check |
 | `expect.count` | `name`, `component`, check | Fails unless the number of matching entities passes the check |
@@ -125,12 +125,12 @@ The editor adds:
 | `level.open`, `map.open` | `path`, `discard` | Opens a level or a map (relative to the project's assets) |
 | `level.new` | `path`, `map`, `discard` | Creates a level with one new, empty map (`map`; default `Maps/<level name>.opaaxmap`) and opens it; refuses files that exist |
 | `map.new` | `path` | Creates an empty map, adds it to the open level and focuses it: entities created next go there |
-| `level.info` | | The open level's file, its maps (`id`, `path`, `persistent`, `focused`, `unsaved`) and whether anything is unsaved |
+| `level.info` | | The open level's file, its maps (`id`, `path`, `persistent`, `focused`, `unsaved`), whether anything is unsaved, and whether its edits can be undone or redone (`canUndo`, `canRedo`) |
 | `level.save` | `all` | Saves the level's changed maps; with `all`, rewrites every map of the level and its file in the current format |
 | `map.save` | `path` | Saves the focused map; with `path`, writes it to that new file instead, which the level names from then on (the old file stays as last saved) |
 | `map.add` | `path` | Adds an existing map to the open level: its entities load. Answers the map's `id` |
 | `project.export` | `path` | Exports the game into a folder (its release build and content); answered when done, minutes later |
-| `entity.create` | `name`, `map`, `components` | Creates an entity in the focused map, with components `{type: values}` |
+| `entity.create` | `name`, `map`, `components` | Creates an entity in the focused map, with components `{type: values}`, as one undo step. Every type and value is checked first: a request that fails creates nothing |
 | `entity.destroy` | `entity` | Deletes an entity |
 | `entity.parent` | `entity`, `parent` | Puts an entity (and its children) under another, keeping its place in the world; no `parent` detaches it |
 | `entity.rename` | `entity`, `name` | Renames an entity |

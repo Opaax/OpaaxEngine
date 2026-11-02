@@ -54,9 +54,17 @@ namespace Opaax
         nlohmann::json DescribeEntity(Entity InEntity, const ComponentRegistry& InTypes, bool bInWithValues);
 
         /**
+         * Whether every patch of InComponents, {type: values}, can be tried: each type known, each
+         * value an object. Checked before an entity is made for them, so a request fails whole. False,
+         * with OutError naming the first one that cannot and what to do.
+         */
+        bool CheckComponents(const ComponentRegistry& InTypes, const nlohmann::json& InComponents, OpaaxString& OutError);
+
+        /**
          * InEntity's component InParams["type"] with InParams["value"] merged into its values
          * (a JSON merge patch: the fields given change, the others stay). Added when missing.
-         * @return False, with OutError, for an unknown type or a value that is not an object
+         * @return False, with OutError, for an unknown type, a value that is not an object, or a field
+         *   of the wrong type; the component is then left as it was (not added when it was missing)
          */
         bool PatchComponent(Entity InEntity, const ComponentRegistry& InTypes, const nlohmann::json& InParams,
                             OpaaxString& OutError);

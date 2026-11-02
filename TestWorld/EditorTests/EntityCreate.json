@@ -1,0 +1,181 @@
+[
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 10
+        }
+    },
+    {
+        "id": "new",
+        "command": "level.new",
+        "params": {
+            "path": "Scratch/EntityCreate.opaaxlevel",
+            "map": "Scratch/EntityCreate.opaaxmap"
+        }
+    },
+    {
+        "command": "expect.count",
+        "params": {
+            "equals": 0
+        },
+        "id": "starts-empty"
+    },
+    {
+        "id": "starts-clean",
+        "command": "level.info",
+        "expect": {
+            "unsaved": false,
+            "canUndo": false
+        }
+    },
+    {
+        "id": "unknown-type",
+        "command": "entity.create",
+        "params": {
+            "name": "Ghost",
+            "components": {
+                "Quad": {
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    }
+                },
+                "UnbuiltProbe": {}
+            }
+        },
+        "expectFailure": true
+    },
+    {
+        "command": "expect.count",
+        "params": {
+            "equals": 0
+        },
+        "id": "unknown-type-creates-nothing"
+    },
+    {
+        "id": "unknown-type-records-nothing",
+        "command": "level.info",
+        "expect": {
+            "unsaved": false,
+            "canUndo": false
+        }
+    },
+    {
+        "id": "not-an-object",
+        "command": "entity.create",
+        "params": {
+            "name": "Ghost",
+            "components": {
+                "Quad": 3
+            }
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "wrong-field-type",
+        "command": "entity.create",
+        "params": {
+            "name": "Ghost",
+            "components": {
+                "Quad": {
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    }
+                },
+                "Transform": {
+                    "Position": "far"
+                }
+            }
+        },
+        "expectFailure": true
+    },
+    {
+        "command": "expect.count",
+        "params": {
+            "equals": 0
+        },
+        "id": "wrong-field-type-creates-nothing"
+    },
+    {
+        "id": "wrong-field-type-records-nothing",
+        "command": "level.info",
+        "expect": {
+            "unsaved": false,
+            "canUndo": false
+        }
+    },
+    {
+        "id": "create",
+        "command": "entity.create",
+        "params": {
+            "name": "Ghost",
+            "components": {
+                "Quad": {
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 45.0
+                    }
+                }
+            }
+        },
+        "expect": {
+            "name": "Ghost"
+        }
+    },
+    {
+        "id": "created-unsaved",
+        "command": "level.info",
+        "expect": {
+            "unsaved": true,
+            "canUndo": true
+        }
+    },
+    {
+        "id": "undo-create",
+        "command": "editor.undo"
+    },
+    {
+        "command": "expect.count",
+        "params": {
+            "equals": 0
+        },
+        "id": "undone-in-one-step"
+    },
+    {
+        "id": "nothing-left-to-undo",
+        "command": "level.info",
+        "expect": {
+            "canUndo": false,
+            "canRedo": true
+        }
+    },
+    {
+        "id": "redo-create",
+        "command": "editor.redo"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Ghost",
+            "path": "Quad/Size/x",
+            "equals": 40
+        },
+        "id": "redone-with-quad"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Ghost",
+            "path": "Transform/Position/y",
+            "equals": 45
+        },
+        "id": "redone-with-transform"
+    }
+]

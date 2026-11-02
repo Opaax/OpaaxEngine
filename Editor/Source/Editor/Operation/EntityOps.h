@@ -29,11 +29,14 @@ namespace Opaax::Editor
     {
         /**
          * Creates an entity in InOwnerMap, selects it, and marks the world changed.
-         * The map is required, so the entity can be saved. No components (add them in the Inspector).
-         * InName is made unique ("Entity", "Entity 1", ...).
-         * @return The new entity, or an invalid one if refused (no world, Play running, no map)
+         * The map is required, so the entity can be saved. InName is made unique ("Entity", "Entity 1", ...).
+         * @param InFill Gives the entity its components before the undo capture, so creating it stays one
+         *   step. When it returns false the entity is destroyed: nothing is recorded or selected.
+         *   Empty: no components (add them in the Inspector).
+         * @return The new entity, or an invalid one if refused (no world, Play running, no map) or not filled
          */
-        Entity Create(EditorContext& InContext, MapId InOwnerMap, const OpaaxString& InName);
+        Entity Create(EditorContext& InContext, MapId InOwnerMap, const OpaaxString& InName,
+                      const TFunction<bool(Entity)>& InFill = {});
 
         /**
          * Places one instance of the prefab at InAbsPath into InOwnerMap, selects all of it, and
