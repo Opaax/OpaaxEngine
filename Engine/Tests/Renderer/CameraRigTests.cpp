@@ -4,6 +4,7 @@
 // its rhythm is "steps" at any frames. Driven through WorldManager the way Engine::Loop runs a frame.
 // CameraFollowStage: a dead zone, damping per axis and a look-ahead, the same over one step or two halves.
 // CameraConfinerStage: the whole view kept inside its bounds, its size, the aspect and its roll counted.
+// CameraGroupStage: several entities framed with their padding at the aspect, the size clamped.
 #include <doctest.h>
 
 #include "Application/Services/IPaths.h"
@@ -15,6 +16,7 @@
 #include "Renderer/Camera/CameraComponent.h"
 #include "Renderer/Camera/CameraConfinerStage.h"
 #include "Renderer/Camera/CameraFollowStage.h"
+#include "Renderer/Camera/CameraGroupStage.h"
 #include "Renderer/Camera/CameraInterpolationComponent.h"
 #include "Renderer/Camera/CameraManager.h"
 #include "Renderer/Camera/CameraRhythm.h"
@@ -124,6 +126,7 @@ namespace
             REQUIRE(Components.Register<PushStage>(OpaaxStringID("PushStage")));
             REQUIRE(Components.Register<CameraFollowStage>(OpaaxStringID("CameraFollowStage")));
             REQUIRE(Components.Register<CameraConfinerStage>(OpaaxStringID("CameraConfinerStage")));
+            REQUIRE(Components.Register<CameraGroupStage>(OpaaxStringID("CameraGroupStage")));
 
             TheWorld = Worlds.CreateWorld("Rig", EWorldMode::Play);
             REQUIRE(TheWorld != nullptr);
@@ -428,4 +431,74 @@ TEST_CASE("CameraConfinerStage: after the body stages; the size, the aspect and 
     lRoom.Destroy();
     lRig.Tick(1);
     CHECK(lCamera.Get<TransformComponent>().Position.x == doctest::Approx(1900.f));
+}
+
+// =============================================================================
+// Group
+// =============================================================================
+TEST_CASE("FrameCameraGroup: two targets apart fit with their padding at the aspect; the size is clamped")
+{
+    constexpr float WIDE = 16.f / 9.f;
+
+    // Side by side: the width decides. 300 + 50 each side of the centre, so 350 / (16 / 9) tall.
+    const CameraGroupFrame lApart = FrameCameraGroup(Bounds2D::FromMinMax({ -300.f, 0.f }, { 300.f, 100.f }), 50.f,
+                                                     WIDE, 10.f, 1000.f);
+    CheckNear(lApart.Center, { 0.f, 50.f });
+    CHECK(lApart.OrthoSize == doctest::Approx(196.875f));
+    CHECK(lApart.OrthoSize * WIDE == doctest::Approx(350.f));
+
+    // One above the other: the height decides.
+    const CameraGroupFrame lTall = FrameCameraGroup(Bounds2D::FromMinMax({ 0.f, -400.f }, { 10.f, 400.f }), 50.f,
+                                                    WIDE, 10.f, 1000.f);
+    CHECK(lTall.OrthoSize == doctest::Approx(450.f));
+
+    // Close together it zooms in no closer than MinSize; far apart, out no further than MaxSize.
+    CHECK(FrameCameraGroup(Bounds2D::FromMinMax({ 0.f, 0.f }, { 1.f, 1.f }), 0.f, WIDE, 120.f, 1000.f).OrthoSize
+          == doctest::Approx(120.f));
+    CHECK(FrameCameraGroup(Bounds2D::FromMinMax({ -5000.f, 0.f }, { 5000.f, 0.f }), 50.f, WIDE, 120.f, 1000.f).OrthoSize
+          == doctest::Approx(1000.f));
+}
+
+TEST_CASE("CameraGroupStage: frames the targets found as they move; one gone is left out; eased over Damping")
+{
+    RigWorld lRig;
+    lRig.TheWorld->SetViewAspect(2.f);
+
+    Entity lLeft  = lRig.TheWorld->CreateEntity("Left");
+    Entity lRight = lRig.TheWorld->CreateEntity("Right");
+    lLeft.Get<TransformComponent>().Position  = { -300.f, 0.f };
+    lRight.Get<TransformComponent>().Position = { 300.f, 100.f };
+
+    Entity            lCamera = lRig.MakeCamera("Group");
+    CameraGroupStage& lGroup  = lCamera.Add<CameraGroupStage>();
+    lGroup.Targets            = { OpaaxString("Left"), OpaaxString("Nobody"), OpaaxString("Right") };
+    lGroup.Padding            = 50.f;
+    lGroup.MinSize            = 100.f;
+
+    // 350 each side at aspect 2: 175 tall.
+    lRig.Tick(1);
+    CheckNear(lCamera.Get<TransformComponent>().Position, { 0.f, 50.f });
+    CHECK(lCamera.Get<CameraComponent>().OrthoSize == doctest::Approx(175.f));
+    REQUIRE(lGroup.GetTargetBounds().has_value());
+    CheckNear(lGroup.GetTargetBounds()->HalfExtent, { 300.f, 50.f });
+
+    // Right runs off: 650 each side, 325 tall.
+    lRight.Get<TransformComponent>().Position = { 900.f, 100.f };
+    lRig.Tick(1);
+    CheckNear(lCamera.Get<TransformComponent>().Position, { 300.f, 50.f });
+    CHECK(lCamera.Get<CameraComponent>().OrthoSize == doctest::Approx(325.f));
+
+    // Left gone: Right alone, zoomed in to MinSize.
+    lLeft.Destroy();
+    lRig.Tick(1);
+    CheckNear(lCamera.Get<TransformComponent>().Position, { 900.f, 100.f });
+    CHECK(lCamera.Get<CameraComponent>().OrthoSize == doctest::Approx(100.f));
+
+    // Eased: part of the way after a step, toward the group.
+    lGroup.Damping = 0.5f;
+    lRight.Get<TransformComponent>().Position = { 0.f, 100.f };
+    lRig.Tick(1);
+    const float lX = lCamera.Get<TransformComponent>().Position.x;
+    CHECK(lX < 900.f);
+    CHECK(lX > 0.f);
 }

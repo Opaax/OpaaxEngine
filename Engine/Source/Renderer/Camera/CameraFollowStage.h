@@ -49,20 +49,8 @@ namespace Opaax
     };
 
     // =============================================================================
-    // Follow (pure functions)
+    // Follow (pure function)
     // =============================================================================
-    /** InCurrent moved toward InGoal over InDeltaTime as SmoothDamp moves it in InTime seconds; on it with 0. */
-    inline float DampCameraAxis(const float InCurrent, const float InGoal, float& InOutVelocity, const float InTime,
-                                const float InDeltaTime)
-    {
-        if (InTime <= 0.f)
-        {
-            InOutVelocity = 0.f;
-            return InGoal;
-        }
-        return Maths::SmoothDamp(InCurrent, InGoal, InOutVelocity, InTime, InDeltaTime);
-    }
-
     /**
      * Where a camera at InCamera is after InDeltaTime following a target at InTarget. It aims at the
      * target plus the offset plus a lead (its velocity over the last step times LookAhead); while the
