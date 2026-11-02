@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Maths/MathTypes.h"
+#include "Core/Maths/Maths.h"
 #include "Core/OpaaxTypes.h"
 #include "Object/ObjectMacros.h"
 #include "World/Behaviour/Behaviour.h"
@@ -57,6 +58,21 @@ namespace Opaax
         /** The camera's OrthoSize: half the height it frames. */
         float OrthoSize = 300.f;
     };
+
+    /**
+     * InCurrent moved toward InGoal over InDeltaTime as SmoothDamp moves it in InTime seconds, on it at
+     * once with 0: how stages ease, the same over one step or two halves of it.
+     */
+    inline float DampCameraAxis(const float InCurrent, const float InGoal, float& InOutVelocity, const float InTime,
+                                const float InDeltaTime)
+    {
+        if (InTime <= 0.f)
+        {
+            InOutVelocity = 0.f;
+            return InGoal;
+        }
+        return Maths::SmoothDamp(InCurrent, InGoal, InOutVelocity, InTime, InDeltaTime);
+    }
 
     // =============================================================================
     // CameraStage — a behaviour on a camera that changes its pose in the fixed steps, run by the

@@ -4,6 +4,7 @@
 #include "Renderer/Camera/CameraConfinerStage.h"
 #include "Renderer/Camera/CameraDirector.h"
 #include "Renderer/Camera/CameraFollowStage.h"
+#include "Renderer/Camera/CameraGroupStage.h"
 #include "Renderer/Camera/CameraRigSubsystem.h"
 #include "Renderer/Camera/CameraShake.h"   // complete: the source visits its shake reference
 #include "Renderer/Camera/CameraShakeSourceComponent.h"
@@ -38,6 +39,7 @@ namespace Opaax
     OPAAX_REGISTER_OBJECT(CameraRigSubsystem);
     OPAAX_REGISTER_BEHAVIOUR(CameraFollowStage);
     OPAAX_REGISTER_BEHAVIOUR(CameraConfinerStage);
+    OPAAX_REGISTER_BEHAVIOUR(CameraGroupStage);
 
     // How a view shakes, the entities a shake comes from, and the shakes under way (the director's modifier).
     OPAAX_REGISTER_OBJECT(CameraShake);
