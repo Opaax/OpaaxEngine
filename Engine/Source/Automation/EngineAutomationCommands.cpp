@@ -25,6 +25,8 @@
 #include "Renderer/Camera/CameraInterpolationComponent.h"
 #include "Renderer/Camera/CameraDirector.h"
 #include "Renderer/Camera/CameraManager.h"
+#include "Renderer/Camera/CameraShakeSourceComponent.h"
+#include "Renderer/Camera/CameraShakeSubsystem.h"
 #include "UI/UICanvas.h"
 #include "UI/UISubsystem.h"
 #include "UI/UIWidget.h"
@@ -187,6 +189,43 @@ namespace Opaax::EngineAutomation
             const EntityMeta* lMeta = InEntity.TryGet<EntityMeta>();
             return nlohmann::json{ { "name", lMeta != nullptr ? lMeta->Name : OpaaxString("<unnamed>") },
                                    { "id",   lMeta != nullptr ? nlohmann::json(lMeta->Id.ToString()) : nlohmann::json() } };
+        }
+
+        /** The active world's shakes, or null with OutError: only a Play world has them. */
+        CameraShakeSubsystem* Shakes(IEngine& InEngine, OpaaxString& OutError)
+        {
+            World* const          lWorld  = ActiveWorld(InEngine, OutError);
+            CameraShakeSubsystem* lShakes = lWorld != nullptr ? lWorld->GetSubsystems().GetSubsystem<CameraShakeSubsystem>()
+                                                              : nullptr;
+            if (lWorld != nullptr && lShakes == nullptr)
+            {
+                OutError = "camera shakes play in a Play world: level.play first";
+            }
+            return lShakes;
+        }
+
+        /** The shakes under way as camera.info gives them, their trauma at InGameTime. */
+        nlohmann::json ShakesToJson(World& InWorld, const CameraShakeSubsystem& InShakes, const double InGameTime)
+        {
+            nlohmann::json lList = nlohmann::json::array();
+            for (const CameraShakePlaying& lPlaying : InShakes.GetPlaying())
+            {
+                const Entity lSource(lPlaying.Source, &InWorld);
+                nlohmann::json lShake{
+                    { "id",      lPlaying.Id },
+                    { "shake",   lPlaying.Owned ? nlohmann::json() : nlohmann::json(lPlaying.Asset.GetPath()) },
+                    { "scale",   lPlaying.Scale },
+                    { "seed",    lPlaying.Seed },
+                    { "start",   lPlaying.Start },
+                    { "stopped", lPlaying.StoppedAt.has_value() ? nlohmann::json(*lPlaying.StoppedAt) : nlohmann::json() },
+                    { "source",  lSource.IsValid() ? NameAndId(lSource)["name"] : nlohmann::json() } };
+                if (lPlaying.bTrauma)
+                {
+                    lShake["trauma"] = lPlaying.Trauma.At(InGameTime);
+                }
+                lList.push_back(Move(lShake));
+            }
+            return lList;
         }
 
         /** How a camera's view moves against the steps, as camera.info gives it ("unknown" when not recorded). */
@@ -762,6 +801,8 @@ namespace Opaax::EngineAutomation
                 "Play world the last frame's {live: {name, id, rhythm, count, tied, blends (blends under way), blend "
                 "(the newest: from, the camera it leaves, null for a view held; weight toward the live camera), "
                 "unmodified (the view before the modifiers)}, modifiers (each {class, priority}, in the order they run), "
+                "shakes (each under way {id, shake (its asset), scale, seed, start and stopped (game times), source (its "
+                "entity's name), trauma (a trauma source's, at the frame)}), "
                 "frame: {delta, steps, alpha, interpolated, "
                 "stepDelta, gameTime}}. An Edit world is framed by the editor's camera.",
                 [&InEngine](const nlohmann::json&)
@@ -853,6 +894,10 @@ namespace Opaax::EngineAutomation
                             }
                         }
                         lAnswer["modifiers"] = Move(lModifiers);
+                        if (const CameraShakeSubsystem* lShakes = lWorld->GetSubsystems().GetSubsystem<CameraShakeSubsystem>())
+                        {
+                            lAnswer["shakes"] = ShakesToJson(*lWorld, *lShakes, lFrame.GameTime);
+                        }
                         lAnswer["frame"] = nlohmann::json{
                             { "delta",        lFrame.FrameDelta },
                             { "steps",        lFrame.Steps },
@@ -864,6 +909,88 @@ namespace Opaax::EngineAutomation
                     }
 
                     return AutomationResult::Ok(lAnswer);
+                });
+
+            InRunner.Register("camera.shake",
+                "Plays the camera shake asset {path} on the active Play world, times {scale} (1), its noise picked by "
+                "{seed} (0), from the next step: answers its {id}. {stop}: a shake's id, faded out from the next step; "
+                "{stopAll}: true fades every shake out.",
+                [&InEngine](const nlohmann::json& InParams)
+                {
+                    OpaaxString           lError;
+                    CameraShakeSubsystem* lShakes = Shakes(InEngine, lError);
+                    if (lShakes == nullptr)
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    if (InParams.value("stopAll", false))
+                    {
+                        lShakes->StopAll();
+                        return AutomationResult::Ok(nlohmann::json{ { "stopped", lShakes->GetPlaying().size() } });
+                    }
+
+                    const auto lStop = InParams.find("stop");
+                    if (lStop != InParams.end())
+                    {
+                        if (!lStop->is_number_unsigned())
+                        {
+                            return AutomationResult::Fail("\"stop\" is the id camera.shake answered");
+                        }
+                        lShakes->Stop(lStop->get<Uint32>());
+                        return AutomationResult::Ok(nlohmann::json{ { "stopped", lStop->get<Uint32>() } });
+                    }
+
+                    TAssetRef<CameraShake> lShake;
+                    lShake.Path = InParams.value("path", OpaaxString());
+                    if (lShake.IsEmpty())
+                    {
+                        return AutomationResult::Fail("\"path\" names a CameraShake asset (Shakes/Hit.opaaxasset); "
+                                                      "or give {stop} or {stopAll}");
+                    }
+
+                    const Uint32 lId = lShakes->Play(lShake, InParams.value("scale", 1.f), InParams.value("seed", 0u));
+                    if (lId == 0)
+                    {
+                        return AutomationResult::Fail("'" + lShake.Path + "' did not load as a CameraShake: check the path "
+                                                      "(asset.get answers its class)");
+                    }
+                    return AutomationResult::Ok(nlohmann::json{ { "id", lId } });
+                });
+
+            InRunner.Register("camera.trauma",
+                "Raises the trauma of {entity} (a CameraShakeSource with bUseTrauma) by {amount} (lowers it, negative), "
+                "kept in [0, 1], from the next step: answers its {trauma} then.",
+                [&InEngine](const nlohmann::json& InParams)
+                {
+                    OpaaxString           lError;
+                    CameraShakeSubsystem* lShakes = Shakes(InEngine, lError);
+                    if (lShakes == nullptr)
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    Entity lEntity = FindEntity(*InEngine.GetWorldManager().GetActiveWorld(), InParams, lError);
+                    if (!lEntity.IsValid())
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    const CameraShakeSourceComponent* lSource = lEntity.TryGet<CameraShakeSourceComponent>();
+                    if (lSource == nullptr || !lSource->bUseTrauma)
+                    {
+                        return AutomationResult::Fail(InParams.at("entity").get<OpaaxString>() + " is not a trauma source: "
+                                                      "give it a CameraShakeSource with bUseTrauma");
+                    }
+
+                    const auto lAmount = InParams.find("amount");
+                    if (lAmount == InParams.end() || !lAmount->is_number())
+                    {
+                        return AutomationResult::Fail("\"amount\" is the trauma to add, 0 to 1");
+                    }
+
+                    lShakes->AddTrauma(lEntity.GetHandle(), lAmount->get<float>());
+                    return AutomationResult::Ok(nlohmann::json{ { "trauma", lShakes->GetTrauma(lEntity.GetHandle()) } });
                 });
 
             InRunner.Register("camera.trace.start",

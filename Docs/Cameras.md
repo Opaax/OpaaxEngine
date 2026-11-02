@@ -143,6 +143,8 @@ A shake is a function of game time and its `Seed`: played in a fixed step it sta
 is drawn the same at any frame rate; played in `Update`, at the next step; a paused world holds it.
 It moves the drawn view (a modifier of the director, below), never an entity, so no camera's rhythm
 turns mixed. Its offset is along the view's axes, and its roll shows even without `bRotateView`.
+From a script, `camera.shake` plays and stops one and `camera.trauma` hits a trauma source;
+`camera.info` lists the shakes under way.
 
 ### A camera modifier
 
@@ -183,7 +185,7 @@ In `Engine.config` (the Config panel):
 
 - **`camera.info`** ([Automation.md](Automation.md)): the view, the frame clock (the refresh frames
   are snapped to, dropped steps), each camera's framed view, blend and rhythm, the blends under way,
-  and the last frame's steps and alpha.
+  the shakes under way, and the last frame's steps and alpha.
 - **Traces:** `camera.trace.start` and `camera.trace.stop` record every frame's time, view and
   followed entity into a JSON and a CSV file and measure them: how far the followed entity moves on
   screen (`targetDrift`), how unevenly the view moves (`motionJitter`), time running back, moves
