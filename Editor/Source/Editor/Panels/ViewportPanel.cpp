@@ -334,6 +334,7 @@ namespace Opaax::Editor
         const bool bOutlined =
             ViewportOverlays::EnqueueSelectionOutline(m_Context.Engine.GetDebugDraw(), *lWorld, lIds, lAnchor, InAlpha) > 0;
         ViewportOverlays::EnqueueLightGizmos(m_Context.Engine.GetDebugDraw(), *lWorld, lIds, lAnchor, InAlpha);
+        ViewportOverlays::EnqueueCameraRigGizmos(m_Context.Engine.GetDebugDraw(), *lWorld, lIds, lAnchor, InAlpha);
 
         Bounds2D lOutlined;
         m_Context.Viewport.SetOutlined(bOutlined && EntityQuery::TryGetBounds(*lWorld, lIds, lOutlined, lAnchor, InAlpha)

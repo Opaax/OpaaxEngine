@@ -2,37 +2,130 @@
     "entities": [
         {
             "components": {
-                "Camera": {
-                    "OrthoSize": 300.0,
-                    "Priority": 1
-                },
-                "CameraFollowStage": {
-                    "Damping": {
-                        "x": 0.3,
-                        "y": 0.3
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.30000001192092896,
+                        "y": 0.44999998807907104,
+                        "z": 0.699999988079071
                     },
-                    "DeadZone": {
-                        "x": 0.1,
-                        "y": 0.2
-                    },
-                    "LookAhead": 0.25,
-                    "LookAheadDamping": 0.3,
-                    "Offset": {
-                        "x": 0.0,
-                        "y": 40.0
-                    },
-                    "Target": "Runner"
+                    "Size": {
+                        "x": 12.0,
+                        "y": 120.0
+                    }
                 },
                 "Transform": {
                     "Position": {
-                        "x": 0.0,
-                        "y": 40.0
+                        "x": 1200.0,
+                        "y": -30.0
                     },
                     "Rotation": 0.0,
                     "Scale": {
                         "x": 1.0,
                         "y": 1.0
                     }
+                }
+            },
+            "guid": "004227634fed4471a90f6cedb2e0d2c5",
+            "name": "Post9",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3499999940395355,
+                        "y": 0.30000001192092896,
+                        "z": 0.25
+                    },
+                    "Size": {
+                        "x": 40000.0,
+                        "y": 20.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 19000.0,
+                        "y": -100.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "0917dd4a26e1490d990c2e8ed7be51b8",
+            "name": "Ground",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.30000001192092896,
+                        "y": 0.44999998807907104,
+                        "z": 0.699999988079071
+                    },
+                    "Size": {
+                        "x": 12.0,
+                        "y": 120.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 200.0,
+                        "y": -30.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "1abe4fce9e7643b9af06d69c74847fde",
+            "name": "Post4",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "CameraZone": {
+                    "BlendTime": 0.5,
+                    "HalfExtent": {
+                        "x": 570.0,
+                        "y": 300.0
+                    },
+                    "OrthoSize": 250.0,
+                    "Priority": 0,
+                    "bConfine": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 1830.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "27e9e398e55a482fb6f18a4e832c47aa",
+            "name": "RoomB",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "BlendCurve": "EaseInOut",
+                    "BlendIn": 0.0,
+                    "OrthoSize": 300.0,
+                    "Priority": 1,
+                    "bRotateView": false
                 },
                 "CameraConfinerStage": {
                     "BoundsEntity": "",
@@ -44,6 +137,34 @@
                         "x": 1800.0,
                         "y": 0.0
                     }
+                },
+                "CameraFollowStage": {
+                    "Damping": {
+                        "x": 0.30000001192092896,
+                        "y": 0.30000001192092896
+                    },
+                    "DeadZone": {
+                        "x": 0.10000000149011612,
+                        "y": 0.20000000298023224
+                    },
+                    "LookAhead": 0.25,
+                    "LookAheadDamping": 0.30000001192092896,
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 40.0
+                    },
+                    "Target": "Runner"
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 40.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
                 }
             },
             "guid": "32ff64025f3b4025bf0be24423b75a53",
@@ -53,121 +174,11 @@
         {
             "components": {
                 "Camera": {
+                    "BlendCurve": "EaseInOut",
+                    "BlendIn": 0.0,
                     "OrthoSize": 300.0,
-                    "Priority": 0
-                },
-                "CameraFollowStage": {
-                    "Damping": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "DeadZone": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "LookAhead": 0.0,
-                    "LookAheadDamping": 0.0,
-                    "Offset": {
-                        "x": 0.0,
-                        "y": 40.0
-                    },
-                    "Target": "Runner"
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 0.0,
-                        "y": 40.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "ad8e256fdc1940de95fe7a1324c3e4b1",
-            "name": "LockCam",
-            "ownerMap": "CameraRig"
-        },
-        {
-            "components": {
-                "Camera": {
-                    "OrthoSize": 300.0,
-                    "Priority": 0
-                },
-                "CameraGroupStage": {
-                    "Damping": 0.1,
-                    "MaxSize": 800.0,
-                    "MinSize": 200.0,
-                    "Padding": 150.0,
-                    "Targets": [
-                        "Runner",
-                        "Post1"
-                    ]
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 0.0,
-                        "y": 40.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "d224902eb1ca49fd99f6063f1db2e9b2",
-            "name": "GroupCam",
-            "ownerMap": "CameraRig"
-        },
-        {
-            "components": {
-                "Camera": {
-                    "OrthoSize": 300.0,
-                    "Priority": 0
-                },
-                "CameraFollowStage": {
-                    "Damping": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "DeadZone": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "LookAhead": 0.0,
-                    "LookAheadDamping": 0.0,
-                    "Offset": {
-                        "x": 0.0,
-                        "y": 40.0
-                    },
-                    "Target": "Runner"
-                },
-                "CameraZoneStage": {
-                    "Target": "Runner"
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 0.0,
-                        "y": 40.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "ed4d026c9c5a4cee8f33a526cb1c0726",
-            "name": "ZoneCam",
-            "ownerMap": "CameraRig"
-        },
-        {
-            "components": {
-                "Camera": {
-                    "OrthoSize": 300.0,
-                    "Priority": 0
+                    "Priority": 0,
+                    "bRotateView": false
                 },
                 "CameraFollowStage": {
                     "Damping": {
@@ -211,121 +222,12 @@
         },
         {
             "components": {
-                "FollowProbe": {
-                    "Chase": "",
-                    "FramedBetween": 0,
-                    "Frames": 0,
-                    "MaxFraction": 0.0,
-                    "MaxZoomLag": 0.0,
-                    "MinFraction": 1.0,
-                    "Offset": {
-                        "x": 0.0,
-                        "y": 40.0
-                    },
-                    "SmoothTime": 0.0,
-                    "Speed": 400.0,
-                    "UpdateNudge": 0.0,
-                    "ViewOffsetY": 0.0,
-                    "WrapAfter": 0.0,
-                    "ZoomFrames": 0,
-                    "ZoomPerStep": 0.0
-                },
                 "Quad": {
                     "Color": {
                         "w": 1.0,
-                        "x": 0.95,
-                        "y": 0.55,
-                        "z": 0.2
-                    },
-                    "Size": {
-                        "x": 40.0,
-                        "y": 40.0
-                    }
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "ce5a348713d64c1091474a587fa307df",
-            "name": "Runner",
-            "ownerMap": "CameraRig"
-        },
-        {
-            "components": {
-                "Quad": {
-                    "Color": {
-                        "w": 1.0,
-                        "x": 0.35,
-                        "y": 0.3,
-                        "z": 0.25
-                    },
-                    "Size": {
-                        "x": 40000.0,
-                        "y": 20.0
-                    }
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 19000.0,
-                        "y": -100.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "0917dd4a26e1490d990c2e8ed7be51b8",
-            "name": "Ground",
-            "ownerMap": "CameraRig"
-        },
-        {
-            "components": {
-                "Quad": {
-                    "Color": {
-                        "w": 1.0,
-                        "x": 0.3,
-                        "y": 0.45,
-                        "z": 0.7
-                    },
-                    "Size": {
-                        "x": 12.0,
-                        "y": 120.0
-                    }
-                },
-                "Transform": {
-                    "Position": {
-                        "x": -400.0,
-                        "y": -30.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "b421abed79614157aaf4abc10f3a5f7c",
-            "name": "Post1",
-            "ownerMap": "CameraRig"
-        },
-        {
-            "components": {
-                "Quad": {
-                    "Color": {
-                        "w": 1.0,
-                        "x": 0.3,
-                        "y": 0.45,
-                        "z": 0.7
+                        "x": 0.30000001192092896,
+                        "y": 0.44999998807907104,
+                        "z": 0.699999988079071
                     },
                     "Size": {
                         "x": 12.0,
@@ -353,159 +255,9 @@
                 "Quad": {
                     "Color": {
                         "w": 1.0,
-                        "x": 0.3,
-                        "y": 0.45,
-                        "z": 0.7
-                    },
-                    "Size": {
-                        "x": 12.0,
-                        "y": 120.0
-                    }
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 0.0,
-                        "y": -30.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "856e9b18a6ff4d6599fd5e7126fa1f1b",
-            "name": "Post3",
-            "ownerMap": "CameraRig"
-        },
-        {
-            "components": {
-                "Quad": {
-                    "Color": {
-                        "w": 1.0,
-                        "x": 0.3,
-                        "y": 0.45,
-                        "z": 0.7
-                    },
-                    "Size": {
-                        "x": 12.0,
-                        "y": 120.0
-                    }
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 200.0,
-                        "y": -30.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "1abe4fce9e7643b9af06d69c74847fde",
-            "name": "Post4",
-            "ownerMap": "CameraRig"
-        },
-        {
-            "components": {
-                "Quad": {
-                    "Color": {
-                        "w": 1.0,
-                        "x": 0.3,
-                        "y": 0.45,
-                        "z": 0.7
-                    },
-                    "Size": {
-                        "x": 12.0,
-                        "y": 120.0
-                    }
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 400.0,
-                        "y": -30.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "f674aaa32c524594910c4aecdafa638b",
-            "name": "Post5",
-            "ownerMap": "CameraRig"
-        },
-        {
-            "components": {
-                "Quad": {
-                    "Color": {
-                        "w": 1.0,
-                        "x": 0.3,
-                        "y": 0.45,
-                        "z": 0.7
-                    },
-                    "Size": {
-                        "x": 12.0,
-                        "y": 120.0
-                    }
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 600.0,
-                        "y": -30.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "98117a0ded60432c9745a1ff9ee325f1",
-            "name": "Post6",
-            "ownerMap": "CameraRig"
-        },
-        {
-            "components": {
-                "Quad": {
-                    "Color": {
-                        "w": 1.0,
-                        "x": 0.3,
-                        "y": 0.45,
-                        "z": 0.7
-                    },
-                    "Size": {
-                        "x": 12.0,
-                        "y": 120.0
-                    }
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 800.0,
-                        "y": -30.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "bb5e9c579b3d492496dcf144a8892fc9",
-            "name": "Post7",
-            "ownerMap": "CameraRig"
-        },
-        {
-            "components": {
-                "Quad": {
-                    "Color": {
-                        "w": 1.0,
-                        "x": 0.3,
-                        "y": 0.45,
-                        "z": 0.7
+                        "x": 0.30000001192092896,
+                        "y": 0.44999998807907104,
+                        "z": 0.699999988079071
                     },
                     "Size": {
                         "x": 12.0,
@@ -533,9 +285,9 @@
                 "Quad": {
                     "Color": {
                         "w": 1.0,
-                        "x": 0.3,
-                        "y": 0.45,
-                        "z": 0.7
+                        "x": 0.30000001192092896,
+                        "y": 0.44999998807907104,
+                        "z": 0.699999988079071
                     },
                     "Size": {
                         "x": 12.0,
@@ -544,7 +296,7 @@
                 },
                 "Transform": {
                     "Position": {
-                        "x": 1200.0,
+                        "x": 0.0,
                         "y": -30.0
                     },
                     "Rotation": 0.0,
@@ -554,8 +306,8 @@
                     }
                 }
             },
-            "guid": "004227634fed4471a90f6cedb2e0d2c5",
-            "name": "Post9",
+            "guid": "856e9b18a6ff4d6599fd5e7126fa1f1b",
+            "name": "Post3",
             "ownerMap": "CameraRig"
         },
         {
@@ -563,9 +315,9 @@
                 "Quad": {
                     "Color": {
                         "w": 1.0,
-                        "x": 0.3,
-                        "y": 0.45,
-                        "z": 0.7
+                        "x": 0.30000001192092896,
+                        "y": 0.44999998807907104,
+                        "z": 0.699999988079071
                     },
                     "Size": {
                         "x": 12.0,
@@ -593,9 +345,9 @@
                 "Quad": {
                     "Color": {
                         "w": 1.0,
-                        "x": 0.3,
-                        "y": 0.45,
-                        "z": 0.7
+                        "x": 0.30000001192092896,
+                        "y": 0.44999998807907104,
+                        "z": 0.699999988079071
                     },
                     "Size": {
                         "x": 12.0,
@@ -623,9 +375,141 @@
                 "Quad": {
                     "Color": {
                         "w": 1.0,
-                        "x": 0.3,
-                        "y": 0.45,
-                        "z": 0.7
+                        "x": 0.30000001192092896,
+                        "y": 0.44999998807907104,
+                        "z": 0.699999988079071
+                    },
+                    "Size": {
+                        "x": 12.0,
+                        "y": 120.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 600.0,
+                        "y": -30.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "98117a0ded60432c9745a1ff9ee325f1",
+            "name": "Post6",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "BlendCurve": "EaseInOut",
+                    "BlendIn": 0.0,
+                    "OrthoSize": 300.0,
+                    "Priority": 0,
+                    "bRotateView": false
+                },
+                "CameraFollowStage": {
+                    "Damping": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "DeadZone": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "LookAhead": 0.0,
+                    "LookAheadDamping": 0.0,
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 40.0
+                    },
+                    "Target": "Runner"
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 40.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "ad8e256fdc1940de95fe7a1324c3e4b1",
+            "name": "LockCam",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.30000001192092896,
+                        "y": 0.44999998807907104,
+                        "z": 0.699999988079071
+                    },
+                    "Size": {
+                        "x": 12.0,
+                        "y": 120.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -400.0,
+                        "y": -30.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "b421abed79614157aaf4abc10f3a5f7c",
+            "name": "Post1",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.30000001192092896,
+                        "y": 0.44999998807907104,
+                        "z": 0.699999988079071
+                    },
+                    "Size": {
+                        "x": 12.0,
+                        "y": 120.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 800.0,
+                        "y": -30.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "bb5e9c579b3d492496dcf144a8892fc9",
+            "name": "Post7",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.30000001192092896,
+                        "y": 0.44999998807907104,
+                        "z": 0.699999988079071
                     },
                     "Size": {
                         "x": 12.0,
@@ -650,38 +534,8 @@
         },
         {
             "components": {
-                "Quad": {
-                    "Color": {
-                        "w": 1.0,
-                        "x": 0.8,
-                        "y": 0.25,
-                        "z": 0.25
-                    },
-                    "Size": {
-                        "x": 20.0,
-                        "y": 600.0
-                    }
-                },
-                "Transform": {
-                    "Position": {
-                        "x": 890.0,
-                        "y": 0.0
-                    },
-                    "Rotation": 0.0,
-                    "Scale": {
-                        "x": 1.0,
-                        "y": 1.0
-                    }
-                }
-            },
-            "guid": "f4a33cebfb4c4d8196b7dc18696fdeca",
-            "name": "Wall",
-            "ownerMap": "CameraRig"
-        },
-        {
-            "components": {
                 "CameraZone": {
-                    "BlendTime": 0.4,
+                    "BlendTime": 0.4000000059604645,
                     "HalfExtent": {
                         "x": 180.0,
                         "y": 300.0
@@ -708,19 +562,40 @@
         },
         {
             "components": {
-                "CameraZone": {
-                    "BlendTime": 0.5,
-                    "HalfExtent": {
-                        "x": 570.0,
-                        "y": 300.0
+                "FollowProbe": {
+                    "Chase": "",
+                    "FramedBetween": 0,
+                    "Frames": 0,
+                    "MaxFraction": 0.0,
+                    "MaxZoomLag": 0.0,
+                    "MinFraction": 1.0,
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 40.0
                     },
-                    "OrthoSize": 250.0,
-                    "Priority": 0,
-                    "bConfine": true
+                    "SmoothTime": 0.0,
+                    "Speed": 400.0,
+                    "UpdateNudge": 0.0,
+                    "ViewOffsetY": 0.0,
+                    "WrapAfter": 0.0,
+                    "ZoomFrames": 0,
+                    "ZoomPerStep": 0.0
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.949999988079071,
+                        "y": 0.550000011920929,
+                        "z": 0.20000000298023224
+                    },
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    }
                 },
                 "Transform": {
                     "Position": {
-                        "x": 1830.0,
+                        "x": 0.0,
                         "y": 0.0
                     },
                     "Rotation": 0.0,
@@ -730,8 +605,148 @@
                     }
                 }
             },
-            "guid": "27e9e398e55a482fb6f18a4e832c47aa",
-            "name": "RoomB",
+            "guid": "ce5a348713d64c1091474a587fa307df",
+            "name": "Runner",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "BlendCurve": "EaseInOut",
+                    "BlendIn": 0.0,
+                    "OrthoSize": 300.0,
+                    "Priority": 0,
+                    "bRotateView": false
+                },
+                "CameraGroupStage": {
+                    "Damping": 0.10000000149011612,
+                    "MaxSize": 800.0,
+                    "MinSize": 200.0,
+                    "Padding": 150.0,
+                    "Targets": [
+                        "Runner",
+                        "Post1"
+                    ]
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 40.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "d224902eb1ca49fd99f6063f1db2e9b2",
+            "name": "GroupCam",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "BlendCurve": "EaseInOut",
+                    "BlendIn": 0.0,
+                    "OrthoSize": 300.0,
+                    "Priority": 0,
+                    "bRotateView": false
+                },
+                "CameraFollowStage": {
+                    "Damping": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "DeadZone": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "LookAhead": 0.0,
+                    "LookAheadDamping": 0.0,
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 40.0
+                    },
+                    "Target": "Runner"
+                },
+                "CameraZoneStage": {
+                    "Target": "Runner"
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 40.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "ed4d026c9c5a4cee8f33a526cb1c0726",
+            "name": "ZoneCam",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.800000011920929,
+                        "y": 0.25,
+                        "z": 0.25
+                    },
+                    "Size": {
+                        "x": 20.0,
+                        "y": 600.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 890.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "f4a33cebfb4c4d8196b7dc18696fdeca",
+            "name": "Wall",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.30000001192092896,
+                        "y": 0.44999998807907104,
+                        "z": 0.699999988079071
+                    },
+                    "Size": {
+                        "x": 12.0,
+                        "y": 120.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 400.0,
+                        "y": -30.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "f674aaa32c524594910c4aecdafa638b",
+            "name": "Post5",
             "ownerMap": "CameraRig"
         }
     ],

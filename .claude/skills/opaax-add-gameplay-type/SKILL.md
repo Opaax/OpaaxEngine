@@ -58,10 +58,14 @@ Engine types go in their module (`Engine/Source/<Module>/`) and register in the 
   (or a `TConfig<Data>` subclass with `OPAAX_OBJECT(T, Opaax::Config)` and `FileName()`) and
   `OPAAX_REGISTER_OBJECT(Config_Name)` in a .cpp. Read with `IConfigSystem::Get<T>().GetData()`; the
   Config panel draws it. Registrations in editor code never run (the editor library is not linked whole).
-- Cameras, and anything that moves one (Docs/Cameras.md): move the camera, or the rig entity it
-  hangs from, in `OnFixedUpdate` / `FixedUpdate`, and in one place only (a shake is an offset in
-  `OnUpdate` on a camera under a rig that follows in the steps; a camera moved both ways is reported
-  `mixed` with a warning). Smooth with `Maths::ExpDecay` or `Maths::SmoothDamp` and the step's delta,
+- Cameras, and anything that moves one (Docs/Cameras.md): build a camera's motion from stages, the
+  engine's (`CameraFollowStage`, `CameraConfinerStage`, `CameraGroupStage`, `CameraZoneStage`,
+  `CameraSpeedZoomStage`) or a `CameraStage` subclass (`GetStage`, and `Step` on the pose it is
+  given), which the rig runs in the steps and writes once. Otherwise move the camera, or the entity
+  it hangs from, in `OnFixedUpdate` / `FixedUpdate`, and in one place only (a camera moved both ways
+  is reported `mixed` with a warning). A shake is a `CameraShake` asset (a source, or
+  `CameraShakeSubsystem::Play`), any other change to the drawn view a `CameraModifier`: neither
+  moves an entity. Smooth with `Maths::ExpDecay` or `Maths::SmoothDamp` and the step's delta,
   never `Lerp(a, b, k)` once a frame. After a jump: `TransformInterpolation::Teleport(entity)` and
   `CameraManager::Cut(world)`. Never `World::SetCameraView` on a Play world (the camera manager sets
   it); a view of another camera is `IEngine::SubmitCameraView`. Another entity moved in the steps is

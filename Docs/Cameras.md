@@ -213,8 +213,10 @@ In `Engine.config` (the Config panel):
 ## Seeing it
 
 - **`camera.info`** ([Automation.md](Automation.md)): the view, the frame clock (the refresh frames
-  are snapped to, dropped steps), each camera's framed view, blend and rhythm, the blends under way,
-  the shakes under way, and the last frame's steps and alpha.
+  are snapped to, dropped steps), each camera's framed view, blend, rhythm and rig (its stages in the
+  order they run, and what each holds: a follow in or out of its dead zone and its lead, a
+  confiner's or a group's bounds, the zone applied and its blend, a speed zoom's size), the blends
+  under way, the shakes under way, and the last frame's steps and alpha.
 - **Traces:** `camera.trace.start` and `camera.trace.stop` record every frame's time, view and
   followed entity into a JSON and a CSV file and measure them: how far the followed entity moves on
   screen (`targetDrift`), how unevenly the view moves (`motionJitter`), time running back, moves
@@ -226,9 +228,14 @@ In `Engine.config` (the Config panel):
   (`144,hitch=0.1@2`), the same frames every run.
 - **The camera matrix:** `TestWorld/Tests/Camera*.json` play the Following levels at 30 to 240 frames
   a second, steady, noisy and stalling, at fixed rates of 30, 60 and 120, far from the origin,
-  smoothed, through a camera switch, a blended hand-over, a pause, a respawn and two shakes.
-  `TestWorld/EditorTests/Camera*.json` play them in the editor at 60, 144 and 240.
+  smoothed, through a camera switch, a blended hand-over, a pause, a respawn and two shakes, and
+  `CameraRig.json` a rig's stages (an eased follow stopped by a wall, a locked one, a group, two
+  rooms, a speed zoom). `TestWorld/EditorTests/Camera*.json` play them in the editor at 60, 144 and
+  240.
 - **In the editor:** **Panels > Camera Stats** shows the live camera and how it moves, the blend
   under way, the frame's time, steps and alpha, the frame clock, and a graph of the selected entity's
   drift on screen; **Camera Preview** shows what the selected camera frames; `editor.camera*`,
-  `editor.viewport` and `editor.camera.preview` drive and read them from scripts.
+  `editor.viewport` and `editor.camera.preview` drive and read them from scripts. A selected rigged
+  camera draws its areas in the viewport: its follow's dead zone around it (yellow), its confiner's
+  bounds (red; walls only for a free axis), its group's targets with their padding (green) and every
+  zone when it has a zone stage (blue); a selected `CameraZone` draws itself.

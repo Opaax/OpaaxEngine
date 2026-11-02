@@ -1,0 +1,99 @@
+[
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 10
+        }
+    },
+    {
+        "id": "open",
+        "command": "level.open",
+        "params": {
+            "path": "Levels/CameraRig.opaaxlevel"
+        }
+    },
+    {
+        "id": "frame-rig",
+        "command": "editor.camera.set",
+        "params": {
+            "x": 200.0,
+            "y": 0.0,
+            "size": 700.0
+        }
+    },
+    {
+        "id": "select-rig",
+        "command": "entity.select",
+        "params": {
+            "entities": [
+                "RigCam"
+            ]
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "shot-rig",
+        "command": "screenshot",
+        "params": {
+            "path": "EditorCameraRig-rig.png"
+        }
+    },
+    {
+        "id": "select-group",
+        "command": "entity.select",
+        "params": {
+            "entities": [
+                "GroupCam"
+            ]
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "shot-group",
+        "command": "screenshot",
+        "params": {
+            "path": "EditorCameraRig-group.png"
+        }
+    },
+    {
+        "id": "frame-zones",
+        "command": "editor.camera.set",
+        "params": {
+            "x": 1450.0,
+            "y": 0.0,
+            "size": 600.0
+        }
+    },
+    {
+        "id": "select-zone",
+        "command": "entity.select",
+        "params": {
+            "entities": [
+                "ZoneCam"
+            ]
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "shot-zone",
+        "command": "screenshot",
+        "params": {
+            "path": "EditorCameraRig-zone.png"
+        }
+    }
+]
