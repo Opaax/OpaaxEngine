@@ -1292,6 +1292,42 @@ namespace Opaax::EngineAutomation
             }
             return lEntry;
         }
+
+        /** One component of an entity as it was before a patch: its values, or that it was missing. */
+        struct ComponentSnapshot
+        {
+            const IComponentEntry* Entry = nullptr;
+            bool                   bHad  = false;
+            nlohmann::json         Values;
+        };
+
+        ComponentSnapshot TakeSnapshot(const IComponentEntry& InEntry, const EntityRegistry& InRegistry,
+                                       const EntityID InEntity)
+        {
+            ComponentSnapshot lSnapshot{ &InEntry, InEntry.Has(InRegistry, InEntity), nlohmann::json::object() };
+            if (lSnapshot.bHad)
+            {
+                lSnapshot.Values = InEntry.Save(InRegistry, InEntity);
+            }
+            if (lSnapshot.Values.is_null())
+            {
+                lSnapshot.Values = nlohmann::json::object();
+            }
+            return lSnapshot;
+        }
+
+        /** Puts the component back as InSnapshot holds it: its values, or removed when it was missing. */
+        void RestoreSnapshot(const ComponentSnapshot& InSnapshot, EntityRegistry& InRegistry, const EntityID InEntity)
+        {
+            if (InSnapshot.bHad)
+            {
+                InSnapshot.Entry->Load(InRegistry, InEntity, InSnapshot.Values);
+            }
+            else
+            {
+                InSnapshot.Entry->Remove(InRegistry, InEntity);
+            }
+        }
     }
 
     void Register(AutomationRunner& InRunner, IEngine& InEngine, IAutomationHost& InHost)
@@ -1500,16 +1536,11 @@ namespace Opaax::EngineAutomation
             return false;
         }
 
-        EntityRegistry& lRegistry = InEntity.GetWorld()->GetRegistry();
-        const EntityID  lHandle   = InEntity.GetHandle();
-        const bool      bHad      = lEntry->Has(lRegistry, lHandle);
-        nlohmann::json  lBefore   = bHad ? lEntry->Save(lRegistry, lHandle) : nlohmann::json::object();
-        if (lBefore.is_null())
-        {
-            lBefore = nlohmann::json::object();
-        }
+        EntityRegistry&         lRegistry = InEntity.GetWorld()->GetRegistry();
+        const EntityID          lHandle   = InEntity.GetHandle();
+        const ComponentSnapshot lBefore   = TakeSnapshot(*lEntry, lRegistry, lHandle);
 
-        nlohmann::json lData = lBefore;
+        nlohmann::json lData = lBefore.Values;
         if (bValue)
         {
             lData.merge_patch(*lValue);
@@ -1522,17 +1553,39 @@ namespace Opaax::EngineAutomation
         catch (const nlohmann::json::exception& lError)
         {
             // A field of the wrong type stops the load part way: the component goes back to what it was.
-            if (bHad)
-            {
-                lEntry->Load(lRegistry, lHandle, lBefore);
-            }
-            else
-            {
-                lEntry->Remove(lRegistry, lHandle);
-            }
+            RestoreSnapshot(lBefore, lRegistry, lHandle);
             OutError = OpaaxString::Format("'{}' did not take these values ({}): give each field the type "
                                            "entity.get shows for it", lType, lError.what());
             return false;
+        }
+        return true;
+    }
+
+    bool PatchComponents(Entity InEntity, const ComponentRegistry& InTypes, const nlohmann::json& InComponents,
+                         OpaaxString& OutError)
+    {
+        if (!CheckComponents(InTypes, InComponents, OutError))
+        {
+            return false;
+        }
+
+        // Each one as it was, taken before it is patched: a later failure puts the earlier ones back.
+        EntityRegistry&              lRegistry = InEntity.GetWorld()->GetRegistry();
+        const EntityID               lHandle   = InEntity.GetHandle();
+        TDynArray<ComponentSnapshot> lPatched;
+        for (const auto& [lType, lValue] : InComponents.items())
+        {
+            const IComponentEntry&  lEntry    = *InTypes.FindByName(OpaaxStringID(FromJsonString(lType)));
+            const ComponentSnapshot lSnapshot = TakeSnapshot(lEntry, lRegistry, lHandle);
+            if (!PatchComponent(InEntity, InTypes, nlohmann::json{ { "type", lType }, { "value", lValue } }, OutError))
+            {
+                for (const ComponentSnapshot& lDone : lPatched)
+                {
+                    RestoreSnapshot(lDone, lRegistry, lHandle);
+                }
+                return false;
+            }
+            lPatched.push_back(lSnapshot);
         }
         return true;
     }

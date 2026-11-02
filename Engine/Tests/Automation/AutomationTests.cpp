@@ -607,6 +607,44 @@ TEST_CASE("Automation entities: the components to create an entity with are all 
     CHECK(lError.Contains("\"components\""));
 }
 
+TEST_CASE("Automation entities: several components are patched all together or not at all")
+{
+    ComponentRegistry lTypes;
+    REQUIRE(lTypes.Register<TransformComponent>("Transform", /*bInEssential*/ true));
+    REQUIRE(lTypes.Register<QuadComponent>("Quad"));
+
+    World  lWorld("Automation");
+    Entity lHero = lWorld.CreateEntity("Hero");
+
+    const nlohmann::json lSmallQuad{ { "Size", { { "x", 5.0 }, { "y", 5.0 } } } };
+    OpaaxString          lError;
+
+    // Quad comes first and loads, then Transform fails: the Quad added goes again.
+    CHECK_FALSE(EngineAutomation::PatchComponents(
+        lHero, lTypes, nlohmann::json{ { "Quad", lSmallQuad }, { "Transform", { { "Position", "far" } } } }, lError));
+    CHECK(lError.Contains("'Transform' did not take"));
+    CHECK_FALSE(lHero.Has<QuadComponent>());
+    CHECK(lHero.Get<TransformComponent>().Position.x == doctest::Approx(0.f));
+
+    // A Quad that was there gets its values back.
+    lHero.AddOrReplace<QuadComponent>();
+    CHECK_FALSE(EngineAutomation::PatchComponents(
+        lHero, lTypes, nlohmann::json{ { "Quad", lSmallQuad }, { "Transform", { { "Position", "far" } } } }, lError));
+    CHECK(lHero.Get<QuadComponent>().Size.x == doctest::Approx(50.f));
+
+    // An unknown type is refused before anything is patched.
+    CHECK_FALSE(EngineAutomation::PatchComponents(
+        lHero, lTypes, nlohmann::json{ { "Quad", lSmallQuad }, { "ShakeProbe", nlohmann::json::object() } }, lError));
+    CHECK(lError.Contains("unknown component type 'ShakeProbe'"));
+    CHECK(lHero.Get<QuadComponent>().Size.x == doctest::Approx(50.f));
+
+    REQUIRE(EngineAutomation::PatchComponents(
+        lHero, lTypes, nlohmann::json{ { "Quad", lSmallQuad }, { "Transform", { { "Position", { { "x", 12.0 } } } } } },
+        lError));
+    CHECK(lHero.Get<QuadComponent>().Size.x == doctest::Approx(5.f));
+    CHECK(lHero.Get<TransformComponent>().Position.x == doctest::Approx(12.f));
+}
+
 TEST_CASE("Automation expectations: equals, near, greater, less and between, with what was found")
 {
     OpaaxString lError;

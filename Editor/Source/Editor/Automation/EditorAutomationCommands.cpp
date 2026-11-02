@@ -660,15 +660,7 @@ namespace Opaax::Editor::EditorAutomation
                     // A field of the wrong type is only found as it loads: the fill then fails and the entity goes.
                     const Entity lEntity = EntityOps::Create(InContext, lOwner, lName, [&](const Entity InEntity)
                     {
-                        for (const auto& [lType, lValue] : lComponents.items())
-                        {
-                            const nlohmann::json lPatch{ { "type", lType }, { "value", lValue } };
-                            if (!EngineAutomation::PatchComponent(InEntity, lTypes, lPatch, lError))
-                            {
-                                return false;
-                            }
-                        }
-                        return true;
+                        return EngineAutomation::PatchComponents(InEntity, lTypes, lComponents, lError);
                     });
                     if (!lEntity.IsValid())
                     {
@@ -894,7 +886,7 @@ namespace Opaax::Editor::EditorAutomation
             InCommands.Register("prefab.variant",
                 "Writes a variant of the prefab {prefab} at {path}: it inherits everything from it, except "
                 "{components} ({type: values}) changed on its {entity} (name or id). Opens it in the Prefab panel; "
-                "refuses a file that exists.",
+                "refuses a file that exists. A type or value it refuses writes nothing and leaves the base as it was.",
                 [&InContext](const nlohmann::json& InParams)
                 {
                     const OpaaxString lBaseParam = InParams.value("prefab", OpaaxString());
@@ -916,6 +908,14 @@ namespace Opaax::Editor::EditorAutomation
                         return AutomationResult::Fail("no prefab at '" + lBase + "'");
                     }
 
+                    // Checked before the prefab opens: a type or value it refuses leaves the Prefab panel as it was.
+                    const ComponentRegistry& lTypes      = InContext.Engine.GetRegistries().Components();
+                    const nlohmann::json     lComponents = InParams.value("components", nlohmann::json::object());
+                    if (!EngineAutomation::CheckComponents(lTypes, lComponents, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
                     EditorPrefabDocument& lDocument = InContext.PrefabDocument;
                     InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_PREFAB_AT, InContext,
                                                             PrefabPathParams{ lBase });
@@ -925,23 +925,17 @@ namespace Opaax::Editor::EditorAutomation
                     }
 
                     // The changes are made in the prefab's own world: saved as a variant, they are its overrides.
-                    const auto lComponents = InParams.find("components");
-                    if (lComponents != InParams.end() && lComponents->is_object() && !lComponents->empty())
+                    // All or none, so a field that does not load leaves the open prefab as it was read.
+                    if (!lComponents.empty())
                     {
                         const Entity lEntity = EngineAutomation::FindEntity(*lDocument.GetWorld(), InParams, lError);
                         if (!lEntity.IsValid())
                         {
                             return AutomationResult::Fail("\"entity\" names the prefab's entity to change: " + lError);
                         }
-
-                        const ComponentRegistry& lTypes = InContext.Engine.GetRegistries().Components();
-                        for (const auto& [lType, lValue] : lComponents->items())
+                        if (!EngineAutomation::PatchComponents(lEntity, lTypes, lComponents, lError))
                         {
-                            const nlohmann::json lPatch{ { "type", lType }, { "value", lValue } };
-                            if (!EngineAutomation::PatchComponent(lEntity, lTypes, lPatch, lError))
-                            {
-                                return AutomationResult::Fail(lError);
-                            }
+                            return AutomationResult::Fail(lError);
                         }
                     }
 

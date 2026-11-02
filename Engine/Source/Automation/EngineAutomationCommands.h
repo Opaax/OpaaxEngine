@@ -70,6 +70,14 @@ namespace Opaax
                             OpaaxString& OutError);
 
         /**
+         * Every patch of InComponents, {type: values}, applied to InEntity as PatchComponent does, or none:
+         * when one fails (CheckComponents first, then a field of the wrong type) the ones before it are
+         * put back. False, with OutError, then.
+         */
+        bool PatchComponents(Entity InEntity, const ComponentRegistry& InTypes, const nlohmann::json& InComponents,
+                             OpaaxString& OutError);
+
+        /**
          * Whether InActual meets what InParams expects: "equals" (numbers within 1e-4, objects and
          * arrays member by member), "near" within "tolerance" (default 0.01), "greater", "less",
          * "between" [min, max]. With none of them, any value passes. OutError tells what was found
