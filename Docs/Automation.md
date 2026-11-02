@@ -139,7 +139,7 @@ The editor adds:
 | `component.set` | `entity`, `type`, `value` | As the engine's, recorded for undo in the edit world |
 | `prefab.create` | `entities`, `path` | Writes entities (with their children) as a prefab, then replaces them with an instance of it |
 | `prefab.place` | `path`, `position` | Places an instance of a prefab in the focused map, its first entity at `position` |
-| `prefab.variant` | `prefab`, `path`, `entity`, `components` | Writes a variant of a prefab: it inherits everything, except `components` changed on its `entity` |
+| `prefab.variant` | `prefab`, `path`, `entity`, `components` | Writes a variant of a prefab: it inherits everything, except `components` changed on its `entity`. A type or value it refuses writes nothing and leaves the base prefab as it was |
 | `ui.new` | `path` | Creates an empty UI canvas (a root panel at the project's reference height); its widgets are written in the file |
 | `asset.classes` | | The asset classes a project can make: name, label, category, and properties at their defaults |
 | `asset.new` | `path`, `class`, `properties` | Creates an asset of a class, every field at its default, then sets `properties`, saves and opens it; refuses a file that exists |

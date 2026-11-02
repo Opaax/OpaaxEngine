@@ -285,6 +285,54 @@
         }
     },
     {
+        "id": "variant-unknown-type",
+        "command": "prefab.variant",
+        "params": {
+            "prefab": "Prefabs/Turret.opaaxprefab",
+            "path": "Scratch/BadTurret.opaaxprefab",
+            "entity": "Turret",
+            "components": {
+                "Quad": {
+                    "Size": {
+                        "x": 10.0,
+                        "y": 10.0
+                    }
+                },
+                "UnbuiltProbe": {}
+            }
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "variant-wrong-field-type",
+        "command": "prefab.variant",
+        "params": {
+            "prefab": "Prefabs/Turret.opaaxprefab",
+            "path": "Scratch/BadTurret.opaaxprefab",
+            "entity": "Turret",
+            "components": {
+                "Quad": {
+                    "Size": {
+                        "x": 10.0,
+                        "y": 10.0
+                    }
+                },
+                "Transform": {
+                    "Position": "far"
+                }
+            }
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "refused-variants-not-written",
+        "command": "asset.get",
+        "params": {
+            "path": "Scratch/BadTurret.opaaxprefab"
+        },
+        "expectFailure": true
+    },
+    {
         "id": "variant",
         "command": "prefab.variant",
         "params": {
