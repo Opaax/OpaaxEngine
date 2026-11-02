@@ -193,6 +193,71 @@
                         "rotation": 0.001
                     }
                 }
+            },
+            {
+                "id": "priority-GroupCam-{tag}",
+                "command": "component.set",
+                "params": {
+                    "entity": "GroupCam",
+                    "type": "Camera",
+                    "value": {
+                        "Priority": 6
+                    }
+                }
+            },
+            {
+                "command": "frames.wait",
+                "params": {
+                    "count": 2
+                }
+            },
+            {
+                "id": "trace-CameraRigGroup-{tag}",
+                "command": "camera.trace.start",
+                "params": {
+                    "name": "CameraRigGroup-{tag}",
+                    "target": "Runner"
+                }
+            },
+            {
+                "command": "world.wait",
+                "params": {
+                    "seconds": 0.5
+                }
+            },
+            {
+                "id": "CameraRigGroup-{tag}",
+                "command": "camera.trace.stop",
+                "params": {
+                    "limits": {
+                        "timeReversals": 0,
+                        "stillMoves": 0,
+                        "zoomReversals": 0,
+                        "cameraSwitches": 0,
+                        "motionJitter": 1000.0,
+                        "mostSteps": 8
+                    }
+                }
+            },
+            {
+                "id": "CameraRigGroup-{tag}-path",
+                "command": "camera.trace.compare",
+                "params": {
+                    "reference": "CameraRigGroup-{reference}",
+                    "trace": "CameraRigGroup-{tag}",
+                    "limits": {
+                        "position": 0.001,
+                        "size": 0.001,
+                        "rotation": 0.001
+                    }
+                }
+            },
+            {
+                "id": "group-shot-{tag}",
+                "command": "screenshot",
+                "params": {
+                    "path": "CameraRigGroup-{tag}.png"
+                }
             }
         ]
     }

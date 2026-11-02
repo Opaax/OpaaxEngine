@@ -91,6 +91,38 @@
         },
         {
             "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
+                "CameraGroupStage": {
+                    "Damping": 0.1,
+                    "MaxSize": 800.0,
+                    "MinSize": 200.0,
+                    "Padding": 150.0,
+                    "Targets": [
+                        "Runner",
+                        "Post1"
+                    ]
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 40.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "d224902eb1ca49fd99f6063f1db2e9b2",
+            "name": "GroupCam",
+            "ownerMap": "CameraRig"
+        },
+        {
+            "components": {
                 "FollowProbe": {
                     "Chase": "",
                     "FramedBetween": 0,
