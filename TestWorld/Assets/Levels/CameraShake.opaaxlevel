@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/CameraShake.opaaxmap"
+    ],
+    "name": "CameraShake",
+    "persistentMap": "Maps/CameraShake.opaaxmap",
+    "version": 1
+}
