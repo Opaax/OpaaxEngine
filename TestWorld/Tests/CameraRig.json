@@ -258,6 +258,92 @@
                 "params": {
                     "path": "CameraRigGroup-{tag}.png"
                 }
+            },
+            {
+                "id": "priority-ZoneCam-{tag}",
+                "command": "component.set",
+                "params": {
+                    "entity": "ZoneCam",
+                    "type": "Camera",
+                    "value": {
+                        "Priority": 7
+                    }
+                }
+            },
+            {
+                "command": "frames.wait",
+                "params": {
+                    "count": 2
+                }
+            },
+            {
+                "id": "trace-CameraRigZone-{tag}",
+                "command": "camera.trace.start",
+                "params": {
+                    "name": "CameraRigZone-{tag}",
+                    "target": "Runner"
+                }
+            },
+            {
+                "command": "world.wait",
+                "params": {
+                    "seconds": 1.5
+                }
+            },
+            {
+                "id": "CameraRigZone-{tag}",
+                "command": "camera.trace.stop",
+                "params": {
+                    "limits": {
+                        "timeReversals": 0,
+                        "stillMoves": 0,
+                        "cameraSwitches": 0,
+                        "largestMove": 100,
+                        "zoomReversals": 1,
+                        "motionJitter": 1000.0,
+                        "mostSteps": 8
+                    }
+                }
+            },
+            {
+                "id": "CameraRigZone-{tag}-path",
+                "command": "camera.trace.compare",
+                "params": {
+                    "reference": "CameraRigZone-{reference}",
+                    "trace": "CameraRigZone-{tag}",
+                    "limits": {
+                        "position": 0.001,
+                        "size": 0.001,
+                        "rotation": 0.001
+                    }
+                }
+            },
+            {
+                "id": "zone-x-{tag}",
+                "command": "expect.value",
+                "params": {
+                    "entity": "ZoneCam",
+                    "path": "Transform/Position/x",
+                    "near": 1704.4444444444443,
+                    "tolerance": 0.01
+                }
+            },
+            {
+                "id": "zone-size-{tag}",
+                "command": "expect.value",
+                "params": {
+                    "entity": "ZoneCam",
+                    "path": "Camera/OrthoSize",
+                    "near": 250.0,
+                    "tolerance": 0.01
+                }
+            },
+            {
+                "id": "zone-shot-{tag}",
+                "command": "screenshot",
+                "params": {
+                    "path": "CameraRigZone-{tag}.png"
+                }
             }
         ]
     }
