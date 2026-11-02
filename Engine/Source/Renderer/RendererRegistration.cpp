@@ -9,6 +9,7 @@
 #include "Renderer/Camera/CameraShake.h"   // complete: the source visits its shake reference
 #include "Renderer/Camera/CameraShakeSourceComponent.h"
 #include "Renderer/Camera/CameraShakeSubsystem.h"
+#include "Renderer/Camera/CameraSpeedZoomStage.h"
 #include "Renderer/Camera/CameraZoneComponent.h"
 #include "Renderer/Camera/CameraZoneStage.h"
 #include "Renderer/Components/EnvironmentComponent.h"
@@ -43,6 +44,7 @@ namespace Opaax
     OPAAX_REGISTER_BEHAVIOUR(CameraConfinerStage);
     OPAAX_REGISTER_BEHAVIOUR(CameraGroupStage);
     OPAAX_REGISTER_BEHAVIOUR(CameraZoneStage);
+    OPAAX_REGISTER_BEHAVIOUR(CameraSpeedZoomStage);
 
     // A part of a level that sets how a rigged camera frames it (CameraZoneStage).
     OPAAX_REGISTER_NAMED_COMPONENT(CameraZoneComponent, "CameraZone");
