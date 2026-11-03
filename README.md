@@ -48,6 +48,8 @@ X11/Wayland/GL development packages listed in `.github/workflows/build.yml`.
   check one.
 - [Docs/Objects.md](Docs/Objects.md): asset classes, their files and windows, custom asset editors,
   converting old asset files.
+- [Docs/Saving.md](Docs/Saving.md): a player's saves: save classes, saving in the background,
+  versions, where the files go.
 - [Docs/Automation.md](Docs/Automation.md): driving a game or the editor from scripts.
 - [Docs/AssetFormats.md](Docs/AssetFormats.md): the asset files (levels, maps, prefabs, UI, input,
   sprites, data), to write them by hand or from a tool.

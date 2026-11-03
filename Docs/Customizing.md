@@ -17,7 +17,8 @@ the class it derives from ([Objects.md](Objects.md)).
 | `OPAAX_REGISTER_COMPONENT(Health)` | Data on an entity, saved in maps, edited in the Inspector | QuickStart step 2 |
 | `OPAAX_REGISTER_BEHAVIOUR(Spinner)` | Gameplay code on an entity | QuickStart step 2, `TestWorld/Source` |
 | `OPAAX_REGISTER_OBJECT(ScoreSubsystem)` | A world subsystem (`Opaax::WorldSubsystem`): code that lives as long as a world and ticks with it | below |
-| `OPAAX_REGISTER_OBJECT(SaveSubsystem)` | A game instance subsystem (`Opaax::GameInstanceSubsystem`): lives as long as a game session, across levels | below |
+| `OPAAX_REGISTER_OBJECT(ScoreKeeper)` | A game instance subsystem (`Opaax::GameInstanceSubsystem`): lives as long as a game session, across levels | below |
+| `OPAAX_REGISTER_OBJECT(ProgressSave)` | What the game keeps for a player between launches: an `Opaax::SaveGame` subclass, its fields as properties, saved in a slot by the game's `SaveGameSubsystem` | [Saving.md](Saving.md), `TestWorld/Source/TestWorld/Probes/SaveProbes.h` |
 | `OPAAX_REGISTER_OBJECT(MyGame)` | The game's own `Opaax::GameInstance` class, named in the project file: code run when the game starts and ends | below |
 | `OPAAX_REGISTER_OBJECT(EnemyStats)` | An asset class (an `Opaax::Asset` with `OPAAX_OBJECT`): `.opaaxasset` files, made and edited in the editor | `Renderer/Materials/Material2D.h`, `Sandbox/Source/Sandbox/Data` |
 | `OPAAX_REGISTER_OBJECT(EnemyWave)` | A file format of the game: an asset class read from its own files (`OPAAX_ASSET_SOURCE(".wave")`), loaded and cached like any asset | `Sandbox/Source/Sandbox/Data/EnemyWave.h` |
@@ -88,8 +89,9 @@ running game), and a behaviour finds the subsystem with `GetSubsystem<ScoreSubsy
 A game instance subsystem derives from `Opaax::GameInstanceSubsystem` and registers the same way.
 Every game makes one of each class, in `GetTickOrder()` order, and it lives from the start of the game
 to its end, across level changes (a score, a save); `GetContext()` gives the game's services. A
-behaviour finds it with `GetGameSubsystem<Save>()`, null while no game runs (in the editor outside
-Play). `TestWorld/Source/TestWorld/Probes/LevelProbes.h` has one.
+behaviour finds it with `GetGameSubsystem<ScoreKeeper>()`, null while no game runs (in the editor
+outside Play). `TestWorld/Source/TestWorld/Probes/LevelProbes.h` has one, and the engine's own
+`SaveGameSubsystem` keeps the player's saves ([Saving.md](Saving.md)).
 
 The game session itself can be a class of the game: a `GameInstance` subclass with `OPAAX_OBJECT`,
 registered, and named in the project file (`"gameInstanceClass": "MyGame"`). `OnStart` runs once its
