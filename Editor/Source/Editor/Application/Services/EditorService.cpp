@@ -290,6 +290,7 @@ namespace Opaax::Editor
         lFile.AddCommand("Resave Level (All Maps)", Tags::EDITOR_COMMAND_RESAVE_LEVEL).SetEnabled(IsEditing);
         lFile.AddSeparator();
         lFile.AddCommand("Export Game...", Tags::EDITOR_COMMAND_EXPORT_GAME);
+        lFile.AddCommand("Open Save Folder", Tags::EDITOR_COMMAND_OPEN_SAVE_FOLDER);
         lFile.AddSeparator();
         lFile.AddCommand("Exit", Tags::EDITOR_COMMAND_QUIT);
 
@@ -436,6 +437,7 @@ namespace Opaax::Editor
         lCommands.Register<RedoCommand>(Tags::EDITOR_COMMAND_REDO);
 
         lCommands.Register<ExportGameCommand>(Tags::EDITOR_COMMAND_EXPORT_GAME);
+        lCommands.Register<OpenSaveFolderCommand>(Tags::EDITOR_COMMAND_OPEN_SAVE_FOLDER);
 
         // Every asset class, through one set of commands.
         lCommands.Register<OpenAssetCommand>(Tags::EDITOR_COMMAND_OPEN_ASSET);

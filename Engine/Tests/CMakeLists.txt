@@ -78,6 +78,7 @@ set(OPAAX_TEST_SOURCES
     Application/IWindowManagerTests.cpp
     Application/OpaaxApplicationBootTests.cpp
     Application/PathsTests.cpp
+    Application/ProcessTests.cpp
     Application/Utf8PathTests.cpp
 
     # Engine

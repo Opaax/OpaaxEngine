@@ -15,4 +15,11 @@ namespace Opaax::Process
      * @return The command's exit code (0 is success)
      */
     Int32 RunCommandLine(const OpaaxString& InCommandLine);
+
+    /**
+     * Shows InFolder in the system's file browser (Explorer, Finder, the desktop's file manager) and
+     * returns without waiting for it.
+     * @return False when InFolder is not a folder, or the system could not be asked to show it
+     */
+    bool OpenFolder(const OpaaxString& InFolder);
 }

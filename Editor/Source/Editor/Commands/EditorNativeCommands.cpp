@@ -34,6 +34,9 @@
 #include "Application/Services/IEngine.h"
 #include "Core/Log/Logger.h"
 #include "Application/Services/IPaths.h"
+#include "Application/Services/ISaveStorage.h"
+#include "Core/IO/FileSystem.h"
+#include "Platform/Process.h"
 #include "Platform/IFileSystem.h"
 #include "Platform/Window/Window.h"
 #include "Engine/Registries/EngineRegistries.h"
@@ -220,6 +223,25 @@ namespace Opaax::Editor
         {
             ExportOps::Start(InContext, InFolder);
         });
+    }
+
+    void OpenSaveFolderCommand::Execute(EditorContext&, const Params&)
+    {
+        // Made when nothing was saved yet: the folder shown is where the saves will go.
+        const OpaaxString lFolder = OpaaxApplication::GetAppService<ISaveStorage>().GetSaveDirectory();
+        if (lFolder.IsEmpty() || !FileSystem::CreateDirectories(lFolder))
+        {
+            OPAAX_LOG(LogEditorCommands, Error, "No save folder to open ('{}')", lFolder.CStr());
+            return;
+        }
+
+        if (!Process::OpenFolder(lFolder))
+        {
+            OPAAX_LOG(LogEditorCommands, Error, "Could not show the save folder '{}'", lFolder.CStr());
+            return;
+        }
+
+        OPAAX_LOG(LogEditorCommands, Info, "Showing the save folder '{}'", lFolder.CStr());
     }
 
     void QuitCommand::Execute(EditorContext& InContext, const Params&)
