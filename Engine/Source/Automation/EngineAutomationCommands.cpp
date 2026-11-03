@@ -5,6 +5,7 @@
 #include "Application/Services/IEngine.h"
 #include "Application/Services/IPaths.h"
 #include "Application/Services/IWindowManager.h"
+#include "Automation/SaveAutomationCommands.h"
 #include "Core/Algo/Algo.h"
 #include "Core/IO/FileIO.h"
 #include "Core/IO/FileSystem.h"
@@ -463,7 +464,8 @@ namespace Opaax::EngineAutomation
         // =========================================================================
         void RegisterApp(AutomationRunner& InRunner, IAutomationHost& InHost)
         {
-            InRunner.Register("app.info", "The app's frame and folders: {frame, workspace, engine, project, assets, save}.",
+            InRunner.Register("app.info",
+                "The app's frame and folders: {frame, workspace, engine, project, assets, save, user}.",
                 [&InHost](const nlohmann::json&)
                 {
                     const IPaths& lPaths = OpaaxApplication::GetAppService<IPaths>();
@@ -473,7 +475,8 @@ namespace Opaax::EngineAutomation
                         { "engine",    lPaths.EngineRoot() },
                         { "project",   lPaths.ProjectRoot() },
                         { "assets",    lPaths.AssetsDir() },
-                        { "save",      lPaths.SaveDir() } });
+                        { "save",      lPaths.SaveDir() },
+                        { "user",      lPaths.UserDir() } });
                 });
 
             InRunner.Register("app.quit", "Closes the app at the end of this frame.",
@@ -1405,6 +1408,7 @@ namespace Opaax::EngineAutomation
         RegisterConfig(InRunner);
         RegisterCamera(InRunner, InEngine);
         RegisterExpectations(InRunner, InEngine);
+        SaveAutomation::Register(InRunner, InEngine);
     }
 
     nlohmann::json DescribeWidgets(const UICanvas& InCanvas, const OpaaxString& InName)

@@ -1,0 +1,174 @@
+[
+    {
+        "id": "clear",
+        "command": "save.clear",
+        "params": {
+            "all": true
+        }
+    },
+    {
+        "id": "seed",
+        "command": "save.set",
+        "params": {
+            "slot": "Probe",
+            "class": "ProbeSave",
+            "properties": {
+                "Runs": 41
+            }
+        }
+    },
+    {
+        "id": "seeded",
+        "command": "save.get",
+        "params": {
+            "slot": "Probe"
+        },
+        "expect": {
+            "class": "ProbeSave",
+            "properties": {
+                "Runs": 41,
+                "LastLevel": ""
+            }
+        }
+    },
+    {
+        "id": "misspelt",
+        "command": "save.set",
+        "params": {
+            "slot": "Probe",
+            "class": "ProbeSave",
+            "properties": {
+                "Rnus": 1
+            }
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "seed-broken",
+        "command": "save.set",
+        "params": {
+            "slot": "Broken",
+            "text": "{ \"Class\": \"ProbeSave\", \"Prop"
+        }
+    },
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Saves.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 1.0
+        }
+    },
+    {
+        "id": "loaded",
+        "command": "expect.value",
+        "params": {
+            "entity": "Saver",
+            "path": "SaveProbe/LoadAnswer",
+            "equals": "Ok"
+        }
+    },
+    {
+        "id": "loaded-runs",
+        "command": "expect.value",
+        "params": {
+            "entity": "Saver",
+            "path": "SaveProbe/LoadedRuns",
+            "equals": 41
+        }
+    },
+    {
+        "id": "saved",
+        "command": "expect.value",
+        "params": {
+            "entity": "Saver",
+            "path": "SaveProbe/SaveAnswer",
+            "equals": "Ok"
+        }
+    },
+    {
+        "id": "answered-later",
+        "command": "expect.value",
+        "params": {
+            "entity": "Saver",
+            "path": "SaveProbe/bAnsweredInCall",
+            "equals": false
+        }
+    },
+    {
+        "id": "written",
+        "command": "save.get",
+        "params": {
+            "slot": "Probe"
+        },
+        "expect": {
+            "class": "ProbeSave",
+            "classVersion": 1,
+            "properties": {
+                "Runs": 42,
+                "LastLevel": "Saves"
+            }
+        }
+    },
+    {
+        "id": "broken-read",
+        "command": "expect.value",
+        "params": {
+            "entity": "Keeper",
+            "path": "SaveProbe/LoadAnswer",
+            "equals": "Corrupt"
+        }
+    },
+    {
+        "id": "broken-not-saved",
+        "command": "expect.value",
+        "params": {
+            "entity": "Keeper",
+            "path": "SaveProbe/SaveAnswer",
+            "equals": ""
+        }
+    },
+    {
+        "id": "broken-kept",
+        "command": "save.get",
+        "params": {
+            "slot": "Broken"
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "listed",
+        "command": "save.list",
+        "expect": {
+            "slots": [
+                "Broken",
+                "Probe"
+            ]
+        }
+    },
+    {
+        "id": "cleared",
+        "command": "save.clear",
+        "params": {
+            "slot": "Probe"
+        },
+        "expect": {
+            "deleted": [
+                "Probe"
+            ]
+        }
+    },
+    {
+        "id": "gone",
+        "command": "save.get",
+        "params": {
+            "slot": "Probe"
+        },
+        "expectFailure": true
+    }
+]

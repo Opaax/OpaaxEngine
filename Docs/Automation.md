@@ -11,6 +11,7 @@ test, or by an AI agent. The commands are the same everywhere; the editor adds i
 | `--automation <folder>` | Keeps the app open and runs every `<name>.request.json` dropped in the folder (in name order), answering in `<name>.response.json`. `app.quit` closes it. |
 | `--upgrade-assets` | The editor only: before it opens, converts the asset files of older formats (`.opaaxsheet`, `.opaaxclip`...) in the project and the engine's content into `.opaaxasset` files, and rewrites the paths that named them. The log lists what changed. With `--exec` and a script that sends `app.quit`, it converts and closes ([Objects.md](Objects.md)). |
 | `--frame-pacing <pacing>` | The frames get the time of a screen rate instead of the clock's, from the first frame: `144`, `60,jitter=0.25` (each frame up to a quarter of a frame early or late, never drifting off the rate), `60,hitch=0.1@2` (a 0.1 s stall every 2 s), `60,seed=3` (another jitter), `deltas=0.016/0.033` (repeated). The same pacing gives the same frames every run, on any machine, and VSync is off so the run goes as fast as it can. A pacing that does not read fails the run. |
+| `--user-dir <folder>` | The player's own folder, where the saves go (`IPaths::UserDir`), instead of `<ProjectRoot>/Save` in a dev build or the OS's user folder in a ship build. A relative folder is from the workspace. The feature tests point it at `<build>/<Game>Results/User`, so their saves never touch yours. |
 
 The two can be combined. For the inbox, write a request under another name first and rename it to
 `.request.json`, so the app never reads half a file; number the names (`001`, `002`...) to keep the
@@ -70,7 +71,7 @@ saved in `.opaaxmap` files.
 
 | Command | Params | Does |
 |---|---|---|
-| `app.info` | | Frame number and the folders: workspace, engine, project, assets, save |
+| `app.info` | | Frame number and the folders: workspace, engine, project, assets, save, user (where the saves go) |
 | `app.quit` | | Closes the app at the end of the frame |
 | `frames.wait` | `count` | Lets frames run before the next request |
 | `world.wait` | `seconds` | Lets the playing world's clock advance (game time, whatever the frame rate) |
@@ -99,12 +100,20 @@ saved in `.opaaxmap` files.
 | `expect.count` | `name`, `component`, check | Fails unless the number of matching entities passes the check |
 | `expect.entity` | `entity`, `exists` | Fails unless an entity with that name or id exists (or, with `exists: false`, none does) |
 | `expect.quit` | `seconds` | Waits for the game to close the app itself (`QuitGame`); fails if it is still open after `seconds` (10) |
+| `save.list` | | The player's save slots: `folder`, `slots` (sorted) |
+| `save.get` | `slot` | A slot's save as its file holds it: `slot`, `path`, `class`, `classVersion`, `properties`. Fails for a slot without a save, or a file that is not a save this engine reads |
+| `save.set` | `slot`, `class`, `properties` | Writes a slot as the game writes a save of `class`: its defaults, `properties` merged. An unknown class, a property the class does not have (the error lists its properties) or a value of the wrong type writes nothing. With `slot`, `text` instead, the file is written as given, unchecked: an old or broken file, for a test |
+| `save.clear` | `slot` or `all` | Deletes a slot's save, or every slot's with `all: true`; answers `deleted`. A slot without a save is no failure |
 
 A check is any of `equals` (numbers within 1e-4; for an object, the fields given), `near` with a
 `tolerance` (0.01 by default), `greater`, `less`, `between: [min, max]`. A failed expectation fails
 its request, so a script of expectations is a test: its exit code is 1 when one fails. When the app
 closes before the script's end, the requests left fail too: a game that quits early cannot pass a
 test it never finished.
+
+While a game runs, the `save.*` commands first wait for its background saves
+(`SaveGameSubsystem::Flush`), so they read what it asked to write. `TestWorld/Tests/Saves.json` seeds
+slots, plays a level that loads and saves in the background, and checks the files.
 
 The editor adds:
 

@@ -34,8 +34,9 @@ namespace Opaax
     // =============================================================================
     // EngineAutomation — the commands every app answers: the app itself (info, quit, screenshot),
     //   input (keys and mouse, fed to the engine as if pressed), the game's UI (its widgets, a click
-    //   on one), and the active world (its entities, their components, editing a component's
-    //   values). The editor adds its own, and replaces the edits with undoable ones.
+    //   on one), the active world (its entities, their components, editing a component's values), and
+    //   the player's save slots (SaveAutomationCommands.h). The editor adds its own, and replaces the
+    //   edits with undoable ones.
     // =============================================================================
     namespace EngineAutomation
     {
