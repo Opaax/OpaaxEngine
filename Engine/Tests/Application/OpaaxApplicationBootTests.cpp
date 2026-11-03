@@ -7,7 +7,9 @@
 #include "Application/OpaaxApplication.h"
 #include "Platform/IPlatform.h"
 #include "Application/Services/IPaths.h"
+#include "Application/Services/ISaveStorage.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/OpaaxPathString.h"
 
 using namespace Opaax;
 
@@ -25,6 +27,10 @@ TEST_CASE("OpaaxApplication: boot provides Platform + Paths through the locator"
         CHECK_FALSE(lApp.Paths().IsNull());
         CHECK_FALSE(lApp.Paths().ProjectRoot().IsEmpty());
         CHECK_FALSE(lApp.Paths().EngineRoot().IsEmpty());
+
+        // The player's saves, in the user folder.
+        CHECK_FALSE(lApp.SaveStorage().IsNull());
+        CHECK(lApp.SaveStorage().GetSaveDirectory() == PathString::Join(lApp.Paths().UserDir(), "SaveGames"));
 
         CHECK(Logger::Get().HasSinks());
     }

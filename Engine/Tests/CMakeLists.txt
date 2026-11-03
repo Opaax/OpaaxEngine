@@ -73,6 +73,7 @@ set(OPAAX_TEST_SOURCES
     Application/IConfigSystemTests.cpp
     Application/IJobSystemTests.cpp
     Application/IProjectManagerTests.cpp
+    Application/ISaveStorageTests.cpp
     Application/IWindowManagerTests.cpp
     Application/OpaaxApplicationBootTests.cpp
     Application/PathsTests.cpp

@@ -11,6 +11,7 @@
 #include "Core/Profiling/Profiler.h"
 #include "Application/Services/IProjectManager.h"
 #include "Application/Services/IJobSystem.h"
+#include "Application/Services/ISaveStorage.h"
 
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/EngineEvents.h"
@@ -96,6 +97,9 @@ void OpaaxApplication::Bootstrap()
     //Jobsystem
     IJobSystem& lJobSystem = BootJobSystem();
 
+    //Save storage — the player's saves, in the user folder.
+    BootSaveStorage(lPath);
+
     //Stats — reads the config, so after the config system.
     BootProfiler(lConfigSystem);
 
@@ -138,6 +142,11 @@ IProjectManager& OpaaxApplication::BootProjectManager(const IPaths& Paths)
 IJobSystem& OpaaxApplication::BootJobSystem()
 {
     return m_Services.Provide<IJobSystem, Opaax::JobSystem>();
+}
+
+ISaveStorage& OpaaxApplication::BootSaveStorage(const IPaths& Paths)
+{
+    return m_Services.Provide<ISaveStorage, Opaax::SaveStorage>(Paths);
 }
 
 void OpaaxApplication::BootProfiler(IConfigSystem& ConfigSystem)
@@ -564,5 +573,6 @@ IPaths&             OpaaxApplication::Paths()           { return m_Services.Get<
 IProjectManager&    OpaaxApplication::ProjectManager()  { return m_Services.Get<IProjectManager>(); }
 IConfigSystem&      OpaaxApplication::ConfigSystem()    { return m_Services.Get<IConfigSystem>();   }
 IJobSystem&         OpaaxApplication::JobSystem()       { return m_Services.Get<IJobSystem>();      }
+ISaveStorage&       OpaaxApplication::SaveStorage()     { return m_Services.Get<ISaveStorage>();    }
 IWindowManager&     OpaaxApplication::WindowManager()   { return m_Services.Get<IWindowManager>();  }
 IEngine&            OpaaxApplication::Engine()          { return m_Services.Get<IEngine>();         }
