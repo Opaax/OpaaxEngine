@@ -41,4 +41,28 @@ namespace Opaax::FileIO
      * @return False if the file could not be written
      */
     bool WriteAllBytes(const OpaaxString& InAbsPath, const Uint8* InData, Uint64 InSize);
+
+    // =============================================================================
+    // Atomic writes — for files a crash must not cut in half (a player's save). The data goes to a
+    //   temporary file beside the target (AtomicTempPath), is flushed to the disk, and the temporary
+    //   file is renamed over the target in one step: a reader, or the next launch after a crash or a
+    //   power cut, finds the old file or the new one, never a mix. One writer per file at a time.
+    // =============================================================================
+
+    /**
+     * Writes text to InAbsPath whole or not at all, as WriteAllText writes it. Creates missing parent
+     * directories.
+     * @return False if any step failed: the file that was there is left as it was, the temporary file
+     *   removed
+     */
+    bool WriteAllTextAtomic(const OpaaxString& InAbsPath, const OpaaxString& InText);
+
+    /** WriteAllTextAtomic for raw bytes. */
+    bool WriteAllBytesAtomic(const OpaaxString& InAbsPath, const Uint8* InData, Uint64 InSize);
+
+    /**
+     * The temporary file of an atomic write to InAbsPath: InAbsPath followed by ".tmp". What a crash
+     * leaves there is never read, and the next write replaces it.
+     */
+    OpaaxString AtomicTempPath(const OpaaxString& InAbsPath);
 }
