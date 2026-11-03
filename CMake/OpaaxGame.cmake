@@ -113,9 +113,10 @@ endfunction()
 #
 # A CTest test per automation script <dir>/*.json (relative to the calling folder), named
 # <Name>.<Script>: the game's runtime plays it (--exec) and fails when a check fails
-# (Docs/Automation.md). The answers and screenshots go to <build>/<Name>Results. They open a window,
-# so they need a display: labelled "feature" (`ctest -LE feature` leaves them out). Built with
-# OPAAX_BUILD_TESTS.
+# (Docs/Automation.md). The answers and screenshots go to <build>/<Name>Results, and the saves the
+# scripts make to <build>/<Name>Results/User (--user-dir), never the project's own. They open a
+# window, so they need a display: labelled "feature" (`ctest -LE feature` leaves them out). Built
+# with OPAAX_BUILD_TESTS.
 # =============================================================================
 function(opaax_add_game_feature_tests InName InDir)
     if(NOT OPAAX_BUILD_TESTS)
@@ -135,6 +136,7 @@ function(opaax_add_game_feature_tests InName InDir)
         get_filename_component(lFeature "${lScript}" NAME_WE)
         add_test(NAME ${InName}.${lFeature}
                  COMMAND ${InName} --exec "${lScript}" --exec-out "${lResults}/${lFeature}.out.json"
+                                   --user-dir "${lResults}/User"
                  WORKING_DIRECTORY "${lResults}")
         set_tests_properties(${InName}.${lFeature} PROPERTIES LABELS feature TIMEOUT 120)
     endforeach()

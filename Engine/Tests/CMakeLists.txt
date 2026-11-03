@@ -34,6 +34,7 @@ set(OPAAX_TEST_SOURCES
 
     # Automation
     Automation/AutomationTests.cpp
+    Automation/SaveAutomationTests.cpp
 
     # Core
     Core/AlgoTests.cpp

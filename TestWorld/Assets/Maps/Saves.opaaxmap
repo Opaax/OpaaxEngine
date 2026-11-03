@@ -1,0 +1,70 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "a0b3023b99794f09a3fbe8bb3630dbd3",
+            "name": "Camera",
+            "ownerMap": "Saves"
+        },
+        {
+            "components": {
+                "SaveProbe": {
+                    "Slot": "Probe"
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "03281f556b9346b5a9fef9c44f95beb1",
+            "name": "Saver",
+            "ownerMap": "Saves"
+        },
+        {
+            "components": {
+                "SaveProbe": {
+                    "Slot": "Broken"
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "6a4b01cab3f249f89a27116f399c6361",
+            "name": "Keeper",
+            "ownerMap": "Saves"
+        }
+    ],
+    "mapId": "Saves",
+    "version": 4
+}
