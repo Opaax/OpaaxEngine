@@ -14,6 +14,8 @@
 #include "Platform/CommandLine.h"
 #include "Platform/IPlatform.h"
 #include "Platform/IFileSystem.h"   // StubPlatform hands out the null one
+#include "Platform/NativePlatform.h"
+#include "Core/String/OpaaxPathString.h"
 #include "Application/Services/AppServiceLocator.h"
 
 using namespace Opaax;
@@ -23,14 +25,17 @@ namespace
     class StubPlatform final : public IPlatform
     {
     public:
-        explicit StubPlatform(OpaaxString InExe) : m_Exe(Move(InExe)) {}
+        explicit StubPlatform(OpaaxString InExe, OpaaxString InUserData = OpaaxString())
+            : m_Exe(Move(InExe)), m_UserData(Move(InUserData)) {}
         Uint32      GetLogicalCoreCount() const override { return 4; }
         double      GetTimeSeconds()      const override { return 0.0; }
         OpaaxString GetExecutablePath()   const override { return m_Exe; }
         OpaaxString GetPlatformName()     const override { return OpaaxString("Stub"); }
         const IFileSystem& GetFileSystem() const override { return IFileSystem::Null(); }  // unused here
+        OpaaxString GetUserDataDirectory() const override { return m_UserData; }
     private:
         OpaaxString m_Exe;
+        OpaaxString m_UserData;
     };
 
     /** An absolute path on this platform: "<InDrive>:/<InRest>" on Windows, "/<InRest>" elsewhere. */
@@ -171,6 +176,73 @@ TEST_CASE("ResolveProjectLayout: a game repository's workspace does not hold the
         CHECK(lNative.EngineRoot == Abs("game/External/OpaaxEngine/Engine"));
     }
 #endif
+}
+
+// =============================================================================
+// User folder — where the player's saves go
+// =============================================================================
+TEST_CASE("ResolveUserDir: a ship build uses the OS user folder, named after the project")
+{
+    const ProjectLayout lLayout = ResolveProjectLayout(Abs("Games/Bhop.exe"), OpaaxString(), OpaaxString(), OpaaxString());
+
+    CHECK(ResolveUserDir(lLayout, Abs("Users/Zo\xC3\xA9/AppData/Roaming"), false, OpaaxString())
+          == Abs("Users/Zo\xC3\xA9/AppData/Roaming/Bhop"));
+
+    // Never the install folder, which the player may not be able to write to.
+    CHECK_FALSE(ResolveUserDir(lLayout, Abs("Users/A/AppData/Roaming"), false, OpaaxString()).StartsWith(Abs("Games")));
+}
+
+TEST_CASE("ResolveUserDir: a dev build, or an OS without a user folder, keeps <ProjectRoot>/Save")
+{
+    const ProjectLayout lLayout = ResolveProjectLayout(Abs("repo/build/bin/Debug/Bhop.exe"), Abs("repo"),
+                                                       OpaaxString(), OpaaxString());
+
+    CHECK(ResolveUserDir(lLayout, Abs("Users/A/AppData/Roaming"), true, OpaaxString()) == Abs("repo/Bhop/Save"));
+    CHECK(ResolveUserDir(lLayout, OpaaxString(), false, OpaaxString()) == Abs("repo/Bhop/Save"));
+    CHECK(lLayout.UserDir == lLayout.SaveDir);
+}
+
+TEST_CASE("ResolveUserDir: --user-dir wins, relative to the workspace")
+{
+    const ProjectLayout lLayout = ResolveProjectLayout(Abs("repo/build/bin/Debug/Bhop.exe"), Abs("repo"),
+                                                       OpaaxString(), OpaaxString());
+
+    CHECK(ResolveUserDir(lLayout, Abs("Users/A/AppData/Roaming"), false, OpaaxString("build/Results/User"))
+          == Abs("repo/build/Results/User"));
+    CHECK(ResolveUserDir(lLayout, Abs("Users/A/AppData/Roaming"), true, Abs("tmp/Saves", 'T')) == Abs("tmp/Saves", 'T'));
+}
+
+TEST_CASE("ResolvePosixUserDataDirectory: XDG first on Linux, Application Support on macOS")
+{
+    CHECK(ResolvePosixUserDataDirectory(OpaaxString("/data/xdg"), OpaaxString("/home/zoe"), false) == "/data/xdg");
+    CHECK(ResolvePosixUserDataDirectory(OpaaxString(), OpaaxString("/home/zoe"), false) == "/home/zoe/.local/share");
+    // A relative XDG value is ignored, as the spec says.
+    CHECK(ResolvePosixUserDataDirectory(OpaaxString("data"), OpaaxString("/home/zoe"), false) == "/home/zoe/.local/share");
+    CHECK(ResolvePosixUserDataDirectory(OpaaxString("/data/xdg"), OpaaxString("/Users/zoe"), true)
+          == "/Users/zoe/Library/Application Support");
+    CHECK(ResolvePosixUserDataDirectory(OpaaxString(), OpaaxString(), false).IsEmpty());
+}
+
+TEST_CASE("NativePlatform: the OS gives an absolute user data folder")
+{
+    // The real OS call: %APPDATA% on Windows, $XDG_DATA_HOME or $HOME on Linux and macOS (CI sets HOME).
+    const NativePlatform lPlatform;
+    const OpaaxString    lDir = lPlatform.GetUserDataDirectory();
+
+    REQUIRE_FALSE(lDir.IsEmpty());
+    CHECK(PathString::IsAbsolute(lDir));
+    CHECK_FALSE(lDir.Contains("\\"));
+}
+
+TEST_CASE("Paths: --user-dir reaches UserDir")
+{
+    StubPlatform      lPlatform(Abs("deploy/bin/Game.exe"), Abs("Users/A/AppData/Roaming"));
+    const CommandLine lCommandLine({ "Game.exe", "--project", Abs("proj/MyGame/MyGame.opaaxproj"),
+                                     "--user-dir", Abs("results/User") });
+
+    const Paths lPaths(lPlatform, lCommandLine);
+
+    CHECK(lPaths.UserDir() == Abs("results/User"));
 }
 
 // =============================================================================

@@ -69,6 +69,19 @@ namespace Opaax
         return OpaaxString("macOS");
 #endif
     }
+
+    OpaaxString PosixPlatform::GetUserDataDirectory() const
+    {
+        const char* lXdg  = std::getenv("XDG_DATA_HOME");
+        const char* lHome = std::getenv("HOME");
+
+#if defined(OPAAX_PLATFORM_MACOS)
+        constexpr bool bMacOS = true;
+#else
+        constexpr bool bMacOS = false;
+#endif
+        return ResolvePosixUserDataDirectory(OpaaxString(lXdg ? lXdg : ""), OpaaxString(lHome ? lHome : ""), bMacOS);
+    }
 }
 
 #endif // OPAAX_PLATFORM_POSIX

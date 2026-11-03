@@ -11,6 +11,7 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <Windows.h>
+#include <ShlObj.h>
 
 namespace Opaax
 {
@@ -38,6 +39,24 @@ namespace Opaax
         }
 
         // Convert to '/' while still wide, then one conversion.
+        for (wchar_t& lCh : lWide) { if (lCh == L'\\') { lCh = L'/'; } }
+
+        return Utf8::FromWide(lWide);
+    }
+
+    OpaaxString WindowsPlatform::GetUserDataDirectory() const
+    {
+        // %APPDATA%: roams with the user's profile, as most games' saves do.
+        PWSTR lRaw = nullptr;
+        if (FAILED(SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DEFAULT, nullptr, &lRaw)))
+        {
+            CoTaskMemFree(lRaw);
+            return OpaaxString();
+        }
+
+        std::wstring lWide(lRaw);
+        CoTaskMemFree(lRaw);
+
         for (wchar_t& lCh : lWide) { if (lCh == L'\\') { lCh = L'/'; } }
 
         return Utf8::FromWide(lWide);
