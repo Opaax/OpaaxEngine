@@ -17,6 +17,7 @@ namespace Opaax
     class IEngine;
     class IConfigSystem;
     class IProjectManager;
+    class ISaveStorage;
     class IPlatform;
     class IPaths;
     class IJobSystem;
@@ -71,6 +72,7 @@ namespace Opaax
         IConfigSystem&      BootConfigSystem(const IPaths& Paths);
         IProjectManager&    BootProjectManager(const IPaths& Paths);
         IJobSystem&         BootJobSystem();
+        ISaveStorage&       BootSaveStorage(const IPaths& Paths);
 
         /** Enables the Profiler: always in dev builds, from config in ship builds. */
         void                BootProfiler(IConfigSystem& ConfigSystem);
@@ -229,6 +231,7 @@ namespace Opaax
         IProjectManager&    ProjectManager();
         IConfigSystem&      ConfigSystem();
         IJobSystem&         JobSystem();
+        ISaveStorage&       SaveStorage();
         IWindowManager&     WindowManager();
         IEngine&            Engine();
 

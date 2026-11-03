@@ -23,8 +23,6 @@ namespace Opaax
     // =============================================================================
     namespace SaveGameFile
     {
-        inline constexpr const char* SAVE_EXTENSION = ".opaaxsave";
-
         /** The format this engine writes. A file from a newer one is refused. */
         inline constexpr Int32 FORMAT_VERSION = 1;
 

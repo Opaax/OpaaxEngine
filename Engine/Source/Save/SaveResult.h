@@ -24,6 +24,9 @@ namespace Opaax
         /** Holds a class that is unknown, abstract, not a SaveGame, or not the one asked for. */
         WrongClass,
 
+        /** The slot name is not a plain file name (ISaveStorage::IsValidSlotName). */
+        InvalidSlot,
+
         /** The disk refused: no space, no rights, a locked file. */
         IoError
     };
@@ -37,6 +40,7 @@ namespace Opaax
             case ESaveResult::Corrupt:      return "Corrupt";
             case ESaveResult::NewerVersion: return "NewerVersion";
             case ESaveResult::WrongClass:   return "WrongClass";
+            case ESaveResult::InvalidSlot:  return "InvalidSlot";
             case ESaveResult::IoError:      return "IoError";
         }
         return "Unknown";
