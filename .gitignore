@@ -83,6 +83,10 @@ build_e2g.log
 # CrashHandler output — a minidump and the log copied beside it, per crash, under <ProjectRoot>/Save/.
 **/Save/Crashes/
 
+# A dev build's player saves (IPaths::UserDir is <ProjectRoot>/Save there; a ship build's are in the
+# OS's user folder).
+**/Save/SaveGames/
+
 # Editor dock layout — per-user working state written to <ProjectRoot>/Editor/Save/ at runtime.
 # (A SHIPPED default layout, if we ever want one, would be a separate template file, not this.)
 imgui.ini
