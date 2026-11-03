@@ -101,6 +101,7 @@ set(OPAAX_TEST_SOURCES
 
     # Save
     Save/SaveGameFileTests.cpp
+    Save/SaveGameSubsystemTests.cpp
 
     # World
     World/BehaviourRuntimeTests.cpp

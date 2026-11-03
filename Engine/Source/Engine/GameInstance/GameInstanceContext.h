@@ -1,5 +1,8 @@
 #pragma once
 
+#include "Application/Services/IJobSystem.h"
+#include "Application/Services/ISaveStorage.h"
+
 namespace Opaax
 {
     class WorldManager;
@@ -40,5 +43,11 @@ namespace Opaax
          * The engine config (read-only).
          */
         const EngineConfigData& Config;
+
+        /** The worker threads, for work that must not stall a frame (a save). The null one runs each job at once. */
+        IJobSystem& Jobs = IJobSystem::Null();
+
+        /** The player's save slots. The null one keeps nothing. */
+        ISaveStorage& Saves = ISaveStorage::Null();
     };
 }
