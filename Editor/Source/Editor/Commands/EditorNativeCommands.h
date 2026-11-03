@@ -131,6 +131,16 @@ namespace Opaax::Editor
     };
 
     /**
+     * Shows the folder of the player's save slots (ISaveStorage) in the system's file browser, made
+     * first when nothing was saved yet: where Play In Editor's saves are, to read or delete them.
+     */
+    struct OpenSaveFolderCommand
+    {
+        using Params = NoParams;
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /**
      * Minimizes the window (the first caption button).
      */
     struct MinimizeWindowCommand

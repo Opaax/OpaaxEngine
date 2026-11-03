@@ -12,6 +12,9 @@ namespace Opaax::Editor::Tags
     // Export
     inline const OpaaxTag EDITOR_COMMAND_EXPORT_GAME = OpaaxTag("Editor.Command.ExportGame");
 
+    // Saves — the folder of the player's save slots, shown in the system's file browser.
+    inline const OpaaxTag EDITOR_COMMAND_OPEN_SAVE_FOLDER = OpaaxTag("Editor.Command.OpenSaveFolder");
+
     //Window — the title bar buttons. Close is EDITOR_COMMAND_QUIT (the X and File/Exit are the same).
     inline const OpaaxTag EDITOR_COMMAND_MINIMIZE_WINDOW        = OpaaxTag("Editor.Command.MinimizeWindow");
     inline const OpaaxTag EDITOR_COMMAND_TOGGLE_MAXIMIZE_WINDOW = OpaaxTag("Editor.Command.ToggleMaximizeWindow");
