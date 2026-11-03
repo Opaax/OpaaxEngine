@@ -26,6 +26,7 @@ namespace Opaax
             OpaaxString SourceDir()     const override { return OpaaxString(); }
             OpaaxString SaveDir()       const override { return OpaaxString(); }
             OpaaxString TempDir()       const override { return OpaaxString(); }
+            OpaaxString UserDir()       const override { return OpaaxString(); }
             OpaaxString EngineToAbsolute(const OpaaxString&)  const override { return OpaaxString(); }
             OpaaxString ProjectToAbsolute(const OpaaxString&) const override { return OpaaxString(); }
             OpaaxString AssetToAbsolute(const OpaaxString&)   const override { return OpaaxString(); }
@@ -103,7 +104,29 @@ namespace Opaax
         lOut.SourceDir     = PathString::Join(lProjRoot, "Source");
         lOut.SaveDir       = PathString::Join(lProjRoot, "Save");
         lOut.TempDir       = PathString::Join(lProjRoot, "Temp");
+        lOut.UserDir       = lOut.SaveDir;
         return lOut;
+    }
+
+    OpaaxString ResolveUserDir(const ProjectLayout& InLayout, const OpaaxString& InUserDataRoot,
+                               bool bInDevBuild, const OpaaxString& InUserDirArg)
+    {
+        if (!InUserDirArg.IsEmpty())
+        {
+            const OpaaxString lDir = PathString::IsAbsolute(InUserDirArg)
+                                         ? InUserDirArg
+                                         : PathString::Join(InLayout.WorkspaceRoot, InUserDirArg);
+            return PathString::Normalize(lDir);
+        }
+
+        if (bInDevBuild || InUserDataRoot.IsEmpty())
+        {
+            return InLayout.SaveDir;
+        }
+
+        // Named after the project, not the executable: an editor and its game share one folder.
+        const OpaaxString lProjectName = PathString::Stem(InLayout.ProjectFile).ToString();
+        return PathString::Join(PathString::Generic(InUserDataRoot), lProjectName);
     }
 
     // =========================================================================
@@ -152,12 +175,14 @@ namespace Opaax
         }
 
         m_Layout = ResolveProjectLayout(lExe, lWorkspace, lEngine, lProjArg);
+        m_Layout.UserDir = ResolveUserDir(m_Layout, InPlatform.GetUserDataDirectory(), !lWorkspace.IsEmpty(),
+                                          InCommandLine.GetValue("--user-dir"));
     }
 
     void Paths::LogPaths() const
     {
-        OPAAX_APP_LOG(Info, "Workspace '{}', project root '{}', engine root '{}'",
-                      WorkspaceRoot().CStr(), ProjectRoot().CStr(), EngineRoot().CStr());
+        OPAAX_APP_LOG(Info, "Workspace '{}', project root '{}', engine root '{}', user dir '{}'",
+                      WorkspaceRoot().CStr(), ProjectRoot().CStr(), EngineRoot().CStr(), UserDir().CStr());
     }
 
     OpaaxString Paths::EngineToAbsolute(const OpaaxString& InEngineRel) const

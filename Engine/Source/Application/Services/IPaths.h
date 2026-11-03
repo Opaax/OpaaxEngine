@@ -22,6 +22,7 @@ namespace Opaax
         OpaaxString SourceDir;       // <ProjectRoot>/Source 
         OpaaxString SaveDir;         // <ProjectRoot>/Save 
         OpaaxString TempDir;         // <ProjectRoot>/Temp
+        OpaaxString UserDir;         // the player's own data (ResolveUserDir); <ProjectRoot>/Save until set
     };
 
     /** A ship build's project folder, next to the executable, is <ExeName> followed by this. */
@@ -44,6 +45,21 @@ namespace Opaax
                                        const OpaaxString& InWorkspaceDir,
                                        const OpaaxString& InEngineDir,
                                        const OpaaxString& InProjectArg);
+
+    /**
+     * Resolves the player's own folder, where saves go: a ship build cannot count on writing to its
+     * install folder. No OS calls.
+     * @param InLayout The resolved project layout
+     * @param InUserDataRoot The OS's user data folder (IPlatform::GetUserDataDirectory)
+     * @param bInDevBuild A dev build keeps it in <ProjectRoot>/Save, so a developer's runs stay with the
+     *   project and never mix with an installed copy's
+     * @param InUserDirArg Value of --user-dir (relative to the workspace), which wins: tests point it at
+     *   their own folder
+     * @return <InUserDataRoot>/<ProjectName> in a ship build; <ProjectRoot>/Save in a dev build, or when
+     *   the OS gives no folder
+     */
+    OpaaxString ResolveUserDir(const ProjectLayout& InLayout, const OpaaxString& InUserDataRoot,
+                               bool bInDevBuild, const OpaaxString& InUserDirArg);
 
     // =============================================================================
     // Mounts — an asset path without prefix is relative to the project's Assets dir.
@@ -84,6 +100,9 @@ namespace Opaax
         virtual OpaaxString SourceDir()     const = 0;
         virtual OpaaxString SaveDir()       const = 0;
         virtual OpaaxString TempDir()       const = 0;
+
+        /** The player's own data (saves): see ResolveUserDir. SaveDir unless overridden. */
+        virtual OpaaxString UserDir()       const { return SaveDir(); }
 
         /**
          * @return <EngineRoot>/Assets, where "/Engine/" asset paths point
@@ -137,6 +156,7 @@ namespace Opaax
         OpaaxString SourceDir()     const override { return m_Layout.SourceDir; }
         OpaaxString SaveDir()       const override { return m_Layout.SaveDir; }
         OpaaxString TempDir()       const override { return m_Layout.TempDir; }
+        OpaaxString UserDir()       const override { return m_Layout.UserDir; }
 
         OpaaxString EngineToAbsolute(const OpaaxString& InEngineRel)   const override;
         OpaaxString ProjectToAbsolute(const OpaaxString& InProjectRel) const override;

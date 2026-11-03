@@ -23,6 +23,7 @@ namespace Opaax
         OpaaxString                         GetExecutablePath()     const override;
         OpaaxString                         GetPlatformName()       const override { return OpaaxString("Windows"); }
         [[nodiscard]] const IFileSystem&    GetFileSystem()         const override { return m_FileSystem; }
+        OpaaxString                         GetUserDataDirectory()  const override;
         //~End IPlatform interface
         
         // =============================================================================
