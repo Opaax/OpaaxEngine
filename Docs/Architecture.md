@@ -17,6 +17,7 @@ how to extend each part.
 | `World` | Worlds (EnTT), entities, components, behaviours, levels and maps, prefabs, their files |
 | `Physics` | Colliders, rigidbodies, contacts and queries over Box2D (`Physics/Box2D`) |
 | `Audio` | Sound: the engine's own mixer (voices, buses, fades, spatial sound) on an audio thread, clip definitions and banks, sources and the listener; the device and the decoders behind a backend (`Audio/Miniaudio`) |
+| `Save` | What a game keeps for a player: `SaveGame` classes saved by their properties, one file per slot in the player's own folder, written whole or not at all; each game's `SaveGameSubsystem` saves and loads them now or on a worker ([Saving.md](Saving.md)) |
 | `Input`, `Animation`, `Movement`, `UI` | Actions and mapping contexts, sprite animation, character movers, UI canvases |
 | `Engine`, `Application` | The application, its services, the registries, the frame loop and the configs (`Engine/Config`: one `Config` object class per `.config` file) |
 | `Automation` | The request runner, its two transports (a script, an inbox folder) and the engine's commands |
@@ -187,6 +188,24 @@ A game or the editor runs requests from a script (`--exec`) or from files droppe
 - **For:** any tool that writes files can drive it, with no socket or library; the same commands
   work in a game and in the editor; the CI feature tests are plain scripts.
 - **Against:** the inbox is polled once a frame, and the app only answers: it does not push events.
+
+### Saves in the player's folder, written whole
+
+A save is an object of a `SaveGame` class, written as text by its properties, one file per slot.
+Two layers: `ISaveStorage`, an app service, holds the files (in the player's own folder: the OS's
+user data folder in a ship build, the project's `Save/` in a dev build, as Unreal keeps its
+`Saved/SaveGames`); the game's `SaveGameSubsystem` turns objects into those files, and lives and
+ends with the game. A write goes to a temporary file, flushed, then renamed over the slot. The
+background requests run on one worker job at a time, in the order asked, and answer at the
+subsystem's next `Update`.
+
+- **For:** a ship build never writes where it was installed; a crash or a power cut keeps the last
+  save whole; the automation and the editor read the slots with no game running, and a platform's
+  own save API can replace the files; a load asked after a save reads it; stopping Play In Editor
+  writes what was asked and never calls back into a game that is gone; a person can read a save.
+- **Against:** a save is turned into text on the main thread when it is asked, so a very large one
+  costs that frame; the requests share one worker, so a long write delays the loads behind it;
+  text is larger than a binary format and nothing checks that a save was not edited by hand.
 
 ### The engine mixes; an audio library only plays
 
