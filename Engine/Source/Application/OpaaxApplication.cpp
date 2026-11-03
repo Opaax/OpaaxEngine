@@ -76,12 +76,13 @@ void OpaaxApplication::Bootstrap()
     //Path
     IPaths& lPath = BootPaths();
     
-    //Log — adds the sinks and replays the messages logged so far.
-    const OpaaxString lLogFile = lPath.SaveDir() + "/Log/OpaaxEngine.log";
+    //Log — adds the sinks and replays the messages logged so far. In the player's folder, with the
+    //saves: a ship build may not be able to write where it was installed.
+    const OpaaxString lLogFile = lPath.UserDir() + "/Log/OpaaxEngine.log";
     Logger::Get().Init(lLogFile);
 
     //Crash reporting — as soon as we know where to write.
-    CrashHandler::Get().Install({ lPath.SaveDir() + "/Crashes", lLogFile, true });
+    CrashHandler::Get().Install({ lPath.UserDir() + "/Crashes", lLogFile, true });
     lPath.LogPaths();
 
     // Before anything reads the project's files.

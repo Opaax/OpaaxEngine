@@ -79,6 +79,9 @@ namespace Opaax
     public:
         bool IsInstalled() const noexcept { return m_bInstalled; }
 
+        /** Where the reports go and the log they copy, as last configured. */
+        const CrashHandlerSettings& GetSettings() const noexcept { return m_Settings; }
+
         // =============================================================================
         // Members
         // =============================================================================
