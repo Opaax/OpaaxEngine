@@ -97,6 +97,9 @@ set(OPAAX_TEST_SOURCES
     Resources/ResourceFormatRegistryTests.cpp
     Resources/ResourceSystemTests.cpp
 
+    # Save
+    Save/SaveGameFileTests.cpp
+
     # World
     World/BehaviourRuntimeTests.cpp
     World/BehaviourStorageTests.cpp
