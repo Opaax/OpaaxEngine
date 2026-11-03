@@ -3,7 +3,9 @@
 // games, what each failure answers, and the slots.
 #include <doctest.h>
 
+#include "../TestManualJobs.h"
 #include "../TestTempDir.h"
+#include "Application/Services/IJobSystem.h"
 #include "Application/Services/IPaths.h"
 #include "Application/Services/ISaveStorage.h"
 #include "Core/IO/FileIO.h"
@@ -45,6 +47,20 @@ namespace SaveSubsystemTestTypes
         float Volume = 1.f;
         OPAAX_PROPERTIES(TestOptionsSave, OPAAX_PROP(Volume))
     };
+
+    // A class whose upgrade has a bug: it asks the JSON for a key the old file does not have.
+    class TestThrowingSave final : public SaveGame
+    {
+        OPAAX_OBJECT(TestThrowingSave, SaveGame)
+
+    public:
+        Int32 GetSaveVersion() const override { return 2; }
+
+        void UpgradeProperties(Int32 /*InFileVersion*/, nlohmann::json& InOutProperties) const override
+        {
+            InOutProperties["Renamed"] = InOutProperties.at("NotThere");
+        }
+    };
 }
 
 using namespace SaveSubsystemTestTypes;
@@ -71,6 +87,7 @@ namespace
             Classes.Register<SaveGame>();
             Classes.Register<TestRunSave>();
             Classes.Register<TestOptionsSave>();
+            Classes.Register<TestThrowingSave>();
             Resources.SetObjectClasses(&Classes);
         }
 
@@ -85,7 +102,8 @@ namespace
             EndGame();
 
             Game = NewObject<GameInstance>();
-            Game->Init(GameInstanceContext{ Worlds, Resources, IPaths::Null(), Events, Input, Config, InJobs, Storage });
+            Game->Init(GameInstanceContext{ Worlds, Resources, IPaths::Null(), Events, Input, Config,
+                                            InJobs, Storage });
             Game->GetSubsystems().Add<SaveGameSubsystem>();
             Game->GetSubsystems().StartupAll();
             return *Game->GetSubsystems().GetSubsystem<SaveGameSubsystem>();
@@ -228,4 +246,213 @@ TEST_CASE("SaveGameSubsystem: a save that cannot be written keeps the slot's las
     TStrongObjectPtr<TestRunSave> lLoaded;
     REQUIRE(lSaves.Load("Main", lLoaded) == ESaveResult::Ok);
     CHECK(lLoaded->Coins == 1);
+}
+
+TEST_CASE("SaveGameSubsystem: a class whose upgrade throws answers Corrupt instead of ending the program")
+{
+    SaveFixture        lFixture;
+    SaveGameSubsystem& lSaves = lFixture.StartGame();
+
+    REQUIRE(lFixture.Storage.Write("Old", R"({ "Class": "TestThrowingSave", "ClassVersion": 1 })") == ESaveResult::Ok);
+
+    TStrongObjectPtr<TestThrowingSave> lLoaded;
+    CHECK(lSaves.Load("Old", lLoaded) == ESaveResult::Corrupt);
+    CHECK_FALSE(lLoaded.IsValid());
+
+    ESaveResult lAnswer = ESaveResult::Ok;
+    lSaves.LoadAsync<TestThrowingSave>("Old", [&lAnswer](const ESaveResult InResult, TStrongObjectPtr<TestThrowingSave>)
+    {
+        lAnswer = InResult;
+    });
+    lSaves.Flush();
+    CHECK(lAnswer == ESaveResult::Corrupt);
+}
+
+// =============================================================================
+// In the background
+// =============================================================================
+
+TEST_CASE("SaveGameSubsystem: SaveAsync writes on a worker, and answers at the next Update")
+{
+    TestManualJobs     lJobs;
+    SaveFixture        lFixture;
+    SaveGameSubsystem& lSaves = lFixture.StartGame(lJobs);
+
+    const TStrongObjectPtr<TestRunSave> lSave = NewObject<TestRunSave>();
+    lSave->Coins = 7;
+
+    TDynArray<ESaveResult> lAnswers;
+    lSaves.SaveAsync("Main", *lSave, [&lAnswers](const ESaveResult InResult) { lAnswers.push_back(InResult); });
+
+    // Asked, not run yet: nothing on the disk, no answer.
+    CHECK(lJobs.HasJobs());
+    CHECK(lSaves.IsBusy());
+    CHECK_FALSE(lFixture.Storage.Exists("Main"));
+    CHECK(lAnswers.empty());
+
+    // The worker writes; the answer waits for the main thread.
+    lJobs.RunAll();
+    CHECK(lFixture.Storage.Exists("Main"));
+    CHECK(lAnswers.empty());
+    CHECK(lSaves.IsBusy());
+
+    lFixture.Game->Update(0.016);
+    REQUIRE(lAnswers.size() == 1);
+    CHECK(lAnswers[0] == ESaveResult::Ok);
+    CHECK_FALSE(lSaves.IsBusy());
+}
+
+TEST_CASE("SaveGameSubsystem: SaveAsync saves the object as it was when asked")
+{
+    TestManualJobs     lJobs;
+    SaveFixture        lFixture;
+    SaveGameSubsystem& lSaves = lFixture.StartGame(lJobs);
+
+    const TStrongObjectPtr<TestRunSave> lSave = NewObject<TestRunSave>();
+    lSave->Coins = 1;
+    lSaves.SaveAsync("Main", *lSave);
+
+    // The game goes on before the worker runs.
+    lSave->Coins = 2;
+    lJobs.RunAll();
+    lFixture.Game->Update(0.016);
+
+    TStrongObjectPtr<TestRunSave> lLoaded;
+    REQUIRE(lSaves.Load("Main", lLoaded) == ESaveResult::Ok);
+    CHECK(lLoaded->Coins == 1);
+}
+
+TEST_CASE("SaveGameSubsystem: LoadAsync hands over the save, or why there is none")
+{
+    // The null job system runs each job at once: the answers still wait for the next Update.
+    SaveFixture        lFixture;
+    SaveGameSubsystem& lSaves = lFixture.StartGame();
+
+    REQUIRE(lFixture.Storage.Write("Main", R"({ "Class": "TestRunSave", "Properties": { "Coins": 9 } })")
+            == ESaveResult::Ok);
+    REQUIRE(lFixture.Storage.Write("Options", R"({ "Class": "TestOptionsSave" })") == ESaveResult::Ok);
+
+    struct Answer
+    {
+        ESaveResult Result;
+        Int32       Coins;
+    };
+    TDynArray<Answer> lAnswers;
+    const auto lRecord = [&lAnswers](const ESaveResult InResult, const TStrongObjectPtr<TestRunSave> InSave)
+    {
+        lAnswers.push_back({ InResult, InSave.IsValid() ? InSave->Coins : -1 });
+    };
+
+    lSaves.LoadAsync<TestRunSave>("Main", lRecord);
+    lSaves.LoadAsync<TestRunSave>("Missing", lRecord);
+    lSaves.LoadAsync<TestRunSave>("Options", lRecord);
+    CHECK(lAnswers.empty());
+
+    lFixture.Game->Update(0.016);
+
+    REQUIRE(lAnswers.size() == 3);
+    CHECK(lAnswers[0].Result == ESaveResult::Ok);
+    CHECK(lAnswers[0].Coins  == 9);
+    CHECK(lAnswers[1].Result == ESaveResult::Missing);
+    CHECK(lAnswers[1].Coins  == -1);
+    CHECK(lAnswers[2].Result == ESaveResult::WrongClass);
+    CHECK(lAnswers[2].Coins  == -1);
+}
+
+TEST_CASE("SaveGameSubsystem: background saves and loads run in the order asked")
+{
+    JobSystem          lJobs;
+    SaveFixture        lFixture;
+    SaveGameSubsystem& lSaves = lFixture.StartGame(lJobs);
+
+    const TStrongObjectPtr<TestRunSave> lSave = NewObject<TestRunSave>();
+    TDynArray<OpaaxString>              lOrder;
+    Int32                               lLoadedCoins = -1;
+
+    lSave->Coins = 1;
+    lSaves.SaveAsync("Main", *lSave, [&lOrder](const ESaveResult InResult)
+    {
+        lOrder.push_back(OpaaxString::Format("save 1: {}", ToString(InResult)));
+    });
+
+    lSave->Coins = 2;
+    lSaves.SaveAsync("Main", *lSave, [&lOrder](ESaveResult) { lOrder.push_back(OpaaxString("save 2")); });
+
+    lSaves.LoadAsync<TestRunSave>("Main", [&](const ESaveResult InResult, const TStrongObjectPtr<TestRunSave> InLoaded)
+    {
+        lOrder.push_back(OpaaxString("load"));
+        lLoadedCoins = (InResult == ESaveResult::Ok) ? InLoaded->Coins : -2;
+    });
+
+    lSave->Coins = 3;
+    lSaves.SaveAsync("Main", *lSave, [&lOrder](ESaveResult) { lOrder.push_back(OpaaxString("save 3")); });
+
+    lSaves.Flush();
+    CHECK_FALSE(lSaves.IsBusy());
+
+    REQUIRE(lOrder.size() == 4);
+    CHECK(lOrder[0] == "save 1: Ok");
+    CHECK(lOrder[1] == "save 2");
+    CHECK(lOrder[2] == "load");
+    CHECK(lOrder[3] == "save 3");
+
+    // The load read the save asked just before it; the last save is on the disk.
+    CHECK(lLoadedCoins == 2);
+
+    TStrongObjectPtr<TestRunSave> lLoaded;
+    REQUIRE(lSaves.Load("Main", lLoaded) == ESaveResult::Ok);
+    CHECK(lLoaded->Coins == 3);
+}
+
+TEST_CASE("SaveGameSubsystem: a call that is not async waits for the background ones asked before it")
+{
+    JobSystem          lJobs;
+    SaveFixture        lFixture;
+    SaveGameSubsystem& lSaves = lFixture.StartGame(lJobs);
+
+    const TStrongObjectPtr<TestRunSave> lSave = NewObject<TestRunSave>();
+    lSave->Coins = 5;
+    lSaves.SaveAsync("Main", *lSave);
+
+    CHECK(lSaves.Exists("Main"));
+
+    TStrongObjectPtr<TestRunSave> lLoaded;
+    REQUIRE(lSaves.Load("Main", lLoaded) == ESaveResult::Ok);
+    CHECK(lLoaded->Coins == 5);
+
+    // Written, but reported at the next Update.
+    CHECK(lSaves.IsBusy());
+    lFixture.Game->Update(0.016);
+    CHECK_FALSE(lSaves.IsBusy());
+}
+
+TEST_CASE("SaveGameSubsystem: when the game ends, what was asked is written")
+{
+    JobSystem          lJobs;
+    SaveFixture        lFixture;
+    SaveGameSubsystem& lSaves = lFixture.StartGame(lJobs);
+
+    const TStrongObjectPtr<TestRunSave> lSave = NewObject<TestRunSave>();
+    Int32                               lAnswered = 0;
+
+    SUBCASE("asked before the game ends: its callback runs at TearDown, while the game is whole")
+    {
+        lSaves.SaveAsync("Main", *lSave, [&lAnswered](ESaveResult) { ++lAnswered; });
+        lFixture.EndGame();
+
+        CHECK(lAnswered == 1);
+        CHECK(lFixture.Storage.Exists("Main"));
+    }
+
+    SUBCASE("asked after TearDown: written at Shutdown, its callback not run")
+    {
+        GameInstanceSubsystemMgr& lSubsystems = lFixture.Game->GetSubsystems();
+        lSubsystems.TearDownAll();
+
+        lSaves.SaveAsync("Late", *lSave, [&lAnswered](ESaveResult) { ++lAnswered; });
+        lSubsystems.ShutdownAll();
+
+        CHECK(lAnswered == 0);
+        CHECK(lFixture.Storage.Exists("Late"));
+    }
 }
