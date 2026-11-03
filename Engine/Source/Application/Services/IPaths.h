@@ -22,7 +22,7 @@ namespace Opaax
         OpaaxString SourceDir;       // <ProjectRoot>/Source 
         OpaaxString SaveDir;         // <ProjectRoot>/Save 
         OpaaxString TempDir;         // <ProjectRoot>/Temp
-        OpaaxString UserDir;         // the player's own data (ResolveUserDir); <ProjectRoot>/Save until set
+        OpaaxString UserDir;         // the player's own data: saves, log, crash reports (ResolveUserDir)
     };
 
     /** A ship build's project folder, next to the executable, is <ExeName> followed by this. */
@@ -47,8 +47,8 @@ namespace Opaax
                                        const OpaaxString& InProjectArg);
 
     /**
-     * Resolves the player's own folder, where saves go: a ship build cannot count on writing to its
-     * install folder. No OS calls.
+     * Resolves the player's own folder, where the saves, the log and the crash reports go: a ship build
+     * cannot count on writing to its install folder. No OS calls.
      * @param InLayout The resolved project layout
      * @param InUserDataRoot The OS's user data folder (IPlatform::GetUserDataDirectory)
      * @param bInDevBuild A dev build keeps it in <ProjectRoot>/Save, so a developer's runs stay with the
@@ -101,7 +101,7 @@ namespace Opaax
         virtual OpaaxString SaveDir()       const = 0;
         virtual OpaaxString TempDir()       const = 0;
 
-        /** The player's own data (saves): see ResolveUserDir. SaveDir unless overridden. */
+        /** The player's own data (saves, the log, crash reports): ResolveUserDir. SaveDir unless overridden. */
         virtual OpaaxString UserDir()       const { return SaveDir(); }
 
         /**

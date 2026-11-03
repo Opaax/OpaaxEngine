@@ -94,16 +94,19 @@ jobs:
 
       # The game draws on a virtual screen with Mesa's software OpenGL, stricter than desktop
       # drivers: a crash, or an error logged while starting and drawing (a shader that does not
-      # compile), fails the job. The frame is kept as an artifact.
+      # compile), fails the job. The frame is kept as an artifact. The log is in the player's folder:
+      # the project's Save/ in a dev build, the OS's user data folder in a ship build, so no log there
+      # fails the job too.
       - name: Render check
         if: runner.os == 'Linux'
         shell: bash
         run: |
           sudo apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri
-          if [ "${{ matrix.preset }}" = "release" ]; then LOG=build/release/bin/Sandbox_Data/Save/Log/OpaaxEngine.log; else LOG=Sandbox/Save/Log/OpaaxEngine.log; fi
+          if [ "${{ matrix.preset }}" = "release" ]; then LOG="${XDG_DATA_HOME:-$HOME/.local/share}/Sandbox/Log/OpaaxEngine.log"; else LOG=Sandbox/Save/Log/OpaaxEngine.log; fi
           rm -f "$LOG"
           xvfb-run -a -s "-screen 0 1280x720x24" build/${{ matrix.preset }}/bin/Sandbox --capture "$PWD/capture.png" --capture-frame 30
           test -s capture.png
+          test -s "$LOG" || { echo "::error::No log at $LOG"; exit 1; }
           if grep -E "\] \[(error|critical)\]" "$LOG"; then echo "::error::Errors were logged while rendering"; exit 1; fi
 
       - name: Upload capture
@@ -209,12 +212,15 @@ jobs:
           ctest --test-dir build/debug-editor -C Debug --output-on-failure -LE feature
 
       # The game plays its level on a virtual screen: an error logged meanwhile (the engine's content
-      # not found from the game repository) fails the job.
+      # not found from the game repository) fails the job. The feature tests run with --user-dir, so
+      # the game's log is in its results folder.
       - name: Feature tests
         if: runner.os == 'Linux'
         run: |
           xvfb-run -a -s "-screen 0 1280x720x24" ctest --test-dir build/debug-editor -C Debug -L feature --output-on-failure
-          if grep -E "\] \[(error|critical)\]" MyGame/Save/Log/OpaaxEngine.log; then echo "::error::Errors were logged while playing"; exit 1; fi
+          LOG=build/debug-editor/MyGameResults/User/Log/OpaaxEngine.log
+          test -s "$LOG" || { echo "::error::No log at $LOG"; exit 1; }
+          if grep -E "\] \[(error|critical)\]" "$LOG"; then echo "::error::Errors were logged while playing"; exit 1; fi
 
       - name: Report feature failures
         if: runner.os == 'Linux' && failure()

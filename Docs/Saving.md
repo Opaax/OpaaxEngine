@@ -158,8 +158,10 @@ overwrites what a newer one saved.
 | `--user-dir <folder>` | `<folder>/SaveGames`, in any build. The feature tests use `<build>/<Game>Results/User` |
 
 A ship build's own folder is where it was installed, which the player may not be able to write to;
-the folder above is the player's own (`IPaths::UserDir`, `ISaveStorage::GetSaveDirectory`). In the
-editor, **File > Open Save Folder** shows it, and the log names it at startup (`user dir`).
+the folder above is the player's own (`IPaths::UserDir`, `ISaveStorage::GetSaveDirectory`). The log
+(`Log/OpaaxEngine.log`) and the crash reports (`Crashes/`) go beside `SaveGames` in it, so in a dev
+build they stay in `<ProjectRoot>/Save`. In the editor, **File > Open Save Folder** shows the saves,
+and the log names the folder at startup (`user dir`).
 
 A slot is `<Slot>.opaaxsave`, text a person can read, keys sorted:
 
