@@ -105,7 +105,8 @@ namespace Opaax
 
         /**
          * The refresh the frame clock snaps deltas to: a pacing's rate, else the window's screen with
-         * vsync on; none with Time.bSnapToRefresh off. Logged when it changes.
+         * vsync on; none with Time.bSnapToRefresh off. Logged when it changes. Reads the screen's stated
+         * rate for the frame cap too.
          */
         void ApplyRefresh();
 
@@ -115,7 +116,7 @@ namespace Opaax
          */
         void LimitFrameRate();
 
-        /** The refresh vsync presents on, in seconds (the clock's measured one when known); 0 without vsync. */
+        /** The refresh vsync presents on, in seconds, as the screen states it; 0 without vsync or a screen. */
         double GetVSyncInterval() const;
         // End Time
         // =============================================================================
@@ -213,6 +214,9 @@ namespace Opaax
 
         /** The refresh interval given to the clock (ApplyRefresh); 0 for none. */
         double m_SnappedInterval = 0.0;
+
+        /** The window's screen's stated refresh rate, read with the refresh (ApplyRefresh); 0 when unknown. */
+        Uint32 m_ScreenHertz = 0;
 
         // A paced run's frames (SetFramePacing), and the time they add up to.
         FramePacer m_Pacer;

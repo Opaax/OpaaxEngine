@@ -565,6 +565,10 @@ namespace Opaax
         double             lHertz  = 0.0;
         bool               bStated = false;
 
+        // The screen's stated rate, whole hertz: what the swap interval counts in (the frame cap).
+        const Window* lWindow = OpaaxApplication::GetAppService<IWindowManager>().GetMainWindow();
+        m_ScreenHertz = lWindow != nullptr ? lWindow->GetRefreshRate() : 0;
+
         // A pacing is its own screen, at its exact rate; else the window's, which only vsync keeps to.
         if (m_EngineConfig == nullptr || m_EngineConfig->GetData().Time.bSnapToRefresh)
         {
@@ -574,8 +578,7 @@ namespace Opaax
             }
             else if (m_EngineConfig == nullptr || m_EngineConfig->GetData().Window.bVSync)
             {
-                const Window* lWindow = OpaaxApplication::GetAppService<IWindowManager>().GetMainWindow();
-                lHertz  = lWindow != nullptr ? static_cast<double>(lWindow->GetRefreshRate()) : 0.0;
+                lHertz  = static_cast<double>(m_ScreenHertz);
                 bStated = true;
             }
         }
@@ -728,15 +731,10 @@ namespace Opaax
             return 0.0;
         }
 
-        // The clock's is measured; with Time.bSnapToRefresh off, the screen's stated rate.
-        if (const double lMeasured = m_Clock.GetRefreshInterval(); lMeasured > 0.0)
-        {
-            return lMeasured;
-        }
-
-        const Window* lWindow = OpaaxApplication::GetAppService<IWindowManager>().GetMainWindow();
-        const Uint32  lHertz  = lWindow != nullptr ? lWindow->GetRefreshRate() : 0;
-        return lHertz > 0 ? 1.0 / static_cast<double>(lHertz) : 0.0;
+        // The stated rate, not the clock's measured one: the swap interval counts the screen's own
+        // refreshes, and a measure that drifts near a whole number would flip the cap between the
+        // swap interval and the beat.
+        return m_ScreenHertz > 0 ? 1.0 / static_cast<double>(m_ScreenHertz) : 0.0;
     }
     
     bool Engine::CaptureFrame(const OpaaxString& InPngPath)
