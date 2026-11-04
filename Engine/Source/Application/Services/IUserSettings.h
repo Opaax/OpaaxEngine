@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 
 #include "Application/Services/IAppService.h"
+#include "Core/Events/Delegate.h"
 #include "Core/Log/Logger.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
@@ -20,6 +21,9 @@ namespace Opaax
     enum class EWindowMode;
 
     inline constexpr LogCategory LogUserSettings{"UserSettings"};
+
+    /** Passed a section's name ("Keys") when its values changed. */
+    DECLARE_MULTICAST_DELEGATE_OneParam(FOnUserSectionChanged, OpaaxStringView)
 
     // =============================================================================
     // IUserSettings — what the player chose in a settings menu, kept between launches: values over the
@@ -135,6 +139,12 @@ namespace Opaax
          */
         virtual bool SetSection(OpaaxStringView InName, const nlohmann::json& InValues) = 0;
 
+        /**
+         * Fires with a section's name when its values changed (SetSection, Load, Reset), whoever changed
+         * them: its system reads it again.
+         */
+        virtual FOnUserSectionChanged& OnSectionChanged() = 0;
+
         // =============================================================================
         // The engine's settings — what the engine reads is in the engine config (GameInstanceContext::Config)
         // =============================================================================
@@ -216,8 +226,9 @@ namespace Opaax
         void        ResetConfig(OpaaxStringView InConfig) override;
         void        Reset() override;
 
-        nlohmann::json GetSection(OpaaxStringView InName) const override;
-        bool           SetSection(OpaaxStringView InName, const nlohmann::json& InValues) override;
+        nlohmann::json         GetSection(OpaaxStringView InName) const override;
+        bool                   SetSection(OpaaxStringView InName, const nlohmann::json& InValues) override;
+        FOnUserSectionChanged& OnSectionChanged() override { return m_OnSectionChanged; }
 
         TDynArray<DisplayMode> GetDisplayModes() const override;
         //~End IUserSettings interface
@@ -247,6 +258,9 @@ namespace Opaax
         /** Stops following the config system. */
         void Unbind();
 
+        /** Tells each section that differs between InBefore and the values now (CONFIGS_SECTION aside). */
+        void BroadcastSectionChanges(const nlohmann::json& InBefore);
+
         // =============================================================================
         // Members
         // =============================================================================
@@ -260,5 +274,7 @@ namespace Opaax
 
         ESaveResult m_LoadResult = ESaveResult::Missing;
         bool        m_bActive    = false;
+
+        FOnUserSectionChanged m_OnSectionChanged;
     };
 }

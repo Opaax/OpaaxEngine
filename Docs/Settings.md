@@ -1,8 +1,8 @@
 # The player's settings
 
-What a player chose in a settings menu: the window, the sound, a game's own options. They go over the
-project's configs, the engine reads them at once, and they are kept between launches in the player's
-own folder, beside the saves.
+What a player chose in a settings menu: the window, the sound, the keys, a game's own options. They go
+over the project's configs and contexts, the engine reads them at once, and they are kept between
+launches in the player's own folder, beside the saves.
 
 ## From a settings menu
 
@@ -69,6 +69,45 @@ Everything changes at once, except the window's title (read when it opens).
   (G-Sync, FreeSync) shows them at once: the cap sees its frames come early and waits for them
   instead, with an Info line in the log.
 
+## The keys
+
+A controls menu rebinds the keys of the game's mapping contexts ([AssetFormats.md](AssetFormats.md#input-inputactionasset-inputmappingcontextasset)).
+A mapping is named by its context's asset, its action and the key the asset gives it (`InputKeySlot`):
+the key the asset gives tells an action's keys apart (Move's W and S), and stays the same whatever the
+player binds.
+
+```cpp
+Opaax::InputMappingSubsystem& lInput = *GetContext().Actions;
+lInput.RegisterContextAsset("Input/Controls.opaaxasset");     // known before it is added: listed, rebindable
+
+for (const Opaax::InputKeyMapping& lMapping : lInput.GetKeyMappings("Input/Controls.opaaxasset"))
+{
+    // lMapping.Slot.Action, lMapping.Key (the player's), lMapping.IsRebound()
+}
+
+const Opaax::InputKeySlot lJump{ "Input/Controls.opaaxasset", OPAAX_ID("Jump"), Opaax::EKeyCode::Space };
+const Opaax::InputRebindResult lResult = lInput.Rebind(lJump, Opaax::EKeyCode::E, Opaax::EKeyConflictPolicy::Swap);
+// lResult.Result: Rebound, Conflict (lResult.Others: who has the key), Reserved, Locked, RefusedByGame (lResult.Why)...
+
+lInput.ResetKeys("Input/Controls.opaaxasset");               // the asset's keys again
+GetUserSettings().Save();                                     // kept with the other settings
+```
+
+- **At once:** every context added from that asset takes the key the moment it is rebound, and one
+  added later starts with it. `EKeyCode::None` clears a mapping: it drives nothing.
+- **Conflicts** are within the mapping's own context: another context (a vehicle's) is active at
+  other times, or above it. `Refuse` changes nothing and lists the mappings on the key, for the menu to
+  ask; `Swap` gives the other mapping the key the rebound one had; `Replace` clears it.
+- **Locked contexts:** an asset with `bRebindable` off (a menu's Escape) is not the player's to
+  change (`Locked`), and once known its keys are never given to another mapping (`Reserved`),
+  whatever the policy.
+- **The game's say:** `SetKeyCheck` takes a function that answers false, with the reason, for a key
+  the game keeps or an action must not have; it is asked for every key a rebind gives, the one swapped
+  included.
+- `OnKeysChanged` tells a menu to redraw: a rebind, a reset, or the settings read again.
+- The keys are read from the settings as the game starts, and again whenever the section changes
+  there (`Load`, `Reset`, `settings.reset`).
+
 ## The file
 
 `<UserDir>/SaveGames/Settings.opaaxsave` ([Saving.md](Saving.md#where-the-files-go)), laid out as a
@@ -84,6 +123,9 @@ save, holding only what the player changed, shaped like each config's file:
                 "Audio": { "Buses": { "Music": { "Volume": 0.25 } }, "MasterVolume": 0.5 },
                 "Window": { "Mode": "Fullscreen" }
             }
+        },
+        "Keys": {
+            "Input/Controls.opaaxasset": { "Jump": { "Space": "E" }, "Move": { "W": "Up", "S": "None" } }
         }
     },
     "Version": 1
@@ -92,6 +134,9 @@ save, holding only what the player changed, shaped like each config's file:
 
 - A bus is set by its name, so the list of buses stays the project's: a bus the project adds later is
   there for this player too.
+- `Keys` holds each rebound mapping: context, action, the asset's key, then the player's. A key kept
+  for a mapping its asset no longer has, or for a locked context, is dropped with a warning once the
+  asset is read; one for a context not read yet waits for it.
 - A value the config does not have any more is dropped as the file is read, with a warning; the rest is
   read.
 - A file of a newer game, or one that holds another class, is not read and never written over. A file
@@ -112,6 +157,10 @@ save, holding only what the player changed, shaped like each config's file:
   with `slot: Settings`).
 - `Engine/Tests/Engine/FrameLimiterTests.cpp` plays the cap on simulated screens (240 Hz rows),
   one that ignores the swap interval included; `IWindowManagerTests.cpp` the display modes chosen.
+- `Engine/Tests/Input/InputRebindingTests.cpp` checks the conflicts, the locked keys, the game's check
+  and the section's JSON; `InputAssetTests.cpp` the subsystem over real files and settings, the next
+  launch included. `TestWorld/Tests/Keys.json` rebinds Fire from gameplay (`RebindProbe`), presses
+  the new key, saves, resets and reads the file again.
 
 ## How it is built
 
@@ -129,4 +178,11 @@ pure: told the time, it says how long to wait before the present, and which swap
 frames; the engine waits with `IPlatform::SleepPrecise` (a high-resolution timer on Windows, the last
 millisecond spun), inside the profiler's `FrameCap` scope.
 
-Not there yet: the player's keys.
+The keys are `InputRebinds` (`Input/Mapping/InputRebinding.h`), pure: told the layouts of the
+known contexts, it rebinds and finds the conflicts. `InputMappingSubsystem` reads the context assets,
+rebuilds the bindings of every context added from one (`InputActionEvaluator::SetContextBindings`,
+in place, so the actions' states carry on), and keeps the keys in the settings' `Keys` section
+(`IUserSettings::OnSectionChanged` says when another hand changed it). As Unreal's Enhanced Input
+keeps the player's mappable keys over the mapping contexts.
+
+Not there yet: waiting for the next key a player presses (a menu's "press a key").

@@ -59,15 +59,13 @@ namespace Opaax::EngineAutomation
         /** The key or mouse button InName names ("Space", "A", "Mouse_Left"...). */
         bool ParseKey(const OpaaxString& InName, EKeyCode& OutKey)
         {
-            for (const EKeyCode lKey : TEnumValues<EKeyCode>::Values)
+            EKeyCode lKey = EKeyCode::None;
+            if (!KeyFromName(InName, lKey) || !IsKeyCodeBindable(lKey))
             {
-                if (InName == ToString(lKey) && IsKeyCodeBindable(lKey))
-                {
-                    OutKey = lKey;
-                    return true;
-                }
+                return false;
             }
-            return false;
+            OutKey = lKey;
+            return true;
         }
 
         void Press(InputManager& InInput, const EKeyCode InKey)

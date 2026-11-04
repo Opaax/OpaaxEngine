@@ -142,6 +142,7 @@ set(OPAAX_TEST_SOURCES
     Input/InputAssetTests.cpp
     Input/InputManagerTests.cpp
     Input/InputMappingTests.cpp
+    Input/InputRebindingTests.cpp
 
     # Animation
     Animation/AnimationTests.cpp

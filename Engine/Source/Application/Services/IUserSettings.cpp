@@ -4,6 +4,7 @@
 #include "Application/Services/ISaveStorage.h"
 #include "Application/Services/IWindowManager.h"
 #include "Audio/AudioBusSettings.h"
+#include "Core/Algo/Algo.h"
 #include "Core/Maths/Maths.h"
 #include "Core/Reflection/OpaaxEnumJson.h"
 #include "Core/String/OpaaxStringJson.h"
@@ -44,10 +45,14 @@ namespace Opaax
             void        ResetConfig(OpaaxStringView) override {}
             void        Reset() override {}
 
-            nlohmann::json GetSection(OpaaxStringView) const override { return nullptr; }
-            bool           SetSection(OpaaxStringView, const nlohmann::json&) override { return false; }
+            nlohmann::json         GetSection(OpaaxStringView) const override { return nullptr; }
+            bool                   SetSection(OpaaxStringView, const nlohmann::json&) override { return false; }
+            FOnUserSectionChanged& OnSectionChanged() override { return m_NeverChanges; }
 
             TDynArray<DisplayMode> GetDisplayModes() const override { return {}; }
+
+        private:
+            FOnUserSectionChanged m_NeverChanges;
         };
 
         /** The engine config's name, "Engine": a config is named after its file. */
@@ -223,6 +228,8 @@ namespace Opaax
             OPAAX_LOG(LogUserSettings, Info, "Read the player's settings ('{}')", GetFilePath().CStr());
         }
 
+        const nlohmann::json lBefore = Move(m_Properties);
+
         m_LoadResult = lResult;
         m_Saved      = lProperties;
         m_Properties = Move(lProperties);
@@ -231,6 +238,7 @@ namespace Opaax
         {
             ApplyToAll();
         }
+        BroadcastSectionChanges(lBefore);
         return lResult;
     }
 
@@ -365,12 +373,14 @@ namespace Opaax
 
     void UserSettings::Reset()
     {
+        const nlohmann::json lBefore = Move(m_Properties);
         m_Properties = nlohmann::json::object();
 
         if (m_bActive)
         {
             ClearConfigs();
         }
+        BroadcastSectionChanges(lBefore);
     }
 
     // =========================================================================
@@ -390,6 +400,11 @@ namespace Opaax
             return false;
         }
 
+        if (GetSection(lName) == InValues)
+        {
+            return true;
+        }
+
         if (InValues.is_null())
         {
             m_Properties.erase(lName.CStr());
@@ -398,6 +413,7 @@ namespace Opaax
         {
             m_Properties[lName.CStr()] = InValues;
         }
+        m_OnSectionChanged.Broadcast(lName);
         return true;
     }
 
@@ -512,6 +528,39 @@ namespace Opaax
         {
             m_Configs->OnConfigAdded().RemoveAll(this);
             m_Configs = nullptr;
+        }
+    }
+
+    void UserSettings::BroadcastSectionChanges(const nlohmann::json& InBefore)
+    {
+        // Every name in either, each once: a section gone changed too.
+        TDynArray<OpaaxString> lNames;
+        const nlohmann::json* const lBoth[] = { &InBefore, &m_Properties };
+        for (const nlohmann::json* lValues : lBoth)
+        {
+            if (!lValues->is_object())
+            {
+                continue;
+            }
+            for (const auto& lSection : lValues->items())
+            {
+                const OpaaxString lName = FromJsonString(lSection.key());
+                if (lName != CONFIGS_SECTION && !Algo::Contains(lNames, lName))
+                {
+                    lNames.push_back(lName);
+                }
+            }
+        }
+
+        for (const OpaaxString& lName : lNames)
+        {
+            // find answers end() on a value that is not an object.
+            const auto           lOld = InBefore.find(lName.CStr());
+            const nlohmann::json lWas = (lOld != InBefore.end()) ? *lOld : nlohmann::json(nullptr);
+            if (lWas != GetSection(lName))
+            {
+                m_OnSectionChanged.Broadcast(lName);
+            }
         }
     }
 }

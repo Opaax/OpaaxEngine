@@ -68,6 +68,7 @@ namespace TestWorld
     OPAAX_REGISTER_BEHAVIOUR(TuningProbe);
     OPAAX_REGISTER_BEHAVIOUR(SaveProbe);
     OPAAX_REGISTER_BEHAVIOUR(SettingsProbe);
+    OPAAX_REGISTER_BEHAVIOUR(RebindProbe);
 
     OPAAX_REGISTER_OBJECT(ProbeLedger);
 

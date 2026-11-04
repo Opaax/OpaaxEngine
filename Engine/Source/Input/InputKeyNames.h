@@ -3,6 +3,7 @@
 
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxEnum.h"
+#include "Core/String/OpaaxString.hpp"
 #include "Input/InputCodes.h"
 #include "Input/InputManager.h"   // KEY_STATE_COUNT
 
@@ -26,7 +27,7 @@ namespace Opaax
         return "None";
     }
 
-    // Parsing goes through OpaaxEnumJson.h (EKeyCode declares its values below).
+    // Parsing goes through OpaaxEnumJson.h (EKeyCode declares its values below), or KeyFromName.
 
     /**
      * Whether InKey can be bound: keyboard and mouse yes, gamepad not yet.
@@ -52,4 +53,18 @@ namespace Opaax
             #undef OPAAX_KEY_CODE
         };
     };
+
+    /** The key InName names as ToString writes it ("Space", "Mouse_Left", "None"); false for no such key. */
+    inline bool KeyFromName(const OpaaxString& InName, EKeyCode& OutKey)
+    {
+        for (const EKeyCode lKey : TEnumValues<EKeyCode>::Values)
+        {
+            if (InName == ToString(lKey))
+            {
+                OutKey = lKey;
+                return true;
+            }
+        }
+        return false;
+    }
 }

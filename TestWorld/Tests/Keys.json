@@ -1,0 +1,269 @@
+[
+    {
+        "id": "clear",
+        "command": "save.clear",
+        "params": {
+            "slot": "Settings"
+        }
+    },
+    {
+        "id": "fresh",
+        "command": "settings.load",
+        "expect": {
+            "active": true
+        }
+    },
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Settings.opaaxlevel"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "asset-key",
+        "command": "expect.value",
+        "params": {
+            "entity": "Keys",
+            "path": "RebindProbe/FireKey",
+            "equals": "F"
+        }
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "F"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 4
+        }
+    },
+    {
+        "id": "f-fires",
+        "command": "expect.value",
+        "params": {
+            "entity": "Keys",
+            "path": "RebindProbe/Fires",
+            "equals": 1
+        }
+    },
+    {
+        "id": "menu-rebinds",
+        "command": "component.set",
+        "params": {
+            "entity": "Keys",
+            "type": "RebindProbe",
+            "value": {
+                "RebindTo": "G"
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "rebound",
+        "command": "expect.value",
+        "params": {
+            "entity": "Keys",
+            "path": "RebindProbe/Result",
+            "equals": "Rebound"
+        }
+    },
+    {
+        "id": "g-now",
+        "command": "expect.value",
+        "params": {
+            "entity": "Keys",
+            "path": "RebindProbe/FireKey",
+            "equals": "G"
+        }
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "G"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 4
+        }
+    },
+    {
+        "id": "g-fires",
+        "command": "expect.value",
+        "params": {
+            "entity": "Keys",
+            "path": "RebindProbe/Fires",
+            "equals": 2
+        }
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "F"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 4
+        }
+    },
+    {
+        "id": "f-no-more",
+        "command": "expect.value",
+        "params": {
+            "entity": "Keys",
+            "path": "RebindProbe/Fires",
+            "equals": 2
+        }
+    },
+    {
+        "id": "kept-in-settings",
+        "command": "settings.get",
+        "expect": {
+            "unsaved": true,
+            "properties": {
+                "Keys": {
+                    "Input/Test.opaaxasset": {
+                        "Fire": {
+                            "F": "G"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    {
+        "id": "menu-any-key",
+        "command": "component.set",
+        "params": {
+            "entity": "Keys",
+            "type": "RebindProbe",
+            "value": {
+                "RebindTo": "AnyKey"
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "refused",
+        "command": "expect.value",
+        "params": {
+            "entity": "Keys",
+            "path": "RebindProbe/Result",
+            "equals": "InvalidKey"
+        }
+    },
+    {
+        "id": "still-g",
+        "command": "expect.value",
+        "params": {
+            "entity": "Keys",
+            "path": "RebindProbe/FireKey",
+            "equals": "G"
+        }
+    },
+    {
+        "id": "save",
+        "command": "settings.save",
+        "expect": {
+            "unsaved": false
+        }
+    },
+    {
+        "id": "reset",
+        "command": "settings.reset"
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 1
+        }
+    },
+    {
+        "id": "reset-key",
+        "command": "expect.value",
+        "params": {
+            "entity": "Keys",
+            "path": "RebindProbe/FireKey",
+            "equals": "F"
+        }
+    },
+    {
+        "id": "reload",
+        "command": "settings.load"
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 1
+        }
+    },
+    {
+        "id": "saved-key",
+        "command": "expect.value",
+        "params": {
+            "entity": "Keys",
+            "path": "RebindProbe/FireKey",
+            "equals": "G"
+        }
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "G"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 4
+        }
+    },
+    {
+        "id": "saved-key-fires",
+        "command": "expect.value",
+        "params": {
+            "entity": "Keys",
+            "path": "RebindProbe/Fires",
+            "equals": 3
+        }
+    },
+    {
+        "id": "leave-none",
+        "command": "settings.reset"
+    },
+    {
+        "id": "leave-no-file",
+        "command": "save.clear",
+        "params": {
+            "slot": "Settings"
+        },
+        "expect": {
+            "deleted": [
+                "Settings"
+            ]
+        }
+    }
+]

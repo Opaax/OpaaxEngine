@@ -1,11 +1,14 @@
 #include "Input/Mapping/InputMappingSubsystem.h"
 
 #include "Application/Services/IPaths.h"
+#include "Application/Services/IUserSettings.h"
+#include "Core/Algo/Algo.h"
 #include "Engine/GameInstance/GameInstanceContext.h"
 #include "Input/Assets/InputActionAsset.h"
 #include "Input/Assets/InputMappingContextAsset.h"
 #include "Input/InputKeyNames.h"   // ToString(EKeyCode)
 #include "Resources/Asset/AssetHandle.h"
+#include "Resources/Asset/AssetMigration.h"
 #include "Resources/ResourceManager.h"
 #include "World/WorldManager.h"
 
@@ -29,11 +32,8 @@ namespace Opaax
 
     bool InputMappingSubsystem::AddContextAsset(OpaaxStringID InName, const OpaaxString& InAssetPath)
     {
-        const TAssetHandle<InputMappingContextAsset> lMapHandle =
-            LoadAsset<InputMappingContextAsset>(GetContext().Resources, GetContext().Paths, InAssetPath);
-
-        const InputMappingContextAsset* lMap = lMapHandle.Get();
-        if (lMap == nullptr)
+        const KnownContext* lKnown = LoadKnown(InAssetPath);
+        if (lKnown == nullptr)
         {
             OPAAX_LOG(LogInputMapping, Error, "AddContextAsset '{}' — '{}' did not load.",
                       InName, InAssetPath.CStr());
@@ -42,51 +42,120 @@ namespace Opaax
 
         InputMappingContext lContext;
         lContext.Name     = InName;
-        lContext.Priority = lMap->Priority;
+        lContext.Priority = lKnown->Priority;
+        lContext.Bindings = BuildBindings(*lKnown);
 
-        for (const InputMappingEntry& lEntry : lMap->Mappings)
+        if (!m_Evaluator.AddContext(lContext))
         {
-            if (lEntry.Action.IsEmpty())
-            {
-                OPAAX_LOG(LogInputMapping, Warn, "Context '{}' — a mapping for key '{}' names no action. Skipped.",
-                          InName, ToString(lEntry.Key));
-                continue;
-            }
-
-            const TAssetHandle<InputActionAsset> lActionHandle =
-                LoadAsset(GetContext().Resources, GetContext().Paths, lEntry.Action);
-
-            const InputActionAsset* lAction = lActionHandle.Get();
-            if (lAction == nullptr)
-            {
-                OPAAX_LOG(LogInputMapping, Warn, "Context '{}' — action '{}' did not load. Skipped.",
-                          InName, lEntry.Action.Path.CStr());
-                continue;
-            }
-
-            // Registered on first use, so a context needs no prior action declaration.
-            const OpaaxStringID lActionName = lAction->GetActionName();
-            if (m_Evaluator.FindAction(lActionName) == nullptr)
-            {
-                m_Evaluator.RegisterAction(lAction->ToAction());
-            }
-
-            InputKeyBinding lBinding;
-            lBinding.Action    = lActionName;
-            lBinding.Key       = lEntry.Key;
-            lBinding.Modifiers = lEntry.Modifiers;
-            lBinding.bConsume  = lEntry.bConsume;
-
-            lContext.Bindings.emplace_back(Move(lBinding));
+            return false;
         }
 
-        // Everything needed was copied, so the assets may be unloaded.
-        return m_Evaluator.AddContext(lContext);
+        const OpaaxString lPath = lKnown->Layout.Context;
+        if (!Algo::AnyOf(m_Added, [InName](const AddedContext& InAdded) { return InAdded.Name == InName; }))
+        {
+            m_Added.push_back(AddedContext{ InName, lPath });
+        }
+        return true;
     }
 
     bool InputMappingSubsystem::RemoveContext(OpaaxStringID InName)
     {
+        Algo::RemoveIf(m_Added, [InName](const AddedContext& InAdded) { return InAdded.Name == InName; });
         return m_Evaluator.RemoveContext(InName);
+    }
+
+    // =========================================================================
+    // The player's keys
+    // =========================================================================
+    bool InputMappingSubsystem::RegisterContextAsset(const OpaaxString& InAssetPath)
+    {
+        if (LoadKnown(InAssetPath) == nullptr)
+        {
+            OPAAX_LOG(LogInputMapping, Error, "RegisterContextAsset — '{}' did not load.", InAssetPath.CStr());
+            return false;
+        }
+        return true;
+    }
+
+    TDynArray<InputKeyMapping> InputMappingSubsystem::GetKeyMappings(const OpaaxString& InAssetPath) const
+    {
+        TDynArray<InputKeyMapping> lMappings;
+
+        const KnownContext* lKnown = FindKnown(InAssetPath);
+        if (lKnown == nullptr)
+        {
+            return lMappings;
+        }
+
+        lMappings.reserve(lKnown->Layout.Slots.size());
+        for (const InputKeySlot& lSlot : lKnown->Layout.Slots)
+        {
+            lMappings.push_back(InputKeyMapping{ lSlot, m_Rebinds.GetKey(lSlot) });
+        }
+        return lMappings;
+    }
+
+    EKeyCode InputMappingSubsystem::GetKey(const InputKeySlot& InSlot) const
+    {
+        return m_Rebinds.GetKey(CanonicalSlot(InSlot));
+    }
+
+    InputRebindResult InputMappingSubsystem::Rebind(const InputKeySlot& InSlot, const EKeyCode InKey,
+                                                    const EKeyConflictPolicy InPolicy)
+    {
+        const InputKeySlot lSlot   = CanonicalSlot(InSlot);
+        const EKeyCode     lBefore = m_Rebinds.GetKey(lSlot);
+
+        const InputRebindResult lResult = m_Rebinds.Rebind(GetLayouts(), lSlot, InKey, InPolicy, m_KeyCheck);
+        if (!lResult.IsOk())
+        {
+            OPAAX_LOG(LogInputMapping, Info, "Rebind {} {} on {} to {}: {}{}{}", lSlot.Context.CStr(), lSlot.Action,
+                      ToString(lSlot.DefaultKey), ToString(InKey), ToString(lResult.Result),
+                      lResult.Why.IsEmpty() ? "" : ", ", lResult.Why.CStr());
+            return lResult;
+        }
+
+        if (m_Rebinds.GetKey(lSlot) != lBefore)
+        {
+            OPAAX_LOG(LogInputMapping, Info, "Rebound {} {} on {}: {} (was {}){}", lSlot.Context.CStr(), lSlot.Action,
+                      ToString(lSlot.DefaultKey), ToString(InKey), ToString(lBefore),
+                      lResult.Others.empty() ? "" : OpaaxString::Format(", {} other(s) {}", lResult.Others.size(),
+                          InPolicy == EKeyConflictPolicy::Swap ? "swapped" : "cleared").CStr());
+            KeysChanged();
+        }
+        return lResult;
+    }
+
+    void InputMappingSubsystem::ResetKey(const InputKeySlot& InSlot)
+    {
+        const InputKeySlot lSlot = CanonicalSlot(InSlot);
+        if (m_Rebinds.GetKey(lSlot) == lSlot.DefaultKey)
+        {
+            return;
+        }
+        m_Rebinds.Reset(lSlot);
+        KeysChanged();
+    }
+
+    void InputMappingSubsystem::ResetKeys(const OpaaxString& InAssetPath)
+    {
+        const OpaaxString lPath = CanonicalPath(InAssetPath);
+        if (!m_Rebinds.HasRebinds(lPath))
+        {
+            return;
+        }
+        m_Rebinds.ResetContext(lPath);
+        KeysChanged();
+    }
+
+    void InputMappingSubsystem::ResetAllKeys()
+    {
+        if (m_Rebinds.IsEmpty())
+        {
+            return;
+        }
+        m_Rebinds.ResetAll();
+        KeysChanged();
     }
 
     // =========================================================================
@@ -189,6 +258,16 @@ namespace Opaax
     // =========================================================================
     bool InputMappingSubsystem::Startup()
     {
+        // The player's keys, from the settings the game started with; read again when they change there.
+        // Without settings (the null ones) the keys are kept for this game only.
+        IUserSettings& lSettings = GetContext().Settings;
+        if (!lSettings.IsNull())
+        {
+            m_Settings = &lSettings;
+            m_Settings->OnSectionChanged().AddMember(this, &InputMappingSubsystem::HandleSettingsSectionChanged);
+        }
+        ReadKeys();
+
         // Check: the game must start before any Play world exists.
         OPAAX_LOG(LogInputMapping, Trace,
                   "Input mapping started before any play world exists ({} play world(s), {} total) — {} action(s), {} context(s)",
@@ -244,5 +323,222 @@ namespace Opaax
 
     void InputMappingSubsystem::Shutdown()
     {
+        if (m_Settings != nullptr)
+        {
+            m_Settings->OnSectionChanged().RemoveAll(this);
+            m_Settings = nullptr;
+        }
+    }
+
+    // =========================================================================
+    // The player's keys — internal
+    // =========================================================================
+    const InputMappingSubsystem::KnownContext* InputMappingSubsystem::LoadKnown(const OpaaxString& InAssetPath)
+    {
+        const TAssetHandle<InputMappingContextAsset> lMapHandle =
+            LoadAsset<InputMappingContextAsset>(GetContext().Resources, GetContext().Paths, InAssetPath);
+
+        const InputMappingContextAsset* lMap = lMapHandle.Get();
+        if (lMap == nullptr)
+        {
+            return nullptr;
+        }
+
+        KnownContext lKnown;
+        lKnown.Layout.Context     = lMapHandle.GetPath();
+        lKnown.Layout.bRebindable = lMap->bRebindable;
+        lKnown.Priority           = lMap->Priority;
+
+        for (const InputMappingEntry& lEntry : lMap->Mappings)
+        {
+            if (lEntry.Action.IsEmpty())
+            {
+                OPAAX_LOG(LogInputMapping, Warn, "Context '{}' — a mapping for key '{}' names no action. Skipped.",
+                          lKnown.Layout.Context.CStr(), ToString(lEntry.Key));
+                continue;
+            }
+
+            const TAssetHandle<InputActionAsset> lActionHandle =
+                LoadAsset(GetContext().Resources, GetContext().Paths, lEntry.Action);
+
+            const InputActionAsset* lAction = lActionHandle.Get();
+            if (lAction == nullptr)
+            {
+                OPAAX_LOG(LogInputMapping, Warn, "Context '{}' — action '{}' did not load. Skipped.",
+                          lKnown.Layout.Context.CStr(), lEntry.Action.Path.CStr());
+                continue;
+            }
+
+            // Registered on first use, so a context needs no prior action declaration.
+            const OpaaxStringID lActionName = lAction->GetActionName();
+            if (m_Evaluator.FindAction(lActionName) == nullptr)
+            {
+                m_Evaluator.RegisterAction(lAction->ToAction());
+            }
+
+            InputKeyBinding lBinding;
+            lBinding.Action    = lActionName;
+            lBinding.Key       = lEntry.Key;
+            lBinding.Modifiers = lEntry.Modifiers;
+            lBinding.bConsume  = lEntry.bConsume;
+
+            lKnown.Layout.Slots.push_back(InputKeySlot{ lKnown.Layout.Context, lActionName, lEntry.Key });
+            lKnown.Bindings.emplace_back(Move(lBinding));
+        }
+
+        // Everything needed was copied, so the assets may be unloaded. Read again, it replaces what was known.
+        KnownContext* lKept = nullptr;
+        for (KnownContext& lExisting : m_Known)
+        {
+            if (lExisting.Layout.Context == lKnown.Layout.Context)
+            {
+                lExisting = Move(lKnown);
+                lKept     = &lExisting;
+                break;
+            }
+        }
+        if (lKept == nullptr)
+        {
+            m_Known.emplace_back(Move(lKnown));
+            lKept = &m_Known.back();
+        }
+
+        // Keys kept for a mapping the asset no longer has are dropped, and the settings told.
+        if (DropUnknownKeys(*lKept))
+        {
+            KeysChanged();
+        }
+        return lKept;
+    }
+
+    const InputMappingSubsystem::KnownContext* InputMappingSubsystem::FindKnown(const OpaaxString& InAssetPath) const
+    {
+        const OpaaxString lPath = CanonicalPath(InAssetPath);
+        for (const KnownContext& lKnown : m_Known)
+        {
+            if (lKnown.Layout.Context == lPath)
+            {
+                return &lKnown;
+            }
+        }
+        return nullptr;
+    }
+
+    OpaaxString InputMappingSubsystem::CanonicalPath(const OpaaxString& InAssetPath)
+    {
+        OpaaxString lConverted = AssetMigration::ConvertedPath(InAssetPath);
+        return lConverted.IsEmpty() ? InAssetPath : lConverted;
+    }
+
+    InputKeySlot InputMappingSubsystem::CanonicalSlot(const InputKeySlot& InSlot)
+    {
+        InputKeySlot lSlot = InSlot;
+        lSlot.Context      = CanonicalPath(InSlot.Context);
+        return lSlot;
+    }
+
+    TDynArray<InputContextLayout> InputMappingSubsystem::GetLayouts() const
+    {
+        TDynArray<InputContextLayout> lLayouts;
+        lLayouts.reserve(m_Known.size());
+        for (const KnownContext& lKnown : m_Known)
+        {
+            lLayouts.push_back(lKnown.Layout);
+        }
+        return lLayouts;
+    }
+
+    TDynArray<InputKeyBinding> InputMappingSubsystem::BuildBindings(const KnownContext& InKnown) const
+    {
+        TDynArray<InputKeyBinding> lBindings;
+        lBindings.reserve(InKnown.Bindings.size());
+
+        for (Uint64 lIndex = 0; lIndex < InKnown.Bindings.size(); ++lIndex)
+        {
+            InputKeyBinding lBinding = InKnown.Bindings[lIndex];
+            lBinding.Key             = m_Rebinds.GetKey(InKnown.Layout.Slots[lIndex]);
+            if (lBinding.Key != EKeyCode::None)
+            {
+                lBindings.emplace_back(Move(lBinding));
+            }
+        }
+        return lBindings;
+    }
+
+    void InputMappingSubsystem::ApplyKeys()
+    {
+        for (const AddedContext& lAdded : m_Added)
+        {
+            if (const KnownContext* lKnown = FindKnown(lAdded.AssetPath))
+            {
+                m_Evaluator.SetContextBindings(lAdded.Name, BuildBindings(*lKnown));
+            }
+        }
+    }
+
+    void InputMappingSubsystem::KeysChanged()
+    {
+        ApplyKeys();
+
+        if (m_Settings != nullptr)
+        {
+            m_bWritingKeys = true;
+            m_Settings->SetSection(KEYS_SECTION, m_Rebinds.ToJson());
+            m_bWritingKeys = false;
+        }
+
+        m_OnKeysChanged.Broadcast();
+    }
+
+    void InputMappingSubsystem::ReadKeys()
+    {
+        TDynArray<OpaaxString> lDropped;
+        m_Rebinds.FromJson(m_Settings != nullptr ? m_Settings->GetSection(KEYS_SECTION) : nlohmann::json(nullptr),
+                           &lDropped);
+        for (const OpaaxString& lWhy : lDropped)
+        {
+            OPAAX_LOG(LogInputMapping, Warn, "The player's keys: {}. Dropped.", lWhy.CStr());
+        }
+
+        bool bDroppedKnown = false;
+        for (const KnownContext& lKnown : m_Known)
+        {
+            bDroppedKnown = DropUnknownKeys(lKnown) || bDroppedKnown;
+        }
+
+        if (!m_Rebinds.IsEmpty())
+        {
+            OPAAX_LOG(LogInputMapping, Info, "The player's keys: {} rebound", m_Rebinds.Num());
+        }
+
+        // Written back only when some were dropped; applied and told either way.
+        if (bDroppedKnown || !lDropped.empty())
+        {
+            KeysChanged();
+        }
+        else
+        {
+            ApplyKeys();
+            m_OnKeysChanged.Broadcast();
+        }
+    }
+
+    bool InputMappingSubsystem::DropUnknownKeys(const KnownContext& InKnown)
+    {
+        TDynArray<OpaaxString> lDropped;
+        m_Rebinds.DropUnknown(InKnown.Layout, &lDropped);
+        for (const OpaaxString& lWhy : lDropped)
+        {
+            OPAAX_LOG(LogInputMapping, Warn, "The player's keys: {}. Dropped.", lWhy.CStr());
+        }
+        return !lDropped.empty();
+    }
+
+    void InputMappingSubsystem::HandleSettingsSectionChanged(const OpaaxStringView InSection)
+    {
+        if (!m_bWritingKeys && InSection == KEYS_SECTION)
+        {
+            ReadKeys();
+        }
     }
 }
