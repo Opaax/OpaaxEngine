@@ -180,6 +180,13 @@ namespace Opaax
         Mouse_Button8   = 507,
 
         // -----------------------------------------------------------------------------
+        // Mouse Wheel — fed by the wheel only, never held.
+
+        Mouse_WheelUp   = 508, // Pressed and released in the frame of a notch up
+        Mouse_WheelDown = 509, // Pressed and released in the frame of a notch down
+        Mouse_WheelAxis = 510, // The notches this frame, up positive (an Axis1D source)
+
+        // -----------------------------------------------------------------------------
         // Gamepad - Buttons
 
         Gamepad_FaceButton_Bottom   = 10000,
@@ -242,4 +249,16 @@ namespace Opaax
         Gamepad_RightStick_Right    = 10028,
         Gamepad_RightStick_Left     = 10029,
     };
+
+    /** Mouse_Left to Mouse_Button8. */
+    inline constexpr bool IsMouseButton(const EKeyCode InKey) noexcept
+    {
+        return InKey >= EKeyCode::Mouse_Left && InKey <= EKeyCode::Mouse_Button8;
+    }
+
+    /** Mouse_WheelUp, Mouse_WheelDown and Mouse_WheelAxis: input that comes in notches, never held. */
+    inline constexpr bool IsMouseWheel(const EKeyCode InKey) noexcept
+    {
+        return InKey >= EKeyCode::Mouse_WheelUp && InKey <= EKeyCode::Mouse_WheelAxis;
+    }
 }

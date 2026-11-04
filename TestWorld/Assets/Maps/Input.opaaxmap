@@ -57,9 +57,38 @@
         },
         {
             "components": {
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                },
+                "WheelProbe": {
+                    "DownPresses": 0,
+                    "Notch": 0.0,
+                    "NotchStarts": 0,
+                    "Scroll": 0.0,
+                    "ScrollTotal": 0.0,
+                    "UpPresses": 0
+                }
+            },
+            "guid": "b47e2c1d9a0f4e6b8c3d5a7f1e2b4c6d",
+            "name": "Wheel",
+            "ownerMap": "Input"
+        },
+        {
+            "components": {
                 "Camera": {
+                    "BlendCurve": "EaseInOut",
+                    "BlendIn": 0.0,
                     "OrthoSize": 300.0,
-                    "Priority": 0
+                    "Priority": 0,
+                    "bRotateView": false
                 },
                 "Transform": {
                     "Position": {

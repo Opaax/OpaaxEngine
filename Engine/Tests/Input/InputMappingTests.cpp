@@ -451,6 +451,107 @@ TEST_SUITE("InputActionEvaluator — triggers")
 }
 
 // =============================================================================
+TEST_SUITE("InputActionEvaluator — the wheel")
+{
+    TEST_CASE("A notch moves an axis bound to Mouse_WheelAxis once, for its frame only")
+    {
+        InputActionEvaluator lEval;
+        InputManager         lInput;
+        lEval.RegisterAction(MakeAction("Scroll", EInputValueType::Axis1D));
+
+        InputMappingContext lContext;
+        lContext.Name = Name("Menu");
+        lContext.Bindings.emplace_back(Bind("Scroll", EKeyCode::Mouse_WheelAxis));
+        lEval.AddContext(lContext);
+
+        const InputActionState* lState = lEval.FindState(Name("Scroll"));
+        REQUIRE(lState != nullptr);
+
+        lInput.OnMouseScrolled(0.f, 1.f);
+        Step(lEval, lInput);
+        CHECK(lState->Value.AsAxis1D() == doctest::Approx(1.f));
+        CHECK(lState->bStarted);
+
+        Step(lEval, lInput);
+        CHECK(lState->Value.AsAxis1D() == doctest::Approx(0.f));
+        CHECK(lState->bCompleted);
+        CHECK_FALSE(lState->bStarted);
+
+        // Down is negative, and two notches in one frame count twice.
+        lInput.OnMouseScrolled(0.f, -1.f);
+        lInput.OnMouseScrolled(0.f, -1.f);
+        Step(lEval, lInput);
+        CHECK(lState->Value.AsAxis1D() == doctest::Approx(-2.f));
+    }
+
+    TEST_CASE("The wheel's up and down keys make an axis, started again by every frame's notch")
+    {
+        InputActionEvaluator lEval;
+        InputManager         lInput;
+        lEval.RegisterAction(MakeAction("Next", EInputValueType::Axis1D));
+
+        InputMappingContext lContext;
+        lContext.Name = Name("Gameplay");
+        lContext.Bindings.emplace_back(Bind("Next", EKeyCode::Mouse_WheelUp));
+        lContext.Bindings.emplace_back(Bind("Next", EKeyCode::Mouse_WheelDown));
+        lContext.Bindings.back().Modifiers.emplace_back(Negate());
+        lEval.AddContext(lContext);
+
+        const InputActionState* lState = lEval.FindState(Name("Next"));
+        REQUIRE(lState != nullptr);
+
+        lInput.OnMouseScrolled(0.f, 1.f);
+        Step(lEval, lInput);
+        CHECK(lState->Value.AsAxis1D() == doctest::Approx(1.f));
+        CHECK(lState->bStarted);
+
+        // A notch on the next frame is a second press, where a held key would only trigger.
+        lInput.OnMouseScrolled(0.f, 1.f);
+        Step(lEval, lInput);
+        CHECK(lState->bStarted);
+
+        // A key gives one a frame, however many notches.
+        lInput.OnMouseScrolled(0.f, -3.f);
+        Step(lEval, lInput);
+        CHECK(lState->Value.AsAxis1D() == doctest::Approx(-1.f));
+        CHECK(lState->bStarted);
+
+        Step(lEval, lInput);
+        CHECK(lState->bCompleted);
+        CHECK(lState->Value.AsAxis1D() == doctest::Approx(0.f));
+    }
+
+    TEST_CASE("A notch the UI used drives nothing, and the next notch is a new press")
+    {
+        InputActionEvaluator lEval;
+        InputManager         lInput;
+        lEval.RegisterAction(MakeAction("Zoom", EInputValueType::Bool));
+
+        InputMappingContext lContext;
+        lContext.Name = Name("Gameplay");
+        lContext.Bindings.emplace_back(Bind("Zoom", EKeyCode::Mouse_WheelUp));
+        lEval.AddContext(lContext);
+
+        InputKeyMask lMask{};
+        lMask[static_cast<Uint16>(EKeyCode::Mouse_WheelUp)] = true;
+
+        // A list under the pointer scrolled with it.
+        lInput.OnMouseScrolled(0.f, 1.f);
+        lEval.Evaluate(lInput, 1.0 / 60.0, &lMask);
+        lInput.EndFrame();
+
+        const InputActionState* lState = lEval.FindState(Name("Zoom"));
+        REQUIRE(lState != nullptr);
+        CHECK_FALSE(lState->bTriggered);
+
+        // Unlike a held key, a notch is over by the next frame: the next one starts the action.
+        lInput.OnMouseScrolled(0.f, 1.f);
+        Step(lEval, lInput);
+        CHECK(lState->bStarted);
+    }
+}
+
+// =============================================================================
 TEST_SUITE("InputActionEvaluator — composites, priority and consumption")
 {
     TEST_CASE("Four keys and two modifiers make an Axis2D, and the diagonal is not faster")

@@ -68,11 +68,6 @@ namespace Opaax::EngineAutomation
             return false;
         }
 
-        bool IsMouseButton(const EKeyCode InKey)
-        {
-            return OpaaxStringView(ToString(InKey)).StartsWith("Mouse_");
-        }
-
         void Press(InputManager& InInput, const EKeyCode InKey)
         {
             if (IsMouseButton(InKey)) { InInput.OnMouseButtonPressed(InKey); }
@@ -541,6 +536,12 @@ namespace Opaax::EngineAutomation
                         return AutomationResult::Fail("unknown key '" + lName + "'");
                     }
 
+                    if (IsMouseWheel(lKey))
+                    {
+                        return AutomationResult::Fail("the wheel is never held: turn it with input.scroll {y} "
+                                                      "(1 is a notch up, -1 a notch down)");
+                    }
+
                     InputManager&     lInput  = InEngine.GetInput();
                     const OpaaxString lAction = InParams.value("action", OpaaxString("tap"));
                     if (lAction == "press")
@@ -571,6 +572,29 @@ namespace Opaax::EngineAutomation
                 {
                     InEngine.GetInput().OnMouseMoved(InParams.at("x").get<float>(), InParams.at("y").get<float>());
                     return AutomationResult::Ok();
+                });
+
+            InRunner.Register("input.scroll",
+                "Turns the game's mouse wheel by {y} notches (1 up, -1 down) and {x} (default 0) in one frame; "
+                "the next request runs after that frame.",
+                [&InEngine](const nlohmann::json& InParams)
+                {
+                    const auto lY = InParams.find("y");
+                    const auto lX = InParams.find("x");
+                    if ((lY == InParams.end() || !lY->is_number()) && (lX == InParams.end() || !lX->is_number()))
+                    {
+                        return AutomationResult::Fail("give the notches as {y} (1 up, -1 down), and {x} for a "
+                                                      "sideways wheel");
+                    }
+
+                    const float lNotchesX = (lX != InParams.end() && lX->is_number()) ? lX->get<float>() : 0.f;
+                    const float lNotchesY = (lY != InParams.end() && lY->is_number()) ? lY->get<float>() : 0.f;
+                    InEngine.GetInput().OnMouseScrolled(lNotchesX, lNotchesY);
+
+                    // A notch lasts its frame: the next request reads what that frame did with it.
+                    AutomationResult lResult = AutomationResult::Ok();
+                    lResult.WaitFrames       = 1;
+                    return lResult;
                 });
         }
 

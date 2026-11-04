@@ -21,9 +21,10 @@ namespace Opaax::UIInputRouter
             }
         }
 
-        bool IsMouseCode(const EKeyCode InKey) noexcept
+        /** The pointer's buttons and its wheel: never sent to the focused widget as keys. */
+        bool IsPointerCode(const EKeyCode InKey) noexcept
         {
-            return InKey >= EKeyCode::Mouse_Left && InKey <= EKeyCode::Mouse_Button8;
+            return IsMouseButton(InKey) || IsMouseWheel(InKey);
         }
 
         void Consume(InputKeyMask& OutConsumed, const EKeyCode InKey) noexcept
@@ -78,7 +79,7 @@ namespace Opaax::UIInputRouter
         for (Uint16 lIndex = 1; lIndex < InputManager::KEY_STATE_COUNT; ++lIndex)
         {
             const EKeyCode lKey = static_cast<EKeyCode>(lIndex);
-            if (IsMouseCode(lKey)) { continue; }
+            if (IsPointerCode(lKey)) { continue; }
 
             const bool lPressed  = InInput.WasPressedThisFrame(lKey);
             const bool lReleased = InInput.WasReleasedThisFrame(lKey);
