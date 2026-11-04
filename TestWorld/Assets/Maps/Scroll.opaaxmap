@@ -1,0 +1,57 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "BlendCurve": "EaseInOut",
+                    "BlendIn": 0.0,
+                    "OrthoSize": 300.0,
+                    "Priority": 0,
+                    "bRotateView": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "3f1a6c9e2b7d4e0f8a5c1d3b6e9f2a47",
+            "name": "Camera",
+            "ownerMap": "Scroll"
+        },
+        {
+            "components": {
+                "ScrollProbe": {
+                    "Asset": "UI/Scroll.opaaxui",
+                    "GameNotches": 0,
+                    "MaxScroll": 0.0,
+                    "Scroll": 0.0,
+                    "bDragging": false,
+                    "bMounted": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "e8b24f61c0d9437a9b1e5c2d7f6a0b38",
+            "name": "List",
+            "ownerMap": "Scroll"
+        }
+    ],
+    "mapId": "Scroll",
+    "version": 4
+}

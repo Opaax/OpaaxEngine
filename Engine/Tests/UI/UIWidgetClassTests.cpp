@@ -10,6 +10,7 @@
 #include "UI/Widgets/UIMask.h"
 #include "UI/Widgets/UIPanel.h"
 #include "UI/Widgets/UISafeArea.h"
+#include "UI/Widgets/UIScrollBox.h"
 #include "UI/Widgets/UIStack.h"
 #include "UI/Widgets/UIText.h"
 
@@ -38,8 +39,9 @@ TEST_CASE("UIWidget classes: each widget type is a class under UIWidget, named a
 
     const ObjectClass* const lClasses[] = {
         &UIPanel::StaticClass(), &UIImage::StaticClass(), &UIText::StaticClass(), &UIButton::StaticClass(),
-        &UIMask::StaticClass(), &UISafeArea::StaticClass(), &UIStack::StaticClass() };
-    const char* const lNames[] = { "UIPanel", "UIImage", "UIText", "UIButton", "UIMask", "UISafeArea", "UIStack" };
+        &UIMask::StaticClass(), &UISafeArea::StaticClass(), &UIStack::StaticClass(), &UIScrollBox::StaticClass() };
+    const char* const lNames[] = { "UIPanel", "UIImage", "UIText", "UIButton", "UIMask", "UISafeArea", "UIStack",
+                                   "UIScrollBox" };
 
     for (Uint64 lIndex = 0; lIndex < ArraySize(lClasses); ++lIndex)
     {
@@ -62,6 +64,7 @@ TEST_CASE("UIWidget classes: a leaf lists the base's properties first, then its 
     CHECK(PropertyNames(UIMask::StaticClass()).size()     == 5u + 2u);   // Texture, bShowMaskGraphic
     CHECK(PropertyNames(UISafeArea::StaticClass()).size() == 5u + 1u);   // Insets
     CHECK(PropertyNames(UIStack::StaticClass()).size()    == 5u + 5u);   // Axis, Spacing, Padding, ChildAlign, bFitContent
+    CHECK(PropertyNames(UIScrollBox::StaticClass()).size() == 5u + 6u);  // a stack's four, ScrollStep, bDragToScroll
     CHECK(PropertyNames(UIImage::StaticClass()).size()    == 5u + 8u);   // Color ... FillBinding
     CHECK(PropertyNames(UIButton::StaticClass()).size()   == 5u + 8u);   // four colours, bEnabled, Texture, Sheet, Frame
     CHECK(PropertyNames(UIText::StaticClass()).size()     == 5u + 10u);

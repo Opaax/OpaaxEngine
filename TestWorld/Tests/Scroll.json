@@ -1,0 +1,246 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Scroll.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.2
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "List",
+            "path": "ScrollProbe/bMounted",
+            "equals": true
+        },
+        "id": "mounted"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "List",
+            "path": "ScrollProbe/MaxScroll",
+            "near": 430,
+            "tolerance": 0.01
+        },
+        "id": "what-does-not-fit"
+    },
+    {
+        "id": "list-in-the-middle",
+        "command": "ui.list",
+        "params": {
+            "name": "List"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "List",
+                    "type": "UIScrollBox",
+                    "x": 640,
+                    "y": 360,
+                    "height": 200
+                }
+            ]
+        }
+    },
+    {
+        "id": "point-at-list",
+        "command": "input.mouse",
+        "params": {
+            "x": 640,
+            "y": 360
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 1
+        }
+    },
+    {
+        "command": "input.scroll",
+        "params": {
+            "y": -1
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "List",
+            "path": "ScrollProbe/Scroll",
+            "near": 60,
+            "tolerance": 0.01
+        },
+        "id": "one-notch-one-step"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "List",
+            "path": "ScrollProbe/GameNotches",
+            "equals": 0
+        },
+        "id": "the-list-kept-the-wheel"
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "List",
+            "path": "ScrollProbe/Scroll",
+            "near": 60,
+            "tolerance": 0.01
+        },
+        "id": "scrolled-once"
+    },
+    {
+        "command": "input.scroll",
+        "params": {
+            "y": -20
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "List",
+            "path": "ScrollProbe/Scroll",
+            "near": 430,
+            "tolerance": 0.01
+        },
+        "id": "stops-at-the-end"
+    },
+    {
+        "id": "screenshot-end",
+        "command": "screenshot",
+        "params": {
+            "path": "ScrollEnd.png"
+        }
+    },
+    {
+        "id": "point-away",
+        "command": "input.mouse",
+        "params": {
+            "x": 40,
+            "y": 680
+        }
+    },
+    {
+        "command": "input.scroll",
+        "params": {
+            "y": 1
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "List",
+            "path": "ScrollProbe/GameNotches",
+            "equals": 1
+        },
+        "id": "the-game-got-the-wheel"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "List",
+            "path": "ScrollProbe/Scroll",
+            "near": 430,
+            "tolerance": 0.01
+        },
+        "id": "the-list-did-not-move"
+    },
+    {
+        "id": "drag-from-list",
+        "command": "input.mouse",
+        "params": {
+            "x": 640,
+            "y": 360
+        }
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "Mouse_Left",
+            "action": "press"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 1
+        }
+    },
+    {
+        "id": "drag-down",
+        "command": "input.mouse",
+        "params": {
+            "x": 640,
+            "y": 380
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 1
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "List",
+            "path": "ScrollProbe/bDragging",
+            "equals": true
+        },
+        "id": "dragging"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "List",
+            "path": "ScrollProbe/Scroll",
+            "near": 400,
+            "tolerance": 0.01
+        },
+        "id": "the-content-followed"
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "Mouse_Left",
+            "action": "release"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 1
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "List",
+            "path": "ScrollProbe/bDragging",
+            "equals": false
+        },
+        "id": "drag-ended"
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "Scroll.png"
+        }
+    }
+]
