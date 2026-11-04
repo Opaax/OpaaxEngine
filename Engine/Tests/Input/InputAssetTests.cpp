@@ -6,7 +6,11 @@
 #include "../LegacyAssetFile.h"
 #include "../TestTempDir.h"
 
+#include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IPaths.h"
+#include "Application/Services/ISaveStorage.h"
+#include "Application/Services/IUserSettings.h"
+#include "Application/Services/IWindowManager.h"
 #include "Core/String/OpaaxPathString.h"
 #include "Engine/Config/EngineConfigData.h"
 #include "Engine/GameInstance/GameInstance.h"
@@ -96,7 +100,11 @@ namespace
 
         ~ContextFixture() { Resources.Shutdown(); }
 
-        GameInstanceContext Make() { return GameInstanceContext{Worlds, Resources, Paths, Events, Input, Config}; }
+        GameInstanceContext Make()
+        {
+            return GameInstanceContext{ Worlds, Resources, Paths, Events, Input, Config, IJobSystem::Null(),
+                                        ISaveStorage::Null(), Settings != nullptr ? *Settings : IUserSettings::Null() };
+        }
 
         /** The game's input mapping, made and started the way a game makes it, with this context. */
         InputMappingSubsystem& StartMapping()
@@ -115,6 +123,26 @@ namespace
             InMapping.Update(1.0 / 60.0);
             Input.EndFrame();
         }
+
+        /** Releases InKey and runs one frame of InMapping. */
+        void Release(InputMappingSubsystem& InMapping, const EKeyCode InKey)
+        {
+            Input.OnKeyReleased(InKey);
+            InMapping.Update(1.0 / 60.0);
+            Input.EndFrame();
+        }
+
+        /** Whether InKey drives InAction: pressed, read, released. */
+        bool Drives(InputMappingSubsystem& InMapping, const EKeyCode InKey, const char* InAction)
+        {
+            Press(InMapping, InKey);
+            const bool bDriven = InMapping.GetValue(OpaaxStringID(OpaaxString(InAction))).AsBool();
+            Release(InMapping, InKey);
+            return bDriven;
+        }
+
+        /** The player's settings the game is given; none (the null ones) when unset. Outlive the game. */
+        IUserSettings* Settings = nullptr;
 
         FolderPaths      Paths;
         WorldManager     Worlds;
@@ -290,4 +318,247 @@ TEST_CASE("AddContextAsset: a path written before the files were converted loads
 
     lFixture.Press(lInput, EKeyCode::F);
     CHECK(lInput.GetValue(OPAAX_ID("Fire")).AsBool());
+
+    // The old path names the same context for a rebind.
+    const InputKeySlot lOldName{ OpaaxString("Input/Test.opaaxinputmap"), OPAAX_ID("Fire"), EKeyCode::F };
+    REQUIRE(lInput.Rebind(lOldName, EKeyCode::G).IsOk());
+    CHECK(lInput.GetKey(InputKeySlot{ OpaaxString("Input/Test.opaaxasset"), OPAAX_ID("Fire"), EKeyCode::F }) == EKeyCode::G);
+}
+
+// =============================================================================
+// The player's keys
+// =============================================================================
+
+namespace
+{
+    // A walking context (Jump on Space, Use on E) and a locked menu (Pause on Escape), as files.
+    void WriteControls(const TestTempDir& InDir)
+    {
+        REQUIRE(AssetFile::Save(InDir.Sub("Input/Jump.opaaxasset"), InputActionAsset{}));
+        REQUIRE(AssetFile::Save(InDir.Sub("Input/Use.opaaxasset"), InputActionAsset{}));
+        REQUIRE(AssetFile::Save(InDir.Sub("Input/Pause.opaaxasset"), InputActionAsset{}));
+
+        InputMappingContextAsset lControls;
+        lControls.Mappings = { Mapping("Input/Jump.opaaxasset", EKeyCode::Space), Mapping("Input/Use.opaaxasset", EKeyCode::E) };
+        REQUIRE(AssetFile::Save(InDir.Sub("Input/Controls.opaaxasset"), lControls));
+
+        InputMappingContextAsset lMenu;
+        lMenu.Priority    = 10;
+        lMenu.bRebindable = false;
+        lMenu.Mappings    = { Mapping("Input/Pause.opaaxasset", EKeyCode::Escape) };
+        REQUIRE(AssetFile::Save(InDir.Sub("Input/Menu.opaaxasset"), lMenu));
+    }
+
+    const OpaaxString CONTROLS_PATH("Input/Controls.opaaxasset");
+    const OpaaxString MENU_PATH("Input/Menu.opaaxasset");
+
+    InputKeySlot JumpSlot() { return InputKeySlot{ CONTROLS_PATH, OPAAX_ID("Jump"), EKeyCode::Space }; }
+    InputKeySlot UseSlot()  { return InputKeySlot{ CONTROLS_PATH, OPAAX_ID("Use"), EKeyCode::E }; }
+
+    /** A player's settings in a save folder of their own, over no config. */
+    struct PlayerSettings
+    {
+        PlayerSettings(const TestTempDir& InDir, const IPaths& InPaths)
+            : Storage(InDir.Sub("SaveGames")), Configs(InPaths) {}
+
+        /** As a game starts: read, and over the configs. */
+        TUniquePtr<UserSettings> Launch()
+        {
+            TUniquePtr<UserSettings> lSettings = MakeUnique<UserSettings>(Storage, Configs, IWindowManager::Null());
+            lSettings->Load();
+            lSettings->Activate();
+            return lSettings;
+        }
+
+        SaveStorage  Storage;
+        ConfigSystem Configs;
+    };
+}
+
+TEST_CASE("Rebind: a context known before it is added gets the player's key; a rebind applies at once")
+{
+    const TestTempDir  lDir("rebindApplies");
+    const InputClasses lClasses;
+    WriteControls(lDir);
+
+    ContextFixture         lFixture(lDir.Path(), lClasses);
+    InputMappingSubsystem& lInput = lFixture.StartMapping();
+
+    Int32 lChanges = 0;
+    lInput.OnKeysChanged().Add([&lChanges]() { ++lChanges; });
+
+    // A controls menu, before the game adds the context.
+    REQUIRE(lInput.RegisterContextAsset(CONTROLS_PATH));
+    const TDynArray<InputKeyMapping> lMappings = lInput.GetKeyMappings(CONTROLS_PATH);
+    REQUIRE(lMappings.size() == 2);
+    CHECK(lMappings[0].Slot == JumpSlot());
+    CHECK_FALSE(lMappings[0].IsRebound());
+
+    REQUIRE(lInput.Rebind(JumpSlot(), EKeyCode::F).IsOk());
+    CHECK(lChanges == 1);
+    CHECK(lInput.GetKeyMappings(CONTROLS_PATH)[0].Key == EKeyCode::F);
+    CHECK(lInput.GetContextCount() == 0u);
+
+    REQUIRE(lInput.AddContextAsset(OPAAX_ID("Controls"), CONTROLS_PATH));
+    CHECK(lFixture.Drives(lInput, EKeyCode::F, "Jump"));
+    CHECK_FALSE(lFixture.Drives(lInput, EKeyCode::Space, "Jump"));
+
+    // While added: at once.
+    REQUIRE(lInput.Rebind(JumpSlot(), EKeyCode::G).IsOk());
+    CHECK(lFixture.Drives(lInput, EKeyCode::G, "Jump"));
+    CHECK_FALSE(lFixture.Drives(lInput, EKeyCode::F, "Jump"));
+
+    // Swapped with Use: E jumps, G uses.
+    const InputRebindResult lSwap = lInput.Rebind(JumpSlot(), EKeyCode::E, EKeyConflictPolicy::Swap);
+    REQUIRE(lSwap.IsOk());
+    REQUIRE(lSwap.Others.size() == 1);
+    CHECK(lFixture.Drives(lInput, EKeyCode::E, "Jump"));
+    CHECK(lFixture.Drives(lInput, EKeyCode::G, "Use"));
+
+    // Cleared: no key drives it.
+    REQUIRE(lInput.Rebind(JumpSlot(), EKeyCode::None).IsOk());
+    CHECK_FALSE(lFixture.Drives(lInput, EKeyCode::E, "Jump"));
+
+    lInput.ResetAllKeys();
+    CHECK_FALSE(lInput.HasRebinds());
+    CHECK(lFixture.Drives(lInput, EKeyCode::Space, "Jump"));
+    CHECK(lFixture.Drives(lInput, EKeyCode::E, "Use"));
+    CHECK(lChanges == 5);
+}
+
+TEST_CASE("Rebind: a locked context's keys are reserved once it is known, and are not the player's")
+{
+    const TestTempDir  lDir("rebindLocked");
+    const InputClasses lClasses;
+    WriteControls(lDir);
+
+    ContextFixture         lFixture(lDir.Path(), lClasses);
+    InputMappingSubsystem& lInput = lFixture.StartMapping();
+    REQUIRE(lInput.AddContextAsset(OPAAX_ID("Controls"), CONTROLS_PATH));
+
+    // Not known yet: nothing reserves Escape.
+    CHECK(lInput.Rebind(JumpSlot(), EKeyCode::Escape).IsOk());
+    lInput.ResetKey(JumpSlot());
+
+    REQUIRE(lInput.RegisterContextAsset(MENU_PATH));
+    const InputRebindResult lResult = lInput.Rebind(JumpSlot(), EKeyCode::Escape, EKeyConflictPolicy::Replace);
+    CHECK(lResult.Result == ERebindResult::Reserved);
+    REQUIRE(lResult.Others.size() == 1);
+    CHECK(lResult.Others[0].Slot.Action == OPAAX_ID("Pause"));
+
+    CHECK(lInput.Rebind(InputKeySlot{ MENU_PATH, OPAAX_ID("Pause"), EKeyCode::Escape }, EKeyCode::P).Result
+          == ERebindResult::Locked);
+
+    // A mapping no known context has.
+    CHECK(lInput.Rebind(InputKeySlot{ CONTROLS_PATH, OPAAX_ID("Jump"), EKeyCode::J }, EKeyCode::K).Result
+          == ERebindResult::NoSuchMapping);
+}
+
+TEST_CASE("Rebind: the game's key check refuses a key, and says why")
+{
+    const TestTempDir  lDir("rebindCheck");
+    const InputClasses lClasses;
+    WriteControls(lDir);
+
+    ContextFixture         lFixture(lDir.Path(), lClasses);
+    InputMappingSubsystem& lInput = lFixture.StartMapping();
+    REQUIRE(lInput.AddContextAsset(OPAAX_ID("Controls"), CONTROLS_PATH));
+
+    lInput.SetKeyCheck([](const InputKeySlot&, const EKeyCode InKey, OpaaxString& OutWhy)
+    {
+        OutWhy = OpaaxString("the wheel is the zoom");
+        return InKey != EKeyCode::Mouse_WheelUp && InKey != EKeyCode::Mouse_WheelDown;
+    });
+
+    const InputRebindResult lResult = lInput.Rebind(JumpSlot(), EKeyCode::Mouse_WheelUp);
+    CHECK(lResult.Result == ERebindResult::RefusedByGame);
+    CHECK(lResult.Why == "the wheel is the zoom");
+    CHECK(lInput.GetKey(JumpSlot()) == EKeyCode::Space);
+
+    CHECK(lInput.Rebind(JumpSlot(), EKeyCode::Mouse_Left).IsOk());
+
+    lInput.SetKeyCheck({});
+    CHECK(lInput.Rebind(JumpSlot(), EKeyCode::Mouse_WheelUp).IsOk());
+}
+
+TEST_CASE("Rebind: the keys are kept in the player's settings, read at the next launch and when they change there")
+{
+    const TestTempDir  lDir("rebindSettings");
+    const InputClasses lClasses;
+    WriteControls(lDir);
+
+    ContextFixture lFixture(lDir.Path(), lClasses);
+    PlayerSettings lPlayer(lDir, lFixture.Paths);
+
+    TUniquePtr<UserSettings> lSettings = lPlayer.Launch();
+    lFixture.Settings                  = lSettings.get();
+    {
+        InputMappingSubsystem& lInput = lFixture.StartMapping();
+
+        // Not known yet: no such mapping, nothing kept.
+        CHECK(lInput.Rebind(UseSlot(), EKeyCode::F).Result == ERebindResult::NoSuchMapping);
+        CHECK(lSettings->GetSection(InputMappingSubsystem::KEYS_SECTION).is_null());
+
+        REQUIRE(lInput.AddContextAsset(OPAAX_ID("Controls"), CONTROLS_PATH));
+        REQUIRE(lInput.Rebind(JumpSlot(), EKeyCode::Q).IsOk());
+        CHECK(lSettings->GetSection(InputMappingSubsystem::KEYS_SECTION)
+              == nlohmann::json::parse(R"({"Input/Controls.opaaxasset": {"Jump": {"Space": "Q"}}})"));
+        CHECK(lSettings->HasUnsavedChanges());
+        REQUIRE(lSettings->Save() == ESaveResult::Ok);
+        lFixture.Game->End();
+    }
+
+    // The next launch: the file read, the context added with the player's key.
+    lSettings         = lPlayer.Launch();
+    lFixture.Settings = lSettings.get();
+    {
+        InputMappingSubsystem& lInput = lFixture.StartMapping();
+        CHECK(lInput.GetKey(JumpSlot()) == EKeyCode::Q);
+        REQUIRE(lInput.AddContextAsset(OPAAX_ID("Controls"), CONTROLS_PATH));
+        CHECK(lFixture.Drives(lInput, EKeyCode::Q, "Jump"));
+
+        // Changed in the settings, by a menu's Reset or an edit: read again at once.
+        Int32 lChanges = 0;
+        lInput.OnKeysChanged().Add([&lChanges]() { ++lChanges; });
+
+        lSettings->SetSection(InputMappingSubsystem::KEYS_SECTION,
+                              nlohmann::json::parse(R"({"Input/Controls.opaaxasset": {"Jump": {"Space": "Z"}}})"));
+        CHECK(lInput.GetKey(JumpSlot()) == EKeyCode::Z);
+        CHECK(lFixture.Drives(lInput, EKeyCode::Z, "Jump"));
+
+        lSettings->Reset();
+        CHECK(lInput.GetKey(JumpSlot()) == EKeyCode::Space);
+        CHECK(lFixture.Drives(lInput, EKeyCode::Space, "Jump"));
+        CHECK(lChanges == 2);
+
+        // Read from the file again: Q.
+        lSettings->Load();
+        CHECK(lInput.GetKey(JumpSlot()) == EKeyCode::Q);
+        lFixture.Game->End();
+    }
+}
+
+TEST_CASE("Rebind: keys kept for a mapping the asset no longer has, or for a locked context, are dropped once it is read")
+{
+    const TestTempDir  lDir("rebindDropped");
+    const InputClasses lClasses;
+    WriteControls(lDir);
+
+    ContextFixture lFixture(lDir.Path(), lClasses);
+    PlayerSettings lPlayer(lDir, lFixture.Paths);
+
+    TUniquePtr<UserSettings> lSettings = lPlayer.Launch();
+    lSettings->SetSection(InputMappingSubsystem::KEYS_SECTION, nlohmann::json::parse(R"({
+        "Input/Controls.opaaxasset": {"Jump": {"Space": "Q"}, "Dash": {"LeftShift": "X"}},
+        "Input/Menu.opaaxasset": {"Pause": {"Escape": "P"}}})"));
+    lFixture.Settings = lSettings.get();
+
+    InputMappingSubsystem& lInput = lFixture.StartMapping();
+    REQUIRE(lInput.AddContextAsset(OPAAX_ID("Controls"), CONTROLS_PATH));
+    REQUIRE(lInput.RegisterContextAsset(MENU_PATH));
+
+    CHECK(lInput.GetKey(JumpSlot()) == EKeyCode::Q);
+    CHECK(lSettings->GetSection(InputMappingSubsystem::KEYS_SECTION)
+          == nlohmann::json::parse(R"({"Input/Controls.opaaxasset": {"Jump": {"Space": "Q"}}})"));
+    lFixture.Game->End();
 }

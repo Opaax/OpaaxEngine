@@ -219,7 +219,10 @@ engine reads one set, the project's with the player's over them. `IUserSettings`
 the player's values in the `Settings` slot of the player's saves and puts them over the configs: in a
 game from the start, before the window opens; in the editor only while Play runs. As Unreal keeps
 `GameUserSettings.ini` in the player's `Saved/` folder over the project's defaults, and Godot a
-`ConfigFile` in `user://`.
+`ConfigFile` in `user://`. The player's keys are a section of the same file that the input mapping
+keeps: a mapping is named by its context asset, its action and the key the asset gives it, so a key
+rebound before its context is added waits for it, and a project change drops only the keys it leaves
+without a mapping.
 
 - **For:** a settings menu changes what the engine reads at once, through the change events each
   config already has; the project's files never take a player's values; a game's own options get the

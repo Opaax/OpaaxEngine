@@ -216,7 +216,7 @@ binds keys to actions.
 
 ```json
 { "Class": "InputMappingContextAsset", "Properties": {
-    "Priority": 0,
+    "Priority": 0, "bRebindable": true,
     "Mappings": [
         { "Action": "Input/Move.opaaxasset", "Key": "D", "Modifiers": [], "bConsume": true },
         { "Action": "Input/Move.opaaxasset", "Key": "A", "Modifiers": [ { "Type": "Negate" } ], "bConsume": true },
@@ -237,7 +237,8 @@ wheel turns. A game adds a context with
 `GetContext().Actions->AddContextAsset(OPAAX_ID("Gameplay"), "Input/Gameplay.opaaxasset")`; a mapping
 whose action does not load is skipped, with a warning. A context's window lists its mappings, key
 first; **2D Composite (WASD)** and **Arrows** replace the selected one with the four that make an
-`Axis2D` of its action.
+`Axis2D` of its action. `bRebindable` (on by default) lets the player change the context's keys in a
+controls menu; off, they are fixed and no rebind takes one of them ([Settings.md](Settings.md#the-keys)).
 
 ## Sprites and animation (`SpriteSheet`, `AnimationClip`, `AnimationLibrary`)
 

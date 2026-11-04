@@ -56,9 +56,17 @@ namespace Opaax
 
         TDynArray<InputMappingEntry> Mappings;
 
+        /**
+         * The player may change its keys (a controls menu). Off for keys the game fixes (a menu's
+         * Escape): no rebind changes them, and none of them can be given to another mapping.
+         */
+        bool bRebindable = true;
+
         OPAAX_PROPERTIES(InputMappingContextAsset,
                          OPAAX_PROP(Priority).SetTooltip("Higher contexts are evaluated first and consume keys first."),
-                         OPAAX_PROP(Mappings).SetTooltip("Which key drives which action."))
+                         OPAAX_PROP(Mappings).SetTooltip("Which key drives which action."),
+                         OPAAX_PROP(bRebindable).SetTooltip("The player may change these keys in a controls menu.\n"
+                                                            "Off: they are fixed, and no rebind can take one of them."))
 
         Uint32 EntryCount() const noexcept { return static_cast<Uint32>(Mappings.size()); }
     };

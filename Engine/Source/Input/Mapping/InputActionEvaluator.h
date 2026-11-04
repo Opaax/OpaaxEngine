@@ -64,6 +64,13 @@ namespace Opaax
         /** @return True if a context with that name was removed */
         bool RemoveContext(OpaaxStringID InName);
 
+        /**
+         * Replaces the bindings of the active context InName (the player rebound a key), keeping its
+         * place among the others; checked as AddContext checks them. The actions' states carry on.
+         * @return False when no context of that name is active
+         */
+        bool SetContextBindings(OpaaxStringID InName, const TDynArray<InputKeyBinding>& InBindings);
+
         Uint64 GetContextCount() const noexcept { return static_cast<Uint64>(m_Contexts.size()); }
 
         /** Priority of the context at InIndex (highest first). For tests. */
@@ -102,6 +109,9 @@ namespace Opaax
         };
 
         ActionEntry* FindEntry(OpaaxStringID InName) noexcept;
+
+        /** InBindings without those AddContext refuses (an unknown action, a gamepad code), each logged. */
+        TDynArray<InputKeyBinding> AcceptBindings(OpaaxStringID InContext, const TDynArray<InputKeyBinding>& InBindings) const;
 
         TDynArray<ActionEntry>         m_Actions;
 

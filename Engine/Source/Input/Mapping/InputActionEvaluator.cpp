@@ -90,28 +90,7 @@ namespace Opaax
         InputMappingContext lAccepted;
         lAccepted.Name     = InContext.Name;
         lAccepted.Priority = InContext.Priority;
-
-        for (const InputKeyBinding& lBinding : InContext.Bindings)
-        {
-            if (ToKeyIndex(lBinding.Key) == InputManager::KEY_STATE_COUNT)
-            {
-                // Gamepad codes (10000+) are reserved but not supported yet: refuse with a warning.
-                OPAAX_LOG(LogInputEvaluator, Warn,
-                          "AddContext '{}' — binding for action '{}' uses key code {} which has no feed (gamepad is not wired yet). Skipped.",
-                          InContext.Name, lBinding.Action, static_cast<Uint16>(lBinding.Key));
-                continue;
-            }
-
-            if (FindAction(lBinding.Action) == nullptr)
-            {
-                OPAAX_LOG(LogInputEvaluator, Warn,
-                          "AddContext '{}' — binding names action '{}', which is not registered. Skipped.",
-                          InContext.Name, lBinding.Action);
-                continue;
-            }
-
-            lAccepted.Bindings.emplace_back(lBinding);
-        }
+        lAccepted.Bindings = AcceptBindings(InContext.Name, InContext.Bindings);
 
         // Count before moving and sorting (sorting changes which context is at back()).
         const Uint64 lAcceptedCount = static_cast<Uint64>(lAccepted.Bindings.size());
@@ -146,6 +125,49 @@ namespace Opaax
         }
 
         return false;
+    }
+
+    bool InputActionEvaluator::SetContextBindings(OpaaxStringID InName, const TDynArray<InputKeyBinding>& InBindings)
+    {
+        for (InputMappingContext& lContext : m_Contexts)
+        {
+            if (lContext.Name == InName)
+            {
+                lContext.Bindings = AcceptBindings(InName, InBindings);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    TDynArray<InputKeyBinding> InputActionEvaluator::AcceptBindings(OpaaxStringID InContext,
+                                                                    const TDynArray<InputKeyBinding>& InBindings) const
+    {
+        TDynArray<InputKeyBinding> lAccepted;
+        lAccepted.reserve(InBindings.size());
+
+        for (const InputKeyBinding& lBinding : InBindings)
+        {
+            if (ToKeyIndex(lBinding.Key) == InputManager::KEY_STATE_COUNT)
+            {
+                // Gamepad codes (10000+) are reserved but not supported yet: refuse with a warning.
+                OPAAX_LOG(LogInputEvaluator, Warn,
+                          "AddContext '{}' — binding for action '{}' uses key code {} which has no feed (gamepad is not wired yet). Skipped.",
+                          InContext, lBinding.Action, static_cast<Uint16>(lBinding.Key));
+                continue;
+            }
+
+            if (FindAction(lBinding.Action) == nullptr)
+            {
+                OPAAX_LOG(LogInputEvaluator, Warn,
+                          "AddContext '{}' — binding names action '{}', which is not registered. Skipped.",
+                          InContext, lBinding.Action);
+                continue;
+            }
+
+            lAccepted.emplace_back(lBinding);
+        }
+        return lAccepted;
     }
 
     const InputMappingContext* InputActionEvaluator::GetContextAt(Uint64 InIndex) const noexcept

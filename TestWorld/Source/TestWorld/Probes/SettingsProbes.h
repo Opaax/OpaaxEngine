@@ -3,7 +3,10 @@
 #include "Application/Services/IUserSettings.h"
 #include "Audio/AudioManager.h"
 #include "Engine/Config/EngineConfigData.h"
+#include "Input/InputKeyNames.h"
+#include "Input/Mapping/InputMappingSubsystem.h"
 #include "World/Behaviour/Behaviour.h"
+#include "World/Systems/WorldContext.h"
 
 namespace TestWorld
 {
@@ -56,5 +59,62 @@ namespace TestWorld
                 MusicVolume = lAudio->GetBusVolume(OPAAX_ID("Music"));
             }
         }
+    };
+
+    // =============================================================================
+    // RebindProbe — what a controls menu does, from gameplay: rebinds Fire (F in Input/Test.opaaxasset,
+    //   which it adds) to the key RebindTo names, and counts Fire's presses. Records the key Fire has and
+    //   what the last rebind did.
+    // =============================================================================
+    class RebindProbe : public Opaax::Behaviour
+    {
+        OPAAX_OBJECT(RebindProbe, Opaax::Behaviour)
+
+    public:
+        /** Set by a test: the next frame rebinds Fire to the key it names ("None" clears it), then it empties. */
+        Opaax::OpaaxString RebindTo;
+
+        /** What the last rebind did ("Rebound", "InvalidKey"...). */
+        Opaax::OpaaxString Result;
+
+        /** The key Fire has, as the player's keys say. */
+        Opaax::OpaaxString FireKey;
+
+        Opaax::Int32 Fires = 0;
+
+        OPAAX_PROPERTIES(RebindProbe, OPAAX_PROP(RebindTo), OPAAX_PROP(Result), OPAAX_PROP(FireKey), OPAAX_PROP(Fires))
+
+        void OnStart() override
+        {
+            if (Opaax::InputMappingSubsystem* lActions = GetContext().Actions)
+            {
+                lActions->AddContextAsset(OPAAX_ID("Test"), Opaax::OpaaxString("Input/Test.opaaxasset"));
+            }
+            BindAction<&RebindProbe::OnFire>(OPAAX_ID("Fire"), Opaax::EInputTrigger::Started);
+        }
+
+        void OnUpdate(float) override
+        {
+            Opaax::InputMappingSubsystem* lActions = GetContext().Actions;
+            if (lActions == nullptr)
+            {
+                return;
+            }
+
+            const Opaax::InputKeySlot lFire{ Opaax::OpaaxString("Input/Test.opaaxasset"), OPAAX_ID("Fire"),
+                                             Opaax::EKeyCode::F };
+            if (!RebindTo.IsEmpty())
+            {
+                Opaax::EKeyCode lKey = Opaax::EKeyCode::None;
+                Result = Opaax::KeyFromName(RebindTo, lKey)
+                       ? Opaax::OpaaxString(ToString(lActions->Rebind(lFire, lKey).Result))
+                       : Opaax::OpaaxString("no such key");
+                RebindTo = Opaax::OpaaxString();
+            }
+
+            FireKey = Opaax::OpaaxString(ToString(lActions->GetKey(lFire)));
+        }
+
+        void OnFire(const Opaax::InputActionValue&) { ++Fires; }
     };
 }
