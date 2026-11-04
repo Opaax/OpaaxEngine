@@ -8,6 +8,7 @@
 #include "UI/Widgets/UIMask.h"
 #include "UI/Widgets/UIPanel.h"
 #include "UI/Widgets/UISafeArea.h"
+#include "UI/Widgets/UIScrollBox.h"
 #include "UI/Widgets/UIStack.h"
 #include "UI/Widgets/UIText.h"
 
@@ -28,6 +29,9 @@ namespace Opaax
 
     // Lays its children out along an axis.
     OPAAX_REGISTER_OBJECT(UIStack);
+
+    // A list that scrolls: laid out like a stack, clipped like a mask, moved by the wheel and by dragging.
+    OPAAX_REGISTER_OBJECT(UIScrollBox);
 
     // An authored widget tree (.opaaxui). Each instance builds its own widgets from it.
     OPAAX_REGISTER_OBJECT(UICanvasAsset);

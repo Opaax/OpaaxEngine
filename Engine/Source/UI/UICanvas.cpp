@@ -32,8 +32,17 @@ namespace Opaax
             // A clip applies to everything below it.
             const UIWidget* lMask = InWidget.ClipsChildren() ? &InWidget : InMask;
 
+            // A quad wholly outside its clip shows nothing: the rows a scroll box has scrolled away.
+            const bool lCulls = lMask != nullptr && lMask->GetBounds().HalfExtent.x > 0.f
+                             && lMask->GetBounds().HalfExtent.y > 0.f;
+
             for (const UIQuad& lQuad : InWidget.GetQuads())
             {
+                if (lCulls && !lMask->GetBounds().Intersects(lQuad.Bounds))
+                {
+                    continue;
+                }
+
                 const Int16 lOrder = static_cast<Int16>(InOutOrder < MAX_ORDER ? InOutOrder++ : MAX_ORDER);
                 OutItems.emplace_back(UIDrawItem{ &lQuad, lMask, lAlpha, lOrder });
             }

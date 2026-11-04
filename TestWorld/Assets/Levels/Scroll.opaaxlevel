@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/Scroll.opaaxmap"
+    ],
+    "name": "Scroll",
+    "persistentMap": "Maps/Scroll.opaaxmap",
+    "version": 1
+}

@@ -1,46 +1,13 @@
 #pragma once
 
 #include "Core/OpaaxTypes.h"
-#include "Core/Reflection/OpaaxEnum.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "UI/UIMargin.h"
+#include "UI/UIStackLayout.h"
 #include "UI/UIWidget.h"
 
 namespace Opaax
 {
-    /** Stack direction. */
-    enum class EUIAxis : Uint8
-    {
-        Vertical,     // top to bottom
-        Horizontal    // left to right
-    };
-
-    inline const char* ToString(const EUIAxis InAxis) noexcept
-    {
-        return InAxis == EUIAxis::Horizontal ? "Horizontal" : "Vertical";
-    }
-
-    /** Placement across the stack's axis. Start is left (vertical) or top (horizontal). */
-    enum class EUIAlign : Uint8
-    {
-        Start,
-        Center,
-        End,
-        Stretch   // fills the cross axis
-    };
-
-    inline const char* ToString(const EUIAlign InAlign) noexcept
-    {
-        switch (InAlign)
-        {
-            case EUIAlign::Start:   return "Start";
-            case EUIAlign::Center:  return "Center";
-            case EUIAlign::End:     return "End";
-            case EUIAlign::Stretch: return "Stretch";
-        }
-        return "Start";
-    }
-
     // =============================================================================
     // UIStack — lays its children out one after another along an axis (like Godot's BoxContainer).
     //   It owns the children's rects: a child's Rect.SizeDelta is its desired size; anchors, pivot
@@ -91,10 +58,6 @@ namespace Opaax
         // Internal
         // =============================================================================
     private:
-        /** The children's total size along the axis, spacing and padding included. */
-        float ContentExtent() const noexcept;
+        UIStackLayout Layout() const noexcept { return UIStackLayout{ Axis, Spacing, Padding, ChildAlign }; }
     };
 }
-
-OPAAX_ENUM_VALUES(Opaax::EUIAxis, Vertical, Horizontal);
-OPAAX_ENUM_VALUES(Opaax::EUIAlign, Start, Center, End, Stretch);

@@ -5,6 +5,7 @@
 #include "UI/UIBinding.h"
 #include "UI/UISubsystem.h"
 #include "UI/Widgets/UIButton.h"
+#include "UI/Widgets/UIScrollBox.h"
 #include "UI/Widgets/UIText.h"
 #include "World/Behaviour/Behaviour.h"
 #include "World/Systems/WorldContext.h"
@@ -106,5 +107,83 @@ namespace TestWorld
         Opaax::UIWidget*       m_Tree    = nullptr;   // owned by the game's canvas
         Opaax::UIText*         m_Counter = nullptr;
         Opaax::UIBindingHandle m_Binding;
+    };
+
+    // =============================================================================
+    // ScrollProbe — mounts the canvas Asset, a scroll box named List, while it lives, and records how far
+    //   the list is scrolled and whether a drag moves it. Counts the Notch action (the wheel's keys,
+    //   Input/Wheel.opaaxasset) the game itself gets: a notch the list scrolled does not reach the game.
+    // =============================================================================
+    class ScrollProbe : public Opaax::Behaviour
+    {
+        OPAAX_OBJECT(ScrollProbe, Opaax::Behaviour)
+
+    public:
+        Opaax::OpaaxString Asset = "UI/Scroll.opaaxui";
+
+        bool         bMounted    = false;
+        float        Scroll      = 0.f;
+        float        MaxScroll   = 0.f;
+        bool         bDragging   = false;
+        Opaax::Int32 GameNotches = 0;
+
+        OPAAX_PROPERTIES(ScrollProbe, OPAAX_PROP(Asset), OPAAX_PROP(bMounted), OPAAX_PROP(Scroll), OPAAX_PROP(MaxScroll),
+                         OPAAX_PROP(bDragging), OPAAX_PROP(GameNotches))
+
+        void OnStart() override
+        {
+            Opaax::UISubsystem* const lUI = GetContext().UI;
+            if (lUI == nullptr)
+            {
+                return;
+            }
+
+            m_Tree   = lUI->MountAsset(Asset);
+            bMounted = (m_Tree != nullptr);
+            if (!bMounted)
+            {
+                return;
+            }
+
+            m_List = dynamic_cast<Opaax::UIScrollBox*>(m_Tree->FindByName(Opaax::OpaaxString("List")));
+
+            if (Opaax::InputMappingSubsystem* const lActions = GetContext().Actions)
+            {
+                lActions->AddContextAsset(OPAAX_ID("Wheel"), Opaax::OpaaxString("Input/Wheel.opaaxasset"));
+            }
+            BindAction<&ScrollProbe::OnNotch>(OPAAX_ID("Notch"), Opaax::EInputTrigger::Started);
+        }
+
+        void OnUpdate(float) override
+        {
+            if (m_List != nullptr)
+            {
+                Scroll    = m_List->GetScroll();
+                MaxScroll = m_List->GetMaxScroll();
+                bDragging = m_List->IsDragging();
+            }
+        }
+
+        void OnDestroy() override
+        {
+            if (Opaax::InputMappingSubsystem* const lActions = GetContext().Actions)
+            {
+                lActions->RemoveContext(OPAAX_ID("Wheel"));
+            }
+
+            Opaax::UISubsystem* const lUI = GetContext().UI;
+            if (lUI != nullptr && m_Tree != nullptr)
+            {
+                lUI->GetCanvas().Root().RemoveChild(*m_Tree);
+            }
+            m_Tree = nullptr;
+            m_List = nullptr;
+        }
+
+    private:
+        void OnNotch(const Opaax::InputActionValue&) { ++GameNotches; }
+
+        Opaax::UIWidget*    m_Tree = nullptr;   // owned by the game's canvas
+        Opaax::UIScrollBox* m_List = nullptr;
     };
 }

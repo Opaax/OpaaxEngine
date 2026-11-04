@@ -188,13 +188,20 @@ mounted canvas's root sits in the screen, so a HUD's root stretches over it (anc
 | `UIText` | `Text`, `Binding`, `Font` (a `.ttf`), `Size`, `Color`, `HAlign` (`Left`, `Center`, `Right`), `VAlign` (`Top`, `Middle`, `Bottom`), `bWrap`, `LineHeightScale`, `bKerning` |
 | `UIButton` | `Normal`, `Hovered`, `Pressed`, `Disabled` colours, `bEnabled`, `Texture` or `Sheet` + `Frame` |
 | `UIStack` | `Axis` (`Vertical`, `Horizontal`), `Spacing`, `Padding`, `ChildAlign` (`Start`, `Center`, `End`, `Stretch`), `bFitContent`: lays its children out in a row or a column |
-| `UIMask` | `Texture` (a shape; empty = the rect), `bShowMaskGraphic`: clips its children |
+| `UIScrollBox` | `Axis`, `Spacing`, `Padding`, `ChildAlign` as a stack's (`Stretch` by default), `ScrollStep` (canvas units a notch of the wheel moves), `bDragToScroll`: a list that scrolls. Its children are laid out as in a stack and show only inside its rect; the wheel over it and a drag with the left button move them. When all of them show, it lets the wheel and presses through |
+| `UIMask` | `Texture` (a shape; empty = the rect), `bShowMaskGraphic`: clips its children, which are hit only inside its rect |
 | `UISafeArea` | `Insets`: keeps its children inside the screen's safe part |
 
 A binding (`"Hud.Score"`) reads a property of a source the game registers on the canvas
 (`Bindings().Add(OPAAX_ID("Hud"), MakeBindingReader(*this))`); with a binding, `Text` is the format and `{}`
 the value. A game mounts a canvas with `GetContext().UI->MountAsset("UI/Hud.opaaxui")` and finds a
 widget with `FindByName`.
+
+The pointer reaches widgets as events, asked of the widget under it first, then of its parents, until
+one handles it: a press (`Down`, which captures the pointer until its `Up`) and the wheel (`Scroll`,
+its notches in `UIPointerEvent::Scroll`). A widget class handles them in `OnPointerEvent`. What a
+widget handles, the game does not get: a list that scrolled with the wheel leaves the game's wheel
+actions alone. A scroll box's code moves it with `SetScroll` and reads `GetScroll` and `GetMaxScroll`.
 
 ## Input (`InputActionAsset`, `InputMappingContextAsset`)
 

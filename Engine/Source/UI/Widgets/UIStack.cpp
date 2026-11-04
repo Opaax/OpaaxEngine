@@ -1,7 +1,5 @@
 #include "UI/Widgets/UIStack.h"
 
-#include "Core/Maths/Maths.h"
-
 #include "Core/Reflection/OpaaxEnumJson.h"
 
 namespace Opaax
@@ -50,23 +48,6 @@ namespace Opaax
     // UIWidget
     // =============================================================================
 
-    float UIStack::ContentExtent() const noexcept
-    {
-        const bool lVertical = Axis == EUIAxis::Vertical;
-
-        float lTotal = lVertical ? Padding.Top + Padding.Bottom : Padding.Left + Padding.Right;
-
-        const TDynArray<TStrongObjectPtr<UIWidget>>& lChildren = GetChildren();
-        for (Uint64 lIndex = 0; lIndex < lChildren.size(); ++lIndex)
-        {
-            const Vector2F& lSize = lChildren[lIndex]->Rect.SizeDelta;
-            lTotal += Maths::Max(lVertical ? lSize.y : lSize.x, 0.f);
-            if (lIndex > 0) { lTotal += Spacing; }
-        }
-
-        return lTotal;
-    }
-
     Bounds2D UIStack::ResolveBounds(const Bounds2D& InParentBounds) const
     {
         if (!bFitContent)
@@ -75,14 +56,16 @@ namespace Opaax
         }
 
         // Only a point-anchored axis can fit the content; a stretched one is sized by the parent.
+        const float lExtent = Layout().ContentExtent(UIStackLayout::DesiredSizes(GetChildren()));
+
         UIRect lRect = Rect;
         if (Axis == EUIAxis::Vertical)
         {
-            if (lRect.AnchorMin.y == lRect.AnchorMax.y) { lRect.SizeDelta.y = ContentExtent(); }
+            if (lRect.AnchorMin.y == lRect.AnchorMax.y) { lRect.SizeDelta.y = lExtent; }
         }
         else
         {
-            if (lRect.AnchorMin.x == lRect.AnchorMax.x) { lRect.SizeDelta.x = ContentExtent(); }
+            if (lRect.AnchorMin.x == lRect.AnchorMax.x) { lRect.SizeDelta.x = lExtent; }
         }
 
         return ResolveRect(lRect, InParentBounds);
@@ -90,52 +73,6 @@ namespace Opaax
 
     void UIStack::ArrangeChildren(TDynArray<Bounds2D>& OutSlots) const
     {
-        const Bounds2D& lBounds = GetBounds();
-
-        // The inner rect, padding removed; a padding wider than the rect collapses it.
-        const Vector2F lMin{ lBounds.Min().x + Padding.Left,  lBounds.Min().y + Padding.Bottom };
-        const Vector2F lMax{ Maths::Max(lBounds.Max().x - Padding.Right, lMin.x),
-                             Maths::Max(lBounds.Max().y - Padding.Top,   lMin.y) };
-
-        const bool lVertical = Axis == EUIAxis::Vertical;
-        float      lCursor   = lVertical ? lMax.y : lMin.x;   // top, or left
-
-        OutSlots.reserve(GetChildren().size());
-
-        for (const TStrongObjectPtr<UIWidget>& lChild : GetChildren())
-        {
-            const Vector2F lSize{ Maths::Max(lChild->Rect.SizeDelta.x, 0.f), Maths::Max(lChild->Rect.SizeDelta.y, 0.f) };
-
-            if (lVertical)
-            {
-                // Down the axis; across it, Start is the left.
-                float lLeft = lMin.x, lRight = lMax.x;
-                switch (ChildAlign)
-                {
-                    case EUIAlign::Start:   lRight = lMin.x + lSize.x; break;
-                    case EUIAlign::End:     lLeft  = lMax.x - lSize.x; break;
-                    case EUIAlign::Center:  lLeft  = (lMin.x + lMax.x - lSize.x) * 0.5f; lRight = lLeft + lSize.x; break;
-                    case EUIAlign::Stretch: break;
-                }
-
-                OutSlots.emplace_back(Bounds2D::FromMinMax({ lLeft, lCursor - lSize.y }, { lRight, lCursor }));
-                lCursor -= lSize.y + Spacing;
-            }
-            else
-            {
-                // Along the axis; across it, Start is the top (Y-up).
-                float lBottom = lMin.y, lTop = lMax.y;
-                switch (ChildAlign)
-                {
-                    case EUIAlign::Start:   lBottom = lMax.y - lSize.y; break;
-                    case EUIAlign::End:     lTop    = lMin.y + lSize.y; break;
-                    case EUIAlign::Center:  lBottom = (lMin.y + lMax.y - lSize.y) * 0.5f; lTop = lBottom + lSize.y; break;
-                    case EUIAlign::Stretch: break;
-                }
-
-                OutSlots.emplace_back(Bounds2D::FromMinMax({ lCursor, lBottom }, { lCursor + lSize.x, lTop }));
-                lCursor += lSize.x + Spacing;
-            }
-        }
+        Layout().Arrange(GetBounds(), UIStackLayout::DesiredSizes(GetChildren()), 0.f, OutSlots);
     }
 }
