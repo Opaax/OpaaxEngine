@@ -33,7 +33,7 @@ namespace Opaax
 
     void WindowsPlatform::SleepPrecise(const double InSeconds) const
     {
-        const double lEnd   = Clock::NowSeconds() + InSeconds;
+        const Uint64 lEnd   = PreciseSleepEnd(InSeconds);
         const double lSleep = InSeconds - PRECISE_SLEEP_SPIN;
 
         // Sleep() wakes on the system tick (15.6 ms unless a program raised it); a high-resolution
@@ -55,7 +55,7 @@ namespace Opaax
             }
         }
 
-        while (Clock::NowSeconds() < lEnd)
+        while (Clock::NowNanoseconds() < lEnd)
         {
             ThisThread::YieldNow();
         }

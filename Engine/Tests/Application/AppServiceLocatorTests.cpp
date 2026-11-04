@@ -169,21 +169,24 @@ TEST_CASE("NativePlatform: SleepPrecise never wakes early, and not long after")
 {
     NativePlatform lPlatform;
 
-    // What a frame cap waits: under a millisecond (spun) to a 30 Hz frame. Early is never allowed. A
-    // shared machine (CI) may wake any thread late, so lateness is checked on the best of a few tries.
+    // What a frame cap waits: under a millisecond (spun) to a 30 Hz frame, a 240 Hz one among them.
+    // Early is never allowed, to the nanosecond: measured in nanoseconds, as a reading in seconds since
+    // boot rounds. A shared machine (CI) may wake any thread late, so lateness is checked on the best
+    // of a few tries.
     constexpr Int32 TRIES = 5;
-    for (const double lSeconds : { 0.0, 0.0004, 0.002, 0.0083, 0.033 })
+    for (const double lSeconds : { 0.0, 0.0004, 0.002, 1.0 / 240.0, 0.0083, 0.033 })
     {
         CAPTURE(lSeconds);
-        double lBestLate = TNumericLimits<double>::max();
+        const Uint64 lAsked    = static_cast<Uint64>(lSeconds * 1.0e9);
+        double       lBestLate = TNumericLimits<double>::max();
         for (Int32 lTry = 0; lTry < TRIES; ++lTry)
         {
-            const double lStart = Clock::NowSeconds();
+            const Uint64 lStart = Clock::NowNanoseconds();
             lPlatform.SleepPrecise(lSeconds);
-            const double lSlept = Clock::NowSeconds() - lStart;
+            const Uint64 lSlept = Clock::NowNanoseconds() - lStart;
 
-            CHECK(lSlept >= lSeconds);
-            lBestLate = Maths::Min(lBestLate, lSlept - lSeconds);
+            CHECK(lSlept >= lAsked);
+            lBestLate = Maths::Min(lBestLate, static_cast<double>(lSlept) * 1.0e-9 - lSeconds);
         }
         CHECK(lBestLate < 0.050);
     }
