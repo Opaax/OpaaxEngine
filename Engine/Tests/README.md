@@ -74,6 +74,8 @@ TEST_CASE("Thing: does what it says")
 - Asset classes: objects cannot be copied, so build one in place; register its class in a local
   `ObjectClassRegistry` and round-trip it through `AssetFile::Save` and `AssetFile::LoadAsset`. An old
   per-type file is converted and loaded by `ConvertAndLoad` (`LegacyAssetFile.h`).
+- A game's input mapping over context asset files, with the player's settings when needed:
+  `Input/InputTestGame.h` (a walking context and a locked menu, `ContextFixture::StartMapping`).
 - A private member is not made public for a test: move the logic into a free function and test that.
 - `Main.cpp` owns `main()` and keeps the logger quiet; never add cases there.
 

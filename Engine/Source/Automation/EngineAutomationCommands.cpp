@@ -5,6 +5,7 @@
 #include "Application/Services/IEngine.h"
 #include "Application/Services/IPaths.h"
 #include "Application/Services/IWindowManager.h"
+#include "Automation/InputAutomationCommands.h"
 #include "Automation/SaveAutomationCommands.h"
 #include "Automation/SettingsAutomationCommands.h"
 #include "Core/Algo/Algo.h"
@@ -1480,6 +1481,7 @@ namespace Opaax::EngineAutomation
     {
         RegisterApp(InRunner, InHost);
         RegisterInput(InRunner, InEngine);
+        InputAutomation::Register(InRunner, InEngine);
         RegisterUI(InRunner, InEngine);
         RegisterWorld(InRunner, InEngine);
         RegisterLevels(InRunner, InEngine);

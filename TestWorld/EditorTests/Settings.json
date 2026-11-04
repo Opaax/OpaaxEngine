@@ -13,6 +13,11 @@
         }
     },
     {
+        "id": "keys-need-a-game",
+        "command": "input.keys",
+        "expectFailure": true
+    },
+    {
         "id": "open",
         "command": "level.open",
         "params": {
@@ -62,6 +67,26 @@
             "path": "SettingsProbe/MixerVolume",
             "near": 0.3,
             "tolerance": 0.001
+        }
+    },
+    {
+        "id": "keys-while-playing",
+        "command": "input.keys",
+        "params": {
+            "context": "Input/Test.opaaxasset"
+        },
+        "expect": {
+            "contexts": [
+                {
+                    "added": true,
+                    "keys": [
+                        {
+                            "action": "Fire",
+                            "default": "F"
+                        }
+                    ]
+                }
+            ]
         }
     },
     {

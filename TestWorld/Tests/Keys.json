@@ -251,6 +251,178 @@
         }
     },
     {
+        "id": "keys-listed",
+        "command": "input.keys",
+        "params": {
+            "context": "Input/Test.opaaxasset"
+        },
+        "expect": {
+            "capturing": false,
+            "contexts": [
+                {
+                    "context": "Input/Test.opaaxasset",
+                    "rebindable": true,
+                    "added": true,
+                    "keys": [
+                        {
+                            "action": "Fire",
+                            "default": "F",
+                            "key": "G",
+                            "rebound": true
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "id": "agent-rebinds",
+        "command": "input.rebind",
+        "params": {
+            "context": "Input/Test.opaaxasset",
+            "action": "Fire",
+            "key": "H"
+        },
+        "expect": {
+            "result": "Rebound",
+            "default": "F",
+            "key": "H"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 1
+        }
+    },
+    {
+        "id": "agent-rebind-seen",
+        "command": "expect.value",
+        "params": {
+            "entity": "Keys",
+            "path": "RebindProbe/FireKey",
+            "equals": "H"
+        }
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "H"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 4
+        }
+    },
+    {
+        "id": "h-fires",
+        "command": "expect.value",
+        "params": {
+            "entity": "Keys",
+            "path": "RebindProbe/Fires",
+            "equals": 4
+        }
+    },
+    {
+        "id": "agent-rebind-refused",
+        "command": "input.rebind",
+        "params": {
+            "context": "Input/Test.opaaxasset",
+            "action": "Fire",
+            "key": "AnyKey"
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "capture-starts",
+        "command": "input.capture",
+        "expect": {
+            "capturing": true
+        }
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "H"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 4
+        }
+    },
+    {
+        "id": "capture-took-h",
+        "command": "input.keys",
+        "params": {
+            "context": "Input/Test.opaaxasset"
+        },
+        "expect": {
+            "capturing": false,
+            "captured": "H"
+        }
+    },
+    {
+        "id": "captured-key-did-not-fire",
+        "command": "expect.value",
+        "params": {
+            "entity": "Keys",
+            "path": "RebindProbe/Fires",
+            "equals": 4
+        }
+    },
+    {
+        "command": "input.capture"
+    },
+    {
+        "id": "capture-cancelled",
+        "command": "input.capture",
+        "params": {
+            "cancel": true
+        },
+        "expect": {
+            "capturing": false,
+            "captured": "None"
+        }
+    },
+    {
+        "id": "keys-reset",
+        "command": "input.resetKeys",
+        "params": {
+            "context": "Input/Test.opaaxasset"
+        },
+        "expect": {
+            "contexts": [
+                {
+                    "keys": [
+                        {
+                            "key": "F",
+                            "rebound": false
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 1
+        }
+    },
+    {
+        "id": "reset-seen",
+        "command": "expect.value",
+        "params": {
+            "entity": "Keys",
+            "path": "RebindProbe/FireKey",
+            "equals": "F"
+        }
+    },
+    {
         "id": "leave-none",
         "command": "settings.reset"
     },

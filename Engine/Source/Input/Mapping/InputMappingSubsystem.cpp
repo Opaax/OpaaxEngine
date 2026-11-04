@@ -77,6 +77,29 @@ namespace Opaax
         return true;
     }
 
+    TDynArray<InputContextLayout> InputMappingSubsystem::GetContextLayouts() const
+    {
+        TDynArray<InputContextLayout> lLayouts;
+        lLayouts.reserve(m_Known.size());
+        for (const KnownContext& lKnown : m_Known)
+        {
+            lLayouts.push_back(lKnown.Layout);
+        }
+        return lLayouts;
+    }
+
+    const InputContextLayout* InputMappingSubsystem::FindContextLayout(const OpaaxString& InAssetPath) const
+    {
+        const KnownContext* lKnown = FindKnown(InAssetPath);
+        return lKnown != nullptr ? &lKnown->Layout : nullptr;
+    }
+
+    bool InputMappingSubsystem::IsContextAssetAdded(const OpaaxString& InAssetPath) const
+    {
+        const OpaaxString lPath = CanonicalPath(InAssetPath);
+        return Algo::AnyOf(m_Added, [&lPath](const AddedContext& InAdded) { return InAdded.AssetPath == lPath; });
+    }
+
     TDynArray<InputKeyMapping> InputMappingSubsystem::GetKeyMappings(const OpaaxString& InAssetPath) const
     {
         TDynArray<InputKeyMapping> lMappings;
@@ -106,7 +129,7 @@ namespace Opaax
         const InputKeySlot lSlot   = CanonicalSlot(InSlot);
         const EKeyCode     lBefore = m_Rebinds.GetKey(lSlot);
 
-        const InputRebindResult lResult = m_Rebinds.Rebind(GetLayouts(), lSlot, InKey, InPolicy, m_KeyCheck);
+        const InputRebindResult lResult = m_Rebinds.Rebind(GetContextLayouts(), lSlot, InKey, InPolicy, m_KeyCheck);
         if (!lResult.IsOk())
         {
             OPAAX_LOG(LogInputMapping, Info, "Rebind {} {} on {} to {}: {}{}{}", lSlot.Context.CStr(), lSlot.Action,
@@ -429,6 +452,7 @@ namespace Opaax
     {
         m_bCapturing     = false;
         m_CaptureIgnored = InputKeyMask{};
+        m_LastCaptured   = InKey;
 
         OPAAX_LOG(LogInputMapping, Info, "Key capture: {}", InKey == EKeyCode::None ? "cancelled" : ToString(InKey));
 
@@ -541,17 +565,6 @@ namespace Opaax
         InputKeySlot lSlot = InSlot;
         lSlot.Context      = CanonicalPath(InSlot.Context);
         return lSlot;
-    }
-
-    TDynArray<InputContextLayout> InputMappingSubsystem::GetLayouts() const
-    {
-        TDynArray<InputContextLayout> lLayouts;
-        lLayouts.reserve(m_Known.size());
-        for (const KnownContext& lKnown : m_Known)
-        {
-            lLayouts.push_back(lKnown.Layout);
-        }
-        return lLayouts;
     }
 
     TDynArray<InputKeyBinding> InputMappingSubsystem::BuildBindings(const KnownContext& InKnown) const
