@@ -210,7 +210,8 @@ TEST_CASE("TConfig::Load: an unreadable file resets to defaults, and that is a c
     FileIO::WriteAllText(lPath, OpaaxString("{ not json at all"));
 
     ProbeConfig lProbe;
-    lProbe.GetData().Window.Width = 900u;   // a value the reset will take away
+    OpaaxString lError;
+    REQUIRE(lProbe.MergeText(OpaaxString(R"({"Window":{"Width":900}})"), lError));   // a value the reset will take away
 
     ChangeCounter lMember;
     lProbe.OnChanged().AddMember(&lMember, &ChangeCounter::OnChanged);

@@ -7,7 +7,9 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/Serialization/JsonConcept.h"
 #include "Core/String/OpaaxString.hpp"
+#include "Core/String/OpaaxStringJson.h"
 #include "Engine/Config/Config.h"
+#include "Engine/Config/ConfigLayer.h"
 #include "Engine/Reflection/PropertyVisitor.h"
 
 // =============================================================================
@@ -105,8 +107,8 @@ namespace Opaax
 
     // =============================================================================
     // TConfig — a config whose values are a TData. A concrete config derives from it, declares
-    //   OPAAX_OBJECT(Class, Config) and its file name; the base handles Load, Save, the default file and
-    //   what the editor draws (TData's OPAAX_PROPERTIES).
+    //   OPAAX_OBJECT(Class, Config) and its file name; the base handles Load, Save, the default file,
+    //   what the editor draws (TData's OPAAX_PROPERTIES) and the player's values over the project's.
     // =============================================================================
     template<class TData>
     class TConfig : public Config
@@ -118,8 +120,11 @@ namespace Opaax
         using DataType = TData;
 
         // ==== Getter =========================================================================
+        /** What the engine reads: the project's values with the player's over them. */
         const TData& GetData() const { return m_Data; }
-        TData&       GetData()       { return m_Data; }
+
+        /** The project's values: the file's, with what the Config panel and MergeText changed. */
+        const TData& GetProjectData() const { return m_Project; }
 
         // =============================================================================
         // Override
@@ -135,18 +140,18 @@ namespace Opaax
             if (lText.IsEmpty())
             {
                 // Missing or empty: write the default file, keep the defaults.
-                return FileIO::WriteAllText(InAbsPath, TConfigCodec<TData>::ToText(m_Data));
+                return FileIO::WriteAllText(InAbsPath, TConfigCodec<TData>::ToText(m_Project));
             }
 
             // Bad JSON or wrong-typed value: keep the defaults and return false
             // (ConfigSystem logs the warning).
             try
             {
-                m_Data = TConfigCodec<TData>::FromText(lText);
+                m_Project = TConfigCodec<TData>::FromText(lText);
             }
             catch (const nlohmann::json::exception&)
             {
-                m_Data = TData{};
+                m_Project = TData{};
                 NotifyChanged();
                 return false;
             }
@@ -158,7 +163,7 @@ namespace Opaax
         bool Save(const OpaaxString& InAbsPath) override
         {
             m_LoadedPath = InAbsPath;
-            return FileIO::WriteAllText(InAbsPath, TConfigCodec<TData>::ToText(m_Data));
+            return FileIO::WriteAllText(InAbsPath, TConfigCodec<TData>::ToText(m_Project));
         }
 
         bool Save() override
@@ -171,7 +176,9 @@ namespace Opaax
         }
 
         // Same codec as Save.
-        OpaaxString ToText() const override { return TConfigCodec<TData>::ToText(m_Data); }
+        OpaaxString ToText() const override { return TConfigCodec<TData>::ToText(m_Project); }
+
+        OpaaxString ToEffectiveText() const override { return TConfigCodec<TData>::ToText(m_Data); }
 
         // Through the codec's text, so a value it would refuse in the file is refused here.
         bool MergeText(const OpaaxString& InValues, OpaaxString& OutError) override
@@ -196,7 +203,7 @@ namespace Opaax
                 }
 
                 lValues.merge_patch(lPatch);
-                m_Data = TConfigCodec<TData>::FromText(OpaaxString(lValues.dump().c_str()));
+                m_Project = TConfigCodec<TData>::FromText(ToJsonText(lValues));
             }
             catch (const nlohmann::json::exception& InError)
             {
@@ -212,7 +219,7 @@ namespace Opaax
         {
             if constexpr (CReflected<TData>)
             {
-                VisitProperties(m_Data, InVisitor);
+                VisitProperties(m_Project, InVisitor);
                 return true;
             }
             else
@@ -221,15 +228,114 @@ namespace Opaax
             }
         }
 
-        void ResetToDefaults() override { m_Data = TData{}; }
+        void ResetToDefaults() override
+        {
+            m_Project = TData{};
+            RefreshValues();
+        }
+
+        bool SetPlayerText(const OpaaxString& InValues, TDynArray<OpaaxString>* OutRejected = nullptr) override
+        {
+            const nlohmann::json lLayer = nlohmann::json::parse(InValues.CStr(), nullptr, false);
+            if (lLayer.is_discarded() || !lLayer.is_object())
+            {
+                return false;
+            }
+
+            const OpaaxString lBefore = ToEffectiveText();
+            ApplyPlayer(lLayer, OutRejected);
+
+            if (ToEffectiveText() != lBefore)
+            {
+                Announce();
+            }
+            return true;
+        }
+
+        OpaaxString GetPlayerText() const override { return ToJsonText(m_Player, 4); }
+
+        bool HasPlayerValues() const override { return !m_Player.empty(); }
+
+    protected:
+        // The project's values may have dropped what a player's value was for: such a value goes.
+        void RefreshValues() override
+        {
+            TDynArray<OpaaxString> lDropped;
+            ApplyPlayer(m_Player, &lDropped);
+
+            for (const OpaaxString& lWhy : lDropped)
+            {
+                OPAAX_LOG(LogConfig, Warn, "Config [{}]: dropped a player's value, {}", FileName(), lWhy.CStr());
+            }
+        }
         //~End Config interface
+
+        // =============================================================================
+        // Internal
+        // =============================================================================
+    private:
+        /**
+         * Keeps the values of InLayer that fit the project's, each checked by the codec on its own, and
+         * reads the project's values with them over.
+         */
+        void ApplyPlayer(const nlohmann::json& InLayer, TDynArray<OpaaxString>* OutRejected)
+        {
+            const nlohmann::json lProject = nlohmann::json::parse(TConfigCodec<TData>::ToText(m_Project).CStr());
+
+            nlohmann::json lAccepted = nlohmann::json::object();
+            for (const ConfigLayer::Leaf& lLeaf : ConfigLayer::Leaves(InLayer))
+            {
+                nlohmann::json lValues = lProject;
+                OpaaxString    lWhy;
+                if (!ConfigLayer::Apply(lValues, lLeaf.Layer))
+                {
+                    lWhy = "no such value";
+                }
+                else
+                {
+                    try
+                    {
+                        (void)TConfigCodec<TData>::FromText(ToJsonText(lValues));
+                    }
+                    catch (const nlohmann::json::exception&)
+                    {
+                        lWhy = "a value of the wrong type";
+                    }
+                }
+
+                if (!lWhy.IsEmpty())
+                {
+                    if (OutRejected != nullptr) { OutRejected->push_back(lLeaf.Path + ": " + lWhy); }
+                    continue;
+                }
+
+                lAccepted.merge_patch(lLeaf.Layer);
+            }
+
+            nlohmann::json lValues = lProject;
+            ConfigLayer::Apply(lValues, lAccepted);
+            try
+            {
+                m_Data = TConfigCodec<TData>::FromText(ToJsonText(lValues));
+            }
+            catch (const nlohmann::json::exception&)
+            {
+                // Each value read on its own, but not all together: the project's values alone.
+                m_Data    = m_Project;
+                lAccepted = nlohmann::json::object();
+                if (OutRejected != nullptr) { OutRejected->push_back("the player's values do not read together"); }
+            }
+            m_Player = Move(lAccepted);
+        }
 
         // =============================================================================
         // Members
         // =============================================================================
     protected:
-        TData       m_Data;       // in-memory defaults until Load
-        OpaaxString m_LoadedPath;
+        TData          m_Project;                                  // in-memory defaults until Load
+        TData          m_Data;                                     // m_Project with m_Player over it
+        nlohmann::json m_Player = nlohmann::json::object();        // the player's values, shaped like the file
+        OpaaxString    m_LoadedPath;
     };
 }
 

@@ -159,12 +159,23 @@ namespace Opaax::EngineAutomation
             return nullptr;
         }
 
-        /** A config's values as its file holds them: JSON, or the text itself for a format of its own. */
-        nlohmann::json ConfigValues(const Config& InConfig)
+        /** A config's text as JSON, or the text itself for a format of its own. */
+        nlohmann::json ConfigJson(const OpaaxString& InText)
         {
-            const OpaaxString    lText   = InConfig.ToText();
-            const nlohmann::json lValues = nlohmann::json::parse(lText.CStr(), nullptr, false);
-            return lValues.is_discarded() ? nlohmann::json(lText) : lValues;
+            const nlohmann::json lValues = nlohmann::json::parse(InText.CStr(), nullptr, false);
+            return lValues.is_discarded() ? nlohmann::json(InText) : lValues;
+        }
+
+        /**
+         * A config's answer: {config, values} what the engine reads, {project} its file's values and
+         * {player} the player's over them.
+         */
+        nlohmann::json DescribeConfig(const OpaaxString& InName, const Config& InConfig)
+        {
+            return nlohmann::json{ { "config",  InName },
+                                   { "values",  ConfigJson(InConfig.ToEffectiveText()) },
+                                   { "project", ConfigJson(InConfig.ToText()) },
+                                   { "player",  ConfigJson(InConfig.GetPlayerText()) } };
         }
 
         /** The engine's camera manager, or null with OutError. */
@@ -1221,8 +1232,8 @@ namespace Opaax::EngineAutomation
         void RegisterConfig(AutomationRunner& InRunner)
         {
             InRunner.Register("config.get",
-                "A config's values as its file holds them: {config}, its file's name (\"Engine\", \"Renderer\"...). "
-                "Answers {config, values}.",
+                "A config's values: {config}, its file's name (\"Engine\", \"Renderer\"...). Answers {config, values} "
+                "what the engine reads, {project} the file's values and {player} the player's settings over them.",
                 [](const nlohmann::json& InParams)
                 {
                     const OpaaxString lName = InParams.value("config", OpaaxString());
@@ -1233,13 +1244,14 @@ namespace Opaax::EngineAutomation
                         return AutomationResult::Fail(lError);
                     }
 
-                    return AutomationResult::Ok(nlohmann::json{ { "config", lName }, { "values", ConfigValues(*lConfig) } });
+                    return AutomationResult::Ok(DescribeConfig(lName, *lConfig));
                 });
 
             InRunner.Register("config.set",
-                "Merges {values}, shaped like the config's file ({\"Time\": {\"FixedRate\": 30}}), into {config} for "
-                "this run, without saving; applied at once, as the Config panel does. A value the config does not have, "
-                "or of the wrong type, is refused. Answers {config, values} after.",
+                "Merges {values}, shaped like the config's file ({\"Time\": {\"FixedRate\": 30}}), into {config}'s "
+                "project values for this run, without saving; applied at once, as the Config panel does. A value the "
+                "config does not have, or of the wrong type, is refused; one the player set still wins. Answers as "
+                "config.get after.",
                 [](const nlohmann::json& InParams)
                 {
                     const OpaaxString lName = InParams.value("config", OpaaxString());
@@ -1261,7 +1273,7 @@ namespace Opaax::EngineAutomation
                         return AutomationResult::Fail(lError);
                     }
 
-                    return AutomationResult::Ok(nlohmann::json{ { "config", lName }, { "values", ConfigValues(*lConfig) } });
+                    return AutomationResult::Ok(DescribeConfig(lName, *lConfig));
                 });
         }
 
