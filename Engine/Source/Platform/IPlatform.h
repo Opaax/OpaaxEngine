@@ -23,8 +23,9 @@ namespace Opaax
         virtual double GetTimeSeconds()      const = 0;
 
         /**
-         * Waits InSeconds of real time (Clock::NowSeconds), never less and only a few microseconds more:
-         * the OS sleeps to PRECISE_SLEEP_SPIN short of the end, the rest spins. What a frame cap waits with.
+         * Waits InSeconds of real time (the steady clock, to the nanosecond), never less and only a few
+         * microseconds more: the OS sleeps to PRECISE_SLEEP_SPIN short of the end, the rest spins. What a
+         * frame cap waits with.
          */
         virtual void SleepPrecise(double InSeconds) const;
 
@@ -52,6 +53,14 @@ namespace Opaax
 
         //----- null object ----------------------------------------------------
         static IPlatform& Null();
+
+    protected:
+        /**
+         * The Clock::NowNanoseconds reading a SleepPrecise of InSeconds from now ends at: rounded up to a
+         * whole nanosecond, now itself for no time or less. Whole nanoseconds, as a reading in seconds
+         * since boot rounds, and could end a hair short.
+         */
+        static Uint64 PreciseSleepEnd(double InSeconds) noexcept;
     };
 
     /**

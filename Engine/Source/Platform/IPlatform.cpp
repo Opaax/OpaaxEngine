@@ -1,5 +1,6 @@
 ﻿#include "IPlatform.h"
 
+#include "Core/Maths/Maths.h"
 #include "Core/String/OpaaxPathString.h"
 #include "Core/Time/Clock.h"
 #include "Platform/IFileSystem.h"
@@ -43,17 +44,23 @@ namespace Opaax
 
     void IPlatform::SleepPrecise(const double InSeconds) const
     {
-        const double lEnd = Clock::NowSeconds() + InSeconds;
+        const Uint64 lEnd = PreciseSleepEnd(InSeconds);
 
         if (InSeconds > PRECISE_SLEEP_SPIN)
         {
             ThisThread::SleepForSeconds(InSeconds - PRECISE_SLEEP_SPIN);
         }
 
-        while (Clock::NowSeconds() < lEnd)
+        while (Clock::NowNanoseconds() < lEnd)
         {
             ThisThread::YieldNow();
         }
+    }
+
+    Uint64 IPlatform::PreciseSleepEnd(const double InSeconds) noexcept
+    {
+        const Int64 lNanoseconds = Maths::CeilToInt64(InSeconds * 1.0e9);
+        return Clock::NowNanoseconds() + (lNanoseconds > 0 ? static_cast<Uint64>(lNanoseconds) : 0u);
     }
 
     ServiceTypeID IPlatform::StaticTypeID() noexcept {

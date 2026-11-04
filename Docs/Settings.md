@@ -213,7 +213,8 @@ app only, and moves only when the mode or the size changed: a window the player 
 size is not snapped back by a volume change. The frame cap is `FrameLimiter` (`Engine/FrameLimiter.h`),
 pure: told the time, it says how long to wait before the present, and which swap interval holds the
 frames; the engine waits with `IPlatform::SleepPrecise` (a high-resolution timer on Windows, the last
-millisecond spun), inside the profiler's `FrameCap` scope.
+millisecond spun, the end counted in whole nanoseconds of the steady clock), inside the profiler's
+`FrameCap` scope.
 
 The keys are `InputRebinds` (`Input/Mapping/InputRebinding.h`), pure: told the layouts of the
 known contexts, it rebinds and finds the conflicts. `InputMappingSubsystem` reads the context assets,
