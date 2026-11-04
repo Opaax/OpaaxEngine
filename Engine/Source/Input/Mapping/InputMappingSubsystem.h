@@ -86,6 +86,15 @@ namespace Opaax
          */
         bool RegisterContextAsset(const OpaaxString& InAssetPath);
 
+        /** Every known context asset (added or registered), in the order read: what a controls menu may list. */
+        TDynArray<InputContextLayout> GetContextLayouts() const;
+
+        /** The layout of a known context asset (an old format's path too), or null; valid until another asset is read. */
+        const InputContextLayout* FindContextLayout(const OpaaxString& InAssetPath) const;
+
+        /** True while a context added from the asset is in use (AddContextAsset, not removed since). */
+        bool IsContextAssetAdded(const OpaaxString& InAssetPath) const;
+
         /** The mappings of a known context asset with the player's keys, in the asset's order; none if unknown. */
         TDynArray<InputKeyMapping> GetKeyMappings(const OpaaxString& InAssetPath) const;
 
@@ -139,6 +148,9 @@ namespace Opaax
         void CancelKeyCapture();
 
         bool IsCapturingKey() const noexcept { return m_bCapturing; }
+
+        /** The key the last capture to end took: EKeyCode::None when it was cancelled; empty before any ended. */
+        TOptional<EKeyCode> GetLastCapturedKey() const noexcept { return m_LastCaptured; }
 
         /** True while a capture waits, or the key it took is still held: the UI routes nothing (UISubsystem). */
         bool IsHoldingInput() const noexcept { return m_bCapturing || m_CapturedHeld != EKeyCode::None; }
@@ -259,9 +271,6 @@ namespace Opaax
         /** InSlot with its context named as a known context is. */
         static InputKeySlot CanonicalSlot(const InputKeySlot& InSlot);
 
-        /** Every known context's layout, for a rebind's checks. */
-        TDynArray<InputContextLayout> GetLayouts() const;
-
         /** InKnown's bindings with the player's keys; a mapping cleared drives nothing. */
         TDynArray<InputKeyBinding> BuildBindings(const KnownContext& InKnown) const;
 
@@ -318,10 +327,11 @@ namespace Opaax
         bool           m_bWritingKeys = false;
 
         // A capture: whether it waits, the keys held when it began (taken once released), the key it
-        // took while that is still held.
-        bool           m_bCapturing     = false;
-        InputKeyMask   m_CaptureIgnored{};
-        EKeyCode       m_CapturedHeld   = EKeyCode::None;
-        FOnKeyCaptured m_OnKeyCaptured;
+        // took while that is still held, and the key the last one took.
+        bool                m_bCapturing     = false;
+        InputKeyMask        m_CaptureIgnored{};
+        EKeyCode            m_CapturedHeld   = EKeyCode::None;
+        TOptional<EKeyCode> m_LastCaptured;
+        FOnKeyCaptured      m_OnKeyCaptured;
     };
 }

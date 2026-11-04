@@ -107,6 +107,15 @@ GetUserSettings().Save();                                     // kept with the o
 - `OnKeysChanged` tells a menu to redraw: a rebind, a reset, or the settings read again.
 - The keys are read from the settings as the game starts, and again whenever the section changes
   there (`Load`, `Reset`, `settings.reset`).
+- `GetContextLayouts` lists every context asset known (added or registered) with its mappings and
+  whether it is rebindable; `IsContextAssetAdded` says whether one is in use.
+- **From outside**, a test or an agent does what a controls menu does: `input.keys` lists the keys,
+  `input.rebind`, `input.resetKeys` and `input.capture` change them ([Automation.md](Automation.md#commands)).
+  ```json
+  { "command": "input.rebind", "params": { "action": "Jump", "key": "E", "policy": "Swap" } }
+  ```
+  A refused rebind fails with why and what to do instead: `Conflict: E is taken by Use on E in
+  Input/Controls.opaaxasset: {"policy": "Swap"} gives it the key Jump had, "Replace" clears it`.
 
 ### Press a key
 
@@ -130,6 +139,7 @@ void ControlsMenu::HandleKeyCaptured(const Opaax::EKeyCode InKey)
   `Mouse_Left` presses no button. The key taken, or the Escape that cancelled, drives nothing until
   released, so binding Jump to Space does not jump.
 - `IsCapturingKey` says it waits; `IsHoldingInput` also covers the key still held.
+  `GetLastCapturedKey` is the key the last capture took, for a menu that reads it instead of listening.
 
 ## The file
 
@@ -183,7 +193,9 @@ save, holding only what the player changed, shaped like each config's file:
 - `Engine/Tests/Input/InputRebindingTests.cpp` checks the conflicts, the locked keys, the game's check
   and the section's JSON; `InputAssetTests.cpp` the subsystem over real files and settings, the next
   launch included. `TestWorld/Tests/Keys.json` rebinds Fire from gameplay (`RebindProbe`), presses
-  the new key, saves, resets and reads the file again. `InputMappingTests.cpp` waits for keys;
+  the new key, saves, resets and reads the file again, then does it with the `input.*` commands, a
+  capture included. `Engine/Tests/Automation/InputAutomationTests.cpp` checks those commands' answers
+  and refusals (`InputTestGame.h` is the game the input suites share). `InputMappingTests.cpp` waits for keys;
   `TestWorld/Tests/UI.json` clicks a button while a capture waits: the click is the key, the button
   is not pressed, and Escape cancels the next one.
 
