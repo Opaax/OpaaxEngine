@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/String/OpaaxStringJson.h"
+#include "Input/InputKeyNames.h"
 #include "Input/Mapping/InputMappingSubsystem.h"
 #include "UI/UIBinding.h"
 #include "UI/UISubsystem.h"
@@ -16,7 +17,8 @@ namespace TestWorld
     // UIProbe — mounts the canvas Asset on the game's UI while it lives. Counts the clicks on its
     //   ClickButton, which its Counter text shows through a binding ("Probe.Clicks"), and the Click
     //   action (the left button, Input/UITest.opaaxasset) the game itself gets: a click the UI
-    //   handled does not reach the game.
+    //   handled does not reach the game. bCapture waits for a key as a controls menu does: the UI
+    //   gets no click while it waits, and Captured names the key taken.
     // =============================================================================
     class UIProbe : public Opaax::Behaviour
     {
@@ -31,8 +33,14 @@ namespace TestWorld
         Opaax::Int32       GameClicks = 0;
         Opaax::OpaaxString CounterText;
 
+        /** Set by a test: the next frame waits for a key (BeginKeyCapture), then it goes back to false. */
+        bool               bCapture   = false;
+        bool               bCapturing = false;
+        Opaax::OpaaxString Captured;   // the key the last capture took, "None" when cancelled
+
         OPAAX_PROPERTIES(UIProbe, OPAAX_PROP(Asset), OPAAX_PROP(bMounted), OPAAX_PROP(Widgets), OPAAX_PROP(Clicks),
-                         OPAAX_PROP(GameClicks), OPAAX_PROP(CounterText))
+                         OPAAX_PROP(GameClicks), OPAAX_PROP(CounterText), OPAAX_PROP(bCapture), OPAAX_PROP(bCapturing),
+                         OPAAX_PROP(Captured))
 
         void OnStart() override
         {
@@ -60,6 +68,7 @@ namespace TestWorld
             if (Opaax::InputMappingSubsystem* const lActions = GetContext().Actions)
             {
                 lActions->AddContextAsset(OPAAX_ID("UITest"), Opaax::OpaaxString("Input/UITest.opaaxasset"));
+                lActions->OnKeyCaptured().AddMember(this, &UIProbe::OnKeyCaptured);
             }
             BindAction<&UIProbe::OnGameClick>(OPAAX_ID("Click"), Opaax::EInputTrigger::Started);
         }
@@ -70,12 +79,24 @@ namespace TestWorld
             {
                 CounterText = m_Counter->GetDisplayText();
             }
+
+            if (Opaax::InputMappingSubsystem* const lActions = GetContext().Actions)
+            {
+                if (bCapture)
+                {
+                    lActions->BeginKeyCapture();
+                    bCapture = false;
+                }
+                bCapturing = lActions->IsCapturingKey();
+            }
         }
 
         void OnDestroy() override
         {
             if (Opaax::InputMappingSubsystem* const lActions = GetContext().Actions)
             {
+                lActions->OnKeyCaptured().RemoveAll(this);
+                lActions->CancelKeyCapture();
                 lActions->RemoveContext(OPAAX_ID("UITest"));
             }
 
@@ -93,6 +114,8 @@ namespace TestWorld
         void OnClicked() { ++Clicks; }
 
         void OnGameClick(const Opaax::InputActionValue&) { ++GameClicks; }
+
+        void OnKeyCaptured(const Opaax::EKeyCode InKey) { Captured = Opaax::OpaaxString(ToString(InKey)); }
 
         static Opaax::Int32 CountWidgets(const Opaax::UIWidget& InWidget)
         {

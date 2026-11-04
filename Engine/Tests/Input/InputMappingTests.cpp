@@ -998,3 +998,172 @@ TEST_SUITE("InputMappingSubsystem — binding")
         CHECK(lInput.FindState(Name("Nope")) == nullptr);
     }
 }
+
+// =============================================================================
+TEST_SUITE("InputMappingSubsystem — waiting for a key")
+{
+    namespace
+    {
+        /** A game with Jump on Space, and the keys its captures took. */
+        struct CaptureGame
+        {
+            CaptureGame() : Input(Fixture.StartMapping())
+            {
+                Input.RegisterAction(MakeAction("Jump", EInputValueType::Bool));
+
+                InputMappingContext lMapping;
+                lMapping.Name = Name("Gameplay");
+                lMapping.Bindings.emplace_back(Bind("Jump", EKeyCode::Space));
+                REQUIRE(Input.AddContext(lMapping));
+
+                Input.OnKeyCaptured().Add([this](const EKeyCode InKey) { Captured.push_back(InKey); });
+                Input.Bind(Name("Jump"), EInputTrigger::Started, [this](const InputActionValue&) { ++Jumps; });
+            }
+
+            /** One frame: the mapping updates, then the frame ends. */
+            void Frame()
+            {
+                Input.Update(1.0 / 60.0);
+                Fixture.Input.EndFrame();
+            }
+
+            void Press(const EKeyCode InKey)   { Fixture.Input.OnKeyPressed(InKey, false); Frame(); }
+            void Release(const EKeyCode InKey) { Fixture.Input.OnKeyReleased(InKey); Frame(); }
+
+            ContextFixture         Fixture;
+            InputMappingSubsystem& Input;
+            TDynArray<EKeyCode>    Captured;
+            int                    Jumps = 0;
+        };
+    }
+
+    TEST_CASE("A capture takes the next key pressed, not the one held when it began")
+    {
+        CaptureGame lGame;
+
+        // The click that opened "press a key" is still down when the capture begins.
+        lGame.Fixture.Input.OnMouseButtonPressed(EKeyCode::Mouse_Left);
+        lGame.Input.BeginKeyCapture();
+        CHECK(lGame.Input.IsCapturingKey());
+        lGame.Frame();
+        lGame.Fixture.Input.OnMouseButtonReleased(EKeyCode::Mouse_Left);
+        lGame.Frame();
+        CHECK(lGame.Captured.empty());
+        CHECK(lGame.Input.IsHoldingInput());
+
+        lGame.Press(EKeyCode::F);
+        REQUIRE(lGame.Captured.size() == 1);
+        CHECK(lGame.Captured[0] == EKeyCode::F);
+        CHECK_FALSE(lGame.Input.IsCapturingKey());
+
+        // Its key holds the input until released.
+        CHECK(lGame.Input.IsHoldingInput());
+        lGame.Frame();
+        CHECK(lGame.Input.IsHoldingInput());
+        lGame.Release(EKeyCode::F);
+        CHECK_FALSE(lGame.Input.IsHoldingInput());
+    }
+
+    TEST_CASE("While a capture waits no key drives an action, and the key it took drives nothing until released")
+    {
+        CaptureGame lGame;
+        lGame.Input.BeginKeyCapture();
+
+        // Space is taken: Jump does not fire, though Space is its key.
+        lGame.Press(EKeyCode::Space);
+        REQUIRE(lGame.Captured.size() == 1);
+        CHECK(lGame.Captured[0] == EKeyCode::Space);
+        CHECK(lGame.Jumps == 0);
+        CHECK_FALSE(lGame.Input.GetValue(Name("Jump")).AsBool());
+
+        // Held: still nothing; released and pressed again: a jump.
+        lGame.Frame();
+        CHECK(lGame.Jumps == 0);
+        lGame.Release(EKeyCode::Space);
+        lGame.Press(EKeyCode::Space);
+        CHECK(lGame.Jumps == 1);
+        lGame.Release(EKeyCode::Space);
+
+        // A key held from before the capture drives nothing while it waits, and gives no new press after.
+        lGame.Fixture.Input.OnKeyPressed(EKeyCode::Space, false);
+        lGame.Frame();
+        CHECK(lGame.Jumps == 2);
+        lGame.Input.BeginKeyCapture();
+        lGame.Frame();
+        CHECK_FALSE(lGame.Input.GetValue(Name("Jump")).AsBool());
+        lGame.Input.CancelKeyCapture();
+        lGame.Frame();
+        CHECK(lGame.Input.GetValue(Name("Jump")).AsBool());
+        CHECK(lGame.Jumps == 2);
+    }
+
+    TEST_CASE("Escape and CancelKeyCapture cancel; a mouse button and a wheel notch can be taken")
+    {
+        CaptureGame lGame;
+
+        lGame.Input.BeginKeyCapture();
+        lGame.Press(EKeyCode::Escape);
+        lGame.Release(EKeyCode::Escape);
+
+        lGame.Input.BeginKeyCapture();
+        lGame.Input.CancelKeyCapture();
+        lGame.Input.CancelKeyCapture();   // none under way: nothing more told
+
+        lGame.Input.BeginKeyCapture();
+        lGame.Fixture.Input.OnMouseButtonPressed(EKeyCode::Mouse_Right);
+        lGame.Frame();
+        lGame.Fixture.Input.OnMouseButtonReleased(EKeyCode::Mouse_Right);
+        lGame.Frame();
+
+        lGame.Input.BeginKeyCapture();
+        lGame.Fixture.Input.OnMouseScrolled(0.f, 1.f);
+        lGame.Frame();
+
+        REQUIRE(lGame.Captured.size() == 4);
+        CHECK(lGame.Captured[0] == EKeyCode::None);
+        CHECK(lGame.Captured[1] == EKeyCode::None);
+        CHECK(lGame.Captured[2] == EKeyCode::Mouse_Right);
+        CHECK(lGame.Captured[3] == EKeyCode::Mouse_WheelUp);
+
+        // A notch is over by the next frame: nothing held.
+        lGame.Frame();
+        CHECK_FALSE(lGame.Input.IsHoldingInput());
+    }
+
+    TEST_CASE("The Escape that cancels a capture does not reach the game's pause")
+    {
+        CaptureGame lGame;
+        lGame.Input.RegisterAction(MakeAction("Pause", EInputValueType::Bool));
+
+        InputMappingContext lMenu;
+        lMenu.Name = Name("Menu");
+        lMenu.Bindings.emplace_back(Bind("Pause", EKeyCode::Escape));
+        REQUIRE(lGame.Input.AddContext(lMenu));
+
+        int lPauses = 0;
+        lGame.Input.Bind(Name("Pause"), EInputTrigger::Started, [&lPauses](const InputActionValue&) { ++lPauses; });
+
+        lGame.Input.BeginKeyCapture();
+        lGame.Press(EKeyCode::Escape);
+        lGame.Frame();
+        lGame.Release(EKeyCode::Escape);
+        CHECK(lPauses == 0);
+        REQUIRE(lGame.Captured.size() == 1);
+        CHECK(lGame.Captured[0] == EKeyCode::None);
+
+        lGame.Press(EKeyCode::Escape);
+        CHECK(lPauses == 1);
+    }
+
+    TEST_CASE("Two keys in one frame: the lower code, every run")
+    {
+        CaptureGame lGame;
+        lGame.Input.BeginKeyCapture();
+        lGame.Fixture.Input.OnKeyPressed(EKeyCode::Z, false);
+        lGame.Fixture.Input.OnKeyPressed(EKeyCode::A, false);
+        lGame.Frame();
+
+        REQUIRE(lGame.Captured.size() == 1);
+        CHECK(lGame.Captured[0] == (static_cast<Uint16>(EKeyCode::A) < static_cast<Uint16>(EKeyCode::Z) ? EKeyCode::A : EKeyCode::Z));
+    }
+}

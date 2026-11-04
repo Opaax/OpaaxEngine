@@ -108,6 +108,29 @@ GetUserSettings().Save();                                     // kept with the o
 - The keys are read from the settings as the game starts, and again whenever the section changes
   there (`Load`, `Reset`, `settings.reset`).
 
+### Press a key
+
+```cpp
+lInput.OnKeyCaptured().AddMember(this, &ControlsMenu::HandleKeyCaptured);   // RemoveAll(this) when it goes
+lInput.BeginKeyCapture();                                                    // "Press a key for Jump..."
+
+void ControlsMenu::HandleKeyCaptured(const Opaax::EKeyCode InKey)
+{
+    if (InKey != Opaax::EKeyCode::None)                                      // None: cancelled
+    {
+        m_LastResult = GetContext().Actions->Rebind(m_Slot, InKey);          // Conflict: ask, then Swap
+    }
+}
+```
+
+- The next key or mouse button pressed is taken, a wheel notch included. A key held when the capture
+  begins (the click or the Enter that asked) counts only once released and pressed again.
+- **Escape cancels** (`EKeyCode::None`), and so does `CancelKeyCapture`.
+- While it waits, no key drives an action, and **the UI gets no input**: the click that gives
+  `Mouse_Left` presses no button. The key taken, or the Escape that cancelled, drives nothing until
+  released, so binding Jump to Space does not jump.
+- `IsCapturingKey` says it waits; `IsHoldingInput` also covers the key still held.
+
 ## The file
 
 `<UserDir>/SaveGames/Settings.opaaxsave` ([Saving.md](Saving.md#where-the-files-go)), laid out as a
@@ -160,7 +183,9 @@ save, holding only what the player changed, shaped like each config's file:
 - `Engine/Tests/Input/InputRebindingTests.cpp` checks the conflicts, the locked keys, the game's check
   and the section's JSON; `InputAssetTests.cpp` the subsystem over real files and settings, the next
   launch included. `TestWorld/Tests/Keys.json` rebinds Fire from gameplay (`RebindProbe`), presses
-  the new key, saves, resets and reads the file again.
+  the new key, saves, resets and reads the file again. `InputMappingTests.cpp` waits for keys;
+  `TestWorld/Tests/UI.json` clicks a button while a capture waits: the click is the key, the button
+  is not pressed, and Escape cancels the next one.
 
 ## How it is built
 
@@ -185,4 +210,6 @@ in place, so the actions' states carry on), and keeps the keys in the settings' 
 (`IUserSettings::OnSectionChanged` says when another hand changed it). As Unreal's Enhanced Input
 keeps the player's mappable keys over the mapping contexts.
 
-Not there yet: waiting for the next key a player presses (a menu's "press a key").
+A capture runs in `InputMappingSubsystem::Update`, before the actions are read: it masks every key
+while it waits (`ConsumeThisFrame`'s mask), and `UISubsystem` routes nothing while
+`IsHoldingInput` holds, as if in `GameOnly` mode.

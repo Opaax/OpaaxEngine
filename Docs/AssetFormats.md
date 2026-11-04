@@ -202,6 +202,8 @@ one handles it: a press (`Down`, which captures the pointer until its `Up`) and 
 its notches in `UIPointerEvent::Scroll`). A widget class handles them in `OnPointerEvent`. What a
 widget handles, the game does not get: a list that scrolled with the wheel leaves the game's wheel
 actions alone. A scroll box's code moves it with `SetScroll` and reads `GetScroll` and `GetMaxScroll`.
+While a controls menu waits for a key (`BeginKeyCapture`, [Settings.md](Settings.md#press-a-key)),
+the UI gets no input at all, until the key taken is released.
 
 ## Input (`InputActionAsset`, `InputMappingContextAsset`)
 

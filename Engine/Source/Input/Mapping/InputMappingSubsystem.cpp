@@ -287,6 +287,18 @@ namespace Opaax
 
     void InputMappingSubsystem::Update(double InDeltaTime)
     {
+        // A capture takes its key before the actions read theirs: while it waits every key is masked,
+        // then the key it took until released.
+        UpdateKeyCapture();
+        if (m_bCapturing)
+        {
+            for (bool& lMasked : m_PreConsumed) { lMasked = true; }
+        }
+        else if (m_CapturedHeld != EKeyCode::None)
+        {
+            m_PreConsumed[static_cast<Uint16>(m_CapturedHeld)] = true;
+        }
+
         m_Evaluator.Evaluate(GetContext().Input, InDeltaTime, &m_PreConsumed);
         m_PreConsumed = InputKeyMask{};   // this frame only
 
@@ -323,11 +335,105 @@ namespace Opaax
 
     void InputMappingSubsystem::Shutdown()
     {
+        // Nobody is told: the game is ending.
+        m_bCapturing   = false;
+        m_CapturedHeld = EKeyCode::None;
+
         if (m_Settings != nullptr)
         {
             m_Settings->OnSectionChanged().RemoveAll(this);
             m_Settings = nullptr;
         }
+    }
+
+    // =========================================================================
+    // Waiting for a key
+    // =========================================================================
+    void InputMappingSubsystem::BeginKeyCapture()
+    {
+        const InputManager& lInput = GetContext().Input;
+
+        // What is down now (the click that asked) counts once released and pressed again.
+        for (Uint16 lIndex = 0; lIndex < InputManager::KEY_STATE_COUNT; ++lIndex)
+        {
+            const EKeyCode lKey      = static_cast<EKeyCode>(lIndex);
+            m_CaptureIgnored[lIndex] = lInput.IsKeyDown(lKey) || lInput.WasPressedThisFrame(lKey);
+        }
+
+        m_bCapturing = true;
+        OPAAX_LOG(LogInputMapping, Trace, "Key capture: waiting for a key (Escape cancels)");
+    }
+
+    void InputMappingSubsystem::CancelKeyCapture()
+    {
+        if (m_bCapturing)
+        {
+            EndKeyCapture(EKeyCode::None);
+        }
+    }
+
+    void InputMappingSubsystem::UpdateKeyCapture()
+    {
+        const InputManager& lInput = GetContext().Input;
+
+        const auto bUp = [&lInput](const EKeyCode InKey)
+        {
+            return !lInput.IsKeyDown(InKey) && !lInput.WasPressedThisFrame(InKey);
+        };
+
+        if (m_CapturedHeld != EKeyCode::None && bUp(m_CapturedHeld))
+        {
+            m_CapturedHeld = EKeyCode::None;
+        }
+
+        if (!m_bCapturing)
+        {
+            return;
+        }
+
+        for (Uint16 lIndex = 0; lIndex < InputManager::KEY_STATE_COUNT; ++lIndex)
+        {
+            if (m_CaptureIgnored[lIndex] && bUp(static_cast<EKeyCode>(lIndex)))
+            {
+                m_CaptureIgnored[lIndex] = false;
+            }
+        }
+
+        const auto bNewPress = [this, &lInput](const EKeyCode InKey)
+        {
+            return lInput.WasPressedThisFrame(InKey) && !m_CaptureIgnored[static_cast<Uint16>(InKey)];
+        };
+
+        // The Escape that cancels is held as a key taken: it does not close the menu too.
+        if (bNewPress(EKeyCode::Escape))
+        {
+            m_CapturedHeld = EKeyCode::Escape;
+            EndKeyCapture(EKeyCode::None);
+            return;
+        }
+
+        // Several in one frame: the lowest code, so a run gives the same key every time.
+        for (Uint16 lIndex = 0; lIndex < InputManager::KEY_STATE_COUNT; ++lIndex)
+        {
+            const EKeyCode lKey = static_cast<EKeyCode>(lIndex);
+            if (IsKeyCodeBindable(lKey) && lKey != EKeyCode::Mouse_WheelAxis && bNewPress(lKey))
+            {
+                m_CapturedHeld = lKey;
+                EndKeyCapture(lKey);
+                return;
+            }
+        }
+    }
+
+    void InputMappingSubsystem::EndKeyCapture(const EKeyCode InKey)
+    {
+        m_bCapturing     = false;
+        m_CaptureIgnored = InputKeyMask{};
+
+        OPAAX_LOG(LogInputMapping, Info, "Key capture: {}", InKey == EKeyCode::None ? "cancelled" : ToString(InKey));
+
+        // Last: a listener may rebind, or start another capture.
+        m_OnKeyCaptured.Broadcast(InKey);
     }
 
     // =========================================================================

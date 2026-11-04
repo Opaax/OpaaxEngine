@@ -164,9 +164,13 @@ namespace Opaax
             }
         }
 
-        // Route the input to the canvas and report what the UI used, before input mapping runs.
+        // Route the input to the canvas and report what the UI used, before input mapping runs. While a
+        // key capture holds the input (a controls menu's "press a key"), the UI gets none of it: the
+        // click that gives a key presses no button.
+        const bool bHeld = m_Mapping != nullptr && m_Mapping->IsHoldingInput();
+
         InputKeyMask lConsumed{};
-        UIInputRouter::Route(GetContext().Input, m_Canvas, m_InputMode, lConsumed);
+        UIInputRouter::Route(GetContext().Input, m_Canvas, bHeld ? EUIInputMode::GameOnly : m_InputMode, lConsumed);
 
         if (m_Mapping != nullptr)
         {

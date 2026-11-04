@@ -23,6 +23,9 @@ namespace Opaax
     /** The player's keys changed: a rebind, a reset, the settings read again. A controls menu redraws. */
     DECLARE_MULTICAST_DELEGATE(FOnInputKeysChanged)
 
+    /** Passed the key a capture took (BeginKeyCapture); EKeyCode::None when it was cancelled. */
+    DECLARE_MULTICAST_DELEGATE_OneParam(FOnKeyCaptured, EKeyCode)
+
     // =============================================================================
     // InputMappingSubsystem — turns raw keys (InputManager) into named actions.
     //   Game-instance subsystem, so mapping contexts survive level changes.
@@ -118,6 +121,30 @@ namespace Opaax
 
         /** Fires after the player's keys changed. */
         FOnInputKeysChanged& OnKeysChanged() noexcept { return m_OnKeysChanged; }
+
+        // =========================================================================
+        // Waiting for a key
+        // =========================================================================
+    public:
+        /**
+         * Waits for the next key or mouse button the player presses: a controls menu's "press a key".
+         * A key held when it starts counts once released and pressed again, so the click or the Enter
+         * that started it is not taken. Escape cancels. While it waits no key drives an action and the
+         * UI gets no input; the key it takes, or the Escape that cancels, drives nothing until released.
+         * OnKeyCaptured tells the key. A capture under way starts over.
+         */
+        void BeginKeyCapture();
+
+        /** Ends a capture under way: OnKeyCaptured with EKeyCode::None. */
+        void CancelKeyCapture();
+
+        bool IsCapturingKey() const noexcept { return m_bCapturing; }
+
+        /** True while a capture waits, or the key it took is still held: the UI routes nothing (UISubsystem). */
+        bool IsHoldingInput() const noexcept { return m_bCapturing || m_CapturedHeld != EKeyCode::None; }
+
+        /** Fires when a capture ends; an owner removes itself in its Shutdown (RemoveAll(this)), as with Bind. */
+        FOnKeyCaptured& OnKeyCaptured() noexcept { return m_OnKeyCaptured; }
 
         // =========================================================================
         // Binding
@@ -253,6 +280,12 @@ namespace Opaax
         /** A section of the settings changed: the keys are read again when it is theirs and they did not write it. */
         void HandleSettingsSectionChanged(OpaaxStringView InSection);
 
+        /** Takes this frame's key for a capture, or Escape's cancel, and lets the key taken go once released. */
+        void UpdateKeyCapture();
+
+        /** Ends the capture with InKey (None: cancelled) and tells it. */
+        void EndKeyCapture(EKeyCode InKey);
+
         // =========================================================================
         // Members
         // =========================================================================
@@ -283,5 +316,12 @@ namespace Opaax
         /** The settings the keys are kept in (the game's), set at Startup; true while the keys write them. */
         IUserSettings* m_Settings     = nullptr;
         bool           m_bWritingKeys = false;
+
+        // A capture: whether it waits, the keys held when it began (taken once released), the key it
+        // took while that is still held.
+        bool           m_bCapturing     = false;
+        InputKeyMask   m_CaptureIgnored{};
+        EKeyCode       m_CapturedHeld   = EKeyCode::None;
+        FOnKeyCaptured m_OnKeyCaptured;
     };
 }
