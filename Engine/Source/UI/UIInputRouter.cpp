@@ -75,6 +75,19 @@ namespace Opaax::UIInputRouter
             }
         }
 
+        // The wheel to the widget under the pointer; what a widget scrolled, the game does not get.
+        const Vector2F lScroll = InInput.GetScrollDelta();
+        if (lScroll.x != 0.f || lScroll.y != 0.f)
+        {
+            const UIPointerEvent lEvent{ EUIPointerEventType::Scroll, lPoint, EUIPointerButton::None, lScroll };
+            if (InCanvas.RoutePointer(lEvent) == EUIReply::Handled)
+            {
+                Consume(OutConsumed, EKeyCode::Mouse_WheelUp);
+                Consume(OutConsumed, EKeyCode::Mouse_WheelDown);
+                Consume(OutConsumed, EKeyCode::Mouse_WheelAxis);
+            }
+        }
+
         // Keyboard to the focused widget (mouse was handled above).
         for (Uint16 lIndex = 1; lIndex < InputManager::KEY_STATE_COUNT; ++lIndex)
         {

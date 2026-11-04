@@ -102,6 +102,15 @@ namespace Opaax
         bool ArrangesChildren() const noexcept { return m_bArrangesChildren; }
 
         /**
+         * Whether my children show only inside my rect (a mask, a scroll box): drawn masked by me, and
+         * hit only there.
+         */
+        bool ClipsChildren() const noexcept { return m_bClipsChildren; }
+
+        /** The texture my children are masked with when I clip them; null clips them to my rect. */
+        virtual ITexture2D* GetClipTexture() const noexcept { return nullptr; }
+
+        /**
          * The first widget named InName (me or a descendant, depth-first), or null.
          * Gameplay uses it to find authored widgets after loading a .opaaxui.
          */
@@ -166,6 +175,9 @@ namespace Opaax
         virtual void ArrangeChildren(TDynArray<Bounds2D>& OutSlots) const { (void)OutSlots; }
 
         bool m_bArrangesChildren = false;
+
+        /** Set by a widget whose children show only inside its rect (ClipsChildren). */
+        bool m_bClipsChildren = false;
 
         // =============================================================================
         // Internal — the canvas's walk

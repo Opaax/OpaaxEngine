@@ -18,7 +18,8 @@ namespace Opaax
         /**
          * Routes this frame according to the mode:
          *  - GameOnly:  nothing routed or consumed.
-         *  - GameAndUI: pointer and keys routed; what a widget handled is marked in OutConsumed.
+         *  - GameAndUI: pointer, wheel and keys routed; what a widget handled is marked in OutConsumed
+         *               (a scroll it handled: every wheel code).
          *  - UIOnly:    routed, and every key is marked in OutConsumed.
          * @param OutConsumed Pass it to InputMappingSubsystem::ConsumeThisFrame
          */

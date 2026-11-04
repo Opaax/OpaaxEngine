@@ -238,12 +238,16 @@ namespace Opaax
             return nullptr;
         }
 
-        // Drawn last = on top, so the last child is checked first.
-        for (auto lIt = m_Children.rbegin(); lIt != m_Children.rend(); ++lIt)
+        // Drawn last = on top, so the last child is checked first. What I clip is not there outside my
+        // rect, for the pointer either.
+        if (!m_bClipsChildren || m_Bounds.Contains(InPoint))
         {
-            if (UIWidget* lHit = (*lIt)->HitTest(InPoint))
+            for (auto lIt = m_Children.rbegin(); lIt != m_Children.rend(); ++lIt)
             {
-                return lHit;
+                if (UIWidget* lHit = (*lIt)->HitTest(InPoint))
+                {
+                    return lHit;
+                }
             }
         }
 

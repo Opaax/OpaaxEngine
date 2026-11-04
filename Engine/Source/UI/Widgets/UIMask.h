@@ -15,7 +15,7 @@ namespace Opaax
     // UIMask — masks everything under it (like Unity's Mask). White shows, black hides
     //   (alpha *= mask.r * mask.a). The texture is stretched over this widget's rect.
     //   An empty texture path clips to the rect. Draws nothing itself unless bShowMaskGraphic,
-    //   and is not hit-testable.
+    //   and is not hit-testable; what it masks is hit only inside its rect.
     // =============================================================================
     class UIMask final : public UIWidget
     {
@@ -42,13 +42,19 @@ namespace Opaax
         // UIWidget
         // =============================================================================
     public:
-        UIMask() { bHitTestable = false; }
+        UIMask()
+        {
+            bHitTestable     = false;
+            m_bClipsChildren = true;
+        }
 
         /**
          * The resolved mask texture, or null for a rect clip. Resolved at rebuild (a texture still
          * uploading re-arms the widget).
          */
         ITexture2D* GetResolvedTexture() const noexcept { return m_Resolved; }
+
+        ITexture2D* GetClipTexture() const noexcept override { return m_Resolved; }
 
     protected:
         void Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads) override;
