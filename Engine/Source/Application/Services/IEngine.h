@@ -24,6 +24,7 @@ namespace Opaax
     struct FramebufferSpec;
     struct FramePacing;
     class FrameClock;
+    class FrameLimiter;
     struct CameraView;
 
     // =============================================================================
@@ -99,6 +100,12 @@ namespace Opaax
 
         /** The frame clock: the fixed step, the refresh it snaps to, the steps dropped. */
         virtual const FrameClock& GetFrameClock() const = 0;
+
+        /**
+         * The frame cap (Window.MaxFrameRate) as it holds the frames: while a game runs, not paced. The
+         * editor's own frames are not capped, only Play's.
+         */
+        virtual const FrameLimiter& GetFrameLimiter() const = 0;
 
         /**
          * Swaps the window backbuffer. Called once per frame, after rendering.

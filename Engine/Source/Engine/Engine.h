@@ -6,6 +6,7 @@
 #include "Core/Maths/MathsStatics.h"
 #include "Renderer/RendererManager.h"
 #include "Engine/FrameClock.h"
+#include "Engine/FrameLimiter.h"
 #include "Engine/FramePacer.h"
 #include "Core/Events/EventBus.h"
 #include "Engine/Registries/EngineRegistries.h"
@@ -107,6 +108,15 @@ namespace Opaax
          * vsync on; none with Time.bSnapToRefresh off. Logged when it changes.
          */
         void ApplyRefresh();
+
+        /**
+         * Holds this frame under Window.MaxFrameRate before its present: the swap interval when the cap
+         * divides the screen's rate, else a wait. Only while a game runs, not paced.
+         */
+        void LimitFrameRate();
+
+        /** The refresh vsync presents on, in seconds (the clock's measured one when known); 0 without vsync. */
+        double GetVSyncInterval() const;
         // End Time
         // =============================================================================
 
@@ -147,7 +157,8 @@ namespace Opaax
         //Time
         void               SetFramePacing(const FramePacing& InPacing) override;
         const FramePacing& GetFramePacing() const override { return m_Pacer.GetPacing(); }
-        const FrameClock&  GetFrameClock() const override { return m_Clock; }
+        const FrameClock&   GetFrameClock() const override { return m_Clock; }
+        const FrameLimiter& GetFrameLimiter() const override { return m_FrameLimiter; }
 
         //Tick
         void Update(double InDeltaTime) override;
@@ -206,6 +217,11 @@ namespace Opaax
         // A paced run's frames (SetFramePacing), and the time they add up to.
         FramePacer m_Pacer;
         double     m_PacedTime = 0.0;
+
+        // Window.MaxFrameRate (0: none), and how it holds the frames; whether its fallback was logged.
+        Uint32       m_MaxFrameRate = 0;
+        FrameLimiter m_FrameLimiter;
+        bool         m_bLoggedUnheld = false;
 
         //Handle Subsystem lifetime
         EngineSubsystemMgr m_Subsystems;

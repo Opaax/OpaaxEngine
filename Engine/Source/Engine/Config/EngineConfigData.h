@@ -29,25 +29,46 @@ namespace Opaax
 
     struct WindowSettings
     {
+        /** The most MaxFrameRate can be set to; 0 is no cap. */
+        static constexpr Uint32 MAX_FRAME_RATE = 1000;
+
         OpaaxString Title  = OpaaxString("Opaax Engine");
         Uint32      Width  = 1280;
         Uint32      Height = 720;
 
+        /** Windowed at Width x Height, borderless over the screen, or fullscreen at the screen's mode closest to it. */
         EWindowMode Mode = EWindowMode::Windowed;
 
         /** Waits for the screen's refresh before showing a frame: no tearing, one frame a refresh. */
         bool bVSync = true;
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(WindowSettings, Title, Width, Height, Mode, bVSync)
+        /** The most frames a second; 0 for no cap. */
+        Uint32 MaxFrameRate = 0;
 
-        // The window is made with the others at startup; vsync applies at once.
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(WindowSettings, Title, Width, Height, Mode, bVSync, MaxFrameRate)
+
+        // The title is set when the window is made. A game's window follows the mode and size at once;
+        // the editor's keeps its own (the size the person gave it).
         OPAAX_PROPERTIES(WindowSettings,
                          OPAAX_PROP(Title).SetFlags(EPropertyFlags::NeedRestart),
-                         OPAAX_PROP(Width).SetRange(320.f, 7680.f).SetFlags(EPropertyFlags::NeedRestart),
-                         OPAAX_PROP(Height).SetRange(240.f, 4320.f).SetFlags(EPropertyFlags::NeedRestart),
-                         OPAAX_PROP(Mode).SetFlags(EPropertyFlags::NeedRestart),
+                         OPAAX_PROP(Width).SetRange(320.f, 7680.f)
+                             .SetTooltip("The window's width when windowed; in fullscreen, the screen's mode\n"
+                                         "closest to Width x Height. A game's window follows it at once,\n"
+                                         "the editor's keeps its own size."),
+                         OPAAX_PROP(Height).SetRange(240.f, 4320.f)
+                             .SetTooltip("The window's height when windowed; in fullscreen, the screen's mode\n"
+                                         "closest to Width x Height. A game's window follows it at once,\n"
+                                         "the editor's keeps its own size."),
+                         OPAAX_PROP(Mode)
+                             .SetTooltip("Windowed, Borderless (over the whole screen, at its own resolution)\n"
+                                         "or Fullscreen (at the screen's mode closest to Width x Height).\n"
+                                         "A game's window follows it at once, the editor's keeps its own."),
                          OPAAX_PROP(bVSync).SetTooltip("Wait for the screen's refresh: no tearing.\n"
-                                                       "Off in a run paced by --frame-pacing."))
+                                                       "Off in a run paced by --frame-pacing."),
+                         OPAAX_PROP(MaxFrameRate).SetRange(0.f, static_cast<float>(MAX_FRAME_RATE))
+                             .SetTooltip("The most frames a second; 0 for no cap.\n"
+                                         "With vsync, a cap that divides the refresh rate (120 on 240 Hz)\n"
+                                         "shows each frame for whole refreshes. Off in a run paced by --frame-pacing."))
     };
 
     struct TimeSettings

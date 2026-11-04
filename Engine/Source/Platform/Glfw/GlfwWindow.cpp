@@ -49,7 +49,9 @@ namespace Opaax
 		m_Data.Title  		= Props.Title;
 		m_Data.Width  		= Props.Width;
 		m_Data.Height 		= Props.Height;
-		m_Data.Mode	= Props.Mode;
+
+		// Made windowed, where the OS puts it: SetWindowMode keeps that place for when it comes back.
+		m_Data.Mode			= EWindowMode::Windowed;
 
 		if (!s_GLFWInitialized)
 		{
@@ -73,11 +75,18 @@ namespace Opaax
 			m_Data.Title.CStr(),
 			nullptr, nullptr
 		);
-		
-		SetWindowMode(m_Data.Mode);
 
 		// A null window is unrecoverable: crash.
 		OPAAX_CORE_ASSERT(m_Window)
+
+		SetWindowMode(Props.Mode, Props.Width, Props.Height);
+
+		// Borderless and fullscreen take the screen's size; the resize callback is not there yet to say so.
+		int lWidth  = 0;
+		int lHeight = 0;
+		glfwGetWindowSize(m_Window, &lWidth, &lHeight);
+		m_Data.Width  = static_cast<Uint32>(lWidth);
+		m_Data.Height = static_cast<Uint32>(lHeight);
 
 		// The graphics context does make-current, glad loading and vsync.
 		m_Context = IGraphicsContext::Create(lBackend, m_Window);
@@ -297,142 +306,147 @@ namespace Opaax
 		m_Window = nullptr;        // cannot be destroyed twice
 	}
 
-	void GlfwWindow::SetWindowMode(EWindowMode mode)
+	void GlfwWindow::SetWindowMode(const EWindowMode InMode, const Uint32 InWidth, const Uint32 InHeight)
 	{
-		SaveWindowedState();
-		
-		switch(mode)
+		if (m_Window == nullptr)
+		{
+			return;
+		}
+
+		// Leaving a window: where it was, to come back to.
+		if (m_Data.Mode == EWindowMode::Windowed && glfwGetWindowMonitor(m_Window) == nullptr)
+		{
+			int lPosX = 0;
+			int lPosY = 0;
+			glfwGetWindowPos(m_Window, &lPosX, &lPosY);
+			m_Data.PosX = lPosX;
+			m_Data.PosY = lPosY;
+		}
+
+		// Found first: fullscreen, the window is on its screen; once it left, the centre decides.
+		GLFWmonitor* const lScreen = FindScreen();
+
+		// Out of fullscreen first, so the screen is back at its own mode before it is read.
+		if (InMode != EWindowMode::Fullscreen && glfwGetWindowMonitor(m_Window) != nullptr)
+		{
+			glfwSetWindowMonitor(m_Window, nullptr, m_Data.PosX, m_Data.PosY, static_cast<int>(InWidth),
+			                     static_cast<int>(InHeight), GLFW_DONT_CARE);
+		}
+
+		switch (InMode)
 		{
 		case EWindowMode::Windowed:
-			SetWindowed();
+		{
+			// The host's flag, not GLFW_TRUE: a window with a custom title bar is windowed and undecorated.
+			glfwSetWindowAttrib(m_Window, GLFW_DECORATED, m_Data.bDecorated ? GLFW_TRUE : GLFW_FALSE);
+			glfwSetWindowMonitor(m_Window, nullptr, m_Data.PosX, m_Data.PosY, static_cast<int>(InWidth),
+			                     static_cast<int>(InHeight), GLFW_DONT_CARE);
 			break;
+		}
 
 		case EWindowMode::Borderless:
-			SetBorderless();
+		{
+			// A window over the whole screen, not the screen's own: no mode change, and switching to
+			// another program leaves it where it is.
+			const GLFWvidmode* const lDesktop = (lScreen != nullptr) ? glfwGetVideoMode(lScreen) : nullptr;
+			if (lDesktop == nullptr)
+			{
+				return;
+			}
+
+			int lScreenX = 0;
+			int lScreenY = 0;
+			glfwGetMonitorPos(lScreen, &lScreenX, &lScreenY);
+
+			glfwSetWindowAttrib(m_Window, GLFW_DECORATED, GLFW_FALSE);
+			glfwSetWindowMonitor(m_Window, nullptr, lScreenX, lScreenY, lDesktop->width, lDesktop->height,
+			                     GLFW_DONT_CARE);
 			break;
+		}
 
 		case EWindowMode::Fullscreen:
-			SetFullscreen();
+		{
+			if (lScreen == nullptr)
+			{
+				return;
+			}
+
+			const DisplayMode lMode = ChooseDisplayMode(ModesOf(lScreen), InWidth, InHeight);
+			glfwSetWindowMonitor(m_Window, lScreen, 0, 0, static_cast<int>(lMode.Width), static_cast<int>(lMode.Height),
+			                     lMode.RefreshRate > 0 ? static_cast<int>(lMode.RefreshRate) : GLFW_DONT_CARE);
+
+			OPAAX_LOG(LogGlfwWindow, Info, "Fullscreen at {}x{}, {} Hz ({}x{} asked)", lMode.Width, lMode.Height,
+			          lMode.RefreshRate, InWidth, InHeight);
 			break;
 		}
-	}
-
-	void GlfwWindow::SetWindowed()
-	{
-		// Use the host's flag, not GLFW_TRUE: a window with a custom title bar is windowed and undecorated.
-		glfwSetWindowAttrib(
-		m_Window,
-		GLFW_DECORATED,
-		m_Data.bDecorated ? GLFW_TRUE : GLFW_FALSE);
-
-		glfwSetWindowMonitor(
-			m_Window,
-			nullptr,
-			m_Data.PosX,
-			m_Data.PosY,
-			m_Data.Width,
-			m_Data.Height,
-			m_Data.RefreshRate);
-		
-		m_Data.Mode = EWindowMode::Windowed;
-	}
-	void GlfwWindow::SetBorderless()
-	{
-		GLFWmonitor* lMonitor = glfwGetPrimaryMonitor();
-
-		if (!lMonitor)
-		{
-			return;
 		}
 
-		const GLFWvidmode* lVMode = glfwGetVideoMode(lMonitor);
-		
-		m_Data.PosX = m_Data.PosY = 0;
-		m_Data.Width = lVMode->width;
-		m_Data.Height = lVMode->height;
-		m_Data.RefreshRate = lVMode->refreshRate;
-
-		glfwSetWindowMonitor(
-			m_Window,
-			lMonitor,
-			m_Data.PosX,
-			m_Data.PosY,
-			m_Data.Width,
-			m_Data.Height,
-			m_Data.RefreshRate);
-
-		glfwSetWindowAttrib(
-			m_Window,
-			GLFW_DECORATED,
-			GLFW_FALSE);
-
-		glfwSetWindowPos(
-			m_Window,
-			m_Data.PosX,
-			m_Data.PosY);
-		
-		m_Data.Mode = EWindowMode::Borderless;
+		m_Data.Mode = InMode;
 	}
-	void GlfwWindow::SetFullscreen()
+
+	TDynArray<DisplayMode> GlfwWindow::GetDisplayModes() const
 	{
-		GLFWmonitor* lMonitor = glfwGetPrimaryMonitor();
-
-		if (!lMonitor)
-		{
-			return;
-		}
-
-		const GLFWvidmode* lVMode = glfwGetVideoMode(lMonitor);
-		
-		m_Data.PosX = m_Data.PosY = 0;
-		m_Data.Width = lVMode->width;
-		m_Data.Height = lVMode->height;
-		m_Data.RefreshRate = lVMode->refreshRate;
-
-		glfwSetWindowMonitor(
-			m_Window,
-			lMonitor,
-			m_Data.PosX,
-			m_Data.PosY,
-			m_Data.Width,
-			m_Data.Height,
-			m_Data.RefreshRate);
-		
-		m_Data.Mode = EWindowMode::Fullscreen;
+		return ModesOf(FindScreen());
 	}
 
 	Uint32 GlfwWindow::GetRefreshRate() const
 	{
-		// A windowed window has no monitor of its own: the primary one shows it.
-		GLFWmonitor* lMonitor = (m_Window != nullptr) ? glfwGetWindowMonitor(m_Window) : nullptr;
-		if (lMonitor == nullptr)
-		{
-			lMonitor = glfwGetPrimaryMonitor();
-		}
-
-		const GLFWvidmode* lMode = (lMonitor != nullptr) ? glfwGetVideoMode(lMonitor) : nullptr;
+		GLFWmonitor* const lScreen = FindScreen();
+		const GLFWvidmode* lMode   = (lScreen != nullptr) ? glfwGetVideoMode(lScreen) : nullptr;
 		return (lMode != nullptr && lMode->refreshRate > 0) ? static_cast<Uint32>(lMode->refreshRate) : 0u;
 	}
 
-	void GlfwWindow::SaveWindowedState()
+	GLFWmonitor* GlfwWindow::FindScreen() const
 	{
-		GLFWmonitor* monitor = glfwGetWindowMonitor(m_Window);
-
-		if (monitor != nullptr)
+		if (m_Window == nullptr)
 		{
-			return;
+			return glfwGetPrimaryMonitor();
 		}
 
-		int lPosX = 0;
-		int lPosY = 0;
+		if (GLFWmonitor* const lOwn = glfwGetWindowMonitor(m_Window))
+		{
+			return lOwn;
+		}
 
-		glfwGetWindowPos(
-			m_Window,
-			&lPosX,
-			&lPosY);
+		int                 lCount    = 0;
+		GLFWmonitor** const lMonitors = glfwGetMonitors(&lCount);
 
-		m_Data.PosX = lPosX;
-		m_Data.PosY = lPosY;
+		TDynArray<ScreenArea> lAreas;
+		for (int lIndex = 0; lIndex < lCount; ++lIndex)
+		{
+			int lX = 0;
+			int lY = 0;
+			glfwGetMonitorPos(lMonitors[lIndex], &lX, &lY);
+
+			const GLFWvidmode* const lMode = glfwGetVideoMode(lMonitors[lIndex]);
+			lAreas.push_back(ScreenArea{ lX, lY, lMode != nullptr ? static_cast<Uint32>(lMode->width) : 0u,
+			                             lMode != nullptr ? static_cast<Uint32>(lMode->height) : 0u });
+		}
+
+		int lPosX   = 0;
+		int lPosY   = 0;
+		int lWidth  = 0;
+		int lHeight = 0;
+		glfwGetWindowPos(m_Window, &lPosX, &lPosY);
+		glfwGetWindowSize(m_Window, &lWidth, &lHeight);
+
+		const Int32 lFound = FindScreenAt(lAreas, lPosX + lWidth / 2, lPosY + lHeight / 2);
+		return lFound >= 0 ? lMonitors[lFound] : glfwGetPrimaryMonitor();
+	}
+
+	TDynArray<DisplayMode> GlfwWindow::ModesOf(GLFWmonitor* const InScreen)
+	{
+		TDynArray<DisplayMode> lModes;
+
+		int                      lCount = 0;
+		const GLFWvidmode* const lRaw   = (InScreen != nullptr) ? glfwGetVideoModes(InScreen, &lCount) : nullptr;
+		for (int lIndex = 0; lRaw != nullptr && lIndex < lCount; ++lIndex)
+		{
+			lModes.push_back(DisplayMode{ static_cast<Uint32>(lRaw[lIndex].width), static_cast<Uint32>(lRaw[lIndex].height),
+			                              lRaw[lIndex].refreshRate > 0 ? static_cast<Uint32>(lRaw[lIndex].refreshRate) : 0u });
+		}
+
+		return SortDisplayModes(Move(lModes));
 	}
 
 	// =============================================================================
@@ -443,7 +457,8 @@ namespace Opaax
 	{
 		m_Data.bDecorated = bInDecorated;
 
-		if (m_Window == nullptr) { return; }
+		// Borderless and fullscreen have none: the preference waits for the next windowed mode.
+		if (m_Window == nullptr || m_Data.Mode != EWindowMode::Windowed) { return; }
 
 		glfwSetWindowAttrib(m_Window, GLFW_DECORATED, bInDecorated ? GLFW_TRUE : GLFW_FALSE);
 

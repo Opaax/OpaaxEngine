@@ -13,7 +13,8 @@ lSettings.SetMasterVolume(0.5f);                        // heard at once
 lSettings.SetBusVolume(OPAAX_ID("Music"), 0.25f);
 lSettings.SetVSync(false);
 lSettings.SetWindowMode(Opaax::EWindowMode::Fullscreen);
-lSettings.SetResolution(1920, 1080);
+lSettings.SetResolution(1920, 1080);                    // the window follows at once
+lSettings.SetMaxFrameRate(120);                         // 0 for no cap
 lSettings.SetConfigValues("Bhop", R"({"MouseSensitivity": 1.5})");    // a game's own config
 
 lSettings.Save();                                       // kept for the next launch
@@ -40,7 +41,33 @@ What the engine reads, the project's values with the player's over them, is in t
 - The Config panel and `config.set` change the project's values; a player's value still wins over them
   (`config.get` answers both).
 
-The volumes and vsync change at once. The window's size and mode are read when it opens.
+Everything changes at once, except the window's title (read when it opens).
+
+## The window and the frame rate
+
+| Setting | What it does |
+|---|---|
+| `Window.Mode` `Windowed` | A window of `Width` x `Height`, back where it was before it left. |
+| `Window.Mode` `Borderless` | A window without borders over the whole screen it is on, at the screen's own resolution: no mode change, and switching to another program leaves it where it is. |
+| `Window.Mode` `Fullscreen` | The screen itself, at its mode closest to `Width` x `Height`, at that mode's highest refresh rate. |
+| `Window.Width`, `Height` | The window's size; in fullscreen, the resolution asked. |
+| `Window.bVSync` | Waits for the screen's refresh: no tearing. |
+| `Window.MaxFrameRate` | The most frames a second; 0 for no cap. |
+
+- **A game's window follows** the mode and size the moment they change, on the screen holding its
+  centre. The editor's window never does: it keeps the size the person gave it (`window.info` answers
+  `follows`).
+- **The resolutions to offer**: `GetDisplayModes()` lists the fullscreen modes of the window's screen,
+  smallest first, each with its refresh rate. A size the screen does not have gets the nearest it has.
+- **The frame cap holds while a game runs**: in the editor, during Play only, and never in a paced run
+  (`--frame-pacing`). With vsync, a cap that divides the screen's rate (120 or 80 on 240 Hz, 30 on
+  60 Hz) shows each frame for the same whole refreshes, by the swap interval: no wait, no uneven
+  frames. Any other cap (100 on 240 Hz) waits for a steady beat, and vsync shows each frame for 2 or 3
+  refreshes around it; so does every cap when vsync is off. A late frame is shown at once, and the next
+  counts from it: no burst of short frames to catch up.
+- A driver may show frames at every refresh whatever the swap interval, and a variable-refresh screen
+  (G-Sync, FreeSync) shows them at once: the cap sees its frames come early and waits for them
+  instead, with an Info line in the log.
 
 ## The file
 
@@ -79,8 +106,12 @@ save, holding only what the player changed, shaped like each config's file:
 - A feature test sets them with `settings.set`, `settings.save`, `settings.load` and `settings.reset`,
   and reads them with `settings.get` and `config.get` ([Automation.md](Automation.md)).
   `TestWorld/Tests/Settings.json` sets the volume from gameplay, as a menu does, and checks the mixer
-  plays at it. The feature tests share one player's folder: a test that saves settings deletes them at
-  its end (`save.clear` with `slot: Settings`).
+  plays at it. `TestWorld/Tests/Window.json` resizes the window, makes it borderless and back, and caps
+  the frames at 30 (`window.info` answers the window, its screen's modes and the cap). The feature
+  tests share one player's folder: a test that saves settings deletes them at its end (`save.clear`
+  with `slot: Settings`).
+- `Engine/Tests/Engine/FrameLimiterTests.cpp` plays the cap on simulated screens (240 Hz rows),
+  one that ignores the swap interval included; `IWindowManagerTests.cpp` the display modes chosen.
 
 ## How it is built
 
@@ -91,5 +122,11 @@ settings put their values over each config, those registered later included
 (`IConfigSystem::OnConfigAdded`). [Architecture.md](Architecture.md#the-players-settings-over-the-projects-configs)
 says why.
 
-Not there yet: changing the window's mode and size while a game runs, a frame-rate cap, and the
-player's keys.
+The window follows the engine config through `WindowManager::FollowEngineConfig`, called by a game
+app only, and moves only when the mode or the size changed: a window the player dragged to another
+size is not snapped back by a volume change. The frame cap is `FrameLimiter` (`Engine/FrameLimiter.h`),
+pure: told the time, it says how long to wait before the present, and which swap interval holds the
+frames; the engine waits with `IPlatform::SleepPrecise` (a high-resolution timer on Windows, the last
+millisecond spun), inside the profiler's `FrameCap` scope.
+
+Not there yet: the player's keys.

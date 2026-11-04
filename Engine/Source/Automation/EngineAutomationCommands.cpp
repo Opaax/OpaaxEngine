@@ -16,6 +16,7 @@
 #include "Engine/Config/Config.h"
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/FrameClock.h"
+#include "Engine/FrameLimiter.h"
 #include "Engine/FramePacer.h"
 #include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
@@ -887,6 +888,49 @@ namespace Opaax::EngineAutomation
         }
 
         // =========================================================================
+        // Window: its mode and size, the screen's modes, the frame cap
+        // =========================================================================
+        void RegisterWindow(AutomationRunner& InRunner, IEngine& InEngine)
+        {
+            InRunner.Register("window.info",
+                "The main window: {mode, width, height, refreshRate (its screen's), decorated, follows (whether it "
+                "follows Window.Mode, Width and Height at once: a game's does, the editor's not), modes (its screen's "
+                "fullscreen modes, smallest first: {width, height, refreshRate}), frameCap {maxFrameRate (0 when "
+                "none holds: no cap, no game running, paced), heldRefreshes (each frame's, by the swap interval; 0 "
+                "on the beat), unheld (the screen ignored the swap interval)}}.",
+                [&InEngine](const nlohmann::json&)
+                {
+                    const IWindowManager& lWindows = OpaaxApplication::GetAppService<IWindowManager>();
+                    const Window*         lWindow  = lWindows.GetMainWindow();
+                    if (lWindow == nullptr)
+                    {
+                        return AutomationResult::Fail("this app has no main window");
+                    }
+
+                    nlohmann::json lModes = nlohmann::json::array();
+                    for (const DisplayMode& lMode : lWindow->GetDisplayModes())
+                    {
+                        lModes.push_back(nlohmann::json{
+                            { "width", lMode.Width }, { "height", lMode.Height }, { "refreshRate", lMode.RefreshRate } });
+                    }
+
+                    const FrameLimiter& lCap = InEngine.GetFrameLimiter();
+                    return AutomationResult::Ok(nlohmann::json{
+                        { "mode",        ToString(lWindow->GetWindowMode()) },
+                        { "width",       lWindow->GetWidth() },
+                        { "height",      lWindow->GetHeight() },
+                        { "refreshRate", lWindow->GetRefreshRate() },
+                        { "decorated",   lWindow->IsDecorated() },
+                        { "follows",     lWindows.IsFollowingEngineConfig() },
+                        { "modes",       Move(lModes) },
+                        { "frameCap",    nlohmann::json{
+                            { "maxFrameRate",  lCap.GetMaxFrameRate() },
+                            { "heldRefreshes", lCap.GetHeldRefreshes() },
+                            { "unheld",        lCap.IsRefreshUnheld() } } } });
+                });
+        }
+
+        // =========================================================================
         // Camera: traces of what it framed, measured
         // =========================================================================
         void RegisterCamera(AutomationRunner& InRunner, IEngine& InEngine)
@@ -1442,6 +1486,7 @@ namespace Opaax::EngineAutomation
         RegisterWorld(InRunner, InEngine);
         RegisterLevels(InRunner, InEngine);
         RegisterTime(InRunner, InEngine);
+        RegisterWindow(InRunner, InEngine);
         RegisterConfig(InRunner);
         RegisterCamera(InRunner, InEngine);
         RegisterExpectations(InRunner, InEngine);

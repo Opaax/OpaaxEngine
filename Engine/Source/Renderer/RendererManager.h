@@ -91,7 +91,10 @@ namespace Opaax
         /** Engine.config changed: applies Render.bInterpolation and Window.bVSync. Backend needs a restart. */
         void HandleEngineConfigChanged();
 
-        /** Sets the surface's vsync: Window.bVSync, off while the frames are paced. Logged when it changes. */
+        /**
+         * Sets the surface's swap interval: Window.bVSync, each frame for the refreshes a frame cap holds
+         * it (SetHeldRefreshes), off while the frames are paced. Logged when it changes.
+         */
         void ApplyVSync();
 
         /**
@@ -233,6 +236,12 @@ namespace Opaax
          * for the screen, so it goes as fast as it can.
          */
         void SetFramesPaced(bool bInPaced);
+
+        /**
+         * With vsync, each frame is shown for InRefreshes refreshes: a frame cap that divides the
+         * screen's rate (FrameLimiter). 0 or 1 for every refresh.
+         */
+        void SetHeldRefreshes(Uint32 InRefreshes);
 
         /**
          * The frame drawn so far into the backbuffer (call before Present).
@@ -413,10 +422,13 @@ namespace Opaax
         /** The window's surface, for its vsync. Not owned. */
         IGraphicsContext* m_Surface = nullptr;
 
-        /** Paced frames present without vsync; the vsync last set (logged when it changes). */
-        bool m_bFramesPaced = false;
-        bool m_bVSync       = true;
-        bool m_bVSyncSet    = false;
+        /** Paced frames present without vsync; the refreshes a frame cap holds each frame for. */
+        bool   m_bFramesPaced  = false;
+        Uint32 m_HeldRefreshes = 1;
+
+        /** The swap interval last set (logged when it changes). */
+        Uint32 m_SwapInterval     = 1;
+        bool   m_bSwapIntervalSet = false;
 
         /** Blends done last frame, and whether the first one was logged. */
         Uint64 m_BlendedThisFrame  = 0;

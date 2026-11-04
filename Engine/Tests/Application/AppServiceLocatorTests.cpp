@@ -6,6 +6,7 @@
 #include "Application/Services/IAppService.h"
 #include "Platform/IPlatform.h"
 #include "Core/OpaaxTypes.h"
+#include "Core/Time/Clock.h"
 #include "Platform/NativePlatform.h"
 
 using namespace Opaax;
@@ -160,4 +161,27 @@ TEST_CASE("NativePlatform: reports real OS values through the locator")
 #ifdef OPAAX_PLATFORM_WINDOWS
     CHECK(lExe.Contains(".exe"));
 #endif
+}
+
+TEST_CASE("NativePlatform: SleepPrecise never wakes early, and not long after")
+{
+    NativePlatform lPlatform;
+
+    // What a frame cap waits: under a millisecond (spun) to a 30 Hz frame. A busy machine may wake
+    // the thread late, so the upper bound is loose; early is never allowed.
+    for (const double lSeconds : { 0.0, 0.0004, 0.002, 0.0083, 0.033 })
+    {
+        CAPTURE(lSeconds);
+        const double lStart = Clock::NowSeconds();
+        lPlatform.SleepPrecise(lSeconds);
+        const double lSlept = Clock::NowSeconds() - lStart;
+
+        CHECK(lSlept >= lSeconds);
+        CHECK(lSlept < lSeconds + 0.050);
+    }
+
+    // The null platform's time stands still: it returns at once.
+    const double lStart = Clock::NowSeconds();
+    IPlatform::Null().SleepPrecise(1.0);
+    CHECK(Clock::NowSeconds() - lStart < 0.5);
 }

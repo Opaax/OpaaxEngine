@@ -3,6 +3,7 @@
 #include "Audio/AudioManager.h"
 
 #include "Engine/FrameClock.h"
+#include "Engine/FrameLimiter.h"
 #include "Engine/FramePacer.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
 #include "Engine/Subsystems/EngineEventBus.h"
@@ -51,6 +52,12 @@ namespace Opaax
             {
                 static const FrameClock s_Clock(1.0 / 60.0);
                 return s_Clock;
+            }
+
+            const FrameLimiter& GetFrameLimiter() const override
+            {
+                static const FrameLimiter s_NoCap;
+                return s_NoCap;
             }
 
             void PresentBackbuffer()      override {}

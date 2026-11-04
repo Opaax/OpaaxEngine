@@ -8,6 +8,7 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/String/OpaaxStringView.hpp"
+#include "Platform/Window/DisplayMode.h"
 #include "Save/SaveResult.h"
 
 namespace Opaax
@@ -15,6 +16,7 @@ namespace Opaax
     class Config;
     class IConfigSystem;
     class ISaveStorage;
+    class IWindowManager;
     enum class EWindowMode;
 
     inline constexpr LogCategory LogUserSettings{"UserSettings"};
@@ -137,14 +139,23 @@ namespace Opaax
         // The engine's settings — what the engine reads is in the engine config (GameInstanceContext::Config)
         // =============================================================================
     public:
-        /** Windowed, borderless or fullscreen. */
+        /** Windowed, borderless (over the whole screen) or fullscreen (at the resolution). */
         bool SetWindowMode(EWindowMode InMode);
 
-        /** The window's size, in pixels. False for a size of zero. */
+        /**
+         * The window's size when windowed, the screen's mode closest to it in fullscreen (GetDisplayModes
+         * lists them). False for a size of zero.
+         */
         bool SetResolution(Uint32 InWidth, Uint32 InHeight);
 
         /** Waits for the screen's refresh before showing a frame. */
         bool SetVSync(bool bInVSync);
+
+        /** The most frames a second; 0 for no cap. */
+        bool SetMaxFrameRate(Uint32 InFramesPerSecond);
+
+        /** The resolutions and refresh rates the window's screen offers in fullscreen, smallest first. */
+        virtual TDynArray<DisplayMode> GetDisplayModes() const = 0;
 
         /** The volume over every sound, 0 to 1. */
         bool SetMasterVolume(float InVolume);
@@ -167,8 +178,11 @@ namespace Opaax
         // CTORS - DTORS
         // =============================================================================
     public:
-        /** Settings in InStorage's Settings slot, over InConfigs' configs; both outlive it. Nothing read yet. */
-        UserSettings(ISaveStorage& InStorage, IConfigSystem& InConfigs);
+        /**
+         * Settings in InStorage's Settings slot, over InConfigs' configs, the display modes from InWindows;
+         * all three outlive it. Nothing read yet.
+         */
+        UserSettings(ISaveStorage& InStorage, IConfigSystem& InConfigs, const IWindowManager& InWindows);
         ~UserSettings() override;
 
         UserSettings(const UserSettings&)            = delete;
@@ -204,6 +218,8 @@ namespace Opaax
 
         nlohmann::json GetSection(OpaaxStringView InName) const override;
         bool           SetSection(OpaaxStringView InName, const nlohmann::json& InValues) override;
+
+        TDynArray<DisplayMode> GetDisplayModes() const override;
         //~End IUserSettings interface
 
         // =============================================================================
@@ -235,8 +251,9 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        ISaveStorage*  m_Storage = nullptr;
-        IConfigSystem* m_Configs = nullptr;   // null once unbound
+        ISaveStorage*         m_Storage = nullptr;
+        IConfigSystem*        m_Configs = nullptr;   // null once unbound
+        const IWindowManager* m_Windows = nullptr;
 
         nlohmann::json m_Properties = nlohmann::json::object();   // the file's properties
         nlohmann::json m_Saved      = nlohmann::json::object();   // as last loaded or saved

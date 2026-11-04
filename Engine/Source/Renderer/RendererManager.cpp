@@ -1251,6 +1251,18 @@ namespace Opaax
         ApplyVSync();
     }
 
+    void RendererManager::SetHeldRefreshes(const Uint32 InRefreshes)
+    {
+        const Uint32 lRefreshes = InRefreshes > 0 ? InRefreshes : 1;
+        if (lRefreshes == m_HeldRefreshes)
+        {
+            return;
+        }
+
+        m_HeldRefreshes = lRefreshes;
+        ApplyVSync();
+    }
+
     void RendererManager::ApplyVSync()
     {
         if (m_Surface == nullptr)
@@ -1258,17 +1270,25 @@ namespace Opaax
             return;
         }
 
-        const bool lVSync = !m_bFramesPaced && (m_EngineConfig == nullptr || m_EngineConfig->GetData().Window.bVSync);
-        if (m_bVSyncSet && lVSync == m_bVSync)
+        const bool   lVSync    = !m_bFramesPaced && (m_EngineConfig == nullptr || m_EngineConfig->GetData().Window.bVSync);
+        const Uint32 lInterval = lVSync ? m_HeldRefreshes : 0;
+        if (m_bSwapIntervalSet && lInterval == m_SwapInterval)
         {
             return;
         }
 
-        m_Surface->SetVSync(lVSync);
-        m_bVSync    = lVSync;
-        m_bVSyncSet = true;
+        m_Surface->SetSwapInterval(lInterval);
+        m_SwapInterval     = lInterval;
+        m_bSwapIntervalSet = true;
 
-        OPAAX_LOG(LogRendererManager, Info, "VSync {}{}", lVSync ? "on" : "off",
-                  m_bFramesPaced ? " (paced frames)" : "");
+        if (lInterval > 1)
+        {
+            OPAAX_LOG(LogRendererManager, Info, "VSync on, each frame for {} refreshes (the frame cap)", lInterval);
+        }
+        else
+        {
+            OPAAX_LOG(LogRendererManager, Info, "VSync {}{}", lVSync ? "on" : "off",
+                      m_bFramesPaced ? " (paced frames)" : "");
+        }
     }
 }

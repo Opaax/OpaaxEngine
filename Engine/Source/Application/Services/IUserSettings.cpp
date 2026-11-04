@@ -2,6 +2,7 @@
 
 #include "Application/Services/IConfigSystem.h"
 #include "Application/Services/ISaveStorage.h"
+#include "Application/Services/IWindowManager.h"
 #include "Audio/AudioBusSettings.h"
 #include "Core/Maths/Maths.h"
 #include "Core/Reflection/OpaaxEnumJson.h"
@@ -45,6 +46,8 @@ namespace Opaax
 
             nlohmann::json GetSection(OpaaxStringView) const override { return nullptr; }
             bool           SetSection(OpaaxStringView, const nlohmann::json&) override { return false; }
+
+            TDynArray<DisplayMode> GetDisplayModes() const override { return {}; }
         };
 
         /** The engine config's name, "Engine": a config is named after its file. */
@@ -112,6 +115,13 @@ namespace Opaax
         return SetEngineValues(*this, lValues);
     }
 
+    bool IUserSettings::SetMaxFrameRate(const Uint32 InFramesPerSecond)
+    {
+        nlohmann::json lValues;
+        lValues["Window"]["MaxFrameRate"] = InFramesPerSecond;
+        return SetEngineValues(*this, lValues);
+    }
+
     bool IUserSettings::SetMasterVolume(const float InVolume)
     {
         nlohmann::json lValues;
@@ -135,9 +145,10 @@ namespace Opaax
     // =========================================================================
     // UserSettings — CTORS - DTORS
     // =========================================================================
-    UserSettings::UserSettings(ISaveStorage& InStorage, IConfigSystem& InConfigs)
+    UserSettings::UserSettings(ISaveStorage& InStorage, IConfigSystem& InConfigs, const IWindowManager& InWindows)
         : m_Storage(&InStorage)
         , m_Configs(&InConfigs)
+        , m_Windows(&InWindows)
     {
         m_Configs->OnConfigAdded().AddMember(this, &UserSettings::HandleConfigAdded);
     }
@@ -388,6 +399,11 @@ namespace Opaax
             m_Properties[lName.CStr()] = InValues;
         }
         return true;
+    }
+
+    TDynArray<DisplayMode> UserSettings::GetDisplayModes() const
+    {
+        return m_Windows->GetDisplayModes();
     }
 
     // =========================================================================

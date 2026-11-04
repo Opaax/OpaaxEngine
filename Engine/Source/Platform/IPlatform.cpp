@@ -1,6 +1,7 @@
 ﻿#include "IPlatform.h"
 
 #include "Core/String/OpaaxPathString.h"
+#include "Core/Time/Clock.h"
 #include "Platform/IFileSystem.h"
 
 namespace Opaax
@@ -13,6 +14,8 @@ namespace Opaax
             bool                IsNull()                const noexcept override { return true; }
             Uint32              GetLogicalCoreCount()   const override { return 1; }
             double              GetTimeSeconds()        const override { return 0.0; }
+            // A null platform's time stands still: nothing to wait for.
+            void                SleepPrecise(double)    const override {}
             OpaaxString         GetExecutablePath()     const override { return OpaaxString("Null Exec Path"); }
             OpaaxString         GetPlatformName()       const override { return OpaaxString("Null Platform"); }
             // A null platform does not touch the disk.
@@ -38,7 +41,22 @@ namespace Opaax
         return InHome.IsEmpty() ? OpaaxString() : PathString::Join(InHome, ".local/share");
     }
 
-    ServiceTypeID IPlatform::StaticTypeID() noexcept { 
+    void IPlatform::SleepPrecise(const double InSeconds) const
+    {
+        const double lEnd = Clock::NowSeconds() + InSeconds;
+
+        if (InSeconds > PRECISE_SLEEP_SPIN)
+        {
+            ThisThread::SleepForSeconds(InSeconds - PRECISE_SLEEP_SPIN);
+        }
+
+        while (Clock::NowSeconds() < lEnd)
+        {
+            ThisThread::YieldNow();
+        }
+    }
+
+    ServiceTypeID IPlatform::StaticTypeID() noexcept {
 		static const int s_Tag = 0; return reinterpret_cast<ServiceTypeID>(&s_Tag); 
 	}
 
