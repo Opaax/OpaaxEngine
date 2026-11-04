@@ -76,7 +76,8 @@ namespace Opaax
         ISaveStorage&       BootSaveStorage(const IPaths& Paths);
 
         /** The player's settings; read and put over the configs now when the app starts its game at once. */
-        IUserSettings&      BootUserSettings(ISaveStorage& SaveStorage, IConfigSystem& ConfigSystem);
+        IUserSettings&      BootUserSettings(ISaveStorage& SaveStorage, IConfigSystem& ConfigSystem,
+                                             const IWindowManager& WindowManager);
 
         /** Enables the Profiler: always in dev builds, from config in ship builds. */
         void                BootProfiler(IConfigSystem& ConfigSystem);
@@ -257,6 +258,9 @@ namespace Opaax
         bool bHasInitialized    = false;
         bool bIsRunning         = false;
         bool bHasShutdown       = false;
+
+        /** The app starts its game at once (a Play startup world): its window and settings are the game's. */
+        bool m_bStartsGame      = false;
         
         TUniquePtr<ModuleRegistrar> m_ModuleRegistrar;
 

@@ -246,6 +246,12 @@ namespace Opaax
 
         /** Blocks the calling thread for at least InDuration. */
         inline void SleepFor(const Milliseconds InDuration) { std::this_thread::sleep_for(InDuration); }
+
+        /** Blocks the calling thread for at least InSeconds; the OS wakes it a little after. */
+        inline void SleepForSeconds(const double InSeconds)
+        {
+            std::this_thread::sleep_for(std::chrono::duration<double>(InSeconds));
+        }
     }
 
     // =============================================================================

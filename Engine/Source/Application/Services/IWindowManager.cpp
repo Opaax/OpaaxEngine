@@ -15,9 +15,11 @@ namespace Opaax
         class NullWindowManager final : public IWindowManager
         {
         public:
-            bool    IsNull()         const noexcept override { return true; }
-            Window* CreateMainWindow()              override { return nullptr; }
-            Window* GetMainWindow()  const          override { return nullptr; }
+            bool    IsNull()                  const noexcept override { return true; }
+            Window* CreateMainWindow()                       override { return nullptr; }
+            Window* GetMainWindow()           const          override { return nullptr; }
+            void    FollowEngineConfig()                     override {}
+            bool    IsFollowingEngineConfig() const          override { return false; }
         };
     }
 
@@ -28,6 +30,20 @@ namespace Opaax
     {
         return WindowProps(InData.Window.Title, InData.Window.Width, InData.Window.Height,
                            InData.Window.Mode);
+    }
+
+    bool IsOtherWindowShape(const WindowProps& InShown, const WindowProps& InWanted) noexcept
+    {
+        return InShown.Mode != InWanted.Mode || InShown.Width != InWanted.Width || InShown.Height != InWanted.Height;
+    }
+
+    // =========================================================================
+    // IWindowManager
+    // =========================================================================
+    TDynArray<DisplayMode> IWindowManager::GetDisplayModes() const
+    {
+        const Window* const lWindow = GetMainWindow();
+        return (lWindow != nullptr) ? lWindow->GetDisplayModes() : TDynArray<DisplayMode>();
     }
 
     // =========================================================================

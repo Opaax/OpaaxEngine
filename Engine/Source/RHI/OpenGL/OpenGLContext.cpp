@@ -29,7 +29,7 @@ namespace Opaax
         }
 
         // VSync on until the renderer applies Window.bVSync.
-        SetVSync(true);
+        SetSwapInterval(1);
 
         LogAdapterInfo();
         return true;
@@ -58,9 +58,9 @@ namespace Opaax
         glfwSwapBuffers(m_Window);
     }
 
-    void OpenGLContext::SetVSync(bool InEnabled)
+    void OpenGLContext::SetSwapInterval(const Uint32 InRefreshes)
     {
-        glfwSwapInterval(InEnabled ? 1 : 0);
+        glfwSwapInterval(static_cast<int>(InRefreshes));
     }
 
 } // namespace Opaax

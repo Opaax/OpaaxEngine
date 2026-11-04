@@ -52,8 +52,11 @@ namespace Opaax
         // Presents the frame to the window.
         virtual void SwapBuffers() = 0;
 
-        // Enables or disables vsync.
-        virtual void SetVSync(bool InEnabled) = 0;
+        /**
+         * The refreshes of the screen each frame is shown for: 1 is vsync, 2 every other refresh (a frame
+         * cap that divides the screen's rate), 0 no vsync. A driver may show them for one only.
+         */
+        virtual void SetSwapInterval(Uint32 InRefreshes) = 0;
     };
 
 } // namespace Opaax

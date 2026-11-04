@@ -279,17 +279,27 @@ TEST_CASE("EngineConfigData: Render.Backend needs a restart, Render.bInterpolati
     CHECK(HasFlag(FlagsOf(lEngine, "Physics"), EPropertyFlags::NeedRestart));
 }
 
-TEST_CASE("EngineConfigData: the window needs a restart, except its vsync")
+TEST_CASE("EngineConfigData: only the window's title needs a restart")
 {
     const auto lWindow = WindowSettings::GetProperties();
-    for (const char* lName : { "Title", "Width", "Height", "Mode" })
+    CHECK(HasFlag(FlagsOf(lWindow, "Title"), EPropertyFlags::NeedRestart));
+    for (const char* lName : { "Width", "Height", "Mode", "bVSync", "MaxFrameRate" })
     {
         CAPTURE(lName);
-        CHECK(HasFlag(FlagsOf(lWindow, lName), EPropertyFlags::NeedRestart));
+        CHECK_FALSE(HasFlag(FlagsOf(lWindow, lName), EPropertyFlags::NeedRestart));
     }
-    CHECK_FALSE(HasFlag(FlagsOf(lWindow, "bVSync"), EPropertyFlags::NeedRestart));
 
     CHECK(WindowSettings{}.bVSync);
+    CHECK(WindowSettings{}.MaxFrameRate == 0);
+}
+
+TEST_CASE("EngineConfigData: a file without MaxFrameRate has no cap")
+{
+    const EngineConfigData lRead = Parse(R"({"Window":{"Width":800,"bVSync":false}})");
+    CHECK(lRead.Window.Width == 800);
+    CHECK(lRead.Window.MaxFrameRate == 0);
+
+    CHECK(Parse(R"({"Window":{"MaxFrameRate":144}})").Window.MaxFrameRate == 144);
 }
 
 TEST_CASE("RendererConfigData: ClearColor is live, the batch limits need a restart")

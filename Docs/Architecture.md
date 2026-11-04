@@ -63,6 +63,10 @@ and the game export. A game is a module of its own types, linked into its runtim
    same alpha as the poses (`SubmitCameraView`): it matches the game's view of that camera exactly.
    What the editor draws on entities (the selection outline, icons, light gizmos) is queued just
    before the frame is drawn (`IEngine::AddBeforeDraw`), at that alpha, so it sits on the sprites.
+6. **Present:** under a frame cap (`Window.MaxFrameRate`, while a game runs) the frame first waits for
+   its turn (`FrameLimiter`); with vsync, a cap that divides the screen's rate is the swap interval
+   instead, each frame shown for the same whole refreshes, as Unity's `vSyncCount` and Unreal's
+   `rhi.SyncInterval` do. Then the back buffer is shown, and vsync waits for the refresh.
 
 A paused world (in the editor) skips its part of 3 and 4; a step runs it for one frame. It is drawn
 as it was on its last frame (the same alpha), so it holds still, and once resumed it goes on from

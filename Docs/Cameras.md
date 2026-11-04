@@ -209,6 +209,7 @@ In `Engine.config` (the Config panel):
 | `Time.MaxStepsPerFrame` | Steps a frame may run (8): a longer stall slows the game for that frame instead of making every frame longer |
 | `Render.bInterpolation` | Draw between the steps (on). Off, everything is drawn where it is, a step at a time |
 | `Window.bVSync` | Wait for the screen's refresh |
+| `Window.MaxFrameRate` | The most frames a second (0: none). With vsync, a cap that divides the screen's rate shows every frame for the same refreshes ([Settings.md](Settings.md#the-window-and-the-frame-rate)) |
 
 ## Seeing it
 

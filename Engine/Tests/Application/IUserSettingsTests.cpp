@@ -9,6 +9,7 @@
 #include "Application/Services/IPaths.h"
 #include "Application/Services/ISaveStorage.h"
 #include "Application/Services/IUserSettings.h"
+#include "Application/Services/IWindowManager.h"
 #include "Automation/SettingsAutomationCommands.h"
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/Config/TConfig.h"
@@ -69,7 +70,7 @@ namespace
         SaveStorage Storage{ Temp.Sub("SaveGames") };
 
         TUniquePtr<ConfigSystem> Configs  = MakeUnique<ConfigSystem>(ProjectPaths);
-        TUniquePtr<UserSettings> Settings = MakeUnique<UserSettings>(Storage, *Configs);
+        TUniquePtr<UserSettings> Settings = MakeUnique<UserSettings>(Storage, *Configs, IWindowManager::Null());
 
         Fixture() { Configs->Register<Config_Engine>(); }
 
@@ -82,7 +83,7 @@ namespace
             Settings.reset();
             Configs = MakeUnique<ConfigSystem>(ProjectPaths);
             Configs->Register<Config_Engine>();
-            Settings = MakeUnique<UserSettings>(Storage, *Configs);
+            Settings = MakeUnique<UserSettings>(Storage, *Configs, IWindowManager::Null());
             Settings->Load();
             Settings->Activate();
         }
@@ -216,6 +217,26 @@ TEST_CASE("UserSettings: a value the config does not take refuses the change who
     CHECK_FALSE(lFix.Settings->SetResolution(0, 720));
 
     CHECK((Json(lFix.Settings->GetConfigValues("Engine").CStr()) == Json(R"({"Window": {"bVSync": false}})")));
+}
+
+TEST_CASE("UserSettings: the frame cap and the resolution, read at once; no screen, no display modes")
+{
+    Fixture lFix;
+    lFix.Settings->Activate();
+
+    REQUIRE(lFix.Settings->SetMaxFrameRate(120));
+    REQUIRE(lFix.Settings->SetResolution(1920, 1080));
+    REQUIRE(lFix.Settings->SetWindowMode(EWindowMode::Fullscreen));
+    CHECK(lFix.Read().Window.MaxFrameRate == 120u);
+    CHECK(lFix.Read().Window.Width == 1920u);
+    CHECK(lFix.Read().Window.Mode == EWindowMode::Fullscreen);
+
+    REQUIRE(lFix.Settings->SetMaxFrameRate(0));
+    CHECK(lFix.Read().Window.MaxFrameRate == 0u);
+
+    // The null window manager has no window, so no screen to list.
+    CHECK(lFix.Settings->GetDisplayModes().empty());
+    CHECK(IUserSettings::Null().GetDisplayModes().empty());
 }
 
 TEST_CASE("UserSettings: a file's value a config does not take is dropped, with a warning; the others are read")

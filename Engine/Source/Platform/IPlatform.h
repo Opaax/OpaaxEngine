@@ -15,10 +15,19 @@ namespace Opaax
     public:
         OPAAX_SERVICE_TYPE(IPlatform)
 
+        /** The end of a SleepPrecise that spins instead of sleeping, in seconds: the OS wakes late by less. */
+        static constexpr double PRECISE_SLEEP_SPIN = 0.001;
+
         //----- contract -------------------------------------------------------
         virtual Uint32 GetLogicalCoreCount() const = 0;
         virtual double GetTimeSeconds()      const = 0;
-        
+
+        /**
+         * Waits InSeconds of real time (Clock::NowSeconds), never less and only a few microseconds more:
+         * the OS sleeps to PRECISE_SLEEP_SPIN short of the end, the rest spins. What a frame cap waits with.
+         */
+        virtual void SleepPrecise(double InSeconds) const;
+
         /**
          * Absolute path to the running executable (from the OS, unlike argv[0]).
          */

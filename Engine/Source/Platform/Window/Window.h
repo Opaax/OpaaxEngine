@@ -4,6 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxEnum.h"   // OPAAX_ENUM_VALUES
 #include "Core/String/OpaaxString.hpp"
+#include "Platform/Window/DisplayMode.h"
 
 namespace Opaax
 {
@@ -116,20 +117,27 @@ namespace Opaax
         virtual Uint32  GetWidth()          const = 0;
         virtual Uint32  GetHeight()         const = 0;
 
-        /** How many times a second the window's screen refreshes, as the screen states it; 0 when unknown. */
+        /**
+         * How many times a second the window's screen refreshes, as the screen states it; 0 when unknown.
+         * Its screen: the one it is fullscreen on, else the one holding its centre.
+         */
         virtual Uint32  GetRefreshRate()    const = 0;
         
         /*-------------------------------------------------------------------------*/
         // Window Mode
-        
-        virtual EWindowMode GetWindowMode() const           = 0;
-        virtual void        SetWindowMode(EWindowMode mode) = 0;
-        
-        virtual void SetWindowed()          = 0;
-        virtual void SetBorderless()        = 0;
-        virtual void SetFullscreen()        = 0;
-        
-        virtual void SaveWindowedState()    = 0;
+
+        virtual EWindowMode GetWindowMode() const = 0;
+
+        /**
+         * Shows the window in InMode. Windowed: InWidth x InHeight, where it was last windowed.
+         * Borderless: over its whole screen, at the screen's own mode, whatever the size. Fullscreen: on
+         * its screen, at the screen's mode closest to InWidth x InHeight, at the highest refresh rate it
+         * has there (ChooseDisplayMode).
+         */
+        virtual void SetWindowMode(EWindowMode InMode, Uint32 InWidth, Uint32 InHeight) = 0;
+
+        /** The modes the window's screen can show in fullscreen, smallest first: a resolution list. */
+        virtual TDynArray<DisplayMode> GetDisplayModes() const = 0;
 
         // Window Mode
         /*-------------------------------------------------------------------------*/

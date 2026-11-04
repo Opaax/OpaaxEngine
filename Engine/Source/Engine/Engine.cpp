@@ -504,6 +504,7 @@ namespace Opaax
 
         // The next frame counts from now, on the clock now in use.
         m_Clock.Restart(ClockTime());
+        m_FrameLimiter.Restart();
 
         if (m_RendererManager != nullptr)
         {
@@ -540,6 +541,20 @@ namespace Opaax
         }
 
         m_Clock.SetMaxStepsPerFrame(m_EngineConfig->GetData().Time.MaxStepsPerFrame);
+
+        const Uint32 lCap = Maths::Min(m_EngineConfig->GetData().Window.MaxFrameRate, WindowSettings::MAX_FRAME_RATE);
+        if (lCap != m_MaxFrameRate)
+        {
+            m_MaxFrameRate = lCap;
+            if (lCap > 0)
+            {
+                OPAAX_ENGINE_LOG(Info, "Frame cap: {} a second, while a game runs", lCap);
+            }
+            else
+            {
+                OPAAX_ENGINE_LOG(Info, "Frame cap: none");
+            }
+        }
 
         ApplyRefresh();
     }
@@ -654,13 +669,74 @@ namespace Opaax
     
     void Engine::PresentBackbuffer()
     {
-        // Scoped here: the host calls it after the UI pass, and vsync blocks here.
-        OPAAX_STAT_SCOPE("Present");
+        LimitFrameRate();
+
+        {
+            // Scoped here: the host calls it after the UI pass, and vsync blocks here.
+            OPAAX_STAT_SCOPE("Present");
+
+            if (m_RendererManager != nullptr)
+            {
+                m_RendererManager->Present();
+            }
+        }
+
+        if (m_Platform != nullptr)
+        {
+            m_FrameLimiter.OnPresented(m_Platform->GetTimeSeconds());
+        }
+    }
+
+    void Engine::LimitFrameRate()
+    {
+        // A paced run goes as fast as it can; the editor's own frames are not capped, only Play's.
+        const bool bCapped = m_Platform != nullptr && !m_Pacer.GetPacing().IsActive() && m_GameInstances != nullptr
+                          && m_GameInstances->IsGameRunning();
+
+        m_FrameLimiter.SetMaxFrameRate(bCapped ? m_MaxFrameRate : 0);
+        m_FrameLimiter.SetRefreshInterval(GetVSyncInterval());
+
+        if (m_FrameLimiter.IsRefreshUnheld() && !m_bLoggedUnheld)
+        {
+            OPAAX_ENGINE_LOG(Info, "Frame cap: the screen shows frames at every refresh whatever the swap interval "
+                                   "(the driver, or a variable-refresh screen): the cap waits for its frames instead");
+        }
+        m_bLoggedUnheld = m_FrameLimiter.IsRefreshUnheld();
 
         if (m_RendererManager != nullptr)
         {
-            m_RendererManager->Present();
+            m_RendererManager->SetHeldRefreshes(m_FrameLimiter.GetHeldRefreshes());
         }
+
+        if (!bCapped)
+        {
+            return;
+        }
+
+        const double lWait = m_FrameLimiter.WaitBeforePresent(m_Platform->GetTimeSeconds());
+        if (lWait > 0.0)
+        {
+            OPAAX_STAT_SCOPE("FrameCap");
+            m_Platform->SleepPrecise(lWait);
+        }
+    }
+
+    double Engine::GetVSyncInterval() const
+    {
+        if (m_Pacer.GetPacing().IsActive() || (m_EngineConfig != nullptr && !m_EngineConfig->GetData().Window.bVSync))
+        {
+            return 0.0;
+        }
+
+        // The clock's is measured; with Time.bSnapToRefresh off, the screen's stated rate.
+        if (const double lMeasured = m_Clock.GetRefreshInterval(); lMeasured > 0.0)
+        {
+            return lMeasured;
+        }
+
+        const Window* lWindow = OpaaxApplication::GetAppService<IWindowManager>().GetMainWindow();
+        const Uint32  lHertz  = lWindow != nullptr ? lWindow->GetRefreshRate() : 0;
+        return lHertz > 0 ? 1.0 / static_cast<double>(lHertz) : 0.0;
     }
     
     bool Engine::CaptureFrame(const OpaaxString& InPngPath)

@@ -65,6 +65,13 @@
         }
     },
     {
+        "id": "editor-window-stays",
+        "command": "window.info",
+        "expect": {
+            "follows": false
+        }
+    },
+    {
         "id": "stop",
         "command": "editor.stop",
         "expect": {

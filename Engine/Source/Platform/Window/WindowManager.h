@@ -4,8 +4,11 @@
 
 namespace Opaax
 {
+    class Config_Engine;
+
 	// =============================================================================
-    // WindowManager — owns the main window, created from Config_Engine.
+    // WindowManager — owns the main window, created from Config_Engine; in a game, it follows the
+    //   config's mode and size as they change (FollowEngineConfig).
     // =============================================================================
     class WindowManager final : public IWindowManager
     {
@@ -37,12 +40,27 @@ namespace Opaax
     public:
         Window* CreateMainWindow() override;
         Window* GetMainWindow() const override { return m_Window.get(); }
+        void    FollowEngineConfig() override;
+        bool    IsFollowingEngineConfig() const override { return m_EngineConfig != nullptr; }
         //~End Opaax::IWindowManager interface
+
+        // =============================================================================
+        // Internal
+        // =============================================================================
+    private:
+        /** The engine config changed: the window takes its mode and size when they are not the ones shown. */
+        void HandleEngineConfigChanged();
 
         // =============================================================================
         // Members
         // =============================================================================
     private:
         TUniquePtr<Window> m_Window;
+
+        /** What the window shows: what it was made with, then each change followed. */
+        WindowProps m_Shown;
+
+        /** Followed while set; not owned (the config system outlives this service). */
+        Config_Engine* m_EngineConfig = nullptr;
     };
 }

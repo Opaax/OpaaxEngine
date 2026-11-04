@@ -20,6 +20,7 @@ namespace Opaax
     public:
         Uint32                              GetLogicalCoreCount()   const override;
         double                              GetTimeSeconds()        const override;
+        void                                SleepPrecise(double InSeconds) const override;
         OpaaxString                         GetExecutablePath()     const override;
         OpaaxString                         GetPlatformName()       const override { return OpaaxString("Windows"); }
         [[nodiscard]] const IFileSystem&    GetFileSystem()         const override { return m_FileSystem; }

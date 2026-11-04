@@ -31,7 +31,7 @@ namespace Opaax
     public:
         bool Init()                   override;
         void SwapBuffers()            override;
-        void SetVSync(bool InEnabled) override;
+        void SetSwapInterval(Uint32 InRefreshes) override;
         //~End IGraphicsContext interface
 
         // =============================================================================

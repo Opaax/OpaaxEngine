@@ -13,6 +13,11 @@
 #include <Windows.h>
 #include <ShlObj.h>
 
+// Older SDKs do not name it; Windows before 10 1803 refuses it, and the wait spins.
+#ifndef CREATE_WAITABLE_TIMER_HIGH_RESOLUTION
+#define CREATE_WAITABLE_TIMER_HIGH_RESOLUTION 0x00000002
+#endif
+
 namespace Opaax
 {
     Uint32 WindowsPlatform::GetLogicalCoreCount() const
@@ -24,6 +29,36 @@ namespace Opaax
     double WindowsPlatform::GetTimeSeconds() const
     {
         return Clock::NowSeconds();
+    }
+
+    void WindowsPlatform::SleepPrecise(const double InSeconds) const
+    {
+        const double lEnd   = Clock::NowSeconds() + InSeconds;
+        const double lSleep = InSeconds - PRECISE_SLEEP_SPIN;
+
+        // Sleep() wakes on the system tick (15.6 ms unless a program raised it); a high-resolution
+        // waitable timer (Windows 10 1803 and later) within a fraction of a millisecond. Without one,
+        // the whole wait spins.
+        if (lSleep > 0.0)
+        {
+            HANDLE lTimer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION,
+                                                   TIMER_ALL_ACCESS);
+            if (lTimer != nullptr)
+            {
+                LARGE_INTEGER lDue;
+                lDue.QuadPart = -static_cast<LONGLONG>(lSleep * 1.0e7);   // relative, in 100 ns
+                if (SetWaitableTimerEx(lTimer, &lDue, 0, nullptr, nullptr, nullptr, 0))
+                {
+                    WaitForSingleObject(lTimer, INFINITE);
+                }
+                CloseHandle(lTimer);
+            }
+        }
+
+        while (Clock::NowSeconds() < lEnd)
+        {
+            ThisThread::YieldNow();
+        }
     }
 
     OpaaxString WindowsPlatform::GetExecutablePath() const

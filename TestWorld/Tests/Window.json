@@ -1,0 +1,217 @@
+[
+    {
+        "id": "clear",
+        "command": "save.clear",
+        "params": {
+            "slot": "Settings"
+        }
+    },
+    {
+        "id": "fresh",
+        "command": "settings.load",
+        "expect": {
+            "active": true
+        }
+    },
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Rendering.opaaxlevel"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "project-window",
+        "command": "window.info",
+        "expect": {
+            "mode": "Windowed",
+            "width": 1280,
+            "height": 720,
+            "decorated": true,
+            "follows": true,
+            "frameCap": {
+                "maxFrameRate": 0
+            }
+        }
+    },
+    {
+        "id": "menu-resizes",
+        "command": "settings.set",
+        "params": {
+            "config": "Engine",
+            "values": {
+                "Window": {
+                    "Width": 960,
+                    "Height": 540
+                }
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "resized",
+        "command": "window.info",
+        "expect": {
+            "mode": "Windowed",
+            "width": 960,
+            "height": 540
+        }
+    },
+    {
+        "id": "shot-960",
+        "command": "screenshot",
+        "params": {
+            "path": "Window960.png"
+        }
+    },
+    {
+        "id": "menu-borderless",
+        "command": "settings.set",
+        "params": {
+            "config": "Engine",
+            "values": {
+                "Window": {
+                    "Mode": "Borderless"
+                }
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "borderless",
+        "command": "window.info",
+        "expect": {
+            "mode": "Borderless",
+            "decorated": false
+        }
+    },
+    {
+        "id": "menu-windowed",
+        "command": "settings.reset",
+        "params": {
+            "config": "Engine"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "windowed-again",
+        "command": "window.info",
+        "expect": {
+            "mode": "Windowed",
+            "width": 1280,
+            "height": 720,
+            "decorated": true
+        }
+    },
+    {
+        "id": "play-pacing",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Pacing.opaaxlevel"
+        }
+    },
+    {
+        "id": "menu-caps",
+        "command": "settings.set",
+        "params": {
+            "config": "Engine",
+            "values": {
+                "Window": {
+                    "MaxFrameRate": 30
+                }
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 20
+        }
+    },
+    {
+        "id": "capped",
+        "command": "window.info",
+        "expect": {
+            "frameCap": {
+                "maxFrameRate": 30
+            }
+        }
+    },
+    {
+        "id": "count-from-here",
+        "command": "component.set",
+        "params": {
+            "entity": "Clock",
+            "type": "FrameProbe",
+            "value": {
+                "Frames": 0,
+                "MinDelta": 1.0,
+                "MaxDelta": 0.0
+            }
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 2.0
+        }
+    },
+    {
+        "id": "30-frames",
+        "command": "expect.value",
+        "params": {
+            "entity": "Clock",
+            "path": "FrameProbe/Frames",
+            "near": 60,
+            "tolerance": 4
+        }
+    },
+    {
+        "id": "cap-off",
+        "command": "settings.reset"
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "uncapped",
+        "command": "window.info",
+        "expect": {
+            "frameCap": {
+                "maxFrameRate": 0,
+                "heldRefreshes": 0
+            }
+        }
+    },
+    {
+        "id": "leave-no-file",
+        "command": "save.clear",
+        "params": {
+            "slot": "Settings"
+        }
+    }
+]

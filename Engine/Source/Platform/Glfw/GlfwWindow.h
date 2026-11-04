@@ -28,7 +28,13 @@ namespace Opaax
     private:
         void Init(const WindowProps& Props);
         void RegisterGLFWCallbacks();
-        
+
+        /** The window's screen: the one it is fullscreen on, else the one holding its centre, else the primary. */
+        GLFWmonitor* FindScreen() const;
+
+        /** InScreen's fullscreen modes, smallest first. */
+        static TDynArray<DisplayMode> ModesOf(GLFWmonitor* InScreen);
+
         // =============================================================================
         // Overrides
         // =============================================================================
@@ -53,15 +59,10 @@ namespace Opaax
         
         /*-------------------------------------------------------------------------*/
         // Window Mode
-        
-        void        SetWindowMode(EWindowMode NewWindowMode) override;
-        EWindowMode GetWindowMode() const override { return m_Data.Mode; }
-        
-        void SetWindowed()      override;
-        void SetBorderless()    override;
-        void SetFullscreen()    override;
-        
-        void SaveWindowedState() override;
+
+        EWindowMode            GetWindowMode() const override { return m_Data.Mode; }
+        void                   SetWindowMode(EWindowMode InMode, Uint32 InWidth, Uint32 InHeight) override;
+        TDynArray<DisplayMode> GetDisplayModes() const override;
 
         // Window Mode
         /*-------------------------------------------------------------------------*/
@@ -104,12 +105,11 @@ namespace Opaax
         {
             OpaaxString Title;
 
-            // Signed: a monitor left of the primary gives a negative X.
+            // Where the window was last windowed. Signed: a monitor left of the primary gives a negative X.
             Int32 PosX = 0, PosY = 0;
 
             Uint32 Width, Height;
-            Uint32 RefreshRate = GLFW_DONT_CARE;
-            EWindowMode Mode;
+            EWindowMode Mode = EWindowMode::Windowed;
 
             // The host's preference, restored by SetWindowed (Borderless overrides it while active).
             bool bDecorated = true;

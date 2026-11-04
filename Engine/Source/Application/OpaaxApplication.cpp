@@ -102,16 +102,20 @@ void OpaaxApplication::Bootstrap()
     //Save storage — the player's saves, in the user folder.
     ISaveStorage& lSaveStorage = BootSaveStorage(lPath);
 
+    //An app that starts its game at once is that game from the start: its window is the game's. The
+    //editor starts in Edit. Asked once the project is read (its startup level).
+    m_bStartsGame = GetStartupWorldSpec().Mode == EWorldMode::Play;
+
+    //Window manager — the window itself is created in InitializeApplication.
+    IWindowManager& lWindowMgr = BootWindowManager();
+
     //User settings — the player's values over the configs, from the save storage. Before the window:
     //a game's opens at the player's size.
-    BootUserSettings(lSaveStorage, lConfigSystem);
+    BootUserSettings(lSaveStorage, lConfigSystem, lWindowMgr);
 
     //Stats — reads the config, so after the config system.
     BootProfiler(lConfigSystem);
 
-    //Window manager — the window itself is created in InitializeApplication.
-    IWindowManager& lWindowMgr = BootWindowManager();
-    
     //Engine
     IEngine& lEngine = BootEngine();
     
@@ -155,13 +159,15 @@ ISaveStorage& OpaaxApplication::BootSaveStorage(const IPaths& Paths)
     return m_Services.Provide<ISaveStorage, Opaax::SaveStorage>(Paths);
 }
 
-IUserSettings& OpaaxApplication::BootUserSettings(ISaveStorage& SaveStorage, IConfigSystem& ConfigSystem)
+IUserSettings& OpaaxApplication::BootUserSettings(ISaveStorage& SaveStorage, IConfigSystem& ConfigSystem,
+                                                  const IWindowManager& WindowManager)
 {
-    IUserSettings& lSettings = m_Services.Provide<IUserSettings, Opaax::UserSettings>(SaveStorage, ConfigSystem);
+    IUserSettings& lSettings = m_Services.Provide<IUserSettings, Opaax::UserSettings>(SaveStorage, ConfigSystem,
+                                                                                     WindowManager);
 
-    // An app that starts its game at once is that game from the start. The editor starts in Edit: its
-    // window and Config panel keep the project's values, and each Play reads the player's (Engine::StartGame).
-    if (GetStartupWorldSpec().Mode == EWorldMode::Play)
+    // The editor's window and Config panel keep the project's values; each Play reads the player's
+    // (Engine::StartGame).
+    if (m_bStartsGame)
     {
         lSettings.Load();
         lSettings.Activate();
@@ -228,7 +234,13 @@ void OpaaxApplication::InitializeApplication()
 void OpaaxApplication::CreateApplicationWindow()
 {
     WindowManager().CreateMainWindow();
-    
+
+    // A game's window takes the player's mode and size as they change; the editor's keeps its own.
+    if (m_bStartsGame)
+    {
+        WindowManager().FollowEngineConfig();
+    }
+
     if (Window* lWindow = WindowManager().GetMainWindow())
     {
         lWindow->SetEventCallback([this](Event& InEvent)
