@@ -85,8 +85,9 @@ saved in `.opaaxmap` files.
 | `camera.trace.compare` | `reference`, `trace`, `limits` | How far `trace` is from where `reference` says its camera was at each of its game times: `position` and `size` in world units, `rotation` in degrees. With a reference at a steady rate of the fixed rate or a multiple, one level played at any pacing must match it: the screen's rate only chooses which moments of the camera's path are shown. A frame the reference did not draw is placed between its two frames around it: at the fixed rate, a step's ends, right for anything drawn between its steps; a view curving within a step (a blend, a shake) needs a reference drawing within it (720 Hz places 60, 144 and 240 exactly) |
 | `time.pace` | `pacing` | From the next frame, the frames get the time of `pacing`, written as `--frame-pacing` takes it; `off` gives the clock back. Answers the pacing as read |
 | `screenshot` | `path` | Saves the frame as a PNG (in the editor: the whole editor) |
-| `input.key` | `key`, `action`, `frames` | `press`, `release` or `tap` a key (`Space`, `A`, `Mouse_Left`...) as if from the keyboard |
+| `input.key` | `key`, `action`, `frames` | `press`, `release` or `tap` a key (`Space`, `A`, `Mouse_Left`...) as if from the keyboard; the wheel's codes are refused (`input.scroll`) |
 | `input.mouse` | `x`, `y` | Moves the game's pointer (pixels of the game view) |
+| `input.scroll` | `y`, `x` | Turns the mouse wheel by `y` notches (1 up, -1 down) and `x` sideways in one frame; the next request runs after that frame |
 | `ui.list` | `name` | The game UI's widgets: name, type, visible, centre and size in game-view pixels |
 | `ui.click` | `widget`, `frames` | Clicks a widget of the game's UI by name: the pointer moves to its centre, the left button is tapped |
 | `world.info` | | The active world: name, mode, paused, entities, camera (its view) |

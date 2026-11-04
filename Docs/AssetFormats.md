@@ -222,7 +222,11 @@ binds keys to actions.
 `Name` is what gameplay binds (`OPAAX_ID("Move")`); left empty, it is the file's name. `ValueType` is
 `Bool`, `Axis1D` or `Axis2D`. Modifiers apply in order: `Negate`, `Swizzle` (x and y swapped),
 `DeadZone` (`DeadZoneLower`, `DeadZoneUpper`), `Scalar` (`Scale`), `Normalize`. Keys are named as in
-`EKeyCode` (`A`...`Z`, `Space`, `Escape`, `Left`, `Mouse_Left`...). A game adds a context with
+`EKeyCode` (`A`...`Z`, `Space`, `Escape`, `Left`, `Mouse_Left`...). The wheel is never held:
+`Mouse_WheelUp` and `Mouse_WheelDown` are pressed and released in the frame of a notch, and
+`Mouse_WheelAxis` gives an `Axis1D` the notches of the frame (up positive, a fraction from a
+touchpad; `Scalar` turns them into units). An action on the wheel starts again on every frame the
+wheel turns. A game adds a context with
 `GetContext().Actions->AddContextAsset(OPAAX_ID("Gameplay"), "Input/Gameplay.opaaxasset")`; a mapping
 whose action does not load is skipped, with a warning. A context's window lists its mappings, key
 first; **2D Composite (WASD)** and **Arrows** replace the selected one with the four that make an

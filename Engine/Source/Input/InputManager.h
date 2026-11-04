@@ -19,6 +19,8 @@ namespace Opaax
     //   Fed by the application as OS events arrive; everything else only reads it.
     //   Physical keys only; named actions are in InputMappingSubsystem.
     //   Keyboard and mouse only (gamepad codes are refused).
+    //   The wheel is never held: a notch presses and releases Mouse_WheelUp or Mouse_WheelDown in its
+    //   frame, and Mouse_WheelAxis reads the notches of the frame.
     // =============================================================================
     class InputManager final : public EngineSubsystem
     {
@@ -53,6 +55,12 @@ namespace Opaax
         bool WasReleasedThisFrame(EKeyCode InKey) const noexcept;
 
         /**
+         * What InKey drives an action with this frame: 1 while held or tapped, else 0; for
+         * Mouse_WheelAxis, the notches turned (up positive, a fraction from a touchpad).
+         */
+        float GetKeyValue(EKeyCode InKey) const noexcept;
+
+        /**
          * Left or right modifier key.
          */
         bool IsShiftDown() const noexcept;
@@ -72,14 +80,17 @@ namespace Opaax
         /** Movement since the previous frame, in window pixels. */
         Vector2F GetMouseDelta() const noexcept;
 
-        /** Wheel movement this frame. */
+        /** Wheel movement this frame, in notches: y up positive, x from a tilting wheel or a touchpad. */
         Vector2F GetScrollDelta() const noexcept { return m_ScrollDelta; }
 
         // =============================================================================
         // Feed — called by the application as OS events arrive
         // =============================================================================
     public:
-        /** @param InRepeat OS key repeat: no state change, no press. */
+        /**
+         * @param InRepeat OS key repeat: no state change, no press.
+         * The wheel codes are ignored: only OnMouseScrolled turns the wheel.
+         */
         void OnKeyPressed(EKeyCode InKey, bool InRepeat);
         void OnKeyReleased(EKeyCode InKey);
 
@@ -87,6 +98,8 @@ namespace Opaax
         void OnMouseButtonReleased(EKeyCode InButton);
 
         void OnMouseMoved(float InX, float InY);
+
+        /** Adds to this frame's scroll; a notch up or down also taps Mouse_WheelUp or Mouse_WheelDown. */
         void OnMouseScrolled(float InXOffset, float InYOffset);
 
         // =============================================================================
@@ -122,6 +135,9 @@ namespace Opaax
          * @return The index for InKey, or KEY_STATE_COUNT when out of range. Warns once.
          */
         Uint16 ToIndex(EKeyCode InKey) const;
+
+        /** Presses and releases InKey within this frame, as a notch does. */
+        void TapThisFrame(EKeyCode InKey);
 
         // =============================================================================
         // Members

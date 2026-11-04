@@ -137,6 +137,48 @@ namespace TestWorld
     };
 
     // =============================================================================
+    // WheelProbe — the mouse wheel as the game reads it: Scroll, an Axis1D on Mouse_WheelAxis; Notch,
+    //   an Axis1D on the wheel's up and down keys, counted on Started; and those keys raw. Adds
+    //   Input/Wheel.opaaxasset.
+    // =============================================================================
+    class WheelProbe : public Opaax::Behaviour
+    {
+        OPAAX_OBJECT(WheelProbe, Opaax::Behaviour)
+
+    public:
+        float        Scroll      = 0.f;   // this frame's
+        float        ScrollTotal = 0.f;   // every frame's added up
+        float        Notch       = 0.f;   // this frame's
+        Opaax::Int32 NotchStarts = 0;
+        Opaax::Int32 UpPresses   = 0;
+        Opaax::Int32 DownPresses = 0;
+
+        OPAAX_PROPERTIES(WheelProbe, OPAAX_PROP(Scroll), OPAAX_PROP(ScrollTotal), OPAAX_PROP(Notch),
+                         OPAAX_PROP(NotchStarts), OPAAX_PROP(UpPresses), OPAAX_PROP(DownPresses))
+
+        void OnStart() override
+        {
+            if (Opaax::InputMappingSubsystem* lActions = GetContext().Actions)
+            {
+                lActions->AddContextAsset(OPAAX_ID("Wheel"), Opaax::OpaaxString("Input/Wheel.opaaxasset"));
+            }
+            BindAction<&WheelProbe::OnNotch>(OPAAX_ID("Notch"), Opaax::EInputTrigger::Started);
+        }
+
+        void OnUpdate(float) override
+        {
+            Scroll       = GetAction(OPAAX_ID("Scroll")).AsAxis1D();
+            ScrollTotal += Scroll;
+            Notch        = GetAction(OPAAX_ID("Notch")).AsAxis1D();
+
+            if (WasKeyPressed(Opaax::EKeyCode::Mouse_WheelUp))   { ++UpPresses; }
+            if (WasKeyPressed(Opaax::EKeyCode::Mouse_WheelDown)) { ++DownPresses; }
+        }
+
+        void OnNotch(const Opaax::InputActionValue&) { ++NotchStarts; }
+    };
+
+    // =============================================================================
     // LaunchProbe — throws its dynamic body up at LaunchSpeed and records how high it went.
     // =============================================================================
     class LaunchProbe : public Opaax::Behaviour

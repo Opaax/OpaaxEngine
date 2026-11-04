@@ -401,5 +401,128 @@
             "equals": 1
         },
         "id": "button-pressed-once"
+    },
+    {
+        "command": "input.scroll",
+        "params": {
+            "y": 1
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Wheel",
+            "path": "WheelProbe/Scroll",
+            "near": 1,
+            "tolerance": 0.0001
+        },
+        "id": "wheel-axis-up"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Wheel",
+            "path": "WheelProbe/Notch",
+            "near": 1,
+            "tolerance": 0.0001
+        },
+        "id": "wheel-key-up"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Wheel",
+            "path": "WheelProbe/UpPresses",
+            "equals": 1
+        },
+        "id": "wheel-up-pressed"
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Wheel",
+            "path": "WheelProbe/Scroll",
+            "near": 0,
+            "tolerance": 0.0001
+        },
+        "id": "wheel-axis-back-to-zero"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Wheel",
+            "path": "WheelProbe/ScrollTotal",
+            "near": 1,
+            "tolerance": 0.0001
+        },
+        "id": "wheel-axis-moved-once"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Wheel",
+            "path": "WheelProbe/NotchStarts",
+            "equals": 1
+        },
+        "id": "wheel-key-started-once"
+    },
+    {
+        "command": "input.scroll",
+        "params": {
+            "y": -2
+        }
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Wheel",
+            "path": "WheelProbe/Scroll",
+            "near": -2,
+            "tolerance": 0.0001
+        },
+        "id": "wheel-axis-two-down"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Wheel",
+            "path": "WheelProbe/Notch",
+            "near": -1,
+            "tolerance": 0.0001
+        },
+        "id": "wheel-key-down-once-a-frame"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Wheel",
+            "path": "WheelProbe/DownPresses",
+            "equals": 1
+        },
+        "id": "wheel-down-pressed"
+    },
+    {
+        "command": "expect.value",
+        "params": {
+            "entity": "Wheel",
+            "path": "WheelProbe/NotchStarts",
+            "equals": 2
+        },
+        "id": "wheel-key-started-again"
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "Mouse_WheelUp",
+            "action": "tap"
+        },
+        "expectFailure": true,
+        "id": "wheel-not-a-held-key"
     }
 ]

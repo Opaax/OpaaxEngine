@@ -15,14 +15,6 @@ namespace Opaax
             const Uint16 lRaw = static_cast<Uint16>(InKey);
             return lRaw < InputManager::KEY_STATE_COUNT ? lRaw : InputManager::KEY_STATE_COUNT;
         }
-
-        /**
-         * Held, or pressed and released within this frame (a quick tap).
-         */
-        bool IsActuated(const InputManager& InInput, EKeyCode InKey) noexcept
-        {
-            return InInput.IsKeyDown(InKey) || InInput.WasPressedThisFrame(InKey);
-        }
     }
 
     // =========================================================================
@@ -184,6 +176,7 @@ namespace Opaax
             lEntry.State.bCompleted       = false;
             lEntry.State.bHold            = false;
             lEntry.State.bMaskSuppressed  = false;
+            lEntry.State.bWheelThisFrame  = false;
         }
 
         // Consumed keys (per key, this frame only), starting with the keys the UI used.
@@ -203,7 +196,9 @@ namespace Opaax
                     continue;
                 }
 
-                const bool bActuated = IsActuated(InInput, lBinding.Key);
+                const float lKeyValue = InInput.GetKeyValue(lBinding.Key);
+                const bool  bActuated = lKeyValue != 0.f;
+                const bool  bWheel    = IsMouseWheel(lBinding.Key);
 
                 ActionEntry* lEntry = FindEntry(lBinding.Action);
                 if (lEntry == nullptr)
@@ -211,18 +206,23 @@ namespace Opaax
                     continue;
                 }
 
-                // A masked binding gives no value, but remember the key is down so unmasking
-                // does not produce a false press.
+                // A masked binding gives no value, but remember a held key is down so unmasking does
+                // not produce a false press. A notch is over by the next frame.
                 if (lConsumed[lIndex])
                 {
-                    if (bActuated) { lEntry->State.bMaskSuppressed = true; }
+                    if (bActuated && !bWheel) { lEntry->State.bMaskSuppressed = true; }
                     continue;
                 }
 
                 // The raw value goes in x; Negate and Swizzle move it (WASD -> Axis2D).
-                const Vector2F lRaw = Vector2F{bActuated ? 1.f : 0.f, 0.f};
+                const Vector2F lRaw = Vector2F{lKeyValue, 0.f};
 
                 lEntry->State.Value.Value += InputModifiers::ApplyAll(lRaw, lBinding.Modifiers);
+
+                if (bActuated && bWheel)
+                {
+                    lEntry->State.bWheelThisFrame = true;
+                }
 
                 // Consume only pressed keys.
                 if (lBinding.bConsume && bActuated)
@@ -241,9 +241,17 @@ namespace Opaax
             lState.Value.Value = InputModifiers::ApplyAll(lState.Value.Value, lEntry.Action.Modifiers);
 
             lState.bTriggered = lState.Value.AsBool();
-            // A key held through an unmask is not a new press: no Started.
-            lState.bStarted   = lState.bTriggered && !lWasActuated[lIdx] && !lWasMaskSuppressed[lIdx];
+            // A key held through an unmask is not a new press: no Started. Each notch of the wheel is.
+            lState.bStarted   = lState.bTriggered && (!lWasActuated[lIdx] || lState.bWheelThisFrame)
+                             && !lWasMaskSuppressed[lIdx];
             lState.bCompleted = !lState.bTriggered && lWasActuated[lIdx];
+
+            // A new press holds from zero.
+            if (lState.bStarted)
+            {
+                lState.HeldSeconds  = 0.f;
+                lState.bHoldLatched = false;
+            }
 
             if (lState.bTriggered)
             {

@@ -172,6 +172,76 @@ TEST_CASE("input: scroll ACCUMULATES within a frame and clears at EndFrame")
 }
 
 // =============================================================================
+// The wheel — notches, never held
+// =============================================================================
+TEST_CASE("input: a notch taps the wheel key of its direction for its frame only, never held")
+{
+    InputManager lInput;
+
+    lInput.OnMouseScrolled(0.f, 1.f);
+
+    CHECK(lInput.WasPressedThisFrame(EKeyCode::Mouse_WheelUp));
+    CHECK(lInput.WasReleasedThisFrame(EKeyCode::Mouse_WheelUp));
+    CHECK_FALSE(lInput.IsKeyDown(EKeyCode::Mouse_WheelUp));
+    CHECK_FALSE(lInput.WasPressedThisFrame(EKeyCode::Mouse_WheelDown));
+    CHECK(lInput.GetKeysDown().empty());
+
+    lInput.EndFrame();
+    CHECK_FALSE(lInput.WasPressedThisFrame(EKeyCode::Mouse_WheelUp));
+    CHECK_FALSE(lInput.WasReleasedThisFrame(EKeyCode::Mouse_WheelUp));
+
+    lInput.OnMouseScrolled(0.f, -1.f);
+    CHECK(lInput.WasPressedThisFrame(EKeyCode::Mouse_WheelDown));
+    CHECK_FALSE(lInput.WasPressedThisFrame(EKeyCode::Mouse_WheelUp));
+
+    // A reset is not a notch: nothing is left pressed.
+    lInput.ResetState();
+    CHECK_FALSE(lInput.WasPressedThisFrame(EKeyCode::Mouse_WheelDown));
+}
+
+TEST_CASE("input: the wheel axis reads the notches of the frame; a key reads 1 held or tapped")
+{
+    InputManager lInput;
+
+    lInput.OnMouseScrolled(0.f, -1.f);
+    lInput.OnMouseScrolled(0.f, -1.f);
+    CHECK(lInput.GetKeyValue(EKeyCode::Mouse_WheelAxis) == doctest::Approx(-2.f));
+    CHECK(lInput.GetKeyValue(EKeyCode::Mouse_WheelDown) == doctest::Approx(1.f));
+    CHECK(lInput.GetKeyValue(EKeyCode::Mouse_WheelUp) == doctest::Approx(0.f));
+
+    lInput.EndFrame();
+    CHECK(lInput.GetKeyValue(EKeyCode::Mouse_WheelAxis) == doctest::Approx(0.f));
+    CHECK(lInput.GetKeyValue(EKeyCode::Mouse_WheelDown) == doctest::Approx(0.f));
+
+    // A sideways scroll turns no vertical wheel code.
+    lInput.OnMouseScrolled(1.f, 0.f);
+    CHECK(lInput.GetKeyValue(EKeyCode::Mouse_WheelAxis) == doctest::Approx(0.f));
+    CHECK_FALSE(lInput.WasPressedThisFrame(EKeyCode::Mouse_WheelUp));
+
+    lInput.OnKeyPressed(EKeyCode::Space, false);
+    CHECK(lInput.GetKeyValue(EKeyCode::Space) == doctest::Approx(1.f));
+    lInput.OnKeyReleased(EKeyCode::Space);
+    CHECK(lInput.GetKeyValue(EKeyCode::Space) == doctest::Approx(1.f));   // tapped this frame
+    lInput.EndFrame();
+    CHECK(lInput.GetKeyValue(EKeyCode::Space) == doctest::Approx(0.f));
+}
+
+TEST_CASE("input: a wheel code fed as a key or a button is ignored: only the wheel turns it")
+{
+    InputManager lInput;
+
+    lInput.OnKeyPressed(EKeyCode::Mouse_WheelUp, false);
+    lInput.OnMouseButtonPressed(EKeyCode::Mouse_WheelDown);
+    lInput.OnKeyPressed(EKeyCode::Mouse_WheelAxis, false);
+
+    CHECK_FALSE(lInput.IsKeyDown(EKeyCode::Mouse_WheelUp));
+    CHECK_FALSE(lInput.WasPressedThisFrame(EKeyCode::Mouse_WheelUp));
+    CHECK_FALSE(lInput.IsKeyDown(EKeyCode::Mouse_WheelDown));
+    CHECK(lInput.GetKeyValue(EKeyCode::Mouse_WheelAxis) == doctest::Approx(0.f));
+    CHECK(lInput.GetKeysDown().empty());
+}
+
+// =============================================================================
 // ResetState — the route-close contract
 // =============================================================================
 TEST_CASE("input: ResetState releases everything held")

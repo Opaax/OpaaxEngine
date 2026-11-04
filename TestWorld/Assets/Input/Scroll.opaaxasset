@@ -1,0 +1,11 @@
+{
+    "Class": "InputActionAsset",
+    "Properties": {
+        "Description": "The wheel's notches this frame, up positive (the WheelProbe reads it).",
+        "HoldSeconds": 0.5,
+        "Modifiers": [],
+        "Name": "Scroll",
+        "ValueType": "Axis1D"
+    },
+    "Version": 1
+}

@@ -193,6 +193,12 @@ namespace Opaax
          */
         bool bMaskSuppressed = false;
 
+        /**
+         * Internal: the wheel drove the action this frame. Each notch is a new press, so it starts again
+         * even when the last frame had one.
+         */
+        bool bWheelThisFrame = false;
+
         /** Whether it fires for InTrigger this frame. */
         bool FiresFor(EInputTrigger InTrigger) const noexcept
         {

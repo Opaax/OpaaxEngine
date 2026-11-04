@@ -57,6 +57,17 @@ namespace Opaax
         return lIndex < KEY_STATE_COUNT && m_ReleasedThisFrame[lIndex];
     }
 
+    float InputManager::GetKeyValue(EKeyCode InKey) const noexcept
+    {
+        if (InKey == EKeyCode::Mouse_WheelAxis)
+        {
+            return m_ScrollDelta.y;
+        }
+
+        // Held, or pressed and released within this frame (a quick tap, a notch).
+        return (IsKeyDown(InKey) || WasPressedThisFrame(InKey)) ? 1.f : 0.f;
+    }
+
     bool InputManager::IsShiftDown() const noexcept
     {
         return IsKeyDown(EKeyCode::LeftShift) || IsKeyDown(EKeyCode::RightShift);
@@ -97,9 +108,10 @@ namespace Opaax
     // =========================================================================
     void InputManager::OnKeyPressed(EKeyCode InKey, bool InRepeat)
     {
-        if (InRepeat)
+        // Key repeat does not change state (WasPressedThisFrame must not fire again), and a wheel is
+        // never held down.
+        if (InRepeat || IsMouseWheel(InKey))
         {
-            // Key repeat does not change state (WasPressedThisFrame must not fire again).
             return;
         }
 
@@ -113,6 +125,11 @@ namespace Opaax
 
     void InputManager::OnKeyReleased(EKeyCode InKey)
     {
+        if (IsMouseWheel(InKey))
+        {
+            return;
+        }
+
         const Uint16 lIndex = ToIndex(InKey);
         if (lIndex < KEY_STATE_COUNT)
         {
@@ -148,6 +165,17 @@ namespace Opaax
         // Accumulated: several wheel events can arrive in one frame.
         m_ScrollDelta.x += InXOffset;
         m_ScrollDelta.y += InYOffset;
+
+        if (InYOffset > 0.f) { TapThisFrame(EKeyCode::Mouse_WheelUp); }
+        if (InYOffset < 0.f) { TapThisFrame(EKeyCode::Mouse_WheelDown); }
+    }
+
+    void InputManager::TapThisFrame(EKeyCode InKey)
+    {
+        // Never held: the press is seen this frame, and EndFrame clears both edges.
+        const Uint16 lIndex = static_cast<Uint16>(InKey);
+        m_PressedThisFrame[lIndex]  = true;
+        m_ReleasedThisFrame[lIndex] = true;
     }
 
     // =========================================================================

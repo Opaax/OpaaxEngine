@@ -1,0 +1,11 @@
+{
+    "Class": "InputActionAsset",
+    "Properties": {
+        "Description": "1 on a frame the wheel turns up, -1 down: its keys, not its axis (the WheelProbe counts it).",
+        "HoldSeconds": 0.5,
+        "Modifiers": [],
+        "Name": "Notch",
+        "ValueType": "Axis1D"
+    },
+    "Version": 1
+}
