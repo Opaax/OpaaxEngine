@@ -426,6 +426,46 @@ TEST_CASE("Rebind: a context known before it is added gets the player's key; a r
     CHECK(lChanges == 5);
 }
 
+TEST_CASE("Rebind: a menu's press-a-key, the key captured then bound; it jumps only once pressed again")
+{
+    const TestTempDir  lDir("rebindCaptured");
+    const InputClasses lClasses;
+    WriteControls(lDir);
+
+    ContextFixture         lFixture(lDir.Path(), lClasses);
+    InputMappingSubsystem& lInput = lFixture.StartMapping();
+    REQUIRE(lInput.AddContextAsset(OPAAX_ID("Controls"), CONTROLS_PATH));
+
+    ERebindResult lResult = ERebindResult::NoSuchMapping;
+    lInput.OnKeyCaptured().Add([&lInput, &lResult](const EKeyCode InKey)
+    {
+        if (InKey != EKeyCode::None)
+        {
+            lResult = lInput.Rebind(JumpSlot(), InKey).Result;
+        }
+    });
+
+    lInput.BeginKeyCapture();
+    lFixture.Press(lInput, EKeyCode::G);
+    CHECK(lResult == ERebindResult::Rebound);
+    CHECK(lInput.GetKey(JumpSlot()) == EKeyCode::G);
+
+    // The key that was taken does not jump on its own press, nor while held.
+    CHECK_FALSE(lInput.GetValue(OPAAX_ID("Jump")).AsBool());
+    lInput.Update(1.0 / 60.0);
+    lFixture.Input.EndFrame();
+    CHECK_FALSE(lInput.GetValue(OPAAX_ID("Jump")).AsBool());
+
+    lFixture.Release(lInput, EKeyCode::G);
+    CHECK(lFixture.Drives(lInput, EKeyCode::G, "Jump"));
+
+    // A key another mapping has: the menu learns it, and asks.
+    lInput.BeginKeyCapture();
+    lFixture.Press(lInput, EKeyCode::E);
+    CHECK(lResult == ERebindResult::Conflict);
+    CHECK(lInput.GetKey(JumpSlot()) == EKeyCode::G);
+}
+
 TEST_CASE("Rebind: a locked context's keys are reserved once it is known, and are not the player's")
 {
     const TestTempDir  lDir("rebindLocked");

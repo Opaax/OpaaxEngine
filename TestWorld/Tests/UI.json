@@ -130,5 +130,142 @@
         "params": {
             "path": "UI.png"
         }
+    },
+    {
+        "id": "press-a-key",
+        "command": "component.set",
+        "params": {
+            "entity": "Hud",
+            "type": "UIProbe",
+            "value": {
+                "bCapture": true
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "waiting",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "UIProbe/bCapturing",
+            "equals": true
+        }
+    },
+    {
+        "id": "click-is-the-key",
+        "command": "ui.click",
+        "params": {
+            "widget": "ClickButton"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.2
+        }
+    },
+    {
+        "id": "captured-click",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "UIProbe/Captured",
+            "equals": "Mouse_Left"
+        }
+    },
+    {
+        "id": "button-frozen",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "UIProbe/Clicks",
+            "equals": 1
+        }
+    },
+    {
+        "id": "game-masked",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "UIProbe/GameClicks",
+            "equals": 1
+        }
+    },
+    {
+        "id": "click-again",
+        "command": "ui.click",
+        "params": {
+            "widget": "ClickButton"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.2
+        }
+    },
+    {
+        "id": "button-back",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "UIProbe/Clicks",
+            "equals": 2
+        }
+    },
+    {
+        "id": "press-a-key-again",
+        "command": "component.set",
+        "params": {
+            "entity": "Hud",
+            "type": "UIProbe",
+            "value": {
+                "bCapture": true
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "escape",
+        "command": "input.key",
+        "params": {
+            "key": "Escape",
+            "action": "tap"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.2
+        }
+    },
+    {
+        "id": "cancelled",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "UIProbe/Captured",
+            "equals": "None"
+        }
+    },
+    {
+        "id": "not-waiting",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "UIProbe/bCapturing",
+            "equals": false
+        }
     }
 ]
