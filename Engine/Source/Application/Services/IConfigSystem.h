@@ -7,6 +7,7 @@
 
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
+#include "Core/String/OpaaxStringView.hpp"
 #include "Engine/Config/Config.h"
 #include "Object/ObjectPtr.h"
 
@@ -17,6 +18,8 @@ namespace Opaax
     class ObjectClassRegistry;
 
     inline constexpr LogCategory LogConfigSystem{"ConfigSystem"};
+
+    DECLARE_MULTICAST_DELEGATE_OneParam(FOnConfigAdded, Config&)
 
     // =============================================================================
     // IConfigSystem — one config of each Config class, one file each under <ProjectRoot>/Configs/.
@@ -98,6 +101,15 @@ namespace Opaax
 
         /** @return The registered config of InClass, or null. */
         Config* FindConfig(const ObjectClass& InClass) const noexcept;
+
+        /** @return The registered config named InName, its file's name ("Engine"), or null. */
+        Config* FindConfigByName(OpaaxStringView InName) const;
+
+        /**
+         * Fired when a config is registered, once it read its file: the player's settings go over it
+         * (IUserSettings). Subscribe with AddMember(this, ...) and RemoveAll(this) before going away.
+         */
+        FOnConfigAdded& OnConfigAdded() noexcept { return m_OnConfigAdded; }
         // End Get - Set
         // =============================================================================
 
@@ -119,6 +131,8 @@ namespace Opaax
     private:
         // Registration order. Few configs, so a linear scan is fine.
         TDynArray<TStrongObjectPtr<Config>> m_Configs;
+
+        FOnConfigAdded m_OnConfigAdded;
     };
 
     // =============================================================================

@@ -53,6 +53,17 @@ namespace Opaax
         return nullptr;
     }
 
+    Config* IConfigSystem::FindConfigByName(const OpaaxStringView InName) const
+    {
+        const OpaaxStringID lName(InName.ToString());
+        for (const TStrongObjectPtr<Config>& lConfig : m_Configs)
+        {
+            if (lConfig->GetName() == lName) { return lConfig.Get(); }
+        }
+
+        return nullptr;
+    }
+
     Config& IConfigSystem::FindOrCreate(const ObjectClass& InClass)
     {
         if (Config* lFound = FindConfig(InClass))
@@ -67,6 +78,8 @@ namespace Opaax
 
         // Registered before the hook, so a config reading others while loading finds itself.
         OnConfigRegistered(lConfig);
+
+        m_OnConfigAdded.Broadcast(lConfig);
 
         return lConfig;
     }

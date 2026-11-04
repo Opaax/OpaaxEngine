@@ -105,6 +105,11 @@ saved in `.opaaxmap` files.
 | `save.get` | `slot` | A slot's save as its file holds it: `slot`, `path`, `class`, `classVersion`, `properties`. Fails for a slot without a save, or a file that is not a save this engine reads |
 | `save.set` | `slot`, `class`, `properties` | Writes a slot as the game writes a save of `class`: its defaults, `properties` merged. An unknown class, a property the class does not have (the error lists its properties) or a value of the wrong type writes nothing. With `slot`, `text` instead, the file is written as given, unchecked: an old or broken file, for a test |
 | `save.clear` | `slot` or `all` | Deletes a slot's save, or every slot's with `all: true`; answers `deleted`. A slot without a save is no failure |
+| `settings.get` | | The player's settings ([Settings.md](Settings.md)): `active` (over the configs: in a game always, in the editor while Play runs), `unsaved`, `path` (their file) and `properties`, their values as the file holds them (`{"Configs": {"Engine": ...}}`). What the engine reads is in `config.get` |
+| `settings.set` | `config`, `values` | Sets `values`, shaped like the config's file (`{"Audio": {"MasterVolume": 0.5}}`; a bus by its name, `{"Audio": {"Buses": {"Music": {"Volume": 0.5}}}}`), as the player's, as a settings menu does; a null takes one away. Read at once while active; not saved. A value the config does not have, or of the wrong type, refuses them all. Answers as `settings.get` |
+| `settings.save` | | Writes the player's settings to their file (the `Settings` slot). Answers as `settings.get` |
+| `settings.load` | | Reads them from their file again, in place of the values in memory, as a game does when it starts. Answers as `settings.get` |
+| `settings.reset` | `config` | Takes the player's values for `config` away, or every value without it: the project's are read again. Not saved. Answers as `settings.get` |
 
 A check is any of `equals` (numbers within 1e-4; for an object, the fields given), `near` with a
 `tolerance` (0.01 by default), `greater`, `less`, `between: [min, max]`. A failed expectation fails

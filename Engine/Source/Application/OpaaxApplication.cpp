@@ -12,6 +12,7 @@
 #include "Application/Services/IProjectManager.h"
 #include "Application/Services/IJobSystem.h"
 #include "Application/Services/ISaveStorage.h"
+#include "Application/Services/IUserSettings.h"
 
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/EngineEvents.h"
@@ -99,7 +100,11 @@ void OpaaxApplication::Bootstrap()
     IJobSystem& lJobSystem = BootJobSystem();
 
     //Save storage — the player's saves, in the user folder.
-    BootSaveStorage(lPath);
+    ISaveStorage& lSaveStorage = BootSaveStorage(lPath);
+
+    //User settings — the player's values over the configs, from the save storage. Before the window:
+    //a game's opens at the player's size.
+    BootUserSettings(lSaveStorage, lConfigSystem);
 
     //Stats — reads the config, so after the config system.
     BootProfiler(lConfigSystem);
@@ -148,6 +153,20 @@ IJobSystem& OpaaxApplication::BootJobSystem()
 ISaveStorage& OpaaxApplication::BootSaveStorage(const IPaths& Paths)
 {
     return m_Services.Provide<ISaveStorage, Opaax::SaveStorage>(Paths);
+}
+
+IUserSettings& OpaaxApplication::BootUserSettings(ISaveStorage& SaveStorage, IConfigSystem& ConfigSystem)
+{
+    IUserSettings& lSettings = m_Services.Provide<IUserSettings, Opaax::UserSettings>(SaveStorage, ConfigSystem);
+
+    // An app that starts its game at once is that game from the start. The editor starts in Edit: its
+    // window and Config panel keep the project's values, and each Play reads the player's (Engine::StartGame).
+    if (GetStartupWorldSpec().Mode == EWorldMode::Play)
+    {
+        lSettings.Load();
+        lSettings.Activate();
+    }
+    return lSettings;
 }
 
 void OpaaxApplication::BootProfiler(IConfigSystem& ConfigSystem)
@@ -575,5 +594,6 @@ IProjectManager&    OpaaxApplication::ProjectManager()  { return m_Services.Get<
 IConfigSystem&      OpaaxApplication::ConfigSystem()    { return m_Services.Get<IConfigSystem>();   }
 IJobSystem&         OpaaxApplication::JobSystem()       { return m_Services.Get<IJobSystem>();      }
 ISaveStorage&       OpaaxApplication::SaveStorage()     { return m_Services.Get<ISaveStorage>();    }
+IUserSettings&      OpaaxApplication::UserSettings()    { return m_Services.Get<IUserSettings>();   }
 IWindowManager&     OpaaxApplication::WindowManager()   { return m_Services.Get<IWindowManager>();  }
 IEngine&            OpaaxApplication::Engine()          { return m_Services.Get<IEngine>();         }

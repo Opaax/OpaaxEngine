@@ -18,6 +18,7 @@ namespace Opaax
     class IPaths;
     class IJobSystem;
     class ISaveStorage;
+    class IUserSettings;
     struct EngineConfigData;
 
     inline constexpr LogCategory LogGameInstanceManager{"GameInstanceManager"};
@@ -115,6 +116,7 @@ namespace Opaax
         const EngineConfigData* m_Config    = nullptr;
         IJobSystem*             m_Jobs      = nullptr;
         ISaveStorage*           m_Saves     = nullptr;
+        IUserSettings*          m_Settings  = nullptr;
 
         // Number of games started. See GetSessionsStarted.
         Uint64 m_SessionsStarted = 0;

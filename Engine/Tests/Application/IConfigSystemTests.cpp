@@ -209,6 +209,42 @@ TEST_CASE("ConfigSystem: RegisterClasses makes the config of every concrete clas
     CHECK(lConfig.GetConfigs().size() == 2);
 }
 
+TEST_CASE("ConfigSystem: OnConfigAdded fires once per config, after it read its file; FindConfigByName finds it")
+{
+    StubPaths lPaths(OpaaxString("W:/proj/Configs"));
+    ConfigSystem lConfig(lPaths);
+
+    struct Listener
+    {
+        TDynArray<Config*> Added;
+        int                LoadsSeen = 0;
+
+        void OnAdded(Config& InConfig)
+        {
+            Added.push_back(&InConfig);
+            if (&InConfig.GetClass() == &TestConfig::StaticClass())
+            {
+                LoadsSeen = static_cast<TestConfig&>(InConfig).LoadCount();
+            }
+        }
+    } lListener;
+    lConfig.OnConfigAdded().AddMember(&lListener, &Listener::OnAdded);
+
+    TestConfig& lTest = lConfig.Register<TestConfig>();
+    lConfig.Get<TestConfig>();
+    lConfig.Register<OtherTestConfig>();
+
+    REQUIRE(lListener.Added.size() == 2u);
+    CHECK(lListener.Added[0] == &lTest);
+    CHECK(lListener.LoadsSeen == 1);
+
+    CHECK(lConfig.FindConfigByName("Other") == lListener.Added[1]);
+    CHECK(lConfig.FindConfigByName("test.config") == &lTest);
+    CHECK(lConfig.FindConfigByName("Others") == nullptr);
+
+    lConfig.OnConfigAdded().RemoveAll(&lListener);
+}
+
 TEST_CASE("IConfigSystem: the null system stays in-memory (no disk) and is never null")
 {
     AppServiceLocator lLocator;

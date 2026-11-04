@@ -7,6 +7,7 @@
 #include "Application/Services/IPaths.h"
 #include "Application/Services/IProjectManager.h"
 #include "Application/Services/ISaveStorage.h"
+#include "Application/Services/IUserSettings.h"
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Input/InputManager.h"
@@ -33,6 +34,7 @@ namespace Opaax
         m_Config    = &OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>().GetData();
         m_Jobs      = &OpaaxApplication::GetAppService<IJobSystem>();
         m_Saves     = &OpaaxApplication::GetAppService<ISaveStorage>();
+        m_Settings  = &OpaaxApplication::GetAppService<IUserSettings>();
 
         m_GameInstanceClass = OpaaxStringID(OpaaxApplication::GetAppService<IProjectManager>().GameInstanceClass());
 
@@ -56,8 +58,8 @@ namespace Opaax
             return false;
         }
 
-        if (m_Worlds == nullptr || m_Resources == nullptr || m_Events == nullptr
-            || m_Input == nullptr || m_Paths == nullptr || m_Config == nullptr || m_Jobs == nullptr || m_Saves == nullptr)
+        if (m_Worlds == nullptr || m_Resources == nullptr || m_Events == nullptr || m_Input == nullptr
+            || m_Paths == nullptr || m_Config == nullptr || m_Jobs == nullptr || m_Saves == nullptr || m_Settings == nullptr)
         {
             OPAAX_LOG(LogGameInstanceManager, Error,
                       "StartGame refused — this manager was never started, so there is no engine context.");
@@ -66,7 +68,7 @@ namespace Opaax
 
         m_GameInstance = GameInstance::Create(m_GameInstanceClass, m_Registries->ObjectClasses());
         m_GameInstance->Init(GameInstanceContext{*m_Worlds, *m_Resources, *m_Paths, *m_Events, *m_Input, *m_Config,
-                                                 *m_Jobs, *m_Saves});
+                                                 *m_Jobs, *m_Saves, *m_Settings});
         ++m_SessionsStarted;
 
         const Uint64 lCreated = m_GameInstance->Start(m_Registries->ObjectClasses());

@@ -7,6 +7,7 @@
 #include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IJobSystem.h"
 #include "Application/Services/IPaths.h"
+#include "Application/Services/IUserSettings.h"
 #include "Application/Services/IWindowManager.h"
 #include "Audio/AudioManager.h"
 #include "Core/Profiling/Profiler.h"
@@ -378,7 +379,37 @@ namespace Opaax
             return false;
         }
 
-        return m_GameInstances->StartGame();
+        // A second game is refused, with its log; the first keeps the player's settings.
+        if (m_GameInstances->IsGameRunning())
+        {
+            return m_GameInstances->StartGame();
+        }
+
+        // The player's settings for the game's lifetime, from the slot as it is now. A game app read them
+        // at boot, before its window; the editor reads them at each Play and gives them back at Stop.
+        IUserSettings& lSettings = OpaaxApplication::GetAppService<IUserSettings>();
+        m_bGameActivatedSettings = !lSettings.IsActive();
+        if (m_bGameActivatedSettings)
+        {
+            lSettings.Load();
+            lSettings.Activate();
+        }
+
+        if (!m_GameInstances->StartGame())
+        {
+            ReleaseUserSettings();
+            return false;
+        }
+        return true;
+    }
+
+    void Engine::ReleaseUserSettings()
+    {
+        if (m_bGameActivatedSettings)
+        {
+            OpaaxApplication::GetAppService<IUserSettings>().Deactivate();
+            m_bGameActivatedSettings = false;
+        }
     }
 
     bool Engine::EndGame()
@@ -396,7 +427,11 @@ namespace Opaax
         // Logged here so the log follows execution order.
         OPAAX_ENGINE_LOG(Trace, "EndGame — {} play world(s) destroyed, now ending the game instance", lDestroyed);
 
-        return m_GameInstances->EndGame();
+        const bool bEnded = m_GameInstances->EndGame();
+
+        // After the game: its OnEnd still read the player's settings.
+        ReleaseUserSettings();
+        return bEnded;
     }
 
     World* Engine::FinishStartup(const WorldSpec& InSpec)

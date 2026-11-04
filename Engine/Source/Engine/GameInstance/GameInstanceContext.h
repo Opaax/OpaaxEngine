@@ -2,6 +2,7 @@
 
 #include "Application/Services/IJobSystem.h"
 #include "Application/Services/ISaveStorage.h"
+#include "Application/Services/IUserSettings.h"
 
 namespace Opaax
 {
@@ -49,5 +50,11 @@ namespace Opaax
 
         /** The player's save slots. The null one keeps nothing. */
         ISaveStorage& Saves = ISaveStorage::Null();
+
+        /**
+         * The player's settings: a settings menu sets them, Config shows what the engine reads. Over the
+         * configs for the whole game. The null one refuses every change.
+         */
+        IUserSettings& Settings = IUserSettings::Null();
     };
 }

@@ -1,0 +1,257 @@
+[
+    {
+        "id": "clear",
+        "command": "save.clear",
+        "params": {
+            "slot": "Settings"
+        }
+    },
+    {
+        "id": "fresh",
+        "command": "settings.load",
+        "expect": {
+            "active": true,
+            "unsaved": false
+        }
+    },
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Settings.opaaxlevel"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "active",
+        "command": "expect.value",
+        "params": {
+            "entity": "Settings",
+            "path": "SettingsProbe/bActive",
+            "equals": true
+        }
+    },
+    {
+        "id": "project-volume",
+        "command": "expect.value",
+        "params": {
+            "entity": "Settings",
+            "path": "SettingsProbe/MixerVolume",
+            "near": 1.0,
+            "tolerance": 0.001
+        }
+    },
+    {
+        "id": "menu-sets",
+        "command": "component.set",
+        "params": {
+            "entity": "Settings",
+            "type": "SettingsProbe",
+            "value": {
+                "Volume": 0.25
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "menu-taken",
+        "command": "expect.value",
+        "params": {
+            "entity": "Settings",
+            "path": "SettingsProbe/bTaken",
+            "equals": true
+        }
+    },
+    {
+        "id": "mixer-follows",
+        "command": "expect.value",
+        "params": {
+            "entity": "Settings",
+            "path": "SettingsProbe/MixerVolume",
+            "near": 0.25,
+            "tolerance": 0.001
+        }
+    },
+    {
+        "id": "config-reads",
+        "command": "config.get",
+        "params": {
+            "config": "Engine"
+        },
+        "expect": {
+            "values": {
+                "Audio": {
+                    "MasterVolume": 0.25
+                }
+            },
+            "project": {
+                "Audio": {
+                    "MasterVolume": 1.0
+                }
+            },
+            "player": {
+                "Audio": {
+                    "MasterVolume": 0.25
+                }
+            }
+        }
+    },
+    {
+        "id": "music",
+        "command": "settings.set",
+        "params": {
+            "config": "Engine",
+            "values": {
+                "Audio": {
+                    "Buses": {
+                        "Music": {
+                            "Volume": 0.5
+                        }
+                    }
+                }
+            }
+        },
+        "expect": {
+            "unsaved": true,
+            "properties": {
+                "Configs": {
+                    "Engine": {
+                        "Audio": {
+                            "MasterVolume": 0.25,
+                            "Buses": {
+                                "Music": {
+                                    "Volume": 0.5
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 1
+        }
+    },
+    {
+        "id": "music-follows",
+        "command": "expect.value",
+        "params": {
+            "entity": "Settings",
+            "path": "SettingsProbe/MusicVolume",
+            "near": 0.5,
+            "tolerance": 0.001
+        }
+    },
+    {
+        "id": "misspelt",
+        "command": "settings.set",
+        "params": {
+            "config": "Engine",
+            "values": {
+                "Audio": {
+                    "MasterVolum": 0.5
+                }
+            }
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "save",
+        "command": "settings.save",
+        "expect": {
+            "unsaved": false
+        }
+    },
+    {
+        "id": "file",
+        "command": "save.get",
+        "params": {
+            "slot": "Settings"
+        },
+        "expect": {
+            "class": "UserSettings",
+            "classVersion": 1,
+            "properties": {
+                "Configs": {
+                    "Engine": {
+                        "Audio": {
+                            "MasterVolume": 0.25
+                        }
+                    }
+                }
+            }
+        }
+    },
+    {
+        "id": "reset",
+        "command": "settings.reset"
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 1
+        }
+    },
+    {
+        "id": "reset-volume",
+        "command": "expect.value",
+        "params": {
+            "entity": "Settings",
+            "path": "SettingsProbe/MixerVolume",
+            "near": 1.0,
+            "tolerance": 0.001
+        }
+    },
+    {
+        "id": "reload",
+        "command": "settings.load",
+        "expect": {
+            "unsaved": false
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 1
+        }
+    },
+    {
+        "id": "reloaded-volume",
+        "command": "expect.value",
+        "params": {
+            "entity": "Settings",
+            "path": "SettingsProbe/MixerVolume",
+            "near": 0.25,
+            "tolerance": 0.001
+        }
+    },
+    {
+        "id": "leave-none",
+        "command": "settings.reset"
+    },
+    {
+        "id": "leave-no-file",
+        "command": "save.clear",
+        "params": {
+            "slot": "Settings"
+        },
+        "expect": {
+            "deleted": [
+                "Settings"
+            ]
+        }
+    }
+]

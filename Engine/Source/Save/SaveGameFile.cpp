@@ -7,13 +7,21 @@ namespace Opaax
 {
     OpaaxString SaveGameFile::Serialize(const SaveGame& InSave)
     {
-        const ObjectClass&   lClass      = InSave.GetClass();
-        const nlohmann::json lProperties = lClass.WriteProperties(InSave);
+        const ObjectClass& lClass = InSave.GetClass();
 
+        Contents lContents;
+        lContents.Class        = lClass.GetName();
+        lContents.Properties   = lClass.WriteProperties(InSave);
+        lContents.ClassVersion = InSave.GetSaveVersion();
+        return Serialize(lContents);
+    }
+
+    OpaaxString SaveGameFile::Serialize(const Contents& InContents)
+    {
         const nlohmann::json lJson = {
-            { "Class",        lClass.GetName().CStr() },
-            { "ClassVersion", InSave.GetSaveVersion() },
-            { "Properties",   lProperties.is_object() ? lProperties : nlohmann::json::object() },
+            { "Class",        InContents.Class.CStr() },
+            { "ClassVersion", InContents.ClassVersion },
+            { "Properties",   InContents.Properties.is_object() ? InContents.Properties : nlohmann::json::object() },
             { "Version",      FORMAT_VERSION }
         };
         return ToJsonText(lJson, 4);

@@ -2,6 +2,7 @@
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"
+#include "Application/Services/IUserSettings.h"
 #include "Audio/AudioSubsystem.h"
 #include "Engine/EngineEvents.h"
 #include "Engine/Subsystems/EngineEventBus.h"
@@ -558,5 +559,12 @@ namespace Opaax
     DebugDraw& Behaviour::GetDebugDraw() const
     {
         return GetContext().Debug;
+    }
+
+    IUserSettings& Behaviour::GetUserSettings() const
+    {
+        const WorldContext* lContext = (m_World != nullptr) ? m_World->GetContext() : nullptr;
+        GameInstance*       lGame    = (lContext != nullptr) ? lContext->Game : nullptr;
+        return (lGame != nullptr) ? lGame->GetContext().Settings : IUserSettings::Null();
     }
 }

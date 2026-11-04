@@ -37,6 +37,9 @@ namespace Opaax
         /** InSave's class, versions and properties, keys sorted and indented: a person can read it. */
         OpaaxString Serialize(const SaveGame& InSave);
 
+        /** A file of InContents, laid out as Serialize lays out a save: for a file no SaveGame class reads. */
+        OpaaxString Serialize(const Contents& InContents);
+
         /**
          * Reads a file's text into OutContents (untouched on failure). A file written by hand may leave
          * out the versions (taken as 1) and the properties (all keep their defaults).

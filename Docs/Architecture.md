@@ -19,7 +19,7 @@ how to extend each part.
 | `Audio` | Sound: the engine's own mixer (voices, buses, fades, spatial sound) on an audio thread, clip definitions and banks, sources and the listener; the device and the decoders behind a backend (`Audio/Miniaudio`) |
 | `Save` | What a game keeps for a player: `SaveGame` classes saved by their properties, one file per slot in the player's own folder, written whole or not at all; each game's `SaveGameSubsystem` saves and loads them now or on a worker ([Saving.md](Saving.md)) |
 | `Input`, `Animation`, `Movement`, `UI` | Actions and mapping contexts, sprite animation, character movers, UI canvases |
-| `Engine`, `Application` | The application, its services, the registries, the frame loop and the configs (`Engine/Config`: one `Config` object class per `.config` file) |
+| `Engine`, `Application` | The application, its services, the registries, the frame loop and the configs (`Engine/Config`: one `Config` object class per `.config` file, with the player's settings over it: [Settings.md](Settings.md)) |
 | `Automation` | The request runner, its two transports (a script, an inbox folder) and the engine's commands |
 
 The editor is a separate library (`Editor/`) on top of the engine: panels, commands, documents
@@ -206,6 +206,24 @@ subsystem's next `Update`.
 - **Against:** a save is turned into text on the main thread when it is asked, so a very large one
   costs that frame; the requests share one worker, so a long write delays the loads behind it;
   text is larger than a binary format and nothing checks that a save was not edited by hand.
+
+### The player's settings over the project's configs
+
+A config holds two layers: the project's values (its file, what the Config panel edits) and the
+player's over them, shaped like the file, an item of a named list (the audio buses) by its name. The
+engine reads one set, the project's with the player's over them. `IUserSettings`, an app service, keeps
+the player's values in the `Settings` slot of the player's saves and puts them over the configs: in a
+game from the start, before the window opens; in the editor only while Play runs. As Unreal keeps
+`GameUserSettings.ini` in the player's `Saved/` folder over the project's defaults, and Godot a
+`ConfigFile` in `user://`.
+
+- **For:** a settings menu changes what the engine reads at once, through the change events each
+  config already has; the project's files never take a player's values; a game's own options get the
+  same two layers by being a config; a project change (a bus taken out) drops only the player's values
+  it leaves without a place; one file a person can read, kept with the saves.
+- **Against:** a change is checked by reading the whole config again (fine at a menu's pace, not every
+  frame); values go through JSON text between the menu and the config; the values for a config no app
+  registers stay in the file unchecked.
 
 ### The engine mixes; an audio library only plays
 

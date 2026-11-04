@@ -525,6 +525,12 @@ namespace Opaax
         /** The world's services (resources, paths, input, event bus, ...). */
         WorldContext& GetContext() const;
 
+        /**
+         * The player's settings, which a settings menu sets (SetMasterVolume, SetWindowMode...); what the
+         * engine reads is GetContext().Config. The null one, refusing every change, when no game is running.
+         */
+        IUserSettings& GetUserSettings() const;
+
         /** One of this world's subsystems, the engine's or the game's (GetSubsystem<WaveSpawner>()), or null. */
         template<typename T>
         T* GetSubsystem() const
