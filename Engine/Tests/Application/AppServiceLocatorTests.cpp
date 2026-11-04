@@ -6,6 +6,8 @@
 #include "Application/Services/IAppService.h"
 #include "Platform/IPlatform.h"
 #include "Core/OpaaxTypes.h"
+#include "Core/Maths/Maths.h"
+#include "Core/Templates/TypeTraits.h"
 #include "Core/Time/Clock.h"
 #include "Platform/NativePlatform.h"
 
@@ -167,17 +169,23 @@ TEST_CASE("NativePlatform: SleepPrecise never wakes early, and not long after")
 {
     NativePlatform lPlatform;
 
-    // What a frame cap waits: under a millisecond (spun) to a 30 Hz frame. A busy machine may wake
-    // the thread late, so the upper bound is loose; early is never allowed.
+    // What a frame cap waits: under a millisecond (spun) to a 30 Hz frame. Early is never allowed. A
+    // shared machine (CI) may wake any thread late, so lateness is checked on the best of a few tries.
+    constexpr Int32 TRIES = 5;
     for (const double lSeconds : { 0.0, 0.0004, 0.002, 0.0083, 0.033 })
     {
         CAPTURE(lSeconds);
-        const double lStart = Clock::NowSeconds();
-        lPlatform.SleepPrecise(lSeconds);
-        const double lSlept = Clock::NowSeconds() - lStart;
+        double lBestLate = TNumericLimits<double>::max();
+        for (Int32 lTry = 0; lTry < TRIES; ++lTry)
+        {
+            const double lStart = Clock::NowSeconds();
+            lPlatform.SleepPrecise(lSeconds);
+            const double lSlept = Clock::NowSeconds() - lStart;
 
-        CHECK(lSlept >= lSeconds);
-        CHECK(lSlept < lSeconds + 0.050);
+            CHECK(lSlept >= lSeconds);
+            lBestLate = Maths::Min(lBestLate, lSlept - lSeconds);
+        }
+        CHECK(lBestLate < 0.050);
     }
 
     // The null platform's time stands still: it returns at once.
