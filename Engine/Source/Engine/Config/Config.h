@@ -100,6 +100,18 @@ namespace Opaax
             return false;
         }
 
+        /**
+         * Checks InValues as SetPlayerText would, changing nothing: the values it would leave out are
+         * named in OutRejected. How a value is checked before it is kept for later (IUserSettings).
+         * @return False when InValues is not a JSON object, or the config takes no player's values
+         */
+        virtual bool CheckPlayerText(const OpaaxString& InValues, TDynArray<OpaaxString>& OutRejected) const
+        {
+            (void)InValues;
+            (void)OutRejected;
+            return false;
+        }
+
         /** The player's values, as SetPlayerText takes them: "{}" when there are none. */
         virtual OpaaxString GetPlayerText() const { return OpaaxString("{}"); }
 

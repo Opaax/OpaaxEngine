@@ -18,6 +18,7 @@ namespace Opaax
     class IConfigSystem;
     class IProjectManager;
     class ISaveStorage;
+    class IUserSettings;
     class IPlatform;
     class IPaths;
     class IJobSystem;
@@ -73,6 +74,9 @@ namespace Opaax
         IProjectManager&    BootProjectManager(const IPaths& Paths);
         IJobSystem&         BootJobSystem();
         ISaveStorage&       BootSaveStorage(const IPaths& Paths);
+
+        /** The player's settings; read and put over the configs now when the app starts its game at once. */
+        IUserSettings&      BootUserSettings(ISaveStorage& SaveStorage, IConfigSystem& ConfigSystem);
 
         /** Enables the Profiler: always in dev builds, from config in ship builds. */
         void                BootProfiler(IConfigSystem& ConfigSystem);
@@ -232,6 +236,7 @@ namespace Opaax
         IConfigSystem&      ConfigSystem();
         IJobSystem&         JobSystem();
         ISaveStorage&       SaveStorage();
+        IUserSettings&      UserSettings();
         IWindowManager&     WindowManager();
         IEngine&            Engine();
 

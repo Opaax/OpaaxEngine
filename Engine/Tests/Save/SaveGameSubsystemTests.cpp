@@ -227,6 +227,41 @@ TEST_CASE("SaveGameSubsystem: Exists, Delete and ListSlots answer from the playe
     CHECK(lSaves.ListSlots().size() == 1);
 }
 
+TEST_CASE("SaveGameSubsystem: the Settings slot is the player's settings': refused to a game's saves, not listed")
+{
+    SaveFixture        lFixture;
+    SaveGameSubsystem& lSaves = lFixture.StartGame();
+
+    const OpaaxString lSettings(R"({ "Class": "UserSettings", "Properties": {} })");
+    REQUIRE(lFixture.Storage.Write("Settings", lSettings) == ESaveResult::Ok);
+
+    const TStrongObjectPtr<TestRunSave> lSave = NewObject<TestRunSave>();
+    REQUIRE(lSaves.Save("Main", *lSave) == ESaveResult::Ok);
+
+    // In any case: on Windows "settings" is the same file.
+    CHECK(lSaves.Save("Settings", *lSave) == ESaveResult::InvalidSlot);
+    CHECK(lSaves.Save("settings", *lSave) == ESaveResult::InvalidSlot);
+    CHECK(lSaves.Delete("Settings") == ESaveResult::InvalidSlot);
+    CHECK_FALSE(lSaves.Exists("Settings"));
+
+    TStrongObjectPtr<TestRunSave> lLoaded;
+    CHECK(lSaves.Load("Settings", lLoaded) == ESaveResult::InvalidSlot);
+
+    ESaveResult lAnswer = ESaveResult::Ok;
+    lSaves.SaveAsync("SETTINGS", *lSave, [&lAnswer](const ESaveResult InResult) { lAnswer = InResult; });
+    lSaves.Flush();
+    CHECK(lAnswer == ESaveResult::InvalidSlot);
+
+    const TDynArray<OpaaxString> lSlots = lSaves.ListSlots();
+    REQUIRE(lSlots.size() == 1);
+    CHECK(lSlots[0] == "Main");
+
+    // The player's settings are as they were.
+    OpaaxString lText;
+    REQUIRE(lFixture.Storage.Read("Settings", lText) == ESaveResult::Ok);
+    CHECK(lText == lSettings);
+}
+
 TEST_CASE("SaveGameSubsystem: a save that cannot be written keeps the slot's last save")
 {
     SaveFixture        lFixture;

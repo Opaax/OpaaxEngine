@@ -117,9 +117,12 @@ lSaves->SaveAsync("Main", *lSave, [](Opaax::ESaveResult InResult) { /* a "saved"
 
 ## Slots
 
-A slot is a file name: 1 to 64 letters, digits, `_` or `-` (`Main`, `Settings`, `Ghost_Level3`), and
+A slot is a file name: 1 to 64 letters, digits, `_` or `-` (`Main`, `Profile2`, `Ghost_Level3`), and
 not a name Windows keeps for a device (`CON`, `NUL`, `COM1`...). A name a player types ("Zoé's game")
 goes in the save as a field; the slot gets a name of the game's (`Profile2`).
+
+`Settings` holds the player's settings ([Settings.md](Settings.md)), in any case: a game's save there is
+refused (`InvalidSlot`), and `ListSlots` leaves it out.
 
 ## Versions
 

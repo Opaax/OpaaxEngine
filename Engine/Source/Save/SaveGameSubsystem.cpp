@@ -2,6 +2,8 @@
 
 #include "Application/Services/IJobSystem.h"
 #include "Application/Services/ISaveStorage.h"
+#include "Application/Services/IUserSettings.h"
+#include "Core/Algo/Algo.h"
 #include "Engine/GameInstance/GameInstanceContext.h"
 #include "Resources/ResourceManager.h"
 #include "Save/SaveGameFile.h"
@@ -20,6 +22,20 @@ namespace Opaax
                 lJoined += lName;
             }
             return lJoined;
+        }
+
+        /** Logs why a game's save cannot use InSlot, which is not a plain name or is the player's settings'. */
+        void ReportInvalidSlot(const OpaaxStringView InSlot)
+        {
+            if (IUserSettings::IsSettingsSlot(InSlot))
+            {
+                OPAAX_LOG(LogSaveGame, Error, "Slot '{}' holds the player's settings (IUserSettings): give the save "
+                          "another name", InSlot);
+                return;
+            }
+
+            OPAAX_LOG(LogSaveGame, Error, "'{}' is not a slot name: 1 to {} letters, digits, '_' or '-'", InSlot,
+                      ISaveStorage::MAX_SLOT_NAME_LENGTH);
         }
     }
 
@@ -44,12 +60,18 @@ namespace Opaax
     bool SaveGameSubsystem::Exists(const OpaaxStringView InSlot) const
     {
         WaitForRequests();
-        return GetContext().Saves.Exists(InSlot);
+        return !IUserSettings::IsSettingsSlot(InSlot) && GetContext().Saves.Exists(InSlot);
     }
 
     ESaveResult SaveGameSubsystem::Delete(const OpaaxStringView InSlot)
     {
         WaitForRequests();
+
+        if (IUserSettings::IsSettingsSlot(InSlot))
+        {
+            ReportInvalidSlot(InSlot);
+            return ESaveResult::InvalidSlot;
+        }
 
         const ESaveResult lResult = GetContext().Saves.Delete(InSlot);
         if (lResult == ESaveResult::Ok)
@@ -62,7 +84,11 @@ namespace Opaax
     TDynArray<OpaaxString> SaveGameSubsystem::ListSlots() const
     {
         WaitForRequests();
-        return GetContext().Saves.ListSlots();
+
+        // The player's settings share the folder: not a save of the game's.
+        TDynArray<OpaaxString> lSlots = GetContext().Saves.ListSlots();
+        Algo::RemoveIf(lSlots, [](const OpaaxString& InSlot) { return IUserSettings::IsSettingsSlot(InSlot); });
+        return lSlots;
     }
 
     ESaveResult SaveGameSubsystem::LoadOfClass(const OpaaxStringView InSlot, const ObjectClass& InClass,
@@ -288,6 +314,13 @@ namespace Opaax
     {
         Outcome lOutcome;
 
+        // The player's settings are in the same folder, read and written by IUserSettings alone.
+        if (IUserSettings::IsSettingsSlot(InRequest.Slot))
+        {
+            lOutcome.Result = ESaveResult::InvalidSlot;
+            return lOutcome;
+        }
+
         if (InRequest.LoadClass == nullptr)
         {
             lOutcome.Result = InStorage.Write(InRequest.Slot, InRequest.Text);
@@ -350,8 +383,7 @@ namespace Opaax
                 break;
 
             case ESaveResult::InvalidSlot:
-                OPAAX_LOG(LogSaveGame, Error, "'{}' is not a slot name: 1 to {} letters, digits, '_' or '-'", InSlot,
-                          ISaveStorage::MAX_SLOT_NAME_LENGTH);
+                ReportInvalidSlot(InSlot);
                 break;
 
             // The storage said why.
@@ -374,8 +406,7 @@ namespace Opaax
         }
         else if (InResult == ESaveResult::InvalidSlot)
         {
-            OPAAX_LOG(LogSaveGame, Error, "'{}' is not a slot name: 1 to {} letters, digits, '_' or '-'", InSlot,
-                      ISaveStorage::MAX_SLOT_NAME_LENGTH);
+            ReportInvalidSlot(InSlot);
         }
     }
 }

@@ -115,6 +115,21 @@ TEST_CASE("ConfigLayer: Apply sets objects key by key, and an item of a named li
     CHECK_FALSE(ConfigLayer::IsNamedList(Json("[]")));
 }
 
+TEST_CASE("ConfigLayer: Merge puts changes over a layer; a null takes a value away, and what it empties goes")
+{
+    const nlohmann::json lLayer = Json(R"({"Window": {"Mode": "Fullscreen"}, "Audio": {"Buses": {"Music": {"Volume": 0.5}}}})");
+
+    CHECK((ConfigLayer::Merge(lLayer, Json(R"({"Window": {"Width": 1920}})"))
+           == Json(R"({"Window": {"Mode": "Fullscreen", "Width": 1920}, "Audio": {"Buses": {"Music": {"Volume": 0.5}}}})")));
+
+    // The bus's volume gone, nothing is left under Audio: it goes too.
+    CHECK((ConfigLayer::Merge(lLayer, Json(R"({"Audio": {"Buses": {"Music": {"Volume": null}}}})"))
+           == Json(R"({"Window": {"Mode": "Fullscreen"}})")));
+
+    // A null for a value the layer does not hold leaves no empty object behind.
+    CHECK((ConfigLayer::Merge(nlohmann::json(), Json(R"({"Window": {"Mode": null}})")) == Json("{}")));
+}
+
 // =============================================================================
 // TConfig — the player's values over the project's
 // =============================================================================
@@ -182,6 +197,27 @@ TEST_CASE("TConfig: a player's value the config does not have, or of the wrong t
     CHECK_FALSE(lConfig.SetPlayerText(OpaaxString("[1]")));
     CHECK_FALSE(lConfig.SetPlayerText(OpaaxString("{ not json")));
     CHECK_FALSE(lConfig.GetData().Window.bVSync);
+}
+
+TEST_CASE("TConfig: CheckPlayerText names what SetPlayerText would leave out, and changes nothing")
+{
+    PlayerProbeConfig lConfig;
+    REQUIRE(lConfig.SetPlayerText(OpaaxString(R"({"Window": {"bVSync": false}})")));
+
+    TDynArray<OpaaxString> lRejected;
+    REQUIRE(lConfig.CheckPlayerText(OpaaxString(R"({"Window": {"Mod": "Fullscreen", "Width": 1920}})"), lRejected));
+    REQUIRE(lRejected.size() == 1u);
+    CHECK(lRejected[0] == "Window.Mod: no such value");
+
+    // Neither the values the engine reads nor the player's changed.
+    CHECK(lConfig.GetData().Window.Width == 1280u);
+    CHECK_FALSE(lConfig.GetData().Window.bVSync);
+    CHECK((nlohmann::json::parse(lConfig.GetPlayerText().CStr()) == Json(R"({"Window": {"bVSync": false}})")));
+
+    lRejected.clear();
+    CHECK(lConfig.CheckPlayerText(OpaaxString(R"({"Audio": {"Buses": {"Music": {"Volume": 0.5}}}})"), lRejected));
+    CHECK(lRejected.empty());
+    CHECK_FALSE(lConfig.CheckPlayerText(OpaaxString("[1]"), lRejected));
 }
 
 TEST_CASE("TConfig: the player's values are announced when what the engine reads changes, and only then")

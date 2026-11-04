@@ -33,6 +33,9 @@ namespace Opaax
     //   Only Missing means "start a new save": a slot that is Corrupt or from a NewerVersion still holds
     //   the player's progress, and saving over it loses it.
     //
+    //   The "Settings" slot holds the player's settings (IUserSettings): a save there is refused
+    //   (InvalidSlot), and ListSlots leaves it out.
+    //
     //   The background saves and loads run one at a time, in the order asked, so a load asked after a
     //   save reads it; a call that is not async waits for them first. Their callbacks run on the main
     //   thread, at the subsystem's next Update. When the game ends, TearDown waits for them and runs

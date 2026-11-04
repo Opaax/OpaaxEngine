@@ -125,6 +125,10 @@ panel lists it before the game first reads it, draws its values from their prope
 resets them. A missing key keeps its default. Subscribe to `OnChanged()` to follow edits made while
 the game runs.
 
+What a player changes in a settings menu goes over the project's values without touching its file:
+`GetUserSettings().SetConfigValues("Gameplay", R"({"SpawnRate": 3})")`, then `GetData()` reads 3 and
+`GetProjectData()` the file's value ([Settings.md](Settings.md)).
+
 ### Events, input and sound
 
 From a behaviour: `Send(entity, event)` / `Listen<&Class::OnEvent>()` for an entity's events,

@@ -1,0 +1,96 @@
+[
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 10
+        }
+    },
+    {
+        "id": "edit-keeps-project",
+        "command": "settings.get",
+        "expect": {
+            "active": false
+        }
+    },
+    {
+        "id": "open",
+        "command": "level.open",
+        "params": {
+            "path": "Levels/Settings.opaaxlevel"
+        },
+        "expect": {
+            "world": "Settings"
+        }
+    },
+    {
+        "id": "play",
+        "command": "editor.play",
+        "expect": {
+            "mode": "Play"
+        }
+    },
+    {
+        "id": "play-reads-player",
+        "command": "settings.get",
+        "expect": {
+            "active": true
+        }
+    },
+    {
+        "id": "set",
+        "command": "settings.set",
+        "params": {
+            "config": "Engine",
+            "values": {
+                "Audio": {
+                    "MasterVolume": 0.3
+                }
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "mixer-follows",
+        "command": "expect.value",
+        "params": {
+            "entity": "Settings",
+            "path": "SettingsProbe/MixerVolume",
+            "near": 0.3,
+            "tolerance": 0.001
+        }
+    },
+    {
+        "id": "stop",
+        "command": "editor.stop",
+        "expect": {
+            "mode": "Edit"
+        }
+    },
+    {
+        "id": "stop-gives-back",
+        "command": "settings.get",
+        "expect": {
+            "active": false,
+            "unsaved": true
+        }
+    },
+    {
+        "id": "project-again",
+        "command": "config.get",
+        "params": {
+            "config": "Engine"
+        },
+        "expect": {
+            "values": {
+                "Audio": {
+                    "MasterVolume": 1.0
+                }
+            }
+        }
+    }
+]

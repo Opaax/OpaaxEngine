@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/Settings.opaaxmap"
+    ],
+    "name": "Settings",
+    "persistentMap": "Maps/Settings.opaaxmap",
+    "version": 1
+}

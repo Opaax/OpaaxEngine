@@ -37,4 +37,11 @@ namespace Opaax::ConfigLayer
 
     /** Whether InValue is a list of items a layer reaches by name: objects, each with a string "Name". */
     bool IsNamedList(const nlohmann::json& InValue);
+
+    /**
+     * InLayer with InChanges over it, key by key (RFC 7396): a null in InChanges takes that value out of
+     * the layer, and an object left empty goes with it. {"Window": {"Mode": null}} over {"Window":
+     * {"Mode": "Fullscreen"}} is {}.
+     */
+    nlohmann::json Merge(const nlohmann::json& InLayer, const nlohmann::json& InChanges);
 }

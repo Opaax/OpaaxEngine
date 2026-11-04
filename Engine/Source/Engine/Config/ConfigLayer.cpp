@@ -126,4 +126,18 @@ namespace Opaax::ConfigLayer
         }
         return true;
     }
+
+    nlohmann::json Merge(const nlohmann::json& InLayer, const nlohmann::json& InChanges)
+    {
+        nlohmann::json lMerged = InLayer.is_object() ? InLayer : nlohmann::json::object();
+        lMerged.merge_patch(InChanges);
+
+        // Rebuilt from its values: an object a null emptied holds none, so it goes.
+        nlohmann::json lLayer = nlohmann::json::object();
+        for (const Leaf& lLeaf : Leaves(lMerged))
+        {
+            lLayer.merge_patch(lLeaf.Layer);
+        }
+        return lLayer;
+    }
 }

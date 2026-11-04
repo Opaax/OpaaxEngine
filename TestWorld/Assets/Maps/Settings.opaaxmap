@@ -1,0 +1,57 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "BlendCurve": "EaseInOut",
+                    "BlendIn": 0.0,
+                    "OrthoSize": 300.0,
+                    "Priority": 0,
+                    "bRotateView": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "5c2e8a1f9b3d4c7e8f0a2b4d6e8f1a3c",
+            "name": "Camera",
+            "ownerMap": "Settings"
+        },
+        {
+            "components": {
+                "SettingsProbe": {
+                    "ConfigVolume": 0.0,
+                    "MixerVolume": 0.0,
+                    "MusicVolume": 0.0,
+                    "Volume": -1.0,
+                    "bActive": false,
+                    "bTaken": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "a7d3f9b1c5e24086b8d1f3a5c7e9b2d4",
+            "name": "Settings",
+            "ownerMap": "Settings"
+        }
+    ],
+    "mapId": "Settings",
+    "version": 4
+}

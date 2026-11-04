@@ -87,6 +87,9 @@ namespace Opaax
 
         /** Opens the level requested by RequestOpenLevel, at the start of the frame. */
         void ResolvePendingLevel();
+
+        /** Takes the player's settings off the configs, when StartGame put them on. */
+        void ReleaseUserSettings();
         // End Startup
         // =============================================================================
 
@@ -222,6 +225,9 @@ namespace Opaax
 
         //Internal
         bool m_bStarted = false;
+
+        /** StartGame put the player's settings over the configs (the editor's Play): EndGame takes them off. */
+        bool m_bGameActivatedSettings = false;
 
         /** Level requested by RequestOpenLevel, opened at the start of the next frame. */
         WorldSpec m_PendingLevel;

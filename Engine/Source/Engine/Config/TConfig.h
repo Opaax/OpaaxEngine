@@ -252,6 +252,19 @@ namespace Opaax
             return true;
         }
 
+        bool CheckPlayerText(const OpaaxString& InValues, TDynArray<OpaaxString>& OutRejected) const override
+        {
+            const nlohmann::json lLayer = nlohmann::json::parse(InValues.CStr(), nullptr, false);
+            if (lLayer.is_discarded() || !lLayer.is_object())
+            {
+                return false;
+            }
+
+            TData lData;
+            (void)ReadPlayer(lLayer, lData, &OutRejected);
+            return true;
+        }
+
         OpaaxString GetPlayerText() const override { return ToJsonText(m_Player, 4); }
 
         bool HasPlayerValues() const override { return !m_Player.empty(); }
@@ -274,11 +287,18 @@ namespace Opaax
         // Internal
         // =============================================================================
     private:
-        /**
-         * Keeps the values of InLayer that fit the project's, each checked by the codec on its own, and
-         * reads the project's values with them over.
-         */
+        /** Keeps the values of InLayer that fit the project's (ReadPlayer) and reads them over the project's. */
         void ApplyPlayer(const nlohmann::json& InLayer, TDynArray<OpaaxString>* OutRejected)
+        {
+            m_Player = ReadPlayer(InLayer, m_Data, OutRejected);
+        }
+
+        /**
+         * The project's values with those of InLayer over them, in OutData: each value of InLayer is
+         * checked by the codec on its own, and one that does not fit is left out and named in OutRejected.
+         * @return The values kept, shaped like InLayer
+         */
+        nlohmann::json ReadPlayer(const nlohmann::json& InLayer, TData& OutData, TDynArray<OpaaxString>* OutRejected) const
         {
             const nlohmann::json lProject = nlohmann::json::parse(TConfigCodec<TData>::ToText(m_Project).CStr());
 
@@ -316,16 +336,16 @@ namespace Opaax
             ConfigLayer::Apply(lValues, lAccepted);
             try
             {
-                m_Data = TConfigCodec<TData>::FromText(ToJsonText(lValues));
+                OutData = TConfigCodec<TData>::FromText(ToJsonText(lValues));
             }
             catch (const nlohmann::json::exception&)
             {
                 // Each value read on its own, but not all together: the project's values alone.
-                m_Data    = m_Project;
+                OutData   = m_Project;
                 lAccepted = nlohmann::json::object();
                 if (OutRejected != nullptr) { OutRejected->push_back("the player's values do not read together"); }
             }
-            m_Player = Move(lAccepted);
+            return lAccepted;
         }
 
         // =============================================================================

@@ -6,6 +6,7 @@
 #include "Application/Services/IPaths.h"
 #include "Application/Services/IWindowManager.h"
 #include "Automation/SaveAutomationCommands.h"
+#include "Automation/SettingsAutomationCommands.h"
 #include "Core/Algo/Algo.h"
 #include "Core/IO/FileIO.h"
 #include "Core/IO/FileSystem.h"
@@ -1445,6 +1446,7 @@ namespace Opaax::EngineAutomation
         RegisterCamera(InRunner, InEngine);
         RegisterExpectations(InRunner, InEngine);
         SaveAutomation::Register(InRunner, InEngine);
+        SettingsAutomation::Register(InRunner);
     }
 
     nlohmann::json DescribeWidgets(const UICanvas& InCanvas, const OpaaxString& InName)
