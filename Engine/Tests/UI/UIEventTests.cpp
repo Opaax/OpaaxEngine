@@ -23,10 +23,12 @@ namespace
         bool                        bHandleKey     = false;
         TDynArray<EUIPointerEventType> Pointer;
         TDynArray<bool>             Keys;   // bPressed per key event
+        Vector2F                    LastScroll = { 0.f, 0.f };
 
         EUIReply OnPointerEvent(const UIPointerEvent& InEvent) override
         {
             Pointer.emplace_back(InEvent.Type);
+            if (InEvent.Type == EUIPointerEventType::Scroll) { LastScroll = InEvent.Scroll; }
             return bHandlePointer ? EUIReply::Handled : EUIReply::Unhandled;
         }
 
@@ -85,6 +87,26 @@ TEST_CASE("UIEvents: a Down bubbles from the hit child to the parent that handle
     CHECK(lF.Child->Count(EUIPointerEventType::Down) == 1);    // asked first
     CHECK(lF.Parent->Count(EUIPointerEventType::Down) == 1);   // then the parent, which took it
     CHECK(lF.Canvas.GetPressed() == lF.Parent);                // the HANDLER captures, not the hit
+}
+
+TEST_CASE("UIEvents: a Scroll bubbles from the hit child to the parent that handles it, and captures nothing")
+{
+    Fixture lF;
+    lF.Parent->bHandlePointer = true;
+
+    UIPointerEvent lEvent = Ev(EUIPointerEventType::Scroll, { 0.f, 0.f }, EUIPointerButton::None);
+    lEvent.Scroll = { 0.f, -1.f };
+
+    CHECK(lF.Canvas.RoutePointer(lEvent) == EUIReply::Handled);
+    CHECK(lF.Child->Count(EUIPointerEventType::Scroll) == 1u);    // asked first
+    CHECK(lF.Parent->Count(EUIPointerEventType::Scroll) == 1u);   // and took it
+    CHECK(lF.Parent->LastScroll.y == doctest::Approx(-1.f));
+    CHECK(lF.Canvas.GetPressed() == nullptr);
+
+    // Nothing under the pointer: nobody hears it.
+    lEvent.Position = { 800.f, 400.f };
+    CHECK(lF.Canvas.RoutePointer(lEvent) == EUIReply::Unhandled);
+    CHECK(lF.Child->Count(EUIPointerEventType::Scroll) == 1u);
 }
 
 TEST_CASE("UIEvents: nothing handling it, the event reaches the root and falls through")

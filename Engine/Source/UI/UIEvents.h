@@ -33,7 +33,8 @@ namespace Opaax
         Enter,   // sent, not bubbled
         Leave,   // sent, not bubbled
         Down,    // bubbled; the handler captures the pointer
-        Up       // bubbled from the capturing widget, else the hit one
+        Up,      // bubbled from the capturing widget, else the hit one
+        Scroll   // bubbled from the hit widget; captures nothing
     };
 
     struct UIPointerEvent
@@ -41,6 +42,9 @@ namespace Opaax
         EUIPointerEventType Type     = EUIPointerEventType::Move;
         Vector2F            Position = { 0.f, 0.f };   // canvas units
         EUIPointerButton    Button   = EUIPointerButton::None;
+
+        /** Scroll only: the wheel's notches this frame, y up positive, x from a sideways wheel. */
+        Vector2F            Scroll   = { 0.f, 0.f };
     };
 
     /** Bubbled from the focused widget. */

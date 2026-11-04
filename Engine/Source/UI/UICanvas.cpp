@@ -4,7 +4,6 @@
 
 #include "Core/Log/Logger.h"
 #include "Renderer/Renderer2D.h"
-#include "UI/Widgets/UIMask.h"
 #include "UI/Widgets/UIPanel.h"
 
 namespace Opaax
@@ -16,10 +15,11 @@ namespace Opaax
         constexpr Int32 MAX_ORDER = TNumericLimits<Int16>::max();
 
         /**
-         * Tree order, parents first. InMask is the nearest ancestor mask (a UIMask replaces it);
-         * InAlpha is the ancestors' opacity product. A subtree at 0 alpha emits nothing.
+         * Tree order, parents first. InMask is the nearest ancestor that clips its children (a widget
+         * that clips replaces it); InAlpha is the ancestors' opacity product. A subtree at 0 alpha
+         * emits nothing.
          */
-        void CollectTree(const UIWidget& InWidget, const UIMask* InMask, const float InAlpha, Int32& InOutOrder,
+        void CollectTree(const UIWidget& InWidget, const UIWidget* InMask, const float InAlpha, Int32& InOutOrder,
                          TDynArray<UIDrawItem>& OutItems)
         {
             const float lAlpha = InAlpha * InWidget.Opacity;
@@ -29,9 +29,8 @@ namespace Opaax
                 return;
             }
 
-            // A mask applies to everything below it.
-            const UIMask* lMask = InMask;
-            if (const auto* lAsMask = dynamic_cast<const UIMask*>(&InWidget)) { lMask = lAsMask; }
+            // A clip applies to everything below it.
+            const UIWidget* lMask = InWidget.ClipsChildren() ? &InWidget : InMask;
 
             for (const UIQuad& lQuad : InWidget.GetQuads())
             {
@@ -155,7 +154,7 @@ namespace Opaax
             if (lItem.Mask != nullptr)
             {
                 lMask.Rect    = lItem.Mask->GetBounds();
-                lMask.Texture = lItem.Mask->GetResolvedTexture();   // null = clip to the rect
+                lMask.Texture = lItem.Mask->GetClipTexture();   // null = clip to the rect
             }
 
             Vector4F lColor = lQuad.Color;
@@ -260,6 +259,13 @@ namespace Opaax
                 m_PressButton = EUIPointerButton::None;
             }
             return lHandler != nullptr ? EUIReply::Handled : EUIReply::Unhandled;
+        }
+
+        if (InEvent.Type == EUIPointerEventType::Scroll)
+        {
+            // From the widget under the pointer, like a press, but nothing is captured.
+            return BubblePointer(HitTest(InEvent.Position), InEvent) != nullptr ? EUIReply::Handled
+                                                                                : EUIReply::Unhandled;
         }
 
         return EUIReply::Unhandled;

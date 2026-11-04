@@ -218,6 +218,25 @@ TEST_CASE("UIMask: a hidden mask hides its children, and the mask is not a hit t
     CHECK(lF.Canvas.HitTest({ 0.f, 0.f }) != lMask);
 }
 
+TEST_CASE("UIMask: what it masks is hit only inside its rect, where it shows")
+{
+    Fixture lF;
+
+    auto lMaskNode = NewObject<UIMask>();
+    lMaskNode->SetRect(Centred({ 100.f, 100.f }));
+    UIMask* const lMask = static_cast<UIMask*>(lF.Canvas.Root().AddChild(Move(lMaskNode)));
+
+    // Wider than the mask: its ends are cut away.
+    auto lWide = NewObject<UIImage>();
+    lWide->SetRect(Centred({ 400.f, 50.f }));
+    UIWidget* const lChild = lMask->AddChild(Move(lWide));
+    lF.Update();
+
+    CHECK(lF.Canvas.HitTest({ 0.f, 0.f }) == lChild);
+    CHECK(lF.Canvas.HitTest({ 150.f, 0.f }) == nullptr);   // drawn nowhere there, so not there
+    CHECK(lMask->ClipsChildren());
+}
+
 TEST_CASE("UIImage: an authored texture PATH resolves through the provider; a runtime pointer wins")
 {
     Fixture lF;

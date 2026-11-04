@@ -24,6 +24,22 @@ namespace
         EUIReply OnKeyEvent(const UIKeyEvent&) override { ++Keys; return EUIReply::Handled; }
     };
 
+    /** Takes the wheel, and adds up its notches. */
+    class WheelTaker final : public UIWidget
+    {
+        OPAAX_OBJECT(WheelTaker, UIWidget)
+
+    public:
+        float Notches = 0.f;
+
+        EUIReply OnPointerEvent(const UIPointerEvent& InEvent) override
+        {
+            if (InEvent.Type != EUIPointerEventType::Scroll) { return EUIReply::Unhandled; }
+            Notches += InEvent.Scroll.y;
+            return EUIReply::Handled;
+        }
+    };
+
     struct Fixture
     {
         InputManager Input;
@@ -97,6 +113,37 @@ TEST_CASE("UIInputRouter: GameAndUI consumes the button the widget took — on p
     // Nothing pressed, nothing under the pointer: a clean frame consumes nothing.
     lF.Input.OnMouseMoved(0.f, 0.f);
     lF.Frame(EUIInputMode::GameAndUI);
+    CHECK(lF.ConsumedCount() == 0);
+}
+
+TEST_CASE("UIInputRouter: a notch over a widget that takes the wheel reaches it once, and the game gets no wheel code")
+{
+    Fixture lF;
+    auto* const lTaker = static_cast<WheelTaker*>(lF.Canvas.Root().AddChild(NewObject<WheelTaker>()));
+    UIRect lRect;
+    lRect.AnchoredPosition = { 400.f, 0.f };   // pixel (1360, 540)
+    lRect.SizeDelta        = { 200.f, 200.f };
+    lTaker->SetRect(lRect);
+    lF.Canvas.Update();
+
+    lF.Input.OnMouseMoved(1360.f, 540.f);
+    lF.Input.OnMouseScrolled(0.f, -1.f);
+    lF.Frame(EUIInputMode::GameAndUI);
+    CHECK(lTaker->Notches == doctest::Approx(-1.f));
+    CHECK(lF.Consumed[Idx(EKeyCode::Mouse_WheelDown)]);
+    CHECK(lF.Consumed[Idx(EKeyCode::Mouse_WheelUp)]);
+    CHECK(lF.Consumed[Idx(EKeyCode::Mouse_WheelAxis)]);
+
+    // Once: the next frame has no notch.
+    lF.Frame(EUIInputMode::GameAndUI);
+    CHECK(lTaker->Notches == doctest::Approx(-1.f));
+    CHECK(lF.ConsumedCount() == 0);
+
+    // Over the button, which does not take the wheel: the game gets it.
+    lF.Input.OnMouseMoved(960.f, 540.f);
+    lF.Input.OnMouseScrolled(0.f, 1.f);
+    lF.Frame(EUIInputMode::GameAndUI);
+    CHECK(lTaker->Notches == doctest::Approx(-1.f));
     CHECK(lF.ConsumedCount() == 0);
 }
 

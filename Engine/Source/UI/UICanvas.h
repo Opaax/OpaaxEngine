@@ -12,17 +12,16 @@
 namespace Opaax
 {
     class Renderer2D;
-    class UIMask;
 
     /**
      * One quad to draw, with the mask that applies to it (built without GL, so it is testable).
      */
     struct UIDrawItem
     {
-        const UIQuad* Quad  = nullptr;   // not owned
-        const UIMask* Mask  = nullptr;   // nearest ancestor mask, or null
-        float         Alpha = 1.f;       // ancestors' opacity times the widget's own
-        Int16         Order = 0;         // tree order
+        const UIQuad*   Quad  = nullptr;   // not owned
+        const UIWidget* Mask  = nullptr;   // nearest ancestor that clips its children (a mask, a scroll box), or null
+        float           Alpha = 1.f;       // ancestors' opacity times the widget's own
+        Int16           Order = 0;         // tree order
     };
 
     /** What one Update did. Zero on an idle frame. */
@@ -111,7 +110,10 @@ namespace Opaax
         // Input — events bubble from the hit or focused widget (UIEvents.h)
         // =============================================================================
     public:
-        /** Move updates hover (Enter/Leave); Down/Up bubble and capture. @return Whether a widget handled it. */
+        /**
+         * Move updates hover (Enter/Leave); Down/Up bubble and capture; Scroll bubbles from the hit widget.
+         * @return Whether a widget handled it
+         */
         EUIReply RoutePointer(const UIPointerEvent& InEvent);
 
         /** Bubbles from the focused widget; Unhandled when none has focus. */
