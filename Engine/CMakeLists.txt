@@ -86,6 +86,18 @@ set(BOX2D_DOCS       OFF CACHE BOOL "" FORCE)
 add_subdirectory(Vendors/box2d)
 
 # ==================================
+# Online store SDKs — optional, never committed, loaded while the game runs (CMake/OpaaxOnline.cmake)
+# ==================================
+include(OpaaxOnline)
+opaax_add_online_sdk(Steam
+    CACHE OPAAX_STEAMWORKS_SDK ENV STEAMWORKS_SDK FOLDER steamworks
+    HEADER public/steam/steam_api_flat.h INCLUDE public
+    RUNTIME_WINDOWS redistributable_bin/win64/steam_api64.dll
+    RUNTIME_LINUX   redistributable_bin/linux64/libsteam_api.so
+    RUNTIME_MACOS   redistributable_bin/osx/libsteam_api.dylib)
+opaax_filter_online_sources(OPAAX_ENGINE_SOURCES)
+
+# ==================================
 # OpenGL
 # ==================================
 set(OpenGL_GL_PREFERENCE GLVND)
@@ -96,6 +108,7 @@ find_package(OpenGL REQUIRED)
 # ==================================
 add_library(OpaaxEngineLib STATIC ${OPAAX_ENGINE_SOURCES})
 opaax_configure_target(OpaaxEngineLib)
+opaax_use_online_sdks(OpaaxEngineLib)
 
 target_include_directories(OpaaxEngineLib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Source)
 
