@@ -61,7 +61,7 @@ namespace Opaax
                                                FOnEntries InDone) = 0;
     };
 
-    /** Files attached to leaderboard entries (ghosts). */
+    /** A file on a leaderboard entry: bytes the game alone reads (a ghost, a replay, a level, a picture). */
     class IOnlineFiles
     {
     public:
