@@ -531,6 +531,12 @@ namespace Opaax
          */
         IUserSettings& GetUserSettings() const;
 
+        /**
+         * The player's store: leaderboards, achievements, the overlay (OnOverlayChanged). The null one,
+         * answering nothing, when no game is running.
+         */
+        IOnlineServices& GetOnline() const;
+
         /** One of this world's subsystems, the engine's or the game's (GetSubsystem<WaveSpawner>()), or null. */
         template<typename T>
         T* GetSubsystem() const

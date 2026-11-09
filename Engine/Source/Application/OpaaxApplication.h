@@ -18,6 +18,7 @@ namespace Opaax
     class IConfigSystem;
     class IProjectManager;
     class ISaveStorage;
+    class IOnlineServices;
     class IUserSettings;
     class IPlatform;
     class IPaths;
@@ -74,6 +75,9 @@ namespace Opaax
         IProjectManager&    BootProjectManager(const IPaths& Paths);
         IJobSystem&         BootJobSystem();
         ISaveStorage&       BootSaveStorage(const IPaths& Paths);
+
+        /** The player's store (Steam...), or none. Before the window: a store's overlay hooks the GL context it makes. */
+        IOnlineServices&    BootOnlineServices();
 
         /** The player's settings; read and put over the configs now when the app starts its game at once. */
         IUserSettings&      BootUserSettings(ISaveStorage& SaveStorage, IConfigSystem& ConfigSystem,
@@ -238,6 +242,7 @@ namespace Opaax
         IJobSystem&         JobSystem();
         ISaveStorage&       SaveStorage();
         IUserSettings&      UserSettings();
+        IOnlineServices&    Online();
         IWindowManager&     WindowManager();
         IEngine&            Engine();
 

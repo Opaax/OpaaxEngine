@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IJobSystem.h"
+#include "Application/Services/IOnlineServices.h"
 #include "Application/Services/IPaths.h"
 #include "Application/Services/IUserSettings.h"
 #include "Application/Services/IWindowManager.h"
@@ -141,6 +142,9 @@ namespace Opaax
         {
             OPAAX_ENGINE_LOG(Warn, "Paths service is a Null service");
         }
+
+        // Its null object is a normal case (a test's app): no store, nothing to pump.
+        m_Online = &lServices.Get<IOnlineServices>();
 
     }
 
@@ -449,6 +453,9 @@ namespace Opaax
     {
         // Run the completions of finished jobs first.
         m_JobSystem->DrainCompletions();
+
+        // The store's callbacks, then the online requests that are done.
+        m_Online->Pump();
 
         // Deliver this frame's queued events (window/input, job completions) before update.
         m_EngineEventBus->GetEventBus().Flush();

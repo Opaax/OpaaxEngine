@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Application/Services/IJobSystem.h"
+#include "Application/Services/IOnlineServices.h"
 #include "Application/Services/ISaveStorage.h"
 #include "Application/Services/IUserSettings.h"
 
@@ -56,5 +57,8 @@ namespace Opaax
          * configs for the whole game. The null one refuses every change.
          */
         IUserSettings& Settings = IUserSettings::Null();
+
+        /** The player's store (leaderboards, achievements, the overlay). With none, requests answer Unavailable. */
+        IOnlineServices& Online = IOnlineServices::Null();
     };
 }

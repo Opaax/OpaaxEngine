@@ -15,6 +15,7 @@ namespace Opaax
 {
     class IPlatform;
     class IPaths;
+    class IOnlineServices;
     class CameraManager;
     class Config_Engine;
     class ResourceManager;
@@ -205,6 +206,7 @@ namespace Opaax
         IJobSystem* m_JobSystem = nullptr;
         IPlatform*  m_Platform  = nullptr;
         IPaths*     m_Paths     = nullptr;
+        IOnlineServices* m_Online = nullptr;
 
         // Frame deltas and fixed steps (Time.FixedRate, 60 a second until the config is read)
         FrameClock m_Clock{ D60_HZ };
