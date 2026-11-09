@@ -75,6 +75,24 @@ The first two are on when the engine is the top-level project. Turn them on
 game's repository; OpaaxTests then writes its run's files in `OpaaxTests/` at the top of the
 repository, which the `.gitignore` MakeOpaax writes leaves out.
 
+## A store's SDK
+
+A store's SDK (Steamworks) is never committed, to the game's repository or the engine's: its
+agreement forbids publishing it ([Online.md](Online.md#steam)). Keep it outside both and point the
+build at it, once per machine:
+
+```
+set STEAMWORKS_SDK=D:\SDKs\steamworks_sdk
+cmake --preset debug-editor
+```
+
+or `-DOPAAX_STEAMWORKS_SDK=<folder>` on the configure line. The engine's own folder for it,
+`External/OpaaxEngine/Engine/Vendors/steamworks/sdk`, works too: the engine's `.gitignore` leaves it out
+and configuring stops if it is tracked there. A game repository that keeps it in its own tree
+git-ignores it itself; nothing checks that. Without the SDK (CI, a teammate who has none) the games
+build without Steam and play offline. With it, the build copies `steam_api64.dll` beside each game
+and a `release` build installs it there.
+
 ## Tests
 
 A game made by MakeOpaax has both kinds, declared after the game in its `CMakeLists.txt`:
