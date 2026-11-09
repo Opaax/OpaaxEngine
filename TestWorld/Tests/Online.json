@@ -1,0 +1,399 @@
+[
+    {
+        "id": "info",
+        "command": "online.info",
+        "expect": {
+            "backend": "Fake",
+            "profile": "full",
+            "available": true,
+            "leaderboards": [
+                "OnlineProbe"
+            ],
+            "capabilities": {
+                "leaderboardFiles": true,
+                "friendsRange": true
+            },
+            "player": {
+                "name": "Player"
+            }
+        }
+    },
+    {
+        "id": "ada",
+        "command": "online.fake.player",
+        "params": {
+            "name": "Ada",
+            "friend": true,
+            "board": "OnlineProbe",
+            "score": 1000
+        }
+    },
+    {
+        "id": "bob",
+        "command": "online.fake.player",
+        "params": {
+            "name": "Bob",
+            "board": "OnlineProbe",
+            "score": 1300
+        }
+    },
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Online.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.5
+        }
+    },
+    {
+        "id": "uploaded",
+        "command": "expect.value",
+        "params": {
+            "entity": "Board",
+            "path": "LeaderboardProbe/UploadAnswer",
+            "equals": "Ok"
+        }
+    },
+    {
+        "id": "new-best",
+        "command": "expect.value",
+        "params": {
+            "entity": "Board",
+            "path": "LeaderboardProbe/bNewBest",
+            "equals": true
+        }
+    },
+    {
+        "id": "rank",
+        "command": "expect.value",
+        "params": {
+            "entity": "Board",
+            "path": "LeaderboardProbe/Rank",
+            "equals": 2
+        }
+    },
+    {
+        "id": "ghost-sent",
+        "command": "expect.value",
+        "params": {
+            "entity": "Board",
+            "path": "LeaderboardProbe/bGhostSent",
+            "equals": true
+        }
+    },
+    {
+        "id": "lines",
+        "command": "expect.value",
+        "params": {
+            "entity": "Board",
+            "path": "LeaderboardProbe/Lines",
+            "equals": "1. Ada 1000 | 2. Player 1200 | 3. Bob 1300"
+        }
+    },
+    {
+        "id": "ghost-back",
+        "command": "expect.value",
+        "params": {
+            "entity": "Board",
+            "path": "LeaderboardProbe/GhostBack",
+            "equals": "ghost of a 1.2 s run"
+        }
+    },
+    {
+        "id": "answered-later",
+        "command": "expect.value",
+        "params": {
+            "entity": "Board",
+            "path": "LeaderboardProbe/bAnsweredInCall",
+            "equals": false
+        }
+    },
+    {
+        "id": "worse",
+        "command": "online.leaderboard.upload",
+        "params": {
+            "board": "OnlineProbe",
+            "score": 1500,
+            "file": "a worse ghost"
+        },
+        "expect": {
+            "result": "Ok",
+            "scoreChanged": false,
+            "rank": 2,
+            "previousRank": 2
+        }
+    },
+    {
+        "id": "friends",
+        "command": "online.leaderboard.entries",
+        "params": {
+            "board": "OnlineProbe",
+            "range": "Friends"
+        },
+        "expect": {
+            "result": "Ok",
+            "entries": [
+                {
+                    "rank": 1,
+                    "name": "Ada",
+                    "score": 1000
+                },
+                {
+                    "rank": 2,
+                    "name": "Player",
+                    "score": 1200
+                }
+            ]
+        }
+    },
+    {
+        "id": "unknown-board",
+        "command": "online.leaderboard.entries",
+        "params": {
+            "board": "Nope"
+        },
+        "expect": {
+            "result": "NotFound",
+            "entries": []
+        }
+    },
+    {
+        "id": "overlay-open",
+        "command": "online.overlay",
+        "params": {
+            "active": true
+        },
+        "expect": {
+            "overlay": true
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "overlay-heard",
+        "command": "expect.value",
+        "params": {
+            "entity": "Overlay",
+            "path": "OverlayPauseProbe/bOverlayOpen",
+            "equals": true
+        }
+    },
+    {
+        "id": "paused",
+        "command": "world.info",
+        "expect": {
+            "paused": true
+        }
+    },
+    {
+        "id": "overlay-close",
+        "command": "online.overlay",
+        "params": {
+            "active": false
+        },
+        "expect": {
+            "overlay": false
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "resumed",
+        "command": "world.info",
+        "expect": {
+            "paused": false
+        }
+    },
+    {
+        "id": "overlay-changes",
+        "command": "expect.value",
+        "params": {
+            "entity": "Overlay",
+            "path": "OverlayPauseProbe/Changes",
+            "equals": 2
+        }
+    },
+    {
+        "id": "unlock",
+        "command": "online.achievements",
+        "params": {
+            "unlock": "FirstRun"
+        },
+        "expect": {
+            "result": "Ok",
+            "achievements": [
+                {
+                    "name": "FirstRun",
+                    "unlocked": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "clear",
+        "command": "online.achievements",
+        "params": {
+            "clear": "FirstRun"
+        },
+        "expect": {
+            "result": "Ok",
+            "achievements": [
+                {
+                    "name": "FirstRun",
+                    "unlocked": false
+                }
+            ]
+        }
+    },
+    {
+        "id": "epic",
+        "command": "online.use",
+        "params": {
+            "backend": "fake",
+            "profile": "epic"
+        },
+        "expect": {
+            "backend": "Fake",
+            "profile": "epic",
+            "capabilities": {
+                "leaderboardFiles": false,
+                "friendsRange": false
+            }
+        }
+    },
+    {
+        "id": "epic-ada",
+        "command": "online.fake.player",
+        "params": {
+            "name": "Ada",
+            "friend": true,
+            "board": "OnlineProbe",
+            "score": 1000
+        }
+    },
+    {
+        "id": "play-epic",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Online.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.5
+        }
+    },
+    {
+        "id": "epic-uploaded",
+        "command": "expect.value",
+        "params": {
+            "entity": "Board",
+            "path": "LeaderboardProbe/UploadAnswer",
+            "equals": "Ok"
+        }
+    },
+    {
+        "id": "epic-no-ghost",
+        "command": "expect.value",
+        "params": {
+            "entity": "Board",
+            "path": "LeaderboardProbe/bGhostSent",
+            "equals": false
+        }
+    },
+    {
+        "id": "epic-lines",
+        "command": "expect.value",
+        "params": {
+            "entity": "Board",
+            "path": "LeaderboardProbe/Lines",
+            "equals": "1. Ada 1000 | 2. Player 1200"
+        }
+    },
+    {
+        "id": "epic-ghost-back",
+        "command": "expect.value",
+        "params": {
+            "entity": "Board",
+            "path": "LeaderboardProbe/GhostBack",
+            "equals": ""
+        }
+    },
+    {
+        "id": "epic-file",
+        "command": "online.leaderboard.upload",
+        "params": {
+            "board": "OnlineProbe",
+            "score": 900,
+            "file": "x"
+        },
+        "expect": {
+            "result": "Unsupported"
+        }
+    },
+    {
+        "id": "epic-friends",
+        "command": "online.leaderboard.entries",
+        "params": {
+            "board": "OnlineProbe",
+            "range": "Friends"
+        },
+        "expect": {
+            "result": "Ok",
+            "entries": [
+                {
+                    "rank": 1,
+                    "name": "Ada"
+                },
+                {
+                    "rank": 2,
+                    "name": "Player"
+                }
+            ]
+        }
+    },
+    {
+        "id": "none",
+        "command": "online.use",
+        "params": {
+            "backend": "none"
+        },
+        "expect": {
+            "backend": "None",
+            "available": false
+        }
+    },
+    {
+        "id": "none-upload",
+        "command": "online.leaderboard.upload",
+        "params": {
+            "board": "OnlineProbe",
+            "score": 1
+        },
+        "expect": {
+            "result": "Unavailable"
+        }
+    },
+    {
+        "id": "none-overlay",
+        "command": "online.overlay",
+        "params": {
+            "active": true
+        },
+        "expectFailure": true
+    }
+]

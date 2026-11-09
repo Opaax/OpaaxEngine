@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/Online.opaaxmap"
+    ],
+    "name": "Online",
+    "persistentMap": "Maps/Online.opaaxmap",
+    "version": 1
+}

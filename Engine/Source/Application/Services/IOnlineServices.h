@@ -120,8 +120,24 @@ namespace Opaax
         /** Requests not answered yet. */
         virtual Uint32 GetPendingCount() const = 0;
 
+        /** True while InRequest is neither answered nor cancelled. */
+        virtual bool IsPending(OnlineRequestId InRequest) const = 0;
+
         /** Runs the store's callbacks, then answers the requests that are done. Once a frame. */
         virtual void Pump() = 0;
+
+        // =============================================================================
+        // Backend — for tests and automation
+        // =============================================================================
+    public:
+        /** The store behind the services (a FakeOnlineBackend when GetBackend() is Fake). */
+        virtual IOnlineBackend& GetBackendObject() = 0;
+
+        /**
+         * Stops the store and goes on over InBackend, which InReason explains: what was asked is dropped.
+         * For tests and automation (another fake profile); a game never calls it.
+         */
+        virtual void ReplaceBackend(TUniquePtr<IOnlineBackend> InBackend, OpaaxString InReason) = 0;
 
         //----- null object ----------------------------------------------------
         /** No store and nothing pumped: a request answers nothing and returns INVALID_ONLINE_REQUEST. */
@@ -180,16 +196,17 @@ namespace Opaax
 
         void   Cancel(OnlineRequestId InRequest) override;
         Uint32 GetPendingCount() const override { return static_cast<Uint32>(m_Live.size()); }
+        bool   IsPending(const OnlineRequestId InRequest) const override { return IsLive(InRequest); }
         void   Pump() override;
+
+        IOnlineBackend& GetBackendObject() override { return *m_Backend; }
+        void            ReplaceBackend(TUniquePtr<IOnlineBackend> InBackend, OpaaxString InReason) override;
         //~End IOnlineServices interface
 
         // =============================================================================
         // Get - Set
         // =============================================================================
     public:
-        /** The backend, for tests and automation that drive a fake store. */
-        IOnlineBackend& GetBackendObject() noexcept { return *m_Backend; }
-
         /** How long a download waits for names the store does not know yet (3 s); then it answers with those it has. */
         void SetNameTimeout(const double InSeconds) noexcept { m_NameTimeout = InSeconds; }
 
@@ -200,6 +217,9 @@ namespace Opaax
         // Internal
         // =============================================================================
     private:
+        /** Takes InBackend (null: none) and listens to its overlay. */
+        void Adopt(TUniquePtr<IOnlineBackend> InBackend, OpaaxString InReason);
+
         /** A new request id, live until answered or cancelled. */
         OnlineRequestId Begin();
 

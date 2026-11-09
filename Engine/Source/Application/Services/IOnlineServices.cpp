@@ -49,9 +49,14 @@ namespace Opaax
 
             void   Cancel(OnlineRequestId) override {}
             Uint32 GetPendingCount() const override { return 0; }
+            bool   IsPending(OnlineRequestId) const override { return false; }
             void   Pump() override {}
 
+            IOnlineBackend& GetBackendObject() override { return m_Backend; }
+            void            ReplaceBackend(TUniquePtr<IOnlineBackend>, OpaaxString) override {}
+
         private:
+            NullOnlineBackend                m_Backend;
             OpaaxString                      m_Reason = "no online services";
             TDynArray<LeaderboardDefinition> m_Definitions;
             TMulticastDelegate<bool>         m_OnOverlayChanged;
@@ -109,13 +114,32 @@ namespace Opaax
     // OnlineServices
     // =========================================================================
     OnlineServices::OnlineServices(TUniquePtr<IOnlineBackend> InBackend, OpaaxString InReason)
-        : m_Backend(Move(InBackend))
-        , m_Reason(Move(InReason))
     {
+        Adopt(Move(InBackend), Move(InReason));
+    }
+
+    void OnlineServices::ReplaceBackend(TUniquePtr<IOnlineBackend> InBackend, OpaaxString InReason)
+    {
+        // An open overlay goes with its store: a game paused for it hears it close.
+        const bool bOverlayWasActive = m_bOverlayActive;
+
+        OnShutdown();
+        Adopt(Move(InBackend), Move(InReason));
+
+        if (bOverlayWasActive)
+        {
+            m_OnOverlayChanged.Broadcast(false);
+        }
+    }
+
+    void OnlineServices::Adopt(TUniquePtr<IOnlineBackend> InBackend, OpaaxString InReason)
+    {
+        m_Backend = Move(InBackend);
         if (m_Backend == nullptr)
         {
             m_Backend = MakeUnique<NullOnlineBackend>();
         }
+        m_Reason = Move(InReason);
 
         m_Backend->SetOverlayListener([this](const bool bInActive)
         {
