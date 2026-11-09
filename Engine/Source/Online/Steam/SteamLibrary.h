@@ -13,29 +13,36 @@
 // SteamAPI_RestartAppIfNecessary is left out on purpose: the game runs without Steam (DRM-free), so
 // it can never be called.
 // =============================================================================
-#define OPAAX_STEAM_FUNCTIONS(X)                        \
-    X(SteamAPI_InitFlat)                                \
-    X(SteamAPI_Shutdown)                                \
-    X(SteamAPI_GetHSteamPipe)                           \
-    X(SteamAPI_ManualDispatch_Init)                     \
-    X(SteamAPI_ManualDispatch_RunFrame)                 \
-    X(SteamAPI_ManualDispatch_GetNextCallback)          \
-    X(SteamAPI_ManualDispatch_FreeLastCallback)         \
-    X(SteamAPI_ManualDispatch_GetAPICallResult)         \
-    X(SteamAPI_SteamUser_v023)                          \
-    X(SteamAPI_ISteamUser_GetSteamID)                   \
-    X(SteamAPI_ISteamUser_BLoggedOn)                    \
-    X(SteamAPI_SteamFriends_v018)                       \
-    X(SteamAPI_ISteamFriends_GetPersonaName)            \
-    X(SteamAPI_ISteamFriends_GetFriendPersonaName)      \
-    X(SteamAPI_ISteamFriends_GetFriendCount)            \
-    X(SteamAPI_ISteamFriends_GetFriendByIndex)          \
-    X(SteamAPI_ISteamFriends_RequestUserInformation)    \
-    X(SteamAPI_ISteamFriends_ActivateGameOverlay)       \
-    X(SteamAPI_ISteamFriends_ActivateGameOverlayToUser) \
-    X(SteamAPI_SteamUtils_v011)                         \
-    X(SteamAPI_ISteamUtils_GetAppID)                    \
-    X(SteamAPI_ISteamUtils_IsOverlayEnabled)
+#define OPAAX_STEAM_FUNCTIONS(X)                                   \
+    X(SteamAPI_InitFlat)                                           \
+    X(SteamAPI_Shutdown)                                           \
+    X(SteamAPI_GetHSteamPipe)                                      \
+    X(SteamAPI_ManualDispatch_Init)                                \
+    X(SteamAPI_ManualDispatch_RunFrame)                            \
+    X(SteamAPI_ManualDispatch_GetNextCallback)                     \
+    X(SteamAPI_ManualDispatch_FreeLastCallback)                    \
+    X(SteamAPI_ManualDispatch_GetAPICallResult)                    \
+    X(SteamAPI_SteamUser_v023)                                     \
+    X(SteamAPI_ISteamUser_GetSteamID)                              \
+    X(SteamAPI_ISteamUser_BLoggedOn)                               \
+    X(SteamAPI_SteamFriends_v018)                                  \
+    X(SteamAPI_ISteamFriends_GetPersonaName)                       \
+    X(SteamAPI_ISteamFriends_GetFriendPersonaName)                 \
+    X(SteamAPI_ISteamFriends_GetFriendCount)                       \
+    X(SteamAPI_ISteamFriends_GetFriendByIndex)                     \
+    X(SteamAPI_ISteamFriends_RequestUserInformation)               \
+    X(SteamAPI_ISteamFriends_ActivateGameOverlay)                  \
+    X(SteamAPI_ISteamFriends_ActivateGameOverlayToUser)            \
+    X(SteamAPI_SteamUtils_v011)                                    \
+    X(SteamAPI_ISteamUtils_GetAppID)                               \
+    X(SteamAPI_ISteamUtils_IsOverlayEnabled)                       \
+    X(SteamAPI_SteamUserStats_v013)                                \
+    X(SteamAPI_ISteamUserStats_FindOrCreateLeaderboard)            \
+    X(SteamAPI_ISteamUserStats_GetLeaderboardSortMethod)           \
+    X(SteamAPI_ISteamUserStats_UploadLeaderboardScore)             \
+    X(SteamAPI_ISteamUserStats_DownloadLeaderboardEntries)         \
+    X(SteamAPI_ISteamUserStats_DownloadLeaderboardEntriesForUsers) \
+    X(SteamAPI_ISteamUserStats_GetDownloadedLeaderboardEntry)
 
 namespace Opaax
 {

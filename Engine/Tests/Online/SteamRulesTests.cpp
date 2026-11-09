@@ -50,3 +50,42 @@ TEST_CASE("SteamRules: the configured app id goes in the environment only when S
     CHECK_FALSE(SteamRules::ShouldSetAppId(480, true));
     CHECK_FALSE(SteamRules::ShouldSetAppId(0, false));
 }
+
+TEST_CASE("SteamRules: a leaderboard name Steam takes")
+{
+    CHECK(SteamRules::IsValidBoardName("Level1"));
+    CHECK_FALSE(SteamRules::IsValidBoardName(""));
+
+    OpaaxString lLongest;
+    for (Uint64 lIndex = 0; lIndex + 1 < SteamRules::BOARD_NAME_SIZE; ++lIndex)
+    {
+        lLongest.Append("a");
+    }
+    CHECK(SteamRules::IsValidBoardName(lLongest));
+    lLongest.Append("a");
+    CHECK_FALSE(SteamRules::IsValidBoardName(lLongest));
+}
+
+TEST_CASE("SteamRules: a leaderboard's sort, display and range as Steam's values")
+{
+    CHECK(SteamRules::SortMethod(ELeaderboardSort::Ascending) == 1);
+    CHECK(SteamRules::SortMethod(ELeaderboardSort::Descending) == 2);
+
+    CHECK(SteamRules::DisplayType(ELeaderboardDisplay::Numeric) == 1);
+    CHECK(SteamRules::DisplayType(ELeaderboardDisplay::TimeSeconds) == 2);
+    CHECK(SteamRules::DisplayType(ELeaderboardDisplay::TimeMilliseconds) == 3);
+
+    CHECK(SteamRules::DataRequest(ELeaderboardRange::World) == 0);
+    CHECK(SteamRules::DataRequest(ELeaderboardRange::AroundPlayer) == 1);
+    CHECK(SteamRules::DataRequest(ELeaderboardRange::Friends) == 2);
+}
+
+TEST_CASE("SteamRules: the sort Steam reports reads back, and an unknown one reads as none")
+{
+    for (const ELeaderboardSort lSort : { ELeaderboardSort::Ascending, ELeaderboardSort::Descending })
+    {
+        CHECK(SteamRules::SortFromMethod(SteamRules::SortMethod(lSort)) == lSort);
+    }
+    CHECK_FALSE(SteamRules::SortFromMethod(0).has_value());
+    CHECK_FALSE(SteamRules::SortFromMethod(7).has_value());
+}
