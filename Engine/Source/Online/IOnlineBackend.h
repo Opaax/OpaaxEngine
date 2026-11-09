@@ -55,6 +55,10 @@ namespace Opaax
         /** The entries of InRange (see ELeaderboardRange for First and Last). */
         virtual void DownloadEntries(const OnlineLeaderboardHandle& InBoard, ELeaderboardRange InRange, Int32 InFirst,
                                      Int32 InLast, FOnEntries InDone) = 0;
+
+        /** The entries of these players (those who have one), with their ranks on the whole board. */
+        virtual void DownloadEntriesForPlayers(const OnlineLeaderboardHandle& InBoard, const TDynArray<OnlinePlayerId>& InPlayers,
+                                               FOnEntries InDone) = 0;
     };
 
     /** Files attached to leaderboard entries (ghosts). */

@@ -70,6 +70,12 @@ namespace
             InDone(EOnlineResult::Ok, lEntries);
         }
 
+        void DownloadEntriesForPlayers(const OnlineLeaderboardHandle& InBoard, const TDynArray<OnlinePlayerId>&,
+                                       FOnEntries InDone) override
+        {
+            DownloadEntries(InBoard, ELeaderboardRange::World, 1, 1, Move(InDone));
+        }
+
         void AttachFile(const OnlineLeaderboardHandle&, const TDynArray<Uint8>& InBytes, FOnOnlineDone InDone) override
         {
             File         = InBytes;
