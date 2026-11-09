@@ -1,5 +1,5 @@
 // Suite: SteamRules (Online/SteamRules.h), what the Steam backend decides without Steam: ids, names,
-// overlay pages, why Steam did not start, when the app id goes in the environment.
+// overlay pages, why Steam did not start, when the app id goes in the environment, an entry's file.
 #include <doctest.h>
 
 #include "Online/SteamRules.h"
@@ -88,4 +88,83 @@ TEST_CASE("SteamRules: the sort Steam reports reads back, and an unknown one rea
     }
     CHECK_FALSE(SteamRules::SortFromMethod(0).has_value());
     CHECK_FALSE(SteamRules::SortFromMethod(7).has_value());
+}
+
+TEST_CASE("SteamRules: a board's file in the Steam Cloud is named from the board, one per board")
+{
+    CHECK(SteamRules::BoardFileName("Level1") == "leaderboards/Level1.bin");
+    CHECK(SteamRules::BoardFileName("Level1") == SteamRules::BoardFileName("Level1"));
+    CHECK(SteamRules::BoardFileName("speed_run-2") == "leaderboards/speed_run-2.bin");
+
+    // Anything else is escaped: no folder of its own, and no two boards on one file.
+    CHECK(SteamRules::BoardFileName("World 1/Any%") == "leaderboards/World%201%2FAny%25.bin");
+    CHECK(SteamRules::BoardFileName("A.B") != SteamRules::BoardFileName("A_B"));
+    CHECK(SteamRules::BoardFileName("A B") != SteamRules::BoardFileName("A%20B"));
+    CHECK(SteamRules::BoardFileName("\xC3\xA9") == "leaderboards/%C3%A9.bin");
+
+    CHECK(SteamRules::BoardFileName("").IsEmpty());
+}
+
+TEST_CASE("SteamRules: a board's file name fits Steam's, or there is none")
+{
+    // "leaderboards/" and ".bin" take 17 of the 259 characters.
+    OpaaxString lBoard;
+    for (Uint64 lIndex = 0; lIndex < SteamRules::BOARD_NAME_SIZE - 1; ++lIndex)
+    {
+        lBoard.Append("a");
+    }
+    CHECK(SteamRules::BoardFileName(lBoard).GetLength() == 17 + SteamRules::BOARD_NAME_SIZE - 1);
+
+    // Escaped, the same length of name takes three times the room.
+    OpaaxString lSpaces;
+    for (Uint64 lIndex = 0; lIndex < 80; ++lIndex)
+    {
+        lSpaces.Append(" ");
+    }
+    CHECK(SteamRules::BoardFileName(lSpaces).GetLength() == 17 + 240);
+    lSpaces.Append(" ");
+    CHECK(SteamRules::BoardFileName(lSpaces).IsEmpty());
+}
+
+TEST_CASE("SteamRules: the largest file is the quota or one write, none with the Steam Cloud off")
+{
+    const Uint64 lQuota = 1024ull * 1024ull;
+    CHECK(SteamRules::MaxFileBytes(true, true, lQuota) == lQuota);
+    CHECK(SteamRules::MaxFileBytes(true, true, 4 * SteamRules::MAX_FILE_BYTES) == SteamRules::MAX_FILE_BYTES);
+    CHECK(SteamRules::MaxFileBytes(true, true, 0) == 0);
+
+    CHECK(SteamRules::MaxFileBytes(false, true, lQuota) == 0);
+    CHECK(SteamRules::MaxFileBytes(true, false, lQuota) == 0);
+}
+
+TEST_CASE("SteamRules: a file too large or a full cloud is refused before Steam is asked")
+{
+    CHECK(SteamRules::CheckFileSize(100, 1000, 1000, 0) == EOnlineResult::Ok);
+    CHECK(SteamRules::CheckFileSize(1000, 1000, 1000, 0) == EOnlineResult::Ok);
+    CHECK(SteamRules::CheckFileSize(0, 0, 0, 0) == EOnlineResult::Ok);
+
+    // Over MaxFileBytes.
+    CHECK(SteamRules::CheckFileSize(1001, 1000, 5000, 0) == EOnlineResult::QuotaExceeded);
+
+    // Over the room left in the cloud.
+    CHECK(SteamRules::CheckFileSize(500, 1000, 499, 0) == EOnlineResult::QuotaExceeded);
+    CHECK(SteamRules::CheckFileSize(1, 1000, 0, 0) == EOnlineResult::QuotaExceeded);
+
+    // The file it replaces gives its room back.
+    CHECK(SteamRules::CheckFileSize(500, 1000, 100, 400) == EOnlineResult::Ok);
+    CHECK(SteamRules::CheckFileSize(500, 1000, 100, 399) == EOnlineResult::QuotaExceeded);
+}
+
+TEST_CASE("SteamRules: Steam's file results as online results")
+{
+    CHECK(SteamRules::FileResult(1) == EOnlineResult::Ok);
+    CHECK(SteamRules::FileResult(25) == EOnlineResult::QuotaExceeded);
+    CHECK(SteamRules::FileResult(54) == EOnlineResult::QuotaExceeded);
+    CHECK(SteamRules::FileResult(9) == EOnlineResult::NotFound);
+    CHECK(SteamRules::FileResult(16) == EOnlineResult::TimedOut);
+    CHECK(SteamRules::FileResult(21) == EOnlineResult::NotSignedIn);
+
+    CHECK(SteamRules::FileResult(2) == EOnlineResult::Failed);
+    CHECK(SteamRules::FileResult(15) == EOnlineResult::Failed);
+    CHECK(SteamRules::FileResult(0) == EOnlineResult::Failed);
 }

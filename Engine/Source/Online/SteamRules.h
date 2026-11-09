@@ -8,8 +8,8 @@
 
 // =============================================================================
 // SteamRules — what the Steam backend decides without Steam: how ids and names read, which overlay
-//   page a request opens, why Steam did not start. Outside Online/Steam so a build without the SDK
-//   (CI) tests them too.
+//   page a request opens, why Steam did not start, where an entry's file goes and whether it fits.
+//   Outside Online/Steam so a build without the SDK (CI) tests them too.
 // =============================================================================
 namespace Opaax::SteamRules
 {
@@ -137,6 +137,98 @@ namespace Opaax::SteamRules
             case 1: return ELeaderboardSort::Ascending;
             case 2: return ELeaderboardSort::Descending;
             default: return NullOpt;
+        }
+    }
+
+    // =========================================================================
+    // Leaderboard files — a file on an entry is a file of the player's Steam Cloud, shared, its handle
+    //   attached to the entry.
+    // =========================================================================
+
+    /** Bytes one write to the Steam Cloud takes at most (k_unMaxCloudFileChunkSize). */
+    inline constexpr Uint64 MAX_FILE_BYTES = 100ull * 1024ull * 1024ull;
+
+    /** Room for a Steam Cloud file name, its end included (k_cchFilenameMax). */
+    inline constexpr Uint64 FILE_NAME_SIZE = 260;
+
+    /**
+     * The Steam Cloud file of the player's entry on the board named InBoardName: one per board, so a
+     * better score replaces it. Letters, digits, '_' and '-' are kept and any other byte is written
+     * %XX, so two boards never share a file. Empty for an empty name or one too long for Steam.
+     */
+    inline OpaaxString BoardFileName(const OpaaxString& InBoardName)
+    {
+        if (InBoardName.IsEmpty())
+        {
+            return {};
+        }
+
+        constexpr const char* lHex = "0123456789ABCDEF";
+
+        OpaaxString lFile("leaderboards/");
+        for (Uint32 lIndex = 0; lIndex < InBoardName.GetLength(); ++lIndex)
+        {
+            const char lChar = InBoardName.CStr()[lIndex];
+            const bool lbKept = (lChar >= 'A' && lChar <= 'Z') || (lChar >= 'a' && lChar <= 'z') ||
+                                (lChar >= '0' && lChar <= '9') || lChar == '_' || lChar == '-';
+            if (lbKept)
+            {
+                lFile.Append(lChar);
+            }
+            else
+            {
+                const Uint8 lByte = static_cast<Uint8>(lChar);
+                lFile.Append('%');
+                lFile.Append(lHex[lByte >> 4]);
+                lFile.Append(lHex[lByte & 0x0F]);
+            }
+        }
+        lFile.Append(".bin");
+
+        return lFile.GetLength() < FILE_NAME_SIZE ? lFile : OpaaxString();
+    }
+
+    /**
+     * The largest file an entry takes: the player's whole quota, or one write's limit when the quota
+     * is larger. 0 when the app or the player has the Steam Cloud off.
+     */
+    constexpr Uint64 MaxFileBytes(const bool bInCloudForApp, const bool bInCloudForAccount, const Uint64 InTotalQuota) noexcept
+    {
+        if (!bInCloudForApp || !bInCloudForAccount)
+        {
+            return 0;
+        }
+        return InTotalQuota < MAX_FILE_BYTES ? InTotalQuota : MAX_FILE_BYTES;
+    }
+
+    /**
+     * Whether a file of InSize goes to the player's cloud, decided before Steam is asked (Steam answers
+     * a full cloud with a plain failure). The file it replaces gives its room back.
+     * @param InAvailable    Bytes free in the player's quota
+     * @param InReplacedSize Size of the board's file already there, 0 when none
+     */
+    constexpr EOnlineResult CheckFileSize(const Uint64 InSize, const Uint64 InMaxFileBytes, const Uint64 InAvailable,
+                                          const Uint64 InReplacedSize) noexcept
+    {
+        if (InSize > InMaxFileBytes || InSize > InAvailable + InReplacedSize)
+        {
+            return EOnlineResult::QuotaExceeded;
+        }
+        return EOnlineResult::Ok;
+    }
+
+    /** How a Steam Cloud or UGC call ended, from its EResult. */
+    constexpr EOnlineResult FileResult(const Int32 InSteamResult) noexcept
+    {
+        switch (InSteamResult)
+        {
+            case 1:  return EOnlineResult::Ok;             // k_EResultOK
+            case 9:  return EOnlineResult::NotFound;       // k_EResultFileNotFound
+            case 16: return EOnlineResult::TimedOut;       // k_EResultTimeout
+            case 21: return EOnlineResult::NotSignedIn;    // k_EResultNotLoggedOn
+            case 25: return EOnlineResult::QuotaExceeded;  // k_EResultLimitExceeded
+            case 54: return EOnlineResult::QuotaExceeded;  // k_EResultDiskFull
+            default: return EOnlineResult::Failed;
         }
     }
 }
