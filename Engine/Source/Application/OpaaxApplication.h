@@ -77,7 +77,7 @@ namespace Opaax
         ISaveStorage&       BootSaveStorage(const IPaths& Paths);
 
         /** The player's store (Steam...), or none. Before the window: a store's overlay hooks the GL context it makes. */
-        IOnlineServices&    BootOnlineServices();
+        IOnlineServices&    BootOnlineServices(IConfigSystem& ConfigSystem);
 
         /** The player's settings; read and put over the configs now when the app starts its game at once. */
         IUserSettings&      BootUserSettings(ISaveStorage& SaveStorage, IConfigSystem& ConfigSystem,
