@@ -567,4 +567,11 @@ namespace Opaax
         GameInstance*       lGame    = (lContext != nullptr) ? lContext->Game : nullptr;
         return (lGame != nullptr) ? lGame->GetContext().Settings : IUserSettings::Null();
     }
+
+    IOnlineServices& Behaviour::GetOnline() const
+    {
+        const WorldContext* lContext = (m_World != nullptr) ? m_World->GetContext() : nullptr;
+        GameInstance*       lGame    = (lContext != nullptr) ? lContext->Game : nullptr;
+        return (lGame != nullptr) ? lGame->GetContext().Online : IOnlineServices::Null();
+    }
 }

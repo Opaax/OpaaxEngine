@@ -11,6 +11,8 @@
 #include "Core/Profiling/Profiler.h"
 #include "Application/Services/IProjectManager.h"
 #include "Application/Services/IJobSystem.h"
+#include "Application/Services/IOnlineServices.h"
+#include "Online/Null/NullOnlineBackend.h"
 #include "Application/Services/ISaveStorage.h"
 #include "Application/Services/IUserSettings.h"
 
@@ -106,6 +108,9 @@ void OpaaxApplication::Bootstrap()
     //editor starts in Edit. Asked once the project is read (its startup level).
     m_bStartsGame = GetStartupWorldSpec().Mode == EWorldMode::Play;
 
+    //Online services — the player's store, or none: the game plays the same without one.
+    BootOnlineServices();
+
     //Window manager — the window itself is created in InitializeApplication.
     IWindowManager& lWindowMgr = BootWindowManager();
 
@@ -157,6 +162,12 @@ IJobSystem& OpaaxApplication::BootJobSystem()
 ISaveStorage& OpaaxApplication::BootSaveStorage(const IPaths& Paths)
 {
     return m_Services.Provide<ISaveStorage, Opaax::SaveStorage>(Paths);
+}
+
+IOnlineServices& OpaaxApplication::BootOnlineServices()
+{
+    return m_Services.Provide<IOnlineServices, Opaax::OnlineServices>(MakeUnique<NullOnlineBackend>(),
+                                                                      OpaaxString("no store built in"));
 }
 
 IUserSettings& OpaaxApplication::BootUserSettings(ISaveStorage& SaveStorage, IConfigSystem& ConfigSystem,
@@ -607,5 +618,6 @@ IConfigSystem&      OpaaxApplication::ConfigSystem()    { return m_Services.Get<
 IJobSystem&         OpaaxApplication::JobSystem()       { return m_Services.Get<IJobSystem>();      }
 ISaveStorage&       OpaaxApplication::SaveStorage()     { return m_Services.Get<ISaveStorage>();    }
 IUserSettings&      OpaaxApplication::UserSettings()    { return m_Services.Get<IUserSettings>();   }
+IOnlineServices&    OpaaxApplication::Online()          { return m_Services.Get<IOnlineServices>(); }
 IWindowManager&     OpaaxApplication::WindowManager()   { return m_Services.Get<IWindowManager>();  }
 IEngine&            OpaaxApplication::Engine()          { return m_Services.Get<IEngine>();         }

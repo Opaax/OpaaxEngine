@@ -35,6 +35,7 @@ namespace Opaax
         m_Jobs      = &OpaaxApplication::GetAppService<IJobSystem>();
         m_Saves     = &OpaaxApplication::GetAppService<ISaveStorage>();
         m_Settings  = &OpaaxApplication::GetAppService<IUserSettings>();
+        m_Online    = &OpaaxApplication::GetAppService<IOnlineServices>();
 
         m_GameInstanceClass = OpaaxStringID(OpaaxApplication::GetAppService<IProjectManager>().GameInstanceClass());
 
@@ -59,7 +60,8 @@ namespace Opaax
         }
 
         if (m_Worlds == nullptr || m_Resources == nullptr || m_Events == nullptr || m_Input == nullptr
-            || m_Paths == nullptr || m_Config == nullptr || m_Jobs == nullptr || m_Saves == nullptr || m_Settings == nullptr)
+            || m_Paths == nullptr || m_Config == nullptr || m_Jobs == nullptr || m_Saves == nullptr || m_Settings == nullptr
+            || m_Online == nullptr)
         {
             OPAAX_LOG(LogGameInstanceManager, Error,
                       "StartGame refused — this manager was never started, so there is no engine context.");
@@ -68,7 +70,7 @@ namespace Opaax
 
         m_GameInstance = GameInstance::Create(m_GameInstanceClass, m_Registries->ObjectClasses());
         m_GameInstance->Init(GameInstanceContext{*m_Worlds, *m_Resources, *m_Paths, *m_Events, *m_Input, *m_Config,
-                                                 *m_Jobs, *m_Saves, *m_Settings});
+                                                 *m_Jobs, *m_Saves, *m_Settings, *m_Online});
         ++m_SessionsStarted;
 
         const Uint64 lCreated = m_GameInstance->Start(m_Registries->ObjectClasses());
