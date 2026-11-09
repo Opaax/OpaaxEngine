@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 
 // =============================================================================
@@ -22,4 +23,18 @@ namespace Opaax::Process
      * @return False when InFolder is not a folder, or the system could not be asked to show it
      */
     bool OpenFolder(const OpaaxString& InFolder);
+
+    /**
+     * InName's value in this program's environment.
+     * @return Empty when InName is not set
+     */
+    TOptional<OpaaxString> GetEnvironment(const OpaaxString& InName);
+
+    /**
+     * Sets InName in this program's environment, which the libraries it loads and the programs it starts
+     * then read. An empty InValue removes InName (Windows cannot keep an empty variable). Call it before
+     * other threads read the environment.
+     * @return False when InName is empty or holds '=', or the system refused
+     */
+    bool SetEnvironment(const OpaaxString& InName, const OpaaxString& InValue);
 }

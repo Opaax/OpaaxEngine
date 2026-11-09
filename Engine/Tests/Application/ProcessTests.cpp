@@ -17,3 +17,28 @@ TEST_CASE("Process: OpenFolder refuses what is not a folder, and starts nothing"
     CHECK_FALSE(Process::OpenFolder(lTemp.Sub("Missing")));
     CHECK_FALSE(Process::OpenFolder(lTemp.Sub("Note.txt")));
 }
+
+TEST_CASE("Process: an environment variable is set, read back, changed and removed")
+{
+    const OpaaxString lName = "OPAAX_TEST_ENVIRONMENT";
+    REQUIRE(Process::SetEnvironment(lName, OpaaxString()));
+    CHECK_FALSE(Process::GetEnvironment(lName).has_value());
+
+    REQUIRE(Process::SetEnvironment(lName, "480"));
+    REQUIRE(Process::GetEnvironment(lName).has_value());
+    CHECK(*Process::GetEnvironment(lName) == "480");
+
+    // UTF-8 goes through the wide calls on Windows unchanged.
+    REQUIRE(Process::SetEnvironment(lName, "caf\xC3\xA9 / 2"));
+    CHECK(*Process::GetEnvironment(lName) == "caf\xC3\xA9 / 2");
+
+    REQUIRE(Process::SetEnvironment(lName, OpaaxString()));
+    CHECK_FALSE(Process::GetEnvironment(lName).has_value());
+}
+
+TEST_CASE("Process: a name that cannot be a variable is refused")
+{
+    CHECK_FALSE(Process::SetEnvironment(OpaaxString(), "x"));
+    CHECK_FALSE(Process::SetEnvironment("A=B", "x"));
+    CHECK_FALSE(Process::GetEnvironment(OpaaxString()).has_value());
+}
