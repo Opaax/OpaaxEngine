@@ -48,10 +48,13 @@ A change is done when it is tested and seen working, not when it compiles.
    `TestWorld/EditorTests` runs in CTest. See [Docs/Automation.md](Docs/Automation.md). Automation
    cannot click inside a window: what a custom asset editor shows for a selection is checked with a
    local build that starts selected, then reverted.
-5. **CI** (`.github/workflows/build.yml`): Windows, Ubuntu and macOS, debug-editor and release, and a
-   game repository made by MakeOpaax (Windows, Ubuntu). Linux also renders on Mesa's software OpenGL
-   (stricter than desktop drivers) and runs the feature tests there. A change is finished when every
-   job is green.
+5. **CI** (`.github/workflows/build.yml`) runs only when started, on a pushed branch:
+   `gh workflow run build.yml --ref <branch>` is the quick run (Linux debug-editor: unit tests, a
+   render on Mesa's software OpenGL, stricter than desktop drivers, and the feature tests);
+   `-f scope=full` adds Windows and macOS, the release preset and a game repository made by
+   MakeOpaax. Start the quick run only for what the local build cannot show (Linux, Mesa), and the
+   full run once, on a branch's last commit, before it is merged. A change is finished when that
+   full run is green.
 
 ## Code style
 

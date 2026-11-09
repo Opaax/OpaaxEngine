@@ -111,9 +111,12 @@ A workflow (`.github/workflows/build.yml`) that builds and tests the game on Win
 feature tests need a screen, a virtual one on Linux. The engine's own CI runs the same steps on a
 game repository that MakeOpaax makes (its `game-repository` job).
 
+It runs only when started (`gh workflow run build.yml --ref <branch>`, or the Actions tab): a
+private repository pays for its minutes, and a Windows or macOS minute costs several Linux ones.
+
 ```yaml
 name: build
-on: [push, workflow_dispatch]
+on: workflow_dispatch
 
 jobs:
   build:
