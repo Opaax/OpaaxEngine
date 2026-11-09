@@ -9,6 +9,7 @@
 #   Source/<Name>Runtime/             runtime host     -> executable <Name>
 #   Editor/Source/<Name>Editor/       editor host      -> executable <Name>Editor (editor builds only)
 #
+# The library of each online store whose SDK was found goes beside the game (CMake/OpaaxOnline.cmake).
 # Ship builds (OPAAX_DEV_BUILD=OFF) copy the project and engine content next to the executable and
 # declare install rules, so `cmake --install <build> --component <Name> --prefix <dir>` produces a
 # folder that runs on another machine:
@@ -53,6 +54,13 @@ function(opaax_add_game InName)
     target_link_libraries(${InName} PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,${InName}Module>")
     target_include_directories(${InName} PRIVATE "${lRoot}/Source/${InName}Runtime")
     set_target_properties(${InName} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:${InName}>")
+
+    # A store's library beside the game, installed with it in a ship build.
+    if(OPAAX_DEV_BUILD)
+        opaax_deploy_online_runtimes(${InName} FALSE)
+    else()
+        opaax_deploy_online_runtimes(${InName} TRUE)
+    endif()
 
     if(NOT OPAAX_DEV_BUILD)
         # A shipped game opens no console window on Windows.

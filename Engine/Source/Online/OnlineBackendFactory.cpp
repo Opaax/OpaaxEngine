@@ -3,6 +3,10 @@
 #include "Online/Fake/FakeOnlineBackend.h"
 #include "Online/Null/NullOnlineBackend.h"
 
+#ifdef OPAAX_ONLINE_STEAM
+#include "Online/Steam/SteamOnlineBackend.h"
+#endif
+
 namespace Opaax
 {
     TDynArray<EOnlineBackend> OnlineAPI::GetBuiltInBackends()
@@ -34,8 +38,12 @@ namespace Opaax
             }
 
             case EOnlineBackend::Steam:
+#ifdef OPAAX_ONLINE_STEAM
+                return SteamOnlineBackend::Start(InConfig.Steam, OutReason);
+#else
                 OutReason = "Steam is not built in";
                 return nullptr;
+#endif
         }
 
         OutReason = OpaaxString::Format("unknown store {}", static_cast<Uint32>(InBackend));

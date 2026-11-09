@@ -96,3 +96,6 @@ Architectures/*
 
 #Builder
 OpaaxCreator/build/*
+
+# Online store SDKs: never committed (their agreements forbid publishing them). CMake/OpaaxOnline.cmake
+Engine/Vendors/steamworks/
