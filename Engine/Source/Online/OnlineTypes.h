@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/OpaaxTypes.h"
+#include "Core/Reflection/OpaaxEnum.h"   // OPAAX_ENUM_VALUES
 #include "Core/String/OpaaxString.hpp"
 
 namespace Opaax
@@ -137,6 +138,16 @@ namespace Opaax
         Descending
     };
 
+    constexpr const char* ToString(const ELeaderboardSort InSort) noexcept
+    {
+        switch (InSort)
+        {
+            case ELeaderboardSort::Ascending:  return "Ascending";
+            case ELeaderboardSort::Descending: return "Descending";
+        }
+        return "Unknown";
+    }
+
     /** How a store's own pages show the score. */
     enum class ELeaderboardDisplay : Uint8
     {
@@ -144,6 +155,17 @@ namespace Opaax
         TimeSeconds,
         TimeMilliseconds
     };
+
+    constexpr const char* ToString(const ELeaderboardDisplay InDisplay) noexcept
+    {
+        switch (InDisplay)
+        {
+            case ELeaderboardDisplay::Numeric:          return "Numeric";
+            case ELeaderboardDisplay::TimeSeconds:      return "TimeSeconds";
+            case ELeaderboardDisplay::TimeMilliseconds: return "TimeMilliseconds";
+        }
+        return "Unknown";
+    }
 
     /** Which entries a download asks for. */
     enum class ELeaderboardRange : Uint8
@@ -252,3 +274,7 @@ namespace Opaax
         bool bOverlay      = false;
     };
 }
+
+OPAAX_ENUM_VALUES(Opaax::EOnlineBackend, None, Fake, Steam)
+OPAAX_ENUM_VALUES(Opaax::ELeaderboardSort, Ascending, Descending)
+OPAAX_ENUM_VALUES(Opaax::ELeaderboardDisplay, Numeric, TimeSeconds, TimeMilliseconds)

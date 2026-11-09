@@ -12,7 +12,9 @@
 #include "Application/Services/IProjectManager.h"
 #include "Application/Services/IJobSystem.h"
 #include "Application/Services/IOnlineServices.h"
-#include "Online/Null/NullOnlineBackend.h"
+#include "Online/Config/Config_Online.h"
+#include "Online/OnlineAPI.h"
+#include "Platform/Process.h"
 #include "Application/Services/ISaveStorage.h"
 #include "Application/Services/IUserSettings.h"
 
@@ -109,7 +111,7 @@ void OpaaxApplication::Bootstrap()
     m_bStartsGame = GetStartupWorldSpec().Mode == EWorldMode::Play;
 
     //Online services — the player's store, or none: the game plays the same without one.
-    BootOnlineServices();
+    BootOnlineServices(lConfigSystem);
 
     //Window manager — the window itself is created in InitializeApplication.
     IWindowManager& lWindowMgr = BootWindowManager();
@@ -164,10 +166,24 @@ ISaveStorage& OpaaxApplication::BootSaveStorage(const IPaths& Paths)
     return m_Services.Provide<ISaveStorage, Opaax::SaveStorage>(Paths);
 }
 
-IOnlineServices& OpaaxApplication::BootOnlineServices()
+IOnlineServices& OpaaxApplication::BootOnlineServices(IConfigSystem& ConfigSystem)
 {
-    return m_Services.Provide<IOnlineServices, Opaax::OnlineServices>(MakeUnique<NullOnlineBackend>(),
-                                                                      OpaaxString("no store built in"));
+    const OnlineConfigData& lConfig = ConfigSystem.Get<Config_Online>().GetData();
+
+    OnlineLaunch lLaunch;
+    lLaunch.CommandLine      = m_CommandLine.GetValue("--online");
+    lLaunch.bEditor          = !m_bStartsGame;
+    lLaunch.bLaunchedBySteam = Process::GetEnvironment("SteamGameId").has_value();
+    lLaunch.BuiltIn          = OnlineAPI::GetBuiltInBackends();
+
+    const OnlineBackendChoice lChoice = ChooseOnlineBackends(lConfig.Backends, lLaunch);
+
+    OpaaxString lReason;
+    TUniquePtr<IOnlineBackend> lBackend = OnlineAPI::CreateFirstBackend(lChoice, lConfig, lReason);
+
+    IOnlineServices& lOnline = m_Services.Provide<IOnlineServices, Opaax::OnlineServices>(Move(lBackend), Move(lReason));
+    lOnline.SetLeaderboards(ToLeaderboardDefinitions(lConfig));
+    return lOnline;
 }
 
 IUserSettings& OpaaxApplication::BootUserSettings(ISaveStorage& SaveStorage, IConfigSystem& ConfigSystem,
