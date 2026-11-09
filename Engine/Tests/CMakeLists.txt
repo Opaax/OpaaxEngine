@@ -71,6 +71,7 @@ set(OPAAX_TEST_SOURCES
     Application/AppServiceLocatorTests.cpp
     Application/CommandLineTests.cpp
     Application/CrashHandlerTests.cpp
+    Application/DynamicLibraryTests.cpp
     Application/FileSystemTests.cpp
     Application/IConfigSystemTests.cpp
     Application/IJobSystemTests.cpp
