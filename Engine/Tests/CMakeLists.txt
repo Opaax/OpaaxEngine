@@ -104,6 +104,7 @@ set(OPAAX_TEST_SOURCES
     Online/OnlineLeaderboardRulesTests.cpp
     Online/OnlineServicesTests.cpp
     Online/OnlineSubsystemTests.cpp
+    Online/SteamRulesTests.cpp
 
     # Resources
     Resources/AssetMigrationTests.cpp
