@@ -25,17 +25,29 @@ namespace Opaax
         static_assert(SteamRules::DataRequest(ELeaderboardRange::Friends) == k_ELeaderboardDataRequestFriends);
         static_assert(SteamRules::MAX_DETAILS == static_cast<Uint32>(k_cLeaderboardDetailsMax));
         static_assert(SteamRules::BOARD_NAME_SIZE == static_cast<Uint64>(k_cchLeaderboardNameMax));
+        static_assert(SteamRules::MAX_FILE_BYTES == static_cast<Uint64>(k_unMaxCloudFileChunkSize));
+        static_assert(SteamRules::FILE_NAME_SIZE == static_cast<Uint64>(k_cchFilenameMax));
+        static_assert(SteamRules::FileResult(k_EResultOK) == EOnlineResult::Ok);
+        static_assert(SteamRules::FileResult(k_EResultFail) == EOnlineResult::Failed);
+        static_assert(SteamRules::FileResult(k_EResultFileNotFound) == EOnlineResult::NotFound);
+        static_assert(SteamRules::FileResult(k_EResultTimeout) == EOnlineResult::TimedOut);
+        static_assert(SteamRules::FileResult(k_EResultNotLoggedOn) == EOnlineResult::NotSignedIn);
+        static_assert(SteamRules::FileResult(k_EResultLimitExceeded) == EOnlineResult::QuotaExceeded);
+        static_assert(SteamRules::FileResult(k_EResultDiskFull) == EOnlineResult::QuotaExceeded);
 
         // =====================================================================
-        // SteamBackend — Steam once it started: the player, friends' names, leaderboards, the overlay.
-        //   Every Steam callback and call result comes through Pump (manual dispatch), on the main thread.
+        // SteamBackend — Steam once it started: the player, friends' names, leaderboards and the files
+        //   on their entries, the overlay. Every Steam callback and call result comes through Pump
+        //   (manual dispatch), on the main thread.
         // =====================================================================
-        class SteamBackend final : public IOnlineBackend, public IOnlineIdentity, public IOnlineLeaderboards, public IOnlineOverlay
+        class SteamBackend final : public IOnlineBackend, public IOnlineIdentity, public IOnlineLeaderboards, public IOnlineFiles,
+                                   public IOnlineOverlay
         {
         public:
             SteamBackend(TUniquePtr<SteamLibrary> InSteam, ISteamUser* InUser, ISteamFriends* InFriends, ISteamUtils* InUtils,
-                         ISteamUserStats* InStats)
-                : m_Steam(Move(InSteam)), m_User(InUser), m_Friends(InFriends), m_Utils(InUtils), m_Stats(InStats)
+                         ISteamUserStats* InStats, ISteamRemoteStorage* InStorage)
+                : m_Steam(Move(InSteam)), m_User(InUser), m_Friends(InFriends), m_Utils(InUtils), m_Stats(InStats),
+                  m_Storage(InStorage)
             {
                 m_Pipe = m_Steam->SteamAPI_GetHSteamPipe();
             }
@@ -60,6 +72,8 @@ namespace Opaax
                     lCapabilities.bLeaderboardsMadeAtRunTime = true;
                     lCapabilities.bFriendsRange              = true;
                     lCapabilities.MaxDetails                 = SteamRules::MAX_DETAILS;
+                    lCapabilities.MaxFileBytes               = GetMaxFileBytes();
+                    lCapabilities.bLeaderboardFiles          = lCapabilities.MaxFileBytes > 0;
                 }
                 return lCapabilities;
             }
@@ -91,12 +105,14 @@ namespace Opaax
                 m_bRunning = false;
                 m_NameWaits.clear();
                 m_CallWaits.clear();
+                m_FilesInFlight.clear();
                 m_Steam->SteamAPI_Shutdown();
                 OPAAX_LOG(LogOnline, Info, "Steam shut down");
             }
 
             IOnlineIdentity*     GetIdentity() override     { return this; }
             IOnlineLeaderboards* GetLeaderboards() override { return m_Stats != nullptr ? this : nullptr; }
+            IOnlineFiles*        GetFiles() override        { return GetMaxFileBytes() > 0 ? this : nullptr; }
             IOnlineOverlay*      GetOverlay() override      { return this; }
             //~End IOnlineBackend interface
 
@@ -306,6 +322,127 @@ namespace Opaax
             }
             //~End IOnlineLeaderboards interface
 
+            //~Begin IOnlineFiles interface
+            void AttachFile(const OnlineLeaderboardHandle& InBoard, const TDynArray<Uint8>& InBytes, FOnOnlineDone InDone) override
+            {
+                const SteamLeaderboard_t lBoard = SteamRules::ParseId(InBoard.Value);
+                if (lBoard == 0)
+                {
+                    InDone(EOnlineResult::NotFound);
+                    return;
+                }
+                if (!IsLoggedOn())
+                {
+                    InDone(EOnlineResult::NotSignedIn);
+                    return;
+                }
+
+                const char* lBoardName = m_Steam->SteamAPI_ISteamUserStats_GetLeaderboardName(m_Stats, lBoard);
+                const OpaaxString lFile = SteamRules::BoardFileName(OpaaxString(lBoardName != nullptr ? lBoardName : ""));
+                if (lFile.IsEmpty())
+                {
+                    OPAAX_LOG(LogOnline, Warn, "No Steam Cloud file name for leaderboard \"{}\": its name is too long once escaped",
+                              lBoardName != nullptr ? lBoardName : "");
+                    InDone(EOnlineResult::Failed);
+                    return;
+                }
+
+                // One file per board: a second write while the first is shared would attach either.
+                if (Algo::Contains(m_FilesInFlight, lFile))
+                {
+                    OPAAX_LOG(LogOnline, Warn, "{} is still being attached: wait for its answer before the next file", lFile.CStr());
+                    InDone(EOnlineResult::Failed);
+                    return;
+                }
+
+                uint64 lTotal = 0;
+                uint64 lAvailable = 0;
+                m_Steam->SteamAPI_ISteamRemoteStorage_GetQuota(m_Storage, &lTotal, &lAvailable);
+                const Uint64 lReplaced = static_cast<Uint64>(
+                    Maths::Max<int32>(m_Steam->SteamAPI_ISteamRemoteStorage_GetFileSize(m_Storage, lFile.CStr()), 0));
+
+                const EOnlineResult lFits = SteamRules::CheckFileSize(InBytes.size(), GetMaxFileBytes(), lAvailable, lReplaced);
+                if (lFits != EOnlineResult::Ok)
+                {
+                    OPAAX_LOG(LogOnline, Warn, "{} ({} bytes) does not fit the player's Steam Cloud: {} bytes free, files of {} at most",
+                              lFile.CStr(), InBytes.size(), lAvailable + lReplaced, GetMaxFileBytes());
+                    InDone(lFits);
+                    return;
+                }
+
+                // Shared, so the bytes Steam was given stay where they are until it has written them.
+                const TSharedPtr<TDynArray<Uint8>> lBytes = MakeShared<TDynArray<Uint8>>(InBytes);
+                m_FilesInFlight.push_back(lFile);
+
+                const SteamAPICall_t lCall = m_Steam->SteamAPI_ISteamRemoteStorage_FileWriteAsync(
+                    m_Storage, lFile.CStr(), lBytes->data(), static_cast<uint32>(lBytes->size()));
+
+                Await<RemoteStorageFileWriteAsyncComplete_t>(lCall,
+                    [this, lBoard, lFile, lBytes, InDone = Move(InDone)](const RemoteStorageFileWriteAsyncComplete_t* InWritten)
+                    {
+                        if (InWritten == nullptr || InWritten->m_eResult != k_EResultOK)
+                        {
+                            FinishAttach(lFile, lBytes->size(), "written", InWritten != nullptr ? InWritten->m_eResult : k_EResultFail, InDone);
+                            return;
+                        }
+                        ShareAndAttach(lBoard, lFile, lBytes->size(), InDone);
+                    });
+            }
+
+            void DownloadFile(const OnlineFileId& InFile, FOnFile InDone) override
+            {
+                const UGCHandle_t lHandle = SteamRules::ParseId(InFile.Value);
+                if (lHandle == 0 || lHandle == k_UGCHandleInvalid)
+                {
+                    InDone(EOnlineResult::NotFound, {});
+                    return;
+                }
+                if (!IsLoggedOn())
+                {
+                    InDone(EOnlineResult::NotSignedIn, {});
+                    return;
+                }
+
+                const SteamAPICall_t lCall = m_Steam->SteamAPI_ISteamRemoteStorage_UGCDownload(m_Storage, lHandle, 0);
+
+                Await<RemoteStorageDownloadUGCResult_t>(lCall,
+                    [this, lHandle, InDone = Move(InDone)](const RemoteStorageDownloadUGCResult_t* InDownloaded)
+                    {
+                        if (InDownloaded == nullptr || InDownloaded->m_eResult != k_EResultOK)
+                        {
+                            const Int32 lSteamResult = InDownloaded != nullptr ? InDownloaded->m_eResult : k_EResultFail;
+                            OPAAX_LOG(LogOnline, Warn, "Steam file {} not downloaded: Steam result {}", lHandle, lSteamResult);
+                            InDone(SteamRules::FileResult(lSteamResult), {});
+                            return;
+                        }
+
+                        const int32 lSize = InDownloaded->m_nSizeInBytes;
+                        if (lSize < 0 || static_cast<Uint64>(lSize) > SteamRules::MAX_FILE_BYTES)
+                        {
+                            OPAAX_LOG(LogOnline, Warn, "Steam file {} is {} bytes: not a file of a leaderboard entry", lHandle, lSize);
+                            InDone(EOnlineResult::Failed, {});
+                            return;
+                        }
+
+                        TDynArray<Uint8> lBytes(static_cast<Uint64>(lSize));
+                        if (lSize > 0)
+                        {
+                            const int32 lRead = m_Steam->SteamAPI_ISteamRemoteStorage_UGCRead(
+                                m_Storage, lHandle, lBytes.data(), lSize, 0, k_EUGCRead_ContinueReadingUntilFinished);
+                            if (lRead != lSize)
+                            {
+                                OPAAX_LOG(LogOnline, Warn, "Steam file {}: {} of {} bytes read", lHandle, lRead, lSize);
+                                InDone(EOnlineResult::Failed, {});
+                                return;
+                            }
+                        }
+
+                        OPAAX_LOG(LogOnline, Info, "Steam file {} downloaded: {} bytes", lHandle, lSize);
+                        InDone(EOnlineResult::Ok, lBytes);
+                    });
+            }
+            //~End IOnlineFiles interface
+
             //~Begin IOnlineOverlay interface
             bool IsActive() const override { return m_bOverlayActive; }
 
@@ -419,6 +556,74 @@ namespace Opaax
                 });
             }
 
+            /**
+             * The largest file an entry takes, 0 when entries take none: no leaderboards, no remote
+             * storage, or the Steam Cloud off for the app or by the player.
+             */
+            Uint64 GetMaxFileBytes() const
+            {
+                if (m_Stats == nullptr || m_Storage == nullptr)
+                {
+                    return 0;
+                }
+
+                uint64 lTotal = 0;
+                uint64 lAvailable = 0;
+                if (!m_Steam->SteamAPI_ISteamRemoteStorage_GetQuota(m_Storage, &lTotal, &lAvailable))
+                {
+                    return 0;
+                }
+
+                return SteamRules::MaxFileBytes(m_Steam->SteamAPI_ISteamRemoteStorage_IsCloudEnabledForApp(m_Storage),
+                                                m_Steam->SteamAPI_ISteamRemoteStorage_IsCloudEnabledForAccount(m_Storage),
+                                                lTotal);
+            }
+
+            /** Shares the cloud file InFile, written, and attaches its handle to the player's entry on InBoard. */
+            void ShareAndAttach(const SteamLeaderboard_t InBoard, const OpaaxString& InFile, const Uint64 InSize,
+                                const FOnOnlineDone& InDone)
+            {
+                const SteamAPICall_t lCall = m_Steam->SteamAPI_ISteamRemoteStorage_FileShare(m_Storage, InFile.CStr());
+
+                Await<RemoteStorageFileShareResult_t>(lCall,
+                    [this, InBoard, InFile, InSize, InDone](const RemoteStorageFileShareResult_t* InShared)
+                    {
+                        if (InShared == nullptr || InShared->m_eResult != k_EResultOK || InShared->m_hFile == k_UGCHandleInvalid)
+                        {
+                            const bool lbRefused = InShared != nullptr && InShared->m_eResult != k_EResultOK;
+                            FinishAttach(InFile, InSize, "shared", lbRefused ? InShared->m_eResult : k_EResultFail, InDone);
+                            return;
+                        }
+
+                        const SteamAPICall_t lAttach = m_Steam->SteamAPI_ISteamUserStats_AttachLeaderboardUGC(
+                            m_Stats, InBoard, InShared->m_hFile);
+
+                        Await<LeaderboardUGCSet_t>(lAttach, [this, InFile, InSize, InDone](const LeaderboardUGCSet_t* InSet)
+                        {
+                            FinishAttach(InFile, InSize, "attached", InSet != nullptr ? InSet->m_eResult : k_EResultFail, InDone);
+                        });
+                    });
+            }
+
+            /** Ends an attach at the step InStep ("written", "shared", "attached") with Steam's result for it. */
+            void FinishAttach(const OpaaxString& InFile, const Uint64 InSize, const char* InStep, const Int32 InSteamResult,
+                              const FOnOnlineDone& InDone)
+            {
+                Algo::RemoveIf(m_FilesInFlight, [&InFile](const OpaaxString& InFlying) { return InFlying == InFile; });
+
+                const EOnlineResult lResult = SteamRules::FileResult(InSteamResult);
+                if (lResult == EOnlineResult::Ok)
+                {
+                    OPAAX_LOG(LogOnline, Info, "{} ({} bytes) attached to its leaderboard entry", InFile.CStr(), InSize);
+                }
+                else
+                {
+                    OPAAX_LOG(LogOnline, Warn, "{} ({} bytes) not {}: {} (Steam result {})", InFile.CStr(), InSize, InStep,
+                              ToString(lResult), InSteamResult);
+                }
+                InDone(lResult);
+            }
+
             void OnCallCompleted(const SteamAPICallCompleted_t& InCompleted)
             {
                 const auto lFound = Algo::FindIf(m_CallWaits, [&InCompleted](const CallWait& InWait)
@@ -495,12 +700,16 @@ namespace Opaax
             ISteamFriends*           m_Friends = nullptr;
             ISteamUtils*             m_Utils   = nullptr;
             ISteamUserStats*         m_Stats   = nullptr;
+            ISteamRemoteStorage*     m_Storage = nullptr;
             HSteamPipe               m_Pipe    = 0;
 
             bool                m_bRunning       = true;
             bool                m_bOverlayActive = false;
             TDynArray<NameWait> m_NameWaits;
             TDynArray<CallWait> m_CallWaits;
+
+            /** The cloud files being written, shared or attached. */
+            TDynArray<OpaaxString> m_FilesInFlight;
         };
     }
 
@@ -551,7 +760,14 @@ namespace Opaax
             OPAAX_LOG(LogOnline, Warn, "Steam started without its stats interface: no leaderboards");
         }
 
-        TUniquePtr<SteamBackend> lBackend = MakeUnique<SteamBackend>(Move(lSteam), lUser, lFriends, lUtils, lStats);
+        // Without its remote storage the leaderboards still work; a file on an entry answers Unsupported.
+        ISteamRemoteStorage* lStorage = lSteam->SteamAPI_SteamRemoteStorage_v016();
+        if (lStorage == nullptr)
+        {
+            OPAAX_LOG(LogOnline, Warn, "Steam started without its remote storage interface: no files on leaderboard entries");
+        }
+
+        TUniquePtr<SteamBackend> lBackend = MakeUnique<SteamBackend>(Move(lSteam), lUser, lFriends, lUtils, lStats, lStorage);
         const OnlinePlayer lPlayer = lBackend->GetLocalPlayer();
         OPAAX_LOG(LogOnline, Info, "Steam started: app {}, player {} ({}){}", lBackend->GetAppId(), lPlayer.Name.CStr(),
                   lPlayer.Id.Value.CStr(), lBackend->IsLoggedOn() ? "" : ", offline");

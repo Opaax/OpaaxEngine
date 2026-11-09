@@ -42,7 +42,18 @@
     X(SteamAPI_ISteamUserStats_UploadLeaderboardScore)             \
     X(SteamAPI_ISteamUserStats_DownloadLeaderboardEntries)         \
     X(SteamAPI_ISteamUserStats_DownloadLeaderboardEntriesForUsers) \
-    X(SteamAPI_ISteamUserStats_GetDownloadedLeaderboardEntry)
+    X(SteamAPI_ISteamUserStats_GetDownloadedLeaderboardEntry)      \
+    X(SteamAPI_ISteamUserStats_GetLeaderboardName)                 \
+    X(SteamAPI_ISteamUserStats_AttachLeaderboardUGC)               \
+    X(SteamAPI_SteamRemoteStorage_v016)                            \
+    X(SteamAPI_ISteamRemoteStorage_IsCloudEnabledForAccount)       \
+    X(SteamAPI_ISteamRemoteStorage_IsCloudEnabledForApp)           \
+    X(SteamAPI_ISteamRemoteStorage_GetQuota)                       \
+    X(SteamAPI_ISteamRemoteStorage_GetFileSize)                    \
+    X(SteamAPI_ISteamRemoteStorage_FileWriteAsync)                 \
+    X(SteamAPI_ISteamRemoteStorage_FileShare)                      \
+    X(SteamAPI_ISteamRemoteStorage_UGCDownload)                    \
+    X(SteamAPI_ISteamRemoteStorage_UGCRead)
 
 namespace Opaax
 {
