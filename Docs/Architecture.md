@@ -18,6 +18,7 @@ how to extend each part.
 | `Physics` | Colliders, rigidbodies, contacts and queries over Box2D (`Physics/Box2D`) |
 | `Audio` | Sound: the engine's own mixer (voices, buses, fades, spatial sound) on an audio thread, clip definitions and banks, sources and the listener; the device and the decoders behind a backend (`Audio/Miniaudio`) |
 | `Save` | What a game keeps for a player: `SaveGame` classes saved by their properties, one file per slot in the player's own folder, written whole or not at all; each game's `SaveGameSubsystem` saves and loads them now or on a worker ([Saving.md](Saving.md)) |
+| `Online` | The player's store (Steam): the player, names, leaderboards, the overlay, one set of calls over a backend per store, a fake store for tests, none when offline; each game's `OnlineSubsystem` ([Online.md](Online.md)) |
 | `Input`, `Animation`, `Movement`, `UI` | Actions and mapping contexts, sprite animation, character movers, UI canvases |
 | `Engine`, `Application` | The application, its services, the registries, the frame loop and the configs (`Engine/Config`: one `Config` object class per `.config` file, with the player's settings over it: [Settings.md](Settings.md)) |
 | `Automation` | The request runner, its two transports (a script, an inbox folder) and the engine's commands |
@@ -232,6 +233,26 @@ without a mapping.
   frame); values go through JSON text between the menu and the config; the values for a config no app
   registers stay in the file unchecked.
 
+### One online interface, a backend per store, loaded at run time
+
+A game asks `IOnlineServices` (an app service) or its `OnlineSubsystem`, never a store. Each store is
+a backend that gives the feature interfaces it has (identity, leaderboards, files, achievements, the
+overlay) and null for the others; `OnlineCapabilities` says up front what is there, and a missing
+feature answers `Unsupported`, as Unreal's online subsystems and EOS's interfaces split a store into
+features. The services answer every request at the next `Pump` in the engine loop, never inside the
+call. A store's SDK is compiled only where a developer has it, and its library is opened while the
+game runs, never linked; a store that does not start leaves the null backend, which answers
+`Unavailable`.
+
+- **For:** a game is written once for Steam, Epic or GOG, and against their limits with the fake
+  store's profiles; a game starts with no store, no SDK, no library, offline, and is DRM-free; the
+  services keep what every store needs once (board handles, names, the friends range from a friends
+  list, a file attached only to a kept score); answers never come inside a call, whatever the store
+  does; feature tests and CI run on the fake store.
+- **Against:** CI never compiles a store's backend (no SDK there), so a change to it is checked on a
+  developer's machine with the store running; one store per run; what a store has beyond the shared
+  interfaces needs a new interface first.
+
 ### The engine mixes; an audio library only plays
 
 The mix is engine code (`Audio/Mixer`): voices, the bus tree, fades, resampling, distance and pan. A
@@ -251,8 +272,8 @@ game thread with a seeded random) and banks that load sounds before they are nee
 
 ### Vendors only behind their wrappers
 
-EnTT, GLFW, Box2D, miniaudio, OpenGL and stb are each used only inside the code that wraps them,
-and the folders follow the modules above.
+EnTT, GLFW, Box2D, miniaudio, OpenGL, stb and the store SDKs (Steamworks) are each used only inside
+the code that wraps them, and the folders follow the modules above.
 
 - **For:** replacing a library touches only the code that wraps it; the rest reads as the engine's
   own API, which ended the old code being spread everywhere (what is left of it is in `Archive/`).

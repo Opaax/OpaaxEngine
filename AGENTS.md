@@ -80,7 +80,8 @@ Match the code around you. In short:
 
 - **Third-party APIs only behind their wrapper:** EnTT in `World/`, GLFW in `Platform/`, Box2D in
   `Physics/Box2D/`, miniaudio in `Audio/Miniaudio/`, OpenGL in `RHI/OpenGL/`, stb in the texture loader and
-  the font baker, tinyfiledialogs in the editor's dialogs. Type ids come from
+  the font baker, tinyfiledialogs in the editor's dialogs, a store's SDK (Steamworks) in
+  `Online/<Store>/`. Type ids come from
   `Core/Reflection/TypeInfo.h`. Gameplay code uses `Entity`, `World`, `Behaviour`: never the registry.
 - **The standard library is a vendor too:** engine, editor, game and test code use the core types
   and functions above. std appears only in the files that wrap it (listed in
@@ -144,7 +145,9 @@ Match the code around you. In short:
   committing: style, comments, leftovers, debug logs.
 - Message: `[Tag] What changed` (tags: `Feat`, `Fix`, `Refactor`, `Test`, `Docs`, `CI`, `Build`),
   then a body saying why and how it was checked.
-- Never commit build outputs, `Save/` folders or local editor state.
+- Never commit build outputs, `Save/` folders or local editor state, nor a store's SDK
+  (`Engine/Vendors/steamworks/sdk`): its agreement forbids publishing it, and configuring stops when
+  one is tracked.
 
 ## Known traps
 
@@ -175,6 +178,10 @@ Match the code around you. In short:
   owner's properties are registered or drawn: an object class header (an asset, a widget) includes
   the asset classes it references, since every file that makes one builds its class; a component
   forward-declares them and its registration file includes them.
+- A store's backend (`Online/Steam/`) is compiled only where its SDK is, so CI never builds it: check
+  a change to it locally with the SDK in place and the store running (`--online steam`, and
+  `SteamAppId=480` in the environment without an app of your own), as [Docs/Online.md](Docs/Online.md)
+  says. Unit-test its logic in `Online/<Store>Rules.h`, which builds everywhere.
 - An asset window records an undo step whenever no ImGui item is active: an editor that edits on a
   mouse drag keeps an item active for the whole drag (an `InvisibleButton` over the area), or every
   frame of it becomes a step.

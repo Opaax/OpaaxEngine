@@ -159,6 +159,16 @@ can be `const` members.
 - **Another audio library:** implement `IAudioDevice` and `IAudioDecoder` in `Audio/<Library>`, add its
   `EAudioBackend` value and its case in `AudioBackendFactory.cpp`; `Audio.Backend` picks it.
 
+### Online
+
+- **The game's boards and stores:** `Configs/Online.config` (`Config_Online`) lists the stores a game
+  tries (`Backends`), its leaderboards (name, sort, display) and each store's settings (`Steam.AppId`).
+  The editor's Config panel edits it; it is read once at startup.
+- **Calls:** `GetGameSubsystem<OnlineSubsystem>()` uploads scores, reads boards and files, and broadcasts
+  the overlay's opening (`OnOverlayChanged`) for the game to pause. Answers come at a later frame.
+- **Another store:** a backend in `Online/<Store>/` behind `IOnlineBackend`, its SDK declared with
+  `opaax_add_online_sdk` and its case in `OnlineBackendFactory.cpp` ([Online.md](Online.md#adding-a-store)).
+
 ## The renderer
 
 A level is framed by a **Camera** entity: its world position and `OrthoSize` (half the visible

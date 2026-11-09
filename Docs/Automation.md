@@ -115,7 +115,7 @@ saved in `.opaaxmap` files.
 | `settings.save` | | Writes the player's settings to their file (the `Settings` slot). Answers as `settings.get` |
 | `settings.load` | | Reads them from their file again, in place of the values in memory, as a game does when it starts. Answers as `settings.get` |
 | `settings.reset` | `config` | Takes the player's values for `config` away, or every value without it: the project's are read again. Not saved. Answers as `settings.get` |
-| `online.info` | | The player's store: `backend`, `reason` (why it runs, or why none does), `available`, `capabilities`, `player`, `overlay`, `pending` requests, the game's `leaderboards`; `profile` for the fake store |
+| `online.info` | | The player's store ([Online.md](Online.md)): `backend`, `reason` (why it runs, or why none does), `available`, `capabilities`, `player`, `overlay`, `pending` requests, the game's `leaderboards`; `profile` for the fake store |
 | `online.use` | `backend`, `profile` | Runs another store: `none`, or `fake` with a `profile` (`full`, `steam`, `epic`, `gog`). What was asked is dropped. A real store is chosen at launch only (`--online steam`). Answers as `online.info` |
 | `online.leaderboard.upload` | `board`, `score`, `details`, `file` | Uploads a score, keeping the player's best; `file` (text) is attached only when the score was kept. Answers `result`, `scoreChanged`, `rank`, `previousRank` |
 | `online.leaderboard.entries` | `board`, `range`, `first`, `last` | A board's entries: `World` (ranks `first` to `last`, 1 to 10), `AroundPlayer` (offsets, -5 to 5), `Friends`. Answers `result`, `entries` (`rank`, `score`, `name`, `id`, `details`, `file`) |
