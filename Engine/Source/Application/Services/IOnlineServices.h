@@ -72,7 +72,11 @@ namespace Opaax
         virtual OnlineRequestId UploadScore(OpaaxStringView InBoard, Int32 InScore, const TDynArray<Int32>& InDetails,
                                             const TDynArray<Uint8>& InFile, FOnScoreUploaded InDone) = 0;
 
-        /** InBoard's entries in InRange (see ELeaderboardRange for First and Last). */
+        /**
+         * InBoard's entries in InRange (see ELeaderboardRange for First and Last), with the players' names.
+         * Names the store does not know yet are asked for; the answer waits for them a few seconds at
+         * most, then comes with an empty name for those still unknown.
+         */
         virtual OnlineRequestId DownloadEntries(OpaaxStringView InBoard, ELeaderboardRange InRange, Int32 InFirst,
                                                 Int32 InLast, FOnEntries InDone) = 0;
 
@@ -186,6 +190,12 @@ namespace Opaax
         /** The backend, for tests and automation that drive a fake store. */
         IOnlineBackend& GetBackendObject() noexcept { return *m_Backend; }
 
+        /** How long a download waits for names the store does not know yet (3 s); then it answers with those it has. */
+        void SetNameTimeout(const double InSeconds) noexcept { m_NameTimeout = InSeconds; }
+
+        /** The clock the name timeout reads (Clock::NowSeconds); a test gives its own. */
+        void SetClock(TFunction<double()> InClock) { m_Clock = Move(InClock); }
+
         // =============================================================================
         // Internal
         // =============================================================================
@@ -214,6 +224,18 @@ namespace Opaax
         void WithBoard(OnlineRequestId InRequest, OpaaxStringView InBoard,
                        TFunction<void(EOnlineResult, const OnlineLeaderboardHandle&)> InThen);
 
+        /** Answers downloaded entries once their names are known, or once the name timeout passes. */
+        void CompleteEntries(OnlineRequestId InRequest, EOnlineResult InResult, TDynArray<LeaderboardEntry> InEntries,
+                             FOnEntries InDone);
+
+        /** Answers InRequest's name wait with the names known now. */
+        void FinishNameWait(OnlineRequestId InRequest);
+
+        /** Fills the entries' empty names with those the store knows. */
+        void FillNames(TDynArray<LeaderboardEntry>& InOutEntries) const;
+
+        double Now() const;
+
         // =============================================================================
         // Members
         // =============================================================================
@@ -230,5 +252,17 @@ namespace Opaax
 
         bool                     m_bOverlayActive = false;
         TMulticastDelegate<bool> m_OnOverlayChanged;
+
+        /** Downloads waiting for names. */
+        struct NameWait
+        {
+            OnlineRequestId             Request  = INVALID_ONLINE_REQUEST;
+            double                      Deadline = 0.0;
+            TDynArray<LeaderboardEntry> Entries;
+            FOnEntries                  Done;
+        };
+        TDynArray<NameWait> m_NameWaits;
+        double              m_NameTimeout = 3.0;
+        TFunction<double()> m_Clock;
     };
 }

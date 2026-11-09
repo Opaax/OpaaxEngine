@@ -1,6 +1,8 @@
 #include "Application/Services/IOnlineServices.h"
 
+#include "Core/Algo/Algo.h"
 #include "Core/Templates/TypeTraits.h"
+#include "Core/Time/Clock.h"
 #include "Online/Null/NullOnlineBackend.h"
 
 namespace Opaax
@@ -150,6 +152,7 @@ namespace Opaax
         m_Boards.clear();
         m_Live.clear();
         m_Ready.clear();
+        m_NameWaits.clear();
         m_bOverlayActive = false;
     }
 
@@ -177,6 +180,21 @@ namespace Opaax
     void OnlineServices::Pump()
     {
         m_Backend->Pump();
+
+        // Downloads still waiting for names past their time answer with the names known now.
+        const double lNow = Now();
+        TDynArray<OnlineRequestId> lExpired;
+        for (const NameWait& lWait : m_NameWaits)
+        {
+            if (lNow >= lWait.Deadline)
+            {
+                lExpired.push_back(lWait.Request);
+            }
+        }
+        for (const OnlineRequestId lRequest : lExpired)
+        {
+            FinishNameWait(lRequest);
+        }
 
         // Answers queued while these run (a callback asking again) wait for the next Pump.
         TDynArray<TPair<OnlineRequestId, TFunction<void()>>> lReady;
@@ -295,8 +313,18 @@ namespace Opaax
             return lRequest;
         }
 
+        // A store keeping fewer detail numbers keeps the first ones: the score itself still counts.
+        TDynArray<Int32> lDetails = InDetails;
+        const Uint32 lMaxDetails = GetCapabilities().MaxDetails;
+        if (lDetails.size() > lMaxDetails)
+        {
+            OPAAX_LOG(LogOnline, Warn, "{} keeps {} detail numbers with a score: {} dropped", ToString(GetBackend()),
+                      lMaxDetails, lDetails.size() - lMaxDetails);
+            lDetails.resize(lMaxDetails);
+        }
+
         WithBoard(lRequest, InBoard,
-            [this, lRequest, InScore, InDetails, InFile, InDone](const EOnlineResult InFound, const OnlineLeaderboardHandle& InHandle)
+            [this, lRequest, InScore, lDetails, InFile, InDone](const EOnlineResult InFound, const OnlineLeaderboardHandle& InHandle)
             {
                 if (InFound != EOnlineResult::Ok)
                 {
@@ -304,7 +332,7 @@ namespace Opaax
                     return;
                 }
 
-                m_Backend->GetLeaderboards()->UploadScore(InHandle, InScore, InDetails,
+                m_Backend->GetLeaderboards()->UploadScore(InHandle, InScore, lDetails,
                     [this, lRequest, InHandle, InFile, InDone](const EOnlineResult InUploaded, const ScoreUploadResult& InUpload)
                     {
                         // The file goes with a kept score only: a worse run leaves the best entry's file.
@@ -343,9 +371,97 @@ namespace Opaax
                     Fail(lRequest, InDone, InFound);
                     return;
                 }
-                m_Backend->GetLeaderboards()->DownloadEntries(InHandle, InRange, InFirst, InLast, Relay(lRequest, InDone));
+
+                const auto lComplete = [this, lRequest, InDone](const EOnlineResult InResult, const TDynArray<LeaderboardEntry>& InEntries)
+                {
+                    CompleteEntries(lRequest, InResult, InEntries, InDone);
+                };
+
+                // A store without a friends range: the friends' entries, asked by player.
+                IOnlineIdentity* lIdentity = m_Backend->GetIdentity();
+                if (InRange == ELeaderboardRange::Friends && !GetCapabilities().bFriendsRange && lIdentity != nullptr)
+                {
+                    TDynArray<OnlinePlayerId> lPlayers = lIdentity->GetFriends();
+                    lPlayers.push_back(lIdentity->GetLocalPlayer().Id);
+                    m_Backend->GetLeaderboards()->DownloadEntriesForPlayers(InHandle, lPlayers, lComplete);
+                    return;
+                }
+
+                m_Backend->GetLeaderboards()->DownloadEntries(InHandle, InRange, InFirst, InLast, lComplete);
             });
         return lRequest;
+    }
+
+    double OnlineServices::Now() const
+    {
+        return m_Clock ? m_Clock() : Clock::NowSeconds();
+    }
+
+    void OnlineServices::FillNames(TDynArray<LeaderboardEntry>& InOutEntries) const
+    {
+        const IOnlineIdentity* lIdentity = m_Backend->GetIdentity();
+        if (lIdentity == nullptr)
+        {
+            return;
+        }
+
+        for (LeaderboardEntry& lEntry : InOutEntries)
+        {
+            if (lEntry.Player.Name.IsEmpty())
+            {
+                lEntry.Player.Name = lIdentity->GetPlayerName(lEntry.Player.Id);
+            }
+        }
+    }
+
+    void OnlineServices::CompleteEntries(const OnlineRequestId InRequest, const EOnlineResult InResult,
+                                         TDynArray<LeaderboardEntry> InEntries, FOnEntries InDone)
+    {
+        if (!IsLive(InRequest))
+        {
+            return;
+        }
+
+        // Best first, whichever way the store listed them.
+        Algo::StableSort(InEntries, [](const LeaderboardEntry& InA, const LeaderboardEntry& InB) { return InA.Rank < InB.Rank; });
+        FillNames(InEntries);
+
+        TDynArray<OnlinePlayerId> lUnknown;
+        for (const LeaderboardEntry& lEntry : InEntries)
+        {
+            if (lEntry.Player.Name.IsEmpty() && lEntry.Player.Id.IsValid() && !Algo::Contains(lUnknown, lEntry.Player.Id))
+            {
+                lUnknown.push_back(lEntry.Player.Id);
+            }
+        }
+
+        IOnlineIdentity* lIdentity = m_Backend->GetIdentity();
+        if (InResult != EOnlineResult::Ok || lUnknown.empty() || lIdentity == nullptr)
+        {
+            Relay(InRequest, Move(InDone))(InResult, InEntries);
+            return;
+        }
+
+        m_NameWaits.push_back(NameWait{ InRequest, Now() + m_NameTimeout, Move(InEntries), Move(InDone) });
+        lIdentity->RequestPlayerNames(lUnknown, [this, InRequest](EOnlineResult)
+        {
+            FinishNameWait(InRequest);
+        });
+    }
+
+    void OnlineServices::FinishNameWait(const OnlineRequestId InRequest)
+    {
+        const auto lFound = Algo::FindIf(m_NameWaits, [InRequest](const NameWait& InWait) { return InWait.Request == InRequest; });
+        if (lFound == m_NameWaits.end())
+        {
+            return;
+        }
+
+        NameWait lWait = Move(*lFound);
+        m_NameWaits.erase(lFound);
+
+        FillNames(lWait.Entries);
+        Relay(InRequest, Move(lWait.Done))(EOnlineResult::Ok, lWait.Entries);
     }
 
     OnlineRequestId OnlineServices::DownloadFile(const OnlineFileId& InFile, FOnFile InDone)
