@@ -78,4 +78,65 @@ namespace Opaax::SteamRules
     {
         return InConfigured != 0 && !bInAlreadySet;
     }
+
+    // =========================================================================
+    // Leaderboards — the numbers below are Steam's enum values; the backend checks each against the
+    //   SDK at compile time.
+    // =========================================================================
+
+    /** Detail numbers Steam keeps with a score (k_cLeaderboardDetailsMax). */
+    inline constexpr Uint32 MAX_DETAILS = 64;
+
+    /** Players one DownloadLeaderboardEntriesForUsers asks for at most. */
+    inline constexpr Uint64 MAX_PLAYERS_PER_DOWNLOAD = 100;
+
+    /** Room for a leaderboard name, its end included (k_cchLeaderboardNameMax). */
+    inline constexpr Uint64 BOARD_NAME_SIZE = 128;
+
+    /** True when Steam takes InName as a leaderboard name: not empty, and fits with its end. */
+    inline bool IsValidBoardName(const OpaaxString& InName)
+    {
+        return !InName.IsEmpty() && InName.GetLength() < BOARD_NAME_SIZE;
+    }
+
+    /** ELeaderboardSortMethod for InSort. */
+    constexpr Int32 SortMethod(const ELeaderboardSort InSort) noexcept
+    {
+        return InSort == ELeaderboardSort::Ascending ? 1 : 2;
+    }
+
+    /** ELeaderboardDisplayType for InDisplay. */
+    constexpr Int32 DisplayType(const ELeaderboardDisplay InDisplay) noexcept
+    {
+        switch (InDisplay)
+        {
+            case ELeaderboardDisplay::Numeric:          return 1;
+            case ELeaderboardDisplay::TimeSeconds:      return 2;
+            case ELeaderboardDisplay::TimeMilliseconds: return 3;
+        }
+        return 1;
+    }
+
+    /** ELeaderboardDataRequest for InRange: Steam reads First and Last the same way (ranks, or offsets around the player). */
+    constexpr Int32 DataRequest(const ELeaderboardRange InRange) noexcept
+    {
+        switch (InRange)
+        {
+            case ELeaderboardRange::World:        return 0;
+            case ELeaderboardRange::AroundPlayer: return 1;
+            case ELeaderboardRange::Friends:      return 2;
+        }
+        return 0;
+    }
+
+    /** The sort Steam reports for a board (ELeaderboardSortMethod), or nothing for one it does not know. */
+    constexpr TOptional<ELeaderboardSort> SortFromMethod(const Int32 InMethod) noexcept
+    {
+        switch (InMethod)
+        {
+            case 1: return ELeaderboardSort::Ascending;
+            case 2: return ELeaderboardSort::Descending;
+            default: return NullOpt;
+        }
+    }
 }
