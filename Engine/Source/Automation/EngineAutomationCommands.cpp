@@ -6,6 +6,7 @@
 #include "Application/Services/IPaths.h"
 #include "Application/Services/IWindowManager.h"
 #include "Automation/InputAutomationCommands.h"
+#include "Automation/OnlineAutomationCommands.h"
 #include "Automation/SaveAutomationCommands.h"
 #include "Automation/SettingsAutomationCommands.h"
 #include "Core/Algo/Algo.h"
@@ -1491,6 +1492,7 @@ namespace Opaax::EngineAutomation
         RegisterCamera(InRunner, InEngine);
         RegisterExpectations(InRunner, InEngine);
         SaveAutomation::Register(InRunner, InEngine);
+        OnlineAutomation::Register(InRunner);
         SettingsAutomation::Register(InRunner);
     }
 

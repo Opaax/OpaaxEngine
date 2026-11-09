@@ -115,6 +115,14 @@ saved in `.opaaxmap` files.
 | `settings.save` | | Writes the player's settings to their file (the `Settings` slot). Answers as `settings.get` |
 | `settings.load` | | Reads them from their file again, in place of the values in memory, as a game does when it starts. Answers as `settings.get` |
 | `settings.reset` | `config` | Takes the player's values for `config` away, or every value without it: the project's are read again. Not saved. Answers as `settings.get` |
+| `online.info` | | The player's store: `backend`, `reason` (why it runs, or why none does), `available`, `capabilities`, `player`, `overlay`, `pending` requests, the game's `leaderboards`; `profile` for the fake store |
+| `online.use` | `backend`, `profile` | Runs another store: `none`, or `fake` with a `profile` (`full`, `steam`, `epic`, `gog`). What was asked is dropped. A real store is chosen at launch only (`--online steam`). Answers as `online.info` |
+| `online.leaderboard.upload` | `board`, `score`, `details`, `file` | Uploads a score, keeping the player's best; `file` (text) is attached only when the score was kept. Answers `result`, `scoreChanged`, `rank`, `previousRank` |
+| `online.leaderboard.entries` | `board`, `range`, `first`, `last` | A board's entries: `World` (ranks `first` to `last`, 1 to 10), `AroundPlayer` (offsets, -5 to 5), `Friends`. Answers `result`, `entries` (`rank`, `score`, `name`, `id`, `details`, `file`) |
+| `online.file.get` | `file` | A file attached to an entry: `result`, `text`, `size` |
+| `online.achievements` | `unlock` or `clear` | The player's achievements, after unlocking or clearing one if asked: `result`, `achievements` (`name`, `unlocked`) |
+| `online.overlay` | `active` | Opens or closes the fake store's overlay, as the player's key does. Fails on any other store |
+| `online.fake.player` | `name`, `friend`, `nameKnown`, `board`, `score` | Adds a player to the fake store, with a score on a board if given: `id`. `nameKnown: false` keeps the name from the store until asked |
 
 A check is any of `equals` (numbers within 1e-4; for an object, the fields given), `near` with a
 `tolerance` (0.01 by default), `greater`, `less`, `between: [min, max]`. A failed expectation fails
@@ -125,6 +133,12 @@ test it never finished.
 While a game runs, the `save.*` commands first wait for its background saves
 (`SaveGameSubsystem::Flush`), so they read what it asked to write. `TestWorld/Tests/Saves.json` seeds
 slots, plays a level that loads and saves in the background, and checks the files.
+
+The `online.*` requests to the store answer once the store has, 10 s at most. What the store said is
+a success carrying it (`"result": "Unsupported"`), so a script expects it like any value. Feature
+tests run on the fake store (`--online fake`), never a real one; `TestWorld/Tests/Online.json` posts a
+run with its ghost, reads the board around the player, pauses on the overlay, then plays the level
+again as Epic (`online.use`), where the ghost is not sent.
 
 The editor adds:
 

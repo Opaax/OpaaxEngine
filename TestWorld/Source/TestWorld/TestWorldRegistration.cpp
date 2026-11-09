@@ -2,7 +2,8 @@
 // own fields, where the scripts in TestWorld/Tests read it (expect.value). The ProbeLedger keeps a
 // record across levels; the Extensions level uses a component, a data asset and a world subsystem of
 // the game, and its own GameInstance class (ProbeGame, named in TestWorld.opaaxproj); the Saves level
-// keeps the game's save (ProbeSave) between runs; the Settings level changes the player's settings.
+// keeps the game's save (ProbeSave) between runs; the Settings level changes the player's settings;
+// the Online level posts a run to the fake store and pauses on its overlay.
 #include "Engine/Registries/AutoRegistration.h"
 #include "Probes/AnimationProbes.h"
 #include "Probes/CameraProbe.h"
@@ -15,6 +16,7 @@
 #include "Probes/LevelProbes.h"
 #include "Probes/LifecycleProbes.h"
 #include "Probes/MovementProbes.h"
+#include "Probes/OnlineProbes.h"
 #include "Probes/PhysicsProbes.h"
 #include "Probes/SaveProbes.h"
 #include "Probes/ScriptingProbes.h"
@@ -69,6 +71,8 @@ namespace TestWorld
     OPAAX_REGISTER_BEHAVIOUR(SaveProbe);
     OPAAX_REGISTER_BEHAVIOUR(SettingsProbe);
     OPAAX_REGISTER_BEHAVIOUR(RebindProbe);
+    OPAAX_REGISTER_BEHAVIOUR(LeaderboardProbe);
+    OPAAX_REGISTER_BEHAVIOUR(OverlayPauseProbe);
 
     OPAAX_REGISTER_OBJECT(ProbeLedger);
 

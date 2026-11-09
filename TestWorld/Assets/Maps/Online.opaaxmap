@@ -1,0 +1,84 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "BlendCurve": "EaseInOut",
+                    "BlendIn": 0.0,
+                    "OrthoSize": 300.0,
+                    "Priority": 0,
+                    "bRotateView": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "5f0c1a7e9b2d4c3e8a6f1d2b3c4e5f60",
+            "name": "Camera",
+            "ownerMap": "Online"
+        },
+        {
+            "components": {
+                "LeaderboardProbe": {
+                    "Board": "OnlineProbe",
+                    "EntriesAnswer": "",
+                    "Ghost": "ghost of a 1.2 s run",
+                    "GhostBack": "",
+                    "Lines": "",
+                    "Rank": 0,
+                    "Score": 1200,
+                    "UploadAnswer": "",
+                    "bAnsweredInCall": false,
+                    "bGhostSent": false,
+                    "bNewBest": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "7a1b2c3d4e5f40718293a4b5c6d7e8f9",
+            "name": "Board",
+            "ownerMap": "Online"
+        },
+        {
+            "components": {
+                "OverlayPauseProbe": {
+                    "Changes": 0,
+                    "bOverlayOpen": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "9e8d7c6b5a4f43e2a1b0c9d8e7f6a5b4",
+            "name": "Overlay",
+            "ownerMap": "Online"
+        }
+    ],
+    "mapId": "Online",
+    "version": 4
+}

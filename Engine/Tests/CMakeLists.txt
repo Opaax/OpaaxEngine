@@ -99,9 +99,11 @@ set(OPAAX_TEST_SOURCES
     Object/ObjectClassRegistryTests.cpp
     Object/ObjectTests.cpp
     Online/FakeOnlineBackendTests.cpp
+    Online/OnlineAutomationTests.cpp
     Online/OnlineBackendChoiceTests.cpp
     Online/OnlineLeaderboardRulesTests.cpp
     Online/OnlineServicesTests.cpp
+    Online/OnlineSubsystemTests.cpp
 
     # Resources
     Resources/AssetMigrationTests.cpp

@@ -17,15 +17,21 @@ namespace Opaax
     TUniquePtr<IOnlineBackend> OnlineAPI::CreateBackend(const EOnlineBackend InBackend, const OnlineConfigData& InConfig,
                                                         const EFakeStoreProfile InFakeProfile, OpaaxString& OutReason)
     {
-        (void)InConfig;
-
         switch (InBackend)
         {
             case EOnlineBackend::None:
                 return MakeUnique<NullOnlineBackend>();
 
             case EOnlineBackend::Fake:
-                return MakeUnique<FakeOnlineBackend>(InFakeProfile);
+            {
+                // The game's boards exist in the fake store's portal, as the game's team made them there.
+                TUniquePtr<FakeOnlineBackend> lFake = MakeUnique<FakeOnlineBackend>(InFakeProfile);
+                for (const LeaderboardDefinition& lBoard : ToLeaderboardDefinitions(InConfig))
+                {
+                    lFake->DefineLeaderboard(lBoard);
+                }
+                return lFake;
+            }
 
             case EOnlineBackend::Steam:
                 OutReason = "Steam is not built in";
