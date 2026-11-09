@@ -103,7 +103,7 @@ namespace Opaax
         OpaaxString    Name;
     };
 
-    /** A file kept by the store, such as a ghost attached to a leaderboard entry. */
+    /** A file kept by the store on a leaderboard entry; what its bytes mean is the game's. */
     struct OnlineFileId
     {
         OpaaxString Value;
@@ -211,7 +211,7 @@ namespace Opaax
         /** Numbers the game kept with the score (a checkpoint split, a character). */
         TDynArray<Int32> Details;
 
-        /** The file attached to the entry (a ghost); invalid when none. */
+        /** The file attached to the entry; invalid when none. */
         OnlineFileId     File;
     };
 

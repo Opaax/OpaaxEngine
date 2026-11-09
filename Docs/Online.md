@@ -11,7 +11,7 @@ that says so.
 |---|---|---|
 | The player, other players' names, the friends list | Yes | Yes |
 | Leaderboards: find or make, upload keeping the best, World / AroundPlayer / Friends | Yes | Yes |
-| A file on a leaderboard entry (a ghost) | Yes, except the `epic` profile | Not yet: `Unsupported` |
+| A file on a leaderboard entry (a ghost, a replay, a level, a picture) | Yes, except the `epic` profile | Yes, with the Steam Cloud ([below](#steam)) |
 | Achievements | Yes | Not yet: `Unsupported` |
 | The overlay, and its opening and closing | Yes (`online.overlay`) | Yes (Shift+Tab) |
 
@@ -23,7 +23,7 @@ than learning it from an answer:
 | `bIdentity`, `bLeaderboards`, `bAchievements`, `bOverlay` | The feature is there |
 | `bLeaderboardsMadeAtRunTime` | The store makes a board the first time the game asks for it; otherwise it must exist in the store's portal |
 | `bFriendsRange` | The store gives the friends range itself; otherwise the services build it from the friends list |
-| `bLeaderboardFiles`, `MaxFileBytes` | A file can go on an entry, of this size at most |
+| `bLeaderboardFiles`, `MaxFileBytes` | A file can go on an entry, of this size at most. On Steam, off when the app or the player has the Steam Cloud off |
 | `MaxDetails` | Detail numbers kept with a score (Steam: 64); more are cut, with a warning |
 
 ## The game's leaderboards
@@ -79,9 +79,12 @@ lOnline->DownloadEntries("Level1", Opaax::ELeaderboardRange::AroundPlayer, -5, 5
     });
 ```
 
-- **Upload** keeps the player's best by the board's sort. A file given with it (a ghost) goes on the
-  entry only when the score was kept, so the best entry keeps its own file; on a store without files
-  the upload answers `Unsupported`, so send the file only when `bLeaderboardFiles` is set.
+- **Upload** keeps the player's best by the board's sort. A file given with it goes on the entry only
+  when the score was kept, so the best entry keeps its own file; on a store without files the upload
+  answers `Unsupported`, so send the file only when `bLeaderboardFiles` is set. The bytes are the
+  game's own (a ghost, a replay, a level a player made, a picture): the store only keeps them.
+  The score is uploaded first: when the file is then refused (`QuotaExceeded`), the score is kept
+  and its entry has no file, so check the size against `MaxFileBytes` before.
 - **Ranges:** `World` takes ranks (1 to 10 is the top ten), `AroundPlayer` offsets from the player
   (-5 to 5 is eleven lines, none when the player has no entry), `Friends` ignores both.
 - **Names** come with the entries. A name the store does not know yet is asked for; the answer waits
@@ -171,6 +174,24 @@ config is logged as a warning, and Steam's wins. For a released game, make them 
 portal (Stats & Achievements, Leaderboards) with the same names, and publish; a board set to be
 written by a trusted server only refuses the game's uploads (`Failed`).
 
+**Files on entries** are files of the player's [Steam Cloud](https://partner.steamgames.com/doc/features/cloud),
+shared, their handle attached to the entry. In the Steamworks portal (Application, Steam Cloud):
+enable the Cloud, set the byte quota per user and the number of files per user, and publish. No
+Auto-Cloud path is needed: the engine writes through the API.
+
+- One file per board, `leaderboards/<board>.bin` (a character of the board's name other than a
+  letter, a digit, `_` or `-` is written `%XX`). A better score replaces it, and the handle of the
+  file it replaced answers `NotFound`. So the quota holds at least the largest file of every board,
+  and as many files as boards. A player sees them in Steam, under their account's Remote Storage.
+- `MaxFileBytes` is the player's quota, 100 MB at most (one write's limit). Valve's test app 480
+  gives 4096 bytes.
+- A file over `MaxFileBytes`, or over the room left in the player's cloud, answers `QuotaExceeded`
+  before Steam is asked.
+- A player who turns the Steam Cloud off, for the game or for their account, has no files:
+  `bLeaderboardFiles` is false and an upload with a file answers `Unsupported`.
+- A new best score drops the file of the entry it replaces: an entry never shows a file of another
+  score.
+
 **Checking it** needs a Steam client signed in. CI never builds Steam, so a change to `Online/Steam`
 is checked on a machine with the SDK and Steam running:
 
@@ -180,7 +201,9 @@ TestWorld --online steam --exec Scratch/steam_leaderboard.json
 ```
 
 with `online.leaderboard.upload` and `online.leaderboard.entries` requests on a board of TestWorld's
-`Online.config`. On Linux the overlay works only when Steam starts the game.
+`Online.config`. For files: an upload with a `file` and a better score than the entry's, the entry's
+`file` from `online.leaderboard.entries`, then `online.file.get` on it, from the same account and
+from another one. On Linux the overlay works only when Steam starts the game.
 
 ## Testing without a store
 
@@ -191,7 +214,7 @@ store's limits without it:
 | Profile | Like | Differs |
 |---|---|---|
 | `full` | Every feature | |
-| `steam` | Steam | As `full` today: Steam's limits as the fake store keeps them (64 details, files of 1 MB) |
+| `steam` | Steam | As `full` today: Steam's limits as the fake store keeps them (64 details, files of 1 MB; on Steam the size is the app's Cloud quota) |
 | `epic` | Epic Online Services | No files, no detail numbers, no boards made at run time, no friends range |
 | `gog` | GOG Galaxy | No friends range (the services build it from the friends list) |
 
