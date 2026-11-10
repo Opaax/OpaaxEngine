@@ -122,6 +122,7 @@ set(OPAAX_TEST_SOURCES
     World/BehaviourStorageTests.cpp
     World/ComponentIdentityTests.cpp
     World/ComponentRegistryTests.cpp
+    World/EntityCloneTests.cpp
     World/EntityHierarchyTests.cpp
     World/EntityQueryTests.cpp
     World/HardReferencesTests.cpp
