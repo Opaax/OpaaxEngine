@@ -395,6 +395,9 @@ namespace Opaax::Editor
         lCommands.Register<DeleteSelectedCommand>(Tags::EDITOR_COMMAND_DELETE_ENTITY);
         lCommands.Register<FocusSelectedCommand>(Tags::EDITOR_COMMAND_FOCUS_SELECTED);
         lCommands.Register<DuplicateSelectedCommand>(Tags::EDITOR_COMMAND_DUPLICATE_ENTITY);
+        lCommands.Register<CopySelectedCommand>(Tags::EDITOR_COMMAND_COPY_ENTITY);
+        lCommands.Register<CutSelectedCommand>(Tags::EDITOR_COMMAND_CUT_ENTITY);
+        lCommands.Register<PasteEntitiesCommand>(Tags::EDITOR_COMMAND_PASTE_ENTITY);
 
         lCommands.Register<GizmoTranslateCommand>(Tags::EDITOR_COMMAND_GIZMO_TRANSLATE);
         lCommands.Register<GizmoRotateCommand>(Tags::EDITOR_COMMAND_GIZMO_ROTATE);

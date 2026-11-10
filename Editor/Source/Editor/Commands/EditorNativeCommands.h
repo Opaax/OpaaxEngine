@@ -263,6 +263,30 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params&);
     };
 
+    /** Puts the selection on the clipboard (EntityOps::Copy). Allowed during Play. */
+    struct CopySelectedCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /** Copies the selection, then deletes it. Refused during Play. */
+    struct CutSelectedCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /** Makes the clipboard's entities in the focused map (EntityOps::Paste). Refused during Play. */
+    struct PasteEntitiesCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
     /** Renames the primary selection (the Inspector's name field, on Enter or focus loss). */
     struct RenameSelectedCommand
     {
