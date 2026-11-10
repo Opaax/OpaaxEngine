@@ -24,5 +24,181 @@
         "id": "clipboard-set-needs-text",
         "command": "clipboard.set",
         "expectFailure": true
+    },
+    {
+        "id": "open",
+        "command": "level.open",
+        "params": {
+            "path": "Levels/Hierarchy.opaaxlevel",
+            "discard": true
+        },
+        "expect": {
+            "world": "Hierarchy",
+            "mode": "Edit"
+        }
+    },
+    {
+        "id": "duplicate-nothing",
+        "command": "entity.duplicate",
+        "params": {
+            "entities": []
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "duplicate-root",
+        "command": "entity.duplicate",
+        "params": {
+            "entities": [
+                "Doomed"
+            ]
+        },
+        "expect": {
+            "count": 3,
+            "entities": [
+                {
+                    "name": "Doomed 1",
+                    "parent": null
+                }
+            ]
+        }
+    },
+    {
+        "id": "children-copied",
+        "command": "expect.count",
+        "params": {
+            "name": "DoomedA",
+            "equals": 2
+        }
+    },
+    {
+        "id": "duplicate-child",
+        "command": "entity.duplicate",
+        "params": {
+            "entities": [
+                "Hand"
+            ]
+        },
+        "expect": {
+            "count": 2,
+            "entities": [
+                {
+                    "name": "Hand 1",
+                    "parent": "136eb98516295fbd830ca5d3a89fd2b9"
+                }
+            ]
+        }
+    },
+    {
+        "id": "grandchild-copied",
+        "command": "expect.count",
+        "params": {
+            "name": "Finger",
+            "equals": 2
+        }
+    },
+    {
+        "id": "undo-duplicate",
+        "command": "editor.undo"
+    },
+    {
+        "id": "duplicate-undone",
+        "command": "expect.entity",
+        "params": {
+            "entity": "Hand 1",
+            "exists": false
+        }
+    },
+    {
+        "id": "grandchild-undone",
+        "command": "expect.count",
+        "params": {
+            "name": "Finger",
+            "equals": 1
+        }
+    },
+    {
+        "id": "redo-duplicate",
+        "command": "editor.redo"
+    },
+    {
+        "id": "duplicate-redone",
+        "command": "expect.count",
+        "params": {
+            "name": "Finger",
+            "equals": 2
+        }
+    },
+    {
+        "id": "scratch-level",
+        "command": "level.new",
+        "params": {
+            "path": "Scratch/CopyPaste.opaaxlevel",
+            "map": "Scratch/CopyPaste.opaaxmap",
+            "discard": true
+        }
+    },
+    {
+        "id": "place-turret",
+        "command": "prefab.place",
+        "params": {
+            "path": "Prefabs/Turret.opaaxprefab",
+            "position": {
+                "x": 0.0,
+                "y": 0.0
+            }
+        }
+    },
+    {
+        "id": "duplicate-placement",
+        "command": "entity.duplicate",
+        "params": {
+            "entities": [
+                "Turret"
+            ]
+        },
+        "expect": {
+            "count": 2,
+            "entities": [
+                {
+                    "name": "Turret 1"
+                }
+            ]
+        }
+    },
+    {
+        "id": "two-placements",
+        "command": "expect.count",
+        "params": {
+            "component": "PrefabInstance",
+            "equals": 4
+        }
+    },
+    {
+        "id": "save",
+        "command": "level.save"
+    },
+    {
+        "id": "reopen",
+        "command": "level.open",
+        "params": {
+            "path": "Scratch/CopyPaste.opaaxlevel"
+        }
+    },
+    {
+        "id": "placements-saved",
+        "command": "expect.count",
+        "params": {
+            "component": "PrefabInstance",
+            "equals": 4
+        }
+    },
+    {
+        "id": "copy-saved",
+        "command": "expect.entity",
+        "params": {
+            "entity": "Turret 1",
+            "exists": true
+        }
     }
 ]

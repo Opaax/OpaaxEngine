@@ -214,6 +214,49 @@ namespace Opaax::Editor::EditorAutomation
             return EngineAutomation::DescribeEntity(InEntity, InContext.Engine.GetRegistries().Components(), true);
         }
 
+        /** Selects InParams["entities"] (ids or names) when given; otherwise the selection stays. */
+        bool SelectListed(EditorContext& InContext, const nlohmann::json& InParams, OpaaxString& OutError)
+        {
+            const auto lList = InParams.find("entities");
+            if (lList == InParams.end())
+            {
+                return true;
+            }
+            if (!lList->is_array())
+            {
+                OutError = "\"entities\" is a list of ids or names";
+                return false;
+            }
+
+            InContext.Selection.Clear();
+            for (const nlohmann::json& lRef : *lList)
+            {
+                const Entity lEntity = FindEntity(InContext, nlohmann::json{ { "entity", lRef } }, OutError);
+                if (!lEntity.IsValid())
+                {
+                    return false;
+                }
+                InContext.Selection.Add(lEntity);
+            }
+            return true;
+        }
+
+        /** What a copy made: {count} entities in all, and the selected copies ({id, name, parent, map}). */
+        AutomationResult DescribeCopies(EditorContext& InContext, const Uint64 InCount)
+        {
+            World* const   lWorld  = InContext.Worlds.GetActiveWorld();
+            nlohmann::json lCopies = nlohmann::json::array();
+            for (const EntityID lId : InContext.Selection.Ids())
+            {
+                nlohmann::json lEntity = EngineAutomation::DescribeEntity(Entity{ lId, lWorld },
+                                                                          InContext.Engine.GetRegistries().Components(),
+                                                                          false);
+                lEntity.erase("components");
+                lCopies.push_back(Move(lEntity));
+            }
+            return AutomationResult::Ok(nlohmann::json{ { "count", InCount }, { "entities", lCopies } });
+        }
+
         /** What a request does instead of a dialog it met, when its command has nothing better to say. */
         constexpr const char* ANSWER_ELSEWHERE = "use a command that takes the path or the answer (commands.list), "
                                                  "or write the file yourself (Docs/AssetFormats.md)";
@@ -714,6 +757,30 @@ namespace Opaax::Editor::EditorAutomation
                     InContext.Selection.Select(lEntity);
                     EntityOps::DestroySelected(InContext);
                     return AutomationResult::Ok();
+                });
+
+            InCommands.Register("entity.duplicate",
+                "Copies {entities} (ids or names; default: the selection), children included, beside the originals, "
+                "as Duplicate does: the copies are named anew and selected. Undoable. Answers {count} created and "
+                "the selected copies ({id, name, parent, map}).",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString lError;
+                    if (!IsEditing(InContext, lError) || !SelectListed(InContext, InParams, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+                    if (!InContext.Selection.HasSelection())
+                    {
+                        return AutomationResult::Fail("nothing is selected: name the \"entities\" to copy");
+                    }
+
+                    const Uint64 lCount = EntityOps::Duplicate(InContext, EUndoWorld::Active);
+                    if (lCount == 0)
+                    {
+                        return AutomationResult::Fail("nothing was copied (see the log)");
+                    }
+                    return DescribeCopies(InContext, lCount);
                 });
 
             InCommands.Register("entity.select", "Selects {entities} (ids or names); an empty list clears the selection.",

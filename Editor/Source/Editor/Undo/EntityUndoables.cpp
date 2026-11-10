@@ -124,6 +124,9 @@ namespace Opaax::Editor
     void EntityCreate::Undo(EditorContext& InContext) { DestroyEntities(InContext, Entities, EUndoWorld::Active); }
     void EntityCreate::Redo(EditorContext& InContext) { RestoreEntities(InContext, Entities, EUndoWorld::Active); }
 
+    void EntityPaste::Undo(EditorContext& InContext) { DestroyEntities(InContext, Entities, Scope); }
+    void EntityPaste::Redo(EditorContext& InContext) { RestoreEntities(InContext, Entities, Scope); }
+
     void PrefabInstantiate::Undo(EditorContext& InContext) { DestroyEntities(InContext, Entities, Scope); }
     void PrefabInstantiate::Redo(EditorContext& InContext) { RestoreEntities(InContext, Entities, Scope); }
 

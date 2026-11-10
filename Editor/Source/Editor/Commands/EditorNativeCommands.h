@@ -255,6 +255,14 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params&);
     };
 
+    /** Copies the selection beside the originals (EntityOps::Duplicate). Refused during Play. */
+    struct DuplicateSelectedCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
     /** Renames the primary selection (the Inspector's name field, on Enter or focus loss). */
     struct RenameSelectedCommand
     {

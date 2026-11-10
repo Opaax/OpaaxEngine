@@ -37,6 +37,25 @@ namespace Opaax::Editor
     };
 
     /**
+     * Copies of entities were made (Duplicate, Paste). Same bodies as EntityCreate, in either world,
+     * named after the gesture.
+     */
+    struct EntityPaste
+    {
+        /** The copies, captured after the fact. */
+        MapData     Entities;
+
+        EUndoWorld  Scope = EUndoWorld::Active;
+
+        /** "Duplicate" or "Paste", so the menu reads "Undo Duplicate". */
+        OpaaxString Name;
+
+        void        Undo(EditorContext& InContext);
+        void        Redo(EditorContext& InContext);
+        const char* Label() const noexcept { return Name.CStr(); }
+    };
+
+    /**
      * A prefab was placed. Same bodies as EntityCreate; a separate type for its label.
      * The prefab file is not affected by undo.
      */
