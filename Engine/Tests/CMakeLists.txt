@@ -208,6 +208,7 @@ set(OPAAX_TEST_SOURCES
     UI/UIStackTests.cpp
     UI/UITextTests.cpp
     UI/UIWidgetClassTests.cpp
+    UI/UIWidgetNamesTests.cpp
 
     # Editor logic that needs no ImGui (header-only editor types)
     Editor/AnimationClipEditingTests.cpp
