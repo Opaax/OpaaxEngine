@@ -308,6 +308,110 @@
         }
     },
     {
+        "id": "make-gun",
+        "command": "entity.create",
+        "params": {
+            "name": "Gun",
+            "components": {
+                "EntityRefProbe": {
+                    "Target": {
+                        "entityRef": "c480b8587bc8547b838377ccc3789645"
+                    }
+                }
+            }
+        }
+    },
+    {
+        "id": "gun-under-snapper",
+        "command": "entity.parent",
+        "params": {
+            "entity": "Gun",
+            "parent": "Snapper"
+        }
+    },
+    {
+        "id": "duplicate-with-ref",
+        "command": "entity.duplicate",
+        "params": {
+            "entities": [
+                "Snapper"
+            ]
+        },
+        "expect": {
+            "count": 2,
+            "entities": [
+                {
+                    "name": "Snapper 1"
+                }
+            ]
+        }
+    },
+    {
+        "id": "copy-with-ref",
+        "command": "entity.copy",
+        "params": {
+            "entities": [
+                "Snapper"
+            ]
+        },
+        "expect": {
+            "count": 2
+        }
+    },
+    {
+        "id": "paste-with-ref",
+        "command": "entity.paste",
+        "expect": {
+            "count": 2,
+            "entities": [
+                {
+                    "name": "Snapper 2"
+                }
+            ]
+        }
+    },
+    {
+        "id": "play-refs",
+        "command": "editor.play"
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "original-ref",
+        "command": "expect.value",
+        "params": {
+            "entity": "Gun",
+            "path": "EntityRefProbe/Found",
+            "equals": "Snapper"
+        }
+    },
+    {
+        "id": "duplicated-ref",
+        "command": "expect.value",
+        "params": {
+            "entity": "Gun 1",
+            "path": "EntityRefProbe/Found",
+            "equals": "Snapper 1"
+        }
+    },
+    {
+        "id": "pasted-ref",
+        "command": "expect.value",
+        "params": {
+            "entity": "Gun 2",
+            "path": "EntityRefProbe/Found",
+            "equals": "Snapper 2"
+        }
+    },
+    {
+        "id": "stop-refs",
+        "command": "editor.stop"
+    },
+    {
         "id": "scratch-level",
         "command": "level.new",
         "params": {
