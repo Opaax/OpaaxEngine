@@ -5,6 +5,7 @@
 #include "Core/Algo/Algo.h"
 #include "World/Components/ComponentRegistry.h"
 #include "World/Components/PrefabInstanceComponent.h"
+#include "World/Entity/EntityRef.h"
 #include "World/Prefab/PrefabFold.h"
 
 namespace Opaax
@@ -88,6 +89,15 @@ namespace Opaax
             // Parent links are derived with the guids; links to outside the prefab are dropped.
             lEntity.Parent   = Names(InPrefab.Entities, lTemplate.Parent) ? Guid::Derive(InInstanceId, lTemplate.Parent)
                                                                            : Guid{};
+
+            // References among the prefab's entities name this placement's, derived the same way.
+            for (ComponentData& lComponent : lEntity.Components)
+            {
+                EntityRefJson::Remap(lComponent.Payload, [&InPrefab, &InInstanceId](const Guid& InId)
+                {
+                    return Names(InPrefab.Entities, InId) ? Guid::Derive(InInstanceId, InId) : InId;
+                });
+            }
 
             // The outer instance owns the entity: replace any existing marker.
             StripMarker(lEntity, lMarkerName);
