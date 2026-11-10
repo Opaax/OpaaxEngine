@@ -208,6 +208,9 @@ namespace Opaax::Editor
         OpaaxString             m_Filter;
         OpaaxString             m_SelectedPath;   // "<Root>/<RelPath>", highlight only (not EditorSelection)
 
+        // A file's Duplicate, run after the draw: the copy rescans the lists being drawn.
+        OpaaxString             m_PendingDuplicate;
+
         // An asset class's name id -> its look. Built once at Startup.
         TUnorderedMap<Uint32, AssetChrome> m_AssetChrome;
     };

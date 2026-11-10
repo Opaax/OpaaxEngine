@@ -146,6 +146,13 @@ namespace Opaax::Editor
             case EBrowserView::List:  DrawList();  break;
         }
         ImGui::EndChild();
+
+        if (!m_PendingDuplicate.IsEmpty())
+        {
+            const OpaaxString lPath = Move(m_PendingDuplicate);
+            m_PendingDuplicate = OpaaxString();
+            m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_DUPLICATE_FILE, m_Context, AssetPathParams{ lPath });
+        }
     }
 
     // =============================================================================
@@ -484,6 +491,12 @@ namespace Opaax::Editor
             ImGui::TextUnformatted(InFile.Name.CStr());
 
             ImGui::EndDragDropSource();
+        }
+
+        if (ImGui::BeginPopupContextItem("##FileContext"))
+        {
+            if (ImGui::MenuItem("Duplicate")) { m_PendingDuplicate = InFile.AbsPath; }
+            ImGui::EndPopup();
         }
 
         if (ImGui::IsItemHovered())
