@@ -86,6 +86,15 @@ namespace Opaax::Editor
          */
         bool Edit(const OpaaxString& InAbsPath, const nlohmann::json& InProperties, OpaaxString* OutError = nullptr);
 
+        /** Puts the open asset InAbsPath's values on the clipboard, with its class. */
+        bool CopyValues(const OpaaxString& InAbsPath, OpaaxString* OutError = nullptr);
+
+        /**
+         * Gives the open asset InAbsPath the copied values, as Edit does (one undo step, then its
+         * PostEditChange). Only values copied from an asset of the same class are taken.
+         */
+        bool PasteValues(const OpaaxString& InAbsPath, OpaaxString* OutError = nullptr);
+
         /** Applies values from InAbsPath's history (undo and redo steps). */
         void ApplyFromHistory(const OpaaxString& InAbsPath, const nlohmann::json& InProperties);
 

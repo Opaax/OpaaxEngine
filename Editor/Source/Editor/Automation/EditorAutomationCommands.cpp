@@ -1465,6 +1465,33 @@ namespace Opaax::Editor::EditorAutomation
             lStep("asset.undo", "Undoes the last change to the open asset at {path} (its own history).", true);
             lStep("asset.redo", "Redoes the last undone change to the open asset at {path}.", false);
 
+            InCommands.Register("asset.copy",
+                "Puts the values of the asset at {path} (opened first if needed) on the clipboard, with its class.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString          lError;
+                    const AssetDocument* lDocument = OpenAsset(InContext, InParams, lError);
+                    if (lDocument == nullptr || !InContext.Assets.CopyValues(lDocument->GetAbsPath(), &lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+                    return AutomationResult::Ok();
+                });
+
+            InCommands.Register("asset.paste",
+                "Gives the asset at {path} (opened first if needed) the copied values, as one undo step, not saved. "
+                "Only values copied from an asset of the same class are taken.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString          lError;
+                    const AssetDocument* lDocument = OpenAsset(InContext, InParams, lError);
+                    if (lDocument == nullptr || !InContext.Assets.PasteValues(lDocument->GetAbsPath(), &lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+                    return AutomationResult::Ok(DescribeAsset(InContext, *lDocument));
+                });
+
             InCommands.Register("asset.save",
                 "Writes the open asset at {path} and reloads it, so a playing game reads the new values.",
                 [&InContext](const nlohmann::json& InParams)

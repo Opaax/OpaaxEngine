@@ -1,4 +1,5 @@
 #include "Editor/Assets/AssetEditors.h"
+#include "Editor/Clipboard/EditorClipboard.h"
 
 #include <imgui.h>
 
@@ -189,6 +190,65 @@ namespace Opaax::Editor
         {
             lOpen->History.Redo(*m_Context);
         }
+    }
+
+    bool AssetEditors::CopyValues(const OpaaxString& InAbsPath, OpaaxString* OutError)
+    {
+        const OpenAsset* lOpen = FindOpen(InAbsPath);
+        if (lOpen == nullptr || !lOpen->Document->IsClassKnown())
+        {
+            if (OutError != nullptr) { *OutError = OpaaxString("the asset is not open, or its class is unknown"); }
+            return false;
+        }
+
+        nlohmann::json lData = nlohmann::json::object();
+        lData["class"]      = lOpen->Document->GetClassName().CStr();
+        lData["properties"] = lOpen->Document->GetProperties();
+        m_Context->Clipboard.Copy(EClipboardKind::Properties, lData);
+
+        OPAAX_LOG(LogAssetEditors, Info, "Copied the values of '{}'", InAbsPath.CStr());
+        return true;
+    }
+
+    bool AssetEditors::PasteValues(const OpaaxString& InAbsPath, OpaaxString* OutError)
+    {
+        OpaaxString lError;
+        const auto  lRefuse = [OutError, &InAbsPath](OpaaxString InWhy)
+        {
+            OPAAX_LOG(LogAssetEditors, Warn, "Paste Values refused on '{}' — {}", InAbsPath.CStr(), InWhy.CStr());
+            if (OutError != nullptr) { *OutError = Move(InWhy); }
+            return false;
+        };
+
+        const OpenAsset* lOpen = FindOpen(InAbsPath);
+        if (lOpen == nullptr) { return lRefuse("the asset is not open"); }
+
+        nlohmann::json lData;
+        if (!m_Context->Clipboard.Read(EClipboardKind::Properties, lData, lError))
+        {
+            return lRefuse(lError + " (copy an asset's values first)");
+        }
+
+        const auto        lClassField = lData.find("class");
+        const OpaaxString lClass      = lClassField != lData.end() && lClassField->is_string()
+                                            ? lClassField->get<OpaaxString>() : OpaaxString();
+        const auto        lProperties = lData.find("properties");
+        if (lProperties == lData.end() || !lProperties->is_object())
+        {
+            return lRefuse("the clipboard's values have no properties");
+        }
+
+        // Another class's fields would be read by name and could mean something else here.
+        if (lClass != lOpen->Document->GetClassName().ToString())
+        {
+            return lRefuse(OpaaxString::Format("the values are a {}'s, this is a {}", lClass,
+                                               lOpen->Document->GetClassName()));
+        }
+
+        if (!Edit(InAbsPath, *lProperties, &lError)) { return lRefuse(lError); }
+
+        OPAAX_LOG(LogAssetEditors, Info, "Pasted values into '{}'", InAbsPath.CStr());
+        return true;
     }
 
     bool AssetEditors::Edit(const OpaaxString& InAbsPath, const nlohmann::json& InProperties, OpaaxString* OutError)
@@ -520,6 +580,20 @@ namespace Opaax::Editor
         if (ImGui::SmallButton("Redo"))
         {
             Redo(lDocument.GetAbsPath());
+        }
+        ImGui::EndDisabled();
+
+        // Values from one asset to another of its class.
+        ImGui::SameLine();
+        ImGui::BeginDisabled(!bKnown);
+        if (ImGui::SmallButton("Copy Values"))
+        {
+            CopyValues(lDocument.GetAbsPath());
+        }
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Paste Values"))
+        {
+            PasteValues(lDocument.GetAbsPath());
         }
         ImGui::EndDisabled();
     }

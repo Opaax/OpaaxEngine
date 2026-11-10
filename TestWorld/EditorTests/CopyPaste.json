@@ -714,5 +714,94 @@
             "component": "PrefabInstance",
             "equals": 4
         }
+    },
+    {
+        "id": "asset-a",
+        "command": "asset.new",
+        "params": {
+            "path": "Scratch/CopyA.opaaxasset",
+            "class": "ProbeTuning",
+            "properties": {
+                "Speed": 7.0,
+                "Title": "From A"
+            }
+        }
+    },
+    {
+        "id": "asset-b",
+        "command": "asset.new",
+        "params": {
+            "path": "Scratch/CopyB.opaaxasset",
+            "class": "ProbeTuning",
+            "properties": {
+                "Speed": 1.0,
+                "Title": "B"
+            }
+        }
+    },
+    {
+        "id": "copy-values",
+        "command": "asset.copy",
+        "params": {
+            "path": "Scratch/CopyA.opaaxasset"
+        }
+    },
+    {
+        "id": "values-kind",
+        "command": "clipboard.get",
+        "expect": {
+            "kind": "Properties"
+        }
+    },
+    {
+        "id": "paste-values",
+        "command": "asset.paste",
+        "params": {
+            "path": "Scratch/CopyB.opaaxasset"
+        },
+        "expect": {
+            "properties": {
+                "Speed": 7.0,
+                "Title": "From A"
+            },
+            "unsaved": true,
+            "canUndo": true
+        }
+    },
+    {
+        "id": "undo-paste-asset-values",
+        "command": "asset.undo",
+        "params": {
+            "path": "Scratch/CopyB.opaaxasset"
+        }
+    },
+    {
+        "id": "asset-values-undone",
+        "command": "asset.get",
+        "params": {
+            "path": "Scratch/CopyB.opaaxasset"
+        },
+        "expect": {
+            "properties": {
+                "Speed": 1.0,
+                "Title": "B"
+            }
+        }
+    },
+    {
+        "id": "asset-other-class",
+        "command": "asset.new",
+        "params": {
+            "path": "Scratch/CopyMaterial.opaaxasset",
+            "class": "Material2D"
+        }
+    },
+    {
+        "id": "paste-into-other-class",
+        "command": "asset.paste",
+        "params": {
+            "path": "Scratch/CopyMaterial.opaaxasset"
+        },
+        "expectFailure": true
     }
 ]
