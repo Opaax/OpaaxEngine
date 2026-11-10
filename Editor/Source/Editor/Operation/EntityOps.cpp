@@ -39,6 +39,7 @@
 #include "World/Prefab/ResourcePrefabResolver.h"
 #include "World/Prefab/PrefabAsset.h"
 #include "World/Serialization/MapFactory.h"
+#include "World/Serialization/EntityClone.h"
 
 using namespace Opaax;
 
@@ -760,6 +761,154 @@ namespace Opaax::Editor
         if (lCount > 0) { InWorld.MarkChanged(); }
 
         return lCount;
+    }
+
+    // =============================================================================
+    // Copy and paste
+    // =============================================================================
+
+    namespace
+    {
+        /** How many entities of InWorld belong to the prefab instance InInstanceId. */
+        Uint64 CountInWorld(World& InWorld, const Guid& InInstanceId)
+        {
+            Uint64 lCount = 0;
+            InWorld.Each<PrefabInstanceComponent>([&](EntityID, const PrefabInstanceComponent& InMarker)
+            {
+                if (InMarker.InstanceId == InInstanceId) { ++lCount; }
+            });
+            return lCount;
+        }
+
+        /**
+         * InSelected and their children as data, ready to be copied: an instance copied in part is unlinked
+         * (no prefab describes it). With bInAsRoots, an entity whose parent is not copied stores its world
+         * pose, so it lands where it was once its parent is cleared.
+         */
+        MapData CaptureForCopy(World& InWorld, const TDynArray<EntityID>& InSelected, const ComponentRegistry& InRegistry,
+                               const bool bInAsRoots)
+        {
+            TDynArray<EntityID> lIds;
+            EntityHierarchy::CollectSubtree(InWorld, InSelected, lIds);
+
+            MapData lData = MapSerializer::CaptureEntities(InWorld, InRegistry, lIds);
+
+            for (const Guid& lInstance : EntityClone::InstancesOf(lData, InRegistry))
+            {
+                if (EntityClone::CountOfInstance(lData, lInstance, InRegistry) < CountInWorld(InWorld, lInstance))
+                {
+                    EntityClone::Unlink(lData, lInstance, InRegistry);
+                }
+            }
+
+            if (!bInAsRoots) { return lData; }
+
+            const IComponentEntry* lTransform = InRegistry.Find<TransformComponent>();
+            for (EntityData& lEntity : lData.Entities)
+            {
+                bool bParentCopied = !lEntity.Parent.IsValid();
+                for (const EntityData& lOther : lData.Entities)
+                {
+                    bParentCopied = bParentCopied || lOther.Id == lEntity.Parent;
+                }
+                if (bParentCopied || lTransform == nullptr) { continue; }
+
+                const TransformComponent lWorldPose = EntityHierarchy::WorldTransform(InWorld.FindByGuid(lEntity.Id));
+                for (ComponentData& lComponent : lEntity.Components)
+                {
+                    if (lComponent.TypeName == lTransform->GetName()) { lComponent.Payload = lWorldPose; }
+                }
+            }
+            return lData;
+        }
+
+        /** Whether InWorld has an entity named InName, or InAlsoTaken has it. */
+        bool NameUsed(World& InWorld, const OpaaxString& InName, const TDynArray<OpaaxString>& InAlsoTaken)
+        {
+            for (const OpaaxString& lTaken : InAlsoTaken)
+            {
+                if (lTaken == InName) { return true; }
+            }
+            return NameTaken(InWorld, InName);
+        }
+
+        /**
+         * Puts InCopy in InWorld: its roots get names no entity has ("Crate 1"), its children keep theirs.
+         * Selects the copied roots and records one step named InStepName.
+         * @return The created handles, in InCopy's order
+         */
+        TDynArray<EntityID> PlaceCopies(EditorContext& InContext, const EUndoWorld InScope, World& InWorld,
+                                        MapData InCopy, const char* InStepName)
+        {
+            const ComponentRegistry& lRegistry = InContext.Engine.GetRegistries().Components();
+
+            TDynArray<OpaaxString> lGiven;
+            for (EntityData& lEntity : InCopy.Entities)
+            {
+                // A root of the copy: its parent, if any, was not copied with it.
+                bool bRoot = true;
+                for (const EntityData& lOther : InCopy.Entities)
+                {
+                    bRoot = bRoot && lOther.Id != lEntity.Parent;
+                }
+                if (!bRoot) { continue; }
+
+                OpaaxString lName = lEntity.Name;
+                for (Uint32 lIndex = 1; NameUsed(InWorld, lName, lGiven); ++lIndex)
+                {
+                    lName = lEntity.Name + OpaaxString(" ") + OpaaxString::FromUInt(lIndex);
+                }
+                lGiven.emplace_back(lName);
+                lEntity.Name = Move(lName);
+            }
+
+            const TDynArray<EntityID> lHandles = EntityOps::PlaceInstance(InWorld, InCopy, nullptr, lRegistry);
+            if (lHandles.empty()) { return lHandles; }
+
+            TDynArray<EntityID> lRoots;
+            EntityHierarchy::TopmostOf(InWorld, lHandles, lRoots);
+            UndoSelection(InContext, InScope).Replace(&InWorld, lRoots);
+
+            EntityPaste lStep;
+            lStep.Entities = MapSerializer::CaptureEntities(InWorld, lRegistry, lHandles);
+            lStep.Scope    = InScope;
+            lStep.Name     = OpaaxString(InStepName);
+            UndoStack(InContext, InScope).Record(Move(lStep));
+
+            return lHandles;
+        }
+
+        /** The selection's world for InScope, or null when nothing is selected there. */
+        World* SelectionWorld(EditorContext& InContext, const EUndoWorld InScope)
+        {
+            const EditorSelection& lSelection = UndoSelection(InContext, InScope);
+            World* const           lWorld     = UndoWorld(InContext, InScope);
+
+            if (!lSelection.HasSelection() || lWorld == nullptr || lSelection.GetWorld() != lWorld) { return nullptr; }
+            return lWorld;
+        }
+    }
+
+    Uint64 EntityOps::Duplicate(EditorContext& InContext, const EUndoWorld InScope)
+    {
+        if (InScope == EUndoWorld::Active && !MapOps::CanEdit(InContext, "Duplicate")) { return 0; }
+
+        World* const lWorld = SelectionWorld(InContext, InScope);
+        if (lWorld == nullptr) { return 0; }   // nothing selected (normal)
+
+        const ComponentRegistry& lRegistry = InContext.Engine.GetRegistries().Components();
+
+        // Beside the originals: same parents, same maps.
+        EntityClone::Options lOptions;
+        lOptions.bKeepOutsideParents = true;
+
+        const MapData lSource = CaptureForCopy(*lWorld, UndoSelection(InContext, InScope).Ids(), lRegistry,
+                                               /*bInAsRoots*/ false);
+        const TDynArray<EntityID> lPlaced =
+            PlaceCopies(InContext, InScope, *lWorld, EntityClone::Clone(lSource, lOptions, lRegistry), "Duplicate");
+
+        OPAAX_LOG(LogEntityOps, Info, "Duplicated {} entity(ies)", lPlaced.size());
+        return lPlaced.size();
     }
 
     bool EntityOps::AddComponent(EditorContext& InContext, Entity InEntity, const OpaaxStringID InTypeName)

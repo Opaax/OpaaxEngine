@@ -395,6 +395,11 @@ namespace Opaax::Editor
         EntityOps::DestroySelected(InContext);
     }
 
+    void DuplicateSelectedCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        EntityOps::Duplicate(InContext, EUndoWorld::Active);
+    }
+
     void RenameSelectedCommand::Execute(EditorContext& InContext, const Params& InParams)
     {
         EntityOps::Rename(InContext, InContext.Selection.Get(), InParams.Name);

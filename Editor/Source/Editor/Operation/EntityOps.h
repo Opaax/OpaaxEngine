@@ -112,6 +112,14 @@ namespace Opaax::Editor
         Uint64 DestroyEntities(World& InWorld, const TDynArray<EntityID>& InEntities);
 
         /**
+         * Copies the selection of InScope's world, children included, beside the originals (same parents,
+         * same maps). The copied roots are named anew ("Crate 1") and become the selection; one undo step.
+         * A whole prefab instance copies as a placement of its own; part of one, as plain entities.
+         * @return Number of entities created. 0 = nothing selected, or refused during Play
+         */
+        Uint64 Duplicate(EditorContext& InContext, EUndoWorld InScope);
+
+        /**
          * Adds a registered component to InEntity, by name (a command can carry a name, not a pointer).
          * @return False if the type is unknown, already present, or the edit was refused
          */

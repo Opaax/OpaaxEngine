@@ -37,6 +37,9 @@ namespace Opaax::Editor::Tags
     inline const OpaaxTag EDITOR_COMMAND_DELETE_ENTITY  = OpaaxTag("Editor.Command.DeleteEntity");
     inline const OpaaxTag EDITOR_COMMAND_FOCUS_SELECTED = OpaaxTag("Editor.Command.FocusSelected");
 
+    //Entity copies, the selection being the subject
+    inline const OpaaxTag EDITOR_COMMAND_DUPLICATE_ENTITY = OpaaxTag("Editor.Command.DuplicateEntity");
+
     //The Inspector's three. Field edits have no tag: the panel records those steps itself.
     inline const OpaaxTag EDITOR_COMMAND_RENAME_SELECTED  = OpaaxTag("Editor.Command.RenameSelected");
     inline const OpaaxTag EDITOR_COMMAND_ADD_COMPONENT    = OpaaxTag("Editor.Command.AddComponent");
