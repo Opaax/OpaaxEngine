@@ -2,6 +2,12 @@
 
 #include <imgui.h>
 
+#include "Core/GUID/Guid.h"
+#include "Editor/Panels/EntityDragPayload.h"
+#include "World/Entity/Entity.h"
+#include "World/Entity/EntityMeta.h"
+#include "World/World.h"
+
 namespace
 {
     /**
@@ -139,4 +145,51 @@ namespace Opaax::Editor
 
     void ImGuiEditorWidgets::SetDefaultFocus() { ImGui::SetItemDefaultFocus(); }
     void ImGuiEditorWidgets::EndCombo()        { ImGui::EndCombo(); }
+
+    bool ImGuiEditorWidgets::EntityRefField(const char* InLabel, Guid& InOutId)
+    {
+        World* const lWorld = GetEntityScope();
+        const Guid   lBefore = InOutId;
+
+        ImGui::PushID(InLabel);
+
+        // The button shows the entity's name, and is the drop target. Its guid is the tooltip.
+        OpaaxString lText("(drop an entity here)");
+        if (InOutId.IsValid())
+        {
+            Entity            lTarget = lWorld != nullptr ? lWorld->FindByGuid(InOutId) : Entity{};
+            const EntityMeta* lMeta   = lTarget.IsValid() ? lTarget.TryGet<EntityMeta>() : nullptr;
+            lText = lMeta != nullptr ? lMeta->Name : OpaaxString("(missing entity)");
+        }
+
+        ImGui::Button(lText.CStr(), ImVec2(ImGui::CalcItemWidth(), 0.f));
+        if (InOutId.IsValid() && ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("%s", InOutId.ToString().CStr());
+        }
+
+        if (ImGui::BeginDragDropTarget())
+        {
+            if (const ImGuiPayload* lPayload = ImGui::AcceptDragDropPayload(ENTITY_DRAG_PAYLOAD))
+            {
+                const EntityDragPayload& lDragged = *static_cast<const EntityDragPayload*>(lPayload->Data);
+
+                // Only an entity of the world being edited: a guid from another document names nothing here.
+                if (lWorld != nullptr && lDragged.Source == lWorld) { InOutId = lDragged.Id; }
+            }
+            ImGui::EndDragDropTarget();
+        }
+
+        if (InOutId.IsValid())
+        {
+            ImGui::SameLine();
+            if (ImGui::SmallButton("x")) { InOutId = Guid{}; }
+        }
+
+        ImGui::SameLine();
+        ImGui::TextUnformatted(InLabel);
+
+        ImGui::PopID();
+        return InOutId != lBefore;
+    }
 }

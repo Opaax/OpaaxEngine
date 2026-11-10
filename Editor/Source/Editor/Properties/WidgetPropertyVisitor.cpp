@@ -57,6 +57,12 @@ namespace Opaax::Editor
         DrawPropertyNote(m_Widgets, InMeta);
     }
 
+    void WidgetPropertyVisitor::VisitEntityRef(const char* InName, Guid& InOutId, const PropertyMeta& InMeta)
+    {
+        m_Widgets.EntityRefField(InName, InOutId);
+        DrawPropertyNote(m_Widgets, InMeta);
+    }
+
     bool WidgetPropertyVisitor::BeginGroup(const char* InName, const PropertyMeta& InMeta)
     {
         if (!m_Widgets.BeginTreeNode(InName))

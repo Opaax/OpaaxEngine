@@ -297,12 +297,15 @@ namespace Opaax::Editor
             return;
         }
 
-        // The Inspector's drawer registry, so this panel knows no component type.
+        // The Inspector's drawer registry, so this panel knows no component type. References name
+        // entities of the prefab's own world.
+        m_Context.Widgets.SetEntityScope(lEntity.GetWorld());
         for (const TFunction<bool(Entity&, IEditorWidgets&, EditorContext&)>& lDrawer :
              m_Context.Extensions.Drawers().Entries())
         {
             lDrawer(lEntity, m_Context.Widgets, m_Context);
         }
+        m_Context.Widgets.SetEntityScope(nullptr);
 
         // A drawer writes directly, which the world cannot see; mark changes like the Inspector does.
         const bool lItemActive = ImGui::IsAnyItemActive();
