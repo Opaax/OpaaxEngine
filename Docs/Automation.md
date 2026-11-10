@@ -181,6 +181,9 @@ The editor adds:
 | `prefab.place` | `path`, `position` | Places an instance of a prefab in the focused map, its first entity at `position` |
 | `prefab.variant` | `prefab`, `path`, `entity`, `components` | Writes a variant of a prefab: it inherits everything, except `components` changed on its `entity`. A type or value it refuses writes nothing and leaves the base prefab as it was |
 | `ui.new` | `path` | Creates an empty UI canvas (a root panel at the project's reference height); its widgets are written in the file |
+| `ui.widget.add` | `type`, `parent` | Adds a widget of `type` (`UIPanel`, `UIText`...) to the canvas open in the UI panel, under the widget named `parent` (the top level by default), named after its type and numbered when taken. Answers its `name` |
+| `ui.widget.select` | `name` | Selects a widget of the UI panel's canvas by name (an empty name clears): what `Editor.Command.CopyUIWidget`, `CutUIWidget`, `PasteUIWidget` and `DuplicateUIWidget` act on |
+| `ui.widget.list` | | The canvas's widgets in tree order (`name`, `type`, `parent`) and the `selected` one's name |
 | `asset.classes` | | The asset classes a project can make: name, label, category, and properties at their defaults |
 | `asset.new` | `path`, `class`, `properties` | Creates an asset of a class, every field at its default, then sets `properties`, saves and opens it; refuses a file that exists |
 | `asset.open` | `path` | Opens an asset in its window: `path`, `class`, `properties`, `unsaved`, `canUndo`, `canRedo`, `fromSourceFile` (an image and the like: read-only). A class with a document of its own opens there, as a double-click does (a prefab in the Prefab panel): `path`, `class`, `document` |

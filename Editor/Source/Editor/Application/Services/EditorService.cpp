@@ -393,7 +393,7 @@ namespace Opaax::Editor
         lPanelsRegistry.Register<CameraStatsPanel>(PanelDesc    {.Id = CameraStatsPanel::PanelID(),     .DefaultVisibility = EPanelVisibility::Hidden});
         // Hidden until a prefab is opened. Its SaveCommand routes Ctrl+S to the prefab.
         lPanelsRegistry.Register<PrefabPanel>(PanelDesc         {.Id = PrefabPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_PREFAB, .UndoCommand = Tags::EDITOR_COMMAND_UNDO_PREFAB, .RedoCommand = Tags::EDITOR_COMMAND_REDO_PREFAB, .DeleteCommand = Tags::EDITOR_COMMAND_DELETE_PREFAB_SELECTION, .CopyCommand = Tags::EDITOR_COMMAND_COPY_PREFAB_SELECTION, .CutCommand = Tags::EDITOR_COMMAND_CUT_PREFAB_SELECTION, .PasteCommand = Tags::EDITOR_COMMAND_PASTE_INTO_PREFAB, .DuplicateCommand = Tags::EDITOR_COMMAND_DUPLICATE_PREFAB_SELECTION});
-        lPanelsRegistry.Register<UICanvasPanel>(PanelDesc{.Id = UICanvasPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_UI, .DeleteCommand = Tags::EDITOR_COMMAND_DELETE_UI_WIDGET});
+        lPanelsRegistry.Register<UICanvasPanel>(PanelDesc{.Id = UICanvasPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_UI, .DeleteCommand = Tags::EDITOR_COMMAND_DELETE_UI_WIDGET, .CopyCommand = Tags::EDITOR_COMMAND_COPY_UI_WIDGET, .CutCommand = Tags::EDITOR_COMMAND_CUT_UI_WIDGET, .PasteCommand = Tags::EDITOR_COMMAND_PASTE_UI_WIDGET, .DuplicateCommand = Tags::EDITOR_COMMAND_DUPLICATE_UI_WIDGET});
         lPanelsRegistry.Register<ConfigPanel>(PanelDesc         {.Id = ConfigPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<InputPanel>(PanelDesc          {.Id = InputPanel::PanelID(),           .DefaultVisibility = EPanelVisibility::Hidden });
         lPanelsRegistry.Register<StatsPanel>(PanelDesc          {.Id = StatsPanel::PanelID(),           .DefaultVisibility = EPanelVisibility::Hidden });
@@ -459,6 +459,10 @@ namespace Opaax::Editor
         lCommands.Register<NewUIAtCommand>(Tags::EDITOR_COMMAND_NEW_UI_AT);
         lCommands.Register<SaveUICommand>(Tags::EDITOR_COMMAND_SAVE_UI);
         lCommands.Register<DeleteUIWidgetCommand>(Tags::EDITOR_COMMAND_DELETE_UI_WIDGET);
+        lCommands.Register<CopyUIWidgetCommand>(Tags::EDITOR_COMMAND_COPY_UI_WIDGET);
+        lCommands.Register<CutUIWidgetCommand>(Tags::EDITOR_COMMAND_CUT_UI_WIDGET);
+        lCommands.Register<PasteUIWidgetCommand>(Tags::EDITOR_COMMAND_PASTE_UI_WIDGET);
+        lCommands.Register<DuplicateUIWidgetCommand>(Tags::EDITOR_COMMAND_DUPLICATE_UI_WIDGET);
         lCommands.Register<AddMapToLevelCommand>(Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL);
         lCommands.Register<AddMapToLevelAtCommand>(Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL_AT);
 
@@ -1251,8 +1255,8 @@ namespace Opaax::Editor
                 lCommandForFocused(Tags::EDITOR_COMMAND_DELETE_ENTITY, &PanelDesc::DeleteCommand), *m_Context);
         }
 
-        // Ctrl+C / X / V / D: the focused panel's commands. A panel that declares none gets nothing (the UI
-        // panel handles its own), so a copy never lands in another document than the one in front.
+        // Ctrl+C / X / V / D: the focused panel's commands. A panel that declares none gets nothing, so a
+        // copy never lands in another document than the one in front.
         const auto lRunDeclared = [this, &lCommandForFocused](const EKeyCode InKey, OpaaxTag PanelDesc::* InMember)
         {
             if (!m_Gui->Shortcut(EKeyCode::LeftControl, InKey)) { return; }

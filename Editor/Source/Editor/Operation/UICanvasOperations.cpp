@@ -2,7 +2,9 @@
 #include "Editor/Operation/ResourceOperations.h"
 
 #include "Core/Maths/Maths.h"
+#include "Core/String/OpaaxStringJson.h"
 #include "Core/String/UniqueName.h"
+#include "Editor/Clipboard/EditorClipboard.h"
 
 #include "Application/OpaaxApplication.h"
 #include "Core/IO/FileIO.h"
@@ -213,6 +215,65 @@ namespace Opaax::Editor
         Record(InContext, Move(lBefore), "Paste Widget");
 
         return InContext.UICanvasDocument.PathOf(*lAdded);
+    }
+
+    bool UICanvasOps::CopySelected(EditorContext& InContext)
+    {
+        const OpaaxString lText = CopyWidget(InContext, InContext.UICanvasDocument.SelectedPath());
+        if (lText.IsEmpty()) { return false; }   // nothing selected, or the root
+
+        const nlohmann::json lNode = nlohmann::json::parse(ToJsonString(lText), nullptr, false);
+        if (lNode.is_discarded()) { return false; }
+
+        InContext.Clipboard.Copy(EClipboardKind::UIWidget, lNode);
+        return true;
+    }
+
+    bool UICanvasOps::CutSelected(EditorContext& InContext)
+    {
+        const UIWidgetPath lSelected = InContext.UICanvasDocument.SelectedPath();
+        return !lSelected.empty() && CopySelected(InContext) && RemoveWidget(InContext, lSelected);
+    }
+
+    UIWidgetPath UICanvasOps::PasteFromClipboard(EditorContext& InContext, OpaaxString* OutError)
+    {
+        nlohmann::json lNode;
+        OpaaxString    lError;
+        OpaaxString    lText;
+        if (InContext.Clipboard.Read(EClipboardKind::UIWidget, lNode, lError))
+        {
+            lText = ToJsonText(lNode);
+        }
+        else
+        {
+            // A bare node (text copied before the clipboard had kinds) still pastes; PasteWidget refuses
+            // anything else. Another kind of editor copy (entities...) is refused here.
+            lText = InContext.Clipboard.GetText();
+
+            const nlohmann::json lJson = nlohmann::json::parse(ToJsonString(lText), nullptr, false);
+            if (lJson.is_object() && lJson.contains(ClipboardPayload::KEY_KIND))
+            {
+                if (OutError != nullptr) { *OutError = lError; }
+                return {};
+            }
+        }
+
+        const UIWidgetPath lPath = PasteWidget(InContext, lText, InContext.UICanvasDocument.SelectedPath());
+        if (lPath.empty())
+        {
+            if (OutError != nullptr) { *OutError = lError.IsEmpty() ? OpaaxString("the clipboard holds no widget") : lError; }
+            return lPath;
+        }
+
+        InContext.UICanvasDocument.Select(lPath);
+        return lPath;
+    }
+
+    UIWidgetPath UICanvasOps::DuplicateSelected(EditorContext& InContext)
+    {
+        const UIWidgetPath lPath = DuplicateWidget(InContext, InContext.UICanvasDocument.SelectedPath());
+        if (!lPath.empty()) { InContext.UICanvasDocument.Select(lPath); }
+        return lPath;
     }
 
     bool UICanvasOps::CommitEdit(EditorContext& InContext, const OpaaxString& InBefore, const char* InLabel)

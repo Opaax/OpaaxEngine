@@ -803,5 +803,185 @@
             "path": "Scratch/CopyMaterial.opaaxasset"
         },
         "expectFailure": true
+    },
+    {
+        "id": "ui-new",
+        "command": "ui.new",
+        "params": {
+            "path": "Scratch/CopyPaste.opaaxui"
+        }
+    },
+    {
+        "id": "ui-add-panel",
+        "command": "ui.widget.add",
+        "params": {
+            "type": "UIPanel"
+        },
+        "expect": {
+            "name": "UIPanel"
+        }
+    },
+    {
+        "id": "ui-add-text",
+        "command": "ui.widget.add",
+        "params": {
+            "type": "UIText",
+            "parent": "UIPanel"
+        },
+        "expect": {
+            "name": "UIText"
+        }
+    },
+    {
+        "id": "ui-add-second-panel",
+        "command": "ui.widget.add",
+        "params": {
+            "type": "UIPanel"
+        },
+        "expect": {
+            "name": "UIPanel 1"
+        }
+    },
+    {
+        "id": "ui-select-panel",
+        "command": "ui.widget.select",
+        "params": {
+            "name": "UIPanel"
+        }
+    },
+    {
+        "id": "ui-copy",
+        "command": "editor.command",
+        "params": {
+            "tag": "Editor.Command.CopyUIWidget"
+        }
+    },
+    {
+        "id": "ui-copied-kind",
+        "command": "clipboard.get",
+        "expect": {
+            "kind": "UIWidget"
+        }
+    },
+    {
+        "id": "ui-select-none",
+        "command": "ui.widget.select",
+        "params": {
+            "name": ""
+        }
+    },
+    {
+        "id": "ui-paste",
+        "command": "editor.command",
+        "params": {
+            "tag": "Editor.Command.PasteUIWidget"
+        }
+    },
+    {
+        "id": "ui-pasted",
+        "command": "ui.widget.list",
+        "expect": {
+            "selected": "UIPanel 2"
+        }
+    },
+    {
+        "id": "ui-duplicate",
+        "command": "editor.command",
+        "params": {
+            "tag": "Editor.Command.DuplicateUIWidget"
+        }
+    },
+    {
+        "id": "ui-duplicated",
+        "command": "ui.widget.list",
+        "expect": {
+            "selected": "UIPanel 3"
+        }
+    },
+    {
+        "id": "ui-select-text",
+        "command": "ui.widget.select",
+        "params": {
+            "name": "UIText"
+        }
+    },
+    {
+        "id": "ui-cut",
+        "command": "editor.command",
+        "params": {
+            "tag": "Editor.Command.CutUIWidget"
+        }
+    },
+    {
+        "id": "ui-paste-cut",
+        "command": "editor.command",
+        "params": {
+            "tag": "Editor.Command.PasteUIWidget"
+        }
+    },
+    {
+        "id": "ui-cut-pasted",
+        "command": "ui.widget.list",
+        "expect": {
+            "selected": "UIText"
+        }
+    },
+    {
+        "id": "ui-old-copy",
+        "command": "clipboard.set",
+        "params": {
+            "text": "{\"Type\": \"UIText\", \"Name\": \"OldCopy\"}"
+        }
+    },
+    {
+        "id": "ui-select-none-again",
+        "command": "ui.widget.select",
+        "params": {
+            "name": ""
+        }
+    },
+    {
+        "id": "ui-paste-old-copy",
+        "command": "editor.command",
+        "params": {
+            "tag": "Editor.Command.PasteUIWidget"
+        }
+    },
+    {
+        "id": "ui-old-copy-pasted",
+        "command": "ui.widget.list",
+        "expect": {
+            "selected": "OldCopy"
+        }
+    },
+    {
+        "id": "ui-copy-entities",
+        "command": "entity.copy",
+        "params": {
+            "entities": [
+                "Turret"
+            ]
+        }
+    },
+    {
+        "id": "ui-select-before-entities",
+        "command": "ui.widget.select",
+        "params": {
+            "name": "OldCopy"
+        }
+    },
+    {
+        "id": "ui-paste-entities",
+        "command": "editor.command",
+        "params": {
+            "tag": "Editor.Command.PasteUIWidget"
+        }
+    },
+    {
+        "id": "ui-entities-not-pasted",
+        "command": "ui.widget.list",
+        "expect": {
+            "selected": "OldCopy"
+        }
     }
 ]
