@@ -183,6 +183,9 @@ namespace Opaax::Editor
 
     void EditorService::CreateEditorContext(Window* InWindow, IEngine& InEngine)
     {
+        // Through the UI backend, which reaches the system clipboard.
+        m_Clipboard = MakeUnique<EditorClipboard>(*m_Gui);
+
         // --- EditorContext: built after the UI backend, so it can reference it ------------------------------
         m_Context = MakeUnique<EditorContext>(EditorContext{
             InEngine,
@@ -213,7 +216,8 @@ namespace Opaax::Editor
             m_EditorPaths,
             *m_Export,
             *m_AssetEditors,
-            *m_CameraPreview
+            *m_CameraPreview,
+            *m_Clipboard
         });
 
         m_AssetEditors->Bind(*m_Context);
@@ -234,6 +238,7 @@ namespace Opaax::Editor
 
         m_PrefabReconciler.reset();
         m_Context.reset();
+        m_Clipboard.reset();
     }
 
     void EditorService::PostInitialized()

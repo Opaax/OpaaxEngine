@@ -233,6 +233,18 @@ namespace Opaax::Editor
         // =============================================================================
 
         // =============================================================================
+        // Clipboard — the system's, so a copy can be pasted in another editor or a text editor.
+    public:
+        /** Puts InText on the system clipboard. */
+        virtual void SetClipboardText(const OpaaxString& InText) = 0;
+
+        /** The system clipboard's text; empty when it holds none. */
+        virtual OpaaxString GetClipboardText() const = 0;
+
+        // End Clipboard
+        // =============================================================================
+
+        // =============================================================================
         // Get - Set
     public:
         /**

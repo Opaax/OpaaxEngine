@@ -1,0 +1,28 @@
+[
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 10
+        }
+    },
+    {
+        "id": "clipboard-set",
+        "command": "clipboard.set",
+        "params": {
+            "text": "not a copy from the editor"
+        }
+    },
+    {
+        "id": "clipboard-get",
+        "command": "clipboard.get",
+        "expect": {
+            "text": "not a copy from the editor",
+            "kind": null
+        }
+    },
+    {
+        "id": "clipboard-set-needs-text",
+        "command": "clipboard.set",
+        "expectFailure": true
+    }
+]

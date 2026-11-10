@@ -34,6 +34,7 @@ namespace Opaax
         class EditorPanels;             // live panels and visibility
         class GameExport;               // exporting the game, in the background
         class AssetEditors;             // the open .opaaxasset files, a window each
+        class EditorClipboard;          // copy and paste, through the system clipboard
 
         // =============================================================================
         // EditorContext — references to editor and engine systems, built once by EditorService and
@@ -123,6 +124,9 @@ namespace Opaax
             // The open assets, whatever their class: one window, one history and one Save each.
             AssetEditors& Assets;
             CameraPreview& Preview;
+
+            // Copy and paste, whatever the document (entities, widgets...).
+            EditorClipboard& Clipboard;
         };
     }
 }

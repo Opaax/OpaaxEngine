@@ -5,6 +5,7 @@
 #include "Editor/EditorContext.h"
 #include "Editor/Application/Services/EditorPaths.h"
 #include "Editor/Camera/CameraPreview.hpp"
+#include "Editor/Clipboard/EditorClipboard.h"
 #include "Editor/Camera/EditorCamera.h"
 #include "Editor/Operation/EditorGizmo.hpp"
 #include "Editor/Operation/EditorSelection.hpp"
@@ -320,6 +321,7 @@ namespace Opaax::Editor
         /** The open .opaaxasset files, a window each. */
         TUniquePtr<AssetEditors>                   m_AssetEditors;
         
+        TUniquePtr<EditorClipboard>     m_Clipboard;
         TUniquePtr<EditorContext>       m_Context;
         
         double m_LastDirtyCheck = -1.0;
