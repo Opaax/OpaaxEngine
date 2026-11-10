@@ -175,18 +175,18 @@
         }
     },
     {
-        "command": "expect.count",
+        "command": "expect.entity",
         "params": {
-            "name": "Robot",
-            "equals": 2
+            "entity": "Robot 1",
+            "exists": true
         },
         "id": "second-instance"
     },
     {
-        "command": "expect.count",
+        "command": "expect.entity",
         "params": {
-            "name": "Head",
-            "equals": 2
+            "entity": "Head 1",
+            "exists": true
         },
         "id": "with-its-child"
     },

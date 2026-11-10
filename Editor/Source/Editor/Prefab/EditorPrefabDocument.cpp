@@ -200,6 +200,9 @@ namespace Opaax::Editor
                                                          MapId("Prefab"), lRegistry);
         for (EntityData& lEntity : lInstance.Entities) { lEntity.OwnerMap = MapId(); }
 
+        // As in the level: no name the prefab already has (saved as name overrides).
+        EntityOps::NameUniquely(*m_World, lInstance);
+
         const TDynArray<EntityID> lHandles = EntityOps::PlaceInstance(*m_World, lInstance, InAtWorld, lRegistry);
         if (lHandles.empty()) { return 0; }
 

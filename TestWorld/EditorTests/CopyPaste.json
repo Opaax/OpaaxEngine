@@ -65,10 +65,18 @@
     },
     {
         "id": "children-copied",
+        "command": "expect.entity",
+        "params": {
+            "entity": "DoomedA 1",
+            "exists": true
+        }
+    },
+    {
+        "id": "names-stay-unique",
         "command": "expect.count",
         "params": {
             "name": "DoomedA",
-            "equals": 2
+            "equals": 1
         }
     },
     {
@@ -91,10 +99,10 @@
     },
     {
         "id": "grandchild-copied",
-        "command": "expect.count",
+        "command": "expect.entity",
         "params": {
-            "name": "Finger",
-            "equals": 2
+            "entity": "Finger 1",
+            "exists": true
         }
     },
     {
@@ -111,10 +119,10 @@
     },
     {
         "id": "grandchild-undone",
-        "command": "expect.count",
+        "command": "expect.entity",
         "params": {
-            "name": "Finger",
-            "equals": 1
+            "entity": "Finger 1",
+            "exists": false
         }
     },
     {
@@ -123,10 +131,10 @@
     },
     {
         "id": "duplicate-redone",
-        "command": "expect.count",
+        "command": "expect.entity",
         "params": {
-            "name": "Finger",
-            "equals": 2
+            "entity": "Finger 1",
+            "exists": true
         }
     },
     {
@@ -209,10 +217,10 @@
     },
     {
         "id": "pasted-child",
-        "command": "expect.count",
+        "command": "expect.entity",
         "params": {
-            "name": "Finger",
-            "equals": 3
+            "entity": "Finger 2",
+            "exists": true
         }
     },
     {
@@ -277,6 +285,29 @@
         }
     },
     {
+        "id": "rename-onto-taken",
+        "command": "entity.rename",
+        "params": {
+            "entity": "Witness",
+            "name": "Arm"
+        },
+        "expect": {
+            "name": "Arm 1"
+        }
+    },
+    {
+        "id": "undo-rename",
+        "command": "editor.undo"
+    },
+    {
+        "id": "rename-undone",
+        "command": "expect.entity",
+        "params": {
+            "entity": "Witness",
+            "exists": true
+        }
+    },
+    {
         "id": "scratch-level",
         "command": "level.new",
         "params": {
@@ -320,6 +351,31 @@
             "component": "PrefabInstance",
             "equals": 4
         }
+    },
+    {
+        "id": "place-turret-again",
+        "command": "prefab.place",
+        "params": {
+            "path": "Prefabs/Turret.opaaxprefab",
+            "position": {
+                "x": 100.0,
+                "y": 0.0
+            }
+        },
+        "expect": {
+            "entities": [
+                {
+                    "name": "Turret 2"
+                },
+                {
+                    "name": "Barrel 2"
+                }
+            ]
+        }
+    },
+    {
+        "id": "undo-place-again",
+        "command": "editor.undo"
     },
     {
         "id": "save",
@@ -426,8 +482,8 @@
         "id": "level-untouched",
         "command": "expect.count",
         "params": {
-            "name": "Barrel 1",
-            "equals": 0
+            "component": "PrefabInstance",
+            "equals": 4
         }
     }
 ]

@@ -21,6 +21,7 @@
 #include "Engine/Registries/EngineRegistries.h"
 #include "World/Components/ComponentRegistry.h"
 #include "Core/Maths/Maths.h"    // RadiansToDegrees
+#include "Core/String/UniqueName.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityHierarchy.h"   // drags move the world pose
@@ -81,19 +82,10 @@ namespace
         return glm::transpose(lRotation) * InLinear * lRotation;
     }
 
-    /**
-     * InBase, then "InBase 1", "InBase 2", ... (like Unity), only when needed.
-     */
-    OpaaxString MakeUniqueName(World& InWorld, const OpaaxString& InBase)
+    /** InName, or the next free one in InWorld (UniqueName). */
+    OpaaxString MakeUniqueName(World& InWorld, const OpaaxString& InName)
     {
-        if (!NameTaken(InWorld, InBase)) { return InBase; }
-
-        for (Uint32 lIndex = 1; ; ++lIndex)
-        {
-            OpaaxString lCandidate = InBase + OpaaxString(" ") + OpaaxString::FromUInt(lIndex);
-
-            if (!NameTaken(InWorld, lCandidate)) { return lCandidate; }
-        }
+        return UniqueName::Make(InName, [&InWorld](const OpaaxString& InCandidate) { return NameTaken(InWorld, InCandidate); });
     }
 }
 
@@ -196,12 +188,15 @@ namespace Opaax::Editor
             return 0;
         }
 
-        const MapData lInstance = PrefabFactory::BuildInstance(*lPrefab, lAssetPath, Guid::New(),
-                                                               InOwnerMap, lRegistry);
+        MapData lInstance = PrefabFactory::BuildInstance(*lPrefab, lAssetPath, Guid::New(),
+                                                         InOwnerMap, lRegistry);
         if (lInstance.IsEmpty())
         {
             return 0;   // PrefabFactory logged why
         }
+
+        // A second placement must not repeat the first one's names (saved as name overrides).
+        NameUniquely(*lWorld, lInstance);
 
         const TDynArray<EntityID> lHandles = PlaceInstance(*lWorld, lInstance, InAtWorld, lRegistry);
         if (lHandles.empty())
@@ -622,12 +617,20 @@ namespace Opaax::Editor
         EntityMeta& lMeta = InEntity.Get<EntityMeta>();
         if (lMeta.Name == InName) { return; }   // unchanged: not an edit
 
-        OPAAX_LOG(LogEntityOps, Info, "Renamed '{}' -> '{}'", lMeta.Name.CStr(), InName.CStr());
+        // Another entity's name would make lookups by name ambiguous: the next free one instead.
+        const OpaaxString lName = MakeUniqueName(*InEntity.GetWorld(), InName);
+        if (lName != InName)
+        {
+            OPAAX_LOG(LogEntityOps, Warn, "Rename: '{}' is taken, named '{}' instead", InName.CStr(), lName.CStr());
+        }
+        if (lMeta.Name == lName) { return; }
+
+        OPAAX_LOG(LogEntityOps, Info, "Renamed '{}' -> '{}'", lMeta.Name.CStr(), lName.CStr());
 
         // Two strings and a guid: the whole step.
-        InContext.Undo.Record(EntityRename{ InEntity.GetGuid(), lMeta.Name, InName });
+        InContext.Undo.Record(EntityRename{ InEntity.GetGuid(), lMeta.Name, lName });
 
-        lMeta.Name = InName;
+        lMeta.Name = lName;
 
         // EntityMeta is written directly, so mark the world changed.
         if (World* lWorld = InEntity.GetWorld()) { lWorld->MarkChanged(); }
@@ -851,18 +854,8 @@ namespace Opaax::Editor
             return lPaths;
         }
 
-        /** Whether InWorld has an entity named InName, or InAlsoTaken has it. */
-        bool NameUsed(World& InWorld, const OpaaxString& InName, const TDynArray<OpaaxString>& InAlsoTaken)
-        {
-            for (const OpaaxString& lTaken : InAlsoTaken)
-            {
-                if (lTaken == InName) { return true; }
-            }
-            return NameTaken(InWorld, InName);
-        }
-
         /**
-         * Puts InCopy in InWorld: its roots get names no entity has ("Crate 1"), its children keep theirs.
+         * Puts InCopy in InWorld, every entity named so that no other has its name ("Crate 1").
          * Selects the copied roots and records one step named InStepName.
          * @return The created handles, in InCopy's order
          */
@@ -871,25 +864,7 @@ namespace Opaax::Editor
         {
             const ComponentRegistry& lRegistry = InContext.Engine.GetRegistries().Components();
 
-            TDynArray<OpaaxString> lGiven;
-            for (EntityData& lEntity : InCopy.Entities)
-            {
-                // A root of the copy: its parent, if any, was not copied with it.
-                bool bRoot = true;
-                for (const EntityData& lOther : InCopy.Entities)
-                {
-                    bRoot = bRoot && lOther.Id != lEntity.Parent;
-                }
-                if (!bRoot) { continue; }
-
-                OpaaxString lName = lEntity.Name;
-                for (Uint32 lIndex = 1; NameUsed(InWorld, lName, lGiven); ++lIndex)
-                {
-                    lName = lEntity.Name + OpaaxString(" ") + OpaaxString::FromUInt(lIndex);
-                }
-                lGiven.emplace_back(lName);
-                lEntity.Name = Move(lName);
-            }
+            EntityOps::NameUniquely(InWorld, InCopy);
 
             const TDynArray<EntityID> lHandles = EntityOps::PlaceInstance(InWorld, InCopy, nullptr, lRegistry);
             if (lHandles.empty()) { return lHandles; }
@@ -915,6 +890,25 @@ namespace Opaax::Editor
 
             if (!lSelection.HasSelection() || lWorld == nullptr || lSelection.GetWorld() != lWorld) { return nullptr; }
             return lWorld;
+        }
+    }
+
+    void EntityOps::NameUniquely(World& InWorld, MapData& InOutData)
+    {
+        TDynArray<OpaaxString> lGiven;
+        lGiven.reserve(InOutData.Entities.size());
+
+        for (EntityData& lEntity : InOutData.Entities)
+        {
+            lEntity.Name = UniqueName::Make(lEntity.Name, [&InWorld, &lGiven](const OpaaxString& InCandidate)
+            {
+                for (const OpaaxString& lTaken : lGiven)
+                {
+                    if (lTaken == InCandidate) { return true; }
+                }
+                return NameTaken(InWorld, InCandidate);
+            });
+            lGiven.emplace_back(lEntity.Name);
         }
     }
 
