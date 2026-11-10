@@ -102,6 +102,21 @@ Each `World` owns an EnTT registry. Gameplay code reaches it through `Entity`, `
   worlds without a window.
 - **Against:** every EnTT feature a game needs goes through a wrapper first.
 
+### Entities named by guid, names kept unique
+
+Every entity has a guid, which never changes and is its identity in files. A field that names another
+entity is an `EntityRef` (its guid), as Unity and Unreal reference objects rather than names:
+`Behaviour::Resolve` finds it. A copy, a duplicate or a prefab placement re-points the references
+among the entities it makes at its own (`EntityClone`, `PrefabFactory::BuildInstance`), so a turret
+copied with its target aims at the copy. Names stay for people and for lookups of entities made at
+run time (`Behaviour::FindEntity`, a camera's `Target`): the editor names everything it makes or
+renames uniquely in its document (`UniqueName`), entities and UI widgets alike, and warns when a file
+opens with names in common.
+
+- **For:** a reference survives renames and copies; a name lookup finds one thing.
+- **Against:** a reference names an entity of its own world only; a runtime-spawned entity has no
+  guid a file could know, so it is still found by name.
+
 ### Behaviours are C++ classes
 
 Gameplay code is a `Behaviour` subclass with hooks (`OnStart`, `OnUpdate`, `OnFixedUpdate`,
