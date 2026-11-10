@@ -33,7 +33,11 @@ namespace Opaax::Editor
         CreatePrefab,     // the selection becomes a prefab and an instance of it
         RevertPrefab,     // the selected entities go back to their prefab values
         RevertPrefabAll,  // every entity of the touched instances
-        Detach            // every selected entity with a parent becomes a root
+        Detach,           // every selected entity with a parent becomes a root
+        Copy,             // the selection goes on the clipboard
+        Cut,              // copied, then deleted
+        Paste,            // the clipboard's entities, into the clicked map (a row: its map)
+        Duplicate         // the selection, copied beside itself
     };
 
     /** Enum to string. */

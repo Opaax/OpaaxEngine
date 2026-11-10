@@ -50,5 +50,14 @@ namespace Opaax::Editor
          * The command Delete runs while this panel is focused. Invalid = delete the level selection.
          */
         OpaaxTag DeleteCommand;
+
+        /**
+         * The commands Ctrl+C / Ctrl+X / Ctrl+V / Ctrl+D run while this panel is focused. Invalid = the panel
+         * has none: the chords do nothing there (a panel may handle them itself, as the UI panel does).
+         */
+        OpaaxTag CopyCommand;
+        OpaaxTag CutCommand;
+        OpaaxTag PasteCommand;
+        OpaaxTag DuplicateCommand;
     };
 }

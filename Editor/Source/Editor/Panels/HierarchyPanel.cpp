@@ -54,6 +54,10 @@ namespace Opaax::Editor
             case EMapAction::RevertPrefab:   return "Revert to Prefab";
             case EMapAction::RevertPrefabAll: return "Revert Instance to Prefab";
             case EMapAction::Detach:         return "Detach from Parent";
+            case EMapAction::Copy:           return "Copy";
+            case EMapAction::Cut:            return "Cut";
+            case EMapAction::Paste:          return "Paste";
+            case EMapAction::Duplicate:      return "Duplicate";
             case EMapAction::None:           return "None";
         }
 
@@ -271,6 +275,11 @@ namespace Opaax::Editor
             m_Pending = PendingMapAction{EMapAction::CreateEntity, InMapId, InAssetRelPath};
         }
 
+        if (ImGui::MenuItem("Paste", "Ctrl+V"))
+        {
+            m_Pending = PendingMapAction{EMapAction::Paste, InMapId, InAssetRelPath};
+        }
+
         ImGui::Separator();
 
         // Nothing runs here: entries only record the request, and Draw runs it after the walk
@@ -313,6 +322,17 @@ namespace Opaax::Editor
         }
 
         ImGui::TextDisabled("%llu selected", static_cast<unsigned long long>(m_Context.Selection.Count()));
+        ImGui::Separator();
+
+        // Paste goes into the clicked row's map, as a root.
+        if (ImGui::MenuItem("Cut", "Ctrl+X"))       { m_Pending = PendingMapAction{EMapAction::Cut, MapId{}, {}}; }
+        if (ImGui::MenuItem("Copy", "Ctrl+C"))      { m_Pending = PendingMapAction{EMapAction::Copy, MapId{}, {}}; }
+        if (ImGui::MenuItem("Paste", "Ctrl+V"))
+        {
+            m_Pending = PendingMapAction{EMapAction::Paste, InEntity.Get<EntityMeta>().OwnerMap, {}};
+        }
+        if (ImGui::MenuItem("Duplicate", "Ctrl+D")) { m_Pending = PendingMapAction{EMapAction::Duplicate, MapId{}, {}}; }
+
         ImGui::Separator();
 
         // Queued: it destroys the selection and creates an instance, and opens a dialog.
@@ -403,6 +423,19 @@ namespace Opaax::Editor
             // Directly: it records its own undo step.
             case EMapAction::Detach:
                 EntityOps::DetachSelected(m_Context, EUndoWorld::Active);
+                break;
+            // The selection's commands, as the keys run them. Paste names the clicked map.
+            case EMapAction::Copy:
+                m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_COPY_ENTITY, m_Context);
+                break;
+            case EMapAction::Cut:
+                m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_CUT_ENTITY, m_Context);
+                break;
+            case EMapAction::Duplicate:
+                m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_DUPLICATE_ENTITY, m_Context);
+                break;
+            case EMapAction::Paste:
+                EntityOps::Paste(m_Context, EUndoWorld::Active, lAction.Map);
                 break;
             // No payload: the subject is the selection.
             case EMapAction::CreatePrefab:
