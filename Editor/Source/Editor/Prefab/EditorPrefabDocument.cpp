@@ -92,6 +92,8 @@ namespace Opaax::Editor
         OPAAX_LOG(LogEditorPrefabDocument, Info, "Editing prefab '{}' — {} entity(ies), {} of {} nested placement(s)",
                   InAbsPath.CStr(), lCreated, lExpanded, lData.InstanceCount());
 
+        EntityOps::WarnDuplicateNames(*m_World, InAbsPath);
+
         return true;
     }
 

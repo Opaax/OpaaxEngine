@@ -3,6 +3,7 @@
 #include "Editor/EditorContext.h"
 #include "Editor/EditorLevelDocument.h"
 #include "Editor/EditorMapDocument.h"
+#include "Editor/Operation/EntityOps.h"
 #include "Editor/Operation/MapOperations.h"
 
 #include "Application/Services/IEngine.h"
@@ -35,6 +36,9 @@ namespace Opaax::Editor
         InContext.LevelDocument.AdoptExisting(InLevelAbsPath, *lLevel, *lWorld,
                                               InContext.Engine.GetRegistries().Components(),
                                               InContext.Paths);
+
+        // Lookups by name search the whole world, every map of the level at once.
+        EntityOps::WarnDuplicateNames(*lWorld, InLevelAbsPath.IsEmpty() ? lWorld->GetName().ToString() : InLevelAbsPath);
 
         const TDynArray<Level::MountedMap>& lMounted = lLevel->GetMountedMaps();
         if (lMounted.empty())

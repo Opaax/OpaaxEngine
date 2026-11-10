@@ -119,6 +119,14 @@ namespace Opaax::Editor
         void NameUniquely(World& InWorld, MapData& InOutData);
 
         /**
+         * Logs a warning naming every name more than one entity of InWorld has (a document opened as it
+         * was saved, or written by hand): a lookup by name may find either.
+         * @param InDocument What was opened, for the message
+         * @return How many names are shared
+         */
+        Uint64 WarnDuplicateNames(World& InWorld, const OpaaxString& InDocument);
+
+        /**
          * Copies the selection of InScope's world, children included, beside the originals (same parents,
          * same maps). Every copy is named anew ("Crate 1") and the copied roots become the selection; one undo step.
          * A whole prefab instance copies as a placement of its own; part of one, as plain entities.
