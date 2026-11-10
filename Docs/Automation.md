@@ -187,6 +187,7 @@ The editor adds:
 | `asset.get` | `path` | An asset's class and values: its window's when open (unsaved changes included), else its file's; an image, a font or a sound answers its class (`Texture2D`, `FontFace`, `AudioClip`) |
 | `asset.set` | `path`, `properties` | Merges values into an asset (opened first if needed) as one undo step, then its class's fixes apply; not saved. A value of the wrong type changes nothing |
 | `asset.undo`, `asset.redo` | `path` | Steps an open asset's own history |
+| `asset.copy`, `asset.paste` | `path` | Puts an asset's values on the clipboard, with its class; `paste` gives them to another asset of the same class as one undo step, not saved (another class is refused) |
 | `asset.save` | `path` | Writes an open asset and reloads it, so a playing game reads the new values |
 | `asset.close` | `path`, `discard` | Closes an asset's window; unsaved changes are refused unless `discard` is true |
 | `asset.list` | | The open assets, in the order they were opened: `path`, `class`, `unsaved` |
