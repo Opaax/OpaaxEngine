@@ -169,6 +169,10 @@ The editor adds:
 | `entity.parent` | `entity`, `parent` | Puts an entity (and its children) under another, keeping its place in the world; no `parent` detaches it |
 | `entity.rename` | `entity`, `name` | Renames an entity |
 | `entity.select` | `entities` | Selects entities (an empty list clears the selection) |
+| `entity.duplicate` | `entities`, `prefab` | Copies entities (default: the selection) and their children beside the originals, as Ctrl+D does: same parents, same maps, the copies named anew (`Crate 1`) and selected. Answers `count` created and the selected copies (`id`, `name`, `parent`, `map`) |
+| `entity.copy`, `entity.cut` | `entities`, `prefab` | Puts entities (default: the selection) and their children on the clipboard; `cut` then deletes them. Copying works while playing. Answers `count` |
+| `entity.paste` | `map`, `prefab` | Makes new entities of the clipboard's copy in `map` (default: the focused one), as roots where they were copied, named anew and selected. Answers as `entity.duplicate`; fails when the clipboard holds no copied entities |
+| `clipboard.get`, `clipboard.set` | `text` | The clipboard's `text` and the `kind` of editor copy it holds (`Entities`, null for other text); `set` puts `text` there as it is |
 | `component.add`, `component.remove` | `entity`, `type` | Adds or removes a component |
 | `component.set` | `entity`, `type`, `value` | As the engine's, recorded for undo in the edit world |
 | `prefab.create` | `entities`, `path` | Writes entities (with their children) as a prefab, then replaces them with an instance of it |
@@ -188,6 +192,13 @@ The editor adds:
 An asset `path` is relative to the project's assets, `/Engine/...` for the engine's, or absolute.
 
 Edits made by the editor's commands are the same as a user's: undoable, and saved only when asked.
+
+With `"prefab": true`, the entity copy commands act on the prefab open in the Prefab panel (`asset.open`
+a `.opaaxprefab`), on its own selection and history (`editor.command` with
+`Editor.Command.UndoPrefab` undoes there). A paste that would make the prefab place itself is refused.
+A copy is JSON on the system clipboard, `{"opaaxClipboard": "Entities", "version": 1, "data": ...}`:
+whole prefab placements stay placements, part of one is copied as plain entities. Running these
+commands replaces whatever was on your clipboard.
 
 A script never meets a dialog: while a request runs, the editor's questions and file pickers stay
 closed, and a request that met one did nothing and fails, saying what was asked. Opening a level
