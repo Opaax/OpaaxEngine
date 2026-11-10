@@ -13,6 +13,7 @@
 #include "World/Serialization/MapSerializer.h"   // CaptureEntities
 #include "Editor/Operation/EntityOps.h"
 #include "Editor/Operation/ExportOperations.h"
+#include "Editor/Operation/FileOperations.h"
 #include "Editor/Export/GameExport.h"
 #include "Editor/Operation/LevelOperations.h"
 #include "Editor/Operation/UICanvasOperations.h"
@@ -1029,6 +1030,11 @@ namespace Opaax::Editor
         {
             InContext.Assets.Undo(lPath);
         }
+    }
+
+    void DuplicateFileCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        FileOps::Duplicate(InContext, InParams.AbsPath);   // logs what it wrote, or why not
     }
 
     void RedoAssetCommand::Execute(EditorContext& InContext, const Params& InParams)

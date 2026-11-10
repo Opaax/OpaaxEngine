@@ -26,6 +26,7 @@
 #include "Editor/Operation/EditorViewport.hpp"
 #include "Editor/Operation/EntityOps.h"
 #include "Editor/Operation/ExportOperations.h"
+#include "Editor/Operation/FileOperations.h"
 #include "Editor/Operation/MapOperations.h"
 #include "Editor/Operation/NewLevelPlan.hpp"
 #include "Editor/Panels/EditorPanels.h"
@@ -1558,6 +1559,26 @@ namespace Opaax::Editor::EditorAutomation
             };
             lStep("asset.undo", "Undoes the last change to the open asset at {path} (its own history).", true);
             lStep("asset.redo", "Redoes the last undone change to the open asset at {path}.", false);
+
+            InCommands.Register("asset.duplicate",
+                "Copies the file at {path}, as saved, beside it under the next free name, as the Resource Browser's "
+                "Duplicate does; a map gets its own map id and entity guids. Answers the copy's {path}.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString lPath;
+                    OpaaxString lError;
+                    if (!AssetPath(InContext, InParams, lPath, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    const OpaaxString lCopy = FileOps::Duplicate(InContext, lPath, &lError);
+                    if (lCopy.IsEmpty())
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+                    return AutomationResult::Ok(nlohmann::json{ { "path", InContext.Paths.AbsoluteToAsset(lCopy).CStr() } });
+                });
 
             InCommands.Register("asset.copy",
                 "Puts the values of the asset at {path} (opened first if needed) on the clipboard, with its class.",

@@ -800,6 +800,17 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params& InParams);
     };
 
+    /**
+     * Copies the file at Params::AbsPath, as saved, beside it under the next free name (FileOps::Duplicate:
+     * a map gets its own id and entity guids).
+     */
+    struct DuplicateFileCommand
+    {
+        using Params = AssetPathParams;
+
+        void Execute(EditorContext& InContext, const Params& InParams);
+    };
+
     /** Steps the asset's own history forward (empty path: the focused one). */
     struct RedoAssetCommand
     {

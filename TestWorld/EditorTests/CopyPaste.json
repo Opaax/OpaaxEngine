@@ -983,5 +983,84 @@
         "expect": {
             "selected": "OldCopy"
         }
+    },
+    {
+        "id": "duplicate-asset-file",
+        "command": "asset.duplicate",
+        "params": {
+            "path": "Scratch/CopyA.opaaxasset"
+        },
+        "expect": {
+            "path": "Scratch/CopyA 1.opaaxasset"
+        }
+    },
+    {
+        "id": "duplicated-asset-values",
+        "command": "asset.get",
+        "params": {
+            "path": "Scratch/CopyA 1.opaaxasset"
+        },
+        "expect": {
+            "class": "ProbeTuning",
+            "properties": {
+                "Speed": 7.0,
+                "Title": "From A"
+            }
+        }
+    },
+    {
+        "id": "entities-before-map-copy",
+        "command": "expect.count",
+        "params": {
+            "component": "PrefabInstance",
+            "equals": 4
+        }
+    },
+    {
+        "id": "duplicate-map-file",
+        "command": "asset.duplicate",
+        "params": {
+            "path": "Scratch/CopyPaste.opaaxmap"
+        },
+        "expect": {
+            "path": "Scratch/CopyPaste 1.opaaxmap"
+        }
+    },
+    {
+        "id": "add-map-copy",
+        "command": "map.add",
+        "params": {
+            "path": "Scratch/CopyPaste 1.opaaxmap"
+        }
+    },
+    {
+        "id": "map-copy-loaded",
+        "command": "expect.count",
+        "params": {
+            "component": "PrefabInstance",
+            "equals": 8
+        }
+    },
+    {
+        "id": "map-copy-own-id",
+        "command": "level.info",
+        "expect": {
+            "maps": [
+                {
+                    "path": "Scratch/CopyPaste.opaaxmap"
+                },
+                {
+                    "path": "Scratch/CopyPaste 1.opaaxmap"
+                }
+            ]
+        }
+    },
+    {
+        "id": "duplicate-missing-file",
+        "command": "asset.duplicate",
+        "params": {
+            "path": "Scratch/Nothing.opaaxasset"
+        },
+        "expectFailure": true
     }
 ]

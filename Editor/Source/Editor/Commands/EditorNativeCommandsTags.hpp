@@ -126,4 +126,7 @@ namespace Opaax::Editor::Tags
     inline const OpaaxTag EDITOR_COMMAND_CLOSE_ASSET     = OpaaxTag("Editor.Command.CloseAsset");
     inline const OpaaxTag EDITOR_COMMAND_UNDO_ASSET      = OpaaxTag("Editor.Command.UndoAsset");
     inline const OpaaxTag EDITOR_COMMAND_REDO_ASSET      = OpaaxTag("Editor.Command.RedoAsset");
+
+    // A content file, copied beside itself (the Resource Browser's Duplicate).
+    inline const OpaaxTag EDITOR_COMMAND_DUPLICATE_FILE  = OpaaxTag("Editor.Command.DuplicateFile");
 }

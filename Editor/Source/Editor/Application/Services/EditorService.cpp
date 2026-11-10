@@ -488,6 +488,7 @@ namespace Opaax::Editor
         lCommands.Register<CloseAssetCommand>(Tags::EDITOR_COMMAND_CLOSE_ASSET);
         lCommands.Register<UndoAssetCommand>(Tags::EDITOR_COMMAND_UNDO_ASSET);
         lCommands.Register<RedoAssetCommand>(Tags::EDITOR_COMMAND_REDO_ASSET);
+        lCommands.Register<DuplicateFileCommand>(Tags::EDITOR_COMMAND_DUPLICATE_FILE);
     }
 
     void EditorService::RegisterNativeViewportTools()
