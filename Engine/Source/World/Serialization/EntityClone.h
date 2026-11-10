@@ -35,7 +35,8 @@ namespace Opaax
          *   - an entity of a prefab instance gets Guid::Derive(new instance id, its template guid), with one
          *     new instance id per instance, so the copy is a placement of its own and a map still folds it;
          *   - any other entity gets Guid::New();
-         *   - a parent inside InSource names its copy.
+         *   - a parent inside InSource names its copy, and so does an EntityRef to an entity of InSource;
+         *     a reference to an entity left out still names that entity.
          * Names, components and order are kept. InSource's folded records are not copied (captures have none).
          */
         MapData Clone(const MapData& InSource, const Options& InOptions, const ComponentRegistry& InRegistry);
