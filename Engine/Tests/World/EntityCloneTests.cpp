@@ -13,6 +13,7 @@
 #include "World/Entity/EntityHierarchy.h"
 #include "World/Prefab/PrefabFactory.h"
 #include "World/Prefab/PrefabFold.h"
+#include "World/Entity/EntityRef.h"
 #include "World/Serialization/EntityClone.h"
 #include "World/Serialization/MapFactory.h"
 #include "World/Serialization/MapSerializer.h"
@@ -28,6 +29,14 @@ namespace
         REQUIRE(InRegistry.Register<QuadComponent>("Quad"));
         REQUIRE(InRegistry.Register<PrefabInstanceComponent>("PrefabInstance"));
     }
+
+    /** A component naming another entity, as a turret's target. */
+    struct CloneTestAim
+    {
+        EntityRef Target;
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(CloneTestAim, Target)
+    };
 
     const EntityData* FindByName(const MapData& InData, const char* InName)
     {
@@ -216,4 +225,34 @@ TEST_CASE("EntityClone: two copies of one source never share a guid")
             CHECK(lLeft.Id != lRight.Id);
         }
     }
+}
+
+TEST_CASE("EntityClone: a reference inside the copied set names the copy; one outside keeps its entity")
+{
+    ComponentRegistry lRegistry;
+    FillRegistry(lRegistry);
+    REQUIRE(lRegistry.Register<CloneTestAim>("Aim"));
+
+    World  lWorld("Source");
+    Entity lTurret  = lWorld.CreateEntity("Turret", MapId("Level"));
+    Entity lDummy   = lWorld.CreateEntity("Dummy", MapId("Level"));
+    Entity lPlayer  = lWorld.CreateEntity("Player", MapId("Level"));
+    Entity lSpotter = lWorld.CreateEntity("Spotter", MapId("Level"));
+    lTurret.Add<CloneTestAim>().Target.Id  = lDummy.GetGuid();    // copied with it
+    lSpotter.Add<CloneTestAim>().Target.Id = lPlayer.GetGuid();   // not copied
+
+    const MapData lSource = MapSerializer::CaptureEntities(lWorld, lRegistry,
+                                                           { lTurret.GetHandle(), lDummy.GetHandle(), lSpotter.GetHandle() });
+    const MapData lCopy = EntityClone::Clone(lSource, {}, lRegistry);
+    REQUIRE(MapFactory::Instantiate(lCopy, lWorld, lRegistry) == 3);
+
+    Entity lTurretCopy  = lWorld.FindByGuid(FindByName(lCopy, "Turret")->Id);
+    Entity lDummyCopy   = lWorld.FindByGuid(FindByName(lCopy, "Dummy")->Id);
+    Entity lSpotterCopy = lWorld.FindByGuid(FindByName(lCopy, "Spotter")->Id);
+
+    CHECK(lTurretCopy.Get<CloneTestAim>().Target.Id == lDummyCopy.GetGuid());
+    CHECK(lSpotterCopy.Get<CloneTestAim>().Target.Id == lPlayer.GetGuid());
+
+    // The originals are untouched.
+    CHECK(lTurret.Get<CloneTestAim>().Target.Id == lDummy.GetGuid());
 }

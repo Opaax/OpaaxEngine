@@ -2,6 +2,7 @@
 
 #include "World/Components/ComponentRegistry.h"
 #include "World/Components/PrefabInstanceComponent.h"
+#include "World/Entity/EntityRef.h"
 
 namespace Opaax
 {
@@ -88,6 +89,21 @@ namespace Opaax
             lEntity.Id = lNew;
 
             if (InOptions.OwnerMap.IsValid()) { lEntity.OwnerMap = InOptions.OwnerMap; }
+        }
+
+        // References among the copies name the copies (a turret copied with its target aims at the copy);
+        // a reference to an entity left out still names it.
+        const auto lToCopy = [&lNewIds](const Guid& InId)
+        {
+            const auto lFound = lNewIds.find(InId);
+            return lFound != lNewIds.end() ? lFound->second : InId;
+        };
+        for (EntityData& lEntity : lCopy.Entities)
+        {
+            for (ComponentData& lComponent : lEntity.Components)
+            {
+                EntityRefJson::Remap(lComponent.Payload, lToCopy);
+            }
         }
 
         for (EntityData& lEntity : lCopy.Entities)
