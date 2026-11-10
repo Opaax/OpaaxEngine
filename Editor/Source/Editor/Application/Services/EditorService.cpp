@@ -328,6 +328,18 @@ namespace Opaax::Editor
              .SetEnabled(IsEditing)
              .SetParams(MapIdParams{});
         lEdit.AddCommand("Delete Selected", Tags::EDITOR_COMMAND_DELETE_ENTITY).SetEnabled(IsEditing);
+
+        // The level's selection. Copy is not an edit: it works while playing.
+        const auto lCanChangeSelected = [](const EditorContext& InContext)
+        {
+            return InContext.PIE.IsEdit() && InContext.Selection.HasSelection();
+        };
+        lEdit.AddSeparator();
+        lEdit.AddCommand("Cut (Ctrl+X)", Tags::EDITOR_COMMAND_CUT_ENTITY).SetEnabled(lCanChangeSelected);
+        lEdit.AddCommand("Copy (Ctrl+C)", Tags::EDITOR_COMMAND_COPY_ENTITY)
+             .SetEnabled([](const EditorContext& InContext) { return InContext.Selection.HasSelection(); });
+        lEdit.AddCommand("Paste (Ctrl+V)", Tags::EDITOR_COMMAND_PASTE_ENTITY).SetEnabled(IsEditing);
+        lEdit.AddCommand("Duplicate (Ctrl+D)", Tags::EDITOR_COMMAND_DUPLICATE_ENTITY).SetEnabled(lCanChangeSelected);
         lEdit.AddSeparator();
         lEdit.AddCommand("Focus Selected", Tags::EDITOR_COMMAND_FOCUS_SELECTED).SetEnabled(IsEditing);
 
@@ -358,10 +370,20 @@ namespace Opaax::Editor
     {
         PanelRegistry& lPanelsRegistry = m_Extensions.Panels();
         
+        // The level's entities answer Ctrl+C / X / V / D in the panels that show them.
+        const auto lWithEntityClipboard = [](PanelDesc InDesc)
+        {
+            InDesc.CopyCommand      = Tags::EDITOR_COMMAND_COPY_ENTITY;
+            InDesc.CutCommand       = Tags::EDITOR_COMMAND_CUT_ENTITY;
+            InDesc.PasteCommand     = Tags::EDITOR_COMMAND_PASTE_ENTITY;
+            InDesc.DuplicateCommand = Tags::EDITOR_COMMAND_DUPLICATE_ENTITY;
+            return InDesc;
+        };
+
         // Visible by default
-        lPanelsRegistry.Register<ViewportPanel>(PanelDesc       {.Id = ViewportPanel::PanelID()});
+        lPanelsRegistry.Register<ViewportPanel>(lWithEntityClipboard(PanelDesc{.Id = ViewportPanel::PanelID()}));
         lPanelsRegistry.Register<PlayToolbarPanel>(PanelDesc    {.Id = PlayToolbarPanel::PanelID()});
-        lPanelsRegistry.Register<HierarchyPanel>(PanelDesc      {.Id = HierarchyPanel::PanelID()});
+        lPanelsRegistry.Register<HierarchyPanel>(lWithEntityClipboard(PanelDesc{.Id = HierarchyPanel::PanelID()}));
         lPanelsRegistry.Register<InspectorPanel>(PanelDesc      {.Id = InspectorPanel::PanelID()});
         lPanelsRegistry.Register<ResourceBrowserPanel>(PanelDesc{.Id = ResourceBrowserPanel::PanelID()});
         lPanelsRegistry.Register<LogPanel>(PanelDesc            {.Id = LogPanel::PanelID()});
@@ -1222,6 +1244,24 @@ namespace Opaax::Editor
             m_Context->Extensions.Commands().Execute(
                 lCommandForFocused(Tags::EDITOR_COMMAND_DELETE_ENTITY, &PanelDesc::DeleteCommand), *m_Context);
         }
+
+        // Ctrl+C / X / V / D: the focused panel's commands. A panel that declares none gets nothing (the UI
+        // panel handles its own), so a copy never lands in another document than the one in front.
+        const auto lRunDeclared = [this, &lCommandForFocused](const EKeyCode InKey, OpaaxTag PanelDesc::* InMember)
+        {
+            if (!m_Gui->Shortcut(EKeyCode::LeftControl, InKey)) { return; }
+
+            const OpaaxTag lCommand = lCommandForFocused(OpaaxTag(), InMember);
+            if (lCommand.IsValid())
+            {
+                m_Context->Extensions.Commands().Execute(lCommand, *m_Context);
+            }
+        };
+
+        lRunDeclared(EKeyCode::C, &PanelDesc::CopyCommand);
+        lRunDeclared(EKeyCode::X, &PanelDesc::CutCommand);
+        lRunDeclared(EKeyCode::V, &PanelDesc::PasteCommand);
+        lRunDeclared(EKeyCode::D, &PanelDesc::DuplicateCommand);
 
         // W / E / R (like Unreal, Unity and Godot). Editor-wide, like F and Delete; the keyboard guard
         // keeps typing safe. Edit only: in Play they are the game's movement keys. The menu entries
