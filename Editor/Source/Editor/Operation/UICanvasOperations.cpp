@@ -2,6 +2,7 @@
 #include "Editor/Operation/ResourceOperations.h"
 
 #include "Core/Maths/Maths.h"
+#include "Core/String/UniqueName.h"
 
 #include "Application/OpaaxApplication.h"
 #include "Core/IO/FileIO.h"
@@ -14,6 +15,7 @@
 #include "UI/UICanvasAsset.h"
 #include "UI/UICanvasFile.h"
 #include "UI/UIWidget.h"
+#include "UI/UIWidgetNames.h"
 #include "Object/ObjectClassRegistry.h"
 
 namespace Opaax::Editor
@@ -77,8 +79,9 @@ namespace Opaax::Editor
 
         OpaaxString lBefore = Snapshot(InContext);
 
-        // A new widget is named after its type.
+        // A new widget is named after its type, numbered when the canvas has one already.
         lWidget->Name = InType.ToString();
+        UIWidgetNames::NameUniquely(InContext.UICanvasDocument.GetCanvas().Root(), *lWidget);
 
         UIWidget* const lAdded = lParent->AddChild(Move(lWidget));
         Record(InContext, Move(lBefore), "Add Widget");
@@ -174,8 +177,8 @@ namespace Opaax::Editor
 
         OpaaxString lBefore = Snapshot(InContext);
 
-        // A duplicate name would hide the original from FindByName; add a suffix.
-        lClone->Name = lWidget->Name + " (1)";
+        // The whole copy: a name its original keeps would make FindByName ambiguous.
+        UIWidgetNames::NameUniquely(InContext.UICanvasDocument.GetCanvas().Root(), *lClone);
 
         UIWidget* const lAdded = lWidget->GetParent()->AddChild(Move(lClone), InPath.back() + 1);
         Record(InContext, Move(lBefore), "Duplicate Widget");
@@ -204,6 +207,8 @@ namespace Opaax::Editor
 
         OpaaxString lBefore = Snapshot(InContext);
 
+        UIWidgetNames::NameUniquely(InContext.UICanvasDocument.GetCanvas().Root(), *lWidget);
+
         UIWidget* const lAdded = lParent->AddChild(Move(lWidget));
         Record(InContext, Move(lBefore), "Paste Widget");
 
@@ -213,6 +218,20 @@ namespace Opaax::Editor
     bool UICanvasOps::CommitEdit(EditorContext& InContext, const OpaaxString& InBefore, const char* InLabel)
     {
         if (!InContext.UICanvasDocument.IsOpen()) { return false; }
+
+        // A rename onto another widget's name gets the next free one.
+        const UIWidget& lRoot = InContext.UICanvasDocument.GetCanvas().Root();
+        if (UIWidget* const lEdited = InContext.UICanvasDocument.Resolve(InContext.UICanvasDocument.SelectedPath());
+            lEdited != nullptr && !lEdited->Name.IsEmpty() && UIWidgetNames::IsTaken(lRoot, lEdited->Name, lEdited))
+        {
+            const OpaaxString lTaken = lEdited->Name;
+            lEdited->Name = UniqueName::Make(lTaken, [&lRoot, lEdited](const OpaaxString& InCandidate)
+            {
+                return UIWidgetNames::IsTaken(lRoot, InCandidate, lEdited);
+            });
+            OPAAX_LOG(LogEditorUICanvasDocument, Warn, "'{}' is taken in this canvas, named '{}' instead",
+                      lTaken.CStr(), lEdited->Name.CStr());
+        }
 
         if (Snapshot(InContext) == InBefore)
         {
