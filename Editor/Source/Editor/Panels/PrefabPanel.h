@@ -4,6 +4,7 @@
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
+#include "Core/Tag/OpaaxTag.h"
 #include "Editor/Camera/EditorCamera.h"
 #include "Editor/Panels/EntityTreeView.h"
 #include "Editor/Panels/IEditorPanel.h"
@@ -125,6 +126,9 @@ namespace Opaax::Editor
         /** The rows and their drops; Detach from the context menu, run after the pass. */
         EntityTreeView  m_Tree;
         bool            m_bPendingDetach = false;
+
+        /** A row menu's Cut, Copy, Paste or Duplicate: run after the tree walk, as the chords run it. */
+        OpaaxTag        m_PendingCommand;
 
         /** Last frame's ImGui::IsAnyItemActive (the release frame also counts). */
         bool            m_bWasItemActive = false;

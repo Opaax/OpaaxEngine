@@ -590,6 +590,26 @@ namespace Opaax::Editor
         OPAAX_LOG(LogEditorCommands, Info, "Deleted {} entity(ies) from the prefab", lCount);
     }
 
+    void CopyPrefabSelectionCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        EntityOps::Copy(InContext, EUndoWorld::Prefab);
+    }
+
+    void CutPrefabSelectionCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        EntityOps::Cut(InContext, EUndoWorld::Prefab);
+    }
+
+    void PasteIntoPrefabCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        EntityOps::Paste(InContext, EUndoWorld::Prefab, MapId());
+    }
+
+    void DuplicatePrefabSelectionCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        EntityOps::Duplicate(InContext, EUndoWorld::Prefab);
+    }
+
     void SaveMapAsCommand::Execute(EditorContext& InContext, const Params&)
     {
         if (!MapOps::CanEdit(InContext, "Save Map As")) { return; }

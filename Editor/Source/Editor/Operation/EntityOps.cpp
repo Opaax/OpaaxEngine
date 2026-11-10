@@ -42,6 +42,7 @@
 #include "World/Serialization/EntityClone.h"
 #include "World/Serialization/MapJson.h"
 #include "Editor/Clipboard/EditorClipboard.h"
+#include "Editor/Prefab/EditorPrefabDocument.h"
 
 using namespace Opaax;
 
@@ -824,6 +825,32 @@ namespace Opaax::Editor
             return lData;
         }
 
+        /** The prefabs InData's linked entities are placements of (asset-relative), each once. */
+        TDynArray<OpaaxString> PrefabsPlacedBy(const MapData& InData, const ComponentRegistry& InRegistry)
+        {
+            TDynArray<OpaaxString> lPaths;
+
+            const IComponentEntry* lMarker = InRegistry.Find<PrefabInstanceComponent>();
+            if (lMarker == nullptr) { return lPaths; }
+
+            for (const EntityData& lEntity : InData.Entities)
+            {
+                for (const ComponentData& lComponent : lEntity.Components)
+                {
+                    if (lComponent.TypeName != lMarker->GetName() || !lComponent.Payload.is_object()) { continue; }
+
+                    const auto lField = lComponent.Payload.find("Prefab");
+                    if (lField == lComponent.Payload.end() || !lField->is_string()) { continue; }
+
+                    const OpaaxString lPath = lField->get<OpaaxString>();
+                    bool bKnown = lPath.IsEmpty();
+                    for (const OpaaxString& lKnown : lPaths) { bKnown = bKnown || lKnown == lPath; }
+                    if (!bKnown) { lPaths.emplace_back(lPath); }
+                }
+            }
+            return lPaths;
+        }
+
         /** Whether InWorld has an entity named InName, or InAlsoTaken has it. */
         bool NameUsed(World& InWorld, const OpaaxString& InName, const TDynArray<OpaaxString>& InAlsoTaken)
         {
@@ -988,6 +1015,24 @@ namespace Opaax::Editor
         }
 
         const ComponentRegistry& lRegistry = InContext.Engine.GetRegistries().Components();
+
+        // Into a prefab: no placement of that prefab, nor of one placing it (it would contain itself).
+        if (InScope == EUndoWorld::Prefab)
+        {
+            if (!InContext.PrefabDocument.IsOpen()) { return lRefuse("no prefab is open"); }
+
+            ResourcePrefabResolver lResolver(InContext.Paths, InContext.Resources, lRegistry);
+            const OpaaxString      lOwnPath = InContext.Paths.AbsoluteToAsset(InContext.PrefabDocument.AbsPath());
+
+            for (const OpaaxString& lPlaced : PrefabsPlacedBy(lSource, lRegistry))
+            {
+                if (lPlaced == lOwnPath || lResolver.Places(lPlaced, lOwnPath))
+                {
+                    return lRefuse("the copy places '" + lPlaced + "', which would make '" + lOwnPath
+                                   + "' contain itself");
+                }
+            }
+        }
 
         // Roots, at the poses they were copied at, in the target map.
         EntityClone::Options lOptions;

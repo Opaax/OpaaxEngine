@@ -392,7 +392,7 @@ namespace Opaax::Editor
         lPanelsRegistry.Register<CameraPreviewPanel>(PanelDesc  {.Id = CameraPreviewPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<CameraStatsPanel>(PanelDesc    {.Id = CameraStatsPanel::PanelID(),     .DefaultVisibility = EPanelVisibility::Hidden});
         // Hidden until a prefab is opened. Its SaveCommand routes Ctrl+S to the prefab.
-        lPanelsRegistry.Register<PrefabPanel>(PanelDesc         {.Id = PrefabPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_PREFAB, .UndoCommand = Tags::EDITOR_COMMAND_UNDO_PREFAB, .RedoCommand = Tags::EDITOR_COMMAND_REDO_PREFAB, .DeleteCommand = Tags::EDITOR_COMMAND_DELETE_PREFAB_SELECTION});
+        lPanelsRegistry.Register<PrefabPanel>(PanelDesc         {.Id = PrefabPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_PREFAB, .UndoCommand = Tags::EDITOR_COMMAND_UNDO_PREFAB, .RedoCommand = Tags::EDITOR_COMMAND_REDO_PREFAB, .DeleteCommand = Tags::EDITOR_COMMAND_DELETE_PREFAB_SELECTION, .CopyCommand = Tags::EDITOR_COMMAND_COPY_PREFAB_SELECTION, .CutCommand = Tags::EDITOR_COMMAND_CUT_PREFAB_SELECTION, .PasteCommand = Tags::EDITOR_COMMAND_PASTE_INTO_PREFAB, .DuplicateCommand = Tags::EDITOR_COMMAND_DUPLICATE_PREFAB_SELECTION});
         lPanelsRegistry.Register<UICanvasPanel>(PanelDesc{.Id = UICanvasPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_UI, .DeleteCommand = Tags::EDITOR_COMMAND_DELETE_UI_WIDGET});
         lPanelsRegistry.Register<ConfigPanel>(PanelDesc         {.Id = ConfigPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<InputPanel>(PanelDesc          {.Id = InputPanel::PanelID(),           .DefaultVisibility = EPanelVisibility::Hidden });
@@ -439,6 +439,10 @@ namespace Opaax::Editor
         lCommands.Register<UndoPrefabCommand>(Tags::EDITOR_COMMAND_UNDO_PREFAB);
         lCommands.Register<RedoPrefabCommand>(Tags::EDITOR_COMMAND_REDO_PREFAB);
         lCommands.Register<DeletePrefabSelectionCommand>(Tags::EDITOR_COMMAND_DELETE_PREFAB_SELECTION);
+        lCommands.Register<CopyPrefabSelectionCommand>(Tags::EDITOR_COMMAND_COPY_PREFAB_SELECTION);
+        lCommands.Register<CutPrefabSelectionCommand>(Tags::EDITOR_COMMAND_CUT_PREFAB_SELECTION);
+        lCommands.Register<PasteIntoPrefabCommand>(Tags::EDITOR_COMMAND_PASTE_INTO_PREFAB);
+        lCommands.Register<DuplicatePrefabSelectionCommand>(Tags::EDITOR_COMMAND_DUPLICATE_PREFAB_SELECTION);
         lCommands.Register<SaveMapCommand>(Tags::EDITOR_COMMAND_SAVE_MAP);
         lCommands.Register<SaveMapAsCommand>(Tags::EDITOR_COMMAND_SAVE_MAP_AS);
         lCommands.Register<SaveMapAsAtCommand>(Tags::EDITOR_COMMAND_SAVE_MAP_AS_AT);

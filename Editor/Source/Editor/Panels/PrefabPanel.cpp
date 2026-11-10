@@ -204,6 +204,13 @@ namespace Opaax::Editor
             m_bPendingDetach = false;
             EntityOps::DetachSelected(m_Context, EUndoWorld::Prefab);
         }
+
+        if (m_PendingCommand.IsValid())
+        {
+            const OpaaxTag lCommand = m_PendingCommand;
+            m_PendingCommand = OpaaxTag();
+            m_Context.Extensions.Commands().Execute(lCommand, m_Context);
+        }
     }
 
     void PrefabPanel::RunPendingDrop()
@@ -269,6 +276,12 @@ namespace Opaax::Editor
         }
 
         // Queued, not run (the popup is inside the tree walk).
+        if (ImGui::MenuItem("Cut", "Ctrl+X"))       { m_PendingCommand = Tags::EDITOR_COMMAND_CUT_PREFAB_SELECTION; }
+        if (ImGui::MenuItem("Copy", "Ctrl+C"))      { m_PendingCommand = Tags::EDITOR_COMMAND_COPY_PREFAB_SELECTION; }
+        if (ImGui::MenuItem("Paste", "Ctrl+V"))     { m_PendingCommand = Tags::EDITOR_COMMAND_PASTE_INTO_PREFAB; }
+        if (ImGui::MenuItem("Duplicate", "Ctrl+D")) { m_PendingCommand = Tags::EDITOR_COMMAND_DUPLICATE_PREFAB_SELECTION; }
+        ImGui::Separator();
+
         if (ImGui::MenuItem("Detach from Parent", nullptr, false, lHasParent)) { m_bPendingDetach = true; }
 
         ImGui::EndPopup();
