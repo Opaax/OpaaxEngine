@@ -1114,6 +1114,98 @@ namespace Opaax::Editor
         return true;
     }
 
+    bool EntityOps::CopyComponent(EditorContext& InContext, Entity InEntity, const OpaaxStringID InTypeName,
+                                  OpaaxString* OutError)
+    {
+        const auto lRefuse = [OutError](OpaaxString InWhy)
+        {
+            OPAAX_LOG(LogEntityOps, Warn, "Copy Component refused — {}", InWhy.CStr());
+            if (OutError != nullptr) { *OutError = Move(InWhy); }
+            return false;
+        };
+
+        if (!InEntity.IsValid()) { return lRefuse("no entity"); }
+
+        const IComponentEntry* lEntry = InContext.Engine.GetRegistries().Components().FindByName(InTypeName);
+        if (lEntry == nullptr) { return lRefuse(OpaaxString::Format("'{}' is not a registered type", InTypeName)); }
+
+        EntityRegistry& lEntities = InEntity.GetWorld()->GetRegistry();
+        if (!lEntry->Has(lEntities, InEntity.GetHandle()))
+        {
+            return lRefuse(OpaaxString::Format("'{}' has no {}", InEntity.GetName().CStr(), InTypeName));
+        }
+
+        nlohmann::json lData = nlohmann::json::object();
+        lData["type"]   = lEntry->GetName().CStr();
+        lData["values"] = lEntry->Save(lEntities, InEntity.GetHandle());
+        InContext.Clipboard.Copy(EClipboardKind::Component, lData);
+
+        OPAAX_LOG(LogEntityOps, Info, "Copied component '{}' of '{}'", InTypeName, InEntity.GetName().CStr());
+        return true;
+    }
+
+    bool EntityOps::PasteComponent(EditorContext& InContext, Entity InEntity, OpaaxString* OutError)
+    {
+        const auto lRefuse = [OutError](OpaaxString InWhy)
+        {
+            OPAAX_LOG(LogEntityOps, Warn, "Paste Component refused — {}", InWhy.CStr());
+            if (OutError != nullptr) { *OutError = Move(InWhy); }
+            return false;
+        };
+
+        if (!InEntity.IsValid()) { return lRefuse("no entity"); }
+        if (!MapOps::CanEdit(InContext, "Paste Component")) { return lRefuse("the game is playing: stop it first"); }
+
+        nlohmann::json lData;
+        OpaaxString    lError;
+        if (!InContext.Clipboard.Read(EClipboardKind::Component, lData, lError))
+        {
+            return lRefuse(lError + " (copy a component first)");
+        }
+
+        const auto lType   = lData.find("type");
+        const auto lValues = lData.find("values");
+        if (lType == lData.end() || !lType->is_string() || lValues == lData.end() || !lValues->is_object())
+        {
+            return lRefuse("the clipboard's component has no type or values");
+        }
+
+        const OpaaxStringID    lTypeName = OpaaxStringID(lType->get<OpaaxString>());
+        const IComponentEntry* lEntry    = InContext.Engine.GetRegistries().Components().FindByName(lTypeName);
+        if (lEntry == nullptr) { return lRefuse(OpaaxString::Format("'{}' is not a registered type", lTypeName)); }
+
+        EntityRegistry& lEntities = InEntity.GetWorld()->GetRegistry();
+        const EntityID  lHandle   = InEntity.GetHandle();
+
+        ComponentPaste lStep;
+        lStep.EntityId      = InEntity.GetGuid();
+        lStep.TypeName      = lEntry->GetName();
+        lStep.bHadComponent = lEntry->Has(lEntities, lHandle);
+        lStep.Before        = lStep.bHadComponent ? lEntry->Save(lEntities, lHandle) : nlohmann::json();
+
+        // A value of the wrong type throws while loading: put things back as they were.
+        try
+        {
+            lEntry->Add(lEntities, lHandle);
+            lEntry->Load(lEntities, lHandle, *lValues);
+        }
+        catch (const nlohmann::json::exception& InError)
+        {
+            if (lStep.bHadComponent) { lEntry->Load(lEntities, lHandle, lStep.Before); }
+            else                     { lEntry->Remove(lEntities, lHandle); }
+            return lRefuse(OpaaxString::Format("the copied values do not fit {}: {}", lTypeName, InError.what()));
+        }
+
+        lStep.After = lEntry->Save(lEntities, lHandle);
+        if (lStep.bHadComponent && lStep.After == lStep.Before) { return true; }   // the same values: no step
+
+        InEntity.GetWorld()->MarkChanged();
+        InContext.Undo.Record(Move(lStep));
+
+        OPAAX_LOG(LogEntityOps, Info, "Pasted component '{}' on '{}'", lTypeName, InEntity.GetName().CStr());
+        return true;
+    }
+
     bool EntityOps::RemoveComponent(EditorContext& InContext, Entity InEntity, const OpaaxStringID InTypeName)
     {
         if (!InEntity.IsValid() || !MapOps::CanEdit(InContext, "Remove Component")) { return false; }

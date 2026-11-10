@@ -163,6 +163,22 @@ namespace Opaax::Editor
         bool AddComponent(EditorContext& InContext, Entity InEntity, OpaaxStringID InTypeName);
 
         /**
+         * Puts InEntity's component InTypeName on the clipboard: its type and values. Not an edit (allowed
+         * during Play).
+         * @param OutError Why not (unknown type, or the entity has none)
+         */
+        bool CopyComponent(EditorContext& InContext, Entity InEntity, OpaaxStringID InTypeName,
+                           OpaaxString* OutError = nullptr);
+
+        /**
+         * Pastes the clipboard's component on InEntity: its values over the entity's own of that type, or
+         * the component added with them when the entity has none. One undo step; a value the type refuses
+         * changes nothing.
+         * @param OutError Why not (no copied component, unknown type, wrong values, Play running)
+         */
+        bool PasteComponent(EditorContext& InContext, Entity InEntity, OpaaxString* OutError = nullptr);
+
+        /**
          * Removes a component from InEntity. Essential types are refused by the registry entry.
          * @return False if the type is unknown, absent, essential, or the edit was refused
          */

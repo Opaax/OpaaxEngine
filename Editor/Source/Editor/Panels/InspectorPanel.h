@@ -82,6 +82,9 @@ namespace Opaax::Editor
          */
         void DrawRemoveComponent(Entity& InEntity);
 
+        /** Copy Component (a popup of the entity's components) and Paste Component, on the next line. */
+        void DrawCopyPasteComponent(Entity& InEntity);
+
         /**
          * The entity's name, as an editable field (EntityMeta has no drawer). Written through EntityOps.
          */

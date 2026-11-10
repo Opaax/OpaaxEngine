@@ -46,6 +46,25 @@ namespace Opaax::Editor
     };
 
     /**
+     * A copied component was pasted on an entity: its values over the entity's own, or the component
+     * added with them. Both sides are kept, so a type that was absent is removed again by undo.
+     */
+    struct ComponentPaste
+    {
+        Guid           EntityId;
+        OpaaxStringID  TypeName;
+
+        /** False: the entity had no such component, and the paste added it. */
+        bool           bHadComponent = true;
+        nlohmann::json Before;
+        nlohmann::json After;
+
+        void        Undo(EditorContext& InContext);
+        void        Redo(EditorContext& InContext);
+        const char* Label() const noexcept { return "Paste Component"; }
+    };
+
+    /**
      * The values of one entity's components changed (the Inspector's field edits). Recorded by the
      * panel around the edit gesture, since property drawers write directly.
      * Values only: added/removed types and the entity name have their own steps.

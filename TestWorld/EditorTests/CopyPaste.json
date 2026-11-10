@@ -412,6 +412,131 @@
         "command": "editor.stop"
     },
     {
+        "id": "copy-component-unknown",
+        "command": "component.copy",
+        "params": {
+            "entity": "Arm",
+            "type": "Nope"
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "copy-component",
+        "command": "component.copy",
+        "params": {
+            "entity": "Arm",
+            "type": "Transform"
+        }
+    },
+    {
+        "id": "component-kind",
+        "command": "clipboard.get",
+        "expect": {
+            "kind": "Component"
+        }
+    },
+    {
+        "id": "paste-component-values",
+        "command": "component.paste",
+        "params": {
+            "entity": "Witness"
+        }
+    },
+    {
+        "id": "values-pasted",
+        "command": "expect.value",
+        "params": {
+            "entity": "Witness",
+            "path": "Transform/Position/x",
+            "near": -200,
+            "tolerance": 0.01
+        }
+    },
+    {
+        "id": "rotation-pasted",
+        "command": "expect.value",
+        "params": {
+            "entity": "Witness",
+            "path": "Transform/Rotation",
+            "near": 90,
+            "tolerance": 0.01
+        }
+    },
+    {
+        "id": "undo-paste-values",
+        "command": "editor.undo"
+    },
+    {
+        "id": "values-undone",
+        "command": "expect.value",
+        "params": {
+            "entity": "Witness",
+            "path": "Transform/Position/x",
+            "near": 0,
+            "tolerance": 0.01
+        }
+    },
+    {
+        "id": "copy-probe",
+        "command": "component.copy",
+        "params": {
+            "entity": "Gun",
+            "type": "EntityRefProbe"
+        }
+    },
+    {
+        "id": "probes-before",
+        "command": "expect.count",
+        "params": {
+            "component": "EntityRefProbe",
+            "equals": 3
+        }
+    },
+    {
+        "id": "paste-component-adds",
+        "command": "component.paste",
+        "params": {
+            "entity": "Witness"
+        }
+    },
+    {
+        "id": "probe-added",
+        "command": "expect.count",
+        "params": {
+            "component": "EntityRefProbe",
+            "equals": 4
+        }
+    },
+    {
+        "id": "undo-paste-add",
+        "command": "editor.undo"
+    },
+    {
+        "id": "probe-add-undone",
+        "command": "expect.count",
+        "params": {
+            "component": "EntityRefProbe",
+            "equals": 3
+        }
+    },
+    {
+        "id": "copy-entities-again",
+        "command": "entity.copy",
+        "params": {
+            "entities": [
+                "Witness"
+            ]
+        }
+    },
+    {
+        "id": "paste-entities-as-component",
+        "command": "component.paste",
+        "params": {
+            "entity": "Arm"
+        },
+        "expectFailure": true
+    },
+    {
         "id": "scratch-level",
         "command": "level.new",
         "params": {

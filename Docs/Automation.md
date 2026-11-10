@@ -175,6 +175,8 @@ The editor adds:
 | `clipboard.get`, `clipboard.set` | `text` | The clipboard's `text` and the `kind` of editor copy it holds (`Entities`, null for other text); `set` puts `text` there as it is |
 | `component.add`, `component.remove` | `entity`, `type` | Adds or removes a component |
 | `component.set` | `entity`, `type`, `value` | As the engine's, recorded for undo in the edit world |
+| `component.copy` | `entity`, `type` | Puts one component's values on the clipboard, as the Inspector's Copy Component does |
+| `component.paste` | `entity` | Pastes the clipboard's component on an entity: over its own of that type, or added with the copied values. One undo step; a value the type refuses changes nothing |
 | `prefab.create` | `entities`, `path` | Writes entities (with their children) as a prefab, then replaces them with an instance of it |
 | `prefab.place` | `path`, `position` | Places an instance of a prefab in the focused map, its first entity at `position` |
 | `prefab.variant` | `prefab`, `path`, `entity`, `components` | Writes a variant of a prefab: it inherits everything, except `components` changed on its `entity`. A type or value it refuses writes nothing and leaves the base prefab as it was |

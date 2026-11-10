@@ -426,6 +426,16 @@ namespace Opaax::Editor
         EntityOps::AddComponent(InContext, InContext.Selection.Get(), InParams.TypeName);
     }
 
+    void CopyComponentCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        EntityOps::CopyComponent(InContext, InContext.Selection.Get(), InParams.TypeName);
+    }
+
+    void PasteComponentCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        EntityOps::PasteComponent(InContext, InContext.Selection.Get());
+    }
+
     void RemoveComponentCommand::Execute(EditorContext& InContext, const Params& InParams)
     {
         EntityOps::RemoveComponent(InContext, InContext.Selection.Get(), InParams.TypeName);

@@ -73,6 +73,7 @@ namespace Opaax::Editor
 
         DrawAddComponent(lSelected);
         DrawRemoveComponent(lSelected);
+        DrawCopyPasteComponent(lSelected);
 
         // A drawer writes a component directly, which the world cannot see; the dirty check is gated on
         // World::GetRevision(), so mark the world changed. Asked of ImGui (not the drawer), so it can
@@ -174,6 +175,43 @@ namespace Opaax::Editor
         {
             m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_REMOVE_COMPONENT, m_Context,
                                                     ComponentTypeParams{ lChosen->GetName() });
+        }
+    }
+
+    void InspectorPanel::DrawCopyPasteComponent(Entity& InEntity)
+    {
+        const ComponentRegistry& lTypes    = m_Context.Engine.GetRegistries().Components();
+        EntityRegistry&          lEntities = InEntity.GetWorld()->GetRegistry();
+        const EntityID           lHandle   = InEntity.GetHandle();
+
+        if (ImGui::Button("Copy Component"))
+        {
+            ImGui::OpenPopup("CopyComponentPopup");
+        }
+
+        // Queued and run after the popup closes, as Add and Remove are.
+        const IComponentEntry* lChosen = nullptr;
+
+        if (ImGui::BeginPopup("CopyComponentPopup"))
+        {
+            lTypes.ForEach([&](const IComponentEntry& InEntry)
+            {
+                if (InEntry.Has(lEntities, lHandle) && ImGui::MenuItem(InEntry.GetName().CStr())) { lChosen = &InEntry; }
+            });
+            ImGui::EndPopup();
+        }
+
+        if (lChosen != nullptr)
+        {
+            m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_COPY_COMPONENT, m_Context,
+                                                    ComponentTypeParams{ lChosen->GetName() });
+        }
+
+        // Over this entity's own component of the copied type, or added with the copied values.
+        ImGui::SameLine();
+        if (ImGui::Button("Paste Component"))
+        {
+            m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_PASTE_COMPONENT, m_Context);
         }
     }
 
