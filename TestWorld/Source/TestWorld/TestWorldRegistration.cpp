@@ -7,6 +7,7 @@
 #include "Engine/Registries/AutoRegistration.h"
 #include "Probes/AnimationProbes.h"
 #include "Probes/CameraProbe.h"
+#include "Probes/EntityRefProbe.h"
 #include "Probes/EventProbe.h"
 #include "Probes/ExtensionProbes.h"
 #include "Probes/FollowProbe.h"
@@ -31,6 +32,7 @@ namespace TestWorld
     OPAAX_REGISTER_BEHAVIOUR(SelfDestructProbe);
     OPAAX_REGISTER_BEHAVIOUR(EndProbe);
     OPAAX_REGISTER_BEHAVIOUR(WitnessProbe);
+    OPAAX_REGISTER_BEHAVIOUR(EntityRefProbe);
     OPAAX_REGISTER_BEHAVIOUR(EventProbe);
     OPAAX_REGISTER_BEHAVIOUR(SpawnProbe);
     OPAAX_REGISTER_BEHAVIOUR(InputProbe);

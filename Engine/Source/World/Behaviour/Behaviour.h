@@ -20,6 +20,7 @@
 #include "Object/ObjectMacros.h"
 #include "World/Components/TransformComponent.h"   // GetTransform(): every behaviour moves something
 #include "World/Entity/Entity.h"
+#include "World/Entity/EntityRef.h"   // a behaviour's fields name entities with it
 #include "World/Systems/WorldContext.h"
 #include "World/World.h"
 
@@ -267,8 +268,14 @@ namespace Opaax
         // Finding
         // =============================================================================
     public:
-        /** The first entity named InName, or an invalid Entity. */
+        /**
+         * The first entity named InName, or an invalid Entity. For entities made at run time, which no file
+         * can reference; an entity placed in a level is better named by an EntityRef field (Resolve).
+         */
         Entity FindEntity(const OpaaxString& InName) const;
+
+        /** The entity InRef names, in this behaviour's world, or an invalid Entity (none, or gone). */
+        Entity Resolve(const EntityRef& InRef) const;
 
         /** The first started behaviour of type T in the world, or null. */
         template<typename T>

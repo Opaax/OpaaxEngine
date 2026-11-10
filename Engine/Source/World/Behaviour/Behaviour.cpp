@@ -176,6 +176,11 @@ namespace Opaax
         return (lFound != ENTITY_NONE) ? Entity(lFound, m_World) : Entity{};
     }
 
+    Entity Behaviour::Resolve(const EntityRef& InRef) const
+    {
+        return m_World != nullptr ? InRef.Resolve(*m_World) : Entity{};
+    }
+
     Entity Behaviour::GetParent() const
     {
         return EntityHierarchy::GetParent(GetEntity());
