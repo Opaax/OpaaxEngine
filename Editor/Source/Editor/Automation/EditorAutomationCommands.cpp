@@ -12,6 +12,7 @@
 #include "Editor/Assets/AssetEditors.h"
 #include "Editor/Camera/CameraPreview.hpp"
 #include "Editor/Camera/EditorCamera.h"
+#include "Editor/Clipboard/EditorClipboard.h"
 #include "Editor/Commands/EditorNativeCommands.h"
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
 #include "Editor/EditorContext.h"
@@ -333,6 +334,34 @@ namespace Opaax::Editor::EditorAutomation
                         return AutomationResult::Fail("\"tag\" is a command tag, like Editor.Command.Undo");
                     }
                     return Dispatch(InContext, OpaaxTag(lTag));
+                });
+
+            InCommands.Register("clipboard.get",
+                "The clipboard's {text}, and the {kind} of editor copy it holds (Entities, UIWidget...; null for "
+                "other text).",
+                [&InContext](const nlohmann::json&)
+                {
+                    const OpaaxString    lText = InContext.Clipboard.GetText();
+                    const nlohmann::json lJson = nlohmann::json::parse(ToJsonString(lText), nullptr, false);
+
+                    nlohmann::json lKind;
+                    if (lJson.is_object() && lJson.contains(ClipboardPayload::KEY_KIND))
+                    {
+                        lKind = lJson.at(ClipboardPayload::KEY_KIND);
+                    }
+                    return AutomationResult::Ok(nlohmann::json{ { "text", lText }, { "kind", lKind } });
+                });
+
+            InCommands.Register("clipboard.set", "Puts {text} on the clipboard, as it is (to paste it next).",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    const auto lText = InParams.find("text");
+                    if (lText == InParams.end() || !lText->is_string())
+                    {
+                        return AutomationResult::Fail("\"text\" is the text to put on the clipboard");
+                    }
+                    InContext.Clipboard.SetText(lText->get<OpaaxString>());
+                    return AutomationResult::Ok();
                 });
         }
 

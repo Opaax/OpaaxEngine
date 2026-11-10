@@ -69,6 +69,9 @@ namespace Opaax::Editor
         bool   IsKeyboardOwnedByUI() const override;
         bool   Shortcut(EKeyCode InModifier, EKeyCode InKey) const override;
 
+        void        SetClipboardText(const OpaaxString& InText) override;
+        OpaaxString GetClipboardText() const override;
+
         IEditorUIBackend& Backend() const noexcept override { return *m_Backend; }
         IEditorWidgets&   Widgets() noexcept override { return m_Widgets; }
         //~End IEditorGui interface

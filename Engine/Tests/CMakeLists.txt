@@ -215,6 +215,7 @@ set(OPAAX_TEST_SOURCES
     Editor/AssetTypeRegistryTests.cpp
     Editor/AssetWindowPlacementTests.cpp
     Editor/CameraStatsHistoryTests.cpp
+    Editor/ClipboardPayloadTests.cpp
     Editor/ConfigChangeTrackerTests.cpp
     Editor/DrawerRegistryTests.cpp
     Editor/EditorGizmoTests.cpp

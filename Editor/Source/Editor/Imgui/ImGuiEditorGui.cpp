@@ -433,4 +433,15 @@ namespace Opaax::Editor
 
         return ImGui::Shortcut(ToModifier(InModifier) | lKey, ImGuiInputFlags_RouteGlobal);
     }
+
+    void ImGuiEditorGui::SetClipboardText(const OpaaxString& InText)
+    {
+        ImGui::SetClipboardText(InText.CStr());
+    }
+
+    OpaaxString ImGuiEditorGui::GetClipboardText() const
+    {
+        const char* lText = ImGui::GetClipboardText();
+        return lText != nullptr ? OpaaxString(lText) : OpaaxString();
+    }
 }
