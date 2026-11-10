@@ -24,6 +24,7 @@ namespace Opaax
          * The entities of one instance of InPrefab, ready for MapFactory::Instantiate:
          *   - Guid = Guid::Derive(InInstanceId, prefab guid), so instances do not collide;
          *   - OwnerMap = InOwnerMap, so they are saved with the map;
+         *   - an EntityRef to one of the prefab's entities names this instance's, derived the same way;
          *   - a PrefabInstanceComponent naming the prefab, the instance and the template guid.
          * Refused (empty result, error) if InInstanceId or InOwnerMap is invalid, or if
          * PrefabInstanceComponent is not registered.

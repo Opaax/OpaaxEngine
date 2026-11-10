@@ -256,3 +256,54 @@ TEST_CASE("EntityClone: a reference inside the copied set names the copy; one ou
     // The originals are untouched.
     CHECK(lTurret.Get<CloneTestAim>().Target.Id == lDummy.GetGuid());
 }
+
+TEST_CASE("EntityClone: a reference inside a prefab names each placement's own entity, and saves no override")
+{
+    ComponentRegistry lRegistry;
+    FillRegistry(lRegistry);
+    REQUIRE(lRegistry.Register<CloneTestAim>("Aim"));
+
+    // A prefab whose Turret aims at its own Dummy (template guids).
+    World  lAuthoring("Authoring");
+    Entity lTurret = lAuthoring.CreateEntity("Turret", MapId("Source"));
+    Entity lDummy  = lAuthoring.CreateEntity("Dummy", MapId("Source"));
+    lTurret.Add<CloneTestAim>().Target.Id = lDummy.GetGuid();
+
+    PrefabData lPrefab;
+    lPrefab.Entities = MapSerializer::CaptureMap(lAuthoring, lRegistry, MapId("Source")).Entities;
+    for (EntityData& lEntity : lPrefab.Entities) { lEntity.OwnerMap = MapId(); }
+
+    const char* lPath   = "Prefabs/Range.opaaxprefab";
+    const Guid  lFirst  = Guid::New();
+    const Guid  lSecond = Guid::New();
+
+    World lWorld("Target");
+    REQUIRE(MapFactory::Instantiate(PrefabFactory::BuildInstance(lPrefab, lPath, lFirst, MapId("Level"), lRegistry),
+                                    lWorld, lRegistry) == 2);
+    REQUIRE(MapFactory::Instantiate(PrefabFactory::BuildInstance(lPrefab, lPath, lSecond, MapId("Level"), lRegistry),
+                                    lWorld, lRegistry) == 2);
+
+    for (const Guid& lInstance : { lFirst, lSecond })
+    {
+        Entity lPlacedTurret = lWorld.FindByGuid(Guid::Derive(lInstance, lTurret.GetGuid()));
+        REQUIRE(lPlacedTurret.IsValid());
+        CHECK(lPlacedTurret.Get<CloneTestAim>().Target.Id == Guid::Derive(lInstance, lDummy.GetGuid()));
+    }
+
+    // Saved, the placements differ from the prefab in nothing: bare records.
+    MapData lSaved = MapSerializer::CaptureMap(lWorld, lRegistry, MapId("Level"));
+    const OnePrefab lResolver(lPath, lPrefab);
+    REQUIRE(PrefabFold::Fold(lSaved, lResolver, lRegistry) == 2);
+    for (const PrefabInstanceRecord& lRecord : lSaved.Instances)
+    {
+        CHECK(lRecord.Overrides.empty());
+    }
+
+    // And loaded again, each still aims at its own dummy.
+    REQUIRE(PrefabFold::Expand(lSaved, lResolver, lRegistry) == 2);
+    World lReloaded("Reloaded");
+    REQUIRE(MapFactory::Instantiate(lSaved, lReloaded, lRegistry) == 4);
+    Entity lReloadedTurret = lReloaded.FindByGuid(Guid::Derive(lSecond, lTurret.GetGuid()));
+    REQUIRE(lReloadedTurret.IsValid());
+    CHECK(lReloadedTurret.Get<CloneTestAim>().Target.Id == Guid::Derive(lSecond, lDummy.GetGuid()));
+}
