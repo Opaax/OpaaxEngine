@@ -52,6 +52,9 @@ namespace Opaax::Editor
 
         // Ask every registered drawer whether it applies (the panel knows no component type).
         // Every applicable drawer, not only the first.
+        // Entity references in these components name entities of the selection's world.
+        m_Context.Widgets.SetEntityScope(lSelected.GetWorld());
+
         bool lAnyDrawn = false;
         for (const TFunction<bool(Entity&, IEditorWidgets&, EditorContext&)>& lEntry : m_Context.Extensions.Drawers().Entries())
         {
@@ -60,6 +63,8 @@ namespace Opaax::Editor
                 lAnyDrawn = true;
             }
         }
+
+        m_Context.Widgets.SetEntityScope(nullptr);
 
         if (!lAnyDrawn)
         {

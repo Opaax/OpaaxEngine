@@ -8,6 +8,7 @@
 #include "Engine/Reflection/PropertyVisitor.h"            // EnumLabels
 #include "Resources/Asset/AssetRef.h"           // TAssetRef
 #include "Resources/ResourceTypeID.hpp" // ResourceTypeID
+#include "World/Entity/EntityRef.h"             // EntityRef
 #include "Editor/Properties/PropertyDrawer.h"
 #include "Editor/Resources/ResourceDragDrop.h"
 
@@ -58,6 +59,16 @@ namespace Opaax::Editor
         static void Draw(IEditorWidgets& InWidgets, const char* InLabel, TAssetRef<T, TLoad>& InValue, const PropertyMeta&)
         {
             DrawAssetRefField(InWidgets, InLabel, InValue.Path, T::StaticClass());
+        }
+    };
+
+    /** An entity reference: the entity's name and a drop target for an entity row (IEditorWidgets). */
+    template<>
+    struct TPropertyDrawer<EntityRef>
+    {
+        static void Draw(IEditorWidgets& InWidgets, const char* InLabel, EntityRef& InValue, const PropertyMeta&)
+        {
+            InWidgets.EntityRefField(InLabel, InValue.Id);
         }
     };
 

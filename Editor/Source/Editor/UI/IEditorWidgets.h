@@ -2,6 +2,12 @@
 
 #include "Core/OpaaxTypes.h"
 
+namespace Opaax
+{
+    struct Guid;
+    class World;
+}
+
 namespace Opaax::Editor
 {
     // =============================================================================
@@ -138,5 +144,23 @@ namespace Opaax::Editor
 
         /** Only when BeginCombo returned true. */
         virtual void EndCombo() = 0;
+
+        // =============================================================================
+        // Entities — an EntityRef names an entity of the world being edited, which the panel drawing it
+        //   sets (the Inspector, the Prefab panel) for the time it draws that world's entities.
+    public:
+        /** The world entity references are drawn against; null outside a panel that edits entities. */
+        void   SetEntityScope(World* InWorld) noexcept { m_EntityScope = InWorld; }
+        World* GetEntityScope() const noexcept { return m_EntityScope; }
+
+        /**
+         * An entity reference: the entity's name, a drop target for an entity row of the same world, and a
+         * button to clear it.
+         * @return True on the frame InOutId changes
+         */
+        virtual bool EntityRefField(const char* InLabel, Guid& InOutId) = 0;
+
+    private:
+        World* m_EntityScope = nullptr;
     };
 }

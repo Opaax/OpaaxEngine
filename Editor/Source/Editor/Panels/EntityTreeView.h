@@ -83,7 +83,8 @@ namespace Opaax::Editor
         // Members
         // =============================================================================
     private:
-        static constexpr const char* k_Payload = "OPAAX_ENTITY";
+        /** The world of the last Rebuild: a root drop accepts only its rows. */
+        const World* m_World = nullptr;
 
         const TDynArray<EntityID>* ChildrenOf(EntityID InEntity) const;
 

@@ -1,6 +1,7 @@
 #include "Editor/Panels/EntityTreeView.h"
 
 #include "Editor/Operation/EditorSelection.hpp"
+#include "Editor/Panels/EntityDragPayload.h"
 #include "Editor/Resources/ResourceDragDrop.h"   // prefab drops on rows and headers
 
 #include "World/Prefab/PrefabAsset.h"
@@ -23,6 +24,7 @@ namespace Opaax::Editor
 
     void EntityTreeView::Rebuild(World& InWorld)
     {
+        m_World = &InWorld;
         m_Children.clear();
         m_Roots.clear();
 
@@ -86,16 +88,20 @@ namespace Opaax::Editor
 
         if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
         {
-            ImGui::SetDragDropPayload(k_Payload, &InEntity, sizeof(EntityID));
+            // The world and the guid go with the handle: an entity slot keeps the guid.
+            const EntityDragPayload lPayload{ InEntity, &InWorld, lMeta->Id };
+            ImGui::SetDragDropPayload(ENTITY_DRAG_PAYLOAD, &lPayload, sizeof(EntityDragPayload));
             ImGui::Text("%s", lMeta->Name.CStr());
             ImGui::EndDragDropSource();
         }
 
         if (ImGui::BeginDragDropTarget())
         {
-            if (const ImGuiPayload* lPayload = ImGui::AcceptDragDropPayload(k_Payload))
+            // A row of another document's tree (the level's, a prefab's) is refused: its handle means nothing here.
+            if (const ImGuiPayload* lPayload = ImGui::AcceptDragDropPayload(ENTITY_DRAG_PAYLOAD);
+                lPayload != nullptr && static_cast<const EntityDragPayload*>(lPayload->Data)->Source == &InWorld)
             {
-                m_Drop     = EntityTreeDrop{ *static_cast<const EntityID*>(lPayload->Data), InEntity, MapId{} };
+                m_Drop     = EntityTreeDrop{ static_cast<const EntityDragPayload*>(lPayload->Data)->Handle, InEntity, MapId{} };
                 m_bHasDrop = true;
             }
             ImGui::EndDragDropTarget();
@@ -126,9 +132,10 @@ namespace Opaax::Editor
     {
         if (ImGui::BeginDragDropTarget())
         {
-            if (const ImGuiPayload* lPayload = ImGui::AcceptDragDropPayload(k_Payload))
+            if (const ImGuiPayload* lPayload = ImGui::AcceptDragDropPayload(ENTITY_DRAG_PAYLOAD);
+                lPayload != nullptr && static_cast<const EntityDragPayload*>(lPayload->Data)->Source == m_World)
             {
-                m_Drop     = EntityTreeDrop{ *static_cast<const EntityID*>(lPayload->Data), ENTITY_NONE, InMap };
+                m_Drop     = EntityTreeDrop{ static_cast<const EntityDragPayload*>(lPayload->Data)->Handle, ENTITY_NONE, InMap };
                 m_bHasDrop = true;
             }
             ImGui::EndDragDropTarget();
@@ -146,7 +153,7 @@ namespace Opaax::Editor
     {
         // Only while one of our payloads is dragged (a dragged texture shows nothing).
         const ImGuiPayload* lInFlight = ImGui::GetDragDropPayload();
-        if (lInFlight == nullptr || !lInFlight->IsDataType(k_Payload)) { return; }
+        if (lInFlight == nullptr || !lInFlight->IsDataType(ENTITY_DRAG_PAYLOAD)) { return; }
 
         ImGui::Selectable("Drop here to unparent", false, ImGuiSelectableFlags_None, ImVec2(0.f, 0.f));
         AcceptRootDrop(InMap);

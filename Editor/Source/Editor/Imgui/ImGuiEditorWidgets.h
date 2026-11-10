@@ -6,7 +6,7 @@ namespace Opaax::Editor
 {
     // =============================================================================
     // ImGuiEditorWidgets — IEditorWidgets over ImGui. Owned by ImGuiEditorGui, reached through
-    //   IEditorGui::Widgets(). Stateless; a class so another backend can replace it.
+    //   IEditorGui::Widgets(). Holds only the entity scope; a class so another backend can replace it.
     //   Not the same as Editor/ImguiLibrary/ImguiWidgets.h (panel-side helpers).
     // =============================================================================
     class ImGuiEditorWidgets final : public IEditorWidgets
@@ -51,6 +51,8 @@ namespace Opaax::Editor
         bool Selectable(const char* InLabel, bool bInSelected) override;
         void SetDefaultFocus() override;
         void EndCombo() override;
+
+        bool EntityRefField(const char* InLabel, Guid& InOutId) override;
         //~End IEditorWidgets interface
     };
 }
