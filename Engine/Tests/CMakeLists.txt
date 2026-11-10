@@ -125,6 +125,7 @@ set(OPAAX_TEST_SOURCES
     World/ComponentRegistryTests.cpp
     World/EntityCloneTests.cpp
     World/EntityHierarchyTests.cpp
+    World/EntityRefTests.cpp
     World/EntityQueryTests.cpp
     World/HardReferencesTests.cpp
     World/LevelFileTests.cpp
