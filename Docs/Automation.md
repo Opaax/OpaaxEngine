@@ -197,8 +197,13 @@ With `"prefab": true`, the entity copy commands act on the prefab open in the Pr
 a `.opaaxprefab`), on its own selection and history (`editor.command` with
 `Editor.Command.UndoPrefab` undoes there). A paste that would make the prefab place itself is refused.
 A copy is JSON on the system clipboard, `{"opaaxClipboard": "Entities", "version": 1, "data": ...}`:
-whole prefab placements stay placements, part of one is copied as plain entities. Running these
-commands replaces whatever was on your clipboard.
+whole prefab placements stay placements, part of one is copied as plain entities. Every copy gets a
+name no other entity has (`Finger 1`), children included, and its `EntityRef` fields that named a
+copied entity name the copy. Running these commands replaces whatever was on your clipboard.
+
+An `EntityRef` field is set like any value, with the guid of the entity it names
+(`entity.get` answers it as `id`): `{"Target": {"entityRef": "c480b8587bc8547b838377ccc3789645"}}`.
+A rename onto a name another entity has gets the next free one (`Arm 1`).
 
 A script never meets a dialog: while a request runs, the editor's questions and file pickers stay
 closed, and a request that met one did nothing and fails, saying what was asked. Opening a level

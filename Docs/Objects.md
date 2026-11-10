@@ -39,7 +39,9 @@ OPAAX_REGISTER_OBJECT(EnemyStats);
 - `OPAAX_PROPERTIES` lists the fields that are saved, drawn in the editor and set by automation:
   numbers, `bool`, strings, names (`OpaaxStringID`), enums declared with `OPAAX_ENUM_VALUES` (saved by
   name), vectors and colours, another asset (`TAssetRef<Material2D>`, `TAssetRef<Texture2D>` for an
-  image, `TAssetRef<PrefabAsset>` for a prefab), and lists of structs that have
+  image, `TAssetRef<PrefabAsset>` for a prefab), an entity of the same world in a component or a
+  behaviour (`EntityRef`, saved as `{"entityRef": "<guid>"}`, drawn as a slot a Hierarchy row is
+  dropped on, read with `Behaviour::Resolve`), and lists of structs that have
   `OPAAX_PROPERTIES` and `NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT`. Give every field a default: a
   file written before a field existed still loads.
 - `OPAAX_REGISTER_OBJECT(Class)` is the only registration. After renaming a class,
