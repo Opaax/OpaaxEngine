@@ -76,6 +76,13 @@ namespace Opaax::Editor
     void ComponentAdd::Undo(EditorContext& InContext) { Take(InContext, EntityId, TypeName); }
     void ComponentAdd::Redo(EditorContext& InContext) { Put(InContext, EntityId, TypeName, nullptr); }
 
+    void ComponentPaste::Undo(EditorContext& InContext)
+    {
+        if (bHadComponent) { Put(InContext, EntityId, TypeName, &Before); }
+        else               { Take(InContext, EntityId, TypeName); }
+    }
+    void ComponentPaste::Redo(EditorContext& InContext) { Put(InContext, EntityId, TypeName, &After); }
+
     void ComponentRemove::Undo(EditorContext& InContext) { Put(InContext, EntityId, TypeName, &Data); }
     void ComponentRemove::Redo(EditorContext& InContext) { Take(InContext, EntityId, TypeName); }
 

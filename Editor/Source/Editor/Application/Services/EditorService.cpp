@@ -467,6 +467,8 @@ namespace Opaax::Editor
         lCommands.Register<RenameSelectedCommand>(Tags::EDITOR_COMMAND_RENAME_SELECTED);
         lCommands.Register<AddComponentCommand>(Tags::EDITOR_COMMAND_ADD_COMPONENT);
         lCommands.Register<RemoveComponentCommand>(Tags::EDITOR_COMMAND_REMOVE_COMPONENT);
+        lCommands.Register<CopyComponentCommand>(Tags::EDITOR_COMMAND_COPY_COMPONENT);
+        lCommands.Register<PasteComponentCommand>(Tags::EDITOR_COMMAND_PASTE_COMPONENT);
 
         lCommands.Register<UndoCommand>(Tags::EDITOR_COMMAND_UNDO);
         lCommands.Register<RedoCommand>(Tags::EDITOR_COMMAND_REDO);

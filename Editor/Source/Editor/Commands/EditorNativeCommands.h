@@ -303,6 +303,25 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params& InParams);
     };
 
+    /** Puts one component of the primary selection on the clipboard (the Copy Component popup). */
+    struct CopyComponentCommand
+    {
+        using Params = ComponentTypeParams;
+
+        void Execute(EditorContext& InContext, const Params& InParams);
+    };
+
+    /**
+     * Pastes the clipboard's component on the primary selection: over its own of that type, or added
+     * (the Paste Component button). Refused during Play.
+     */
+    struct PasteComponentCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
     /** Removes one (the Remove popup). Essential types are refused by the registry entry. */
     struct RemoveComponentCommand
     {

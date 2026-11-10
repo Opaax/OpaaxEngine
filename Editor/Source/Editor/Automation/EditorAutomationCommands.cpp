@@ -923,6 +923,36 @@ namespace Opaax::Editor::EditorAutomation
                     return AutomationResult::Ok(Describe(InContext, lEntity));
                 });
 
+            InCommands.Register("component.copy",
+                "Puts {entity}'s component {type} on the clipboard (its values), as Copy Component does.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString  lError;
+                    const Entity lEntity = FindEntity(InContext, InParams, lError);
+                    if (!lEntity.IsValid()
+                        || !EntityOps::CopyComponent(InContext, lEntity, OpaaxStringID(InParams.value("type", OpaaxString())),
+                                                     &lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+                    return AutomationResult::Ok();
+                });
+
+            InCommands.Register("component.paste",
+                "Pastes the clipboard's component on {entity}: over its own of that type, or added with the copied "
+                "values. Undoable. A value the type refuses changes nothing.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString  lError;
+                    const Entity lEntity = FindEntity(InContext, InParams, lError);
+                    if (!lEntity.IsValid() || !IsEditing(InContext, lError)
+                        || !EntityOps::PasteComponent(InContext, lEntity, &lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+                    return AutomationResult::Ok(Describe(InContext, lEntity));
+                });
+
             InCommands.Register("component.remove", "Removes the component {type} from {entity}. Undoable.",
                 [&InContext](const nlohmann::json& InParams)
                 {

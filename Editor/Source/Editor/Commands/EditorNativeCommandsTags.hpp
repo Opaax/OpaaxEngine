@@ -47,6 +47,8 @@ namespace Opaax::Editor::Tags
     inline const OpaaxTag EDITOR_COMMAND_RENAME_SELECTED  = OpaaxTag("Editor.Command.RenameSelected");
     inline const OpaaxTag EDITOR_COMMAND_ADD_COMPONENT    = OpaaxTag("Editor.Command.AddComponent");
     inline const OpaaxTag EDITOR_COMMAND_REMOVE_COMPONENT = OpaaxTag("Editor.Command.RemoveComponent");
+    inline const OpaaxTag EDITOR_COMMAND_COPY_COMPONENT   = OpaaxTag("Editor.Command.CopyComponent");
+    inline const OpaaxTag EDITOR_COMMAND_PASTE_COMPONENT  = OpaaxTag("Editor.Command.PasteComponent");
 
     //The gizmo's per-frame drag. Records nothing (the viewport records one step per drag).
     inline const OpaaxTag EDITOR_COMMAND_TRANSFORM_SELECTED = OpaaxTag("Editor.Command.TransformSelected");
