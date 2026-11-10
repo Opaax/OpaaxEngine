@@ -3,6 +3,7 @@
 #include "Core/Templates/TypeTraits.h"
 
 #include "Core/Color/LinearColor.h"
+#include "Core/GUID/Guid.h"
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxEnum.h"
@@ -106,6 +107,16 @@ namespace Opaax
                                     const PropertyMeta& InMeta) = 0;
 
         /**
+         * An entity reference (EntityRef): the guid of the entity it names. Write InOutId to change it.
+         * By default reported as unsupported, so a visitor that has nothing to do with entities needs no code.
+         */
+        virtual void VisitEntityRef(const char* InName, Guid& InOutId, const PropertyMeta& /*InMeta*/)
+        {
+            (void)InOutId;
+            VisitUnsupported(InName, "EntityRef");
+        }
+
+        /**
          * A nested reflected struct. Return false to skip its fields (e.g. a collapsed tree node);
          * EndGroup is only called after a true.
          */
@@ -134,6 +145,14 @@ namespace Opaax
             typename T::AssetType;
             requires T::k_IsAssetRef;
             { InValue.Path } -> CConvertibleTo<OpaaxString&>;
+        };
+
+        /** An EntityRef, recognised by its marker (World/Entity/EntityRef.h is not needed here). */
+        template<typename T>
+        concept CEntityRefField = requires(T& InValue)
+        {
+            requires T::k_IsEntityRef;
+            { InValue.Id } -> CConvertibleTo<Guid&>;
         };
 
         template<typename T>
@@ -253,6 +272,10 @@ namespace Opaax
         else if constexpr (CObjectPtrField<TValue>)
         {
             InVisitor.VisitObjectRef(InName, InValue.GetMutableHandle(), TValue::ObjectType::StaticClass(), InMeta);
+        }
+        else if constexpr (CEntityRefField<TValue>)
+        {
+            InVisitor.VisitEntityRef(InName, InValue.Id, InMeta);
         }
         else if constexpr (k_IsList<TValue> && !TIsSame<TValue, TDynArray<bool>>)
         {
