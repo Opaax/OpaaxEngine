@@ -5,6 +5,7 @@
 #include "Core/String/OpaaxPathString.h"
 #include "UI/UICanvasFile.h"
 #include "UI/UIWidget.h"
+#include "UI/UIWidgetNames.h"
 #include "Object/ObjectClassRegistry.h"
 
 namespace Opaax::Editor
@@ -45,6 +46,14 @@ namespace Opaax::Editor
         m_Baseline = Serialize();
 
         OPAAX_LOG(LogEditorUICanvasDocument, Info, "Opened '{}'", InAbsPath.CStr());
+
+        // UIWidget::FindByName takes the first match: a shared name hides a widget from game code.
+        for (const OpaaxString& lName : UIWidgetNames::FindDuplicates(m_Canvas.Root()))
+        {
+            OPAAX_LOG(LogEditorUICanvasDocument, Warn,
+                      "'{}' has several widgets named '{}': FindByName finds only the first. Rename them apart.",
+                      InAbsPath.CStr(), lName.CStr());
+        }
         return true;
     }
 

@@ -912,6 +912,42 @@ namespace Opaax::Editor
         }
     }
 
+    Uint64 EntityOps::WarnDuplicateNames(World& InWorld, const OpaaxString& InDocument)
+    {
+        TDynArray<OpaaxString> lSeen;
+        TDynArray<OpaaxString> lShared;
+
+        const auto lHas = [](const TDynArray<OpaaxString>& InNames, const OpaaxString& InName)
+        {
+            for (const OpaaxString& lName : InNames)
+            {
+                if (lName == InName) { return true; }
+            }
+            return false;
+        };
+
+        InWorld.Each<EntityMeta>([&](EntityID, const EntityMeta& InMeta)
+        {
+            if (InMeta.Name.IsEmpty()) { return; }
+
+            if (!lHas(lSeen, InMeta.Name))       { lSeen.emplace_back(InMeta.Name); }
+            else if (!lHas(lShared, InMeta.Name)) { lShared.emplace_back(InMeta.Name); }
+        });
+
+        if (!lShared.empty())
+        {
+            OpaaxString lList;
+            for (const OpaaxString& lName : lShared)
+            {
+                lList += (lList.IsEmpty() ? OpaaxString() : OpaaxString(", ")) + OpaaxString("'") + lName + OpaaxString("'");
+            }
+            OPAAX_LOG(LogEntityOps, Warn,
+                      "'{}' has several entities named {}: a lookup by name (FindEntity, a camera's Target) may find "
+                      "either. Rename them apart.", InDocument.CStr(), lList.CStr());
+        }
+        return lShared.size();
+    }
+
     Uint64 EntityOps::Duplicate(EditorContext& InContext, const EUndoWorld InScope)
     {
         if (InScope == EUndoWorld::Active && !MapOps::CanEdit(InContext, "Duplicate")) { return 0; }
