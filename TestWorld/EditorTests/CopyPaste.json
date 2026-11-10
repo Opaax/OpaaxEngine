@@ -130,6 +130,153 @@
         }
     },
     {
+        "id": "paste-not-a-copy",
+        "command": "entity.paste",
+        "expectFailure": true
+    },
+    {
+        "id": "copy",
+        "command": "entity.copy",
+        "params": {
+            "entities": [
+                "Hand"
+            ]
+        },
+        "expect": {
+            "count": 2
+        }
+    },
+    {
+        "id": "copied-kind",
+        "command": "clipboard.get",
+        "expect": {
+            "kind": "Entities"
+        }
+    },
+    {
+        "id": "paste",
+        "command": "entity.paste",
+        "expect": {
+            "count": 2,
+            "entities": [
+                {
+                    "name": "Hand 2",
+                    "parent": null,
+                    "map": "Hierarchy"
+                }
+            ]
+        }
+    },
+    {
+        "id": "pasted-at-world-x",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hand 2",
+            "path": "Transform/Position/x",
+            "near": -200,
+            "tolerance": 0.01
+        }
+    },
+    {
+        "id": "pasted-at-world-y",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hand 2",
+            "path": "Transform/Position/y",
+            "near": 100,
+            "tolerance": 0.01
+        }
+    },
+    {
+        "id": "pasted-at-world-rotation",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hand 2",
+            "path": "Transform/Rotation",
+            "near": 90,
+            "tolerance": 0.01
+        }
+    },
+    {
+        "id": "pasted-at-world-scale",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hand 2",
+            "path": "Transform/Scale/x",
+            "near": 2,
+            "tolerance": 0.01
+        }
+    },
+    {
+        "id": "pasted-child",
+        "command": "expect.count",
+        "params": {
+            "name": "Finger",
+            "equals": 3
+        }
+    },
+    {
+        "id": "undo-paste",
+        "command": "editor.undo"
+    },
+    {
+        "id": "paste-undone",
+        "command": "expect.entity",
+        "params": {
+            "entity": "Hand 2",
+            "exists": false
+        }
+    },
+    {
+        "id": "cut",
+        "command": "entity.cut",
+        "params": {
+            "entities": [
+                "Witness"
+            ]
+        },
+        "expect": {
+            "count": 1
+        }
+    },
+    {
+        "id": "cut-gone",
+        "command": "expect.entity",
+        "params": {
+            "entity": "Witness",
+            "exists": false
+        }
+    },
+    {
+        "id": "paste-cut",
+        "command": "entity.paste",
+        "expect": {
+            "count": 1,
+            "entities": [
+                {
+                    "name": "Witness",
+                    "parent": null
+                }
+            ]
+        }
+    },
+    {
+        "id": "undo-paste-cut",
+        "command": "editor.undo"
+    },
+    {
+        "id": "undo-cut",
+        "command": "editor.undo"
+    },
+    {
+        "id": "cut-undone",
+        "command": "expect.count",
+        "params": {
+            "name": "Witness",
+            "equals": 1
+        }
+    },
+    {
         "id": "scratch-level",
         "command": "level.new",
         "params": {

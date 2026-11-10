@@ -40,6 +40,8 @@
 #include "World/Prefab/PrefabAsset.h"
 #include "World/Serialization/MapFactory.h"
 #include "World/Serialization/EntityClone.h"
+#include "World/Serialization/MapJson.h"
+#include "Editor/Clipboard/EditorClipboard.h"
 
 using namespace Opaax;
 
@@ -908,6 +910,101 @@ namespace Opaax::Editor
             PlaceCopies(InContext, InScope, *lWorld, EntityClone::Clone(lSource, lOptions, lRegistry), "Duplicate");
 
         OPAAX_LOG(LogEntityOps, Info, "Duplicated {} entity(ies)", lPlaced.size());
+        return lPlaced.size();
+    }
+
+    Uint64 EntityOps::Copy(EditorContext& InContext, const EUndoWorld InScope)
+    {
+        World* const lWorld = SelectionWorld(InContext, InScope);
+        if (lWorld == nullptr) { return 0; }   // nothing selected (normal)
+
+        const MapData lData = CaptureForCopy(*lWorld, UndoSelection(InContext, InScope).Ids(),
+                                             InContext.Engine.GetRegistries().Components(), /*bInAsRoots*/ true);
+        if (lData.Entities.empty()) { return 0; }
+
+        InContext.Clipboard.Copy(EClipboardKind::Entities, MapJson::ToJson(lData));
+
+        OPAAX_LOG(LogEntityOps, Info, "Copied {} entity(ies)", lData.EntityCount());
+        return lData.EntityCount();
+    }
+
+    Uint64 EntityOps::Cut(EditorContext& InContext, const EUndoWorld InScope)
+    {
+        if (InScope == EUndoWorld::Active && !MapOps::CanEdit(InContext, "Cut")) { return 0; }
+
+        World* const lWorld = SelectionWorld(InContext, InScope);
+        if (lWorld == nullptr) { return 0; }
+
+        const Uint64 lCopied = Copy(InContext, InScope);
+        if (lCopied == 0) { return 0; }
+
+        // As Delete does, in either world: captured before, the subtree with it.
+        EditorSelection&    lSelection = UndoSelection(InContext, InScope);
+        TDynArray<EntityID> lIds;
+        EntityHierarchy::CollectSubtree(*lWorld, lSelection.Ids(), lIds);
+
+        EntityDelete lStep{ MapSerializer::CaptureEntities(*lWorld, InContext.Engine.GetRegistries().Components(), lIds),
+                            InScope };
+        lSelection.Clear();
+        DestroyEntities(*lWorld, lIds);
+        UndoStack(InContext, InScope).Record(Move(lStep));
+
+        return lCopied;
+    }
+
+    Uint64 EntityOps::Paste(EditorContext& InContext, const EUndoWorld InScope, const MapId InOwnerMap,
+                            OpaaxString* OutError)
+    {
+        OpaaxString lError;
+        const auto  lRefuse = [&lError, OutError](OpaaxString InWhy)
+        {
+            OPAAX_LOG(LogEntityOps, Warn, "Paste refused — {}", InWhy.CStr());
+            if (OutError != nullptr) { *OutError = Move(InWhy); }
+            return Uint64{ 0 };
+        };
+
+        if (InScope == EUndoWorld::Active && !MapOps::CanEdit(InContext, "Paste"))
+        {
+            return lRefuse("the game is playing: stop it first");
+        }
+
+        World* const lWorld = UndoWorld(InContext, InScope);
+        if (lWorld == nullptr) { return lRefuse("no world to paste into"); }
+
+        if (InScope == EUndoWorld::Active && !InOwnerMap.IsValid())
+        {
+            return lRefuse("no map to paste into: open or focus a map first");
+        }
+
+        nlohmann::json lJson;
+        MapData        lSource;
+        if (!InContext.Clipboard.Read(EClipboardKind::Entities, lJson, lError))
+        {
+            return lRefuse(lError + " (copy entities first)");
+        }
+        if (!MapJson::FromJson(lJson, lSource) || lSource.Entities.empty())
+        {
+            return lRefuse("the clipboard's entities cannot be read");
+        }
+
+        const ComponentRegistry& lRegistry = InContext.Engine.GetRegistries().Components();
+
+        // Roots, at the poses they were copied at, in the target map.
+        EntityClone::Options lOptions;
+        lOptions.OwnerMap = InScope == EUndoWorld::Active ? InOwnerMap : MapId();
+
+        MapData lCopy = EntityClone::Clone(lSource, lOptions, lRegistry);
+
+        // A prefab's entities belong to no map.
+        if (InScope == EUndoWorld::Prefab)
+        {
+            for (EntityData& lEntity : lCopy.Entities) { lEntity.OwnerMap = MapId(); }
+        }
+
+        const TDynArray<EntityID> lPlaced = PlaceCopies(InContext, InScope, *lWorld, Move(lCopy), "Paste");
+        if (lPlaced.empty()) { return lRefuse("nothing could be created (see the log)"); }
+
+        OPAAX_LOG(LogEntityOps, Info, "Pasted {} entity(ies)", lPlaced.size());
         return lPlaced.size();
     }
 

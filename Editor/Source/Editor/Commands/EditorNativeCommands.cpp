@@ -400,6 +400,22 @@ namespace Opaax::Editor
         EntityOps::Duplicate(InContext, EUndoWorld::Active);
     }
 
+    void CopySelectedCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        EntityOps::Copy(InContext, EUndoWorld::Active);
+    }
+
+    void CutSelectedCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        EntityOps::Cut(InContext, EUndoWorld::Active);
+    }
+
+    void PasteEntitiesCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        // The focused map, as Create Entity's menu entry. Paste logs why when it refuses.
+        EntityOps::Paste(InContext, EUndoWorld::Active, InContext.MapDocument.GetMapId());
+    }
+
     void RenameSelectedCommand::Execute(EditorContext& InContext, const Params& InParams)
     {
         EntityOps::Rename(InContext, InContext.Selection.Get(), InParams.Name);

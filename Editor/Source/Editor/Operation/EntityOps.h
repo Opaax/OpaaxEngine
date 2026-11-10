@@ -120,6 +120,28 @@ namespace Opaax::Editor
         Uint64 Duplicate(EditorContext& InContext, EUndoWorld InScope);
 
         /**
+         * Puts the selection of InScope's world, children included, on the clipboard (EditorClipboard), at
+         * their world poses. Not an edit: allowed during Play. Part of a prefab instance is copied unlinked.
+         * @return Number of entities copied. 0 = nothing selected
+         */
+        Uint64 Copy(EditorContext& InContext, EUndoWorld InScope);
+
+        /**
+         * Copy, then delete the selection (one undo step, the delete's).
+         * @return Number of entities copied. 0 = nothing selected, or refused during Play
+         */
+        Uint64 Cut(EditorContext& InContext, EUndoWorld InScope);
+
+        /**
+         * Makes new entities of the clipboard's copy in InScope's world: roots at the pose they were copied
+         * at, roots named anew, selected, one "Paste" undo step.
+         * @param InOwnerMap The level's map they go into (required for the level; unused for the prefab)
+         * @param OutError Why nothing was pasted (no copy of entities, no map, Play running)
+         * @return Number of entities created. 0 = nothing pasted
+         */
+        Uint64 Paste(EditorContext& InContext, EUndoWorld InScope, MapId InOwnerMap, OpaaxString* OutError = nullptr);
+
+        /**
          * Adds a registered component to InEntity, by name (a command can carry a name, not a pointer).
          * @return False if the type is unknown, already present, or the edit was refused
          */

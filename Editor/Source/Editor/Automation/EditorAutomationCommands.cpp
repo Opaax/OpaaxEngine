@@ -783,6 +783,67 @@ namespace Opaax::Editor::EditorAutomation
                     return DescribeCopies(InContext, lCount);
                 });
 
+            InCommands.Register("entity.copy",
+                "Puts {entities} (ids or names; default: the selection), children included, on the clipboard, as "
+                "Copy does. Allowed while playing. Answers the {count} copied.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString lError;
+                    if (!SelectListed(InContext, InParams, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    const Uint64 lCount = EntityOps::Copy(InContext, EUndoWorld::Active);
+                    if (lCount == 0)
+                    {
+                        return AutomationResult::Fail("nothing is selected: name the \"entities\" to copy");
+                    }
+                    return AutomationResult::Ok(nlohmann::json{ { "count", lCount } });
+                });
+
+            InCommands.Register("entity.cut",
+                "Puts {entities} (ids or names; default: the selection), children included, on the clipboard, then "
+                "deletes them, as Cut does. Undoable. Answers the {count} copied.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString lError;
+                    if (!IsEditing(InContext, lError) || !SelectListed(InContext, InParams, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    const Uint64 lCount = EntityOps::Cut(InContext, EUndoWorld::Active);
+                    if (lCount == 0)
+                    {
+                        return AutomationResult::Fail("nothing is selected: name the \"entities\" to cut");
+                    }
+                    return AutomationResult::Ok(nlohmann::json{ { "count", lCount } });
+                });
+
+            InCommands.Register("entity.paste",
+                "Makes new entities of the clipboard's copy in {map} (default: the focused one), where they were "
+                "copied, as Paste does: the copies are named anew and selected. Undoable. Answers {count} created and "
+                "the selected copies ({id, name, parent, map}).",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString lError;
+                    if (!IsEditing(InContext, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    const OpaaxString lMap   = InParams.value("map", OpaaxString());
+                    const MapId       lOwner = lMap.IsEmpty() ? InContext.MapDocument.GetMapId() : MapId(lMap);
+
+                    const Uint64 lCount = EntityOps::Paste(InContext, EUndoWorld::Active, lOwner, &lError);
+                    if (lCount == 0)
+                    {
+                        return AutomationResult::Fail("nothing was pasted: " + lError);
+                    }
+                    return DescribeCopies(InContext, lCount);
+                });
+
             InCommands.Register("entity.select", "Selects {entities} (ids or names); an empty list clears the selection.",
                 [&InContext](const nlohmann::json& InParams)
                 {
