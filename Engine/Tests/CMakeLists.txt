@@ -66,6 +66,7 @@ set(OPAAX_TEST_SOURCES
     Core/TimeTests.cpp
     Core/TypesTests.cpp
     Core/TypeTraitsTests.cpp
+    Core/UniqueNameTests.cpp
 
     # Application services and platform
     Application/AppServiceLocatorTests.cpp
