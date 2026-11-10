@@ -178,35 +178,8 @@ namespace Opaax::Editor
         // This window's shortcut route: only while this panel is focused, never while typing a name.
         if (m_Context.Gui.IsKeyboardOwnedByUI()) { return; }
 
-        EditorUICanvasDocument& lDoc      = m_Context.UICanvasDocument;
-        const UIWidgetPath      lSelected = lDoc.SelectedPath();
-
-        if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_D))
-        {
-            if (const UIWidgetPath lPath = UICanvasOps::DuplicateWidget(m_Context, lSelected); !lPath.empty())
-            {
-                lDoc.Select(lPath);
-            }
-        }
-
-        if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C))
-        {
-            if (const OpaaxString lText = UICanvasOps::CopyWidget(m_Context, lSelected); !lText.IsEmpty())
-            {
-                ImGui::SetClipboardText(lText.CStr());
-            }
-        }
-
-        if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_V))
-        {
-            // Under the selection if any, else at the top level.
-            const char* lClipboard = ImGui::GetClipboardText();
-            if (const UIWidgetPath lPath = UICanvasOps::PasteWidget(m_Context, OpaaxString(lClipboard), lSelected);
-                !lPath.empty())
-            {
-                lDoc.Select(lPath);
-            }
-        }
+        // Ctrl+C / X / V / D are the editor's chords, routed here by this panel's PanelDesc.
+        const UIWidgetPath lSelected = m_Context.UICanvasDocument.SelectedPath();
 
         if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_UpArrow))   { UICanvasOps::MoveWidget(m_Context, lSelected, -1); }
         if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_DownArrow)) { UICanvasOps::MoveWidget(m_Context, lSelected, +1); }

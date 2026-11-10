@@ -197,8 +197,9 @@ edit world and throws the clone away on Stop.
 Copy and paste go through the system clipboard as readable JSON in an envelope that names what it
 holds (`EditorClipboard`), so a paste refuses another kind and a copy survives between editors. The
 focused panel declares what Ctrl+C, Ctrl+X, Ctrl+V and Ctrl+D run (`PanelDesc`), as it does for Save,
-Undo and Delete: a copy acts on the document in front, and a panel that declares none keeps the keys
-(the UI panel handles its widgets itself). Entities copy through `EntityClone`, which gives the copies
+Undo and Delete: a copy acts on the document in front (entities in the Hierarchy and the Viewport,
+the prefab's in the Prefab panel, widgets in the UI panel), and a panel that declares none keeps the
+keys. Entities copy through `EntityClone`, which gives the copies
 new guids and keeps a whole prefab placement a placement.
 
 - **For:** an agent's edit is a user's edit (undoable, same checks); Stop needs no undo; a game adds

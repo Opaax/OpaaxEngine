@@ -53,7 +53,7 @@ namespace Opaax::Editor
 
         /**
          * The commands Ctrl+C / Ctrl+X / Ctrl+V / Ctrl+D run while this panel is focused. Invalid = the panel
-         * has none: the chords do nothing there (a panel may handle them itself, as the UI panel does).
+         * has none: the chords do nothing there (a panel may handle them itself).
          */
         OpaaxTag CopyCommand;
         OpaaxTag CutCommand;

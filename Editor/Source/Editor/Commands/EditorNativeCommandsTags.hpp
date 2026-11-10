@@ -111,7 +111,11 @@ namespace Opaax::Editor::Tags
     inline const OpaaxTag EDITOR_COMMAND_NEW_UI           = OpaaxTag("Editor.Command.NewUI");
     inline const OpaaxTag EDITOR_COMMAND_NEW_UI_AT        = OpaaxTag("Editor.Command.NewUIAt");
     inline const OpaaxTag EDITOR_COMMAND_SAVE_UI          = OpaaxTag("Editor.Command.SaveUI");
-    inline const OpaaxTag EDITOR_COMMAND_DELETE_UI_WIDGET = OpaaxTag("Editor.Command.DeleteUIWidget");
+    inline const OpaaxTag EDITOR_COMMAND_DELETE_UI_WIDGET    = OpaaxTag("Editor.Command.DeleteUIWidget");
+    inline const OpaaxTag EDITOR_COMMAND_COPY_UI_WIDGET      = OpaaxTag("Editor.Command.CopyUIWidget");
+    inline const OpaaxTag EDITOR_COMMAND_CUT_UI_WIDGET       = OpaaxTag("Editor.Command.CutUIWidget");
+    inline const OpaaxTag EDITOR_COMMAND_PASTE_UI_WIDGET     = OpaaxTag("Editor.Command.PasteUIWidget");
+    inline const OpaaxTag EDITOR_COMMAND_DUPLICATE_UI_WIDGET = OpaaxTag("Editor.Command.DuplicateUIWidget");
 
     // Assets: every .opaaxasset, whatever its class, in a window of its own. The asset is the
     // AssetPathParams payload; an empty path means the focused asset window.

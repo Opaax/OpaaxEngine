@@ -18,6 +18,9 @@
 #include "Editor/EditorContext.h"
 #include "Editor/EditorLevelDocument.h"
 #include "Editor/EditorMapDocument.h"
+#include "Editor/EditorUICanvasDocument.h"
+#include "Editor/Operation/UICanvasOperations.h"
+#include "UI/UIWidget.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/Operation/EditorSelection.hpp"
 #include "Editor/Operation/EditorViewport.hpp"
@@ -1203,6 +1206,97 @@ namespace Opaax::Editor::EditorAutomation
                         return AutomationResult::Fail("the canvas was not written (see the log)");
                     }
                     return AutomationResult::Ok(nlohmann::json{ { "path", InContext.Paths.AbsoluteToAsset(lPath).CStr() } });
+                });
+
+            InCommands.Register("ui.widget.add",
+                "Adds a widget of {type} (UIPanel, UIText, UIButton...) to the canvas open in the UI panel, under the "
+                "widget named {parent} (default: the top level), as the panel's Add does. Undoable. Answers its {name}.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    EditorUICanvasDocument& lDocument = InContext.UICanvasDocument;
+                    if (!lDocument.IsOpen())
+                    {
+                        return AutomationResult::Fail("no canvas is open in the UI panel: ui.new makes one");
+                    }
+
+                    UIWidgetPath      lParent;
+                    const OpaaxString lParentName = InParams.value("parent", OpaaxString());
+                    if (!lParentName.IsEmpty())
+                    {
+                        const UIWidget* lFound = lDocument.GetCanvas().Root().FindByName(lParentName);
+                        if (lFound == nullptr)
+                        {
+                            return AutomationResult::Fail("no widget named '" + lParentName + "' (ui.widget.list)");
+                        }
+                        lParent = lDocument.PathOf(*lFound);
+                    }
+
+                    const UIWidgetPath lPath = UICanvasOps::AddWidget(InContext,
+                                                                      OpaaxStringID(InParams.value("type", OpaaxString())),
+                                                                      lParent);
+                    if (lPath.empty())
+                    {
+                        return AutomationResult::Fail("not added: \"type\" names a registered widget class (UIPanel, "
+                                                      "UIText...)");
+                    }
+                    return AutomationResult::Ok(nlohmann::json{ { "name", lDocument.Resolve(lPath)->Name } });
+                });
+
+            InCommands.Register("ui.widget.select",
+                "Selects the widget named {name} in the UI panel's canvas (what its copy, paste and delete act on); "
+                "an empty name clears the selection.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    EditorUICanvasDocument& lDocument = InContext.UICanvasDocument;
+                    if (!lDocument.IsOpen())
+                    {
+                        return AutomationResult::Fail("no canvas is open in the UI panel: ui.new makes one");
+                    }
+
+                    const OpaaxString lName = InParams.value("name", OpaaxString());
+                    if (lName.IsEmpty())
+                    {
+                        lDocument.ClearSelection();
+                        return AutomationResult::Ok();
+                    }
+
+                    const UIWidget* lFound = lDocument.GetCanvas().Root().FindByName(lName);
+                    if (lFound == nullptr)
+                    {
+                        return AutomationResult::Fail("no widget named '" + lName + "' (ui.widget.list)");
+                    }
+                    lDocument.Select(lDocument.PathOf(*lFound));
+                    return AutomationResult::Ok();
+                });
+
+            InCommands.Register("ui.widget.list",
+                "The widgets of the UI panel's canvas, in tree order: {widgets: [{name, type, parent}]}, and the "
+                "{selected} one's name.",
+                [&InContext](const nlohmann::json&)
+                {
+                    EditorUICanvasDocument& lDocument = InContext.UICanvasDocument;
+                    if (!lDocument.IsOpen())
+                    {
+                        return AutomationResult::Fail("no canvas is open in the UI panel: ui.new makes one");
+                    }
+
+                    nlohmann::json lWidgets = nlohmann::json::array();
+                    const TFunction<void(const UIWidget&)> lWalk = [&lWidgets, &lWalk](const UIWidget& InWidget)
+                    {
+                        for (const TStrongObjectPtr<UIWidget>& lChild : InWidget.GetChildren())
+                        {
+                            lWidgets.push_back(nlohmann::json{ { "name", lChild->Name },
+                                                               { "type", lChild->GetClass().GetName().CStr() },
+                                                               { "parent", InWidget.Name } });
+                            lWalk(*lChild);
+                        }
+                    };
+                    lWalk(lDocument.GetCanvas().Root());
+
+                    const UIWidget* lSelected = lDocument.SelectedWidget();
+                    return AutomationResult::Ok(nlohmann::json{
+                        { "widgets", lWidgets },
+                        { "selected", lSelected != nullptr ? nlohmann::json(lSelected->Name) : nlohmann::json() } });
                 });
         }
 

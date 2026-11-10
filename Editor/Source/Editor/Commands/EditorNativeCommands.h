@@ -692,6 +692,38 @@ namespace Opaax::Editor
     };
 
     /**
+     * Copy, Cut, Paste and Duplicate of the UI panel's selected widget (the chords while that panel is
+     * focused). Paste goes under the selection, the top level when none (UICanvasOps).
+     */
+    struct CopyUIWidgetCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    struct CutUIWidgetCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    struct PasteUIWidgetCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    struct DuplicateUIWidgetCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /**
      * Add Map to Level: asks for a map file, then runs AddMapToLevelAtCommand. (Removing a map and choosing
      * the persistent one are on the Hierarchy's map headers.)
      */

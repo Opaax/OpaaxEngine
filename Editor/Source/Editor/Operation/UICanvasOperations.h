@@ -45,6 +45,24 @@ namespace Opaax::Editor
         /** Pastes a subtree from text under InParent. @return Its path, empty when the text is not a widget */
         UIWidgetPath PasteWidget(EditorContext& InContext, const OpaaxString& InText, const UIWidgetPath& InParent);
 
+        // The selection and the editor's clipboard: what the panel's chords and its automation run.
+
+        /** Puts the selected widget and its subtree on the clipboard. @return False when nothing is selected */
+        bool CopySelected(EditorContext& InContext);
+
+        /** Copies the selected widget, then removes it (one undo step, the removal). The root is refused. */
+        bool CutSelected(EditorContext& InContext);
+
+        /**
+         * Pastes the clipboard's widget under the selection (the top level when none) and selects it. Takes
+         * the editor's copy, or a bare widget node (a copy made before the clipboard had kinds).
+         * @param OutError Why nothing was pasted
+         */
+        UIWidgetPath PasteFromClipboard(EditorContext& InContext, OpaaxString* OutError = nullptr);
+
+        /** Duplicates the selected widget beside it and selects the copy. */
+        UIWidgetPath DuplicateSelected(EditorContext& InContext);
+
         /**
          * Closes an in-place property edit (the panel's DrawProperties).
          * @param InBefore The whole tree when the edit started (Snapshot)

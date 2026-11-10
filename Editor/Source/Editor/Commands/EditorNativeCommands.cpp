@@ -874,6 +874,26 @@ namespace Opaax::Editor
         UICanvasOps::RemoveWidget(InContext, lSelected);
     }
 
+    void CopyUIWidgetCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        UICanvasOps::CopySelected(InContext);
+    }
+
+    void CutUIWidgetCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        UICanvasOps::CutSelected(InContext);
+    }
+
+    void PasteUIWidgetCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        UICanvasOps::PasteFromClipboard(InContext);
+    }
+
+    void DuplicateUIWidgetCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        UICanvasOps::DuplicateSelected(InContext);
+    }
+
     void SaveLevelCommand::Execute(EditorContext& InContext, const Params&)
     {
         Level* const lLevel = MapOps::ActiveLevel(InContext);
