@@ -96,6 +96,14 @@ namespace Opaax::Editor::Tags
         OpaaxTag("Editor.Command.RedoPrefab");
     inline const OpaaxTag EDITOR_COMMAND_DELETE_PREFAB_SELECTION =
         OpaaxTag("Editor.Command.DeletePrefabSelection");
+    inline const OpaaxTag EDITOR_COMMAND_COPY_PREFAB_SELECTION =
+        OpaaxTag("Editor.Command.CopyPrefabSelection");
+    inline const OpaaxTag EDITOR_COMMAND_CUT_PREFAB_SELECTION =
+        OpaaxTag("Editor.Command.CutPrefabSelection");
+    inline const OpaaxTag EDITOR_COMMAND_PASTE_INTO_PREFAB =
+        OpaaxTag("Editor.Command.PasteIntoPrefab");
+    inline const OpaaxTag EDITOR_COMMAND_DUPLICATE_PREFAB_SELECTION =
+        OpaaxTag("Editor.Command.DuplicatePrefabSelection");
 
     //UI
     inline const OpaaxTag EDITOR_COMMAND_NEW_UI           = OpaaxTag("Editor.Command.NewUI");

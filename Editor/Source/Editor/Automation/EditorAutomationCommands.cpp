@@ -32,6 +32,7 @@
 #include "Editor/Resources/AssetFileClass.hpp"
 #include "Editor/Undo/ComponentUndoables.h"
 #include "Editor/Undo/EditorUndo.h"
+#include "Editor/Undo/UndoWorld.h"
 #include "Editor/UI/GuardedEditorDialogs.hpp"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Platform/IFileSystem.h"
@@ -214,9 +215,41 @@ namespace Opaax::Editor::EditorAutomation
             return EngineAutomation::DescribeEntity(InEntity, InContext.Engine.GetRegistries().Components(), true);
         }
 
-        /** Selects InParams["entities"] (ids or names) when given; otherwise the selection stays. */
-        bool SelectListed(EditorContext& InContext, const nlohmann::json& InParams, OpaaxString& OutError)
+        /** The Prefab panel's world when InParams["prefab"] is true, else the level's. */
+        EUndoWorld ScopeOf(const nlohmann::json& InParams)
         {
+            return InParams.value("prefab", false) ? EUndoWorld::Prefab : EUndoWorld::Active;
+        }
+
+        /** Fails a copy request that cannot act in InScope now: the level while playing, the prefab when none is open. */
+        bool CanCopyIn(EditorContext& InContext, const EUndoWorld InScope, OpaaxString& OutError)
+        {
+            if (InScope == EUndoWorld::Active)
+            {
+                return IsEditing(InContext, OutError);
+            }
+            if (!InContext.PrefabDocument.IsOpen())
+            {
+                OutError = "no prefab is open in the Prefab panel: open one first (asset.open)";
+                return false;
+            }
+            return true;
+        }
+
+        /**
+         * Selects InParams["entities"] (ids or names) in InScope's world when given; otherwise its selection
+         * stays.
+         */
+        bool SelectListed(EditorContext& InContext, const EUndoWorld InScope, const nlohmann::json& InParams,
+                          OpaaxString& OutError)
+        {
+            World* const lWorld = UndoWorld(InContext, InScope);
+            if (lWorld == nullptr)
+            {
+                OutError = "no world to select in";
+                return false;
+            }
+
             const auto lList = InParams.find("entities");
             if (lList == InParams.end())
             {
@@ -228,25 +261,26 @@ namespace Opaax::Editor::EditorAutomation
                 return false;
             }
 
-            InContext.Selection.Clear();
+            EditorSelection& lSelection = UndoSelection(InContext, InScope);
+            lSelection.Clear();
             for (const nlohmann::json& lRef : *lList)
             {
-                const Entity lEntity = FindEntity(InContext, nlohmann::json{ { "entity", lRef } }, OutError);
+                const Entity lEntity = EngineAutomation::FindEntity(*lWorld, nlohmann::json{ { "entity", lRef } }, OutError);
                 if (!lEntity.IsValid())
                 {
                     return false;
                 }
-                InContext.Selection.Add(lEntity);
+                lSelection.Add(lEntity);
             }
             return true;
         }
 
         /** What a copy made: {count} entities in all, and the selected copies ({id, name, parent, map}). */
-        AutomationResult DescribeCopies(EditorContext& InContext, const Uint64 InCount)
+        AutomationResult DescribeCopies(EditorContext& InContext, const EUndoWorld InScope, const Uint64 InCount)
         {
-            World* const   lWorld  = InContext.Worlds.GetActiveWorld();
+            World* const   lWorld  = UndoWorld(InContext, InScope);
             nlohmann::json lCopies = nlohmann::json::array();
-            for (const EntityID lId : InContext.Selection.Ids())
+            for (const EntityID lId : UndoSelection(InContext, InScope).Ids())
             {
                 nlohmann::json lEntity = EngineAutomation::DescribeEntity(Entity{ lId, lWorld },
                                                                           InContext.Engine.GetRegistries().Components(),
@@ -761,40 +795,43 @@ namespace Opaax::Editor::EditorAutomation
 
             InCommands.Register("entity.duplicate",
                 "Copies {entities} (ids or names; default: the selection), children included, beside the originals, "
-                "as Duplicate does: the copies are named anew and selected. Undoable. Answers {count} created and "
-                "the selected copies ({id, name, parent, map}).",
+                "as Duplicate does: the copies are named anew and selected. Undoable. With {prefab}: true, in the "
+                "Prefab panel's prefab. Answers {count} created and the selected copies ({id, name, parent, map}).",
                 [&InContext](const nlohmann::json& InParams)
                 {
-                    OpaaxString lError;
-                    if (!IsEditing(InContext, lError) || !SelectListed(InContext, InParams, lError))
+                    const EUndoWorld lScope = ScopeOf(InParams);
+                    OpaaxString      lError;
+                    if (!CanCopyIn(InContext, lScope, lError) || !SelectListed(InContext, lScope, InParams, lError))
                     {
                         return AutomationResult::Fail(lError);
                     }
-                    if (!InContext.Selection.HasSelection())
+                    if (!UndoSelection(InContext, lScope).HasSelection())
                     {
                         return AutomationResult::Fail("nothing is selected: name the \"entities\" to copy");
                     }
 
-                    const Uint64 lCount = EntityOps::Duplicate(InContext, EUndoWorld::Active);
+                    const Uint64 lCount = EntityOps::Duplicate(InContext, lScope);
                     if (lCount == 0)
                     {
                         return AutomationResult::Fail("nothing was copied (see the log)");
                     }
-                    return DescribeCopies(InContext, lCount);
+                    return DescribeCopies(InContext, lScope, lCount);
                 });
 
             InCommands.Register("entity.copy",
                 "Puts {entities} (ids or names; default: the selection), children included, on the clipboard, as "
-                "Copy does. Allowed while playing. Answers the {count} copied.",
+                "Copy does. Allowed while playing. With {prefab}: true, from the Prefab panel's prefab. Answers the "
+                "{count} copied.",
                 [&InContext](const nlohmann::json& InParams)
                 {
-                    OpaaxString lError;
-                    if (!SelectListed(InContext, InParams, lError))
+                    const EUndoWorld lScope = ScopeOf(InParams);
+                    OpaaxString      lError;
+                    if (!SelectListed(InContext, lScope, InParams, lError))
                     {
                         return AutomationResult::Fail(lError);
                     }
 
-                    const Uint64 lCount = EntityOps::Copy(InContext, EUndoWorld::Active);
+                    const Uint64 lCount = EntityOps::Copy(InContext, lScope);
                     if (lCount == 0)
                     {
                         return AutomationResult::Fail("nothing is selected: name the \"entities\" to copy");
@@ -804,16 +841,18 @@ namespace Opaax::Editor::EditorAutomation
 
             InCommands.Register("entity.cut",
                 "Puts {entities} (ids or names; default: the selection), children included, on the clipboard, then "
-                "deletes them, as Cut does. Undoable. Answers the {count} copied.",
+                "deletes them, as Cut does. Undoable. With {prefab}: true, in the Prefab panel's prefab. Answers the "
+                "{count} copied.",
                 [&InContext](const nlohmann::json& InParams)
                 {
-                    OpaaxString lError;
-                    if (!IsEditing(InContext, lError) || !SelectListed(InContext, InParams, lError))
+                    const EUndoWorld lScope = ScopeOf(InParams);
+                    OpaaxString      lError;
+                    if (!CanCopyIn(InContext, lScope, lError) || !SelectListed(InContext, lScope, InParams, lError))
                     {
                         return AutomationResult::Fail(lError);
                     }
 
-                    const Uint64 lCount = EntityOps::Cut(InContext, EUndoWorld::Active);
+                    const Uint64 lCount = EntityOps::Cut(InContext, lScope);
                     if (lCount == 0)
                     {
                         return AutomationResult::Fail("nothing is selected: name the \"entities\" to cut");
@@ -823,12 +862,14 @@ namespace Opaax::Editor::EditorAutomation
 
             InCommands.Register("entity.paste",
                 "Makes new entities of the clipboard's copy in {map} (default: the focused one), where they were "
-                "copied, as Paste does: the copies are named anew and selected. Undoable. Answers {count} created and "
-                "the selected copies ({id, name, parent, map}).",
+                "copied, as Paste does: the copies are named anew and selected. Undoable. With {prefab}: true, into the "
+                "Prefab panel's prefab (refused when the copy places that prefab). Answers {count} created and the "
+                "selected copies ({id, name, parent, map}).",
                 [&InContext](const nlohmann::json& InParams)
                 {
-                    OpaaxString lError;
-                    if (!IsEditing(InContext, lError))
+                    const EUndoWorld lScope = ScopeOf(InParams);
+                    OpaaxString      lError;
+                    if (!CanCopyIn(InContext, lScope, lError))
                     {
                         return AutomationResult::Fail(lError);
                     }
@@ -836,12 +877,12 @@ namespace Opaax::Editor::EditorAutomation
                     const OpaaxString lMap   = InParams.value("map", OpaaxString());
                     const MapId       lOwner = lMap.IsEmpty() ? InContext.MapDocument.GetMapId() : MapId(lMap);
 
-                    const Uint64 lCount = EntityOps::Paste(InContext, EUndoWorld::Active, lOwner, &lError);
+                    const Uint64 lCount = EntityOps::Paste(InContext, lScope, lOwner, &lError);
                     if (lCount == 0)
                     {
                         return AutomationResult::Fail("nothing was pasted: " + lError);
                     }
-                    return DescribeCopies(InContext, lCount);
+                    return DescribeCopies(InContext, lScope, lCount);
                 });
 
             InCommands.Register("entity.select", "Selects {entities} (ids or names); an empty list clears the selection.",

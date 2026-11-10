@@ -347,5 +347,87 @@
             "entity": "Turret 1",
             "exists": true
         }
+    },
+    {
+        "id": "copy-placement",
+        "command": "entity.copy",
+        "params": {
+            "entities": [
+                "Turret"
+            ]
+        },
+        "expect": {
+            "count": 2
+        }
+    },
+    {
+        "id": "open-prefab",
+        "command": "asset.open",
+        "params": {
+            "path": "Prefabs/Turret.opaaxprefab"
+        },
+        "expect": {
+            "document": true
+        }
+    },
+    {
+        "id": "paste-prefab-into-itself",
+        "command": "entity.paste",
+        "params": {
+            "prefab": true
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "duplicate-in-prefab",
+        "command": "entity.duplicate",
+        "params": {
+            "prefab": true,
+            "entities": [
+                "Barrel"
+            ]
+        },
+        "expect": {
+            "count": 1,
+            "entities": [
+                {
+                    "name": "Barrel 1",
+                    "map": null
+                }
+            ]
+        }
+    },
+    {
+        "id": "undo-in-prefab",
+        "command": "editor.command",
+        "params": {
+            "tag": "Editor.Command.UndoPrefab"
+        }
+    },
+    {
+        "id": "duplicate-in-prefab-again",
+        "command": "entity.duplicate",
+        "params": {
+            "prefab": true,
+            "entities": [
+                "Barrel"
+            ]
+        },
+        "expect": {
+            "count": 1,
+            "entities": [
+                {
+                    "name": "Barrel 1"
+                }
+            ]
+        }
+    },
+    {
+        "id": "level-untouched",
+        "command": "expect.count",
+        "params": {
+            "name": "Barrel 1",
+            "equals": 0
+        }
     }
 ]

@@ -542,6 +542,39 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params&);
     };
 
+    /**
+     * Copy, Cut, Paste and Duplicate in the prefab document's world, on its own history (the chords
+     * while the panel is focused). The same EntityOps as the level's. No Play check.
+     */
+    struct CopyPrefabSelectionCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    struct CutPrefabSelectionCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /** Refused when the copy places this prefab, or one placing it (it would contain itself). */
+    struct PasteIntoPrefabCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    struct DuplicatePrefabSelectionCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
     // =============================================================================
     // Level
     // =============================================================================
