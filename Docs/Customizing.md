@@ -293,6 +293,10 @@ bool ScoreSubsystem::Startup()
 When two registrations share a name, the newest runs, and each handle removes only its own: the
 next level's world can register its command before the last level's world is gone.
 
+Declared parameters (`Param`, `Choices`, `Optional`) let the dev console check a typed line and
+complete it with Tab; `Cheat()` marks a command that voids a run, `DevOnly()` one a ship build leaves
+out ([Console.md](Console.md)).
+
 See [Automation.md](Automation.md) for the protocol, and [AssetFormats.md](AssetFormats.md) for the
 asset files a tool or an agent can write directly.
 

@@ -6,7 +6,9 @@ description: Drive an Opaax game or the Opaax editor with JSON automation reques
 # Drive a game or the editor
 
 Every Opaax app accepts JSON requests (Docs/Automation.md has the full list; `commands.list` asks the
-app itself).
+app itself, `help <command>` in a dev build describes one). `console.run {"line": "time.scale 0.25"}`
+runs a line as the dev console reads it (Docs/Console.md); the console itself is driven with
+`input.key GraveAccent`, `input.text` and `input.key Enter`, and read back with `console.info`.
 
 ## A script (one shot)
 
@@ -95,6 +97,9 @@ another name then renamed), wait for `001.response.json`, repeat; send `app.quit
   `expect.quit` waits for the game to quit by itself (`QuitGame`). `"expectFailure": true` on a
   request checks a refusal: it passes when the command fails. `"expect": {...}` checks any answer
   (`{"command": "world.info", "expect": {"mode": "Play"}}`).
+- A command marked cheat (`commands.list` shows `"cheat": true`) sets the run's cheat flag
+  (`cheats.info`); dev-only ones (`time.scale`, `console.*`, `help`) are absent from a ship build, so a
+  script that uses them goes in `Tests/Dev`, one for a ship build in `Tests/Ship`.
 - Open every screenshot you take before saying what it shows.
 - Requests cannot click inside an editor window (`input.*` feeds the game, not ImGui): check an
   asset's values with `asset.get`, and a custom editor's selected view with a local build that starts

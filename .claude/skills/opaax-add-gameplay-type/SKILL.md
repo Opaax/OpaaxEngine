@@ -70,6 +70,10 @@ Engine types go in their module (`Engine/Source/<Module>/`) and register in the 
   `CameraManager::Cut(world)`. Never `World::SetCameraView` on a Play world (the camera manager sets
   it); a view of another camera is `IEngine::SubmitCameraView`. Another entity moved in the steps is
   drawn between them after `TransformInterpolation::RecordSteps(GetEntity())` in `OnStart`.
+- Commands for scripts and the dev console (Docs/Console.md): in a subsystem's `Startup`,
+  `m_Handle = GetContext().Commands.Register(CommandSpec("game.x", "help").Param(...).Cheat(), handler)`
+  (a pointer in a world subsystem: `GetContext().Commands->Register`), the `CommandHandle` kept as a
+  member; mark `.Cheat()` what a player could not do and `.DevOnly()` what a ship build should drop.
 - Style: AGENTS.md (prefixes, banners, short plain comments).
 
 ## Test it

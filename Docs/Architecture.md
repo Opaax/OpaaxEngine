@@ -21,7 +21,9 @@ how to extend each part.
 | `Online` | The player's store (Steam): the player, names, leaderboards, the overlay, one set of calls over a backend per store, a fake store for tests, none when offline; each game's `OnlineSubsystem` ([Online.md](Online.md)) |
 | `Input`, `Animation`, `Movement`, `UI` | Actions and mapping contexts, sprite animation, character movers, UI canvases |
 | `Engine`, `Application` | The application, its services, the registries, the frame loop and the configs (`Engine/Config`: one `Config` object class per `.config` file, with the player's settings over it: [Settings.md](Settings.md)) |
+| `Commands` | The app's command registry (`ICommandRegistry`, always there): each command's spec (parameters, cheat, dev only), scoped handles, and the typed line read into a request (`CommandText`) |
 | `Automation` | The request runner, its two transports (a script, an inbox folder) and the engine's commands |
+| `DevConsole` | The in-game console of dev builds: the line, history, completion and output as pure parts, and the game instance subsystem that draws it and holds the game's input ([Console.md](Console.md)) |
 
 The editor is a separate library (`Editor/`) on top of the engine: panels, commands, documents
 (the files being edited), a window per open asset, undo, Play In Editor, its own automation commands
@@ -216,6 +218,20 @@ A game or the editor runs requests from a script (`--exec`) or from files droppe
 - **For:** any tool that writes files can drive it, with no socket or library; the same commands
   work in a game and in the editor; the CI feature tests are plain scripts.
 - **Against:** the inbox is polled once a frame, and the app only answers: it does not push events.
+
+### One command registry for scripts and the console
+
+Every command lives in one registry, an app service there in every run. A script's runner and the
+console each keep their own queue over it, so a line typed while a script waits runs at once. A
+command declares its parameters (the console checks a typed line, Tab completes it), whether it is a
+cheat (running it publishes `CheatUsed` and marks the run) and whether it is dev only (a ship build
+leaves it out, and the console with it). Game code registers for a lifetime and keeps the handle.
+
+- **For:** one list for agents, tests and people; a command added by a game is typed and scripted
+  alike; a run that used a cheat is known whatever ran it.
+- **Against:** scripts are not checked against the declared parameters (their JSON goes straight to
+  the handler), and the engine's older test cheats stay in ship builds so the release feature tests
+  can run: a shipped game must check `HaveCheatsRun` before posting a run.
 
 ### Saves in the player's folder, written whole
 
