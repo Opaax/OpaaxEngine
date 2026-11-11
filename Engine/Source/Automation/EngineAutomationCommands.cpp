@@ -496,9 +496,10 @@ namespace Opaax::EngineAutomation
                     return AutomationResult::Ok();
                 });
 
-            InCommands.Add("expect.quit",
+            InCommands.Add(CommandSpec("expect.quit",
                 "Holds the queue until the game closes the app itself (QuitGame), then answers ok; fails if the "
-                "app is still open after {seconds} (default 10, real time).",
+                "app is still open after {seconds} (default 10, real time).")
+                    .Param("seconds", ECommandParamType::Float, "real seconds to wait (10)").Optional(),
                 [](const nlohmann::json& InParams)
                 {
                     const double lSeconds  = InParams.value("seconds", 10.0);
@@ -514,9 +515,10 @@ namespace Opaax::EngineAutomation
                     return lResult;
                 });
 
-            InCommands.Add("screenshot",
+            InCommands.Add(CommandSpec("screenshot",
                 "Saves this frame as a PNG at {path} (relative paths are from the working folder); the next "
-                "request runs once it is written.",
+                "request runs once it is written.")
+                    .Param("path", ECommandParamType::String, "the PNG to write"),
                 [&InHost](const nlohmann::json& InParams)
                 {
                     const OpaaxString lPath = InParams.value("path", OpaaxString());
@@ -539,9 +541,12 @@ namespace Opaax::EngineAutomation
         // =========================================================================
         void RegisterInput(ICommandRegistry& InCommands, IEngine& InEngine)
         {
-            InCommands.Add("input.key",
+            InCommands.Add(CommandSpec("input.key",
                 "Feeds {key} (\"Space\", \"A\", \"Mouse_Left\"...) to the game: {action} \"press\", \"release\" or "
-                "\"tap\" (down for {frames}, default 2, then up).",
+                "\"tap\" (down for {frames}, default 2, then up).")
+                    .Param("key", ECommandParamType::String, "the key: Space, A, Mouse_Left...")
+                    .Param("action", ECommandParamType::String, "press, release or tap (tap)").Choices({ "press", "release", "tap" }).Optional()
+                    .Param("frames", ECommandParamType::Int, "frames a tap holds the key (2)").Optional(),
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     EKeyCode          lKey = EKeyCode::None;
@@ -581,17 +586,21 @@ namespace Opaax::EngineAutomation
                     return lResult;
                 });
 
-            InCommands.Add("input.mouse",
-                "Moves the game's pointer to {x, y} (pixels of the game view, from its top left).",
+            InCommands.Add(CommandSpec("input.mouse",
+                "Moves the game's pointer to {x, y} (pixels of the game view, from its top left).")
+                    .Param("x", ECommandParamType::Float, "pixels from the game view's left")
+                    .Param("y", ECommandParamType::Float, "pixels from its top"),
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     InEngine.GetInput().OnMouseMoved(InParams.at("x").get<float>(), InParams.at("y").get<float>());
                     return AutomationResult::Ok();
                 });
 
-            InCommands.Add("input.scroll",
+            InCommands.Add(CommandSpec("input.scroll",
                 "Turns the game's mouse wheel by {y} notches (1 up, -1 down) and {x} (default 0) in one frame; "
-                "the next request runs after that frame.",
+                "the next request runs after that frame.")
+                    .Param("y", ECommandParamType::Float, "notches: 1 up, -1 down").Optional()
+                    .Param("x", ECommandParamType::Float, "notches sideways (0)").Optional(),
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     const auto lY = InParams.find("y");
@@ -618,9 +627,10 @@ namespace Opaax::EngineAutomation
         // =========================================================================
         void RegisterUI(ICommandRegistry& InCommands, IEngine& InEngine)
         {
-            InCommands.Add("ui.list",
+            InCommands.Add(CommandSpec("ui.list",
                 "The game UI's widgets, depth-first: [{name, type, visible, x, y, width, height}], x and y their "
-                "centre in game-view pixels. Filter: {name}.",
+                "centre in game-view pixels. Filter: {name}.")
+                    .Param("name", ECommandParamType::String, "only the widgets of this name").Optional(),
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     OpaaxString     lError;
@@ -633,9 +643,11 @@ namespace Opaax::EngineAutomation
                         { "widgets", DescribeWidgets(*lCanvas, InParams.value("name", OpaaxString())) } });
                 });
 
-            InCommands.Add("ui.click",
+            InCommands.Add(CommandSpec("ui.click",
                 "Clicks the game UI's widget named {widget}: the pointer moves to its centre and the left button "
-                "is tapped (down for {frames}, default 2).",
+                "is tapped (down for {frames}, default 2).")
+                    .Param("widget", ECommandParamType::String, "the widget's name")
+                    .Param("frames", ECommandParamType::Int, "frames the button is held (2)").Optional(),
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     OpaaxString     lError;
@@ -684,9 +696,10 @@ namespace Opaax::EngineAutomation
                         { "camera",    ViewToJson(lView) } });
                 });
 
-            InCommands.Add("world.pause",
+            InCommands.Add(CommandSpec("world.pause",
                 "Pauses the playing world ({paused}: true) or resumes it (false): a paused world's subsystems do not "
-                "tick. Answers {paused}.",
+                "tick. Answers {paused}.")
+                    .Param("paused", ECommandParamType::Bool, "true pauses, false resumes"),
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     const auto lPaused = InParams.find("paused");
@@ -716,8 +729,10 @@ namespace Opaax::EngineAutomation
                     return lResult;
                 });
 
-            InCommands.Add("entity.list",
-                "The active world's entities: [{id, name, parent, map, components}]. Filters: {name}, {component}.",
+            InCommands.Add(CommandSpec("entity.list",
+                "The active world's entities: [{id, name, parent, map, components}]. Filters: {name}, {component}.")
+                    .Param("name", ECommandParamType::String, "only the entities of this name").Optional()
+                    .Param("component", ECommandParamType::String, "only the entities with this component").Optional(),
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     OpaaxString  lError;
@@ -750,7 +765,8 @@ namespace Opaax::EngineAutomation
                     return AutomationResult::Ok(nlohmann::json{ { "entities", lList } });
                 });
 
-            InCommands.Add("entity.get", "One entity of the active world with its components' values: {entity} (id or name).",
+            InCommands.Add(CommandSpec("entity.get", "One entity of the active world with its components' values: {entity} (id or name).")
+                    .Param("entity", ECommandParamType::String, "the entity's id or name"),
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     OpaaxString  lError;
@@ -771,7 +787,10 @@ namespace Opaax::EngineAutomation
 
             InCommands.Add(CommandSpec("component.set",
                 "Changes fields of {entity}'s component {type}: {value} is merged into it (added when missing). "
-                "A field of the wrong type changes nothing.").Cheat(),
+                "A field of the wrong type changes nothing.")
+                    .Param("entity", ECommandParamType::String, "the entity's id or name")
+                    .Param("type", ECommandParamType::String, "the component")
+                    .Param("value", ECommandParamType::Any, "the fields to merge, a JSON object").Cheat(),
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     OpaaxString  lError;
@@ -805,7 +824,8 @@ namespace Opaax::EngineAutomation
         {
             InCommands.Add(CommandSpec("level.play",
                 "Opens the level at {path} (relative to the project's assets) in a new play world; the next request "
-                "runs once it is open.").Cheat(),
+                "runs once it is open.")
+                    .Param("path", ECommandParamType::String, "the level, from the assets").Cheat(),
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     const OpaaxString lPath     = InParams.value("path", OpaaxString());
@@ -826,9 +846,10 @@ namespace Opaax::EngineAutomation
                     return lResult;
                 });
 
-            InCommands.Add("world.wait",
+            InCommands.Add(CommandSpec("world.wait",
                 "Lets the playing world's clock advance {seconds} (game time, whatever the frame rate) before the "
-                "next request: at a time scale of 0.25 it lasts four times longer. Ends early if the world changes.",
+                "next request: at a time scale of 0.25 it lasts four times longer. Ends early if the world changes.")
+                    .Param("seconds", ECommandParamType::Float, "game seconds"),
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     OpaaxString  lError;
@@ -866,10 +887,11 @@ namespace Opaax::EngineAutomation
         // =========================================================================
         void RegisterTime(ICommandRegistry& InCommands, IEngine& InEngine)
         {
-            InCommands.Add("time.pace",
+            InCommands.Add(CommandSpec("time.pace",
                 "Gives the frames the time of a screen rate from the next frame, whatever the machine: {pacing} as "
                 "--frame-pacing reads it (\"144\", \"60,jitter=0.25\", \"60,hitch=0.1@2\", \"deltas=0.016/0.033\"); "
-                "\"off\" gives the clock back. Answers {pacing}.",
+                "\"off\" gives the clock back. Answers {pacing}.")
+                    .Param("pacing", ECommandParamType::String, "144, 60,jitter=0.25... or off"),
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     const OpaaxString lText = InParams.value("pacing", OpaaxString());
@@ -1082,10 +1104,15 @@ namespace Opaax::EngineAutomation
                     return AutomationResult::Ok(lAnswer);
                 });
 
-            InCommands.Add("camera.shake",
+            InCommands.Add(CommandSpec("camera.shake",
                 "Plays the camera shake asset {path} on the active Play world, times {scale} (1), its noise picked by "
                 "{seed} (0), from the next step: answers its {id}. {stop}: a shake's id, faded out from the next step; "
-                "{stopAll}: true fades every shake out.",
+                "{stopAll}: true fades every shake out.")
+                    .Param("path", ECommandParamType::String, "the shake asset").Optional()
+                    .Param("scale", ECommandParamType::Float, "times its strength (1)").Optional()
+                    .Param("seed", ECommandParamType::Int, "picks its noise (0)").Optional()
+                    .Param("stop", ECommandParamType::Int, "the id of a shake to stop").Optional()
+                    .Param("stopAll", ECommandParamType::Bool, "stops every shake").Optional(),
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     OpaaxString           lError;
@@ -1129,9 +1156,11 @@ namespace Opaax::EngineAutomation
                     return AutomationResult::Ok(nlohmann::json{ { "id", lId } });
                 });
 
-            InCommands.Add("camera.trauma",
+            InCommands.Add(CommandSpec("camera.trauma",
                 "Raises the trauma of {entity} (a CameraShakeSource with bUseTrauma) by {amount} (lowers it, negative), "
-                "kept in [0, 1], from the next step: answers its {trauma} then.",
+                "kept in [0, 1], from the next step: answers its {trauma} then.")
+                    .Param("entity", ECommandParamType::String, "the shake source")
+                    .Param("amount", ECommandParamType::Float, "trauma to add, negative to lower"),
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     OpaaxString           lError;
@@ -1164,10 +1193,13 @@ namespace Opaax::EngineAutomation
                     return AutomationResult::Ok(nlohmann::json{ { "trauma", lShakes->GetTrauma(lEntity.GetHandle()) } });
                 });
 
-            InCommands.Add("camera.trace.start",
+            InCommands.Add(CommandSpec("camera.trace.start",
                 "Records every frame of the playing world from the next one: the frame's time, the view, and where "
                 "{target} (an entity's name, optional) is drawn; {name} names the files. {heightPx}: the view's height "
-                "the pixels are measured in (the window's by default).",
+                "the pixels are measured in (the window's by default).")
+                    .Param("name", ECommandParamType::String, "names the trace files")
+                    .Param("target", ECommandParamType::String, "an entity to follow on screen").Optional()
+                    .Param("heightPx", ECommandParamType::Float, "the view's height in pixels").Optional(),
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     OpaaxString    lError;
@@ -1199,13 +1231,14 @@ namespace Opaax::EngineAutomation
                                                                 { "heightPx", lSetup.HeightPx } });
                 });
 
-            InCommands.Add("camera.trace.stop",
+            InCommands.Add(CommandSpec("camera.trace.stop",
                 "Ends the trace, writes <name>.camera.json and <name>.camera.csv in the working folder and answers "
                 "{name, frames, files, summary}: the target's largest move on screen (targetDrift), the largest change "
                 "of the view's move (motionJitter), largestMove (pixels), timeReversals, stillMoves, zoomReversals, "
                 "cameraSwitches, switchJump (how much a switch changed the view's move: a cut's jump, near 0 for a "
                 "blend), cuts, and the most and fewest steps a frame took (mostSteps, fewestSteps, stepsSpread). "
-                "{limits}, like {\"targetDrift\": 0.01}, fails the request past any of them.",
+                "{limits}, like {\"targetDrift\": 0.01}, fails the request past any of them.")
+                    .Param("limits", ECommandParamType::Any, "a JSON object of limits").Optional(),
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     OpaaxString    lError;
@@ -1246,13 +1279,16 @@ namespace Opaax::EngineAutomation
                         { "summary",   lMeasures } });
                 });
 
-            InCommands.Add("camera.trace.compare",
+            InCommands.Add(CommandSpec("camera.trace.compare",
                 "How far the stopped trace {trace} is from where the stopped trace {reference} says its camera was at "
                 "each of its game times (the reference's frame then, or its two frames around it blended by time): "
                 "{shared, position, size (world units), rotation (degrees), atTime}. The reference is a steady pacing "
                 "at the fixed rate or a multiple, so one level played at any rate must match it; a view curving "
                 "within a step (a blend, a shake) needs a reference drawing within the step (720 places 60, 144 and "
-                "240 exactly). {limits}, like {\"position\": 0.001}, fails past them.",
+                "240 exactly). {limits}, like {\"position\": 0.001}, fails past them.")
+                    .Param("trace", ECommandParamType::String, "the trace to measure")
+                    .Param("reference", ECommandParamType::String, "the trace to measure against")
+                    .Param("limits", ECommandParamType::Any, "a JSON object of limits").Optional(),
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     OpaaxString    lError;
@@ -1299,9 +1335,10 @@ namespace Opaax::EngineAutomation
         // =========================================================================
         void RegisterConfig(ICommandRegistry& InCommands)
         {
-            InCommands.Add("config.get",
+            InCommands.Add(CommandSpec("config.get",
                 "A config's values: {config}, its file's name (\"Engine\", \"Renderer\"...). Answers {config, values} "
-                "what the engine reads, {project} the file's values and {player} the player's settings over them.",
+                "what the engine reads, {project} the file's values and {player} the player's settings over them.")
+                    .Param("config", ECommandParamType::String, "the config file's name: Engine, Renderer..."),
                 [](const nlohmann::json& InParams)
                 {
                     const OpaaxString lName = InParams.value("config", OpaaxString());
@@ -1319,7 +1356,9 @@ namespace Opaax::EngineAutomation
                 "Merges {values}, shaped like the config's file ({\"Time\": {\"FixedRate\": 30}}), into {config}'s "
                 "project values for this run, without saving; applied at once, as the Config panel does. A value the "
                 "config does not have, or of the wrong type, is refused; one the player set still wins. Answers as "
-                "config.get after.").Cheat(),
+                "config.get after.")
+                    .Param("config", ECommandParamType::String, "the config file's name")
+                    .Param("values", ECommandParamType::Any, "a JSON object shaped like the file").Cheat(),
                 [](const nlohmann::json& InParams)
                 {
                     const OpaaxString lName = InParams.value("config", OpaaxString());
@@ -1350,9 +1389,17 @@ namespace Opaax::EngineAutomation
         // =========================================================================
         void RegisterExpectations(ICommandRegistry& InCommands, IEngine& InEngine)
         {
-            InCommands.Add("expect.value",
+            InCommands.Add(CommandSpec("expect.value",
                 "Fails unless {entity}'s value at {path} (\"Transform/Position/x\") meets: equals, near (with "
-                "tolerance), greater, less or between [min, max].",
+                "tolerance), greater, less or between [min, max].")
+                    .Param("entity", ECommandParamType::String, "the entity's id or name")
+                    .Param("path", ECommandParamType::String, "Component/Field/sub")
+                    .Param("equals", ECommandParamType::Any, "the value it must be").Optional()
+                    .Param("near", ECommandParamType::Float, "the value it must be near").Optional()
+                    .Param("tolerance", ECommandParamType::Float, "how near (0.01)").Optional()
+                    .Param("greater", ECommandParamType::Float, "it must be above").Optional()
+                    .Param("less", ECommandParamType::Float, "it must be below").Optional()
+                    .Param("between", ECommandParamType::Any, "[min, max]").Optional(),
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     OpaaxString  lError;
@@ -1384,9 +1431,15 @@ namespace Opaax::EngineAutomation
                     return AutomationResult::Ok(nlohmann::json{ { "value", lActual } });
                 });
 
-            InCommands.Add("expect.count",
+            InCommands.Add(CommandSpec("expect.count",
                 "Fails unless the number of entities ({name}, {component} filter them) meets: equals, greater, "
-                "less or between [min, max].",
+                "less or between [min, max].")
+                    .Param("name", ECommandParamType::String, "count the entities of this name").Optional()
+                    .Param("component", ECommandParamType::String, "count the entities with this component").Optional()
+                    .Param("equals", ECommandParamType::Int, "the count it must be").Optional()
+                    .Param("greater", ECommandParamType::Int, "it must be above").Optional()
+                    .Param("less", ECommandParamType::Int, "it must be below").Optional()
+                    .Param("between", ECommandParamType::Any, "[min, max]").Optional(),
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     OpaaxString  lError;
@@ -1406,8 +1459,10 @@ namespace Opaax::EngineAutomation
                     return AutomationResult::Ok(nlohmann::json{ { "count", lCount } });
                 });
 
-            InCommands.Add("expect.entity",
-                "Fails unless an entity named {entity} (or with that id) exists; with {exists: false}, unless none does.",
+            InCommands.Add(CommandSpec("expect.entity",
+                "Fails unless an entity named {entity} (or with that id) exists; with {exists: false}, unless none does.")
+                    .Param("entity", ECommandParamType::String, "the entity's id or name")
+                    .Param("exists", ECommandParamType::Bool, "false: it must not exist").Optional(),
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     OpaaxString  lError;

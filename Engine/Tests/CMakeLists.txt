@@ -39,6 +39,7 @@ set(OPAAX_TEST_SOURCES
 
     # Commands
     Commands/CommandRegistryTests.cpp
+    Commands/CommandTextTests.cpp
 
     # Core
     Core/AlgoTests.cpp

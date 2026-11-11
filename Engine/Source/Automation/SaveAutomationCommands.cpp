@@ -64,8 +64,9 @@ namespace Opaax::SaveAutomation
                 return List(OpaaxApplication::GetAppService<ISaveStorage>());
             });
 
-        InCommands.Add("save.get",
-            "A slot's save as its file holds it: {slot} answers {slot, path, class, classVersion, properties}.",
+        InCommands.Add(CommandSpec("save.get",
+            "A slot's save as its file holds it: {slot} answers {slot, path, class, classVersion, properties}.")
+                .Param("slot", ECommandParamType::String, "the slot"),
             [&InEngine](const nlohmann::json& InParams)
             {
                 FlushGameSaves(InEngine);
@@ -74,7 +75,11 @@ namespace Opaax::SaveAutomation
 
         InCommands.Add(CommandSpec("save.set",
             "Writes a slot: {slot, class, properties} as the game writes a save of that class (its defaults, "
-            "properties merged), or {slot, text} written as given. Answers {slot, path}.").Cheat(),
+            "properties merged), or {slot, text} written as given. Answers {slot, path}.")
+                .Param("slot", ECommandParamType::String, "the slot")
+                .Param("class", ECommandParamType::String, "the save's class").Optional()
+                .Param("properties", ECommandParamType::Any, "a JSON object merged over the class defaults").Optional()
+                .Param("text", ECommandParamType::String, "the file's text, written as given").Optional().Cheat(),
             [&InEngine](const nlohmann::json& InParams)
             {
                 FlushGameSaves(InEngine);
@@ -82,7 +87,9 @@ namespace Opaax::SaveAutomation
                            InParams);
             });
 
-        InCommands.Add(CommandSpec("save.clear", "Deletes a slot's save, {slot}, or every one, {all: true}. Answers {deleted}.").Cheat(),
+        InCommands.Add(CommandSpec("save.clear", "Deletes a slot's save, {slot}, or every one, {all: true}. Answers {deleted}.")
+                .Param("slot", ECommandParamType::String, "the slot").Optional()
+                .Param("all", ECommandParamType::Bool, "true deletes every slot").Optional().Cheat(),
             [&InEngine](const nlohmann::json& InParams)
             {
                 FlushGameSaves(InEngine);

@@ -214,37 +214,47 @@ namespace Opaax::InputAutomation
                 .Param("text", ECommandParamType::String, "the characters to type"),
             [&InEngine](const nlohmann::json& InParams) { return TypeText(InEngine.GetInput(), InParams); });
 
-        InCommands.Add("input.keys",
+        InCommands.Add(CommandSpec("input.keys",
             "The running game's keys, as a controls menu lists them: {capturing, captured (the key the last "
             "capture took, \"None\" when cancelled), contexts: [{context, rebindable, added, keys: [{action, "
-            "default (the asset's key), key (the player's), rebound}]}]}. Filter: {context}.",
+            "default (the asset's key), key (the player's), rebound}]}]}. Filter: {context}.")
+                .Param("context", ECommandParamType::String, "only this context").Optional(),
             lWithMapping([](InputMappingSubsystem& InMapping, const nlohmann::json& InParams)
             {
                 return Keys(InMapping, InParams);
             }));
 
-        InCommands.Add("input.rebind",
+        InCommands.Add(CommandSpec("input.rebind",
             "Gives a mapping the {key} (\"None\" clears it) as a controls menu does, kept in the player's "
             "settings (not saved): the mapping is {action}, with {context} and {default} (the asset's key) "
             "when several have it; {policy} \"Refuse\" (default), \"Swap\" or \"Replace\" settles a conflict. "
-            "Answers {result, context, action, default, key, others}.",
+            "Answers {result, context, action, default, key, others}.")
+                .Param("action", ECommandParamType::String, "the action")
+                .Param("key", ECommandParamType::String, "the new key, None to clear")
+                .Param("context", ECommandParamType::String, "the context, when several have the action").Optional()
+                .Param("default", ECommandParamType::String, "the asset's key, when several mappings have it").Optional()
+                .Param("policy", ECommandParamType::String, "a conflict: Refuse, Swap or Replace").Choices({ "Refuse", "Swap", "Replace" }).Optional(),
             lWithMapping([](InputMappingSubsystem& InMapping, const nlohmann::json& InParams)
             {
                 return Rebind(InMapping, InParams);
             }));
 
-        InCommands.Add("input.resetKeys",
+        InCommands.Add(CommandSpec("input.resetKeys",
             "Gives every mapping its asset's key again; {context} only that context's, {action} (with "
-            "{context} and {default}) only that mapping. Answers as input.keys.",
+            "{context} and {default}) only that mapping. Answers as input.keys.")
+                .Param("context", ECommandParamType::String, "only this context").Optional()
+                .Param("action", ECommandParamType::String, "only this action").Optional()
+                .Param("default", ECommandParamType::String, "the asset's key, when several mappings have it").Optional(),
             lWithMapping([](InputMappingSubsystem& InMapping, const nlohmann::json& InParams)
             {
                 return ResetKeys(InMapping, InParams);
             }));
 
-        InCommands.Add("input.capture",
+        InCommands.Add(CommandSpec("input.capture",
             "Waits for the next key the player presses, as a menu's \"press a key\" does: input.key presses "
             "one, input.keys says what it took. {cancel: true} ends the one under way. Answers {capturing, "
-            "captured}.",
+            "captured}.")
+                .Param("cancel", ECommandParamType::Bool, "true ends the capture under way").Optional(),
             lWithMapping([](InputMappingSubsystem& InMapping, const nlohmann::json& InParams)
             {
                 return Capture(InMapping, InParams);

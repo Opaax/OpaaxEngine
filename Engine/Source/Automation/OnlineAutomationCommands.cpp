@@ -122,7 +122,9 @@ namespace Opaax::OnlineAutomation
 
         InCommands.Add(CommandSpec("online.use",
             "Runs another store: {backend: none | fake, profile: full | steam | epic | gog}. What was asked is "
-            "dropped. Answers as online.info.").Cheat(),
+            "dropped. Answers as online.info.")
+                .Param("backend", ECommandParamType::String, "none or fake").Choices({ "none", "fake" })
+                .Param("profile", ECommandParamType::String, "the fake store's profile").Choices({ "full", "steam", "epic", "gog" }).Optional().Cheat(),
             [lOnline](const nlohmann::json& InParams)
             {
                 return Use(lOnline(), OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Online>().GetData(),
@@ -131,26 +133,43 @@ namespace Opaax::OnlineAutomation
 
         InCommands.Add(CommandSpec("online.leaderboard.upload",
             "Uploads {score} to {board}, keeping the player's best, with {details} and {file} (text) attached to a "
-            "kept score: {result, scoreChanged, rank, previousRank}.").Cheat(),
+            "kept score: {result, scoreChanged, rank, previousRank}.")
+                .Param("board", ECommandParamType::String, "the leaderboard")
+                .Param("score", ECommandParamType::Int, "the score")
+                .Param("details", ECommandParamType::Any, "numbers kept with the score").Optional()
+                .Param("file", ECommandParamType::String, "text attached to the score").Optional().Cheat(),
             [lOnline](const nlohmann::json& InParams) { return Upload(lOnline(), InParams); });
 
-        InCommands.Add("online.leaderboard.entries",
+        InCommands.Add(CommandSpec("online.leaderboard.entries",
             "{board}'s entries in {range} (World: ranks first-last; AroundPlayer: offsets; Friends): {result, "
-            "entries: [{rank, score, name, id, details, file}]}.",
+            "entries: [{rank, score, name, id, details, file}]}.")
+                .Param("board", ECommandParamType::String, "the leaderboard")
+                .Param("range", ECommandParamType::String, "World, AroundPlayer or Friends").Choices({ "World", "AroundPlayer", "Friends" }).Optional()
+                .Param("first", ECommandParamType::Int, "the first rank or offset").Optional()
+                .Param("last", ECommandParamType::Int, "the last rank or offset").Optional(),
             [lOnline](const nlohmann::json& InParams) { return Entries(lOnline(), InParams); });
 
-        InCommands.Add("online.file.get", "A file attached to an entry, {file}: {result, text, size}.",
+        InCommands.Add(CommandSpec("online.file.get", "A file attached to an entry, {file}: {result, text, size}.")
+                .Param("file", ECommandParamType::Any, "the file handle of an entry"),
             [lOnline](const nlohmann::json& InParams) { return GetFile(lOnline(), InParams); });
 
-        InCommands.Add("online.achievements",
-            "The player's achievements, after {unlock: name} or {clear: name} if given: {result, achievements}.",
+        InCommands.Add(CommandSpec("online.achievements",
+            "The player's achievements, after {unlock: name} or {clear: name} if given: {result, achievements}.")
+                .Param("unlock", ECommandParamType::String, "an achievement to unlock").Optional()
+                .Param("clear", ECommandParamType::String, "an achievement to clear").Optional(),
             [lOnline](const nlohmann::json& InParams) { return Achievements(lOnline(), InParams); });
 
-        InCommands.Add("online.overlay", "Opens or closes the fake store's overlay, {active}, as the player's key does.",
+        InCommands.Add(CommandSpec("online.overlay", "Opens or closes the fake store's overlay, {active}, as the player's key does.")
+                .Param("active", ECommandParamType::Bool, "true opens it"),
             [lOnline](const nlohmann::json& InParams) { return Overlay(lOnline(), InParams); });
 
         InCommands.Add(CommandSpec("online.fake.player",
-            "Adds a player to the fake store, {name, friend, nameKnown}, with {score} on {board} if given: {id}.").Cheat(),
+            "Adds a player to the fake store, {name, friend, nameKnown}, with {score} on {board} if given: {id}.")
+                .Param("name", ECommandParamType::String, "the player's name")
+                .Param("score", ECommandParamType::Int, "a score on board").Optional()
+                .Param("board", ECommandParamType::String, "the leaderboard for score").Optional()
+                .Param("friend", ECommandParamType::Bool, "a friend of the player").Optional()
+                .Param("nameKnown", ECommandParamType::Bool, "whether the store knows the name").Optional().Cheat(),
             [lOnline](const nlohmann::json& InParams) { return AddFakePlayer(lOnline(), InParams); });
     }
 

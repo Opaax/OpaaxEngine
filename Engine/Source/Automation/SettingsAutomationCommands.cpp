@@ -33,10 +33,12 @@ namespace Opaax::SettingsAutomation
             "values as the file holds them ({\"Configs\": {\"Engine\": ...}}). config.get shows what the engine reads.",
             [](const nlohmann::json&) { return Get(Settings()); });
 
-        InCommands.Add("settings.set",
+        InCommands.Add(CommandSpec("settings.set",
             "Sets {values}, shaped like {config}'s file ({\"Audio\": {\"MasterVolume\": 0.5}}; a bus by its name: "
             "{\"Audio\": {\"Buses\": {\"Music\": {\"Volume\": 0.5}}}}), as the player's, as a settings menu does; a "
-            "null takes one away. Read at once while a game runs; not saved. Answers as settings.get.",
+            "null takes one away. Read at once while a game runs; not saved. Answers as settings.get.")
+                .Param("config", ECommandParamType::String, "the config file's name")
+                .Param("values", ECommandParamType::Any, "a JSON object shaped like the file"),
             [](const nlohmann::json& InParams) { return Set(Settings(), InParams); });
 
         InCommands.Add("settings.save", "Writes the player's settings to their file. Answers as settings.get.",
@@ -46,9 +48,10 @@ namespace Opaax::SettingsAutomation
             "Reads the player's settings from their file again, as a game does when it starts. Answers as settings.get.",
             [](const nlohmann::json&) { return Load(Settings()); });
 
-        InCommands.Add("settings.reset",
+        InCommands.Add(CommandSpec("settings.reset",
             "Takes the player's values for {config} away, or every one without it; the project's are read "
-            "again. Not saved. Answers as settings.get.",
+            "again. Not saved. Answers as settings.get.")
+                .Param("config", ECommandParamType::String, "only this config").Optional(),
             [](const nlohmann::json& InParams) { return Reset(Settings(), InParams); });
     }
 

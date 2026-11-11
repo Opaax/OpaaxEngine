@@ -9,6 +9,7 @@
 #include "Automation/AutomationTransports.h"
 #include "Automation/EngineAutomationCommands.h"
 #include "Commands/CommandRegistry.h"
+#include "Core/Algo/Algo.h"
 #include "Core/IO/FileIO.h"
 #include "Core/IO/FileSystem.h"
 #include "Core/String/OpaaxPathString.h"
@@ -368,13 +369,23 @@ TEST_CASE("Automation: commands.list describes every command, sorted, with its h
 
     REQUIRE(lRecorder.Responses.size() == 1);
     const nlohmann::json& lList = lRecorder.Responses[0].Result.at("commands");
-    REQUIRE(lList.size() == 5);
-    CHECK(lList[0].at("name") == "cheats.info");
-    CHECK(lList[1].at("name") == "commands.has");
-    CHECK(lList[2].at("name") == "commands.list");
-    CHECK(lList[3].at("name") == "echo");
-    CHECK(lList[4].at("name") == "frames.wait");
-    CHECK(lList[3].at("help") == "Returns its params.");
+
+    // The built-ins differ by build (console.run is dev only): checked by name, in order.
+    TDynArray<OpaaxString> lNames;
+    for (const nlohmann::json& lItem : lList)
+    {
+        lNames.push_back(lItem.at("name").get<OpaaxString>());
+        if (lItem.at("name") == "echo")
+        {
+            CHECK(lItem.at("help") == "Returns its params.");
+        }
+    }
+    TDynArray<OpaaxString> lSorted = lNames;
+    Algo::Sort(lSorted);
+    CHECK(lSorted == lNames);
+    CHECK(Algo::Contains(lNames, OpaaxString("echo")));
+    CHECK(Algo::Contains(lNames, OpaaxString("commands.list")));
+    CHECK(Algo::Contains(lNames, OpaaxString("frames.wait")));
 }
 
 TEST_CASE("Automation: a script is an array or {requests}; ids default to positions; errors name the request; "

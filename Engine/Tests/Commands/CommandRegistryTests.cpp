@@ -158,7 +158,8 @@ TEST_CASE("CommandRegistry: a command found stays alive while held, even once re
 
 TEST_CASE("CommandRegistry: Describe lists commands by name with their parameters")
 {
-    CommandRegistry lRegistry;
+    // A ship build's registry: the same built-ins in every build (no dev-only console.run).
+    CommandRegistry lRegistry(/*bInDevBuild*/ false);
     lRegistry.Add("b.plain", "No parameters.", Answering("b"));
     lRegistry.Add(CommandSpec("a.typed", "Two parameters.")
                       .Param("x", ECommandParamType::Any, "where").Choices({ "start", "finish" })
@@ -314,7 +315,7 @@ TEST_CASE("Cheats: Describe marks cheat and dev-only commands")
             CHECK(lItem["cheat"] == true);
             CHECK(lItem["devOnly"] == true);
         }
-        else
+        else if (lItem["name"] == "commands.list")
         {
             CHECK_FALSE(lItem.contains("cheat"));
             CHECK_FALSE(lItem.contains("devOnly"));

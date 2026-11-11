@@ -1,5 +1,6 @@
 #include "Commands/CommandRegistry.h"
 
+#include "Commands/CommandText.h"
 #include "Core/Algo/Algo.h"
 #include "Core/Hash/OpaaxHash.h"
 #include "Core/Log/Logger.h"
@@ -115,11 +116,35 @@ namespace Opaax
                 return CommandResult::Ok(nlohmann::json{ { "cheatsRun", HaveCheatsRun() } });
             });
 
-        Add("frames.wait", "Lets {count} frames run (default 1) before the next request.",
+        Add(CommandSpec("frames.wait", "Lets {count} frames run (default 1) before the next request.")
+                .Param("count", ECommandParamType::Int, "frames (1)").Optional(),
             [](const nlohmann::json& InParams)
             {
                 CommandResult lResult;
                 lResult.WaitFrames = Maths::Max(InParams.value("count", 1u), 1u);
+                return lResult;
+            });
+
+        Add(CommandSpec("console.run",
+            "Runs a {line} as the console reads it (\"time.scale 0.25\", \"level.play Levels/Main.opaaxlevel\"): "
+            "its command answers, and waits, as it would. An error names what is wrong with the line.")
+                .Param("line", ECommandParamType::String, "the command and its words")
+                .DevOnly(),
+            [this](const nlohmann::json& InParams)
+            {
+                const CommandTextResult lLine = ParseCommandText(InParams.value("line", OpaaxString()), *this);
+                if (!lLine.bOk)
+                {
+                    return CommandResult::Fail(lLine.Error);
+                }
+
+                // Held while it runs; a cheat is told for the command the line ran, not for console.run.
+                const TSharedPtr<const RegisteredCommand> lCommand = Find(lLine.Command);
+                CommandResult lResult = lCommand->Handler(lLine.Params);
+                if (lResult.bOk)
+                {
+                    NotifySucceeded(*lCommand);
+                }
                 return lResult;
             });
     }
