@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/TimeScale.opaaxmap"
+    ],
+    "name": "TimeScale",
+    "persistentMap": "Maps/TimeScale.opaaxmap",
+    "version": 1
+}

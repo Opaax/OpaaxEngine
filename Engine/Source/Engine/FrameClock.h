@@ -10,7 +10,8 @@ namespace Opaax
     //   simulated in one go. Restart drops the time since the last frame: the time spent opening a
     //   level is not simulated either. A world that does not tick (paused) is drawn at the alpha it
     //   had, so it holds still. With a screen's refresh, deltas are whole refreshes: the timer's noise
-    //   does not reach the frames. Pure: the caller gives the time.
+    //   does not reach the frames. A time scale slows or speeds the game: the steps owed grow by the
+    //   delta times the scale, each step keeps its length. Pure: the caller gives the time.
     // =============================================================================
     class FrameClock
     {
@@ -94,6 +95,18 @@ namespace Opaax
          */
         void SetWorldTicks(bool bInTicks) noexcept;
 
+        /**
+         * The game's time for each second of the frames' (1: as fast as the clock; 0.25: a quarter).
+         * Fewer or more steps are owed, each of its usual length; GetDelta stays the frame's own time.
+         * A scale that is not above zero is ignored.
+         */
+        void SetTimeScale(double InScale) noexcept;
+
+        double GetTimeScale() const noexcept { return m_TimeScale; }
+
+        /** This frame's game time: the delta times the time scale. */
+        double GetScaledDelta() const noexcept { return m_Delta * m_TimeScale; }
+
         /** How far into the next fixed step the clock is, from 0 to 1. */
         double GetFixedAlpha() const noexcept { return m_Owed / m_FixedDelta; }
 
@@ -107,7 +120,8 @@ namespace Opaax
         double m_FixedDelta;
         double m_LastTime = 0.0;
         double m_Delta    = 0.0;
-        double m_Owed     = 0.0;   // time the fixed steps have not simulated yet
+        double m_Owed     = 0.0;   // game time the fixed steps have not simulated yet
+        double m_TimeScale = 1.0;
         bool   m_bStarted = false;
 
         // The alpha the world was last drawn with while it ticked, and whether it holds there.

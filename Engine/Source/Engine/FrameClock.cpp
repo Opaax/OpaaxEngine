@@ -17,7 +17,7 @@ namespace Opaax
         m_LastTime = InNow;
         m_bStarted = true;
         m_Delta    = SnapToRefresh(lMeasured);
-        m_Owed    += m_Delta;
+        m_Owed    += GetScaledDelta();
 
         m_StepsThisFrame = 0;
 
@@ -133,9 +133,17 @@ namespace Opaax
         // Ticking again: on from the picture held, the time spent paused not simulated.
         if (bInTicks && m_bHolding)
         {
-            m_Owed = m_HeldAlpha * m_FixedDelta + m_Delta;
+            m_Owed = m_HeldAlpha * m_FixedDelta + GetScaledDelta();
         }
         m_bHolding = !bInTicks;
+    }
+
+    void FrameClock::SetTimeScale(const double InScale) noexcept
+    {
+        if (InScale > 0.0)
+        {
+            m_TimeScale = InScale;
+        }
     }
 
     void FrameClock::SetFixedDelta(const double InFixedDelta) noexcept

@@ -103,6 +103,18 @@ namespace Opaax
         void SetPaused(bool InPaused);
         bool IsPaused() const noexcept         { return m_bPaused; }
 
+        /** The slowest and fastest game time scale. */
+        static constexpr float MIN_TIME_SCALE = 0.05f;
+        static constexpr float MAX_TIME_SCALE = 4.f;
+
+        /**
+         * The game's time for each second of real time, kept in [MIN_TIME_SCALE, MAX_TIME_SCALE]: the
+         * world updates with the scaled delta and owes its fixed steps by it, each of its usual length.
+         * Game instance subsystems (UI, input) keep real time. Back to 1 when the game ends.
+         */
+        void  SetTimeScale(float InScale) noexcept;
+        float GetTimeScale() const noexcept { return m_TimeScale; }
+
         /**
          * Ticks one more frame, then stays paused (editor Step). Covers Update and FixedUpdate.
          */
@@ -178,6 +190,7 @@ namespace Opaax
 
         
         bool m_bPaused        = false;
+        float m_TimeScale     = 1.f;
         bool m_bStepRequested = false;
         bool m_bTickThisFrame = true;
         

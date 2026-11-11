@@ -664,7 +664,7 @@ namespace Opaax::EngineAutomation
         // =========================================================================
         void RegisterWorld(ICommandRegistry& InCommands, IEngine& InEngine)
         {
-            InCommands.Add("world.info", "The active world: {name, mode, paused, entities, camera}.",
+            InCommands.Add("world.info", "The active world: {name, mode, paused, timeScale, entities, camera}.",
                 [&InEngine](const nlohmann::json&)
                 {
                     OpaaxString  lError;
@@ -676,11 +676,12 @@ namespace Opaax::EngineAutomation
 
                     const CameraView& lView = lWorld->GetCameraView();
                     return AutomationResult::Ok(nlohmann::json{
-                        { "name",     lWorld->GetName().CStr() },
-                        { "mode",     ToString(lWorld->GetMode()) },
-                        { "paused",   InEngine.GetWorldManager().IsPaused() },
-                        { "entities", lWorld->GetEntityCount() },
-                        { "camera",   ViewToJson(lView) } });
+                        { "name",      lWorld->GetName().CStr() },
+                        { "mode",      ToString(lWorld->GetMode()) },
+                        { "paused",    InEngine.GetWorldManager().IsPaused() },
+                        { "timeScale", InEngine.GetWorldManager().GetTimeScale() },
+                        { "entities",  lWorld->GetEntityCount() },
+                        { "camera",    ViewToJson(lView) } });
                 });
 
             InCommands.Add("world.pause",
@@ -827,7 +828,7 @@ namespace Opaax::EngineAutomation
 
             InCommands.Add("world.wait",
                 "Lets the playing world's clock advance {seconds} (game time, whatever the frame rate) before the "
-                "next request. Ends early if the world changes.",
+                "next request: at a time scale of 0.25 it lasts four times longer. Ends early if the world changes.",
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     OpaaxString  lError;
@@ -886,6 +887,26 @@ namespace Opaax::EngineAutomation
 
                     InEngine.SetFramePacing(lPacing);
                     return AutomationResult::Ok(nlohmann::json{ { "pacing", lPacing.ToString() } });
+                });
+
+            InCommands.Add(CommandSpec("time.scale",
+                "Slows or speeds the game: {scale} seconds of game time for each real one (0.25 a quarter, 1 "
+                "normal), kept in [0.05, 4]. The world and its fixed steps run on game time, the UI on real time. "
+                "Back to 1 when the game ends. Answers {scale}.")
+                    .Param("scale", ECommandParamType::Float, "game seconds per real second")
+                    .Cheat()
+                    .DevOnly(),
+                [&InEngine](const nlohmann::json& InParams)
+                {
+                    const auto lScale = InParams.find("scale");
+                    if (lScale == InParams.end() || !lScale->is_number())
+                    {
+                        return AutomationResult::Fail("give {scale}, a number: 0.25 is a quarter speed, 1 normal");
+                    }
+
+                    WorldManager& lWorlds = InEngine.GetWorldManager();
+                    lWorlds.SetTimeScale(lScale->get<float>());
+                    return AutomationResult::Ok(nlohmann::json{ { "scale", lWorlds.GetTimeScale() } });
                 });
         }
 
