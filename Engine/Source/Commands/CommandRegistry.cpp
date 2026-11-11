@@ -125,6 +125,25 @@ namespace Opaax
                 return lResult;
             });
 
+        Add(CommandSpec("help", "Lists the commands, or describes one {command}: its parameters and their choices.")
+                .Param("command", ECommandParamType::String, "the command to describe").Optional().NamesCommand()
+                .DevOnly(),
+            [this](const nlohmann::json& InParams)
+            {
+                const OpaaxString lName = InParams.value("command", OpaaxString());
+                if (lName.IsEmpty())
+                {
+                    return CommandResult::Ok(nlohmann::json(FormatHelpList(GetSpecs())));
+                }
+
+                const TSharedPtr<const RegisteredCommand> lCommand = Find(lName);
+                if (lCommand == nullptr)
+                {
+                    return CommandResult::Fail("unknown command '" + lName + "' (help lists them)");
+                }
+                return CommandResult::Ok(nlohmann::json(FormatCommandHelp(lCommand->Spec)));
+            });
+
         Add(CommandSpec("console.run",
             "Runs a {line} as the console reads it (\"time.scale 0.25\", \"level.play Levels/Main.opaaxlevel\"): "
             "its command answers, and waits, as it would. An error names what is wrong with the line.")

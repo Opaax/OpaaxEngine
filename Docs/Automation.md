@@ -93,7 +93,7 @@ whole params. The line is checked against the declared parameters, and an error 
 | `app.quit` | | Closes the app at the end of the frame |
 | `commands.has` | `name` | `{has}`: whether the command exists now (a subsystem's command is gone with its world). A script refuses an unknown command even with `expectFailure`, so this is how a script checks one is gone |
 | `cheats.info` | | `{cheatsRun}`: whether a cheat answered ok since the game started |
-| `help` | `command` | The commands, a row each with the first sentence of its help; with `command`, its usage, help and parameters. Dev only |
+| `help` | `command` | The commands as text, a row each with the first sentence of its help; with `command`, its usage, help and parameters. Dev only |
 | `console.info` | `rows` | The dev console: `open`, the `line` being typed and its `caret`, `scroll`, `busy` (a line still waiting), `history` (lines kept) and its last `rows` (20) with their `kind` (`input`, `answer`, `info`, `warning`, `error`) and `text`. Dev only |
 | `console.run` | `line` | Runs a typed line (`"time.scale 0.25"`) as the console reads it: its command answers and waits as it would; an error names what is wrong with the line. Dev only |
 | `frames.wait` | `count` | Lets frames run before the next request |

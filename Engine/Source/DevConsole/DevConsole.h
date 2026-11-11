@@ -66,8 +66,14 @@ namespace Opaax
         /** Completes the word before the caret, as Tab does; several matches are listed. */
         void Complete();
 
-        /** Adds a log line, coloured by its level. */
+        /** Adds a log line, coloured by its level. Not echoed: it is in the log already. */
         void AddLog(ELogLevel InLevel, const OpaaxString& InText);
+
+        /**
+         * Told each text the console prints, whole (an answer's JSON in one text): the echo of a line,
+         * an answer, an error, the matches of Tab. The editor's Log panel logs them.
+         */
+        void SetEcho(TFunction<void(EDevConsoleRow, const OpaaxString&)> InEcho) { m_Echo = Move(InEcho); }
 
         // =============================================================================
         // State
@@ -103,6 +109,9 @@ namespace Opaax
     private:
         void Toggle();
         void Respond(const AutomationResponse& InResponse);
+
+        /** Adds InText to the output and tells the echo. */
+        void Print(EDevConsoleRow InKind, const OpaaxString& InText);
         void ScrollBy(Int64 InRows);
 
         ICommandRegistry&  m_Commands;
@@ -111,6 +120,8 @@ namespace Opaax
         DevConsoleLineEdit m_Line;
         DevConsoleHistory  m_History;
         DevConsoleOutput   m_Output;
+
+        TFunction<void(EDevConsoleRow, const OpaaxString&)> m_Echo;
 
         bool   m_bOpen           = false;
         bool   m_bHistoryChanged = false;

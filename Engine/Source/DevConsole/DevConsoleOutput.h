@@ -2,6 +2,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "Core/Log/Logger.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 
@@ -19,6 +20,15 @@ namespace Opaax
 
     /** The name of a row kind ("error"), as console.info answers it. */
     const char* ToString(EDevConsoleRow InKind) noexcept;
+
+    /** The log level a row of InKind is logged at (the editor's Log panel): an error is a warning, a typing mistake. */
+    ELogLevel ToLogLevel(EDevConsoleRow InKind) noexcept;
+
+    /**
+     * What a command's answer prints: nothing for null or an empty object (the command only did
+     * something), a string as it is, anything else as JSON indented by InIndent.
+     */
+    OpaaxString FormatCommandAnswer(const nlohmann::json& InValue, int InIndent = 2);
 
     /** One row of the console's output. */
     struct DevConsoleRow

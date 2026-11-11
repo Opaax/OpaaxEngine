@@ -3,6 +3,7 @@
 #include <doctest.h>
 
 #include "Commands/CommandRegistry.h"
+#include "Commands/CommandText.h"
 #include "DevConsole/DevConsole.h"
 #include "DevConsole/DevConsoleCommands.h"
 #include "Input/InputManager.h"
@@ -259,7 +260,7 @@ TEST_CASE("DevConsole: log lines are rows coloured by level; Page Up scrolls bac
     CHECK(lGame.Console->GetScroll() == 0);
 }
 
-TEST_CASE("DevConsole: help lists the commands or describes one; console.info tells the state")
+TEST_CASE("DevConsole: help (a registry built-in) lists the commands or describes one; console.info tells the state")
 {
     ConsoleGame lGame;
 
@@ -300,4 +301,46 @@ TEST_CASE("DevConsole: a ship build's registry takes none of the console's comma
     }
     CHECK_FALSE(lShip.Has("help"));
     CHECK_FALSE(lShip.Has("console.info"));
+}
+
+TEST_CASE("DevConsole: the echo is told each text printed whole, but not the log lines")
+{
+    ConsoleGame lGame;
+
+    TDynArray<EDevConsoleRow> lKinds;
+    TDynArray<OpaaxString>    lTexts;
+    lGame.Console->SetEcho([&](const EDevConsoleRow InKind, const OpaaxString& InText)
+    {
+        lKinds.push_back(InKind);
+        lTexts.push_back(InText);
+    });
+
+    lGame.Console->Submit("probe.scale 0.5");
+    lGame.Console->Tick();
+    REQUIRE(lKinds.size() == 2);
+    CHECK(lKinds[0] == EDevConsoleRow::Input);
+    CHECK(lTexts[0] == "> probe.scale 0.5");
+    CHECK(lKinds[1] == EDevConsoleRow::Answer);
+    CHECK(lTexts[1].Contains("\"scale\": 0.5"));
+    CHECK(lTexts[1].Contains("\n"));   // one text, several lines
+
+    lGame.Console->Submit("probe.scale nope");
+    CHECK(lKinds.back() == EDevConsoleRow::Error);
+
+    lGame.Console->AddLog(ELogLevel::Warn, "already logged");
+    CHECK(lKinds.size() == 4);
+}
+
+TEST_CASE("FormatCommandAnswer and ToLogLevel: what an answer prints, and the level a row is logged at")
+{
+    CHECK(FormatCommandAnswer(nlohmann::json()).IsEmpty());
+    CHECK(FormatCommandAnswer(nlohmann::json::object()).IsEmpty());
+    CHECK(FormatCommandAnswer(nlohmann::json("done")) == "done");
+    CHECK(FormatCommandAnswer(nlohmann::json{ { "a", 1 } }) == "{\n  \"a\": 1\n}");
+    CHECK(FormatCommandAnswer(nlohmann::json::array({ 1, 2 }), -1) == "[1,2]");
+
+    CHECK(ToLogLevel(EDevConsoleRow::Input) == ELogLevel::Info);
+    CHECK(ToLogLevel(EDevConsoleRow::Answer) == ELogLevel::Info);
+    CHECK(ToLogLevel(EDevConsoleRow::Warning) == ELogLevel::Warn);
+    CHECK(ToLogLevel(EDevConsoleRow::Error) == ELogLevel::Warn);
 }

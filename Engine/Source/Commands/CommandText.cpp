@@ -360,4 +360,88 @@ namespace Opaax
         }
         return lUsage;
     }
+
+    namespace
+    {
+        /** InHelp up to the end of its first sentence. */
+        OpaaxString FirstSentence(const OpaaxString& InHelp)
+        {
+            for (Uint32 lAt = 0; lAt + 1 < InHelp.GetLength(); ++lAt)
+            {
+                if (InHelp[lAt] == '.' && InHelp[lAt + 1] == ' ')
+                {
+                    return InHelp.SubString(0, lAt + 1);
+                }
+            }
+            return InHelp;
+        }
+
+        /** InText with spaces after it up to InWidth characters (at least one). */
+        OpaaxString PadRight(const OpaaxString& InText, const Uint32 InWidth)
+        {
+            OpaaxString lText = InText;
+            do
+            {
+                lText += ' ';
+            }
+            while (lText.GetLength() < InWidth);
+            return lText;
+        }
+    }
+
+    OpaaxString FormatHelpList(const TDynArray<CommandSpec>& InSpecs)
+    {
+        Uint32 lWidth = 0;
+        for (const CommandSpec& lSpec : InSpecs)
+        {
+            lWidth = Maths::Max(lWidth, lSpec.GetName().GetLength());
+        }
+
+        OpaaxString lText;
+        for (const CommandSpec& lSpec : InSpecs)
+        {
+            lText += PadRight(lSpec.GetName(), lWidth + 2);
+            lText += FirstSentence(lSpec.GetHelp());
+            if (lSpec.IsCheat())
+            {
+                lText += " [cheat]";
+            }
+            lText += '\n';
+        }
+        lText += "help <command> describes one; Tab completes a name.";
+        return lText;
+    }
+
+    OpaaxString FormatCommandHelp(const CommandSpec& InSpec)
+    {
+        OpaaxString lText = FormatCommandUsage(InSpec);
+        if (InSpec.IsCheat())
+        {
+            lText += "  [cheat]";
+        }
+        lText += '\n';
+        lText += InSpec.GetHelp();
+
+        for (const CommandParam& lParam : InSpec.GetParams())
+        {
+            lText += "\n  ";
+            lText += lParam.Name;
+            lText += OpaaxString::Format(" ({}{})", ToString(lParam.Type), lParam.bOptional ? ", optional" : "");
+            if (!lParam.Help.IsEmpty())
+            {
+                lText += ": ";
+                lText += lParam.Help;
+            }
+            if (!lParam.Choices.empty())
+            {
+                lText += lParam.Type == ECommandParamType::Any ? ". For example " : ". One of ";
+                for (Uint64 lIndex = 0; lIndex < lParam.Choices.size(); ++lIndex)
+                {
+                    lText += lIndex == 0 ? "" : ", ";
+                    lText += lParam.Choices[lIndex];
+                }
+            }
+        }
+        return lText;
+    }
 }
