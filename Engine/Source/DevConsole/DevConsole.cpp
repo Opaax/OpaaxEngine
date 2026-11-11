@@ -136,14 +136,14 @@ namespace Opaax
             return;
         }
 
-        m_Output.Add(EDevConsoleRow::Input, "> " + lLine);
+        Print(EDevConsoleRow::Input, "> " + lLine);
         m_History.Add(lLine);
         m_bHistoryChanged = true;
 
         const CommandTextResult lRead = ParseCommandText(lLine, m_Commands);
         if (!lRead.bOk)
         {
-            m_Output.Add(EDevConsoleRow::Error, lRead.Error);
+            Print(EDevConsoleRow::Error, lRead.Error);
             return;
         }
 
@@ -180,12 +180,12 @@ namespace Opaax
         {
             if (!lRow.IsEmpty() && lRow.GetLength() + 2 + lMatch.GetLength() > MATCHES_ROW_WIDTH)
             {
-                m_Output.Add(EDevConsoleRow::Info, lRow);
+                Print(EDevConsoleRow::Info, lRow);
                 lRow = OpaaxString();
             }
             lRow += lRow.IsEmpty() ? lMatch : "  " + lMatch;
         }
-        m_Output.Add(EDevConsoleRow::Info, lRow);
+        Print(EDevConsoleRow::Info, lRow);
     }
 
     void DevConsole::AddLog(const ELogLevel InLevel, const OpaaxString& InText)
@@ -233,13 +233,25 @@ namespace Opaax
     // =========================================================================
     void DevConsole::Respond(const AutomationResponse& InResponse)
     {
-        if (InResponse.bOk)
+        if (!InResponse.bOk)
         {
-            m_Output.AddAnswer(InResponse.Result);
+            Print(EDevConsoleRow::Error, InResponse.Error);
+            return;
         }
-        else
+
+        const OpaaxString lText = FormatCommandAnswer(InResponse.Result, DevConsoleOutput::JSON_INDENT);
+        if (!lText.IsEmpty() || InResponse.Result.is_string())
         {
-            m_Output.Add(EDevConsoleRow::Error, InResponse.Error);
+            Print(EDevConsoleRow::Answer, lText);
+        }
+    }
+
+    void DevConsole::Print(const EDevConsoleRow InKind, const OpaaxString& InText)
+    {
+        m_Output.Add(InKind, InText);
+        if (m_Echo)
+        {
+            m_Echo(InKind, InText);
         }
     }
 

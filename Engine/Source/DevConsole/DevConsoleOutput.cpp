@@ -18,6 +18,24 @@ namespace Opaax
         return "info";
     }
 
+    ELogLevel ToLogLevel(const EDevConsoleRow InKind) noexcept
+    {
+        return InKind == EDevConsoleRow::Warning || InKind == EDevConsoleRow::Error ? ELogLevel::Warn : ELogLevel::Info;
+    }
+
+    OpaaxString FormatCommandAnswer(const nlohmann::json& InValue, const int InIndent)
+    {
+        if (InValue.is_null() || (InValue.is_object() && InValue.empty()))
+        {
+            return OpaaxString();
+        }
+        if (InValue.is_string())
+        {
+            return InValue.get<OpaaxString>();
+        }
+        return OpaaxString(InValue.dump(InIndent).c_str());
+    }
+
     DevConsoleOutput::DevConsoleOutput(const Uint32 InMaxRows)
         : m_MaxRows(Maths::Max(InMaxRows, 1u))
     {
@@ -54,16 +72,11 @@ namespace Opaax
 
     void DevConsoleOutput::AddAnswer(const nlohmann::json& InValue)
     {
-        if (InValue.is_null() || (InValue.is_object() && InValue.empty()))
+        const OpaaxString lText = FormatCommandAnswer(InValue, JSON_INDENT);
+        if (!lText.IsEmpty() || InValue.is_string())
         {
-            return;
+            Add(EDevConsoleRow::Answer, lText);
         }
-        if (InValue.is_string())
-        {
-            Add(EDevConsoleRow::Answer, InValue.get<OpaaxString>());
-            return;
-        }
-        Add(EDevConsoleRow::Answer, OpaaxString(InValue.dump(JSON_INDENT).c_str()));
     }
 
     void DevConsoleOutput::Clear()

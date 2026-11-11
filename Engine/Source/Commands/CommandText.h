@@ -58,4 +58,10 @@ namespace Opaax
 
     /** How a command is typed: "time.scale <scale:float>", optional parameters in [ ]. */
     OpaaxString FormatCommandUsage(const CommandSpec& InSpec);
+
+    /** help's list: a row per command, its name and the first sentence of its help, cheats marked. */
+    OpaaxString FormatHelpList(const TDynArray<CommandSpec>& InSpecs);
+
+    /** help {command}: its usage, its help, then a row per parameter with its type and choices. */
+    OpaaxString FormatCommandHelp(const CommandSpec& InSpec);
 }

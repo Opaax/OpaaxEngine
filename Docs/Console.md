@@ -22,7 +22,8 @@ still sees them.
 | Tab | Completes the word before the caret: a command's name, then a parameter's choices. Several matches are completed as far as they agree, and listed |
 | Page Up, Page Down | Scroll the output |
 
-`help` lists every command; `help time.scale` describes one, with its parameters and their choices.
+`help` lists every command; `help time.scale` describes one, with its parameters and their choices
+(`help` is a command of the registry, in every dev build: scripts can send it too).
 A line is a command's name and its words:
 
 ```
@@ -45,6 +46,13 @@ config names (warnings and errors by default). The lines run are kept between ru
 
 A command that waits (`frames.wait 60`, `world.wait 2`) answers when its wait ends; the console has
 its own queue, so typing goes on meanwhile, and a script running at the same time is not held by it.
+
+## In the editor
+
+The editor's Log panel has the same line under its rows, in Edit and in Play: the same commands
+(the editor's own too: `entity.create`, `asset.open`...), Tab, Up and Down. What it prints goes to the
+log, in the `DevConsole` category: the line, the answer a row per line, and a refused line as a
+warning. Its history is its own, in `<UserDir>/Console/EditorHistory.txt`.
 
 ## Settings
 

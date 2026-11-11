@@ -1,0 +1,31 @@
+[
+    {
+        "id": "edit-has-help",
+        "command": "commands.has",
+        "params": {
+            "name": "help"
+        },
+        "expect": {
+            "has": true
+        }
+    },
+    {
+        "id": "help-line",
+        "command": "console.run",
+        "params": {
+            "line": "help world.info"
+        }
+    },
+    {
+        "id": "help-unknown",
+        "command": "console.run",
+        "params": {
+            "line": "help no.such.command"
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "help-list",
+        "command": "help"
+    }
+]

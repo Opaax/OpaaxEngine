@@ -5,6 +5,14 @@
 #include "Editor/Panels/LogFilter.h"
 
 #include "Core/OpaaxTypes.h"
+#include "Core/String/OpaaxString.hpp"
+
+struct ImGuiInputTextCallbackData;
+
+namespace Opaax
+{
+    class DevConsole;
+}
 
 namespace Opaax::Editor
 {
@@ -15,6 +23,8 @@ namespace Opaax::Editor
     //   lines as the console and the file, boot lines included.
     //   Keeps its own copy (Clear only empties it). Filtering is incremental: new lines are tested
     //   once; only a filter change re-tests every line. m_Entries is contiguous in sequence.
+    //   Under the lines, a command line: the dev console's (DevConsole), in Edit and in Play. What
+    //   it prints goes to the log; its history is kept in <UserDir>/Console/EditorHistory.txt.
     // =============================================================================
     class LogPanel final : public IEditorPanel
     {
@@ -26,6 +36,9 @@ namespace Opaax::Editor
 
         /** Maximum lines shown (also what the editor asks the Logger to keep). */
         static constexpr Uint32 MAX_LINES = 4096;
+
+        /** The command line's history, under the user's folder. */
+        static constexpr const char* HISTORY_FILE = "Console/EditorHistory.txt";
 
         // =============================================================================
         // Ctor - Dtor
@@ -68,6 +81,15 @@ namespace Opaax::Editor
         /** Empties the panel's copy (never the Logger's). */
         void ClearLines();
 
+        /** The command line under the lines: Enter runs it, Tab completes, Up and Down walk the history. */
+        void DrawCommandLine();
+
+        /** Made on first draw, once the app's command registry is there. */
+        void EnsureConsole();
+
+        /** Tab, Up and Down inside the command line's text field. */
+        static int OnCommandLineEdit(ImGuiInputTextCallbackData* InData);
+
         const LogEntry& EntryAt(Uint64 InSequence) const;
 
         // =============================================================================
@@ -78,7 +100,7 @@ namespace Opaax::Editor
         void Startup()     override {}
         void OnPreRender() override {}
         void DrawContents() override;
-        void Shutdown()    override {}
+        void Shutdown()    override;
 
         PanelWindowStyle GetWindowStyle() const override { return { { 720.f, 260.f } }; }
         //~End IEditorPanel interface
@@ -112,5 +134,10 @@ namespace Opaax::Editor
         TDynArray<LogEntry>  m_Incoming;
 
         Uint64               m_LastSequence = 0;
+
+        TUniquePtr<DevConsole> m_Console;
+        OpaaxString            m_HistoryPath;
+        char                   m_CommandBuffer[1024] = {};
+        bool                   m_bRefocusLine = false;
     };
 }

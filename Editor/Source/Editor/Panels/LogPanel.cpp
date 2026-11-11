@@ -4,8 +4,14 @@
 
 #include <imgui.h>
 
+#include "Application/OpaaxApplication.h"
+#include "Application/Services/ICommandRegistry.h"
+#include "Application/Services/IPaths.h"
 #include "Core/Algo/Algo.h"
+#include "Core/IO/FileIO.h"
+#include "Core/IO/FileSystem.h"
 #include "Core/String/CString.h"
+#include "DevConsole/DevConsole.h"
 
 using namespace Opaax;
 using namespace Opaax::Editor;
@@ -72,9 +78,115 @@ namespace Opaax::Editor
 
     void LogPanel::DrawContents()
     {
+        EnsureConsole();
+        m_Console->Tick();
+
         PullNewLines();
         DrawToolbar();
         DrawLines();
+        DrawCommandLine();
+    }
+
+    void LogPanel::Shutdown()
+    {
+        m_Console.reset();
+    }
+
+    void LogPanel::EnsureConsole()
+    {
+        if (m_Console != nullptr)
+        {
+            return;
+        }
+
+        // Only the history and the runner are used: the panel takes the text, and no key opens it.
+        ConsoleSettings lSettings;
+        lSettings.ToggleKey = EKeyCode::None;
+        m_Console = MakeUnique<DevConsole>(OpaaxApplication::GetAppService<ICommandRegistry>(), lSettings);
+        // A line of the log each: the table's rows are one line tall.
+        m_Console->SetEcho([](const EDevConsoleRow InKind, const OpaaxString& InText)
+        {
+            Uint32 lStart = 0;
+            for (Uint32 lAt = 0; lAt <= InText.GetLength(); ++lAt)
+            {
+                if (lAt == InText.GetLength() || InText[lAt] == '\n')
+                {
+                    Logger::Get().Log(ToLogLevel(InKind), LogDevConsole, InText.SubString(lStart, lAt - lStart).View());
+                    lStart = lAt + 1;
+                }
+            }
+        });
+
+        m_HistoryPath = OpaaxApplication::GetAppService<IPaths>().UserDir() + "/" + HISTORY_FILE;
+        if (FileSystem::IsFile(m_HistoryPath))
+        {
+            m_Console->GetHistory().FromText(FileIO::ReadAllText(m_HistoryPath));
+        }
+    }
+
+    void LogPanel::DrawCommandLine()
+    {
+        constexpr ImGuiInputTextFlags lFlags = ImGuiInputTextFlags_EnterReturnsTrue
+                                             | ImGuiInputTextFlags_CallbackCompletion
+                                             | ImGuiInputTextFlags_CallbackHistory;
+
+        if (m_bRefocusLine)
+        {
+            ImGui::SetKeyboardFocusHere();
+            m_bRefocusLine = false;
+        }
+
+        ImGui::SetNextItemWidth(-1.f);
+        if (ImGui::InputTextWithHint("##command", "Command (help lists them, Tab completes, Up for the last ones)",
+                                     m_CommandBuffer, sizeof(m_CommandBuffer), lFlags, &LogPanel::OnCommandLineEdit, this))
+        {
+            const OpaaxString lLine(m_CommandBuffer);
+            m_CommandBuffer[0] = '\0';
+            m_Console->Submit(lLine);
+            m_bRefocusLine = true;   // Enter leaves the field: the next line goes in at once
+
+            if (m_Console->ConsumeHistoryChanged()
+                && !FileIO::WriteAllTextAtomic(m_HistoryPath, m_Console->GetHistory().ToText()))
+            {
+                OPAAX_LOG(LogDevConsole, Warn, "The command line's history could not be saved to '{}'", m_HistoryPath.CStr());
+            }
+        }
+    }
+
+    int LogPanel::OnCommandLineEdit(ImGuiInputTextCallbackData* InData)
+    {
+        LogPanel&           lPanel = *static_cast<LogPanel*>(InData->UserData);
+        DevConsoleLineEdit& lLine  = lPanel.m_Console->GetLine();
+
+        // The field's text, its caret in characters.
+        const OpaaxString lText(InData->Buf);
+        lLine.SetText(OpaaxString(lText.SubString(0, static_cast<Uint32>(InData->CursorPos))));
+        const Uint32 lCaret = lLine.GetCaret();
+        lLine.SetText(lText);
+        lLine.SetCaret(lCaret);
+
+        if (InData->EventFlag == ImGuiInputTextFlags_CallbackCompletion)
+        {
+            lPanel.m_Console->Complete();
+        }
+        else if (InData->EventFlag == ImGuiInputTextFlags_CallbackHistory)
+        {
+            OpaaxString lWalked;
+            const bool  bWalked = InData->EventKey == ImGuiKey_UpArrow
+                                ? lPanel.m_Console->GetHistory().Up(lText, lWalked)
+                                : lPanel.m_Console->GetHistory().Down(lWalked);
+            if (!bWalked)
+            {
+                return 0;
+            }
+            lLine.SetText(lWalked);
+        }
+
+        const OpaaxString lNew = lLine.GetText();
+        InData->DeleteChars(0, InData->BufTextLen);
+        InData->InsertChars(0, lNew.CStr());
+        InData->CursorPos = static_cast<int>(lLine.GetTextBeforeCaret().GetLength());
+        return 0;
     }
 
     void LogPanel::PullNewLines()
@@ -243,7 +355,8 @@ namespace Opaax::Editor
         constexpr ImGuiTableFlags lFlags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg
                                          | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_Resizable;
 
-        if (!ImGui::BeginTable("##lines", 4, lFlags))
+        // The command line goes under the table.
+        if (!ImGui::BeginTable("##lines", 4, lFlags, ImVec2(0.f, -ImGui::GetFrameHeightWithSpacing())))
         {
             return;
         }
