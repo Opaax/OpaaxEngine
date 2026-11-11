@@ -1,5 +1,6 @@
 #include "Application/OpaaxApplication.h"
 
+#include "Core/Build/BuildInfo.h"
 #include "Core/Maths/Maths.h"
 #include "Core/String/CString.h"
 
@@ -205,13 +206,7 @@ IUserSettings& OpaaxApplication::BootUserSettings(ISaveStorage& SaveStorage, ICo
 void OpaaxApplication::BootProfiler(IConfigSystem& ConfigSystem)
 {
     // Dev builds always profile (editor or not).
-#if defined(OPAAX_WORKSPACE_DIR)
-    constexpr bool lbDevBuild = true;
-#else
-    constexpr bool lbDevBuild = false;
-#endif
-
-    const bool lbEnable = lbDevBuild
+    const bool lbEnable = Build::IsDevBuild()
                        || ConfigSystem.Get<Opaax::Config_Engine>().GetData().Stats.EnableInShipBuild;
 
     // When disabled, OPAAX_STAT_SCOPE costs a single branch.
@@ -289,13 +284,11 @@ void OpaaxApplication::RunApplication()
 {
     EngineStartup();
 
-#if defined(OPAAX_WORKSPACE_DIR)
     // Dev builds only: tests the crash path (dump, stack, log copy, dialog).
-    if (m_CommandLine.HasFlag("--crash-test"))
+    if (Build::IsDevBuild() && m_CommandLine.HasFlag("--crash-test"))
     {
         CrashHandler::TriggerTestCrash();
     }
-#endif
 
     // --frame-pacing <pacing>: the frames get the time of a screen rate instead of the clock's
     // ("144,jitter=0.25", FramePacing::Parse). A pacing that does not read fails the run.
