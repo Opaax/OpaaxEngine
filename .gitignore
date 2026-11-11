@@ -87,6 +87,9 @@ build_e2g.log
 # OS's user folder).
 **/Save/SaveGames/
 
+# The dev console's history (<UserDir>/Console/History.txt), per user.
+**/Save/Console/
+
 # Editor dock layout — per-user working state written to <ProjectRoot>/Editor/Save/ at runtime.
 # (A SHIPPED default layout, if we ever want one, would be a separate template file, not this.)
 imgui.ini
