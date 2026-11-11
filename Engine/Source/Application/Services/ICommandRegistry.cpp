@@ -19,6 +19,7 @@ namespace Opaax
             TSharedPtr<const RegisteredCommand> Find(const OpaaxString&) const override { return nullptr; }
 
             nlohmann::json Describe() const override { return nlohmann::json::array(); }
+            TDynArray<CommandSpec> GetSpecs() const override { return {}; }
 
             void NotifySucceeded(const RegisteredCommand&) override {}
             bool HaveCheatsRun() const override { return false; }
