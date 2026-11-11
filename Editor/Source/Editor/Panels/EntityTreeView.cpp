@@ -74,16 +74,31 @@ namespace Opaax::Editor
             ImGui::SetItemTooltip("Instance of %s", lMarker->Prefab.Path.CStr());
         }
 
-        // The arrow toggles, the rest selects. Ctrl toggles, a plain click replaces. Asked of ImGui (with
-        // an Edit world the engine never sees Ctrl).
+        // The arrow toggles, the rest selects. The selection changes on release, and not after a drag: a row
+        // dragged to the Inspector's entity slot keeps the Inspector on the entity that owns the slot.
         if (ImGui::IsItemClicked(ImGuiMouseButton_Left) && !ImGui::IsItemToggledOpen())
         {
-            if (ImGui::GetIO().KeyCtrl) { InSelection.Toggle(lEntity); }
-            else                        { InSelection.Select(lEntity); }
+            m_PressedRow = InEntity;
+            m_bHasPress  = true;
+        }
 
-            // A click (no spam). The count shows a multi-selection.
-            OPAAX_LOG(LogEntityTreeView, Info, "Hierarchy selected '{}' ({} selected)",
-                      lMeta->Name.CStr(), InSelection.Count());
+        if (ImGui::IsItemDeactivated() && m_bHasPress && m_PressedRow == InEntity)
+        {
+            m_bHasPress = false;
+
+            const ImGuiIO& lIO      = ImGui::GetIO();
+            const bool     lDragged = lIO.MouseDragMaxDistanceSqr[ImGuiMouseButton_Left]
+                                    >= lIO.MouseDragThreshold * lIO.MouseDragThreshold;
+            if (!lDragged)
+            {
+                // Ctrl toggles, a plain click replaces. Asked of ImGui (with an Edit world the engine never sees Ctrl).
+                if (lIO.KeyCtrl) { InSelection.Toggle(lEntity); }
+                else             { InSelection.Select(lEntity); }
+
+                // A click (no spam). The count shows a multi-selection.
+                OPAAX_LOG(LogEntityTreeView, Info, "Hierarchy selected '{}' ({} selected)",
+                          lMeta->Name.CStr(), InSelection.Count());
+            }
         }
 
         if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
