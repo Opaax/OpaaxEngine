@@ -1,0 +1,69 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "7e263f18a6374b71b9dc03af87bf3d75",
+            "name": "Camera",
+            "ownerMap": "TimeScale"
+        },
+        {
+            "components": {
+                "DriftProbe": {
+                    "Distance": 0.0,
+                    "GameTime": 0.0,
+                    "Speed": 100.0
+                },
+                "FrameProbe": {
+                    "Frames": 0,
+                    "MaxDelta": 0.0,
+                    "MinDelta": 1.0,
+                    "Steps": 0
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.8999999761581421,
+                        "y": 0.6000000238418579,
+                        "z": 0.20000000298023224
+                    },
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -300.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "5cbab5acfbda4c439d265385111c2471",
+            "name": "Drifter",
+            "ownerMap": "TimeScale"
+        }
+    ],
+    "mapId": "TimeScale",
+    "version": 4
+}

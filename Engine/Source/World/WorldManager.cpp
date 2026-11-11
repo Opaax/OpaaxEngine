@@ -6,6 +6,7 @@
 #include "Application/Services/IEngine.h"
 #include "Application/Services/IPaths.h"
 #include "Core/Events/EventBus.h"
+#include "Core/Maths/Maths.h"
 #include "Core/Profiling/Profiler.h"   // OPAAX_STAT_SCOPE
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/GameInstance/GameInstance.h"
@@ -69,6 +70,11 @@ namespace Opaax
         }
     }
 
+    void WorldManager::SetTimeScale(const float InScale) noexcept
+    {
+        m_TimeScale = Maths::Clamp(InScale, MIN_TIME_SCALE, MAX_TIME_SCALE);
+    }
+
     // =========================================================================
     // Tick — only the active world runs.
     // =========================================================================
@@ -86,7 +92,8 @@ namespace Opaax
         // Scope for everything the world's subsystems do.
         OPAAX_STAT_SCOPE("World");
 
-        m_ActiveWorld->GetSubsystems().UpdateAll(InDeltaTime);
+        // The world's time: real time scaled (its fixed steps are owed by the same, FrameClock).
+        m_ActiveWorld->GetSubsystems().UpdateAll(InDeltaTime * static_cast<double>(m_TimeScale));
     }
 
     void WorldManager::FixedUpdate(double InFixedDeltaTime)

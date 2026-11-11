@@ -1,0 +1,210 @@
+[
+    {
+        "repeat": [
+            { "hz": 60, "pace": "60" },
+            { "hz": 240, "pace": "240" }
+        ],
+        "requests": [
+            {
+                "id": "pace-{pace}",
+                "command": "time.pace",
+                "params": {
+                    "pacing": "{pace}"
+                }
+            },
+            {
+                "id": "play-{pace}",
+                "command": "level.play",
+                "params": {
+                    "path": "Levels/TimeScale.opaaxlevel"
+                }
+            },
+            {
+                "id": "normal-{pace}",
+                "command": "time.scale",
+                "params": {
+                    "scale": 1.0
+                },
+                "expect": {
+                    "scale": 1.0
+                }
+            },
+            {
+                "id": "reset-normal-{pace}",
+                "command": "component.set",
+                "params": {
+                    "entity": "Drifter",
+                    "type": "DriftProbe",
+                    "value": {
+                        "Distance": 0.0,
+                        "GameTime": 0.0
+                    }
+                }
+            },
+            {
+                "id": "reset-frames-normal-{pace}",
+                "command": "component.set",
+                "params": {
+                    "entity": "Drifter",
+                    "type": "FrameProbe",
+                    "value": {
+                        "Frames": 0,
+                        "Steps": 0
+                    }
+                }
+            },
+            {
+                "command": "frames.wait",
+                "params": {
+                    "count": "{hz}"
+                }
+            },
+            {
+                "id": "normal-distance-{pace}",
+                "command": "expect.value",
+                "params": {
+                    "entity": "Drifter",
+                    "path": "DriftProbe/Distance",
+                    "near": 100.0,
+                    "tolerance": 2.0
+                }
+            },
+            {
+                "id": "normal-game-time-{pace}",
+                "command": "expect.value",
+                "params": {
+                    "entity": "Drifter",
+                    "path": "DriftProbe/GameTime",
+                    "near": 1.0,
+                    "tolerance": 0.01
+                }
+            },
+            {
+                "id": "quarter-{pace}",
+                "command": "time.scale",
+                "params": {
+                    "scale": 0.25
+                },
+                "expect": {
+                    "scale": 0.25
+                }
+            },
+            {
+                "id": "reset-quarter-{pace}",
+                "command": "component.set",
+                "params": {
+                    "entity": "Drifter",
+                    "type": "DriftProbe",
+                    "value": {
+                        "Distance": 0.0,
+                        "GameTime": 0.0
+                    }
+                }
+            },
+            {
+                "id": "reset-frames-quarter-{pace}",
+                "command": "component.set",
+                "params": {
+                    "entity": "Drifter",
+                    "type": "FrameProbe",
+                    "value": {
+                        "Frames": 0,
+                        "Steps": 0
+                    }
+                }
+            },
+            {
+                "command": "frames.wait",
+                "params": {
+                    "count": "{hz}"
+                }
+            },
+            {
+                "id": "quarter-distance-{pace}",
+                "command": "expect.value",
+                "params": {
+                    "entity": "Drifter",
+                    "path": "DriftProbe/Distance",
+                    "near": 25.0,
+                    "tolerance": 2.0
+                }
+            },
+            {
+                "id": "quarter-game-time-{pace}",
+                "command": "expect.value",
+                "params": {
+                    "entity": "Drifter",
+                    "path": "DriftProbe/GameTime",
+                    "near": 0.25,
+                    "tolerance": 0.01
+                }
+            },
+            {
+                "id": "quarter-frames-real-{pace}",
+                "command": "expect.value",
+                "params": {
+                    "entity": "Drifter",
+                    "path": "FrameProbe/Frames",
+                    "near": "{hz}",
+                    "tolerance": 1
+                }
+            },
+            {
+                "id": "quarter-steps-{pace}",
+                "command": "expect.value",
+                "params": {
+                    "entity": "Drifter",
+                    "path": "FrameProbe/Steps",
+                    "near": 15,
+                    "tolerance": 1
+                }
+            },
+            {
+                "id": "quarter-info-{pace}",
+                "command": "world.info",
+                "expect": {
+                    "timeScale": 0.25
+                }
+            },
+            {
+                "id": "screenshot-{pace}",
+                "command": "screenshot",
+                "params": {
+                    "path": "TimeScale{pace}.png"
+                }
+            }
+        ]
+    },
+    {
+        "id": "kept-in-range",
+        "command": "time.scale",
+        "params": {
+            "scale": 10.0
+        },
+        "expect": {
+            "scale": 4.0
+        }
+    },
+    {
+        "id": "needs-a-number",
+        "command": "time.scale",
+        "params": {
+            "scale": "slow"
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "back-to-normal",
+        "command": "time.scale",
+        "params": {
+            "scale": 1.0
+        }
+    },
+    {
+        "id": "a-cheat",
+        "command": "cheats.info",
+        "expect": {
+            "cheatsRun": true
+        }
+    }
+]

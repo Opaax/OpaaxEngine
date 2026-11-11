@@ -24,6 +24,7 @@
 #include "Probes/ScriptingProbes.h"
 #include "Probes/SettingsProbes.h"
 #include "Probes/SpawnProbe.h"
+#include "Probes/TimeScaleProbes.h"
 #include "Probes/UIProbes.h"
 
 namespace TestWorld
@@ -65,6 +66,7 @@ namespace TestWorld
     OPAAX_REGISTER_BEHAVIOUR(ShakeProbe);
     OPAAX_REGISTER_BEHAVIOUR(FollowProbe);
     OPAAX_REGISTER_BEHAVIOUR(FrameProbe);
+    OPAAX_REGISTER_BEHAVIOUR(DriftProbe);
     OPAAX_REGISTER_BEHAVIOUR(WalkerProbe);
     OPAAX_REGISTER_BEHAVIOUR(ScriptProbe);
     OPAAX_REGISTER_BEHAVIOUR(HelperProbe);

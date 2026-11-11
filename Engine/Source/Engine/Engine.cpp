@@ -433,6 +433,12 @@ namespace Opaax
 
         const bool bEnded = m_GameInstances->EndGame();
 
+        // A slowed game does not slow the next one.
+        if (m_WorldManager != nullptr)
+        {
+            m_WorldManager->SetTimeScale(1.f);
+        }
+
         // After the game: its OnEnd still read the player's settings.
         ReleaseUserSettings();
         return bEnded;
@@ -473,6 +479,8 @@ namespace Opaax
             m_PacedTime += m_Pacer.Next();
         }
 
+        // The world's time scale owes the fixed steps from this frame on.
+        m_Clock.SetTimeScale(m_WorldManager != nullptr ? m_WorldManager->GetTimeScale() : 1.0);
         const double lDeltaTime = m_Clock.BeginFrame(ClockTime());
 
         {

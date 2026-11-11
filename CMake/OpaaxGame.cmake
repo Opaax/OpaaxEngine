@@ -125,7 +125,8 @@ endfunction()
 # scripts make to <build>/<Name>Results/User (--user-dir), never the project's own. They run on the
 # fake online store (--online fake), never a real one, even where one is installed. They open a
 # window, so they need a display: labelled "feature" (`ctest -LE feature` leaves them out). Built
-# with OPAAX_BUILD_TESTS.
+# with OPAAX_BUILD_TESTS. The scripts of <dir>/Dev run only in a dev build (they use dev-only
+# commands, like time.scale), those of <dir>/Ship only in a ship build.
 # =============================================================================
 function(opaax_add_game_feature_tests InName InDir)
     if(NOT OPAAX_BUILD_TESTS)
@@ -137,6 +138,12 @@ function(opaax_add_game_feature_tests InName InDir)
 
     get_filename_component(lDir "${InDir}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
     file(GLOB lScripts CONFIGURE_DEPENDS "${lDir}/*.json")
+    if(OPAAX_DEV_BUILD)
+        file(GLOB lKindScripts CONFIGURE_DEPENDS "${lDir}/Dev/*.json")
+    else()
+        file(GLOB lKindScripts CONFIGURE_DEPENDS "${lDir}/Ship/*.json")
+    endif()
+    list(APPEND lScripts ${lKindScripts})
 
     set(lResults "${CMAKE_BINARY_DIR}/${InName}Results")
     file(MAKE_DIRECTORY "${lResults}")

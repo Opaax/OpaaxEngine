@@ -2,6 +2,7 @@
 // Restart (the time spent opening a level is not simulated), a paused world held still, and deltas
 // snapped to a screen's refresh: a noisy timer gives steady frames, a stated rate is measured, the
 // game's time does not drift, and a frame at a step's length takes exactly one step.
+// A time scale owes more or fewer steps of the same length.
 // The fixed step is 1/64 s here so the arithmetic is exact.
 #include <doctest.h>
 
@@ -351,4 +352,124 @@ TEST_CASE("FrameClock: a frame owing more than its most steps takes them, drops 
     // At least one.
     lClock.SetMaxStepsPerFrame(0);
     CHECK(lClock.GetMaxStepsPerFrame() == 1);
+}
+
+// =============================================================================
+// Time scale
+// =============================================================================
+namespace
+{
+    /** InSeconds of frames at InHertz with the world ticking: the fixed steps taken. */
+    int RunFor(FrameClock& InClock, double& InOutNow, const double InHertz, const double InSeconds)
+    {
+        const int lFrames = static_cast<int>(Maths::RoundHalfFromZero(InSeconds * InHertz));
+        int       lSteps  = 0;
+        for (int lFrame = 0; lFrame < lFrames; ++lFrame)
+        {
+            InOutNow += 1.0 / InHertz;
+            InClock.BeginFrame(InOutNow);
+            InClock.SetWorldTicks(true);
+            lSteps += TakeAll(InClock);
+        }
+        return lSteps;
+    }
+}
+
+TEST_CASE("FrameClock: at a time scale, N seconds run N times the scale of steps, each of the usual length")
+{
+    for (const double lHertz : { 60.0, 144.0, 240.0 })
+    {
+        for (const double lScale : { 1.0, 0.25, 0.5, 2.0 })
+        {
+            CAPTURE(lHertz);
+            CAPTURE(lScale);
+
+            FrameClock lClock(FIXED);
+            lClock.SetTimeScale(lScale);
+            double lNow = 0.0;
+            lClock.BeginFrame(lNow);
+
+            const double lSeconds  = 4.0;
+            const int    lSteps    = RunFor(lClock, lNow, lHertz, lSeconds);
+            const double lExpected = lSeconds * lScale / FIXED;
+
+            // One step of slack: the last frame's part of one is still owed.
+            CHECK(static_cast<double>(lSteps) <= lExpected + 1e-9);
+            CHECK(static_cast<double>(lSteps) >= lExpected - 1.0);
+            CHECK(lClock.GetFixedDelta() == FIXED);
+            CHECK(lClock.GetDelta() == doctest::Approx(1.0 / lHertz));
+            CHECK(lClock.GetScaledDelta() == doctest::Approx(lScale / lHertz));
+        }
+    }
+}
+
+TEST_CASE("FrameClock: a scale of 1 gives the same steps as no scale, frame by frame")
+{
+    FrameClock lPlain(FIXED);
+    FrameClock lScaled(FIXED);
+    lScaled.SetTimeScale(1.0);
+
+    double lNow = 0.0;
+    lPlain.BeginFrame(lNow);
+    lScaled.BeginFrame(lNow);
+    for (int lFrame = 0; lFrame < 500; ++lFrame)
+    {
+        lNow += 1.0 / 144.0;
+        lPlain.BeginFrame(lNow);
+        lScaled.BeginFrame(lNow);
+        CHECK(TakeAll(lPlain) == TakeAll(lScaled));
+        CHECK(lPlain.GetFixedAlpha() == lScaled.GetFixedAlpha());
+    }
+}
+
+TEST_CASE("FrameClock: at a quarter speed, a 240 Hz frame owes a quarter as much, so the steps come four times slower")
+{
+    FrameClock lClock(FIXED);
+    lClock.SetTimeScale(0.25);
+    double lNow = 0.0;
+    lClock.BeginFrame(lNow);
+
+    // A step is 1/64 s of game time: 1/16 s of real time, 15 frames at 240 Hz.
+    CHECK(RunFor(lClock, lNow, 240.0, 1.0 / 16.0) == 1);
+    CHECK(RunFor(lClock, lNow, 240.0, 1.0) == 16);
+}
+
+TEST_CASE("FrameClock: a pause and a resume at a quarter speed go on from the picture held")
+{
+    FrameClock lClock(FIXED);
+    lClock.SetTimeScale(0.25);
+    lClock.BeginFrame(0.0);
+    lClock.SetWorldTicks(true);
+
+    // Half a step of game time: two steps' length of real time.
+    double lNow = FIXED * 2.0;
+    lClock.BeginFrame(lNow);
+    lClock.SetWorldTicks(true);
+    CHECK(TakeAll(lClock) == 0);
+    CHECK(lClock.GetDisplayAlpha() == 0.5);
+
+    for (int lFrame = 0; lFrame < 10; ++lFrame)
+    {
+        lNow += FIXED;
+        lClock.BeginFrame(lNow);
+        lClock.SetWorldTicks(false);
+        TakeAll(lClock);
+        CHECK(lClock.GetDisplayAlpha() == 0.5);
+    }
+
+    // Resumed for a step's length of real time: a quarter step on from the picture.
+    lNow += FIXED;
+    lClock.BeginFrame(lNow);
+    lClock.SetWorldTicks(true);
+    CHECK(TakeAll(lClock) == 0);
+    CHECK(lClock.GetDisplayAlpha() == 0.75);
+}
+
+TEST_CASE("FrameClock: a time scale that is not above zero is ignored")
+{
+    FrameClock lClock(FIXED);
+    lClock.SetTimeScale(0.5);
+    lClock.SetTimeScale(0.0);
+    lClock.SetTimeScale(-1.0);
+    CHECK(lClock.GetTimeScale() == 0.5);
 }

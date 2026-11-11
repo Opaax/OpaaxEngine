@@ -113,7 +113,9 @@ opaax_add_game_feature_tests(MyGame Tests)
 - `opaax_add_game_feature_tests(<Name> <dir>)`: a test per script `<dir>/*.json`, named
   `<Name>.<Script>`: the game's runtime plays it and checks it with `expect.*`
   ([Automation.md](Automation.md)). The answers and screenshots go to `build/<preset>/<Name>Results`.
-  They open a window, so they are labelled `feature` (`ctest -LE feature` leaves them out).
+  They open a window, so they are labelled `feature` (`ctest -LE feature` leaves them out). The
+  scripts of `<dir>/Dev` run only in a dev build (they use dev-only commands, like `time.scale`),
+  those of `<dir>/Ship` only in a ship build.
 
 ## Continuous integration
 
