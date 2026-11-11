@@ -240,6 +240,9 @@ namespace Opaax
 
         if (lResult.bOk)
         {
+            // A cheat counts once it answered ok, before its wait: what it did is done.
+            m_Commands.NotifySucceeded(*lCommand);
+
             m_WaitFrames = lResult.WaitFrames;
             m_WaitUntil  = Move(lResult.WaitUntil);
             m_AfterWait  = Move(lResult.AfterWait);

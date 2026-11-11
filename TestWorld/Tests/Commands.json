@@ -32,6 +32,65 @@
         }
     },
     {
+        "id": "no-cheat-yet",
+        "command": "probe.cheats",
+        "expect": {
+            "count": 0
+        }
+    },
+    {
+        "id": "cheat",
+        "command": "component.set",
+        "params": {
+            "entity": "Camera",
+            "type": "Transform",
+            "value": {
+                "Position": {
+                    "x": 5.0
+                }
+            }
+        }
+    },
+    {
+        "id": "cheat-told-at-once",
+        "command": "probe.cheats",
+        "expect": {
+            "count": 1,
+            "last": "component.set"
+        }
+    },
+    {
+        "id": "refused-cheat",
+        "command": "component.set",
+        "params": {
+            "entity": "Nobody",
+            "type": "Transform",
+            "value": {}
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "plain-command",
+        "command": "commands.has",
+        "params": {
+            "name": "frames.wait"
+        }
+    },
+    {
+        "id": "refused-and-plain-are-not-cheats",
+        "command": "probe.cheats",
+        "expect": {
+            "count": 1
+        }
+    },
+    {
+        "id": "flag-set",
+        "command": "cheats.info",
+        "expect": {
+            "cheatsRun": true
+        }
+    },
+    {
         "id": "other-level",
         "command": "level.play",
         "params": {

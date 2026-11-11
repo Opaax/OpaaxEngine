@@ -65,15 +65,26 @@ depending on the machine, game time does not.
 
 ## Commands
 
-`commands.list` lists every command with its help, and its parameters when it declares them. An `entity` is an entity's id (from
-`entity.list`) or its name when no other entity has it. Component types and fields are the ones
-saved in `.opaaxmap` files.
+`commands.list` lists every command with its help, and its parameters when it declares them. An
+`entity` is an entity's id (from `entity.list`) or its name when no other entity has it. Component
+types and fields are the ones saved in `.opaaxmap` files.
+
+Some commands are **cheats**: they change the game in a way a player could not. When one answers
+ok, in any build and from any source, the engine publishes `CheatUsed` on its event bus and sets a
+flag the game can read (`ICommandRegistry::HaveCheatsRun`), cleared when a game starts. A game
+voids a run on it, so a script on a shipped game does not post a time. The engine's cheats:
+`world.step`, `component.set` (and the editor's `component.add`, `component.remove`), `level.play`,
+`config.set`, `save.set`, `save.clear`, `online.use`, `online.fake.player`,
+`online.leaderboard.upload`, and the editor's `entity.create`, `entity.destroy`, `entity.duplicate`,
+`entity.parent`, `entity.paste`, `entity.cut`, `prefab.place`. `commands.list` marks them
+`"cheat": true`; a command marked `"devOnly": true` is not there in a ship build.
 
 | Command | Params | Does |
 |---|---|---|
 | `app.info` | | Frame number, `devBuild` (false in a ship build) and the folders: workspace, engine, project, assets, save, user (where the saves go) |
 | `app.quit` | | Closes the app at the end of the frame |
 | `commands.has` | `name` | `{has}`: whether the command exists now (a subsystem's command is gone with its world). A script refuses an unknown command even with `expectFailure`, so this is how a script checks one is gone |
+| `cheats.info` | | `{cheatsRun}`: whether a cheat answered ok since the game started |
 | `frames.wait` | `count` | Lets frames run before the next request |
 | `world.wait` | `seconds` | Lets the playing world's clock advance (game time, whatever the frame rate) |
 | `config.get` | `config` | A config's values (`Engine`, `Renderer`...): `values` what the engine reads, `project` its file's values and `player` the player's settings over them |

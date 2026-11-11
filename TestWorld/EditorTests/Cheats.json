@@ -1,0 +1,74 @@
+[
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 10
+        }
+    },
+    {
+        "id": "open",
+        "command": "level.open",
+        "params": {
+            "path": "Levels/Commands.opaaxlevel"
+        },
+        "expect": {
+            "world": "Commands"
+        }
+    },
+    {
+        "id": "play",
+        "command": "editor.play",
+        "expect": {
+            "mode": "Play"
+        }
+    },
+    {
+        "id": "clean-start",
+        "command": "cheats.info",
+        "expect": {
+            "cheatsRun": false
+        }
+    },
+    {
+        "id": "cheat",
+        "command": "component.set",
+        "params": {
+            "entity": "Camera",
+            "type": "Transform",
+            "value": {
+                "Position": {
+                    "x": 5.0
+                }
+            }
+        }
+    },
+    {
+        "id": "flag-set",
+        "command": "cheats.info",
+        "expect": {
+            "cheatsRun": true
+        }
+    },
+    {
+        "id": "stop",
+        "command": "editor.stop"
+    },
+    {
+        "id": "play-again",
+        "command": "editor.play",
+        "expect": {
+            "mode": "Play"
+        }
+    },
+    {
+        "id": "next-session-starts-clean",
+        "command": "cheats.info",
+        "expect": {
+            "cheatsRun": false
+        }
+    },
+    {
+        "id": "stop-again",
+        "command": "editor.stop"
+    }
+]

@@ -5,8 +5,6 @@
 
 namespace Opaax
 {
-    OPAAX_LOG_CATEGORY(Commands);
-
     // =========================================================================
     // CommandResult
     // =========================================================================
@@ -82,9 +80,29 @@ namespace Opaax
         return *this;
     }
 
+    CommandSpec& CommandSpec::Cheat()
+    {
+        m_bCheat = true;
+        return *this;
+    }
+
+    CommandSpec& CommandSpec::DevOnly()
+    {
+        m_bDevOnly = true;
+        return *this;
+    }
+
     nlohmann::json CommandSpec::ToJson() const
     {
         nlohmann::json lJson{ { "name", m_Name }, { "help", m_Help } };
+        if (m_bCheat)
+        {
+            lJson["cheat"] = true;
+        }
+        if (m_bDevOnly)
+        {
+            lJson["devOnly"] = true;
+        }
         if (m_Params.empty())
         {
             return lJson;

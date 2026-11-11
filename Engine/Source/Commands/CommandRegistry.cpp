@@ -2,6 +2,7 @@
 
 #include "Core/Algo/Algo.h"
 #include "Core/Hash/OpaaxHash.h"
+#include "Core/Log/Logger.h"
 #include "Core/Maths/Maths.h"
 #include "Core/String/OpaaxStringJson.h"
 
@@ -86,8 +87,9 @@ namespace Opaax
     // =========================================================================
     // CommandRegistry
     // =========================================================================
-    CommandRegistry::CommandRegistry()
+    CommandRegistry::CommandRegistry(const bool bInDevBuild)
         : m_State(MakeShared<CommandRegistryState>())
+        , m_bDevBuild(bInDevBuild)
     {
         Add("commands.list", "Lists every command with its help.",
             [this](const nlohmann::json&)
@@ -107,6 +109,12 @@ namespace Opaax
                 return CommandResult::Ok(nlohmann::json{ { "has", Has(lName) } });
             });
 
+        Add("cheats.info", "Whether a cheat answered ok since the game started: {cheatsRun}.",
+            [this](const nlohmann::json&)
+            {
+                return CommandResult::Ok(nlohmann::json{ { "cheatsRun", HaveCheatsRun() } });
+            });
+
         Add("frames.wait", "Lets {count} frames run (default 1) before the next request.",
             [](const nlohmann::json& InParams)
             {
@@ -124,6 +132,12 @@ namespace Opaax
 
     void CommandRegistry::Add(CommandSpec InSpec, CommandHandler InHandler)
     {
+        if (IsRefused(InSpec))
+        {
+            OPAAX_LOG(LogCommands, Trace, "Command '{}' is dev only: not registered in a ship build", InSpec.GetName());
+            return;
+        }
+
         TSharedPtr<RegisteredCommand> lCommand = MakeShared<RegisteredCommand>();
         lCommand->Spec    = Move(InSpec);
         lCommand->Handler = Move(InHandler);
@@ -135,6 +149,12 @@ namespace Opaax
 
     CommandHandle CommandRegistry::Register(CommandSpec InSpec, CommandHandler InHandler)
     {
+        if (IsRefused(InSpec))
+        {
+            OPAAX_LOG(LogCommands, Trace, "Command '{}' is dev only: not registered in a ship build", InSpec.GetName());
+            return CommandHandle();
+        }
+
         OpaaxString  lName = InSpec.GetName();
         const Uint64 lId   = m_State->NextId;
         Add(Move(InSpec), Move(InHandler));
@@ -167,5 +187,26 @@ namespace Opaax
             lList.push_back(Find(lName)->Spec.ToJson());
         }
         return lList;
+    }
+
+    void CommandRegistry::NotifySucceeded(const RegisteredCommand& InCommand)
+    {
+        if (!InCommand.Spec.IsCheat())
+        {
+            return;
+        }
+
+        m_bCheatsRun = true;
+        OPAAX_LOG(LogCommands, Info, "Cheat used: {}", InCommand.Spec.GetName());
+
+        if (m_CheatListener)
+        {
+            m_CheatListener(CheatUsed{ OpaaxStringID(InCommand.Spec.GetName()) });
+        }
+    }
+
+    void CommandRegistry::SetCheatListener(TFunction<void(const CheatUsed&)> InListener)
+    {
+        m_CheatListener = Move(InListener);
     }
 }

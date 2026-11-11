@@ -368,12 +368,13 @@ TEST_CASE("Automation: commands.list describes every command, sorted, with its h
 
     REQUIRE(lRecorder.Responses.size() == 1);
     const nlohmann::json& lList = lRecorder.Responses[0].Result.at("commands");
-    REQUIRE(lList.size() == 4);
-    CHECK(lList[0].at("name") == "commands.has");
-    CHECK(lList[1].at("name") == "commands.list");
-    CHECK(lList[2].at("name") == "echo");
-    CHECK(lList[3].at("name") == "frames.wait");
-    CHECK(lList[2].at("help") == "Returns its params.");
+    REQUIRE(lList.size() == 5);
+    CHECK(lList[0].at("name") == "cheats.info");
+    CHECK(lList[1].at("name") == "commands.has");
+    CHECK(lList[2].at("name") == "commands.list");
+    CHECK(lList[3].at("name") == "echo");
+    CHECK(lList[4].at("name") == "frames.wait");
+    CHECK(lList[3].at("help") == "Returns its params.");
 }
 
 TEST_CASE("Automation: a script is an array or {requests}; ids default to positions; errors name the request; "

@@ -335,7 +335,20 @@ namespace Opaax::Editor::EditorAutomation
             void Register(const char* InName, const char* InHelp, AutomationHandler InHandler,
                           const char* InInstead = ANSWER_ELSEWHERE)
             {
-                m_Commands.Add(InName, InHelp,
+                Add(CommandSpec(InName, InHelp), Move(InHandler), InInstead);
+            }
+
+            /** Register for a command that changes the game as a player could not (CommandSpec::Cheat). */
+            void RegisterCheat(const char* InName, const char* InHelp, AutomationHandler InHandler,
+                               const char* InInstead = ANSWER_ELSEWHERE)
+            {
+                Add(CommandSpec(InName, InHelp).Cheat(), Move(InHandler), InInstead);
+            }
+
+        private:
+            void Add(CommandSpec InSpec, AutomationHandler InHandler, const char* InInstead)
+            {
+                m_Commands.Add(Move(InSpec),
                     [&lDialogs = m_Dialogs, lHandler = Move(InHandler), InInstead](const nlohmann::json& InParams)
                     {
                         AutomationResult lResult;
@@ -495,7 +508,7 @@ namespace Opaax::Editor::EditorAutomation
                 UNSAVED_CHANGES);
 
             // Replaces the engine's: the editor plays a level by opening it, then Play In Editor.
-            InCommands.Register("level.play",
+            InCommands.RegisterCheat("level.play",
                 "Opens the level at {path} (relative to the project's assets) and plays it in the editor; the next "
                 "request runs once it plays. Refused when the open level has unsaved changes, unless {discard} is true.",
                 [&InContext](const nlohmann::json& InParams)
@@ -750,7 +763,7 @@ namespace Opaax::Editor::EditorAutomation
         // =========================================================================
         void RegisterEntities(Commands& InCommands, EditorContext& InContext)
         {
-            InCommands.Register("entity.create",
+            InCommands.RegisterCheat("entity.create",
                 "Creates an entity in the edit world: {name}, {map} (default: the focused one), {components}: "
                 "{type: values}. One undo step; returns the entity. A request that fails creates nothing.",
                 [&InContext](const nlohmann::json& InParams)
@@ -782,7 +795,7 @@ namespace Opaax::Editor::EditorAutomation
                     return AutomationResult::Ok(Describe(InContext, lEntity));
                 });
 
-            InCommands.Register("entity.destroy", "Destroys {entity} (id or name), as Delete would. Undoable.",
+            InCommands.RegisterCheat("entity.destroy", "Destroys {entity} (id or name), as Delete would. Undoable.",
                 [&InContext](const nlohmann::json& InParams)
                 {
                     OpaaxString  lError;
@@ -797,7 +810,7 @@ namespace Opaax::Editor::EditorAutomation
                     return AutomationResult::Ok();
                 });
 
-            InCommands.Register("entity.duplicate",
+            InCommands.RegisterCheat("entity.duplicate",
                 "Copies {entities} (ids or names; default: the selection), children included, beside the originals, "
                 "as Duplicate does: the copies are named anew and selected. Undoable. With {prefab}: true, in the "
                 "Prefab panel's prefab. Answers {count} created and the selected copies ({id, name, parent, map}).",
@@ -843,7 +856,7 @@ namespace Opaax::Editor::EditorAutomation
                     return AutomationResult::Ok(nlohmann::json{ { "count", lCount } });
                 });
 
-            InCommands.Register("entity.cut",
+            InCommands.RegisterCheat("entity.cut",
                 "Puts {entities} (ids or names; default: the selection), children included, on the clipboard, then "
                 "deletes them, as Cut does. Undoable. With {prefab}: true, in the Prefab panel's prefab. Answers the "
                 "{count} copied.",
@@ -864,7 +877,7 @@ namespace Opaax::Editor::EditorAutomation
                     return AutomationResult::Ok(nlohmann::json{ { "count", lCount } });
                 });
 
-            InCommands.Register("entity.paste",
+            InCommands.RegisterCheat("entity.paste",
                 "Makes new entities of the clipboard's copy in {map} (default: the focused one), where they were "
                 "copied, as Paste does: the copies are named anew and selected. Undoable. With {prefab}: true, into the "
                 "Prefab panel's prefab (refused when the copy places that prefab). Answers {count} created and the "
@@ -909,7 +922,7 @@ namespace Opaax::Editor::EditorAutomation
                     return AutomationResult::Ok(nlohmann::json{ { "selected", lSelected } });
                 });
 
-            InCommands.Register("component.add", "Adds the component {type} to {entity}, with its defaults. Undoable.",
+            InCommands.RegisterCheat("component.add", "Adds the component {type} to {entity}, with its defaults. Undoable.",
                 [&InContext](const nlohmann::json& InParams)
                 {
                     OpaaxString  lError;
@@ -957,7 +970,7 @@ namespace Opaax::Editor::EditorAutomation
                     return AutomationResult::Ok(Describe(InContext, lEntity));
                 });
 
-            InCommands.Register("component.remove", "Removes the component {type} from {entity}. Undoable.",
+            InCommands.RegisterCheat("component.remove", "Removes the component {type} from {entity}. Undoable.",
                 [&InContext](const nlohmann::json& InParams)
                 {
                     OpaaxString  lError;
@@ -975,7 +988,7 @@ namespace Opaax::Editor::EditorAutomation
                     return AutomationResult::Ok(Describe(InContext, lEntity));
                 });
 
-            InCommands.Register("entity.parent",
+            InCommands.RegisterCheat("entity.parent",
                 "Puts {entity} (and its children) under {parent} (id or name; empty or absent detaches it), "
                 "keeping where it is in the world. Undoable.",
                 [&InContext](const nlohmann::json& InParams)
@@ -1022,7 +1035,7 @@ namespace Opaax::Editor::EditorAutomation
                 });
 
             // Replaces the engine's: in the edit world, an edit is an undo step.
-            InCommands.Register("component.set",
+            InCommands.RegisterCheat("component.set",
                 "Changes fields of {entity}'s component {type}: {value} is merged into it (added when missing). "
                 "Undoable in the edit world. A field of the wrong type changes nothing.",
                 [&InContext](const nlohmann::json& InParams)
@@ -1077,7 +1090,7 @@ namespace Opaax::Editor::EditorAutomation
                     return AutomationResult::Ok(nlohmann::json{ { "path", lPath.CStr() } });
                 });
 
-            InCommands.Register("prefab.place",
+            InCommands.RegisterCheat("prefab.place",
                 "Places an instance of the prefab at {path} in the focused map, its first entity at {position} "
                 "({x, y}; default: where the prefab has it). Undoable; returns the placed entities.",
                 [&InContext](const nlohmann::json& InParams)

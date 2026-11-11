@@ -485,6 +485,12 @@ void OpaaxApplication::EngineStartup()
     // The engine's commands, before any world: its subsystems may refine them.
     EngineAutomation::Register(Commands(), Engine(), *this);
 
+    // A cheat that ran is told to the game at once, on the engine bus.
+    Commands().SetCheatListener([this](const CheatUsed& InCheat)
+    {
+        Engine().GetEngineEventBus().GetEventBus().Publish(InCheat);
+    });
+
     // Gameplay may ask to quit; the host decides what quitting means.
     Engine().GetEngineEventBus().GetEventBus().Subscribe<QuitGameRequested>(
         [this](const QuitGameRequested&) { OnQuitGameRequested(); });
@@ -541,6 +547,9 @@ void OpaaxApplication::EngineTeardown()
 {
     // End the game (and its Play worlds) before the engine. No-op if no game was started.
     Engine().EndGame();
+
+    // Its bus is going: a cheat is no longer told to anyone.
+    Commands().SetCheatListener(nullptr);
 
     Engine().TearDown();
 }
