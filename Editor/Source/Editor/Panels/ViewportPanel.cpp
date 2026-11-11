@@ -405,6 +405,16 @@ namespace Opaax::Editor
         // Pushed for others: focus-selected needs the aspect.
         m_Context.Viewport.SetSizePx({ lAvail.x, lAvail.y });
 
+        // Play gives the viewport the keyboard (as Unity's Game view and Unreal's PIE take it): the click
+        // on the Play button, or a text field, would otherwise keep it, and the game get no key until the
+        // viewport is clicked.
+        const bool bInPlay = !m_Context.PIE.IsEdit();
+        if (bInPlay && !m_bWasInPlay)
+        {
+            ImGui::SetWindowFocus();
+        }
+        m_bWasInPlay = bInPlay;
+
         // Hover/focus can only be read while the window is current: measured here and pushed into the
         // input route, which reads them next frame.
         const bool lHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);

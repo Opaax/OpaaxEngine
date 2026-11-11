@@ -182,6 +182,9 @@ namespace Opaax::Editor
 
         // The hook that queues the entity overlays before each frame is drawn (0: none).
         Uint64 m_BeforeDraw = 0;
+
+        /** Play last frame: the frame Play starts focuses the viewport. */
+        bool m_bWasInPlay = false;
         
         Vector2F   m_viewportSizeDefault  = {960.f, 600.f};
         Vector2u32 m_viewportSize         = {1,1};
