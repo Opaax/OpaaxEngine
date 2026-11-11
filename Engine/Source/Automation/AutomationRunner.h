@@ -2,6 +2,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "Commands/CommandRegistry.h"
 #include "Core/Hash/OpaaxHash.h"
 #include "Core/Log/Logger.h"
 #include "Core/OpaaxTypes.h"
@@ -36,43 +37,15 @@ namespace Opaax
         OpaaxString    Error;                               // when not: why
     };
 
-    /** What a command returns. */
-    struct AutomationResult
-    {
-        bool           bOk   = true;
-        nlohmann::json Value = nlohmann::json::object();
-        OpaaxString    Error;
-
-        /** Frames to let run before the next request (a screenshot taken, a key held, a wait). */
-        Uint32 WaitFrames = 0;
-
-        /** After those frames, holds the queue frame after frame until it returns true (a game clock). */
-        TFunction<bool()> WaitUntil;
-
-        /** Runs once the wait is over, before the next request (a held key released). */
-        TFunction<void()> AfterWait;
-
-        /**
-         * With a wait: the request is answered once the wait is over, with what this returns (the
-         * outcome of a long job), instead of at once.
-         */
-        TFunction<AutomationResult()> Answer;
-
-        /** With Answer: the answer when the app closes before the wait is over (a failure if unset). */
-        TFunction<AutomationResult()> OnClose;
-
-        static AutomationResult Ok(nlohmann::json InValue = nlohmann::json::object());
-        static AutomationResult Fail(OpaaxString InError);
-    };
-
-    using AutomationHandler = TFunction<AutomationResult(const nlohmann::json& InParams)>;
+    /** The automation names of a command's result and handler (Commands/CommandTypes.h). */
+    using AutomationResult  = CommandResult;
+    using AutomationHandler = CommandHandler;
 
     // =============================================================================
     // AutomationRunner — drives the app from outside (an AI agent, a test script): requests run
     //   one after another at the start of frames, each answered with a response. A request can
-    //   hold the queue for frames (waits, screenshots, held keys). Commands are registered by name
-    //   with a line of help, by the engine and the editor; "commands.list" lists them and
-    //   "frames.wait" is built in.
+    //   hold the queue for frames (waits, screenshots, held keys). The commands are those of a
+    //   CommandRegistry; each runner has its own queue over it.
     // =============================================================================
     class AutomationRunner
     {
@@ -80,7 +53,7 @@ namespace Opaax
         // CTORS - DTORS
         // =============================================================================
     public:
-        AutomationRunner();
+        explicit AutomationRunner(CommandRegistry& InCommands);
 
         AutomationRunner(const AutomationRunner&)            = delete;
         AutomationRunner& operator=(const AutomationRunner&) = delete;
@@ -89,13 +62,18 @@ namespace Opaax
         // Commands
         // =============================================================================
     public:
-        /** Adds the command InName, or replaces it (the editor refines some of the engine's). */
+        /**
+         * Adds the command InName to the registry for its lifetime. A name registered again runs
+         * the newest (the editor refines some of the engine's).
+         */
         void Register(const OpaaxString& InName, const OpaaxString& InHelp, AutomationHandler InHandler);
 
         bool Has(const OpaaxString& InName) const;
 
-        /** Every command and its help, sorted by name: [{"name", "help"}]. */
+        /** Every command and its help, sorted by name: [{"name", "help", "params"?}]. */
         nlohmann::json Describe() const;
+
+        CommandRegistry& GetCommands() noexcept { return m_Commands; }
 
         // =============================================================================
         // Requests
@@ -140,14 +118,8 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        struct Command
-        {
-            OpaaxString       Help;
-            AutomationHandler Handler;
-        };
-
-        TUnorderedMap<OpaaxString, Command> m_Commands;
-        TQueue<AutomationRequest>           m_Queue;
+        CommandRegistry&          m_Commands;
+        TQueue<AutomationRequest> m_Queue;
 
         Uint32            m_WaitFrames = 0;
         TFunction<bool()> m_WaitUntil;

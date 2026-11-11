@@ -39,7 +39,8 @@ namespace
     /** A runner whose answers are kept in order. */
     struct Recorder
     {
-        AutomationRunner              Runner;
+        CommandRegistry               Commands;
+        AutomationRunner              Runner{ Commands };
         TDynArray<AutomationResponse> Responses;
 
         Recorder()

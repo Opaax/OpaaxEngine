@@ -1,6 +1,5 @@
 #include "Automation/AutomationRunner.h"
 
-#include "Core/Algo/Algo.h"
 #include "Core/Maths/Maths.h"
 
 namespace Opaax
@@ -131,69 +130,26 @@ namespace Opaax
     }
 
     // =========================================================================
-    // AutomationResult
-    // =========================================================================
-    AutomationResult AutomationResult::Ok(nlohmann::json InValue)
-    {
-        AutomationResult lResult;
-        lResult.Value = Move(InValue);
-        return lResult;
-    }
-
-    AutomationResult AutomationResult::Fail(OpaaxString InError)
-    {
-        AutomationResult lResult;
-        lResult.bOk   = false;
-        lResult.Error = Move(InError);
-        return lResult;
-    }
-
-    // =========================================================================
     // AutomationRunner
     // =========================================================================
-    AutomationRunner::AutomationRunner()
+    AutomationRunner::AutomationRunner(CommandRegistry& InCommands)
+        : m_Commands(InCommands)
     {
-        Register("commands.list", "Lists every command with its help.",
-                 [this](const nlohmann::json&)
-                 {
-                     return AutomationResult::Ok(nlohmann::json{ { "commands", Describe() } });
-                 });
-
-        Register("frames.wait", "Lets {count} frames run (default 1) before the next request.",
-                 [](const nlohmann::json& InParams)
-                 {
-                     AutomationResult lResult;
-                     lResult.WaitFrames = Maths::Max(InParams.value("count", 1u), 1u);
-                     return lResult;
-                 });
     }
 
     void AutomationRunner::Register(const OpaaxString& InName, const OpaaxString& InHelp, AutomationHandler InHandler)
     {
-        m_Commands[InName] = Command{ InHelp, Move(InHandler) };
+        m_Commands.Add(InName, InHelp, Move(InHandler));
     }
 
     bool AutomationRunner::Has(const OpaaxString& InName) const
     {
-        return m_Commands.find(InName) != m_Commands.end();
+        return m_Commands.Has(InName);
     }
 
     nlohmann::json AutomationRunner::Describe() const
     {
-        TDynArray<OpaaxString> lNames;
-        lNames.reserve(m_Commands.size());
-        for (const auto& [lName, lCommand] : m_Commands)
-        {
-            lNames.push_back(lName);
-        }
-        Algo::Sort(lNames);
-
-        nlohmann::json lList = nlohmann::json::array();
-        for (const OpaaxString& lName : lNames)
-        {
-            lList.push_back(nlohmann::json{ { "name", lName }, { "help", m_Commands.at(lName).Help } });
-        }
-        return lList;
+        return m_Commands.Describe();
     }
 
     void AutomationRunner::Enqueue(AutomationRequest InRequest)
@@ -287,15 +243,15 @@ namespace Opaax
 
     void AutomationRunner::Run(const AutomationRequest& InRequest)
     {
-        const auto lIt = m_Commands.find(InRequest.Command);
-        if (lIt == m_Commands.end())
+        // Held while it runs: a handler may remove its own command (a level change).
+        const TSharedPtr<const RegisteredCommand> lCommand = m_Commands.Find(InRequest.Command);
+        if (lCommand == nullptr)
         {
             Respond(MakeFailure(InRequest, "unknown command '" + InRequest.Command + "' (commands.list lists them)"));
             return;
         }
 
-        const AutomationHandler& lHandler = lIt->second.Handler;
-        AutomationResult         lResult  = Guarded([&lHandler, &InRequest]() { return lHandler(InRequest.Params); });
+        AutomationResult lResult = Guarded([&lCommand, &InRequest]() { return lCommand->Handler(InRequest.Params); });
 
         if (lResult.bOk)
         {

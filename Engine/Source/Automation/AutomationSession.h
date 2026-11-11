@@ -62,7 +62,8 @@ namespace Opaax
         //~End IAutomationHost interface
 
     private:
-        AutomationRunner             m_Runner;
+        CommandRegistry              m_Commands;
+        AutomationRunner             m_Runner{ m_Commands };
         TUniquePtr<AutomationInbox>  m_Inbox;
         TUniquePtr<AutomationScript> m_Script;
 
