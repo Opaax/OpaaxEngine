@@ -1,0 +1,91 @@
+[
+    {
+        "id": "build",
+        "command": "app.info",
+        "expect": {
+            "devBuild": false
+        }
+    },
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Commands.opaaxlevel"
+        }
+    },
+    {
+        "id": "no-help",
+        "command": "commands.has",
+        "params": {
+            "name": "help"
+        },
+        "expect": {
+            "has": false
+        }
+    },
+    {
+        "id": "no-console-info",
+        "command": "commands.has",
+        "params": {
+            "name": "console.info"
+        },
+        "expect": {
+            "has": false
+        }
+    },
+    {
+        "id": "no-console-run",
+        "command": "commands.has",
+        "params": {
+            "name": "console.run"
+        },
+        "expect": {
+            "has": false
+        }
+    },
+    {
+        "id": "no-time-scale",
+        "command": "commands.has",
+        "params": {
+            "name": "time.scale"
+        },
+        "expect": {
+            "has": false
+        }
+    },
+    {
+        "id": "press-key",
+        "command": "input.key",
+        "params": {
+            "key": "GraveAccent"
+        }
+    },
+    {
+        "id": "type",
+        "command": "input.text",
+        "params": {
+            "text": "time.scale 0.25"
+        }
+    },
+    {
+        "id": "enter",
+        "command": "input.key",
+        "params": {
+            "key": "Enter"
+        }
+    },
+    {
+        "id": "not-scaled",
+        "command": "world.info",
+        "expect": {
+            "timeScale": 1
+        }
+    },
+    {
+        "id": "shot",
+        "command": "screenshot",
+        "params": {
+            "path": "ConsoleOff.png"
+        }
+    }
+]
