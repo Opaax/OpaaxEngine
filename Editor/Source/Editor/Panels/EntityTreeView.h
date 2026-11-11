@@ -91,6 +91,10 @@ namespace Opaax::Editor
         TUnorderedMap<Uint32, TDynArray<EntityID>>      m_Children;   // by entity bits
         TDynArray<EntityID>                             m_Roots;
 
+        // The row a click went down on, selected on release unless the click became a drag.
+        EntityID             m_PressedRow{};
+        bool                 m_bHasPress = false;
+
         EntityTreeDrop       m_Drop;
         bool                 m_bHasDrop = false;
 
