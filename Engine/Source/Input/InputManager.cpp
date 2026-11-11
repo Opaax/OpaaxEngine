@@ -1,5 +1,7 @@
 #include "Input/InputManager.h"
 
+#include "Core/String/OpaaxUtf8.h"
+
 namespace Opaax
 {
     // =========================================================================
@@ -57,6 +59,12 @@ namespace Opaax
         return lIndex < KEY_STATE_COUNT && m_ReleasedThisFrame[lIndex];
     }
 
+    bool InputManager::WasRepeatedThisFrame(EKeyCode InKey) const noexcept
+    {
+        const Uint16 lIndex = ToIndex(InKey);
+        return lIndex < KEY_STATE_COUNT && m_RepeatedThisFrame[lIndex];
+    }
+
     float InputManager::GetKeyValue(EKeyCode InKey) const noexcept
     {
         if (InKey == EKeyCode::Mouse_WheelAxis)
@@ -108,14 +116,25 @@ namespace Opaax
     // =========================================================================
     void InputManager::OnKeyPressed(EKeyCode InKey, bool InRepeat)
     {
-        // Key repeat does not change state (WasPressedThisFrame must not fire again), and a wheel is
-        // never held down.
-        if (InRepeat || IsMouseWheel(InKey))
+        // A wheel is never held down.
+        if (IsMouseWheel(InKey))
         {
             return;
         }
 
         const Uint16 lIndex = ToIndex(InKey);
+
+        // Key repeat does not change state (WasPressedThisFrame must not fire again): it is only told
+        // to text entry, for a key still held.
+        if (InRepeat)
+        {
+            if (lIndex < KEY_STATE_COUNT && m_Current[lIndex])
+            {
+                m_RepeatedThisFrame[lIndex] = true;
+            }
+            return;
+        }
+
         if (lIndex < KEY_STATE_COUNT)
         {
             m_Current[lIndex]          = true;
@@ -170,6 +189,29 @@ namespace Opaax
         if (InYOffset < 0.f) { TapThisFrame(EKeyCode::Mouse_WheelDown); }
     }
 
+    void InputManager::OnCharTyped(const Uint32 InCodepoint)
+    {
+        // Control characters are keys (Enter, Tab, Backspace, Delete); surrogates and values past
+        // Unicode are not characters.
+        const bool bControl = InCodepoint < 0x20u || (InCodepoint >= 0x7Fu && InCodepoint < 0xA0u);
+        const bool bInvalid = (InCodepoint >= 0xD800u && InCodepoint <= 0xDFFFu) || InCodepoint > 0x10FFFFu;
+        if (bControl || bInvalid)
+        {
+            return;
+        }
+        m_TypedText.push_back(InCodepoint);
+    }
+
+    OpaaxString InputManager::GetTypedTextUtf8() const
+    {
+        OpaaxString lText;
+        for (const Uint32 lCodepoint : m_TypedText)
+        {
+            Utf8::Encode(lCodepoint, lText);
+        }
+        return lText;
+    }
+
     void InputManager::TapThisFrame(EKeyCode InKey)
     {
         // Never held: the press is seen this frame, and EndFrame clears both edges.
@@ -188,6 +230,8 @@ namespace Opaax
         // Edge flags are cleared, not set: a reset is not a release.
         m_PressedThisFrame.fill(false);
         m_ReleasedThisFrame.fill(false);
+        m_RepeatedThisFrame.fill(false);
+        m_TypedText.clear();
 
         m_ScrollDelta       = Vector2F{0.f, 0.f};
         m_MousePrevious     = m_MousePosition;
@@ -198,6 +242,8 @@ namespace Opaax
     {
         m_PressedThisFrame.fill(false);
         m_ReleasedThisFrame.fill(false);
+        m_RepeatedThisFrame.fill(false);
+        m_TypedText.clear();
 
         m_MousePrevious = m_MousePosition;
         m_ScrollDelta   = Vector2F{0.f, 0.f};

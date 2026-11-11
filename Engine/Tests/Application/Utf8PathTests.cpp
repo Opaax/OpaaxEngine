@@ -183,6 +183,42 @@ TEST_CASE("Utf8::Decode: a mixed-script string walks to its end and terminates")
     CHECK(lCount == 3u);
 }
 
+TEST_CASE("Utf8::Encode: one to four bytes, and Decode reads back what it wrote")
+{
+    // A, Gamma, the CJK sun, an emoji: one of each length.
+    const Uint32 lCodepoints[] = { 0x41u, 0x393u, 0x65E5u, 0x1F600u };
+    const Uint32 lLengths[]    = { 1u, 2u, 3u, 4u };
+
+    OpaaxString lAll;
+    for (Uint32 lIndex = 0; lIndex < 4u; ++lIndex)
+    {
+        OpaaxString lOne;
+        Utf8::Encode(lCodepoints[lIndex], lOne);
+        CHECK(lOne.GetLength() == lLengths[lIndex]);
+        lAll.Append(lOne);
+    }
+    CHECK(lAll == OpaaxString("\x41" "\xCE\x93" "\xE6\x97\xA5" "\xF0\x9F\x98\x80"));
+
+    const char* lCursor = lAll.CStr();
+    for (const Uint32 lExpected : lCodepoints)
+    {
+        CHECK(Utf8::Decode(lCursor) == lExpected);
+    }
+    CHECK(Utf8::Decode(lCursor) == 0u);
+}
+
+TEST_CASE("Utf8::Encode: a surrogate or a value past Unicode is written as REPLACEMENT")
+{
+    OpaaxString lText;
+    Utf8::Encode(0xD800u, lText);
+    Utf8::Encode(0x110000u, lText);
+
+    const char* lCursor = lText.CStr();
+    CHECK(Utf8::Decode(lCursor) == Utf8::REPLACEMENT);
+    CHECK(Utf8::Decode(lCursor) == Utf8::REPLACEMENT);
+    CHECK(Utf8::Decode(lCursor) == 0u);
+}
+
 // =============================================================================
 // The call sites that open files
 // =============================================================================

@@ -7,17 +7,19 @@
 namespace Opaax
 {
     class IEngine;
+    class InputManager;
     class InputMappingSubsystem;
 
     // =============================================================================
     // InputAutomation — the commands on the player's keys, for tests and agents: list them as a
     //   controls menu does, rebind one, give the assets' keys back and wait for a key (input.keys,
-    //   input.rebind, input.resetKeys, input.capture). The keys are the running game's. The answers
-    //   are pure functions of its input mapping, tested without an app.
+    //   input.rebind, input.resetKeys, input.capture), and type text (input.text). The keys are the
+    //   running game's. The answers are pure functions of its input mapping or input manager, tested
+    //   without an app.
     // =============================================================================
     namespace InputAutomation
     {
-        /** Registers input.keys, input.rebind, input.resetKeys and input.capture. */
+        /** Registers input.keys, input.rebind, input.resetKeys, input.capture and input.text. */
         void Register(ICommandRegistry& InCommands, IEngine& InEngine);
 
         /**
@@ -50,5 +52,13 @@ namespace Opaax
          * way. Answers {capturing, captured}.
          */
         AutomationResult Capture(InputMappingSubsystem& InMapping, const nlohmann::json& InParams);
+
+        /**
+         * input.text {text}: types the text in one frame, as the OS would (InputManager::GetTypedText),
+         * for the game's text fields; the keys are not pressed. Control characters are dropped, as the
+         * OS sends none (Enter, Backspace: input.key). Holds the queue that frame. Answers {typed}, the
+         * characters given.
+         */
+        AutomationResult TypeText(InputManager& InInput, const nlohmann::json& InParams);
     }
 }

@@ -2,9 +2,11 @@
 
 #include "Application/Services/IEngine.h"
 #include "Core/String/OpaaxStringJson.h"
+#include "Core/String/OpaaxUtf8.h"
 #include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
 #include "Input/InputKeyNames.h"
+#include "Input/InputManager.h"
 #include "Input/Mapping/InputMappingSubsystem.h"
 
 namespace Opaax::InputAutomation
@@ -206,6 +208,12 @@ namespace Opaax::InputAutomation
             };
         };
 
+        InCommands.Add(CommandSpec("input.text",
+            "Types {text} in one frame, as the OS would for the keys a player presses, for the game's text "
+            "fields (the console). Enter, Backspace and the arrows are keys: input.key. Answers {typed}.")
+                .Param("text", ECommandParamType::String, "the characters to type"),
+            [&InEngine](const nlohmann::json& InParams) { return TypeText(InEngine.GetInput(), InParams); });
+
         InCommands.Add("input.keys",
             "The running game's keys, as a controls menu lists them: {capturing, captured (the key the last "
             "capture took, \"None\" when cancelled), contexts: [{context, rebindable, added, keys: [{action, "
@@ -347,6 +355,30 @@ namespace Opaax::InputAutomation
         }
 
         return Keys(InMapping, lContext.IsEmpty() ? nlohmann::json::object() : nlohmann::json{ { "context", lContext } });
+    }
+
+    AutomationResult TypeText(InputManager& InInput, const nlohmann::json& InParams)
+    {
+        const auto lText = InParams.find("text");
+        if (lText == InParams.end() || !lText->is_string() || lText->get<OpaaxString>().IsEmpty())
+        {
+            return AutomationResult::Fail("give the {text} to type; Enter, Backspace and the arrows are keys: "
+                                          "input.key");
+        }
+
+        const OpaaxString lUtf8   = lText->get<OpaaxString>();
+        const char*       lCursor = lUtf8.CStr();
+        const Uint64      lBefore = InInput.GetTypedText().size();
+        while (const Uint32 lCodepoint = Utf8::Decode(lCursor))
+        {
+            InInput.OnCharTyped(lCodepoint);
+        }
+
+        // The text lasts its frame: the next request reads what that frame did with it.
+        AutomationResult lResult = AutomationResult::Ok(nlohmann::json{
+            { "typed", InInput.GetTypedText().size() - lBefore } });
+        lResult.WaitFrames = 1;
+        return lResult;
     }
 
     AutomationResult Capture(InputMappingSubsystem& InMapping, const nlohmann::json& InParams)

@@ -351,3 +351,80 @@ TEST_CASE("input: GetKeysDown reports exactly what is held, in code order")
     CHECK(lDown[1] == EKeyCode::LeftShift);
     CHECK(lDown[2] == EKeyCode::Mouse_Left);
 }
+
+// =============================================================================
+// Text entry
+// =============================================================================
+TEST_CASE("input: a held key repeated by the OS is told for that frame only, and is not a press")
+{
+    InputManager lInput;
+
+    lInput.OnKeyPressed(EKeyCode::Backspace, false);
+    CHECK(lInput.WasPressedThisFrame(EKeyCode::Backspace));
+    CHECK_FALSE(lInput.WasRepeatedThisFrame(EKeyCode::Backspace));
+    lInput.EndFrame();
+
+    lInput.OnKeyPressed(EKeyCode::Backspace, true);
+    CHECK(lInput.WasRepeatedThisFrame(EKeyCode::Backspace));
+    CHECK_FALSE(lInput.WasPressedThisFrame(EKeyCode::Backspace));
+    CHECK(lInput.IsKeyDown(EKeyCode::Backspace));
+
+    lInput.EndFrame();
+    CHECK_FALSE(lInput.WasRepeatedThisFrame(EKeyCode::Backspace));
+}
+
+TEST_CASE("input: a repeat of a key not held (released, or reset) is ignored")
+{
+    InputManager lInput;
+
+    lInput.OnKeyPressed(EKeyCode::Left, true);
+    CHECK_FALSE(lInput.WasRepeatedThisFrame(EKeyCode::Left));
+
+    lInput.OnKeyPressed(EKeyCode::Left, false);
+    lInput.ResetState();
+    lInput.OnKeyPressed(EKeyCode::Left, true);
+    CHECK_FALSE(lInput.WasRepeatedThisFrame(EKeyCode::Left));
+}
+
+TEST_CASE("input: typed characters last their frame, in order, as codepoints and as UTF-8")
+{
+    InputManager lInput;
+    CHECK(lInput.GetTypedText().empty());
+
+    lInput.OnCharTyped('h');
+    lInput.OnCharTyped(0xE9u);   // e acute: two UTF-8 bytes
+    lInput.OnCharTyped('!');
+
+    REQUIRE(lInput.GetTypedText().size() == 3);
+    CHECK(lInput.GetTypedText()[0] == 'h');
+    CHECK(lInput.GetTypedText()[1] == 0xE9u);
+    CHECK(lInput.GetTypedTextUtf8() == OpaaxString("h\xC3\xA9!"));
+
+    lInput.EndFrame();
+    CHECK(lInput.GetTypedText().empty());
+    CHECK(lInput.GetTypedTextUtf8().IsEmpty());
+}
+
+TEST_CASE("input: control characters and invalid codepoints are not typed text")
+{
+    InputManager lInput;
+
+    lInput.OnCharTyped(0x08u);       // backspace
+    lInput.OnCharTyped('\r');
+    lInput.OnCharTyped('\t');
+    lInput.OnCharTyped(0x7Fu);       // delete
+    lInput.OnCharTyped(0xD800u);     // a surrogate
+    lInput.OnCharTyped(0x110000u);   // past Unicode
+    CHECK(lInput.GetTypedText().empty());
+
+    lInput.OnCharTyped(' ');
+    CHECK(lInput.GetTypedText().size() == 1);
+}
+
+TEST_CASE("input: ResetState drops the text typed this frame")
+{
+    InputManager lInput;
+    lInput.OnCharTyped('a');
+    lInput.ResetState();
+    CHECK(lInput.GetTypedText().empty());
+}
