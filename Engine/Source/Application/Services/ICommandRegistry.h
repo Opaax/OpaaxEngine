@@ -42,6 +42,9 @@ namespace Opaax
         /** Every command, sorted by name: [{"name", "help", "params"?, "cheat"?, "devOnly"?}]. */
         virtual nlohmann::json Describe() const = 0;
 
+        /** Every command's spec, the one that runs for each name, sorted by name (help, completion). */
+        virtual TDynArray<CommandSpec> GetSpecs() const = 0;
+
         // =============================================================================
         // Cheats
         // =============================================================================

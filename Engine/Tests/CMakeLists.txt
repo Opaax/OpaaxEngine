@@ -41,6 +41,12 @@ set(OPAAX_TEST_SOURCES
     Commands/CommandRegistryTests.cpp
     Commands/CommandTextTests.cpp
 
+    # DevConsole
+    DevConsole/DevConsoleCompletionTests.cpp
+    DevConsole/DevConsoleHistoryTests.cpp
+    DevConsole/DevConsoleLineEditTests.cpp
+    DevConsole/DevConsoleOutputTests.cpp
+
     # Core
     Core/AlgoTests.cpp
     Core/BuildInfoTests.cpp

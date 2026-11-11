@@ -198,6 +198,16 @@ namespace Opaax
 
     nlohmann::json CommandRegistry::Describe() const
     {
+        nlohmann::json lList = nlohmann::json::array();
+        for (const CommandSpec& lSpec : GetSpecs())
+        {
+            lList.push_back(lSpec.ToJson());
+        }
+        return lList;
+    }
+
+    TDynArray<CommandSpec> CommandRegistry::GetSpecs() const
+    {
         TDynArray<OpaaxString> lNames;
         lNames.reserve(m_State->Commands.size());
         for (const auto& [lName, lStack] : m_State->Commands)
@@ -206,12 +216,13 @@ namespace Opaax
         }
         Algo::Sort(lNames);
 
-        nlohmann::json lList = nlohmann::json::array();
+        TDynArray<CommandSpec> lSpecs;
+        lSpecs.reserve(lNames.size());
         for (const OpaaxString& lName : lNames)
         {
-            lList.push_back(Find(lName)->Spec.ToJson());
+            lSpecs.push_back(Find(lName)->Spec);
         }
-        return lList;
+        return lSpecs;
     }
 
     void CommandRegistry::NotifySucceeded(const RegisteredCommand& InCommand)
