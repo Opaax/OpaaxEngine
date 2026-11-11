@@ -582,4 +582,62 @@ TEST_SUITE("WorldManager::DestroyWorldsOfMode")
         CHECK(lWorlds.CountWorldsOfMode(EWorldMode::Edit) == 1);
         CHECK(lWorlds.GetWorldCount() == 2);
     }
+
+    // -------------------------------------------------------------------------
+    // Ends the game from its own Update, as a command typed in the game's console does (editor.stop).
+    // -------------------------------------------------------------------------
+    class EnderSubsystem : public GameInstanceSubsystem
+    {
+        OPAAX_OBJECT(EnderSubsystem, GameInstanceSubsystem)
+
+    public:
+        ~EnderSubsystem() override { s_bDestroyed = true; }
+
+        /** Before the probe: it is the one left not updated. */
+        Int32 GetTickOrder() const override { return -10; }
+
+        void Update(double) override
+        {
+            if (s_Manager != nullptr)
+            {
+                s_Manager->EndGame();
+                s_bAliveAfterEnd = !s_bDestroyed;
+            }
+        }
+
+        static GameInstanceManager* s_Manager;
+        static bool                 s_bDestroyed;
+        static bool                 s_bAliveAfterEnd;
+    };
+
+    GameInstanceManager* EnderSubsystem::s_Manager        = nullptr;
+    bool                 EnderSubsystem::s_bDestroyed     = false;
+    bool                 EnderSubsystem::s_bAliveAfterEnd = false;
+
+    TEST_CASE("A subsystem that ends the game in its Update: the game ends at once, the rest is not updated, and it is destroyed after")
+    {
+        ProbeSubsystem::Reset();
+
+        EngineRegistries lRegistries;
+        lRegistries.ObjectClasses().Register<EnderSubsystem>();
+        lRegistries.ObjectClasses().Register<ProbeSubsystem>();
+
+        GameInstanceManager lManager(&lRegistries);
+        REQUIRE(lManager.Startup());
+        REQUIRE(lManager.StartGame());
+
+        const ProbeSubsystem* lProbe = lManager.GetGameInstance()->GetSubsystems().GetSubsystem<ProbeSubsystem>();
+        REQUIRE(lProbe != nullptr);
+
+        EnderSubsystem::s_Manager        = &lManager;
+        EnderSubsystem::s_bDestroyed     = false;
+        EnderSubsystem::s_bAliveAfterEnd = false;
+        lManager.Update(0.5);
+        EnderSubsystem::s_Manager = nullptr;
+
+        CHECK_FALSE(lManager.IsGameRunning());
+        CHECK(ProbeSubsystem::s_ShutdownCount == 1);
+        CHECK(EnderSubsystem::s_bAliveAfterEnd);   // still there for the rest of its Update
+        CHECK(EnderSubsystem::s_bDestroyed);       // gone once the update returned
+    }
 }

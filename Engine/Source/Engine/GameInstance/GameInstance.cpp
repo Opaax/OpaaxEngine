@@ -104,6 +104,8 @@ namespace Opaax
 
     void GameInstance::Update(double InDeltaTime)
     {
-        m_Subsystems.UpdateAll(InDeltaTime);
+        // A subsystem may end the game in its Update (a command that stops Play): the others, shut
+        // down, are not updated after it.
+        m_Subsystems.UpdateAllWhile(InDeltaTime, [this] { return !m_bEnded; });
     }
 }

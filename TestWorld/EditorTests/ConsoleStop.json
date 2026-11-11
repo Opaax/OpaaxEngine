@@ -1,0 +1,78 @@
+[
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 10
+        }
+    },
+    {
+        "id": "open",
+        "command": "level.open",
+        "params": {
+            "path": "Levels/Commands.opaaxlevel"
+        }
+    },
+    {
+        "id": "play",
+        "command": "editor.play",
+        "expect": {
+            "mode": "Play"
+        }
+    },
+    {
+        "id": "console",
+        "command": "input.key",
+        "params": {
+            "key": "GraveAccent"
+        }
+    },
+    {
+        "id": "opened",
+        "command": "console.info",
+        "expect": {
+            "open": true
+        }
+    },
+    {
+        "id": "type-stop",
+        "command": "input.text",
+        "params": {
+            "text": "editor.stop"
+        }
+    },
+    {
+        "id": "enter",
+        "command": "input.key",
+        "params": {
+            "key": "Enter"
+        }
+    },
+    {
+        "id": "stopped",
+        "command": "world.info",
+        "expect": {
+            "mode": "Edit"
+        }
+    },
+    {
+        "id": "console-gone",
+        "command": "commands.has",
+        "params": {
+            "name": "console.info"
+        },
+        "expect": {
+            "has": false
+        }
+    },
+    {
+        "id": "play-again",
+        "command": "editor.play",
+        "expect": {
+            "mode": "Play"
+        }
+    },
+    {
+        "id": "stop-again",
+        "command": "editor.stop"
+    }
+]

@@ -68,7 +68,8 @@ namespace Opaax
         void LoadHistory();
         void SaveHistory();
 
-        TUniquePtr<DevConsole>   m_Console;
+        /** Shared: a line that ends the game shuts the subsystem down inside the console's Tick. */
+        TSharedPtr<DevConsole>   m_Console;
         TDynArray<CommandHandle> m_Commands;
         ConsoleSettings          m_Settings;
         OpaaxString              m_HistoryPath;
