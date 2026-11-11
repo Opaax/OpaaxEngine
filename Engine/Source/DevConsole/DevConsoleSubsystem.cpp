@@ -64,7 +64,7 @@ namespace Opaax
             m_Mapping = lGame->GetSubsystems().GetSubsystem<InputMappingSubsystem>();
         }
 
-        m_Console  = MakeUnique<DevConsole>(lContext.Commands, m_Settings);
+        m_Console  = MakeShared<DevConsole>(lContext.Commands, m_Settings);
         m_Commands = RegisterDevConsoleCommands(lContext.Commands, *m_Console);
         LoadHistory();
 
@@ -88,7 +88,14 @@ namespace Opaax
         PullLog();
 
         m_Console->HandleInput(GetContext().Input);
-        m_Console->Tick();
+
+        // A line can end the game (editor.stop): Shutdown then runs inside the Tick.
+        const TSharedPtr<DevConsole> lTicking = m_Console;
+        lTicking->Tick();
+        if (m_Console == nullptr)
+        {
+            return;
+        }
 
         if (m_Console->IsOpen() != m_bWasOpen)
         {

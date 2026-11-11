@@ -205,6 +205,16 @@ namespace Opaax
             }
         }
 
+        /** UpdateAll, stopping before the next subsystem once InContinue() is false (its owner ended). */
+        template<typename TContinue>
+        void UpdateAllWhile(const double InDeltaTime, TContinue&& InContinue)
+        {
+            for (Uint64 lIndex = 0; lIndex < m_Systems.size() && InContinue(); ++lIndex)
+            {
+                m_Systems[lIndex]->Update(InDeltaTime);
+            }
+        }
+
         void FixedUpdateAll(const double InFixedDeltaTime)
         {
             for (const TStrongObjectPtr<TBase>& lSystem : m_Systems)

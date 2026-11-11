@@ -107,7 +107,10 @@ namespace Opaax
     {
         if (m_GameInstance != nullptr)
         {
-            m_GameInstance->Update(InDeltaTime);
+            // Held for the update: EndGame from inside it (a command that stops Play) ends the game at
+            // once, and the game is destroyed once its update is over.
+            const TStrongObjectPtr<GameInstance> lUpdating = m_GameInstance;
+            lUpdating->Update(InDeltaTime);
         }
     }
 
