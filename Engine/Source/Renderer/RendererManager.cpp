@@ -26,6 +26,7 @@
 #include "Renderer/RenderTarget.hpp"
 #include "Renderer/Renderer2D.h"
 #include "UI/UICanvas.h"
+#include "UI/UILayer.h"
 
 #include "Renderer/ShaderSource.h"
 #include "Core/IO/FileIO.h"
@@ -1166,7 +1167,8 @@ namespace Opaax
         }
     }
 
-    void RendererManager::SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget, const CameraView* InView)
+    void RendererManager::SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget, const CameraView* InView,
+                                         const Int32 InLayer)
     {
         UICanvasRequest lRequest{ &InCanvas, InTarget };
         if (InView != nullptr)
@@ -1174,7 +1176,8 @@ namespace Opaax
             lRequest.View     = *InView;
             lRequest.bHasView = true;
         }
-        m_SubmittedCanvases.emplace_back(lRequest);
+        lRequest.Layer = InLayer;
+        UILayer::InsertByLayer(m_SubmittedCanvases, lRequest, [](const UICanvasRequest& InRequest) { return InRequest.Layer; });
     }
     
     TUniquePtr<IFramebuffer> RendererManager::CreateFramebuffer(const FramebufferSpec& InSpec)

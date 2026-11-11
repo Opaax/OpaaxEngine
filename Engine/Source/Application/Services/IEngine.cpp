@@ -67,7 +67,7 @@ namespace Opaax
             void SubmitCameraView(IRenderTarget&, EntityID, bool, CameraView*, World*) override {}
             Uint64 AddBeforeDraw(TFunction<void(TOptional<float>)>) override { return 0; }
             void RemoveBeforeDraw(Uint64) override {}
-            void SubmitUICanvas(UICanvas&, IRenderTarget*, const CameraView*) override {}
+            void SubmitUICanvas(UICanvas&, IRenderTarget*, const CameraView*, Int32) override {}
 
             TUniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec&) override { return nullptr; }
 

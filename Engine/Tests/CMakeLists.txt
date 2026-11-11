@@ -46,6 +46,7 @@ set(OPAAX_TEST_SOURCES
     DevConsole/DevConsoleHistoryTests.cpp
     DevConsole/DevConsoleLineEditTests.cpp
     DevConsole/DevConsoleOutputTests.cpp
+    DevConsole/DevConsoleTests.cpp
 
     # Core
     Core/AlgoTests.cpp
@@ -208,6 +209,7 @@ set(OPAAX_TEST_SOURCES
     UI/UIBindingTests.cpp
     UI/UIButtonTests.cpp
     UI/UICanvasFileTests.cpp
+    UI/UILayerTests.cpp
     UI/UICanvasTests.cpp
     UI/UIEventTests.cpp
     UI/UIImageSourceTests.cpp

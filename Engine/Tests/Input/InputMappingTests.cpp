@@ -1166,4 +1166,53 @@ TEST_SUITE("InputMappingSubsystem — waiting for a key")
         REQUIRE(lGame.Captured.size() == 1);
         CHECK(lGame.Captured[0] == (static_cast<Uint16>(EKeyCode::A) < static_cast<Uint16>(EKeyCode::Z) ? EKeyCode::A : EKeyCode::Z));
     }
+
+    TEST_CASE("HoldInput masks every key until ReleaseInput; a key down at the release drives nothing until released")
+    {
+        CaptureGame lGame;
+
+        lGame.Input.HoldInput();
+        CHECK(lGame.Input.IsInputHeld());
+        CHECK(lGame.Input.IsHoldingInput());
+        lGame.Press(EKeyCode::Space);
+        lGame.Release(EKeyCode::Space);
+        CHECK(lGame.Jumps == 0);
+
+        // The Escape that closes the tool is down when it lets go.
+        lGame.Fixture.Input.OnKeyPressed(EKeyCode::Escape, false);
+        lGame.Input.ReleaseInput();
+        CHECK_FALSE(lGame.Input.IsInputHeld());
+        CHECK(lGame.Input.IsHoldingInput());
+        lGame.Frame();
+
+        // Only that key is masked: Space drives Jump again.
+        lGame.Press(EKeyCode::Space);
+        lGame.Release(EKeyCode::Space);
+        CHECK(lGame.Jumps == 1);
+        CHECK(lGame.Input.IsHoldingInput());
+
+        lGame.Release(EKeyCode::Escape);
+        lGame.Frame();
+        CHECK_FALSE(lGame.Input.IsHoldingInput());
+    }
+
+    TEST_CASE("Holds count; a ReleaseInput without its HoldInput changes nothing")
+    {
+        CaptureGame lGame;
+
+        lGame.Input.ReleaseInput();
+        CHECK_FALSE(lGame.Input.IsHoldingInput());
+
+        lGame.Input.HoldInput();
+        lGame.Input.HoldInput();
+        lGame.Input.ReleaseInput();
+        lGame.Press(EKeyCode::Space);
+        lGame.Release(EKeyCode::Space);
+        CHECK(lGame.Jumps == 0);
+
+        lGame.Input.ReleaseInput();
+        lGame.Press(EKeyCode::Space);
+        lGame.Release(EKeyCode::Space);
+        CHECK(lGame.Jumps == 1);
+    }
 }

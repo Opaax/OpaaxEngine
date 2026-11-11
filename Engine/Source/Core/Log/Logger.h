@@ -95,6 +95,9 @@ namespace Opaax
          */
         void EnableHistory(Uint32 InCapacity);
 
+        /** Keeps at least InCapacity lines: raises the history, never lowers it (the console beside the Log panel). */
+        void EnsureHistory(Uint32 InCapacity);
+
         /** Copies the history lines newer than InAfterSequence. */
         Uint64 CopyHistorySince(Uint64 InAfterSequence, TDynArray<LogEntry>& OutEntries) const;
 

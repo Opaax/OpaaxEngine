@@ -39,6 +39,9 @@ namespace Opaax
 
         bool Has(const OpaaxString& InName) const;
 
+        /** Whether DevOnly commands register: false in a ship build, and in the null registry. */
+        virtual bool AllowsDevOnly() const = 0;
+
         /** Every command, sorted by name: [{"name", "help", "params"?, "cheat"?, "devOnly"?}]. */
         virtual nlohmann::json Describe() const = 0;
 

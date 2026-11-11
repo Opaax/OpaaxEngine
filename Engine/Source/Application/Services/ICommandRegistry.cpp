@@ -20,6 +20,7 @@ namespace Opaax
 
             nlohmann::json Describe() const override { return nlohmann::json::array(); }
             TDynArray<CommandSpec> GetSpecs() const override { return {}; }
+            bool                   AllowsDevOnly() const override { return false; }
 
             void NotifySucceeded(const RegisteredCommand&) override {}
             bool HaveCheatsRun() const override { return false; }

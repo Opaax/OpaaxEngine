@@ -267,8 +267,10 @@ namespace Opaax
          * @param InTarget Null draws over every view with UI enabled; otherwise only into this
          *   target, cleared first (editor preview)
          * @param InView Optional view for InTarget (zoom/pan). Null uses the canvas's own view.
+         * @param InLayer Higher draws on top; equal layers in submit order (UI/UILayer.h)
          */
-        void SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget = nullptr, const CameraView* InView = nullptr);
+        void SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget = nullptr, const CameraView* InView = nullptr,
+                            Int32 InLayer = 0);
 
         /**
          * Draws a world into InTarget with the world's own view, read when the frame is drawn.
@@ -388,9 +390,10 @@ namespace Opaax
             IRenderTarget* Target = nullptr;   // null = over the world views
             CameraView     View;               // used only with bHasView
             bool           bHasView = false;
+            Int32          Layer    = 0;
         };
 
-        /** This frame's canvases. */
+        /** This frame's canvases, by layer then submit order. */
         TDynArray<UICanvasRequest> m_SubmittedCanvases;
 
         /** This frame's UI counters. */

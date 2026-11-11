@@ -310,16 +310,24 @@ namespace Opaax
 
     void InputMappingSubsystem::Update(double InDeltaTime)
     {
-        // A capture takes its key before the actions read theirs: while it waits every key is masked,
-        // then the key it took until released.
+        // A capture or a hold takes the keys before the actions read theirs: every key is masked while
+        // one is under way, then the key a capture took, and the keys down at a release, until released.
         UpdateKeyCapture();
-        if (m_bCapturing)
+        UpdateReleaseHeld();
+        if (m_bCapturing || m_Holds > 0)
         {
             for (bool& lMasked : m_PreConsumed) { lMasked = true; }
         }
-        else if (m_CapturedHeld != EKeyCode::None)
+        else
         {
-            m_PreConsumed[static_cast<Uint16>(m_CapturedHeld)] = true;
+            if (m_CapturedHeld != EKeyCode::None)
+            {
+                m_PreConsumed[static_cast<Uint16>(m_CapturedHeld)] = true;
+            }
+            if (m_bReleaseHeld)
+            {
+                ConsumeThisFrame(m_ReleaseHeldKeys);
+            }
         }
 
         m_Evaluator.Evaluate(GetContext().Input, InDeltaTime, &m_PreConsumed);
@@ -359,8 +367,11 @@ namespace Opaax
     void InputMappingSubsystem::Shutdown()
     {
         // Nobody is told: the game is ending.
-        m_bCapturing   = false;
-        m_CapturedHeld = EKeyCode::None;
+        m_bCapturing      = false;
+        m_CapturedHeld    = EKeyCode::None;
+        m_Holds           = 0;
+        m_ReleaseHeldKeys = InputKeyMask{};
+        m_bReleaseHeld    = false;
 
         if (m_Settings != nullptr)
         {
@@ -444,6 +455,63 @@ namespace Opaax
                 m_CapturedHeld = lKey;
                 EndKeyCapture(lKey);
                 return;
+            }
+        }
+    }
+
+    void InputMappingSubsystem::UpdateReleaseHeld()
+    {
+        if (!m_bReleaseHeld)
+        {
+            return;
+        }
+
+        const InputManager& lInput = GetContext().Input;
+
+        m_bReleaseHeld = false;
+        for (Uint16 lIndex = 0; lIndex < InputManager::KEY_STATE_COUNT; ++lIndex)
+        {
+            if (!m_ReleaseHeldKeys[lIndex])
+            {
+                continue;
+            }
+            const EKeyCode lKey = static_cast<EKeyCode>(lIndex);
+            if (!lInput.IsKeyDown(lKey) && !lInput.WasPressedThisFrame(lKey))
+            {
+                m_ReleaseHeldKeys[lIndex] = false;
+            }
+            else
+            {
+                m_bReleaseHeld = true;
+            }
+        }
+    }
+
+    // =========================================================================
+    // Holding the input
+    // =========================================================================
+    void InputMappingSubsystem::ReleaseInput()
+    {
+        if (m_Holds == 0)
+        {
+            OPAAX_LOG(LogInputMapping, Warn, "ReleaseInput without a HoldInput: ignored");
+            return;
+        }
+
+        if (--m_Holds > 0)
+        {
+            return;
+        }
+
+        // What is down now (the key that closed the tool) drives nothing until released.
+        const InputManager& lInput = GetContext().Input;
+        for (Uint16 lIndex = 0; lIndex < InputManager::KEY_STATE_COUNT; ++lIndex)
+        {
+            const EKeyCode lKey = static_cast<EKeyCode>(lIndex);
+            if (lInput.IsKeyDown(lKey) || lInput.WasPressedThisFrame(lKey))
+            {
+                m_ReleaseHeldKeys[lIndex] = true;
+                m_bReleaseHeld            = true;
             }
         }
     }

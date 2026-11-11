@@ -1,0 +1,144 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Commands.opaaxlevel"
+        }
+    },
+    {
+        "id": "closed",
+        "command": "console.info",
+        "expect": {
+            "open": false
+        }
+    },
+    {
+        "id": "open",
+        "command": "input.key",
+        "params": {
+            "key": "GraveAccent"
+        }
+    },
+    {
+        "id": "opened",
+        "command": "console.info",
+        "expect": {
+            "open": true,
+            "line": ""
+        }
+    },
+    {
+        "id": "type-scale",
+        "command": "input.text",
+        "params": {
+            "text": "time.scale 0.25"
+        }
+    },
+    {
+        "id": "typed",
+        "command": "console.info",
+        "expect": {
+            "line": "time.scale 0.25",
+            "caret": 15
+        }
+    },
+    {
+        "id": "enter-scale",
+        "command": "input.key",
+        "params": {
+            "key": "Enter"
+        }
+    },
+    {
+        "id": "scaled",
+        "command": "world.info",
+        "expect": {
+            "timeScale": 0.25
+        }
+    },
+    {
+        "id": "cheated",
+        "command": "cheats.info",
+        "expect": {
+            "cheatsRun": true
+        }
+    },
+    {
+        "id": "answered",
+        "command": "console.info",
+        "params": {
+            "rows": 4
+        },
+        "expect": {
+            "line": "",
+            "rows": [
+                { "kind": "input", "text": "> time.scale 0.25" },
+                { "kind": "answer", "text": "{" },
+                { "kind": "answer", "text": "  \"scale\": 0.25" },
+                { "kind": "answer", "text": "}" }
+            ]
+        }
+    },
+    {
+        "id": "type-help",
+        "command": "input.text",
+        "params": {
+            "text": "help time.sc"
+        }
+    },
+    {
+        "id": "complete",
+        "command": "input.key",
+        "params": {
+            "key": "Tab"
+        }
+    },
+    {
+        "id": "completed",
+        "command": "console.info",
+        "expect": {
+            "line": "help time.scale "
+        }
+    },
+    {
+        "id": "enter-help",
+        "command": "input.key",
+        "params": {
+            "key": "Enter"
+        }
+    },
+    {
+        "id": "helped",
+        "command": "console.info",
+        "params": {
+            "rows": 1
+        },
+        "expect": {
+            "rows": [
+                { "kind": "answer", "text": "  scale (float): game seconds per real second" }
+            ]
+        }
+    },
+    {
+        "id": "shot",
+        "command": "screenshot",
+        "params": {
+            "path": "Console.png"
+        }
+    },
+    {
+        "id": "close",
+        "command": "input.key",
+        "params": {
+            "key": "Escape"
+        }
+    },
+    {
+        "id": "closed-again",
+        "command": "console.info",
+        "expect": {
+            "open": false
+        }
+    }
+]

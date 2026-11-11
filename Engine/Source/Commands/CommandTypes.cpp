@@ -80,6 +80,17 @@ namespace Opaax
         return *this;
     }
 
+    CommandSpec& CommandSpec::NamesCommand()
+    {
+        if (m_Params.empty())
+        {
+            OPAAX_LOG(LogCommands, Error, "Command '{}': NamesCommand before any Param", m_Name);
+            return *this;
+        }
+        m_Params.back().bCommandName = true;
+        return *this;
+    }
+
     CommandSpec& CommandSpec::Cheat()
     {
         m_bCheat = true;
@@ -119,6 +130,10 @@ namespace Opaax
             if (!lParam.Choices.empty())
             {
                 lItem["choices"] = lParam.Choices;
+            }
+            if (lParam.bCommandName)
+            {
+                lItem["command"] = true;
             }
             lParams.push_back(Move(lItem));
         }

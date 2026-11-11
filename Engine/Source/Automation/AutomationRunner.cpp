@@ -276,9 +276,12 @@ namespace Opaax
         if (!InResponse.bOk)
         {
             ++m_Failed;
-            OPAAX_LOG(LogAutomation, Warn, "Request '{}' ({}) failed: {}", InResponse.Id, InResponse.Command, InResponse.Error);
+            if (m_bLogResponses)
+            {
+                OPAAX_LOG(LogAutomation, Warn, "Request '{}' ({}) failed: {}", InResponse.Id, InResponse.Command, InResponse.Error);
+            }
         }
-        else
+        else if (m_bLogResponses)
         {
             OPAAX_LOG(LogAutomation, Info, "Request '{}' ({}) done", InResponse.Id, InResponse.Command);
         }
