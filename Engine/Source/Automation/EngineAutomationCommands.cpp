@@ -10,6 +10,7 @@
 #include "Automation/SaveAutomationCommands.h"
 #include "Automation/SettingsAutomationCommands.h"
 #include "Core/Algo/Algo.h"
+#include "Core/Build/BuildInfo.h"
 #include "Core/IO/FileIO.h"
 #include "Core/IO/FileSystem.h"
 #include "Core/Maths/Maths.h"
@@ -473,12 +474,13 @@ namespace Opaax::EngineAutomation
         void RegisterApp(AutomationRunner& InRunner, IAutomationHost& InHost)
         {
             InRunner.Register("app.info",
-                "The app's frame and folders: {frame, workspace, engine, project, assets, save, user}.",
+                "The app's frame, build kind and folders: {frame, devBuild, workspace, engine, project, assets, save, user}.",
                 [&InHost](const nlohmann::json&)
                 {
                     const IPaths& lPaths = OpaaxApplication::GetAppService<IPaths>();
                     return AutomationResult::Ok(nlohmann::json{
                         { "frame",     InHost.GetFrameIndex() },
+                        { "devBuild",  Build::IsDevBuild() },
                         { "workspace", lPaths.WorkspaceRoot() },
                         { "engine",    lPaths.EngineRoot() },
                         { "project",   lPaths.ProjectRoot() },

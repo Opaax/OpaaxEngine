@@ -39,6 +39,7 @@ set(OPAAX_TEST_SOURCES
 
     # Core
     Core/AlgoTests.cpp
+    Core/BuildInfoTests.cpp
     Core/ColorTests.cpp
     Core/CStringTests.cpp
     Core/GuidTests.cpp

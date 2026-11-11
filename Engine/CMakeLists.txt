@@ -145,11 +145,14 @@ endif()
 # workspace (the top-level project, which holds the games) and this folder (the engine's content).
 # They differ when a game repository adds the engine as a subdirectory (External/OpaaxEngine).
 # A ship build bakes nothing and resolves everything next to the executable.
+# OPAAX_DEV_BUILD (1 or 0) is what code tests for a dev build: Core/Build/BuildInfo.h.
 if(OPAAX_DEV_BUILD)
+    target_compile_definitions(OpaaxEngineLib PUBLIC OPAAX_DEV_BUILD=1)
     target_compile_definitions(OpaaxEngineLib PUBLIC OPAAX_WORKSPACE_DIR="${CMAKE_SOURCE_DIR}")
     target_compile_definitions(OpaaxEngineLib PRIVATE OPAAX_ENGINE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
     message(STATUS "[Opaax] Dev build: workspace root ${CMAKE_SOURCE_DIR}, engine ${CMAKE_CURRENT_SOURCE_DIR}")
 else()
+    target_compile_definitions(OpaaxEngineLib PUBLIC OPAAX_DEV_BUILD=0)
     message(STATUS "[Opaax] Ship build: paths resolve next to the executable")
 endif()
 
