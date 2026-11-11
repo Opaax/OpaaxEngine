@@ -698,9 +698,9 @@ namespace Opaax::EngineAutomation
                     return AutomationResult::Ok(nlohmann::json{ { "paused", InEngine.GetWorldManager().IsPaused() } });
                 });
 
-            InCommands.Add("world.step",
+            InCommands.Add(CommandSpec("world.step",
                 "Runs one frame of the paused world: its update and the fixed steps that frame owes. The next request "
-                "runs after that frame.",
+                "runs after that frame.").Cheat(),
                 [&InEngine](const nlohmann::json&)
                 {
                     if (!InEngine.GetWorldManager().IsPaused())
@@ -768,9 +768,9 @@ namespace Opaax::EngineAutomation
                     return AutomationResult::Ok(DescribeEntity(lEntity, InEngine.GetRegistries().Components(), true));
                 });
 
-            InCommands.Add("component.set",
+            InCommands.Add(CommandSpec("component.set",
                 "Changes fields of {entity}'s component {type}: {value} is merged into it (added when missing). "
-                "A field of the wrong type changes nothing.",
+                "A field of the wrong type changes nothing.").Cheat(),
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     OpaaxString  lError;
@@ -802,9 +802,9 @@ namespace Opaax::EngineAutomation
         // =========================================================================
         void RegisterLevels(ICommandRegistry& InCommands, IEngine& InEngine)
         {
-            InCommands.Add("level.play",
+            InCommands.Add(CommandSpec("level.play",
                 "Opens the level at {path} (relative to the project's assets) in a new play world; the next request "
-                "runs once it is open.",
+                "runs once it is open.").Cheat(),
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     const OpaaxString lPath     = InParams.value("path", OpaaxString());
@@ -1294,11 +1294,11 @@ namespace Opaax::EngineAutomation
                     return AutomationResult::Ok(DescribeConfig(lName, *lConfig));
                 });
 
-            InCommands.Add("config.set",
+            InCommands.Add(CommandSpec("config.set",
                 "Merges {values}, shaped like the config's file ({\"Time\": {\"FixedRate\": 30}}), into {config}'s "
                 "project values for this run, without saving; applied at once, as the Config panel does. A value the "
                 "config does not have, or of the wrong type, is refused; one the player set still wins. Answers as "
-                "config.get after.",
+                "config.get after.").Cheat(),
                 [](const nlohmann::json& InParams)
                 {
                     const OpaaxString lName = InParams.value("config", OpaaxString());

@@ -120,18 +120,18 @@ namespace Opaax::OnlineAutomation
             "profile (fake)}.",
             [lOnline](const nlohmann::json&) { return Info(lOnline()); });
 
-        InCommands.Add("online.use",
+        InCommands.Add(CommandSpec("online.use",
             "Runs another store: {backend: none | fake, profile: full | steam | epic | gog}. What was asked is "
-            "dropped. Answers as online.info.",
+            "dropped. Answers as online.info.").Cheat(),
             [lOnline](const nlohmann::json& InParams)
             {
                 return Use(lOnline(), OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Online>().GetData(),
                            InParams);
             });
 
-        InCommands.Add("online.leaderboard.upload",
+        InCommands.Add(CommandSpec("online.leaderboard.upload",
             "Uploads {score} to {board}, keeping the player's best, with {details} and {file} (text) attached to a "
-            "kept score: {result, scoreChanged, rank, previousRank}.",
+            "kept score: {result, scoreChanged, rank, previousRank}.").Cheat(),
             [lOnline](const nlohmann::json& InParams) { return Upload(lOnline(), InParams); });
 
         InCommands.Add("online.leaderboard.entries",
@@ -149,8 +149,8 @@ namespace Opaax::OnlineAutomation
         InCommands.Add("online.overlay", "Opens or closes the fake store's overlay, {active}, as the player's key does.",
             [lOnline](const nlohmann::json& InParams) { return Overlay(lOnline(), InParams); });
 
-        InCommands.Add("online.fake.player",
-            "Adds a player to the fake store, {name, friend, nameKnown}, with {score} on {board} if given: {id}.",
+        InCommands.Add(CommandSpec("online.fake.player",
+            "Adds a player to the fake store, {name, friend, nameKnown}, with {score} on {board} if given: {id}.").Cheat(),
             [lOnline](const nlohmann::json& InParams) { return AddFakePlayer(lOnline(), InParams); });
     }
 

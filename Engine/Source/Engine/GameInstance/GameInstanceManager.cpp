@@ -70,6 +70,9 @@ namespace Opaax
             return false;
         }
 
+        // A new game starts with no cheat run: one Play session does not mark the next.
+        m_Commands->ClearCheatsRun();
+
         m_GameInstance = GameInstance::Create(m_GameInstanceClass, m_Registries->ObjectClasses());
         m_GameInstance->Init(GameInstanceContext{*m_Worlds, *m_Resources, *m_Paths, *m_Events, *m_Input, *m_Config,
                                                  *m_Jobs, *m_Saves, *m_Settings, *m_Online, *m_Commands});

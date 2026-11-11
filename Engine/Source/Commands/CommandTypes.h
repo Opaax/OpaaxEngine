@@ -2,11 +2,14 @@
 
 #include <nlohmann/json.hpp>
 
+#include "Core/Log/Logger.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 
 namespace Opaax
 {
+    OPAAX_LOG_CATEGORY(Commands);
+
     // =============================================================================
     // Results and handlers
     // =============================================================================
@@ -75,6 +78,7 @@ namespace Opaax
     //   CommandSpec("bhop.teleport", "Moves the rabbit.")
     //       .Param("x", ECommandParamType::Any, "start, finish or the x position").Choices({ "start", "finish" })
     //       .Param("y", ECommandParamType::Float, "the y position").Optional()
+    //       .Cheat()
     //   Choices and Optional apply to the parameter declared last.
     // =============================================================================
     class CommandSpec
@@ -92,16 +96,29 @@ namespace Opaax
         /** The last parameter may be left out. */
         CommandSpec& Optional();
 
+        /**
+         * Running it changes the game in a way a player could not: once it answers ok, in any build
+         * and from any source, the registry sends CheatUsed and sets its flag (HaveCheatsRun).
+         */
+        CommandSpec& Cheat();
+
+        /** Not registered in a ship build (Build::IsDevBuild() false): a dev tool. */
+        CommandSpec& DevOnly();
+
         const OpaaxString&             GetName()   const noexcept { return m_Name; }
         const OpaaxString&             GetHelp()   const noexcept { return m_Help; }
         const TDynArray<CommandParam>& GetParams() const noexcept { return m_Params; }
+        bool                           IsCheat()   const noexcept { return m_bCheat; }
+        bool                           IsDevOnly() const noexcept { return m_bDevOnly; }
 
-        /** {"name", "help"}, and "params" when it declares some. */
+        /** {"name", "help"}, and "params", "cheat", "devOnly" when it has them. */
         nlohmann::json ToJson() const;
 
     private:
         OpaaxString             m_Name;
         OpaaxString             m_Help;
         TDynArray<CommandParam> m_Params;
+        bool                    m_bCheat   = false;
+        bool                    m_bDevOnly = false;
     };
 }

@@ -1,8 +1,11 @@
-// Suite: CommandRegistry (commands by name, the newest registration of a name runs) and
-// CommandHandle (a registration removed with its handle).
+// Suite: CommandRegistry (commands by name, the newest registration of a name runs),
+// CommandHandle (a registration removed with its handle) and cheats (the flag, CheatUsed, dev-only
+// commands refused by a ship build).
 #include <doctest.h>
 
+#include "Automation/AutomationRunner.h"
 #include "Commands/CommandRegistry.h"
+#include "Core/Build/BuildInfo.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxStringJson.h"
 
@@ -164,14 +167,15 @@ TEST_CASE("CommandRegistry: Describe lists commands by name with their parameter
 
     const nlohmann::json lList = lRegistry.Describe();
     REQUIRE(lList.is_array());
-    REQUIRE(lList.size() == 5);   // with the built-in commands
+    REQUIRE(lList.size() == 6);   // with the built-in commands
 
-    // Sorted: a.typed, b.plain, commands.has, commands.list, frames.wait.
+    // Sorted: a.typed, b.plain, cheats.info, commands.has, commands.list, frames.wait.
     CHECK(lList[0]["name"] == "a.typed");
     CHECK(lList[1]["name"] == "b.plain");
-    CHECK(lList[2]["name"] == "commands.has");
-    CHECK(lList[3]["name"] == "commands.list");
-    CHECK(lList[4]["name"] == "frames.wait");
+    CHECK(lList[2]["name"] == "cheats.info");
+    CHECK(lList[3]["name"] == "commands.has");
+    CHECK(lList[4]["name"] == "commands.list");
+    CHECK(lList[5]["name"] == "frames.wait");
 
     CHECK(lList[1]["help"] == "No parameters.");
     CHECK_FALSE(lList[1].contains("params"));
@@ -230,4 +234,115 @@ TEST_CASE("ICommandRegistry: the null registry keeps nothing")
     CHECK_FALSE(lNull.Has("game.hello"));
     CHECK_FALSE(lNull.Has("commands.list"));
     CHECK(lNull.Describe().empty());
+}
+
+// =============================================================================
+// Cheats
+// =============================================================================
+namespace
+{
+    /** A registry with a runner over it, and the CheatUsed it sent. */
+    struct CheatFixture
+    {
+        CommandRegistry                 Commands;
+        AutomationRunner                Runner{ Commands };
+        TDynArray<OpaaxString>          Cheats;
+
+        CheatFixture()
+        {
+            Commands.SetCheatListener([this](const CheatUsed& InCheat) { Cheats.push_back(InCheat.Command.ToString()); });
+            Commands.Add(CommandSpec("game.god", "A cheat.").Cheat(), Answering("god"));
+            Commands.Add(CommandSpec("game.bad", "A cheat that refuses.").Cheat(),
+                         [](const nlohmann::json&) { return CommandResult::Fail("refused"); });
+            Commands.Add("game.info", "A plain command.", Answering("info"));
+        }
+
+        void Run(const char* InCommand)
+        {
+            Runner.Enqueue(AutomationRequest{ InCommand, InCommand });
+            Runner.Tick();
+        }
+    };
+}
+
+TEST_CASE("Cheats: a cheat that answers ok sets the flag and is told at once")
+{
+    CheatFixture lFix;
+    CHECK_FALSE(lFix.Commands.HaveCheatsRun());
+
+    lFix.Run("game.god");
+    CHECK(lFix.Commands.HaveCheatsRun());
+    REQUIRE(lFix.Cheats.size() == 1);
+    CHECK(lFix.Cheats[0] == "game.god");
+}
+
+TEST_CASE("Cheats: a plain command and a refused cheat do neither")
+{
+    CheatFixture lFix;
+
+    lFix.Run("game.info");
+    lFix.Run("game.bad");
+    lFix.Run("game.unknown");
+
+    CHECK_FALSE(lFix.Commands.HaveCheatsRun());
+    CHECK(lFix.Cheats.empty());
+}
+
+TEST_CASE("Cheats: ClearCheatsRun starts a clean run; cheats.info answers the flag")
+{
+    CheatFixture lFix;
+    const auto lInfo = [&lFix]() { return lFix.Commands.Find("cheats.info")->Handler(nlohmann::json::object()).Value; };
+
+    CHECK(lInfo().at("cheatsRun") == false);
+    lFix.Run("game.god");
+    CHECK(lInfo().at("cheatsRun") == true);
+
+    lFix.Commands.ClearCheatsRun();
+    CHECK_FALSE(lFix.Commands.HaveCheatsRun());
+    CHECK(lInfo().at("cheatsRun") == false);
+}
+
+TEST_CASE("Cheats: Describe marks cheat and dev-only commands")
+{
+    CommandRegistry lRegistry(/*bInDevBuild*/ true);
+    lRegistry.Add(CommandSpec("game.god", "A cheat.").Cheat().DevOnly(), Answering("god"));
+
+    for (const nlohmann::json& lItem : lRegistry.Describe())
+    {
+        if (lItem["name"] == "game.god")
+        {
+            CHECK(lItem["cheat"] == true);
+            CHECK(lItem["devOnly"] == true);
+        }
+        else
+        {
+            CHECK_FALSE(lItem.contains("cheat"));
+            CHECK_FALSE(lItem.contains("devOnly"));
+        }
+    }
+}
+
+TEST_CASE("Cheats: a ship build's registry refuses dev-only commands, and keeps the others")
+{
+    CommandRegistry lShip(/*bInDevBuild*/ false);
+
+    lShip.Add(CommandSpec("time.scale", "Dev only.").Cheat().DevOnly(), Answering("scale"));
+    CommandHandle lHandle = lShip.Register(CommandSpec("game.teleport", "Dev only.").Cheat().DevOnly(), Answering("tp"));
+    lShip.Add(CommandSpec("world.step", "A cheat a ship build keeps.").Cheat(), Answering("step"));
+
+    CHECK_FALSE(lShip.Has("time.scale"));
+    CHECK_FALSE(lShip.Has("game.teleport"));
+    CHECK_FALSE(lHandle.IsValid());
+    CHECK(lShip.Has("world.step"));
+
+    CommandRegistry lDev(/*bInDevBuild*/ true);
+    lDev.Add(CommandSpec("time.scale", "Dev only.").Cheat().DevOnly(), Answering("scale"));
+    CHECK(lDev.Has("time.scale"));
+}
+
+TEST_CASE("Cheats: the registry is built for this build by default")
+{
+    CommandRegistry lRegistry;
+    lRegistry.Add(CommandSpec("game.dev", "Dev only.").DevOnly(), Answering("dev"));
+    CHECK(lRegistry.Has("game.dev") == Build::IsDevBuild());
 }

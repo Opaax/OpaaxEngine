@@ -72,9 +72,9 @@ namespace Opaax::SaveAutomation
                 return Get(OpaaxApplication::GetAppService<ISaveStorage>(), InParams);
             });
 
-        InCommands.Add("save.set",
+        InCommands.Add(CommandSpec("save.set",
             "Writes a slot: {slot, class, properties} as the game writes a save of that class (its defaults, "
-            "properties merged), or {slot, text} written as given. Answers {slot, path}.",
+            "properties merged), or {slot, text} written as given. Answers {slot, path}.").Cheat(),
             [&InEngine](const nlohmann::json& InParams)
             {
                 FlushGameSaves(InEngine);
@@ -82,7 +82,7 @@ namespace Opaax::SaveAutomation
                            InParams);
             });
 
-        InCommands.Add("save.clear", "Deletes a slot's save, {slot}, or every one, {all: true}. Answers {deleted}.",
+        InCommands.Add(CommandSpec("save.clear", "Deletes a slot's save, {slot}, or every one, {all: true}. Answers {deleted}.").Cheat(),
             [&InEngine](const nlohmann::json& InParams)
             {
                 FlushGameSaves(InEngine);
