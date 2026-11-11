@@ -2,12 +2,14 @@
 
 #include "Core/Maths/MathTypes.h"
 #include "World/Behaviour/Behaviour.h"
+#include "World/Entity/TransformInterpolation.h"
 
 namespace TestWorld
 {
     // =============================================================================
     // DriftProbe — moves its entity right at Speed units a second of game time, in fixed steps, and
-    //   adds up how far it went and the game time its updates were given. Reset Distance and
+    //   adds up how far it went and the game time its updates were given. Drawn between its steps
+    //   (TransformInterpolation::RecordSteps), so it glides at any frame rate. Reset Distance and
     //   GameTime to 0 to measure from a point: at a time scale of 0.25 a real second moves it a
     //   quarter as far.
     // =============================================================================
@@ -21,6 +23,8 @@ namespace TestWorld
         float GameTime = 0.f;
 
         OPAAX_PROPERTIES(DriftProbe, OPAAX_PROP(Speed), OPAAX_PROP(Distance), OPAAX_PROP(GameTime))
+
+        void OnStart() override { Opaax::TransformInterpolation::RecordSteps(GetEntity()); }
 
         void OnUpdate(const float InDeltaTime) override { GameTime += InDeltaTime; }
 

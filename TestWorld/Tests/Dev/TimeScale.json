@@ -1,8 +1,8 @@
 [
     {
         "repeat": [
-            { "hz": 60, "pace": "60" },
-            { "hz": 240, "pace": "240" }
+            { "hz": 60, "pace": "60", "normalMove": 2.01, "quarterMove": 0.51 },
+            { "hz": 240, "pace": "240", "normalMove": 0.51, "quarterMove": 0.13 }
         ],
         "requests": [
             {
@@ -54,9 +54,26 @@
                 }
             },
             {
+                "id": "trace-start-normal-{pace}",
+                "command": "camera.trace.start",
+                "params": {
+                    "name": "TimeScale-normal-{pace}",
+                    "target": "Drifter"
+                }
+            },
+            {
                 "command": "frames.wait",
                 "params": {
                     "count": "{hz}"
+                }
+            },
+            {
+                "id": "glides-normal-{pace}",
+                "command": "camera.trace.stop",
+                "params": {
+                    "limits": {
+                        "targetDrift": "{normalMove}"
+                    }
                 }
             },
             {
@@ -114,9 +131,26 @@
                 }
             },
             {
+                "id": "trace-start-quarter-{pace}",
+                "command": "camera.trace.start",
+                "params": {
+                    "name": "TimeScale-quarter-{pace}",
+                    "target": "Drifter"
+                }
+            },
+            {
                 "command": "frames.wait",
                 "params": {
                     "count": "{hz}"
+                }
+            },
+            {
+                "id": "glides-quarter-{pace}",
+                "command": "camera.trace.stop",
+                "params": {
+                    "limits": {
+                        "targetDrift": "{quarterMove}"
+                    }
                 }
             },
             {
