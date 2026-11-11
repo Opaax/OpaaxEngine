@@ -65,7 +65,7 @@ depending on the machine, game time does not.
 
 ## Commands
 
-`commands.list` lists every command with its help. An `entity` is an entity's id (from
+`commands.list` lists every command with its help, and its parameters when it declares them. An `entity` is an entity's id (from
 `entity.list`) or its name when no other entity has it. Component types and fields are the ones
 saved in `.opaaxmap` files.
 
