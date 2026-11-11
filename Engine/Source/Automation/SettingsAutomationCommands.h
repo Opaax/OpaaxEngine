@@ -17,7 +17,7 @@ namespace Opaax
     namespace SettingsAutomation
     {
         /** Registers settings.get, settings.set, settings.save, settings.load and settings.reset. */
-        void Register(AutomationRunner& InRunner);
+        void Register(ICommandRegistry& InCommands);
 
         /**
          * settings.get: {active} whether they are over the configs, {unsaved} whether they differ from the

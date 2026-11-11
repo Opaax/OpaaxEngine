@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Application/Services/ICommandRegistry.h"
 #include "Application/Services/IJobSystem.h"
 #include "Application/Services/IOnlineServices.h"
 #include "Application/Services/ISaveStorage.h"
@@ -60,5 +61,11 @@ namespace Opaax
 
         /** The player's store (leaderboards, achievements, the overlay). With none, requests answer Unavailable. */
         IOnlineServices& Online = IOnlineServices::Null();
+
+        /**
+         * The app's commands (automation, the console). Keep what Register returns as a member: the
+         * command is gone with it. The null one keeps nothing.
+         */
+        ICommandRegistry& Commands = ICommandRegistry::Null();
     };
 }

@@ -471,9 +471,9 @@ namespace Opaax::EngineAutomation
         // =========================================================================
         // App
         // =========================================================================
-        void RegisterApp(AutomationRunner& InRunner, IAutomationHost& InHost)
+        void RegisterApp(ICommandRegistry& InCommands, IAutomationHost& InHost)
         {
-            InRunner.Register("app.info",
+            InCommands.Add("app.info",
                 "The app's frame, build kind and folders: {frame, devBuild, workspace, engine, project, assets, save, user}.",
                 [&InHost](const nlohmann::json&)
                 {
@@ -489,14 +489,14 @@ namespace Opaax::EngineAutomation
                         { "user",      lPaths.UserDir() } });
                 });
 
-            InRunner.Register("app.quit", "Closes the app at the end of this frame.",
+            InCommands.Add("app.quit", "Closes the app at the end of this frame.",
                 [&InHost](const nlohmann::json&)
                 {
                     InHost.RequestQuit();
                     return AutomationResult::Ok();
                 });
 
-            InRunner.Register("expect.quit",
+            InCommands.Add("expect.quit",
                 "Holds the queue until the game closes the app itself (QuitGame), then answers ok; fails if the "
                 "app is still open after {seconds} (default 10, real time).",
                 [](const nlohmann::json& InParams)
@@ -514,7 +514,7 @@ namespace Opaax::EngineAutomation
                     return lResult;
                 });
 
-            InRunner.Register("screenshot",
+            InCommands.Add("screenshot",
                 "Saves this frame as a PNG at {path} (relative paths are from the working folder); the next "
                 "request runs once it is written.",
                 [&InHost](const nlohmann::json& InParams)
@@ -537,9 +537,9 @@ namespace Opaax::EngineAutomation
         // =========================================================================
         // Input
         // =========================================================================
-        void RegisterInput(AutomationRunner& InRunner, IEngine& InEngine)
+        void RegisterInput(ICommandRegistry& InCommands, IEngine& InEngine)
         {
-            InRunner.Register("input.key",
+            InCommands.Add("input.key",
                 "Feeds {key} (\"Space\", \"A\", \"Mouse_Left\"...) to the game: {action} \"press\", \"release\" or "
                 "\"tap\" (down for {frames}, default 2, then up).",
                 [&InEngine](const nlohmann::json& InParams)
@@ -581,7 +581,7 @@ namespace Opaax::EngineAutomation
                     return lResult;
                 });
 
-            InRunner.Register("input.mouse",
+            InCommands.Add("input.mouse",
                 "Moves the game's pointer to {x, y} (pixels of the game view, from its top left).",
                 [&InEngine](const nlohmann::json& InParams)
                 {
@@ -589,7 +589,7 @@ namespace Opaax::EngineAutomation
                     return AutomationResult::Ok();
                 });
 
-            InRunner.Register("input.scroll",
+            InCommands.Add("input.scroll",
                 "Turns the game's mouse wheel by {y} notches (1 up, -1 down) and {x} (default 0) in one frame; "
                 "the next request runs after that frame.",
                 [&InEngine](const nlohmann::json& InParams)
@@ -616,9 +616,9 @@ namespace Opaax::EngineAutomation
         // =========================================================================
         // The game's UI
         // =========================================================================
-        void RegisterUI(AutomationRunner& InRunner, IEngine& InEngine)
+        void RegisterUI(ICommandRegistry& InCommands, IEngine& InEngine)
         {
-            InRunner.Register("ui.list",
+            InCommands.Add("ui.list",
                 "The game UI's widgets, depth-first: [{name, type, visible, x, y, width, height}], x and y their "
                 "centre in game-view pixels. Filter: {name}.",
                 [&InEngine](const nlohmann::json& InParams)
@@ -633,7 +633,7 @@ namespace Opaax::EngineAutomation
                         { "widgets", DescribeWidgets(*lCanvas, InParams.value("name", OpaaxString())) } });
                 });
 
-            InRunner.Register("ui.click",
+            InCommands.Add("ui.click",
                 "Clicks the game UI's widget named {widget}: the pointer moves to its centre and the left button "
                 "is tapped (down for {frames}, default 2).",
                 [&InEngine](const nlohmann::json& InParams)
@@ -662,9 +662,9 @@ namespace Opaax::EngineAutomation
         // =========================================================================
         // World
         // =========================================================================
-        void RegisterWorld(AutomationRunner& InRunner, IEngine& InEngine)
+        void RegisterWorld(ICommandRegistry& InCommands, IEngine& InEngine)
         {
-            InRunner.Register("world.info", "The active world: {name, mode, paused, entities, camera}.",
+            InCommands.Add("world.info", "The active world: {name, mode, paused, entities, camera}.",
                 [&InEngine](const nlohmann::json&)
                 {
                     OpaaxString  lError;
@@ -683,7 +683,7 @@ namespace Opaax::EngineAutomation
                         { "camera",   ViewToJson(lView) } });
                 });
 
-            InRunner.Register("world.pause",
+            InCommands.Add("world.pause",
                 "Pauses the playing world ({paused}: true) or resumes it (false): a paused world's subsystems do not "
                 "tick. Answers {paused}.",
                 [&InEngine](const nlohmann::json& InParams)
@@ -698,7 +698,7 @@ namespace Opaax::EngineAutomation
                     return AutomationResult::Ok(nlohmann::json{ { "paused", InEngine.GetWorldManager().IsPaused() } });
                 });
 
-            InRunner.Register("world.step",
+            InCommands.Add("world.step",
                 "Runs one frame of the paused world: its update and the fixed steps that frame owes. The next request "
                 "runs after that frame.",
                 [&InEngine](const nlohmann::json&)
@@ -715,7 +715,7 @@ namespace Opaax::EngineAutomation
                     return lResult;
                 });
 
-            InRunner.Register("entity.list",
+            InCommands.Add("entity.list",
                 "The active world's entities: [{id, name, parent, map, components}]. Filters: {name}, {component}.",
                 [&InEngine](const nlohmann::json& InParams)
                 {
@@ -749,7 +749,7 @@ namespace Opaax::EngineAutomation
                     return AutomationResult::Ok(nlohmann::json{ { "entities", lList } });
                 });
 
-            InRunner.Register("entity.get", "One entity of the active world with its components' values: {entity} (id or name).",
+            InCommands.Add("entity.get", "One entity of the active world with its components' values: {entity} (id or name).",
                 [&InEngine](const nlohmann::json& InParams)
                 {
                     OpaaxString  lError;
@@ -768,7 +768,7 @@ namespace Opaax::EngineAutomation
                     return AutomationResult::Ok(DescribeEntity(lEntity, InEngine.GetRegistries().Components(), true));
                 });
 
-            InRunner.Register("component.set",
+            InCommands.Add("component.set",
                 "Changes fields of {entity}'s component {type}: {value} is merged into it (added when missing). "
                 "A field of the wrong type changes nothing.",
                 [&InEngine](const nlohmann::json& InParams)
@@ -800,9 +800,9 @@ namespace Opaax::EngineAutomation
         // =========================================================================
         // Levels
         // =========================================================================
-        void RegisterLevels(AutomationRunner& InRunner, IEngine& InEngine)
+        void RegisterLevels(ICommandRegistry& InCommands, IEngine& InEngine)
         {
-            InRunner.Register("level.play",
+            InCommands.Add("level.play",
                 "Opens the level at {path} (relative to the project's assets) in a new play world; the next request "
                 "runs once it is open.",
                 [&InEngine](const nlohmann::json& InParams)
@@ -825,7 +825,7 @@ namespace Opaax::EngineAutomation
                     return lResult;
                 });
 
-            InRunner.Register("world.wait",
+            InCommands.Add("world.wait",
                 "Lets the playing world's clock advance {seconds} (game time, whatever the frame rate) before the "
                 "next request. Ends early if the world changes.",
                 [&InEngine](const nlohmann::json& InParams)
@@ -863,9 +863,9 @@ namespace Opaax::EngineAutomation
         // =========================================================================
         // Time: the frames a run is given
         // =========================================================================
-        void RegisterTime(AutomationRunner& InRunner, IEngine& InEngine)
+        void RegisterTime(ICommandRegistry& InCommands, IEngine& InEngine)
         {
-            InRunner.Register("time.pace",
+            InCommands.Add("time.pace",
                 "Gives the frames the time of a screen rate from the next frame, whatever the machine: {pacing} as "
                 "--frame-pacing reads it (\"144\", \"60,jitter=0.25\", \"60,hitch=0.1@2\", \"deltas=0.016/0.033\"); "
                 "\"off\" gives the clock back. Answers {pacing}.",
@@ -892,9 +892,9 @@ namespace Opaax::EngineAutomation
         // =========================================================================
         // Window: its mode and size, the screen's modes, the frame cap
         // =========================================================================
-        void RegisterWindow(AutomationRunner& InRunner, IEngine& InEngine)
+        void RegisterWindow(ICommandRegistry& InCommands, IEngine& InEngine)
         {
-            InRunner.Register("window.info",
+            InCommands.Add("window.info",
                 "The main window: {mode, width, height, refreshRate (its screen's), decorated, follows (whether it "
                 "follows Window.Mode, Width and Height at once: a game's does, the editor's not), modes (its screen's "
                 "fullscreen modes, smallest first: {width, height, refreshRate}), frameCap {maxFrameRate (0 when "
@@ -935,9 +935,9 @@ namespace Opaax::EngineAutomation
         // =========================================================================
         // Camera: traces of what it framed, measured
         // =========================================================================
-        void RegisterCamera(AutomationRunner& InRunner, IEngine& InEngine)
+        void RegisterCamera(ICommandRegistry& InCommands, IEngine& InEngine)
         {
-            InRunner.Register("camera.info",
+            InCommands.Add("camera.info",
                 "How the active world is framed: {world, mode, paused, view (x, y, size, rotation), fixedRate, pacing, "
                 "tracing, clock (fixedDelta, refreshHz snapped to, snapping, maxSteps, droppedSteps), cameras} with "
                 "each camera's {name, id, priority, x, y, size, blendIn, blendCurve, framed (the view it gives on that frame), "
@@ -1061,7 +1061,7 @@ namespace Opaax::EngineAutomation
                     return AutomationResult::Ok(lAnswer);
                 });
 
-            InRunner.Register("camera.shake",
+            InCommands.Add("camera.shake",
                 "Plays the camera shake asset {path} on the active Play world, times {scale} (1), its noise picked by "
                 "{seed} (0), from the next step: answers its {id}. {stop}: a shake's id, faded out from the next step; "
                 "{stopAll}: true fades every shake out.",
@@ -1108,7 +1108,7 @@ namespace Opaax::EngineAutomation
                     return AutomationResult::Ok(nlohmann::json{ { "id", lId } });
                 });
 
-            InRunner.Register("camera.trauma",
+            InCommands.Add("camera.trauma",
                 "Raises the trauma of {entity} (a CameraShakeSource with bUseTrauma) by {amount} (lowers it, negative), "
                 "kept in [0, 1], from the next step: answers its {trauma} then.",
                 [&InEngine](const nlohmann::json& InParams)
@@ -1143,7 +1143,7 @@ namespace Opaax::EngineAutomation
                     return AutomationResult::Ok(nlohmann::json{ { "trauma", lShakes->GetTrauma(lEntity.GetHandle()) } });
                 });
 
-            InRunner.Register("camera.trace.start",
+            InCommands.Add("camera.trace.start",
                 "Records every frame of the playing world from the next one: the frame's time, the view, and where "
                 "{target} (an entity's name, optional) is drawn; {name} names the files. {heightPx}: the view's height "
                 "the pixels are measured in (the window's by default).",
@@ -1178,7 +1178,7 @@ namespace Opaax::EngineAutomation
                                                                 { "heightPx", lSetup.HeightPx } });
                 });
 
-            InRunner.Register("camera.trace.stop",
+            InCommands.Add("camera.trace.stop",
                 "Ends the trace, writes <name>.camera.json and <name>.camera.csv in the working folder and answers "
                 "{name, frames, files, summary}: the target's largest move on screen (targetDrift), the largest change "
                 "of the view's move (motionJitter), largestMove (pixels), timeReversals, stillMoves, zoomReversals, "
@@ -1225,7 +1225,7 @@ namespace Opaax::EngineAutomation
                         { "summary",   lMeasures } });
                 });
 
-            InRunner.Register("camera.trace.compare",
+            InCommands.Add("camera.trace.compare",
                 "How far the stopped trace {trace} is from where the stopped trace {reference} says its camera was at "
                 "each of its game times (the reference's frame then, or its two frames around it blended by time): "
                 "{shared, position, size (world units), rotation (degrees), atTime}. The reference is a steady pacing "
@@ -1276,9 +1276,9 @@ namespace Opaax::EngineAutomation
         // =========================================================================
         // Configs: read, and changed for this run
         // =========================================================================
-        void RegisterConfig(AutomationRunner& InRunner)
+        void RegisterConfig(ICommandRegistry& InCommands)
         {
-            InRunner.Register("config.get",
+            InCommands.Add("config.get",
                 "A config's values: {config}, its file's name (\"Engine\", \"Renderer\"...). Answers {config, values} "
                 "what the engine reads, {project} the file's values and {player} the player's settings over them.",
                 [](const nlohmann::json& InParams)
@@ -1294,7 +1294,7 @@ namespace Opaax::EngineAutomation
                     return AutomationResult::Ok(DescribeConfig(lName, *lConfig));
                 });
 
-            InRunner.Register("config.set",
+            InCommands.Add("config.set",
                 "Merges {values}, shaped like the config's file ({\"Time\": {\"FixedRate\": 30}}), into {config}'s "
                 "project values for this run, without saving; applied at once, as the Config panel does. A value the "
                 "config does not have, or of the wrong type, is refused; one the player set still wins. Answers as "
@@ -1327,9 +1327,9 @@ namespace Opaax::EngineAutomation
         // =========================================================================
         // Expectations: a failed one fails the request, so a script's exit code fails a test run
         // =========================================================================
-        void RegisterExpectations(AutomationRunner& InRunner, IEngine& InEngine)
+        void RegisterExpectations(ICommandRegistry& InCommands, IEngine& InEngine)
         {
-            InRunner.Register("expect.value",
+            InCommands.Add("expect.value",
                 "Fails unless {entity}'s value at {path} (\"Transform/Position/x\") meets: equals, near (with "
                 "tolerance), greater, less or between [min, max].",
                 [&InEngine](const nlohmann::json& InParams)
@@ -1363,7 +1363,7 @@ namespace Opaax::EngineAutomation
                     return AutomationResult::Ok(nlohmann::json{ { "value", lActual } });
                 });
 
-            InRunner.Register("expect.count",
+            InCommands.Add("expect.count",
                 "Fails unless the number of entities ({name}, {component} filter them) meets: equals, greater, "
                 "less or between [min, max].",
                 [&InEngine](const nlohmann::json& InParams)
@@ -1385,7 +1385,7 @@ namespace Opaax::EngineAutomation
                     return AutomationResult::Ok(nlohmann::json{ { "count", lCount } });
                 });
 
-            InRunner.Register("expect.entity",
+            InCommands.Add("expect.entity",
                 "Fails unless an entity named {entity} (or with that id) exists; with {exists: false}, unless none does.",
                 [&InEngine](const nlohmann::json& InParams)
                 {
@@ -1480,22 +1480,22 @@ namespace Opaax::EngineAutomation
         }
     }
 
-    void Register(AutomationRunner& InRunner, IEngine& InEngine, IAutomationHost& InHost)
+    void Register(ICommandRegistry& InCommands, IEngine& InEngine, IAutomationHost& InHost)
     {
-        RegisterApp(InRunner, InHost);
-        RegisterInput(InRunner, InEngine);
-        InputAutomation::Register(InRunner, InEngine);
-        RegisterUI(InRunner, InEngine);
-        RegisterWorld(InRunner, InEngine);
-        RegisterLevels(InRunner, InEngine);
-        RegisterTime(InRunner, InEngine);
-        RegisterWindow(InRunner, InEngine);
-        RegisterConfig(InRunner);
-        RegisterCamera(InRunner, InEngine);
-        RegisterExpectations(InRunner, InEngine);
-        SaveAutomation::Register(InRunner, InEngine);
-        OnlineAutomation::Register(InRunner);
-        SettingsAutomation::Register(InRunner);
+        RegisterApp(InCommands, InHost);
+        RegisterInput(InCommands, InEngine);
+        InputAutomation::Register(InCommands, InEngine);
+        RegisterUI(InCommands, InEngine);
+        RegisterWorld(InCommands, InEngine);
+        RegisterLevels(InCommands, InEngine);
+        RegisterTime(InCommands, InEngine);
+        RegisterWindow(InCommands, InEngine);
+        RegisterConfig(InCommands);
+        RegisterCamera(InCommands, InEngine);
+        RegisterExpectations(InCommands, InEngine);
+        SaveAutomation::Register(InCommands, InEngine);
+        OnlineAutomation::Register(InCommands);
+        SettingsAutomation::Register(InCommands);
     }
 
     nlohmann::json DescribeWidgets(const UICanvas& InCanvas, const OpaaxString& InName)

@@ -13,6 +13,7 @@ namespace Opaax
     class InputMappingSubsystem;
     class UISubsystem;
     class ComponentRegistry;
+    class ICommandRegistry;
     struct EngineConfigData;
 
     // =============================================================================
@@ -69,5 +70,11 @@ namespace Opaax
 
         /** The running game, whose subsystems last across levels. Null when no game is running (Edit worlds). */
         GameInstance* Game = nullptr;
+
+        /**
+         * The app's commands (automation, the console). Keep what Register returns as a member: the
+         * command is gone with the subsystem, so with the world. Null in a bare test world.
+         */
+        ICommandRegistry* Commands = nullptr;
     };
 }

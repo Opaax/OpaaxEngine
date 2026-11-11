@@ -38,6 +38,23 @@ TEST_CASE("CommandRegistry: commands.list and frames.wait are built in")
     CHECK(lWait.WaitFrames == 4);
 }
 
+TEST_CASE("CommandRegistry: commands.has answers whether a name is a command now")
+{
+    CommandRegistry lRegistry;
+    const auto lHas = [&lRegistry](const char* InName)
+    {
+        return lRegistry.Find("commands.has")->Handler(nlohmann::json{ { "name", InName } });
+    };
+
+    CHECK(lHas("frames.wait").Value.at("has") == true);
+    CHECK(lHas("game.ping").Value.at("has") == false);
+
+    CommandHandle lHandle = lRegistry.Register(CommandSpec("game.ping", "Answers."), Answering("scoped"));
+    CHECK(lHas("game.ping").Value.at("has") == true);
+
+    CHECK_FALSE(lRegistry.Find("commands.has")->Handler(nlohmann::json::object()).bOk);
+}
+
 TEST_CASE("CommandRegistry: Add keeps a command for the registry's lifetime")
 {
     CommandRegistry lRegistry;
@@ -147,13 +164,14 @@ TEST_CASE("CommandRegistry: Describe lists commands by name with their parameter
 
     const nlohmann::json lList = lRegistry.Describe();
     REQUIRE(lList.is_array());
-    REQUIRE(lList.size() == 4);   // with commands.list and frames.wait
+    REQUIRE(lList.size() == 5);   // with the built-in commands
 
-    // Sorted: a.typed, b.plain, commands.list, frames.wait.
+    // Sorted: a.typed, b.plain, commands.has, commands.list, frames.wait.
     CHECK(lList[0]["name"] == "a.typed");
     CHECK(lList[1]["name"] == "b.plain");
-    CHECK(lList[2]["name"] == "commands.list");
-    CHECK(lList[3]["name"] == "frames.wait");
+    CHECK(lList[2]["name"] == "commands.has");
+    CHECK(lList[3]["name"] == "commands.list");
+    CHECK(lList[4]["name"] == "frames.wait");
 
     CHECK(lList[1]["help"] == "No parameters.");
     CHECK_FALSE(lList[1].contains("params"));
@@ -182,4 +200,34 @@ TEST_CASE("CommandRegistry: Describe shows the registration that runs")
         }
     }
     CHECK(lHello["help"] == "New help.");
+}
+
+TEST_CASE("ICommandRegistry: the app's registry is used through its interface")
+{
+    CommandRegistry   lConcrete;
+    ICommandRegistry& lRegistry = lConcrete;
+
+    lRegistry.Add("game.hello", "Says hello.", Answering("service"));
+    CHECK(lRegistry.Has("game.hello"));
+
+    {
+        CommandHandle lHandle = lRegistry.Register(CommandSpec("game.ping", "Answers."), Answering("scoped"));
+        CHECK(lRegistry.Has("game.ping"));
+    }
+    CHECK_FALSE(lRegistry.Has("game.ping"));
+    CHECK_FALSE(lRegistry.IsNull());
+}
+
+TEST_CASE("ICommandRegistry: the null registry keeps nothing")
+{
+    ICommandRegistry& lNull = ICommandRegistry::Null();
+    CHECK(lNull.IsNull());
+
+    lNull.Add("game.hello", "Says hello.", Answering("null"));
+    CommandHandle lHandle = lNull.Register(CommandSpec("game.ping", "Answers."), Answering("null"));
+
+    CHECK_FALSE(lHandle.IsValid());
+    CHECK_FALSE(lNull.Has("game.hello"));
+    CHECK_FALSE(lNull.Has("commands.list"));
+    CHECK(lNull.Describe().empty());
 }

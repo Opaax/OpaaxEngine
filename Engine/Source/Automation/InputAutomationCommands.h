@@ -18,7 +18,7 @@ namespace Opaax
     namespace InputAutomation
     {
         /** Registers input.keys, input.rebind, input.resetKeys and input.capture. */
-        void Register(AutomationRunner& InRunner, IEngine& InEngine);
+        void Register(ICommandRegistry& InCommands, IEngine& InEngine);
 
         /**
          * input.keys {context}: {capturing, captured (the key the last capture took, "None" when it was

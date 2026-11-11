@@ -26,27 +26,27 @@ namespace Opaax::SettingsAutomation
         }
     }
 
-    void Register(AutomationRunner& InRunner)
+    void Register(ICommandRegistry& InCommands)
     {
-        InRunner.Register("settings.get",
+        InCommands.Add("settings.get",
             "The player's settings: {active} over the configs, {unsaved}, {path} their file, {properties} their "
             "values as the file holds them ({\"Configs\": {\"Engine\": ...}}). config.get shows what the engine reads.",
             [](const nlohmann::json&) { return Get(Settings()); });
 
-        InRunner.Register("settings.set",
+        InCommands.Add("settings.set",
             "Sets {values}, shaped like {config}'s file ({\"Audio\": {\"MasterVolume\": 0.5}}; a bus by its name: "
             "{\"Audio\": {\"Buses\": {\"Music\": {\"Volume\": 0.5}}}}), as the player's, as a settings menu does; a "
             "null takes one away. Read at once while a game runs; not saved. Answers as settings.get.",
             [](const nlohmann::json& InParams) { return Set(Settings(), InParams); });
 
-        InRunner.Register("settings.save", "Writes the player's settings to their file. Answers as settings.get.",
+        InCommands.Add("settings.save", "Writes the player's settings to their file. Answers as settings.get.",
             [](const nlohmann::json&) { return Save(Settings()); });
 
-        InRunner.Register("settings.load",
+        InCommands.Add("settings.load",
             "Reads the player's settings from their file again, as a game does when it starts. Answers as settings.get.",
             [](const nlohmann::json&) { return Load(Settings()); });
 
-        InRunner.Register("settings.reset",
+        InCommands.Add("settings.reset",
             "Takes the player's values for {config} away, or every one without it; the project's are read "
             "again. Not saved. Answers as settings.get.",
             [](const nlohmann::json& InParams) { return Reset(Settings(), InParams); });

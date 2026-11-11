@@ -1,0 +1,28 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "2a775754fae043f09e1cf9dff56bfc29",
+            "name": "Camera",
+            "ownerMap": "Commands"
+        }
+    ],
+    "mapId": "Commands",
+    "version": 4
+}

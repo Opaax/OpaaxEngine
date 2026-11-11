@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 
 #include "Automation/AutomationRunner.h"
+#include "Automation/IAutomationHost.h"
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
@@ -15,22 +16,6 @@ namespace Opaax
     class UICanvas;
     class World;
 
-    /** What the engine's commands ask of the app hosting them. */
-    class IAutomationHost
-    {
-    public:
-        virtual ~IAutomationHost() = default;
-
-        /** Saves the frame being drawn as a PNG at InPath once it is drawn. */
-        virtual void RequestScreenshot(const OpaaxString& InPath) = 0;
-
-        /** Closes the app at the end of this frame. */
-        virtual void RequestQuit() = 0;
-
-        /** Frames since the app started. */
-        virtual Uint64 GetFrameIndex() const = 0;
-    };
-
     // =============================================================================
     // EngineAutomation — the commands every app answers: the app itself (info, quit, screenshot),
     //   input (keys and mouse, fed to the engine as if pressed), the game's UI (its widgets, a click
@@ -40,7 +25,7 @@ namespace Opaax
     // =============================================================================
     namespace EngineAutomation
     {
-        void Register(AutomationRunner& InRunner, IEngine& InEngine, IAutomationHost& InHost);
+        void Register(ICommandRegistry& InCommands, IEngine& InEngine, IAutomationHost& InHost);
 
         /**
          * The entity InParams["entity"] names in InWorld: its id (Guid text) or its name (which must

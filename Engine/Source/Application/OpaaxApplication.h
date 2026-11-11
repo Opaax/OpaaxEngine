@@ -3,6 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Application/Services/AppServiceLocator.h"
+#include "Automation/IAutomationHost.h"
 #include "World/WorldSpec.h"   // GetStartupWorldSpec returns one by value
 #include "Core/Events/Event.h"
 #include "Platform/CommandLine.h"
@@ -11,8 +12,8 @@ namespace Opaax
 {
     // Forward-declared to keep World/ and entt out of this header.
     class ModuleRegistrar;
-    class AutomationRunner;
     class AutomationSession;
+    class ICommandRegistry;
 
     class IEngine;
     class IConfigSystem;
@@ -28,16 +29,17 @@ namespace Opaax
 
     // =============================================================================
     // OpaaxApplication — base application host. Owns the AppServiceLocator and boots
-    // the app-level services (Platform, Paths, ...) in dependency order.
+    // the app-level services (Platform, Paths, ...) in dependency order. Hosts the engine's
+    // commands (IAutomationHost): screenshots, quitting, the frame index.
     // =============================================================================
-    class OpaaxApplication
+    class OpaaxApplication : public IAutomationHost
     {
         // =============================================================================
         // CTORS - DTORS
         // =============================================================================
     public:
         OpaaxApplication(int InArgc, char** InArgv);
-        virtual ~OpaaxApplication();
+        ~OpaaxApplication() override;
 
         // =============================================================================
         // Copy - Move = delete
@@ -86,6 +88,9 @@ namespace Opaax
         /** Enables the Profiler: always in dev builds, from config in ship builds. */
         void                BootProfiler(IConfigSystem& ConfigSystem);
         IWindowManager&     BootWindowManager();
+
+        /** The command registry, before the engine: its subsystems take it into their contexts. */
+        ICommandRegistry&   BootCommands();
         IEngine&            BootEngine();
         
     protected:
@@ -175,10 +180,10 @@ namespace Opaax
         virtual void OnQuitGameRequested();
 
         /**
-         * The app is driven from outside (--exec, --automation): the engine's commands are in
-         * InRunner, child apps add theirs (the editor's).
+         * The app adds its commands, in every run, once the engine started (after PostEngineStartup).
+         * The engine's are in InCommands already; a name added again runs the app's.
          */
-        virtual void OnAutomationStarted(AutomationRunner& /*InRunner*/) {}
+        virtual void OnRegisterCommands(ICommandRegistry& /*InCommands*/) {}
 
         /** A script drives the app: the window's own input is ignored (AutomationSession::OwnsInput). */
         bool IsInputScripted() const noexcept;
@@ -244,6 +249,7 @@ namespace Opaax
         IUserSettings&      UserSettings();
         IOnlineServices&    Online();
         IWindowManager&     WindowManager();
+        ICommandRegistry&   Commands();
         IEngine&            Engine();
 
         /** The process exit code main() returns. 0 unless something set it. */
@@ -251,6 +257,13 @@ namespace Opaax
 
         /** Sets the process exit code (e.g. a failed automated test run). */
         void SetExitCode(int InExitCode) noexcept { m_ExitCode = InExitCode; }
+
+        //~Begin IAutomationHost interface
+    public:
+        void   RequestScreenshot(const OpaaxString& InPath) override { m_PendingScreenshot = InPath; }
+        void   RequestQuit() override { m_bQuitRequested = true; }
+        Uint64 GetFrameIndex() const override { return m_FrameIndex; }
+        //~End IAutomationHost interface
 
         // =============================================================================
         // Members
@@ -271,6 +284,13 @@ namespace Opaax
 
         /** Set while the app is driven from outside. */
         TUniquePtr<AutomationSession> m_Automation;
+
+        /** Frames since the loop started, counted before each frame ticks. */
+        Uint64      m_FrameIndex = 0;
+
+        /** Asked by a command, done at the end of the frame. */
+        OpaaxString m_PendingScreenshot;
+        bool        m_bQuitRequested = false;
 
         static AppServiceLocator m_Services;
     };

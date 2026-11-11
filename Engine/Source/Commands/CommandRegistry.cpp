@@ -95,6 +95,18 @@ namespace Opaax
                 return CommandResult::Ok(nlohmann::json{ { "commands", Describe() } });
             });
 
+        Add(CommandSpec("commands.has", "Whether {name} is a command now: {has}.")
+                .Param("name", ECommandParamType::String, "the command's name"),
+            [this](const nlohmann::json& InParams)
+            {
+                const OpaaxString lName = InParams.value("name", OpaaxString());
+                if (lName.IsEmpty())
+                {
+                    return CommandResult::Fail("commands.has needs {name}, a command's name");
+                }
+                return CommandResult::Ok(nlohmann::json{ { "has", Has(lName) } });
+            });
+
         Add("frames.wait", "Lets {count} frames run (default 1) before the next request.",
             [](const nlohmann::json& InParams)
             {
@@ -110,34 +122,22 @@ namespace Opaax
         m_State->Commands.clear();
     }
 
-    Uint64 CommandRegistry::Insert(CommandSpec InSpec, CommandHandler InHandler)
+    void CommandRegistry::Add(CommandSpec InSpec, CommandHandler InHandler)
     {
-        const Uint64 lId = m_State->NextId++;
-
         TSharedPtr<RegisteredCommand> lCommand = MakeShared<RegisteredCommand>();
         lCommand->Spec    = Move(InSpec);
         lCommand->Handler = Move(InHandler);
-        lCommand->Id      = lId;
+        lCommand->Id      = m_State->NextId++;
 
         const OpaaxString lName = lCommand->Spec.GetName();
         m_State->Commands[lName].push_back(Move(lCommand));
-        return lId;
-    }
-
-    void CommandRegistry::Add(CommandSpec InSpec, CommandHandler InHandler)
-    {
-        Insert(Move(InSpec), Move(InHandler));
-    }
-
-    void CommandRegistry::Add(const OpaaxString& InName, const OpaaxString& InHelp, CommandHandler InHandler)
-    {
-        Insert(CommandSpec(InName, InHelp), Move(InHandler));
     }
 
     CommandHandle CommandRegistry::Register(CommandSpec InSpec, CommandHandler InHandler)
     {
         OpaaxString  lName = InSpec.GetName();
-        const Uint64 lId   = Insert(Move(InSpec), Move(InHandler));
+        const Uint64 lId   = m_State->NextId;
+        Add(Move(InSpec), Move(InHandler));
         return CommandHandle(m_State, Move(lName), lId);
     }
 
@@ -149,11 +149,6 @@ namespace Opaax
             return nullptr;
         }
         return lIt->second.back();
-    }
-
-    bool CommandRegistry::Has(const OpaaxString& InName) const
-    {
-        return Find(InName) != nullptr;
     }
 
     nlohmann::json CommandRegistry::Describe() const

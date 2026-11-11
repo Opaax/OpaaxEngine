@@ -66,7 +66,7 @@ namespace Opaax::Editor
         void OnQuitGameRequested() override;
 
         /** Driven from outside: the editor's commands join the engine's. */
-        void OnAutomationStarted(AutomationRunner& InRunner) override;
+        void OnRegisterCommands(ICommandRegistry& InCommands) override;
         //~End OpaaxApplication Interface
     };
 }

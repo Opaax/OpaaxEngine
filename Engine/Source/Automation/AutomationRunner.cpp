@@ -132,24 +132,9 @@ namespace Opaax
     // =========================================================================
     // AutomationRunner
     // =========================================================================
-    AutomationRunner::AutomationRunner(CommandRegistry& InCommands)
+    AutomationRunner::AutomationRunner(ICommandRegistry& InCommands)
         : m_Commands(InCommands)
     {
-    }
-
-    void AutomationRunner::Register(const OpaaxString& InName, const OpaaxString& InHelp, AutomationHandler InHandler)
-    {
-        m_Commands.Add(InName, InHelp, Move(InHandler));
-    }
-
-    bool AutomationRunner::Has(const OpaaxString& InName) const
-    {
-        return m_Commands.Has(InName);
-    }
-
-    nlohmann::json AutomationRunner::Describe() const
-    {
-        return m_Commands.Describe();
     }
 
     void AutomationRunner::Enqueue(AutomationRequest InRequest)

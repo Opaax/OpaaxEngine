@@ -111,16 +111,16 @@ namespace Opaax::OnlineAutomation
     // =========================================================================
     // Registration
     // =========================================================================
-    void Register(AutomationRunner& InRunner)
+    void Register(ICommandRegistry& InCommands)
     {
         const auto lOnline = []() -> IOnlineServices& { return OpaaxApplication::GetAppService<IOnlineServices>(); };
 
-        InRunner.Register("online.info",
+        InCommands.Add("online.info",
             "The player's store: {backend, reason, available, capabilities, player, overlay, pending, leaderboards, "
             "profile (fake)}.",
             [lOnline](const nlohmann::json&) { return Info(lOnline()); });
 
-        InRunner.Register("online.use",
+        InCommands.Add("online.use",
             "Runs another store: {backend: none | fake, profile: full | steam | epic | gog}. What was asked is "
             "dropped. Answers as online.info.",
             [lOnline](const nlohmann::json& InParams)
@@ -129,27 +129,27 @@ namespace Opaax::OnlineAutomation
                            InParams);
             });
 
-        InRunner.Register("online.leaderboard.upload",
+        InCommands.Add("online.leaderboard.upload",
             "Uploads {score} to {board}, keeping the player's best, with {details} and {file} (text) attached to a "
             "kept score: {result, scoreChanged, rank, previousRank}.",
             [lOnline](const nlohmann::json& InParams) { return Upload(lOnline(), InParams); });
 
-        InRunner.Register("online.leaderboard.entries",
+        InCommands.Add("online.leaderboard.entries",
             "{board}'s entries in {range} (World: ranks first-last; AroundPlayer: offsets; Friends): {result, "
             "entries: [{rank, score, name, id, details, file}]}.",
             [lOnline](const nlohmann::json& InParams) { return Entries(lOnline(), InParams); });
 
-        InRunner.Register("online.file.get", "A file attached to an entry, {file}: {result, text, size}.",
+        InCommands.Add("online.file.get", "A file attached to an entry, {file}: {result, text, size}.",
             [lOnline](const nlohmann::json& InParams) { return GetFile(lOnline(), InParams); });
 
-        InRunner.Register("online.achievements",
+        InCommands.Add("online.achievements",
             "The player's achievements, after {unlock: name} or {clear: name} if given: {result, achievements}.",
             [lOnline](const nlohmann::json& InParams) { return Achievements(lOnline(), InParams); });
 
-        InRunner.Register("online.overlay", "Opens or closes the fake store's overlay, {active}, as the player's key does.",
+        InCommands.Add("online.overlay", "Opens or closes the fake store's overlay, {active}, as the player's key does.",
             [lOnline](const nlohmann::json& InParams) { return Overlay(lOnline(), InParams); });
 
-        InRunner.Register("online.fake.player",
+        InCommands.Add("online.fake.player",
             "Adds a player to the fake store, {name, friend, nameKnown}, with {score} on {board} if given: {id}.",
             [lOnline](const nlohmann::json& InParams) { return AddFakePlayer(lOnline(), InParams); });
     }

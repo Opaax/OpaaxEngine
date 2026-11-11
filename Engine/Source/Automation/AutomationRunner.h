@@ -2,7 +2,7 @@
 
 #include <nlohmann/json.hpp>
 
-#include "Commands/CommandRegistry.h"
+#include "Application/Services/ICommandRegistry.h"
 #include "Core/Hash/OpaaxHash.h"
 #include "Core/Log/Logger.h"
 #include "Core/OpaaxTypes.h"
@@ -45,7 +45,7 @@ namespace Opaax
     // AutomationRunner — drives the app from outside (an AI agent, a test script): requests run
     //   one after another at the start of frames, each answered with a response. A request can
     //   hold the queue for frames (waits, screenshots, held keys). The commands are those of a
-    //   CommandRegistry; each runner has its own queue over it.
+    //   registry (ICommandRegistry); each runner has its own queue over it.
     // =============================================================================
     class AutomationRunner
     {
@@ -53,7 +53,7 @@ namespace Opaax
         // CTORS - DTORS
         // =============================================================================
     public:
-        explicit AutomationRunner(CommandRegistry& InCommands);
+        explicit AutomationRunner(ICommandRegistry& InCommands);
 
         AutomationRunner(const AutomationRunner&)            = delete;
         AutomationRunner& operator=(const AutomationRunner&) = delete;
@@ -62,18 +62,8 @@ namespace Opaax
         // Commands
         // =============================================================================
     public:
-        /**
-         * Adds the command InName to the registry for its lifetime. A name registered again runs
-         * the newest (the editor refines some of the engine's).
-         */
-        void Register(const OpaaxString& InName, const OpaaxString& InHelp, AutomationHandler InHandler);
-
-        bool Has(const OpaaxString& InName) const;
-
-        /** Every command and its help, sorted by name: [{"name", "help", "params"?}]. */
-        nlohmann::json Describe() const;
-
-        CommandRegistry& GetCommands() noexcept { return m_Commands; }
+        /** The registry the requests run from. */
+        ICommandRegistry& GetCommands() noexcept { return m_Commands; }
 
         // =============================================================================
         // Requests
@@ -118,7 +108,7 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        CommandRegistry&          m_Commands;
+        ICommandRegistry&         m_Commands;
         TQueue<AutomationRequest> m_Queue;
 
         Uint32            m_WaitFrames = 0;
