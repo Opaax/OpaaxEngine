@@ -1,0 +1,90 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Commands.opaaxlevel"
+        }
+    },
+    {
+        "id": "typed-pause",
+        "command": "console.run",
+        "params": {
+            "line": "world.pause true"
+        },
+        "expect": {
+            "paused": true
+        }
+    },
+    {
+        "id": "paused",
+        "command": "world.info",
+        "expect": {
+            "paused": true
+        }
+    },
+    {
+        "id": "typed-resume",
+        "command": "console.run",
+        "params": {
+            "line": "world.pause paused=false"
+        }
+    },
+    {
+        "id": "typed-scale",
+        "command": "console.run",
+        "params": {
+            "line": "time.scale 0.5"
+        },
+        "expect": {
+            "scale": 0.5
+        }
+    },
+    {
+        "id": "scaled",
+        "command": "world.info",
+        "expect": {
+            "paused": false,
+            "timeScale": 0.5
+        }
+    },
+    {
+        "id": "typed-json",
+        "command": "console.run",
+        "params": {
+            "line": "component.set Camera Transform {\"Position\": {\"x\": 7}}"
+        }
+    },
+    {
+        "id": "json-applied",
+        "command": "expect.value",
+        "params": {
+            "entity": "Camera",
+            "path": "Transform/Position/x",
+            "near": 7.0
+        }
+    },
+    {
+        "id": "missing-parameter",
+        "command": "console.run",
+        "params": {
+            "line": "time.scale"
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "unknown-command",
+        "command": "console.run",
+        "params": {
+            "line": "time.scael 1"
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "back",
+        "command": "console.run",
+        "params": {
+            "line": "time.scale 1"
+        }
+    }
+]

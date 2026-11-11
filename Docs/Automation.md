@@ -79,12 +79,20 @@ voids a run on it, so a script on a shipped game does not post a time. The engin
 `entity.parent`, `entity.paste`, `entity.cut`, `prefab.place`. `commands.list` marks them
 `"cheat": true`; a command marked `"devOnly": true` is not there in a ship build.
 
+A command can also be typed as a line, as the console reads it (`console.run` runs one):
+`name word word key=value "two words" {json}`. Words fill the parameters `commands.list` declares, in
+order; `key=value` names one. A word that reads as JSON (`5`, `0.25`, `true`, `[1, 2]`) is that value,
+unless its parameter is text; a quoted word is always text; a lone JSON object after the name is the
+whole params. The line is checked against the declared parameters, and an error names what is wrong
+(an unknown command, a missing parameter, a wrong type). A script's JSON params are not checked.
+
 | Command | Params | Does |
 |---|---|---|
 | `app.info` | | Frame number, `devBuild` (false in a ship build) and the folders: workspace, engine, project, assets, save, user (where the saves go) |
 | `app.quit` | | Closes the app at the end of the frame |
 | `commands.has` | `name` | `{has}`: whether the command exists now (a subsystem's command is gone with its world). A script refuses an unknown command even with `expectFailure`, so this is how a script checks one is gone |
 | `cheats.info` | | `{cheatsRun}`: whether a cheat answered ok since the game started |
+| `console.run` | `line` | Runs a typed line (`"time.scale 0.25"`) as the console reads it: its command answers and waits as it would; an error names what is wrong with the line. Dev only |
 | `frames.wait` | `count` | Lets frames run before the next request |
 | `world.wait` | `seconds` | Lets the playing world's clock advance (game time, whatever the frame rate; at a time scale of 0.25 it lasts four times longer) |
 | `config.get` | `config` | A config's values (`Engine`, `Renderer`...): `values` what the engine reads, `project` its file's values and `player` the player's settings over them |
