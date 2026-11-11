@@ -137,6 +137,15 @@ namespace Opaax
         m_History.SetCapacity(InCapacity);
     }
 
+    void Logger::EnsureHistory(const Uint32 InCapacity)
+    {
+        TLockGuard<Mutex> lLock(m_Mutex);
+        if (m_History.GetCapacity() < InCapacity)
+        {
+            m_History.SetCapacity(InCapacity);
+        }
+    }
+
     Uint64 Logger::CopyHistorySince(const Uint64 InAfterSequence, TDynArray<LogEntry>& OutEntries) const
     {
         TLockGuard<Mutex> lLock(m_Mutex);

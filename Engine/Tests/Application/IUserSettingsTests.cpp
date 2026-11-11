@@ -118,7 +118,8 @@ TEST_CASE("UserSettings: without a file, the project's values; a value set is re
 
     // The project's values, and their file, are not the player's.
     CHECK(lFix.Configs->Get<Config_Engine>().GetProjectData().Audio.MasterVolume == doctest::Approx(1.f));
-    CHECK_FALSE(lFix.Configs->Get<Config_Engine>().ToText().Contains("0.25"));
+    const nlohmann::json lProjectText = nlohmann::json::parse(lFix.Configs->Get<Config_Engine>().ToText().CStr());
+    CHECK(lProjectText["Audio"]["MasterVolume"].get<float>() == doctest::Approx(1.f));
     CHECK(lFix.Settings->HasUnsavedChanges());
     CHECK_FALSE(lFix.Storage.Exists(IUserSettings::SLOT));
 }

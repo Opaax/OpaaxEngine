@@ -33,6 +33,7 @@ namespace Opaax
         TSharedPtr<const RegisteredCommand> Find(const OpaaxString& InName) const override;
         nlohmann::json                      Describe() const override;
         TDynArray<CommandSpec>              GetSpecs() const override;
+        bool                                AllowsDevOnly() const override { return m_bDevBuild; }
         void                                NotifySucceeded(const RegisteredCommand& InCommand) override;
         bool                                HaveCheatsRun() const override { return m_bCheatsRun; }
         void                                ClearCheatsRun() override { m_bCheatsRun = false; }

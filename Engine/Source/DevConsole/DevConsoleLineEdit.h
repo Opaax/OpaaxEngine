@@ -39,6 +39,9 @@ namespace Opaax
         /** Inserts characters at the caret, which moves past them. */
         void Insert(const TDynArray<Uint32>& InCodepoints);
 
+        /** Puts the caret before character InCaret (past the end: at the end). */
+        void SetCaret(Uint32 InCaret) noexcept { m_Caret = InCaret < GetLength() ? InCaret : GetLength(); }
+
         void MoveLeft() noexcept;
         void MoveRight() noexcept;
         void MoveHome() noexcept;

@@ -152,11 +152,36 @@ namespace Opaax
         /** The key the last capture to end took: EKeyCode::None when it was cancelled; empty before any ended. */
         TOptional<EKeyCode> GetLastCapturedKey() const noexcept { return m_LastCaptured; }
 
-        /** True while a capture waits, or the key it took is still held: the UI routes nothing (UISubsystem). */
-        bool IsHoldingInput() const noexcept { return m_bCapturing || m_CapturedHeld != EKeyCode::None; }
+        /**
+         * True while a capture waits or the key it took is still held, while a tool holds the input
+         * (HoldInput), or a key down when it let go is still held: the UI routes nothing (UISubsystem).
+         */
+        bool IsHoldingInput() const noexcept
+        {
+            return m_bCapturing || m_CapturedHeld != EKeyCode::None || m_Holds > 0 || m_bReleaseHeld;
+        }
 
         /** Fires when a capture ends; an owner removes itself in its Shutdown (RemoveAll(this)), as with Bind. */
         FOnKeyCaptured& OnKeyCaptured() noexcept { return m_OnKeyCaptured; }
+
+        // =========================================================================
+        // Holding the input
+        // =========================================================================
+    public:
+        /**
+         * A tool drawn over the game (the dev console) takes the keys: no key drives an action and the UI
+         * gets no input until ReleaseInput. Each HoldInput needs its ReleaseInput.
+         */
+        void HoldInput() noexcept { ++m_Holds; }
+
+        /**
+         * Ends one HoldInput. At the last, the keys still down (the Escape that closed the tool) drive
+         * nothing until released, as the key a capture took.
+         */
+        void ReleaseInput();
+
+        /** True between a HoldInput and its ReleaseInput. */
+        bool IsInputHeld() const noexcept { return m_Holds > 0; }
 
         // =========================================================================
         // Binding
@@ -292,6 +317,9 @@ namespace Opaax
         /** Takes this frame's key for a capture, or Escape's cancel, and lets the key taken go once released. */
         void UpdateKeyCapture();
 
+        /** Lets the keys held at the last ReleaseInput go once released. */
+        void UpdateReleaseHeld();
+
         /** Ends the capture with InKey (None: cancelled) and tells it. */
         void EndKeyCapture(EKeyCode InKey);
 
@@ -333,5 +361,10 @@ namespace Opaax
         EKeyCode            m_CapturedHeld   = EKeyCode::None;
         TOptional<EKeyCode> m_LastCaptured;
         FOnKeyCaptured      m_OnKeyCaptured;
+
+        // Holds under way (HoldInput), and the keys down at the last release, masked until released.
+        Uint32       m_Holds = 0;
+        InputKeyMask m_ReleaseHeldKeys{};
+        bool         m_bReleaseHeld = false;
     };
 }

@@ -13,6 +13,7 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringJson.h"
+#include "DevConsole/DevConsoleSettings.h"
 #include "Platform/Window/Window.h"
 #include "Physics/PhysicsBackend.h"
 #include "Physics/PhysicsTypes.h"
@@ -233,8 +234,9 @@ namespace Opaax
         PhysicsSettings Physics;
         AudioSettings   Audio;
         StatsSettings   Stats;
+        ConsoleSettings Console;
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(EngineConfigData, Window, Time, Render, Physics, Audio, Stats)
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(EngineConfigData, Window, Time, Render, Physics, Audio, Stats, Console)
 
         // NeedRestart on groups read at startup. Render and Audio are mixed, so only some fields have it.
         OPAAX_PROPERTIES(EngineConfigData,
@@ -243,6 +245,7 @@ namespace Opaax
                          OPAAX_PROP(Render),
                          OPAAX_PROP(Physics).SetFlags(EPropertyFlags::NeedRestart),
                          OPAAX_PROP(Audio),
-                         OPAAX_PROP(Stats).SetFlags(EPropertyFlags::NeedRestart))
+                         OPAAX_PROP(Stats).SetFlags(EPropertyFlags::NeedRestart),
+                         OPAAX_PROP(Console).SetTooltip("The dev console (dev builds only). Read when a game starts."))
     };
 }

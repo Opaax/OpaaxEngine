@@ -77,6 +77,9 @@ namespace Opaax
         /** Told every response, in order. */
         void SetResponseSink(TFunction<void(const AutomationResponse&)> InSink);
 
+        /** Whether each response is logged (on by default); the console shows its own instead. */
+        void SetLogResponses(const bool bInLog) noexcept { m_bLogResponses = bInLog; }
+
         /** Nothing queued and nothing held. */
         bool IsIdle() const noexcept;
 
@@ -124,6 +127,8 @@ namespace Opaax
 
         Uint64 m_Answered = 0;
         Uint64 m_Failed   = 0;
+
+        bool m_bLogResponses = true;
     };
 
     /**

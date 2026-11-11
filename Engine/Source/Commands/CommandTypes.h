@@ -71,6 +71,9 @@ namespace Opaax
         OpaaxString            Help;
         TDynArray<OpaaxString> Choices;
         bool                   bOptional = false;
+
+        /** It names a command: the console's Tab completes it among the commands' names. */
+        bool bCommandName = false;
     };
 
     // =============================================================================
@@ -95,6 +98,9 @@ namespace Opaax
 
         /** The last parameter may be left out. */
         CommandSpec& Optional();
+
+        /** The last parameter names a command (help's): Tab completes it among the commands' names. */
+        CommandSpec& NamesCommand();
 
         /**
          * Running it changes the game in a way a player could not: once it answers ok, in any build

@@ -11,7 +11,8 @@ namespace
     TDynArray<CommandSpec> Specs()
     {
         TDynArray<CommandSpec> lSpecs;
-        lSpecs.push_back(CommandSpec("help", "Lists the commands."));
+        lSpecs.push_back(CommandSpec("help", "Lists the commands.")
+                             .Param("command", ECommandParamType::String, "one to describe").Optional().NamesCommand());
         lSpecs.push_back(CommandSpec("input.key", "Feeds a key.")
                              .Param("key", ECommandParamType::String, "the key")
                              .Param("action", ECommandParamType::String, "what it does")
@@ -80,6 +81,13 @@ TEST_CASE("CompleteCommandText: key=value completes that key's choices, and a na
 
     // backend named: the first plain word fills profile.
     CHECK(CompleteCommandText("online.use backend=fake s", Specs()).Line == "online.use backend=fake steam ");
+}
+
+TEST_CASE("CompleteCommandText: a parameter that names a command is completed among the commands' names")
+{
+    CHECK(CompleteCommandText("help time.sc", Specs()).Line == "help time.scale ");
+    CHECK(CompleteCommandText("help command=online", Specs()).Line == "help command=online.use ");
+    CHECK(CompleteCommandText("help input.", Specs()).Matches.size() == 3);
 }
 
 TEST_CASE("CompleteCommandText: nothing that fits leaves the line as it is")

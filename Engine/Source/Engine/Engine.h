@@ -180,7 +180,7 @@ namespace Opaax
         Uint64                      AddBeforeDraw(TFunction<void(TOptional<float>)> InHook) override;
         void                        RemoveBeforeDraw(Uint64 InHandle) override;
         void                        SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget = nullptr,
-                                                   const CameraView* InView = nullptr) override;
+                                                   const CameraView* InView = nullptr, Int32 InLayer = 0) override;
         bool                        CaptureFrame(const OpaaxString& InPngPath) override;
         TUniquePtr<IFramebuffer>    CreateFramebuffer(const FramebufferSpec& InSpec) override;
         TUniquePtr<ITexture2D>      CreateTexture(const void* InPixels, Uint32 InWidth,

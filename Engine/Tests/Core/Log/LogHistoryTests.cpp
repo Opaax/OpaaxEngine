@@ -114,3 +114,28 @@ TEST_CASE("Logger: history is off by default, and on it keeps the message WITHOU
     CHECK(lOutA->GetText() == lExpected);
     CHECK(lOutB->GetText() == lExpected);
 }
+
+TEST_CASE("Logger::EnsureHistory raises the history, never lowers it")
+{
+    Logger lLogger;
+    TDynArray<LogEntry> lEntries;
+
+    lLogger.EnsureHistory(2);
+    for (int lIndex = 0; lIndex < 4; ++lIndex)
+    {
+        lLogger.Logf(ELogLevel::Info, LogHistoryTest, "line {}", lIndex);
+    }
+    lLogger.CopyHistorySince(0, lEntries);
+    CHECK(lEntries.size() == 2);
+
+    // A larger history (the Log panel's) is kept.
+    lLogger.EnableHistory(8);
+    lLogger.EnsureHistory(3);
+    for (int lIndex = 0; lIndex < 8; ++lIndex)
+    {
+        lLogger.Logf(ELogLevel::Info, LogHistoryTest, "line {}", lIndex);
+    }
+    lEntries.clear();
+    lLogger.CopyHistorySince(0, lEntries);
+    CHECK(lEntries.size() == 8);
+}

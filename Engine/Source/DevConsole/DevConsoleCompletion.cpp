@@ -147,6 +147,13 @@ namespace Opaax
                 return lResult;
             }
             lCandidates = lParam->Choices;
+            if (lParam->bCommandName)
+            {
+                for (const CommandSpec& lNamed : InSpecs)
+                {
+                    lCandidates.push_back(lNamed.GetName());
+                }
+            }
         }
 
         const OpaaxString lTyped = lWord.SubString(lValueStart).ToLower();
