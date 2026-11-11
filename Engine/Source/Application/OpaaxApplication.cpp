@@ -635,7 +635,12 @@ void OpaaxApplication::HandleAllInputEvent(EventDispatcher& Dispatcher, Event& I
         return false;
     });
 
-    // KeyTypedEvent is text entry, not key state: left to text fields (ImGui).
+    // Text entry, apart from the keys: the game's own text fields (the console) read it.
+    Dispatcher.Dispatch<KeyTypedEvent>([&lInput](KeyTypedEvent& InTyped)
+    {
+        lInput.OnCharTyped(InTyped.GetPayload().Codepoint);
+        return false;
+    });
     (void)InEvent;
 }
 

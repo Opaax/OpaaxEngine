@@ -1,9 +1,11 @@
 // Suite: the commands on the player's keys (input.keys, input.rebind, input.resetKeys, input.capture) as
-// functions of a game's input mapping, over a walking context and a locked menu written as files.
+// functions of a game's input mapping, over a walking context and a locked menu written as files; and
+// input.text, as a function of the input manager.
 #include <doctest.h>
 
 #include "../Input/InputTestGame.h"
 #include "Automation/InputAutomationCommands.h"
+#include "Input/InputManager.h"
 
 using namespace Opaax;
 using namespace InputTesting;
@@ -207,4 +209,44 @@ TEST_CASE("InputAutomation: input.capture waits for the next key, and input.keys
     const AutomationResult lNone = InputAutomation::Capture(lFix.Actions, { { "cancel", true } });
     CHECK_FALSE(lNone.bOk);
     CHECK(lNone.Error.Contains("input.capture starts one"));
+}
+
+TEST_CASE("InputAutomation: input.text types its characters in one frame, and holds the queue that frame")
+{
+    InputManager lInput;
+
+    const AutomationResult lTyped = InputAutomation::TypeText(lInput, nlohmann::json{ { "text", "time.scale 0.25" } });
+    REQUIRE(lTyped.bOk);
+    CHECK(lTyped.Value.at("typed") == 15);
+    CHECK(lTyped.WaitFrames == 1);
+    CHECK(lInput.GetTypedTextUtf8() == OpaaxString("time.scale 0.25"));
+
+    // No key is pressed: the text is apart from the keys.
+    CHECK(lInput.GetKeysDown().empty());
+
+    lInput.EndFrame();
+    CHECK(lInput.GetTypedText().empty());
+}
+
+TEST_CASE("InputAutomation: input.text keeps non-ASCII text whole and drops control characters")
+{
+    InputManager lInput;
+
+    const AutomationResult lTyped = InputAutomation::TypeText(lInput, nlohmann::json{ { "text", "a\xC3\xA9\nb" } });
+    REQUIRE(lTyped.bOk);
+    CHECK(lTyped.Value.at("typed") == 3);
+    CHECK(lInput.GetTypedTextUtf8() == OpaaxString("a\xC3\xA9" "b"));
+}
+
+TEST_CASE("InputAutomation: input.text with no text refuses and says Enter is a key")
+{
+    InputManager lInput;
+
+    const AutomationResult lEmpty = InputAutomation::TypeText(lInput, nlohmann::json{ { "text", "" } });
+    CHECK_FALSE(lEmpty.bOk);
+    CHECK(lEmpty.Error.Contains("input.key"));
+
+    CHECK_FALSE(InputAutomation::TypeText(lInput, nlohmann::json::object()).bOk);
+    CHECK_FALSE(InputAutomation::TypeText(lInput, nlohmann::json{ { "text", 5 } }).bOk);
+    CHECK(lInput.GetTypedText().empty());
 }

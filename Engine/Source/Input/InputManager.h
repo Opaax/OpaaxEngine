@@ -3,6 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/MathTypes.h"
+#include "Core/String/OpaaxString.hpp"
 #include "Core/Log/Logger.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
 #include "Input/InputCodes.h"
@@ -21,6 +22,8 @@ namespace Opaax
     //   Keyboard and mouse only (gamepad codes are refused).
     //   The wheel is never held: a notch presses and releases Mouse_WheelUp or Mouse_WheelDown in its
     //   frame, and Mouse_WheelAxis reads the notches of the frame.
+    //   Text entry is apart from the keys: the characters typed this frame (GetTypedText), and the
+    //   OS repeat of a held key (WasRepeatedThisFrame) for a held Backspace or arrow.
     // =============================================================================
     class InputManager final : public EngineSubsystem
     {
@@ -55,6 +58,12 @@ namespace Opaax
         bool WasReleasedThisFrame(EKeyCode InKey) const noexcept;
 
         /**
+         * @return True on a frame the OS repeated InKey while held (text entry: a held Backspace
+         *   deletes again). Not on the press itself: a line edit reads press or repeat.
+         */
+        bool WasRepeatedThisFrame(EKeyCode InKey) const noexcept;
+
+        /**
          * What InKey drives an action with this frame: 1 while held or tapped, else 0; for
          * Mouse_WheelAxis, the notches turned (up positive, a fraction from a touchpad).
          */
@@ -84,6 +93,20 @@ namespace Opaax
         Vector2F GetScrollDelta() const noexcept { return m_ScrollDelta; }
 
         // =============================================================================
+        // Query — text
+        // =============================================================================
+    public:
+        /**
+         * The characters typed this frame, as Unicode codepoints in order: what the OS made of the
+         * keys (layout, Shift, dead keys). Control characters are not in it (Enter, Backspace and
+         * Tab are keys). Cleared by EndFrame.
+         */
+        const TDynArray<Uint32>& GetTypedText() const noexcept { return m_TypedText; }
+
+        /** GetTypedText as UTF-8. */
+        OpaaxString GetTypedTextUtf8() const;
+
+        // =============================================================================
         // Feed — called by the application as OS events arrive
         // =============================================================================
     public:
@@ -101,6 +124,9 @@ namespace Opaax
 
         /** Adds to this frame's scroll; a notch up or down also taps Mouse_WheelUp or Mouse_WheelDown. */
         void OnMouseScrolled(float InXOffset, float InYOffset);
+
+        /** A character typed (the OS text input). Control characters and invalid codepoints are dropped. */
+        void OnCharTyped(Uint32 InCodepoint);
 
         // =============================================================================
         // Frame + route control
@@ -148,6 +174,9 @@ namespace Opaax
         TFixedArray<bool, KEY_STATE_COUNT> m_Current{};
         TFixedArray<bool, KEY_STATE_COUNT> m_PressedThisFrame{};
         TFixedArray<bool, KEY_STATE_COUNT> m_ReleasedThisFrame{};
+        TFixedArray<bool, KEY_STATE_COUNT> m_RepeatedThisFrame{};
+
+        TDynArray<Uint32> m_TypedText;
 
         Vector2F m_MousePosition{0.f, 0.f};
         Vector2F m_MousePrevious{0.f, 0.f};

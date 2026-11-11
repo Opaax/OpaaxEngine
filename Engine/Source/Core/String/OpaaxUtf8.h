@@ -18,7 +18,7 @@ namespace Opaax::Utf8
     // =============================================================================
 
     // =============================================================================
-    // Codepoints — decode UTF-8 text into characters (for text rendering).
+    // Codepoints — UTF-8 text to characters (text rendering) and back (typed text).
     // =============================================================================
 
     /** Returned for malformed input: U+FFFD. */
@@ -81,6 +81,44 @@ namespace Opaax::Utf8
 
         InOutCursor += lLength;
         return lCodepoint;
+    }
+
+    /**
+     * Appends InCodepoint to OutText as UTF-8 (1 to 4 bytes). A surrogate or a value past U+10FFFF is
+     * appended as REPLACEMENT.
+     */
+    inline void Encode(Uint32 InCodepoint, OpaaxString& OutText)
+    {
+        if ((InCodepoint >= 0xD800u && InCodepoint <= 0xDFFFu) || InCodepoint > 0x10FFFFu)
+        {
+            InCodepoint = REPLACEMENT;
+        }
+
+        char   lBytes[4];
+        Uint32 lLength = 0u;
+        if (InCodepoint < 0x80u)
+        {
+            lBytes[lLength++] = static_cast<char>(InCodepoint);
+        }
+        else if (InCodepoint < 0x800u)
+        {
+            lBytes[lLength++] = static_cast<char>(0xC0u | (InCodepoint >> 6));
+            lBytes[lLength++] = static_cast<char>(0x80u | (InCodepoint & 0x3Fu));
+        }
+        else if (InCodepoint < 0x10000u)
+        {
+            lBytes[lLength++] = static_cast<char>(0xE0u | (InCodepoint >> 12));
+            lBytes[lLength++] = static_cast<char>(0x80u | ((InCodepoint >> 6) & 0x3Fu));
+            lBytes[lLength++] = static_cast<char>(0x80u | (InCodepoint & 0x3Fu));
+        }
+        else
+        {
+            lBytes[lLength++] = static_cast<char>(0xF0u | (InCodepoint >> 18));
+            lBytes[lLength++] = static_cast<char>(0x80u | ((InCodepoint >> 12) & 0x3Fu));
+            lBytes[lLength++] = static_cast<char>(0x80u | ((InCodepoint >> 6) & 0x3Fu));
+            lBytes[lLength++] = static_cast<char>(0x80u | (InCodepoint & 0x3Fu));
+        }
+        OutText.Append(lBytes, lLength);
     }
 
 #ifdef OPAAX_PLATFORM_WINDOWS
