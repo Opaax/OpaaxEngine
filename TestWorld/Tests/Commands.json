@@ -1,0 +1,80 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Commands.opaaxlevel"
+        }
+    },
+    {
+        "id": "registered-in-its-world",
+        "command": "commands.has",
+        "params": {
+            "name": "probe.ping"
+        },
+        "expect": {
+            "has": true
+        }
+    },
+    {
+        "id": "world-command-answers",
+        "command": "probe.ping",
+        "expect": {
+            "world": "Commands",
+            "pings": 1
+        }
+    },
+    {
+        "id": "world-command-keeps-state",
+        "command": "probe.ping",
+        "expect": {
+            "pings": 2
+        }
+    },
+    {
+        "id": "other-level",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Extensions.opaaxlevel"
+        }
+    },
+    {
+        "id": "gone-with-its-world",
+        "command": "commands.has",
+        "params": {
+            "name": "probe.ping"
+        },
+        "expect": {
+            "has": false
+        }
+    },
+    {
+        "id": "back",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Commands.opaaxlevel"
+        }
+    },
+    {
+        "id": "new-world-registers-again",
+        "command": "probe.ping",
+        "expect": {
+            "world": "Commands",
+            "pings": 1
+        }
+    },
+    {
+        "id": "reopened-from-itself",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Commands.opaaxlevel"
+        }
+    },
+    {
+        "id": "newest-world-runs",
+        "command": "probe.ping",
+        "expect": {
+            "pings": 1
+        }
+    }
+]

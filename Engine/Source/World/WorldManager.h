@@ -11,6 +11,7 @@
 namespace Opaax
 {
     class AudioManager;
+    class ICommandRegistry;
     class EngineRegistries;
     class ResourceManager;
     class EngineEventBus;
@@ -168,6 +169,9 @@ namespace Opaax
 
         // The sound mixer, given to every WorldContext.
         AudioManager* m_Audio = nullptr;
+
+        /** The app's commands, for every world's context. */
+        ICommandRegistry* m_Commands = nullptr;
 
         // The running game, if any. Looked up per world (games come and go across Play sessions).
         GameInstanceManager* m_GameInstances = nullptr;

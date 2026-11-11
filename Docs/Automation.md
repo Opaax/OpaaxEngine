@@ -73,6 +73,7 @@ saved in `.opaaxmap` files.
 |---|---|---|
 | `app.info` | | Frame number, `devBuild` (false in a ship build) and the folders: workspace, engine, project, assets, save, user (where the saves go) |
 | `app.quit` | | Closes the app at the end of the frame |
+| `commands.has` | `name` | `{has}`: whether the command exists now (a subsystem's command is gone with its world). A script refuses an unknown command even with `expectFailure`, so this is how a script checks one is gone |
 | `frames.wait` | `count` | Lets frames run before the next request |
 | `world.wait` | `seconds` | Lets the playing world's clock advance (game time, whatever the frame rate) |
 | `config.get` | `config` | A config's values (`Engine`, `Renderer`...): `values` what the engine reads, `project` its file's values and `player` the player's settings over them |

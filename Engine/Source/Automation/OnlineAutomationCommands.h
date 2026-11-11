@@ -19,7 +19,7 @@ namespace Opaax
     namespace OnlineAutomation
     {
         /** Registers the online.* commands, over the app's online services. */
-        void Register(AutomationRunner& InRunner);
+        void Register(ICommandRegistry& InCommands);
 
         /** online.info: {backend, reason, available, capabilities, player, overlay, pending, leaderboards, profile}. */
         AutomationResult Info(IOnlineServices& InOnline);

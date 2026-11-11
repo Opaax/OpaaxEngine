@@ -258,19 +258,40 @@ dialogs. Edits made through `EntityOps` (create, destroy, add or remove a compon
 
 ## Automation
 
-Every command a script or an agent can send is registered on an `AutomationRunner`: the engine's in
-`Automation/EngineAutomationCommands.cpp`, the editor's in `Editor/Automation`. A game adds its own by
-overriding `OnAutomationStarted(AutomationRunner&)` in its application class:
+Every command a script or an agent can send lives in the app's command registry
+(`ICommandRegistry`, an app service there in every run): the engine's are in
+`Automation/EngineAutomationCommands.cpp`, the editor's in `Editor/Automation`. A game adds its own
+in two ways.
+
+For the whole run, by overriding `OnRegisterCommands(ICommandRegistry&)` in its application class
+(called once the engine started; a name the engine has too runs the game's):
 
 ```cpp
-void MyGameApp::OnAutomationStarted(Opaax::AutomationRunner& InRunner)
+void MyGameApp::OnRegisterCommands(Opaax::ICommandRegistry& InCommands)
 {
-    InRunner.Register("game.score", "The current score: {score}.", [](const nlohmann::json&)
+    InCommands.Add("game.version", "The game's version: {version}.", [](const nlohmann::json&)
     {
-        return Opaax::AutomationResult::Ok(nlohmann::json{ { "score", 42 } });
+        return Opaax::CommandResult::Ok(nlohmann::json{ { "version", "1.2" } });
     });
 }
 ```
+
+For the lifetime of a subsystem, from its context (`GetContext().Commands`: a reference in a game
+instance subsystem, a pointer in a world subsystem, null in a bare test world). `Register` returns a
+`CommandHandle`; keep it as a member, and the command is gone with the subsystem:
+
+```cpp
+bool ScoreSubsystem::Startup()
+{
+    m_ScoreCommand = GetContext().Commands.Register(
+        Opaax::CommandSpec("game.score", "The current score: {score}."),
+        [this](const nlohmann::json&) { return Opaax::CommandResult::Ok(nlohmann::json{ { "score", m_Score } }); });
+    return true;
+}
+```
+
+When two registrations share a name, the newest runs, and each handle removes only its own: the
+next level's world can register its command before the last level's world is gone.
 
 See [Automation.md](Automation.md) for the protocol, and [AssetFormats.md](AssetFormats.md) for the
 asset files a tool or an agent can write directly.

@@ -17,6 +17,7 @@ namespace Opaax
     class InputManager;
     class IPaths;
     class IJobSystem;
+    class ICommandRegistry;
     class ISaveStorage;
     class IUserSettings;
     class IOnlineServices;
@@ -119,6 +120,7 @@ namespace Opaax
         ISaveStorage*           m_Saves     = nullptr;
         IUserSettings*          m_Settings  = nullptr;
         IOnlineServices*        m_Online    = nullptr;
+        ICommandRegistry*       m_Commands  = nullptr;
 
         // Number of games started. See GetSessionsStarted.
         Uint64 m_SessionsStarted = 0;

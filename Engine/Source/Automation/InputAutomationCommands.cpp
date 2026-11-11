@@ -194,7 +194,7 @@ namespace Opaax::InputAutomation
         }
     }
 
-    void Register(AutomationRunner& InRunner, IEngine& InEngine)
+    void Register(ICommandRegistry& InCommands, IEngine& InEngine)
     {
         const auto lWithMapping = [&InEngine](auto InCommand)
         {
@@ -206,7 +206,7 @@ namespace Opaax::InputAutomation
             };
         };
 
-        InRunner.Register("input.keys",
+        InCommands.Add("input.keys",
             "The running game's keys, as a controls menu lists them: {capturing, captured (the key the last "
             "capture took, \"None\" when cancelled), contexts: [{context, rebindable, added, keys: [{action, "
             "default (the asset's key), key (the player's), rebound}]}]}. Filter: {context}.",
@@ -215,7 +215,7 @@ namespace Opaax::InputAutomation
                 return Keys(InMapping, InParams);
             }));
 
-        InRunner.Register("input.rebind",
+        InCommands.Add("input.rebind",
             "Gives a mapping the {key} (\"None\" clears it) as a controls menu does, kept in the player's "
             "settings (not saved): the mapping is {action}, with {context} and {default} (the asset's key) "
             "when several have it; {policy} \"Refuse\" (default), \"Swap\" or \"Replace\" settles a conflict. "
@@ -225,7 +225,7 @@ namespace Opaax::InputAutomation
                 return Rebind(InMapping, InParams);
             }));
 
-        InRunner.Register("input.resetKeys",
+        InCommands.Add("input.resetKeys",
             "Gives every mapping its asset's key again; {context} only that context's, {action} (with "
             "{context} and {default}) only that mapping. Answers as input.keys.",
             lWithMapping([](InputMappingSubsystem& InMapping, const nlohmann::json& InParams)
@@ -233,7 +233,7 @@ namespace Opaax::InputAutomation
                 return ResetKeys(InMapping, InParams);
             }));
 
-        InRunner.Register("input.capture",
+        InCommands.Add("input.capture",
             "Waits for the next key the player presses, as a menu's \"press a key\" does: input.key presses "
             "one, input.keys says what it took. {cancel: true} ends the one under way. Answers {capturing, "
             "captured}.",

@@ -55,16 +55,16 @@ namespace Opaax::SaveAutomation
         }
     }
 
-    void Register(AutomationRunner& InRunner, IEngine& InEngine)
+    void Register(ICommandRegistry& InCommands, IEngine& InEngine)
     {
-        InRunner.Register("save.list", "The player's save slots: {folder, slots}.",
+        InCommands.Add("save.list", "The player's save slots: {folder, slots}.",
             [&InEngine](const nlohmann::json&)
             {
                 FlushGameSaves(InEngine);
                 return List(OpaaxApplication::GetAppService<ISaveStorage>());
             });
 
-        InRunner.Register("save.get",
+        InCommands.Add("save.get",
             "A slot's save as its file holds it: {slot} answers {slot, path, class, classVersion, properties}.",
             [&InEngine](const nlohmann::json& InParams)
             {
@@ -72,7 +72,7 @@ namespace Opaax::SaveAutomation
                 return Get(OpaaxApplication::GetAppService<ISaveStorage>(), InParams);
             });
 
-        InRunner.Register("save.set",
+        InCommands.Add("save.set",
             "Writes a slot: {slot, class, properties} as the game writes a save of that class (its defaults, "
             "properties merged), or {slot, text} written as given. Answers {slot, path}.",
             [&InEngine](const nlohmann::json& InParams)
@@ -82,7 +82,7 @@ namespace Opaax::SaveAutomation
                            InParams);
             });
 
-        InRunner.Register("save.clear", "Deletes a slot's save, {slot}, or every one, {all: true}. Answers {deleted}.",
+        InCommands.Add("save.clear", "Deletes a slot's save, {slot}, or every one, {all: true}. Answers {deleted}.",
             [&InEngine](const nlohmann::json& InParams)
             {
                 FlushGameSaves(InEngine);

@@ -948,14 +948,14 @@ namespace Opaax::Editor
     // =============================================================================
     // =============================================================================
     
-    void EditorService::RegisterAutomation(AutomationRunner& InRunner, const bool bInOwnsInput)
+    void EditorService::RegisterCommands(ICommandRegistry& InCommands, const bool bInOwnsInput)
     {
         // No context: the editor did not start, so there is nothing to drive.
         if (m_Context == nullptr)
         {
             return;
         }
-        EditorAutomation::Register(InRunner, *m_Context, *m_Dialogs);
+        EditorAutomation::Register(InCommands, *m_Context, *m_Dialogs);
 
         if (m_InputRoute != nullptr)
         {

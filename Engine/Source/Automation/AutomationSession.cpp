@@ -1,19 +1,20 @@
 #include "Automation/AutomationSession.h"
 
-#include "Application/Services/IEngine.h"
+#include "Core/Log/Logger.h"
 
 namespace Opaax
 {
     TUniquePtr<AutomationSession> AutomationSession::Create(const OpaaxString& InScript,
                                                             const OpaaxString& InScriptOutput,
-                                                            const OpaaxString& InInbox)
+                                                            const OpaaxString& InInbox,
+                                                            ICommandRegistry&  InCommands)
     {
         if (InScript.IsEmpty() && InInbox.IsEmpty())
         {
             return nullptr;
         }
 
-        TUniquePtr<AutomationSession> lSession = MakeUnique<AutomationSession>();
+        TUniquePtr<AutomationSession> lSession = MakeUnique<AutomationSession>(InCommands);
         AutomationSession&            lSelf    = *lSession;
 
         // Each answer goes back the way its request came.
@@ -47,15 +48,8 @@ namespace Opaax
         return lSession;
     }
 
-    void AutomationSession::Start(IEngine& InEngine)
-    {
-        EngineAutomation::Register(m_Runner, InEngine, *this);
-    }
-
     void AutomationSession::BeginFrame()
     {
-        ++m_Frame;
-
         if (m_Inbox != nullptr)
         {
             m_Inbox->Poll(m_Runner);
@@ -63,23 +57,17 @@ namespace Opaax
         m_Runner.Tick();
     }
 
-    bool AutomationSession::EndFrame(IEngine& InEngine)
+    bool AutomationSession::EndFrame()
     {
-        if (!m_PendingScreenshot.IsEmpty())
-        {
-            InEngine.CaptureFrame(m_PendingScreenshot);
-            m_PendingScreenshot.Clear();
-        }
-
         // A script with no inbox beside it ends the session once answered.
         const bool bScriptDone = m_Script != nullptr && m_Script->IsDone() && m_Runner.IsIdle() && m_Inbox == nullptr;
-        if (bScriptDone && !m_bQuitRequested)
+        if (bScriptDone)
         {
             OPAAX_LOG(LogAutomation, Info, "Automation script done: {} request(s), {} failed",
                       m_Runner.GetAnswered(), m_Script->GetFailed());
         }
 
-        return m_bQuitRequested || bScriptDone;
+        return bScriptDone;
     }
 
     void AutomationSession::Close()
@@ -90,10 +78,5 @@ namespace Opaax
     int AutomationSession::GetExitCode() const noexcept
     {
         return (m_Script != nullptr && (m_Script->GetFailed() > 0 || !m_Script->IsDone())) ? 1 : 0;
-    }
-
-    void AutomationSession::RequestScreenshot(const OpaaxString& InPath)
-    {
-        m_PendingScreenshot = InPath;
     }
 }

@@ -329,13 +329,13 @@ namespace Opaax::Editor::EditorAutomation
         class Commands
         {
         public:
-            Commands(AutomationRunner& InRunner, GuardedEditorDialogs& InDialogs) : m_Runner(InRunner), m_Dialogs(InDialogs) {}
+            Commands(ICommandRegistry& InCommands, GuardedEditorDialogs& InDialogs) : m_Commands(InCommands), m_Dialogs(InDialogs) {}
 
             /** @param InInstead What to do rather than meet a dialog, for this command */
             void Register(const char* InName, const char* InHelp, AutomationHandler InHandler,
                           const char* InInstead = ANSWER_ELSEWHERE)
             {
-                m_Runner.Register(InName, InHelp,
+                m_Commands.Add(InName, InHelp,
                     [&lDialogs = m_Dialogs, lHandler = Move(InHandler), InInstead](const nlohmann::json& InParams)
                     {
                         AutomationResult lResult;
@@ -356,7 +356,7 @@ namespace Opaax::Editor::EditorAutomation
             }
 
         private:
-            AutomationRunner&     m_Runner;
+            ICommandRegistry&     m_Commands;
             GuardedEditorDialogs& m_Dialogs;
         };
 
@@ -1900,9 +1900,9 @@ namespace Opaax::Editor::EditorAutomation
         }
     }
 
-    void Register(AutomationRunner& InRunner, EditorContext& InContext, GuardedEditorDialogs& InDialogs)
+    void Register(ICommandRegistry& InCommands, EditorContext& InContext, GuardedEditorDialogs& InDialogs)
     {
-        Commands lCommands(InRunner, InDialogs);
+        Commands lCommands(InCommands, InDialogs);
         RegisterEditor(lCommands, InContext);
         RegisterFiles(lCommands, InContext);
         RegisterEntities(lCommands, InContext);

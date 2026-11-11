@@ -1,6 +1,7 @@
 #include "World/WorldManager.h"
 
 #include "Application/OpaaxApplication.h"
+#include "Application/Services/ICommandRegistry.h"
 #include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IEngine.h"
 #include "Application/Services/IPaths.h"
@@ -47,6 +48,7 @@ namespace Opaax
         m_Input     = &lEngine.GetInput();
         m_Audio     = &lEngine.GetAudio();
         m_GameInstances = &lEngine.GetGameInstances();
+        m_Commands  = &OpaaxApplication::GetAppService<ICommandRegistry>();
 
         return true;
     }
@@ -262,7 +264,8 @@ namespace Opaax
         }
 
         InWorld.SetContext(WorldContext{InWorld, *m_Resources, *m_Paths, *m_Events, *m_Input, *m_Config,
-                                        lActions, lUI, *m_Debug, &m_Registries->Components(), m_Audio, lGame});
+                                        lActions, lUI, *m_Debug, &m_Registries->Components(), m_Audio, lGame,
+                                        m_Commands});
 
         OPAAX_ASSERT(InWorld.GetContext() != nullptr);
 

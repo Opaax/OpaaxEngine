@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/Commands.opaaxmap"
+    ],
+    "name": "Commands",
+    "persistentMap": "Maps/Commands.opaaxmap",
+    "version": 1
+}

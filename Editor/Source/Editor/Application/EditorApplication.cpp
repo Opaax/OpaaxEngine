@@ -150,9 +150,9 @@ namespace Opaax::Editor
         Editor().StopPlay();
     }
 
-    void EditorApplication::OnAutomationStarted(AutomationRunner& InRunner)
+    void EditorApplication::OnRegisterCommands(ICommandRegistry& InCommands)
     {
-        Editor().RegisterAutomation(InRunner, IsInputScripted());
+        Editor().RegisterCommands(InCommands, IsInputScripted());
     }
 
     void EditorApplication::OnEvent(Event& InEvent)

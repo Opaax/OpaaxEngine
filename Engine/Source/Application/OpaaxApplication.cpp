@@ -5,6 +5,8 @@
 #include "Core/String/CString.h"
 
 #include "Automation/AutomationSession.h"
+#include "Automation/EngineAutomationCommands.h"
+#include "Commands/CommandRegistry.h"
 #include "Platform/CrashHandler.h"
 #include "Platform/IPlatform.h"
 #include "Application/Services/IPaths.h"
@@ -124,6 +126,9 @@ void OpaaxApplication::Bootstrap()
     //Stats — reads the config, so after the config system.
     BootProfiler(lConfigSystem);
 
+    //Commands — the engine's subsystems take the registry into their contexts.
+    BootCommands();
+
     //Engine
     IEngine& lEngine = BootEngine();
     
@@ -223,6 +228,11 @@ IWindowManager& OpaaxApplication::BootWindowManager()
     return m_Services.Provide<IWindowManager, Opaax::WindowManager>();
 }
 
+ICommandRegistry& OpaaxApplication::BootCommands()
+{
+    return m_Services.Provide<ICommandRegistry, Opaax::CommandRegistry>();
+}
+
 IEngine& OpaaxApplication::BootEngine()
 {
     return m_Services.Provide<IEngine, Opaax::Engine>();
@@ -282,6 +292,14 @@ void OpaaxApplication::OnInitializeApplication()
 
 void OpaaxApplication::RunApplication()
 {
+    // --exec <script.json> [--exec-out <answers.json>], --automation <folder>: driven from outside
+    // (AutomationSession). Made before the engine starts, so the app knows from the start whether a
+    // script owns the input. A script that cannot be run fails the run instead of starting it.
+    const OpaaxString* lScript = m_CommandLine.FindValue("--exec");
+    const OpaaxString* lInbox  = m_CommandLine.FindValue("--automation");
+    m_Automation = AutomationSession::Create(m_CommandLine.GetValue("--exec"), m_CommandLine.GetValue("--exec-out"),
+                                             m_CommandLine.GetValue("--automation"), Commands());
+
     EngineStartup();
 
     // Dev builds only: tests the crash path (dump, stack, log copy, dialog).
@@ -314,20 +332,8 @@ void OpaaxApplication::RunApplication()
     const OpaaxString* lCaptureFrame = m_CommandLine.FindValue("--capture-frame");
     const Uint64       lCaptureAt    = (lCaptureFrame != nullptr) ? CString::ToUint64(lCaptureFrame->CStr())
                                                                   : DEFAULT_CAPTURE_FRAME;
-    Uint64             lFrameIndex   = 0;
 
-    // --exec <script.json> [--exec-out <answers.json>], --automation <folder>: driven from outside
-    // (AutomationSession). A script that cannot be run fails the run instead of starting it.
-    const OpaaxString* lScript = m_CommandLine.FindValue("--exec");
-    const OpaaxString* lInbox  = m_CommandLine.FindValue("--automation");
-    m_Automation = AutomationSession::Create(m_CommandLine.GetValue("--exec"), m_CommandLine.GetValue("--exec-out"),
-                                             m_CommandLine.GetValue("--automation"));
-    if (m_Automation != nullptr)
-    {
-        m_Automation->Start(Engine());
-        OnAutomationStarted(m_Automation->GetRunner());
-    }
-    else if (lScript != nullptr || lInbox != nullptr)
+    if (m_Automation == nullptr && (lScript != nullptr || lInbox != nullptr))
     {
         SetExitCode(1);
         bIsRunning = false;
@@ -371,6 +377,7 @@ void OpaaxApplication::RunApplication()
         // ----------------------------------------------------------------
         // 1.2 Automation: the requests due this frame, before anything ticks.
         // ----------------------------------------------------------------
+        ++m_FrameIndex;
         if (m_Automation != nullptr)
         {
             m_Automation->BeginFrame();
@@ -384,17 +391,23 @@ void OpaaxApplication::RunApplication()
         // ----------------------------------------------------------------
         // 2.1 Capture, before the swap (the backbuffer holds the frame).
         // ----------------------------------------------------------------
-        ++lFrameIndex;
-        if (lCapturePath != nullptr && lFrameIndex == Maths::Max<Uint64>(lCaptureAt, 1))
+        if (lCapturePath != nullptr && m_FrameIndex == Maths::Max<Uint64>(lCaptureAt, 1))
         {
             Engine().CaptureFrame(*lCapturePath);
             lWindow->RequestClose();
         }
 
         // ----------------------------------------------------------------
-        // 2.2 Automation: a screenshot asked for, the end of a script or a quit.
+        // 2.2 Commands: a screenshot asked for, a quit, the end of a script.
         // ----------------------------------------------------------------
-        if (m_Automation != nullptr && m_Automation->EndFrame(Engine()))
+        if (!m_PendingScreenshot.IsEmpty())
+        {
+            Engine().CaptureFrame(m_PendingScreenshot);
+            m_PendingScreenshot.Clear();
+        }
+
+        const bool bScriptDone = m_Automation != nullptr && m_Automation->EndFrame();
+        if (m_bQuitRequested || bScriptDone)
         {
             lWindow->RequestClose();
         }
@@ -405,7 +418,7 @@ void OpaaxApplication::RunApplication()
         Engine().PresentBackbuffer();
     }
 
-    // Its commands hold the engine: gone before it. What the app closed on is answered first.
+    // Before the engine ends: what the app closed on is answered while the world is still there.
     if (m_Automation != nullptr)
     {
         m_Automation->Close();
@@ -469,6 +482,9 @@ void OpaaxApplication::EngineStartup()
     // 1. Start every subsystem. No world exists yet, so the registries stay open.
     Engine().Startup();
 
+    // The engine's commands, before any world: its subsystems may refine them.
+    EngineAutomation::Register(Commands(), Engine(), *this);
+
     // Gameplay may ask to quit; the host decides what quitting means.
     Engine().GetEngineEventBus().GetEventBus().Subscribe<QuitGameRequested>(
         [this](const QuitGameRequested&) { OnQuitGameRequested(); });
@@ -491,6 +507,9 @@ void OpaaxApplication::EngineStartup()
     Engine().FinishStartup(lStartupSpec);
 
     PostEngineStartup();
+
+    // The app's commands, once it is up (the editor's need its context).
+    OnRegisterCommands(Commands());
 }
 
 void OpaaxApplication::PopulateEngineRegistries()
@@ -629,4 +648,5 @@ ISaveStorage&       OpaaxApplication::SaveStorage()     { return m_Services.Get<
 IUserSettings&      OpaaxApplication::UserSettings()    { return m_Services.Get<IUserSettings>();   }
 IOnlineServices&    OpaaxApplication::Online()          { return m_Services.Get<IOnlineServices>(); }
 IWindowManager&     OpaaxApplication::WindowManager()   { return m_Services.Get<IWindowManager>();  }
+ICommandRegistry&   OpaaxApplication::Commands()        { return m_Services.Get<ICommandRegistry>(); }
 IEngine&            OpaaxApplication::Engine()          { return m_Services.Get<IEngine>();         }

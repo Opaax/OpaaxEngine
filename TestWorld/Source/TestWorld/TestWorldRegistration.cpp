@@ -7,6 +7,7 @@
 #include "Engine/Registries/AutoRegistration.h"
 #include "Probes/AnimationProbes.h"
 #include "Probes/CameraProbe.h"
+#include "Probes/CommandProbes.h"
 #include "Probes/EntityRefProbe.h"
 #include "Probes/EventProbe.h"
 #include "Probes/ExtensionProbes.h"
@@ -83,6 +84,7 @@ namespace TestWorld
     OPAAX_REGISTER_COMPONENT(TunedComponent);
     OPAAX_REGISTER_OBJECT(ProbeTuning);
     OPAAX_REGISTER_OBJECT(ProbeCounterSubsystem);
+    OPAAX_REGISTER_OBJECT(CommandProbeSubsystem);
     OPAAX_REGISTER_OBJECT(ProbeGame);
 
     // The game's save, which the Saves level keeps.

@@ -1,22 +1,20 @@
 #pragma once
 
 #include "Automation/AutomationRunner.h"
-#include "Automation/EngineAutomationCommands.h"
 #include "Automation/AutomationTransports.h"
 #include "Core/OpaaxTypes.h"
 
 namespace Opaax
 {
-    class IEngine;
-
     // =============================================================================
     // AutomationSession — the app driven from outside, as its command line asks:
     //   --exec <script.json> [--exec-out <answers.json>] runs a script's requests, then closes the
     //     app; its exit code is 1 when a request failed, or never ran because the app closed first.
     //   --automation <folder> keeps an inbox open for an agent until it sends app.quit.
-    //   The app calls BeginFrame before the frame ticks and EndFrame once it is drawn.
+    //   Its requests run from the app's registry (ICommandRegistry), in a queue of its own. The app
+    //   calls BeginFrame before the frame ticks and EndFrame once it is drawn.
     // =============================================================================
-    class AutomationSession final : public IAutomationHost
+    class AutomationSession final
     {
     public:
         /**
@@ -25,21 +23,20 @@ namespace Opaax
          * @param InScriptOutput Where the script's answers go; empty: beside the script
          */
         static TUniquePtr<AutomationSession> Create(const OpaaxString& InScript, const OpaaxString& InScriptOutput,
-                                                    const OpaaxString& InInbox);
+                                                    const OpaaxString& InInbox, ICommandRegistry& InCommands);
+
+        explicit AutomationSession(ICommandRegistry& InCommands) : m_Runner(InCommands) {}
 
         AutomationRunner& GetRunner() noexcept { return m_Runner; }
-
-        /** Registers the engine's commands. Called once the engine is up. */
-        void Start(IEngine& InEngine);
 
         /** Runs the requests due this frame. */
         void BeginFrame();
 
         /**
-         * After the frame is drawn, before it is shown: takes the screenshot asked for.
-         * @return True when the app should close (asked to, or the script is done)
+         * After the frame is drawn.
+         * @return True when the app should close: the script is done (and no inbox is open)
          */
-        bool EndFrame(IEngine& InEngine);
+        bool EndFrame();
 
         /** The app is closing: what is left unanswered gets an answer (AutomationRunner::Close). */
         void Close();
@@ -54,21 +51,9 @@ namespace Opaax
          */
         bool OwnsInput() const noexcept { return m_Script != nullptr; }
 
-        //~Begin IAutomationHost interface
-    public:
-        void   RequestScreenshot(const OpaaxString& InPath) override;
-        void   RequestQuit() override { m_bQuitRequested = true; }
-        Uint64 GetFrameIndex() const override { return m_Frame; }
-        //~End IAutomationHost interface
-
     private:
-        CommandRegistry              m_Commands;
-        AutomationRunner             m_Runner{ m_Commands };
+        AutomationRunner             m_Runner;
         TUniquePtr<AutomationInbox>  m_Inbox;
         TUniquePtr<AutomationScript> m_Script;
-
-        OpaaxString m_PendingScreenshot;
-        bool        m_bQuitRequested = false;
-        Uint64      m_Frame          = 0;
     };
 }

@@ -19,7 +19,7 @@ namespace Opaax
     namespace SaveAutomation
     {
         /** Registers save.list, save.get, save.set and save.clear. */
-        void Register(AutomationRunner& InRunner, IEngine& InEngine);
+        void Register(ICommandRegistry& InCommands, IEngine& InEngine);
 
         /** save.list: {folder, slots}, the slots sorted. */
         AutomationResult List(const ISaveStorage& InStorage);

@@ -2,7 +2,7 @@
 
 namespace Opaax
 {
-    class AutomationRunner;
+    class ICommandRegistry;
 }
 
 namespace Opaax::Editor
@@ -19,9 +19,9 @@ namespace Opaax::Editor
     namespace EditorAutomation
     {
         /**
-         * Adds the editor's commands to InRunner. While one runs, InDialogs stay closed: a request that
+         * Adds the editor's commands to InCommands. While one runs, InDialogs stay closed: a request that
          * met a dialog fails, saying what was asked.
          */
-        void Register(AutomationRunner& InRunner, EditorContext& InContext, GuardedEditorDialogs& InDialogs);
+        void Register(ICommandRegistry& InCommands, EditorContext& InContext, GuardedEditorDialogs& InDialogs);
     }
 }

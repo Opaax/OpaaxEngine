@@ -8,6 +8,7 @@
 #include "Automation/AutomationSession.h"
 #include "Automation/AutomationTransports.h"
 #include "Automation/EngineAutomationCommands.h"
+#include "Commands/CommandRegistry.h"
 #include "Core/IO/FileIO.h"
 #include "Core/IO/FileSystem.h"
 #include "Core/String/OpaaxPathString.h"
@@ -46,7 +47,7 @@ namespace
         Recorder()
         {
             Runner.SetResponseSink([this](const AutomationResponse& InResponse) { Responses.push_back(InResponse); });
-            Runner.Register("echo", "Returns its params.",
+            Commands.Add("echo", "Returns its params.",
                             [](const nlohmann::json& InParams) { return AutomationResult::Ok(InParams); });
         }
     };
@@ -93,14 +94,14 @@ TEST_CASE("Automation: what comes after a wait runs before the next request")
     Recorder lRecorder;
     bool     bReleased = false;
 
-    lRecorder.Runner.Register("hold", "Holds a frame, then releases.", [&bReleased](const nlohmann::json&)
+    lRecorder.Commands.Add("hold", "Holds a frame, then releases.", [&bReleased](const nlohmann::json&)
     {
         AutomationResult lResult;
         lResult.WaitFrames = 1;
         lResult.AfterWait  = [&bReleased] { bReleased = true; };
         return lResult;
     });
-    lRecorder.Runner.Register("check", "Reports the release.", [&bReleased](const nlohmann::json&)
+    lRecorder.Commands.Add("check", "Reports the release.", [&bReleased](const nlohmann::json&)
     {
         return AutomationResult::Ok(nlohmann::json{ { "released", bReleased } });
     });
@@ -122,7 +123,7 @@ TEST_CASE("Automation: a condition holds the queue, after the frames, until it i
     Uint32   lClock    = 0;
     bool     bReleased = false;
 
-    lRecorder.Runner.Register("until-3", "Holds until the clock reaches 3.", [&](const nlohmann::json&)
+    lRecorder.Commands.Add("until-3", "Holds until the clock reaches 3.", [&](const nlohmann::json&)
     {
         AutomationResult lResult;
         lResult.WaitFrames = 1;
@@ -153,14 +154,14 @@ TEST_CASE("Automation: a long job is answered when its wait is over, with its ou
     Recorder lRecorder;
     bool     bDone = false;
 
-    lRecorder.Runner.Register("job", "Ends when bDone is set.", [&bDone](const nlohmann::json&)
+    lRecorder.Commands.Add("job", "Ends when bDone is set.", [&bDone](const nlohmann::json&)
     {
         AutomationResult lResult;
         lResult.WaitUntil = [&bDone] { return bDone; };
         lResult.Answer    = [&bDone] { return AutomationResult::Ok(nlohmann::json{ { "done", bDone } }); };
         return lResult;
     });
-    lRecorder.Runner.Register("broken-job", "Ends badly a frame later.", [](const nlohmann::json&)
+    lRecorder.Commands.Add("broken-job", "Ends badly a frame later.", [](const nlohmann::json&)
     {
         AutomationResult lResult;
         lResult.WaitFrames = 1;
@@ -195,7 +196,7 @@ TEST_CASE("Automation: a long job is answered when its wait is over, with its ou
 TEST_CASE("Automation: closing answers what is left: the waiting request, then every request not run")
 {
     Recorder lRecorder;
-    lRecorder.Runner.Register("job", "Never ends on its own.", [](const nlohmann::json&)
+    lRecorder.Commands.Add("job", "Never ends on its own.", [](const nlohmann::json&)
     {
         AutomationResult lResult;
         lResult.WaitUntil = [] { return false; };
@@ -224,7 +225,7 @@ TEST_CASE("Automation: closing answers what is left: the waiting request, then e
 TEST_CASE("Automation: a request waiting for the app to close is answered by its OnClose")
 {
     Recorder lRecorder;
-    lRecorder.Runner.Register("until-closed", "Waits for the app to close.", [](const nlohmann::json&)
+    lRecorder.Commands.Add("until-closed", "Waits for the app to close.", [](const nlohmann::json&)
     {
         AutomationResult lResult;
         lResult.WaitUntil = [] { return false; };
@@ -246,7 +247,7 @@ TEST_CASE("Automation: a request waiting for the app to close is answered by its
 TEST_CASE("Automation: an unknown command and bad params fail, and the queue goes on")
 {
     Recorder lRecorder;
-    lRecorder.Runner.Register("needs-x", "Reads an int x.", [](const nlohmann::json& InParams)
+    lRecorder.Commands.Add("needs-x", "Reads an int x.", [](const nlohmann::json& InParams)
     {
         return AutomationResult::Ok(nlohmann::json{ { "x", InParams.at("x").get<int>() } });
     });
@@ -268,7 +269,7 @@ TEST_CASE("Automation: an unknown command and bad params fail, and the queue goe
 TEST_CASE("Automation: a request expecting a failure passes on a refusal and fails when the command succeeds")
 {
     Recorder lRecorder;
-    lRecorder.Runner.Register("refuse", "Always refuses.", [](const nlohmann::json&)
+    lRecorder.Commands.Add("refuse", "Always refuses.", [](const nlohmann::json&)
     {
         return AutomationResult::Fail("not here");
     });
@@ -367,11 +368,12 @@ TEST_CASE("Automation: commands.list describes every command, sorted, with its h
 
     REQUIRE(lRecorder.Responses.size() == 1);
     const nlohmann::json& lList = lRecorder.Responses[0].Result.at("commands");
-    REQUIRE(lList.size() == 3);
-    CHECK(lList[0].at("name") == "commands.list");
-    CHECK(lList[1].at("name") == "echo");
-    CHECK(lList[2].at("name") == "frames.wait");
-    CHECK(lList[1].at("help") == "Returns its params.");
+    REQUIRE(lList.size() == 4);
+    CHECK(lList[0].at("name") == "commands.has");
+    CHECK(lList[1].at("name") == "commands.list");
+    CHECK(lList[2].at("name") == "echo");
+    CHECK(lList[3].at("name") == "frames.wait");
+    CHECK(lList[2].at("help") == "Returns its params.");
 }
 
 TEST_CASE("Automation: a script is an array or {requests}; ids default to positions; errors name the request; "
@@ -768,10 +770,11 @@ TEST_CASE("Automation session: a script the app closed on fails the run; a finis
     const OpaaxString lOutput     = lDir.Sub("steps.out.json");
     FileIO::WriteAllText(lScriptPath,
                          R"([{"command": "frames.wait", "params": {"count": 2}}, {"command": "commands.list"}])");
+    CommandRegistry lCommands;
 
     SUBCASE("closed before the end")
     {
-        TUniquePtr<AutomationSession> lSession = AutomationSession::Create(lScriptPath, lOutput, OpaaxString());
+        TUniquePtr<AutomationSession> lSession = AutomationSession::Create(lScriptPath, lOutput, OpaaxString(), lCommands);
         REQUIRE(lSession != nullptr);
 
         lSession->BeginFrame();   // the wait holds commands.list
@@ -785,7 +788,7 @@ TEST_CASE("Automation session: a script the app closed on fails the run; a finis
 
     SUBCASE("run to the end")
     {
-        TUniquePtr<AutomationSession> lSession = AutomationSession::Create(lScriptPath, lOutput, OpaaxString());
+        TUniquePtr<AutomationSession> lSession = AutomationSession::Create(lScriptPath, lOutput, OpaaxString(), lCommands);
         REQUIRE(lSession != nullptr);
 
         for (int lFrame = 0; lFrame < 3; ++lFrame)
@@ -805,12 +808,13 @@ TEST_CASE("Automation session: a script owns the input; an inbox shares it with 
 
     const OpaaxString lScriptPath = lDir.Sub("steps.json");
     FileIO::WriteAllText(lScriptPath, R"([{"command": "frames.wait"}])");
+    CommandRegistry lCommands;
 
-    TUniquePtr<AutomationSession> lScripted = AutomationSession::Create(lScriptPath, OpaaxString(), OpaaxString());
+    TUniquePtr<AutomationSession> lScripted = AutomationSession::Create(lScriptPath, OpaaxString(), OpaaxString(), lCommands);
     REQUIRE(lScripted != nullptr);
     CHECK(lScripted->OwnsInput());
 
-    TUniquePtr<AutomationSession> lInbox = AutomationSession::Create(OpaaxString(), OpaaxString(), lDir.Path());
+    TUniquePtr<AutomationSession> lInbox = AutomationSession::Create(OpaaxString(), OpaaxString(), lDir.Path(), lCommands);
     REQUIRE(lInbox != nullptr);
     CHECK_FALSE(lInbox->OwnsInput());
 }
