@@ -78,3 +78,69 @@ TEST_CASE("SheetEditing: a click finds the first frame under it, edges included"
     CHECK(SheetEditing::FrameUnder(lFrames, { 48.f, 48.f }) == 1);   // B's corner
     CHECK(SheetEditing::FrameUnder(lFrames, { 60.f, 2.f }) == -1);
 }
+
+// =============================================================================
+// The slice border's lines: which a press takes, and where a drag puts them
+// =============================================================================
+TEST_CASE("SheetEditing: a press near one border line takes it; near a crossing it takes both; the middle takes none")
+{
+    const Margin   lBorder{ 112.f, 112.f, 85.f, 112.f };   // lines at x 112 and 144, y 112 and 171
+    const Vector2F lSize{ 256.f, 256.f };
+
+    CHECK(SheetEditing::BorderLinesUnder(lBorder, lSize, { 114.f, 30.f }, 3.f)  == ERectEdge::Left);
+    CHECK(SheetEditing::BorderLinesUnder(lBorder, lSize, { 142.f, 30.f }, 3.f)  == ERectEdge::Right);
+    CHECK(SheetEditing::BorderLinesUnder(lBorder, lSize, { 30.f, 110.f }, 3.f)  == ERectEdge::Top);
+    CHECK(SheetEditing::BorderLinesUnder(lBorder, lSize, { 30.f, 172.f }, 3.f)  == ERectEdge::Bottom);
+    CHECK(SheetEditing::BorderLinesUnder(lBorder, lSize, { 113.f, 111.f }, 3.f) == ERectEdge::TopLeft);
+    CHECK(SheetEditing::BorderLinesUnder(lBorder, lSize, { 145.f, 170.f }, 3.f) == ERectEdge::BottomRight);
+
+    // Between the lines, and outside the frame, nothing.
+    CHECK(SheetEditing::BorderLinesUnder(lBorder, lSize, { 128.f, 140.f }, 3.f) == ERectEdge::None);
+    CHECK(SheetEditing::BorderLinesUnder(lBorder, lSize, { 30.f, 30.f }, 3.f)   == ERectEdge::None);
+    CHECK(SheetEditing::BorderLinesUnder(lBorder, lSize, { 113.f, 300.f }, 3.f) == ERectEdge::None);
+}
+
+TEST_CASE("SheetEditing: a zero border's lines lie on the frame's edges and are taken there")
+{
+    const Margin   lNone;
+    const Vector2F lSize{ 64.f, 32.f };
+
+    CHECK(SheetEditing::BorderLinesUnder(lNone, lSize, { 1.f, 16.f }, 2.f)  == ERectEdge::Left);
+    CHECK(SheetEditing::BorderLinesUnder(lNone, lSize, { 63.f, 16.f }, 2.f) == ERectEdge::Right);
+    CHECK(SheetEditing::BorderLinesUnder(lNone, lSize, { 32.f, 0.f }, 2.f)  == ERectEdge::Top);
+    CHECK(SheetEditing::BorderLinesUnder(lNone, lSize, { 0.f, 32.f }, 2.f)  == ERectEdge::BottomLeft);
+
+    // Dragged inwards, a zero line becomes a border.
+    const Margin lDragged = SheetEditing::DragBorder(lNone, lSize, ERectEdge::Left, { 9.3f, 16.f });
+    CHECK(lDragged.Left == doctest::Approx(9.f));
+    CHECK(lDragged.Right == doctest::Approx(0.f));
+}
+
+TEST_CASE("SheetEditing: a dragged line lands on whole pixels, inside the frame, and stops at the opposite line")
+{
+    const Margin   lBorder{ 112.f, 112.f, 85.f, 112.f };
+    const Vector2F lSize{ 256.f, 256.f };
+
+    // The cursor's pixel, rounded.
+    Margin lLeft = SheetEditing::DragBorder(lBorder, lSize, ERectEdge::Left, { 100.6f, 50.f });
+    CHECK(lLeft.Left == doctest::Approx(101.f));
+    CHECK(lLeft.Right == doctest::Approx(112.f));   // the others are kept
+    CHECK(lLeft.Top == doctest::Approx(112.f));
+
+    // Right and bottom count from their own edge.
+    const Margin lRight = SheetEditing::DragBorder(lBorder, lSize, ERectEdge::BottomRight, { 200.2f, 230.f });
+    CHECK(lRight.Right == doctest::Approx(56.f));
+    CHECK(lRight.Bottom == doctest::Approx(26.f));
+    CHECK(lRight.Left == doctest::Approx(112.f));
+
+    // Never past the opposite line: Left stops at 256 - 112 = 144.
+    lLeft = SheetEditing::DragBorder(lBorder, lSize, ERectEdge::Left, { 220.f, 50.f });
+    CHECK(lLeft.Left == doctest::Approx(144.f));
+
+    // Never outside the frame.
+    lLeft = SheetEditing::DragBorder(lBorder, lSize, ERectEdge::TopLeft, { -40.f, -5.f });
+    CHECK(lLeft.Left == doctest::Approx(0.f));
+    CHECK(lLeft.Top == doctest::Approx(0.f));
+    const Margin lOut = SheetEditing::DragBorder(lBorder, lSize, ERectEdge::Bottom, { 50.f, 400.f });
+    CHECK(lOut.Bottom == doctest::Approx(0.f));
+}
