@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
+#include "Core/Maths/Margin.h"
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
 #include "Renderer/Text/Text2D.h"
@@ -9,13 +10,14 @@ namespace Opaax
 {
     class ITexture2D;
 
-    /** One sheet frame: the sheet's texture, the frame's UVs, and its size in pixels. */
+    /** One sheet frame: the sheet's texture, the frame's UVs, its size and slice border in pixels. */
     struct UISheetFrameView
     {
         ITexture2D* Texture = nullptr;   // null while uploading, or if nothing loads
         Vector2F    UVMin   = { 0.f, 0.f };
         Vector2F    UVMax   = { 1.f, 1.f };
         Vector2F    SizePx  = { 0.f, 0.f };
+        Margin      Border;              // all zero: not sliced
     };
 
     // =============================================================================

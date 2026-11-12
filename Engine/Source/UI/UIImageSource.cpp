@@ -36,6 +36,7 @@ namespace Opaax
             Out.UVMin   = lFrame.UVMin;
             Out.UVMax   = lFrame.UVMax;
             Out.SizePx  = lFrame.SizePx;
+            Out.Border  = lFrame.Border;
             return true;
         }
 

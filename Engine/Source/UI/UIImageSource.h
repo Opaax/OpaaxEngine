@@ -24,6 +24,7 @@ namespace Opaax
         Vector2F    UVMin   = { 0.f, 0.f };
         Vector2F    UVMax   = { 1.f, 1.f };
         Vector2F    SizePx  = { 0.f, 0.f };   // frame or texture size (for 9-slice)
+        Margin      Border;                   // a sheet frame's slice border in pixels; none for a texture
     };
 
     /**

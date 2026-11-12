@@ -1,0 +1,94 @@
+{
+    "Class": "SpriteSheet",
+    "Properties": {
+        "DefaultFrame": 0,
+        "Frames": [
+            {
+                "Border": {
+                    "Bottom": 85.0,
+                    "Left": 112.0,
+                    "Right": 112.0,
+                    "Top": 112.0
+                },
+                "Name": "Normal",
+                "Offset": {
+                    "x": 0.0,
+                    "y": 0.0
+                },
+                "Size": {
+                    "x": 256.0,
+                    "y": 256.0
+                }
+            },
+            {
+                "Border": {
+                    "Bottom": 9.0,
+                    "Left": 9.0,
+                    "Right": 9.0,
+                    "Top": 9.0
+                },
+                "Name": "Hovered",
+                "Offset": {
+                    "x": 256.0,
+                    "y": 0.0
+                },
+                "Size": {
+                    "x": 256.0,
+                    "y": 256.0
+                }
+            },
+            {
+                "Border": {
+                    "Bottom": 85.0,
+                    "Left": 85.0,
+                    "Right": 85.0,
+                    "Top": 85.0
+                },
+                "Name": "Pressed",
+                "Offset": {
+                    "x": 0.0,
+                    "y": 256.0
+                },
+                "Size": {
+                    "x": 256.0,
+                    "y": 256.0
+                }
+            },
+            {
+                "Border": {
+                    "Bottom": 0.0,
+                    "Left": 0.0,
+                    "Right": 0.0,
+                    "Top": 0.0
+                },
+                "Name": "Disabled",
+                "Offset": {
+                    "x": 256.0,
+                    "y": 256.0
+                },
+                "Size": {
+                    "x": 256.0,
+                    "y": 256.0
+                }
+            }
+        ],
+        "Grid": {
+            "CellSize": {
+                "x": 256.0,
+                "y": 256.0
+            },
+            "Columns": 0,
+            "Margin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "Rows": 0,
+            "Spacing": {
+                "x": 0.0,
+                "y": 0.0
+            }
+        },
+        "Texture": "Textures/SlicedButtons.png"
+    },
+    "Version": 1
+}

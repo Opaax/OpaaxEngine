@@ -209,6 +209,59 @@ TEST_CASE("An edit leaving the default past the last frame sets it back to the f
 }
 
 // =============================================================================
+// The slice border — kept inside its frame
+// =============================================================================
+TEST_CASE("ClampBorderInside: a border that fits is kept as it is")
+{
+    Margin lBorder{ 112.f, 112.f, 85.f, 112.f };
+    ClampBorderInside(lBorder, { 256.f, 256.f });
+
+    CHECK(lBorder.Left == doctest::Approx(112.f));
+    CHECK(lBorder.Right == doctest::Approx(112.f));
+    CHECK(lBorder.Bottom == doctest::Approx(85.f));
+    CHECK(lBorder.Top == doctest::Approx(112.f));
+}
+
+TEST_CASE("ClampBorderInside: no negative side, and two opposite sides shrink to the frame's size")
+{
+    Margin lBorder{ 200.f, 200.f, -5.f, 300.f };
+    ClampBorderInside(lBorder, { 256.f, 100.f });
+
+    // Left and right in proportion: 200 + 200 over 256 gives 128 each.
+    CHECK(lBorder.Left == doctest::Approx(128.f));
+    CHECK(lBorder.Right == doctest::Approx(128.f));
+    // Bottom is not negative, and the top alone fills the height.
+    CHECK(lBorder.Bottom == doctest::Approx(0.f));
+    CHECK(lBorder.Top == doctest::Approx(100.f));
+}
+
+TEST_CASE("ClampBorderInside: a frame with no size (the whole texture) only loses negatives")
+{
+    Margin lBorder{ -1.f, 600.f, 20.f, 20.f };
+    ClampBorderInside(lBorder, { 0.f, 0.f });
+
+    CHECK(lBorder.Left == doctest::Approx(0.f));
+    CHECK(lBorder.Right == doctest::Approx(600.f));
+    CHECK(lBorder.Bottom == doctest::Approx(20.f));
+}
+
+TEST_CASE("An edit leaving a border larger than its frame brings it back inside")
+{
+    SpriteSheet lSheet;
+    FillProbeSheet(lSheet);   // 32 px frames
+    lSheet.Frames[1].Border = Margin{ 30.f, 30.f, 8.f, 8.f };
+    lSheet.Frames[2].Border = Margin{ 4.f, 4.f, 4.f, 4.f };
+
+    lSheet.PostEditChange();
+
+    CHECK(lSheet.Frames[1].Border.Left == doctest::Approx(16.f));
+    CHECK(lSheet.Frames[1].Border.Right == doctest::Approx(16.f));
+    CHECK(lSheet.Frames[1].Border.Top == doctest::Approx(8.f));
+    CHECK(lSheet.Frames[2].Border.Left == doctest::Approx(4.f));   // one that fits is untouched
+    CHECK(lSheet.Frames[0].Border.IsZero());
+}
+
+// =============================================================================
 // The file
 // =============================================================================
 TEST_CASE("SpriteSheet: save then load round-trips every field")
@@ -219,7 +272,8 @@ TEST_CASE("SpriteSheet: save then load round-trips every field")
 
     SpriteSheet lSaved;
     FillProbeSheet(lSaved);
-    lSaved.Frames[1].Name = OPAAX_ID("Hero_Idle_1");
+    lSaved.Frames[1].Name   = OPAAX_ID("Hero_Idle_1");
+    lSaved.Frames[2].Border = Margin{ 12.f, 11.f, 9.f, 10.f };
 
     REQUIRE(AssetFile::Save(lPath, lSaved));
 
@@ -236,6 +290,13 @@ TEST_CASE("SpriteSheet: save then load round-trips every field")
     CHECK(lLoaded->Frames[1].Name == OPAAX_ID("Hero_Idle_1"));
     CHECK_FALSE(lLoaded->Frames[0].Name.IsValid());
     CHECK(lLoaded->Frames[3].Offset.x == doctest::Approx(32.f));
+
+    // The slice border, each side in its own place.
+    CHECK(lLoaded->Frames[2].Border.Left == doctest::Approx(12.f));
+    CHECK(lLoaded->Frames[2].Border.Right == doctest::Approx(11.f));
+    CHECK(lLoaded->Frames[2].Border.Bottom == doctest::Approx(9.f));
+    CHECK(lLoaded->Frames[2].Border.Top == doctest::Approx(10.f));
+    CHECK(lLoaded->Frames[0].Border.IsZero());
 
     // Saving what was loaded writes the same text: the editor's dirty check compares it.
     CHECK(AssetFile::Serialize(*lLoaded) == AssetFile::Serialize(lSaved));
@@ -256,6 +317,18 @@ TEST_CASE("SpriteSheet: a file missing keys keeps the defaults; a wrong type is 
     CHECK(lLoaded->DefaultFrame == 3u);
     CHECK(lLoaded->Frames.empty());
     CHECK(lLoaded->Grid.CellSize.x == doctest::Approx(32.f));   // the struct's own default
+
+    // A sheet saved before frames had a border: its frames load unsliced.
+    const OpaaxString lBeforeBorder = lDir.Sub("BeforeBorder.opaaxasset");
+    REQUIRE(FileIO::WriteAllText(lBeforeBorder, OpaaxString(R"({ "Class": "SpriteSheet", "Properties": {
+        "Frames": [ { "Name": "Idle", "Offset": { "x": 0.0, "y": 0.0 }, "Size": { "x": 64.0, "y": 64.0 } } ] } })")));
+
+    const TStrongObjectPtr<Asset> lOld      = AssetFile::LoadAsset(lBeforeBorder, lClasses);
+    const SpriteSheet*            lOldSheet = Cast<SpriteSheet>(lOld.Get());
+    REQUIRE(lOldSheet != nullptr);
+    REQUIRE(lOldSheet->FrameCount() == 1u);
+    CHECK(lOldSheet->Frames[0].Size.x == doctest::Approx(64.f));
+    CHECK(lOldSheet->Frames[0].Border.IsZero());
 
     const OpaaxString lWrongType = lDir.Sub("WrongType.opaaxasset");
     REQUIRE(FileIO::WriteAllText(lWrongType, OpaaxString(R"({ "Class": "SpriteSheet", "Properties": { "DefaultFrame": "three" } })")));
@@ -280,5 +353,6 @@ TEST_CASE("SpriteSheet: an old .opaaxsheet converts with its texture, frames and
     REQUIRE(lSheet->FrameCount() == 2u);
     CHECK(lSheet->Frames[1].Name == OPAAX_ID("Run_0"));
     CHECK(lSheet->Frames[1].Offset.x == doctest::Approx(64.f));
+    CHECK(lSheet->Frames[1].Border.IsZero());   // the old format had no border
     CHECK(lSheet->Grid.CellSize.x == doctest::Approx(64.f));
 }
