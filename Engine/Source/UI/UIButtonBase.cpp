@@ -95,10 +95,21 @@ Opaax::EUIReply Opaax::UIButtonBase::OnPointerEvent(const UIPointerEvent& InEven
     }
 }
 
+Opaax::EUIButtonState Opaax::UIButtonBase::GetState() const noexcept
+{
+    if (!bIsEnabled) { return EUIButtonState::Disabled; }
+    if (bIsPressed)  { return EUIButtonState::Pressed; }
+    if (bIsHovered)  { return EUIButtonState::Hovered; }
+    return EUIButtonState::Normal;
+}
+
 void Opaax::UIButtonBase::Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
 {
-    if      (!bIsEnabled)   RebuildDisabledState(InContext, OutQuads);
-    else if (bIsPressed)    RebuildPressedState(InContext, OutQuads);
-    else if (bIsHovered)    RebuildHoveredState(InContext, OutQuads);
-    else                    RebuildNormalState(InContext, OutQuads);
+    switch (GetState())
+    {
+        case EUIButtonState::Disabled: RebuildDisabledState(InContext, OutQuads); break;
+        case EUIButtonState::Pressed:  RebuildPressedState(InContext, OutQuads);  break;
+        case EUIButtonState::Hovered:  RebuildHoveredState(InContext, OutQuads);  break;
+        case EUIButtonState::Normal:   RebuildNormalState(InContext, OutQuads);   break;
+    }
 }
