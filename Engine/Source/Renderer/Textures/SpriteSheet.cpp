@@ -1,5 +1,7 @@
 #include "Renderer/Textures/SpriteSheet.h"
 
+#include "Core/Maths/Maths.h"
+
 namespace Opaax
 {
     namespace
@@ -14,6 +16,27 @@ namespace Opaax
 
             return static_cast<Uint32>((InAvailable + InSpacing) / lPitch);
         }
+
+        /** Two opposite sides: never negative, and together never more than InExtent (when it has one). */
+        void ClampPair(float& InOutLow, float& InOutHigh, const float InExtent) noexcept
+        {
+            InOutLow  = Maths::Max(InOutLow, 0.f);
+            InOutHigh = Maths::Max(InOutHigh, 0.f);
+
+            const float lSum = InOutLow + InOutHigh;
+            if (InExtent > 0.f && lSum > InExtent)
+            {
+                const float lScale = InExtent / lSum;
+                InOutLow  *= lScale;
+                InOutHigh *= lScale;
+            }
+        }
+    }
+
+    void ClampBorderInside(Margin& InOutBorder, const Vector2F& InFrameSize) noexcept
+    {
+        ClampPair(InOutBorder.Left, InOutBorder.Right, InFrameSize.x);
+        ClampPair(InOutBorder.Bottom, InOutBorder.Top, InFrameSize.y);
     }
 
     // =============================================================================
@@ -52,6 +75,11 @@ namespace Opaax
             OPAAX_LOG(LogSpriteSheet, Warn, "Sprite sheet '{}': default frame {} is past its {} frame(s) — set to 0",
                       GetName(), DefaultFrame, FrameCount());
             DefaultFrame = 0u;
+        }
+
+        for (SpriteFrame& lFrame : Frames)
+        {
+            ClampBorderInside(lFrame.Border, lFrame.Size);
         }
     }
 

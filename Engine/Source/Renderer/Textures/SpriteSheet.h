@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 
 #include "Core/Log/Logger.h"
+#include "Core/Maths/Margin.h"
 #include "Core/Maths/MathTypes.h"
 #include "Core/Maths/MathsJson.hpp"
 #include "Core/OpaaxTypes.h"
@@ -31,14 +32,30 @@ namespace Opaax
         /** Width and height in pixels. */
         Vector2F Size = { 0.f, 0.f };
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(SpriteFrame, Name, Offset, Size)
+        /**
+         * Slice border in texture pixels, inside the frame (Top is the top of the art as seen).
+         * UI images and buttons keep the corners and stretch the rest. All zero: not sliced.
+         */
+        Margin Border;
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(SpriteFrame, Name, Offset, Size, Border)
 
         OPAAX_PROPERTIES(SpriteFrame,
                          OPAAX_PROP(Name).SetTooltip("What animation looks this frame up by. Empty is\n"
                                                      "fine — the frame is then addressed by its index."),
                          OPAAX_PROP(Offset).SetTooltip("Top-left corner in texture pixels."),
-                         OPAAX_PROP(Size).SetTooltip("Width and height in texture pixels."))
+                         OPAAX_PROP(Size).SetTooltip("Width and height in texture pixels."),
+                         OPAAX_PROP(Border).SetRange(0.f, 4096.f).SetDragStep(1.f)
+                             .SetTooltip("Slice border in texture pixels, inside the frame. UI images and\n"
+                                         "buttons keep the corners and stretch the edges and centre.\n"
+                                         "All zero: drawn whole."))
     };
+
+    /**
+     * InOutBorder kept inside a frame of InFrameSize: no side negative, two opposite sides never more
+     * than the frame's size (both shrunk in proportion). A frame with no size only loses negatives.
+     */
+    void ClampBorderInside(Margin& InOutBorder, const Vector2F& InFrameSize) noexcept;
 
     /**
      * The last slice settings, kept so slicing again gives the same result.
@@ -99,7 +116,7 @@ namespace Opaax
         Int32 FindFrameIndex(OpaaxStringID InName) const noexcept;
 
         //~Begin Object interface
-        /** A DefaultFrame past the last frame goes back to the first. */
+        /** A DefaultFrame past the last frame goes back to the first; each border stays inside its frame. */
         void PostEditChange() override;
         //~End Object interface
     };
