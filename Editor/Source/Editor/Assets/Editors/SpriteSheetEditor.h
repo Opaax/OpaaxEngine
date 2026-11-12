@@ -24,7 +24,8 @@ namespace Opaax::Editor
     // SpriteSheetEditor — a sheet over its image: every frame outlined, the selected one highlighted. A
     //   click selects the frame under it; dragging the selected frame's middle moves it, its edge or
     //   corner resizes it, inside the texture. Below: the grid and Slice (which replaces the frames),
-    //   Auto-Name, the selected frame's fields, and the frame list.
+    //   Auto-Name, the selected frame's fields, the frame alone enlarged with its slice border's four
+    //   lines (dragged there, in whole pixels), and the frame list.
     // =============================================================================
     class SpriteSheetEditor final : public IAssetEditor
     {
@@ -65,6 +66,13 @@ namespace Opaax::Editor
         /** The selected frame's fields, and Set as Default. */
         void DrawSelectedFrame(SpriteSheet& InSheet);
 
+        /**
+         * The selected frame alone, fitted to the window's width, with its border's four lines. A press
+         * near a line takes it (two near a crossing); while held, the line follows the cursor's pixel.
+         * One ImGui item held for the whole drag, so the drag is one undo step.
+         */
+        void DrawFrameView(SpriteSheet& InSheet, const Texture2D* InTexture);
+
         /** One row per frame: its index, name and rect; the default is marked. */
         void DrawFrameList(const SpriteSheet& InSheet);
 
@@ -83,8 +91,14 @@ namespace Opaax::Editor
         bool      m_bDraggingRect = false;
         ERectEdge m_DragEdge      = ERectEdge::None;
 
+        /** The border lines held in the frame view (a corner is two), or None. */
+        ERectEdge m_BorderLines = ERectEdge::None;
+
         /** Largest edge the image is drawn at, in pixels. */
         static constexpr float MAX_CANVAS_SIZE = 420.f;
+
+        /** Tallest the frame view is drawn, in pixels (its width is the window's). */
+        static constexpr float MAX_FRAME_VIEW_HEIGHT = 360.f;
 
         /** Distance to an edge, in screen pixels, that counts as grabbing it. */
         static constexpr float GRAB_THICKNESS = 5.f;
