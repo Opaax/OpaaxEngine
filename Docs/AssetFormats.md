@@ -184,9 +184,9 @@ mounted canvas's root sits in the screen, so a HUD's root stretches over it (anc
 | Type | Its fields |
 |---|---|
 | `UIPanel` | none: a container |
-| `UIImage` | `Texture` or `Sheet` + `Frame`, `Color`, `Border` (nine-slice), `Fill`, `FillAmount`, `FillBinding` |
+| `UIImage` | `Texture` or `Sheet` + `Frame`, `Color`, `Border` and `BorderScale` (nine-slice, [below](#sliced-art)), `Fill`, `FillAmount`, `FillBinding` |
 | `UIText` | `Text`, `Binding`, `Font` (a `.ttf`), `Size`, `Color`, `HAlign` (`Left`, `Center`, `Right`), `VAlign` (`Top`, `Middle`, `Bottom`), `bWrap`, `LineHeightScale`, `bKerning` |
-| `UIButton` | `Normal`, `Hovered`, `Pressed`, `Disabled` colours, `bIsEnabled`, `Texture` or `Sheet` + `Frame` |
+| `UIButton` | `Normal`, `Hovered`, `Pressed`, `Disabled` colours, `bIsEnabled`, `Texture` or `Sheet` + `Frame`, `HoveredFrame`, `PressedFrame`, `DisabledFrame` (-1 shows `Frame`), `Border` and `BorderScale` (nine-slice, [below](#sliced-art)) |
 | `UIStack` | `Axis` (`Vertical`, `Horizontal`), `Spacing`, `Padding`, `ChildAlign` (`Start`, `Center`, `End`, `Stretch`), `bFitContent`: lays its children out in a row or a column |
 | `UIScrollBox` | `Axis`, `Spacing`, `Padding`, `ChildAlign` as a stack's (`Stretch` by default), `ScrollStep` (canvas units a notch of the wheel moves), `bDragToScroll`: a list that scrolls. Its children are laid out as in a stack and show only inside its rect; the wheel over it and a drag with the left button move them. When all of them show, it lets the wheel and presses through |
 | `UIMask` | `Texture` (a shape; empty = the rect), `bShowMaskGraphic`: clips its children, which are hit only inside its rect |
@@ -204,6 +204,34 @@ widget handles, the game does not get: a list that scrolled with the wheel leave
 actions alone. A scroll box's code moves it with `SetScroll` and reads `GetScroll` and `GetMaxScroll`.
 While a controls menu waits for a key (`BeginKeyCapture`, [Settings.md](Settings.md#press-a-key)),
 the UI gets no input at all, until the key taken is released.
+
+### Sliced art
+
+An image or a button drawn bigger than its art keeps the art's corners and stretches the rest: it is
+cut in nine (a nine-slice). Where it is cut is a border in texture pixels, set once on the sheet frame
+([below](#sprites-and-animation-spritesheet-animationclip-animationlibrary)), so every widget showing
+that frame slices it the same way. A widget's own `Border`, when it is not all zero, wins over the
+frame's (and is the only way to slice a plain `Texture`). Without any border the art is one stretched
+quad.
+
+`BorderScale` says how many canvas units a border pixel takes: 1 draws the corners at the art's size,
+0.4 draws 256 px art on a 90 unit tall button with corners 2.5 times smaller, showing the same pixels.
+When the scaled borders do not fit the widget, each axis is shrunk in proportion (the corners are
+squeezed). Art drawn smaller than its pixels is filtered without mipmaps, so it softens below about
+half its size; drawn larger, it turns blocky.
+
+A button shows `Frame` in its Normal state, and `HoveredFrame`, `PressedFrame` or `DisabledFrame` in
+the others (-1 keeps `Frame`), each sliced with its own frame's border and tinted by the state's colour:
+
+```json
+{ "Type": "UIButton", "Name": "Play", "Sheet": "UI/Buttons.opaaxasset",
+  "Frame": 0, "HoveredFrame": 1, "PressedFrame": 2, "DisabledFrame": 3, "BorderScale": 0.4 }
+```
+
+A game's own button derives from `UIButtonBase` (`UI/UIButtonBase.h`), which keeps the state
+(`GetState()`), fires the events and calls one of `RebuildNormalState`, `RebuildHoveredState`,
+`RebuildPressedState`, `RebuildDisabledState`; each can draw with `BuildImageQuads`
+(`UI/UIImageSource.h`), the routine images and buttons slice with.
 
 ## Input (`InputActionAsset`, `InputMappingContextAsset`)
 
@@ -253,15 +281,29 @@ All three are assets. A sheet cuts a texture into named frames (pixels, from the
     "DefaultFrame": 0,
     "Frames": [
         { "Name": "Idle", "Offset": { "x": 0.0, "y": 0.0 }, "Size": { "x": 64.0, "y": 64.0 } },
-        { "Name": "Run_0", "Offset": { "x": 64.0, "y": 0.0 }, "Size": { "x": 64.0, "y": 64.0 } }
+        { "Name": "Run_0", "Offset": { "x": 64.0, "y": 0.0 }, "Size": { "x": 64.0, "y": 64.0 } },
+        { "Name": "Panel", "Offset": { "x": 128.0, "y": 0.0 }, "Size": { "x": 64.0, "y": 64.0 },
+          "Border": { "Left": 12.0, "Right": 12.0, "Bottom": 10.0, "Top": 12.0 } }
     ] } }
 ```
+
+A frame's `Border` is its slice border for UI images and buttons ([Sliced art](#sliced-art)), in
+texture pixels inside the frame, `Top` being the top of the art as seen; all zero (or missing) is not
+sliced. An edit keeps it inside its frame: no side negative, and two opposite sides that add up to
+more than the frame shrink in proportion.
 
 A sprite, a `UIImage` or a `UIButton` shows a sheet frame by index (`Frame`; -1 is the sheet's
 `DefaultFrame`), a clip by name. A sheet's window draws its frames over the image: a click selects
 one, dragging it moves it, dragging an edge resizes it. **Slice** replaces the frames with the grid's
-cells (a grid that cuts nothing is refused), and **Auto-Name** names the unnamed ones `Frame_<index>`.
-An edit that leaves `DefaultFrame` past the last frame sets it back to 0.
+cells (a grid that cuts nothing is refused; the new frames have no names and no borders), and
+**Auto-Name** names the unnamed ones `Frame_<index>`. An edit that leaves `DefaultFrame` past the last
+frame sets it back to 0.
+
+Under the selected frame's fields, **Slice border** shows that frame alone, enlarged, with its
+border's four lines (the image above shows them too, smaller). Dragging a line sets that side in whole
+pixels, never past the opposite line; a press where two lines cross takes both, and a side at zero is
+taken on the frame's edge. **Preview** draws the frame as a UI image or button of `Size` canvas units
+draws it at `BorderScale`; both fields are the window's own and are not saved.
 
 A clip plays frames of a sheet (or whole textures) in order;
 `PlayMode` is `Once`, `Loop` or `PingPong`, and `Hold` keeps a step for that many ticks:
