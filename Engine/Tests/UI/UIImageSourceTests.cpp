@@ -43,6 +43,7 @@ namespace
         bool        bSheetReady = true;
         Uint32      SheetResolves = 0;
         Int32       LastFrame     = -99;
+        Margin      FrameBorder;   // the frame's slice border, as the sheet would give it
 
         FontFaceView ResolveFace(const char*) override { return FontFaceView{}; }
         ITexture2D*  ResolveTexture(const char*) override { return &Plain; }
@@ -58,6 +59,7 @@ namespace
             lView.UVMin   = { 0.25f, 0.75f };    // MakeFrameUV's V flip: the top row is the larger v
             lView.UVMax   = { 0.375f, 0.875f };
             lView.SizePx  = { 64.f, 64.f };
+            lView.Border  = FrameBorder;
             return lView;
         }
     };
@@ -108,6 +110,32 @@ TEST_CASE("UIImageSource: runtime beats sheet beats texture, and nothing named i
     lAssets.bSheetReady = false;
     CHECK_FALSE(ResolveImageSource(lContext, nullptr, {}, lSheet, 0, lImage, bNamed));
     CHECK(bNamed);
+}
+
+TEST_CASE("UIImageSource: a sheet frame's slice border reaches the resolved image; a texture has none")
+{
+    StubAssets lAssets;
+    lAssets.FrameBorder = Margin{ 20.f, 21.f, 22.f, 23.f };
+    UIBuildContext lContext{ &lAssets };
+
+    TAssetRef<Texture2D>   lTexture;  lTexture.Path = "UI/Art.png";
+    TAssetRef<SpriteSheet> lSheet;    lSheet.Path   = "UI/Buttons.opaaxasset";
+    FakeTexture lRuntime{ 4u };
+
+    UIResolvedImage lImage;
+    bool            bNamed = false;
+
+    REQUIRE(ResolveImageSource(lContext, nullptr, {}, lSheet, 0, lImage, bNamed));
+    CHECK(lImage.Border.Left == doctest::Approx(20.f));
+    CHECK(lImage.Border.Right == doctest::Approx(21.f));
+    CHECK(lImage.Border.Bottom == doctest::Approx(22.f));
+    CHECK(lImage.Border.Top == doctest::Approx(23.f));
+
+    // A texture, or one handed over by code, is not a sheet frame: no border, even after a frame.
+    REQUIRE(ResolveImageSource(lContext, nullptr, lTexture, {}, -1, lImage, bNamed));
+    CHECK(lImage.Border.IsZero());
+    REQUIRE(ResolveImageSource(lContext, &lRuntime, {}, {}, -1, lImage, bNamed));
+    CHECK(lImage.Border.IsZero());
 }
 
 TEST_CASE("UIImage: a sheet frame reaches the quad's UVs, and a sliced frame stays inside it")
