@@ -95,7 +95,7 @@ TEST_CASE("UICanvasFile: every widget type round-trips its own fields and the tr
     lButton->Hovered  = { 0.22f, 0.f, 0.f, 1.f };
     lButton->Pressed  = { 0.33f, 0.f, 0.f, 1.f };
     lButton->Disabled = { 0.44f, 0.f, 0.f, 0.5f };
-    lButton->bEnabled = false;
+    lButton->SetEnabled(false);
     lDoc.Root->AddChild(Move(lButton));
 
     const OpaaxString lText1 = UICanvasFile::Serialize(lDoc);
@@ -138,7 +138,7 @@ TEST_CASE("UICanvasFile: every widget type round-trips its own fields and the tr
 
     const auto* lBackButton = dynamic_cast<const UIButton*>(lBack.Root->GetChildren()[1].Get());
     REQUIRE(lBackButton != nullptr);
-    CHECK_FALSE(lBackButton->bEnabled);
+    CHECK_FALSE(lBackButton->IsEnabled());
     CHECK(lBackButton->Pressed.r == doctest::Approx(0.33f));
 
     // And the text is STABLE: writing what was read gives the same bytes, which is what makes a
@@ -420,7 +420,7 @@ TEST_CASE("UICanvasFile: CloneWidget is a deep copy through the format, and a no
     // A button with a label under it: two types, two levels, one field of each kind.
     auto lButton      = NewObject<UIButton>();
     lButton->Name     = "Resume";
-    lButton->bEnabled = false;
+    lButton->SetEnabled(false);
     lButton->SetRect(Corner({ 0.5f, 0.f }, { 0.f, 30.f }, { 240.f, 64.f }));
 
     auto lLabel  = NewObject<UIText>();
@@ -436,7 +436,7 @@ TEST_CASE("UICanvasFile: CloneWidget is a deep copy through the format, and a no
     const auto* lCloned = dynamic_cast<const UIButton*>(lClone.Get());
     REQUIRE(lCloned != nullptr);
     CHECK(lCloned->Name == OpaaxString("Resume"));
-    CHECK_FALSE(lCloned->bEnabled);
+    CHECK_FALSE(lCloned->IsEnabled());
     CheckVec(lCloned->Rect.SizeDelta, { 240.f, 64.f });
     REQUIRE(lCloned->GetChildren().size() == 1u);
     CHECK(lCloned->GetChildren()[0]->Name == OpaaxString("ResumeLabel"));
