@@ -3,6 +3,7 @@
 // stands in for the renderer's caches.
 #include <doctest.h>
 
+#include "Core/Maths/Maths.h"
 #include "Renderer/Textures/SpriteSheet.h"   // completes the widgets' sheet references
 #include "RHI/Texture.h"
 #include "UI/UICanvas.h"
@@ -181,6 +182,121 @@ TEST_CASE("UIImage: a sheet frame reaches the quad's UVs, and a sliced frame sta
     CHECK(lCanvas.Update(lContext).Rebuilds == 0);
 }
 
+namespace
+{
+    /** A 200x100 image on a 1080 canvas showing frame 0 of the stub's sheet. */
+    struct SlicedFixture
+    {
+        StubAssets     Assets;
+        UIBuildContext Context{ &Assets };
+        UICanvas       Canvas{ 1080.f };
+        UIImage*       Image = nullptr;
+
+        SlicedFixture()
+        {
+            Canvas.SetTargetSize(1920, 1080);
+            Image = static_cast<UIImage*>(Canvas.Root().AddChild(NewObject<UIImage>()));
+            UIRect lRect;
+            lRect.SizeDelta = { 200.f, 100.f };
+            Image->SetRect(lRect);
+            Image->SetSheetFrame(OpaaxString("UI/Buttons.opaaxasset"), 0);
+        }
+
+        const TDynArray<UIQuad>& Quads()
+        {
+            Canvas.Update(Context);
+            return Image->GetQuads();
+        }
+
+        /** The width of the quad at the image's bottom-left corner. */
+        float CornerWidth()
+        {
+            const TDynArray<UIQuad>& lQuads = Quads();
+            const Vector2F           lMin   = Image->GetBounds().Min();
+            for (const UIQuad& lQuad : lQuads)
+            {
+                if (Maths::Abs(lQuad.Bounds.Min().x - lMin.x) < 0.01f && Maths::Abs(lQuad.Bounds.Min().y - lMin.y) < 0.01f)
+                {
+                    return lQuad.Bounds.Size().x;
+                }
+            }
+            return -1.f;
+        }
+    };
+}
+
+TEST_CASE("UIImage: with no border of its own, a bordered sheet frame is sliced, every UV inside the frame")
+{
+    SlicedFixture lF;
+    lF.Assets.FrameBorder = Margin{ 8.f, 8.f, 8.f, 8.f };
+
+    const TDynArray<UIQuad>& lQuads = lF.Quads();
+    REQUIRE(lQuads.size() == 9u);
+    for (const UIQuad& lQuad : lQuads)
+    {
+        CHECK(lQuad.Texture == &lF.Assets.Atlas);
+        CHECK(lQuad.UVMin.x >= 0.25f - 1e-5f);
+        CHECK(lQuad.UVMax.x <= 0.375f + 1e-5f);
+        CHECK(lQuad.UVMin.y >= 0.75f - 1e-5f);
+        CHECK(lQuad.UVMax.y <= 0.875f + 1e-5f);
+    }
+    CHECK(lF.CornerWidth() == doctest::Approx(8.f));
+}
+
+TEST_CASE("UIImage: its own border wins over the frame's; no border anywhere is one quad")
+{
+    SlicedFixture lF;
+    lF.Assets.FrameBorder = Margin{ 8.f, 8.f, 8.f, 8.f };
+    lF.Image->SetBorder(UIMargin{ 16.f, 16.f, 16.f, 16.f });
+    CHECK(lF.CornerWidth() == doctest::Approx(16.f));
+
+    lF.Image->SetBorder(UIMargin{});
+    lF.Assets.FrameBorder = Margin{};
+    lF.Image->InvalidateContent();
+    REQUIRE(lF.Quads().size() == 1u);
+    CHECK(lF.Quads()[0].UVMin.x == doctest::Approx(0.25f));
+}
+
+TEST_CASE("UIImage: BorderScale sizes the frame's corners, and a fill still cuts the nine quads")
+{
+    SlicedFixture lF;
+    lF.Assets.FrameBorder = Margin{ 20.f, 20.f, 20.f, 20.f };
+
+    lF.Image->SetBorderScale(0.5f);
+    CHECK(lF.CornerWidth() == doctest::Approx(10.f));
+
+    lF.Image->SetBorderScale(0.f);   // read as 1
+    CHECK(lF.CornerWidth() == doctest::Approx(20.f));
+
+    // Half filled: the left column whole, the middle one cut, the right one gone.
+    lF.Image->SetFill(EUIFill::Horizontal, 0.5f);
+    CHECK(lF.Quads().size() == 6u);
+}
+
+TEST_CASE("BuildImageQuads: appends after what OutQuads holds, and leaves it alone")
+{
+    UIResolvedImage lImage;
+    FakeTexture     lTexture{ 64u };
+    lImage.Texture = &lTexture;
+    lImage.SizePx  = { 64.f, 64.f };
+    lImage.Border  = Margin{ 16.f, 16.f, 16.f, 16.f };
+
+    TDynArray<UIQuad> lQuads;
+    UIQuad& lFirst = lQuads.emplace_back();
+    lFirst.UVMax   = { 0.5f, 0.5f };
+    lFirst.Color   = { 0.f, 1.f, 0.f, 1.f };
+
+    BuildImageQuads(Bounds2D::FromMinMax({ 0.f, 0.f }, { 200.f, 100.f }), lImage, Margin{}, 1.f,
+                    LinearColor{ 1.f, 0.f, 0.f, 1.f }, lQuads);
+
+    REQUIRE(lQuads.size() == 10u);
+    CHECK(lQuads[0].UVMax.x == doctest::Approx(0.5f));
+    CHECK(lQuads[0].Color.g == doctest::Approx(1.f));
+    CHECK(lQuads[0].Texture == nullptr);
+    CHECK(lQuads[1].Texture == &lTexture);
+    CHECK(lQuads[1].Color.r == doctest::Approx(1.f));
+}
+
 TEST_CASE("UIButton: its art resolves like an image's, tinted by the state colour")
 {
     StubAssets lAssets;
@@ -219,8 +335,9 @@ TEST_CASE("UIImageSource: the new fields round-trip through the file, and a file
     lDoc.Root = NewObject<UIPanel>();
 
     auto lImage = NewObject<UIImage>();
-    lImage->Sheet.Path = "UI/Icons.opaaxasset";
-    lImage->Frame      = 7;
+    lImage->Sheet.Path  = "UI/Icons.opaaxasset";
+    lImage->Frame       = 7;
+    lImage->BorderScale = 0.4f;
     lDoc.Root->AddChild(Move(lImage));
 
     auto lButton = NewObject<UIButton>();
@@ -237,14 +354,17 @@ TEST_CASE("UIImageSource: the new fields round-trip through the file, and a file
     const auto* lReadButton = static_cast<const UIButton*>(lBack.Root->GetChildren()[1].Get());
     CHECK(lReadImage->Sheet.Path == OpaaxString("UI/Icons.opaaxasset"));
     CHECK(lReadImage->Frame == 7);
+    CHECK(lReadImage->BorderScale == doctest::Approx(0.4f));
     CHECK(lReadButton->Texture.Path == OpaaxString("UI/Button.png"));
     CHECK(lReadButton->Sheet.Path == OpaaxString("UI/Icons.opaaxasset"));
     CHECK(lReadButton->Frame == 2);
 
     UICanvasFile::UICanvasDoc lOld;
-    REQUIRE(UICanvasFile::Deserialize(OpaaxString(R"({"Version":1,"Root":{"Type":"UIPanel","Children":[{"Type":"UIButton"}]}})"),
+    REQUIRE(UICanvasFile::Deserialize(OpaaxString(R"({"Version":1,"Root":{"Type":"UIPanel","Children":[{"Type":"UIButton"},{"Type":"UIImage"}]}})"),
                                       lRegistry, lOld));
     const auto* lOldButton = static_cast<const UIButton*>(lOld.Root->GetChildren()[0].Get());
     CHECK(lOldButton->Texture.IsEmpty());
     CHECK(lOldButton->Frame == -1);
+    const auto* lOldImage = static_cast<const UIImage*>(lOld.Root->GetChildren()[1].Get());
+    CHECK(lOldImage->BorderScale == doctest::Approx(1.f));
 }

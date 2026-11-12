@@ -22,9 +22,22 @@ namespace Opaax
         }
     }
 
+    float SanitizeBorderScale(const float InBorderScale) noexcept
+    {
+        return InBorderScale > 0.f ? InBorderScale : 1.f;   // a NaN fails the test too
+    }
+
     void BuildSlicedQuads(const Bounds2D& InRect, const UIMargin& InBorderPixels,
                           const Vector2F& InTextureSize, TDynArray<UIQuad>& OutQuads)
     {
+        BuildSlicedQuads(InRect, InBorderPixels, 1.f, InTextureSize, OutQuads);
+    }
+
+    void BuildSlicedQuads(const Bounds2D& InRect, const UIMargin& InBorderPixels, const float InBorderScale,
+                          const Vector2F& InTextureSize, TDynArray<UIQuad>& OutQuads)
+    {
+        const float lScale = SanitizeBorderScale(InBorderScale);
+
         const Vector2F lMin  = InRect.Min();
         const Vector2F lMax  = InRect.Max();
         const Vector2F lSize = InRect.Size();
@@ -44,10 +57,11 @@ namespace Opaax
         float lUvBottom = InBorderPixels.Bottom, lUvTop = InBorderPixels.Top;
         FitPair(lUvBottom, lUvTop, InTextureSize.y);
 
-        float lLeft = InBorderPixels.Left, lRight = InBorderPixels.Right;
+        // On screen a border pixel takes lScale canvas units.
+        float lLeft = InBorderPixels.Left * lScale, lRight = InBorderPixels.Right * lScale;
         FitPair(lLeft, lRight, lSize.x);
 
-        float lBottom = InBorderPixels.Bottom, lTop = InBorderPixels.Top;
+        float lBottom = InBorderPixels.Bottom * lScale, lTop = InBorderPixels.Top * lScale;
         FitPair(lBottom, lTop, lSize.y);
 
         const float lXs[4] = { lMin.x, lMin.x + lLeft, lMax.x - lRight, lMax.x };

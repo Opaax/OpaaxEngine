@@ -110,6 +110,74 @@ TEST_CASE("UISlice: a rect NARROWER than its own borders shrinks them, and the U
     }
 }
 
+TEST_CASE("UISlice: at a scale, a corner is border * scale units wide and still shows border pixels")
+{
+    // Bhop's case: a 256 px frame with a 112 px border on a 420x90 button, at 0.4.
+    const Bounds2D lRect = Bounds2D::FromMinMax({ 0.f, 0.f }, { 420.f, 90.f });
+    const UIMargin lBorder{ 112.f, 112.f, 85.f, 112.f };
+
+    TDynArray<UIQuad> lQuads;
+    BuildSlicedQuads(lRect, lBorder, 0.4f, { 256.f, 256.f }, lQuads);
+    REQUIRE(lQuads.size() == 9u);
+
+    const UIQuad* lBottomLeft = QuadAt(lQuads, { 0.f, 0.f });
+    REQUIRE(lBottomLeft != nullptr);
+    CheckVec(lBottomLeft->Bounds.Size(), { 44.8f, 34.f });
+    CheckVec(lBottomLeft->UVMax, { 112.f / 256.f, 85.f / 256.f });
+
+    const UIQuad* lTopRight = QuadAt(lQuads, { 420.f - 44.8f, 90.f - 44.8f });
+    REQUIRE(lTopRight != nullptr);
+    CheckVec(lTopRight->Bounds.Size(), { 44.8f, 44.8f });
+    CheckVec(lTopRight->UVMin, { 1.f - 112.f / 256.f, 1.f - 112.f / 256.f });
+
+    // The same border at 2: twice the size on screen, the same pixels.
+    TDynArray<UIQuad> lBig;
+    BuildSlicedQuads(Bounds2D::FromMinMax({ 0.f, 0.f }, { 1000.f, 1000.f }), lBorder, 2.f, { 256.f, 256.f }, lBig);
+    const UIQuad* lBigCorner = QuadAt(lBig, { 0.f, 0.f });
+    REQUIRE(lBigCorner != nullptr);
+    CheckVec(lBigCorner->Bounds.Size(), { 224.f, 170.f });
+    CheckVec(lBigCorner->UVMax, { 112.f / 256.f, 85.f / 256.f });
+}
+
+TEST_CASE("UISlice: a rect smaller than the SCALED borders shrinks them; one they fit is left alone")
+{
+    const Bounds2D lRect = Bounds2D::FromMinMax({ 0.f, 0.f }, { 50.f, 200.f });
+
+    // 40 + 40 at 1 is 80 units in 50: fitted to 25 each.
+    TDynArray<UIQuad> lAtOne;
+    BuildSlicedQuads(lRect, Uniform(40.f), 1.f, { 128.f, 128.f }, lAtOne);
+    const UIQuad* lShrunk = QuadAt(lAtOne, { 0.f, 0.f });
+    REQUIRE(lShrunk != nullptr);
+    CHECK(lShrunk->Bounds.Size().x == doctest::Approx(25.f));
+
+    // 40 + 40 at 0.5 is 40 units in 50: kept at 20 each, with a 10 unit middle.
+    TDynArray<UIQuad> lAtHalf;
+    BuildSlicedQuads(lRect, Uniform(40.f), 0.5f, { 128.f, 128.f }, lAtHalf);
+    REQUIRE(lAtHalf.size() == 9u);
+    const UIQuad* lKept = QuadAt(lAtHalf, { 0.f, 0.f });
+    REQUIRE(lKept != nullptr);
+    CHECK(lKept->Bounds.Size().x == doctest::Approx(20.f));
+    CHECK(lKept->UVMax.x == doctest::Approx(40.f / 128.f));
+}
+
+TEST_CASE("UISlice: a scale of zero or less reads as 1, as does the call without one")
+{
+    const Bounds2D lRect = Bounds2D::FromMinMax({ 0.f, 0.f }, { 400.f, 200.f });
+
+    for (const float lScale : { 0.f, -3.f, 1.f })
+    {
+        CAPTURE(lScale);
+        TDynArray<UIQuad> lQuads;
+        BuildSlicedQuads(lRect, Uniform(16.f), lScale, { 64.f, 64.f }, lQuads);
+        const UIQuad* lCorner = QuadAt(lQuads, { 0.f, 0.f });
+        REQUIRE(lCorner != nullptr);
+        CheckVec(lCorner->Bounds.Size(), { 16.f, 16.f });
+    }
+
+    CHECK(SanitizeBorderScale(0.4f) == doctest::Approx(0.4f));
+    CHECK(SanitizeBorderScale(0.f) == doctest::Approx(1.f));
+}
+
 TEST_CASE("UISlice: a texture with no size degrades to ONE quad rather than dividing by it")
 {
     const Bounds2D lRect = Bounds2D::FromMinMax({ 0.f, 0.f }, { 400.f, 200.f });
