@@ -6,20 +6,141 @@
         }
     },
     {
-        "id": "open-reads-borders",
-        "command": "asset.open",
+        "id": "new-sheet-with-borders",
+        "command": "asset.new",
         "params": {
-            "path": "UI/SlicedButtons.opaaxasset"
+            "path": "Scratch/SheetBorder.opaaxasset",
+            "class": "SpriteSheet",
+            "properties": {
+                "Texture": "Textures/SlicedButtons.png",
+                "Frames": [
+                    {
+                        "Name": "Normal",
+                        "Offset": {
+                            "x": 0.0,
+                            "y": 0.0
+                        },
+                        "Size": {
+                            "x": 256.0,
+                            "y": 256.0
+                        },
+                        "Border": {
+                            "Left": 112.0,
+                            "Right": 112.0,
+                            "Bottom": 85.0,
+                            "Top": 112.0
+                        }
+                    },
+                    {
+                        "Name": "Hovered",
+                        "Offset": {
+                            "x": 256.0,
+                            "y": 0.0
+                        },
+                        "Size": {
+                            "x": 256.0,
+                            "y": 256.0
+                        },
+                        "Border": {
+                            "Left": 9.0,
+                            "Right": 9.0,
+                            "Bottom": 9.0,
+                            "Top": 9.0
+                        }
+                    }
+                ]
+            }
         },
         "expect": {
             "class": "SpriteSheet",
+            "open": true,
             "unsaved": false,
             "properties": {
                 "Frames": [
-                    { "Name": "Normal", "Border": { "Left": 112.0, "Right": 112.0, "Bottom": 85.0, "Top": 112.0 } },
-                    { "Name": "Hovered", "Border": { "Left": 9.0, "Right": 9.0, "Bottom": 9.0, "Top": 9.0 } },
-                    { "Name": "Pressed", "Border": { "Left": 85.0, "Right": 85.0, "Bottom": 85.0, "Top": 85.0 } },
-                    { "Name": "Disabled", "Border": { "Left": 0.0, "Right": 0.0, "Bottom": 0.0, "Top": 0.0 } }
+                    {
+                        "Name": "Normal",
+                        "Border": {
+                            "Left": 112.0,
+                            "Right": 112.0,
+                            "Bottom": 85.0,
+                            "Top": 112.0
+                        }
+                    },
+                    {
+                        "Name": "Hovered",
+                        "Border": {
+                            "Left": 9.0,
+                            "Right": 9.0,
+                            "Bottom": 9.0,
+                            "Top": 9.0
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "command": "asset.close",
+        "params": {
+            "path": "Scratch/SheetBorder.opaaxasset"
+        }
+    },
+    {
+        "id": "file-reads-borders",
+        "command": "asset.get",
+        "params": {
+            "path": "Scratch/SheetBorder.opaaxasset"
+        },
+        "expect": {
+            "open": false,
+            "properties": {
+                "Frames": [
+                    {
+                        "Border": {
+                            "Left": 112.0,
+                            "Right": 112.0,
+                            "Bottom": 85.0,
+                            "Top": 112.0
+                        }
+                    },
+                    {
+                        "Border": {
+                            "Left": 9.0,
+                            "Right": 9.0,
+                            "Bottom": 9.0,
+                            "Top": 9.0
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "id": "open-is-clean",
+        "command": "asset.open",
+        "params": {
+            "path": "Scratch/SheetBorder.opaaxasset"
+        },
+        "expect": {
+            "unsaved": false,
+            "properties": {
+                "Frames": [
+                    {
+                        "Border": {
+                            "Left": 112.0,
+                            "Right": 112.0,
+                            "Bottom": 85.0,
+                            "Top": 112.0
+                        }
+                    },
+                    {
+                        "Border": {
+                            "Left": 9.0,
+                            "Right": 9.0,
+                            "Bottom": 9.0,
+                            "Top": 9.0
+                        }
+                    }
                 ]
             }
         }
@@ -28,16 +149,43 @@
         "id": "set-a-border-too-wide",
         "command": "asset.set",
         "params": {
-            "path": "UI/SlicedButtons.opaaxasset",
+            "path": "Scratch/SheetBorder.opaaxasset",
             "properties": {
                 "Frames": [
-                    { "Name": "Normal", "Offset": { "x": 0.0, "y": 0.0 }, "Size": { "x": 256.0, "y": 256.0 },
-                      "Border": { "Left": 200.0, "Right": 200.0, "Bottom": 85.0, "Top": 112.0 } },
-                    { "Name": "Hovered", "Offset": { "x": 256.0, "y": 0.0 }, "Size": { "x": 256.0, "y": 256.0 },
-                      "Border": { "Left": 9.0, "Right": 9.0, "Bottom": 9.0, "Top": 9.0 } },
-                    { "Name": "Pressed", "Offset": { "x": 0.0, "y": 256.0 }, "Size": { "x": 256.0, "y": 256.0 },
-                      "Border": { "Left": 85.0, "Right": 85.0, "Bottom": 85.0, "Top": 85.0 } },
-                    { "Name": "Disabled", "Offset": { "x": 256.0, "y": 256.0 }, "Size": { "x": 256.0, "y": 256.0 } }
+                    {
+                        "Name": "Normal",
+                        "Offset": {
+                            "x": 0.0,
+                            "y": 0.0
+                        },
+                        "Size": {
+                            "x": 256.0,
+                            "y": 256.0
+                        },
+                        "Border": {
+                            "Left": 200.0,
+                            "Right": 200.0,
+                            "Bottom": 85.0,
+                            "Top": 112.0
+                        }
+                    },
+                    {
+                        "Name": "Hovered",
+                        "Offset": {
+                            "x": 256.0,
+                            "y": 0.0
+                        },
+                        "Size": {
+                            "x": 256.0,
+                            "y": 256.0
+                        },
+                        "Border": {
+                            "Left": 9.0,
+                            "Right": 9.0,
+                            "Bottom": 9.0,
+                            "Top": 9.0
+                        }
+                    }
                 ]
             }
         },
@@ -46,10 +194,22 @@
             "canUndo": true,
             "properties": {
                 "Frames": [
-                    { "Border": { "Left": 128.0, "Right": 128.0, "Bottom": 85.0, "Top": 112.0 } },
-                    { "Border": { "Left": 9.0 } },
-                    { "Border": { "Left": 85.0 } },
-                    { "Border": { "Left": 0.0 } }
+                    {
+                        "Border": {
+                            "Left": 128.0,
+                            "Right": 128.0,
+                            "Bottom": 85.0,
+                            "Top": 112.0
+                        }
+                    },
+                    {
+                        "Border": {
+                            "Left": 9.0,
+                            "Right": 9.0,
+                            "Bottom": 9.0,
+                            "Top": 9.0
+                        }
+                    }
                 ]
             }
         }
@@ -58,15 +218,18 @@
         "id": "get-sees-the-window",
         "command": "asset.get",
         "params": {
-            "path": "UI/SlicedButtons.opaaxasset"
+            "path": "Scratch/SheetBorder.opaaxasset"
         },
         "expect": {
             "open": true,
             "properties": {
                 "Frames": [
-                    { "Border": { "Left": 128.0, "Right": 128.0 } },
-                    {},
-                    {},
+                    {
+                        "Border": {
+                            "Left": 128.0,
+                            "Right": 128.0
+                        }
+                    },
                     {}
                 ]
             }
@@ -89,16 +252,21 @@
         "id": "undo-puts-it-back",
         "command": "asset.undo",
         "params": {
-            "path": "UI/SlicedButtons.opaaxasset"
+            "path": "Scratch/SheetBorder.opaaxasset"
         },
         "expect": {
             "unsaved": false,
             "canRedo": true,
             "properties": {
                 "Frames": [
-                    { "Border": { "Left": 112.0, "Right": 112.0, "Bottom": 85.0, "Top": 112.0 } },
-                    {},
-                    {},
+                    {
+                        "Border": {
+                            "Left": 112.0,
+                            "Right": 112.0,
+                            "Bottom": 85.0,
+                            "Top": 112.0
+                        }
+                    },
                     {}
                 ]
             }
@@ -108,7 +276,7 @@
         "id": "close",
         "command": "asset.close",
         "params": {
-            "path": "UI/SlicedButtons.opaaxasset"
+            "path": "Scratch/SheetBorder.opaaxasset"
         }
     }
 ]
