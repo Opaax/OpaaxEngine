@@ -1,10 +1,14 @@
 #pragma once
 
+#include "Core/Color/LinearColor.h"
 #include "Core/EngineAPI.h"
+#include "Core/Maths/Bounds2D.h"
+#include "Core/Maths/Margin.h"
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
 #include "Resources/Asset/AssetRef.h"
 #include "UI/UIAssetProvider.h"
+#include "UI/UIQuad.h"
 
 namespace Opaax
 {
@@ -35,4 +39,13 @@ namespace Opaax
                                       const TAssetRef<Texture2D>& InTexture,
                                       const TAssetRef<SpriteSheet>& InSheet, Int32 InFrame,
                                       UIResolvedImage& Out, bool& bOutNamed);
+
+    /**
+     * Appends the quads that draw InImage over InRect, tinted InColor: nine for a sliced image, one
+     * otherwise (one plain quad without a texture). The border is InOwnBorder when it is not all zero,
+     * else the image's own (a sheet frame's); InBorderScale is canvas units per border pixel. The quads
+     * already in OutQuads are left alone. UIImage and UIButton draw with it; a game's widget can too.
+     */
+    void BuildImageQuads(const Bounds2D& InRect, const UIResolvedImage& InImage, const Margin& InOwnBorder,
+                         float InBorderScale, const LinearColor& InColor, TDynArray<UIQuad>& OutQuads);
 }

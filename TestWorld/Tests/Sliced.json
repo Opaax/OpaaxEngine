@@ -1,0 +1,70 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Sliced.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.2
+        }
+    },
+    {
+        "id": "mounted",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "UIProbe/bMounted",
+            "equals": true
+        }
+    },
+    {
+        "id": "every-widget",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "UIProbe/Widgets",
+            "equals": 4
+        }
+    },
+    {
+        "id": "wide-image-listed",
+        "command": "ui.list",
+        "params": {
+            "name": "WideImage"
+        },
+        "expect": {
+            "widgets": [
+                { "name": "WideImage", "type": "UIImage", "visible": true, "width": 280.0, "height": 60.0 }
+            ]
+        }
+    },
+    {
+        "id": "square-image-listed",
+        "command": "ui.list",
+        "params": {
+            "name": "SquareImage"
+        },
+        "expect": {
+            "widgets": [
+                { "name": "SquareImage", "type": "UIImage", "visible": true }
+            ]
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot-images",
+        "command": "screenshot",
+        "params": {
+            "path": "SlicedImages.png"
+        }
+    }
+]
