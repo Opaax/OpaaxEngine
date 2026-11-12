@@ -295,7 +295,7 @@
                         },
                         "Sheet": "",
                         "Texture": "",
-                        "bEnabled": true,
+                        "bIsEnabled": true,
                         "Children": [
                             {
                                 "Name": "ClickLabel",
