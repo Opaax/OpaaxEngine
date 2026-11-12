@@ -3,6 +3,7 @@
 #include <imgui.h>
 
 #include "Application/Services/IPaths.h"
+#include "Core/Maths/Maths.h"
 #include "Core/String/CString.h"
 #include "Editor/Assets/AssetDocument.hpp"
 #include "Editor/Assets/Editors/SpriteSheetEditing.h"
@@ -22,10 +23,69 @@ namespace Opaax::Editor
         constexpr ImU32 k_FrameColor    = IM_COL32(255, 255, 255, 110);
         constexpr ImU32 k_SelectedColor = IM_COL32(255, 190,  60, 255);
 
+        /** The slice border's lines, and a line under the cursor or held. */
+        constexpr ImU32 k_BorderColor    = IM_COL32( 80, 220, 255, 220);
+        constexpr ImU32 k_BorderHotColor = IM_COL32(255, 255, 255, 255);
+
         /** A texel's place on screen, given where the image was drawn and its scale. */
         ImVec2 ToScreen(const ImVec2 InImageMin, const float InScale, const Vector2F& InTexel)
         {
             return ImVec2(InImageMin.x + InTexel.x * InScale, InImageMin.y + InTexel.y * InScale);
+        }
+
+        bool TakesLeft(const ERectEdge InLines)
+        {
+            return InLines == ERectEdge::Left || InLines == ERectEdge::TopLeft || InLines == ERectEdge::BottomLeft;
+        }
+
+        bool TakesRight(const ERectEdge InLines)
+        {
+            return InLines == ERectEdge::Right || InLines == ERectEdge::TopRight || InLines == ERectEdge::BottomRight;
+        }
+
+        bool TakesTop(const ERectEdge InLines)
+        {
+            return InLines == ERectEdge::Top || InLines == ERectEdge::TopLeft || InLines == ERectEdge::TopRight;
+        }
+
+        bool TakesBottom(const ERectEdge InLines)
+        {
+            return InLines == ERectEdge::Bottom || InLines == ERectEdge::BottomLeft || InLines == ERectEdge::BottomRight;
+        }
+
+        /**
+         * A frame's four border lines, drawn over the frame placed at InFrameMin (screen) at InScale.
+         * InHot lines are drawn brighter.
+         */
+        void DrawBorderLines(ImDrawList& InDraw, const SpriteFrame& InFrame, const ImVec2 InFrameMin, const float InScale,
+                             const ERectEdge InHot, const float InThickness)
+        {
+            const float lLeft   = InFrameMin.x + InFrame.Border.Left * InScale;
+            const float lRight  = InFrameMin.x + (InFrame.Size.x - InFrame.Border.Right) * InScale;
+            const float lTop    = InFrameMin.y + InFrame.Border.Top * InScale;
+            const float lBottom = InFrameMin.y + (InFrame.Size.y - InFrame.Border.Bottom) * InScale;
+            const float lMinX   = InFrameMin.x;
+            const float lMaxX   = InFrameMin.x + InFrame.Size.x * InScale;
+            const float lMinY   = InFrameMin.y;
+            const float lMaxY   = InFrameMin.y + InFrame.Size.y * InScale;
+
+            const auto lColor = [](const bool bInHot) { return bInHot ? k_BorderHotColor : k_BorderColor; };
+
+            InDraw.AddLine(ImVec2(lLeft, lMinY),  ImVec2(lLeft, lMaxY),   lColor(TakesLeft(InHot)),   InThickness);
+            InDraw.AddLine(ImVec2(lRight, lMinY), ImVec2(lRight, lMaxY),  lColor(TakesRight(InHot)),  InThickness);
+            InDraw.AddLine(ImVec2(lMinX, lTop),   ImVec2(lMaxX, lTop),    lColor(TakesTop(InHot)),    InThickness);
+            InDraw.AddLine(ImVec2(lMinX, lBottom), ImVec2(lMaxX, lBottom), lColor(TakesBottom(InHot)), InThickness);
+        }
+
+        /** The mouse cursor that says which way the lines move. */
+        ImGuiMouseCursor CursorFor(const ERectEdge InLines)
+        {
+            const bool bX = TakesLeft(InLines) || TakesRight(InLines);
+            const bool bY = TakesTop(InLines) || TakesBottom(InLines);
+            if (bX && bY) { return ImGuiMouseCursor_ResizeAll; }
+            if (bX)       { return ImGuiMouseCursor_ResizeEW; }
+            if (bY)       { return ImGuiMouseCursor_ResizeNS; }
+            return ImGuiMouseCursor_Arrow;
         }
     }
 
@@ -44,6 +104,7 @@ namespace Opaax::Editor
         {
             m_Selected      = -1;
             m_bDraggingRect = false;
+            m_BorderLines   = ERectEdge::None;
         }
 
         DrawSettings(*lSheet);
@@ -58,6 +119,7 @@ namespace Opaax::Editor
         ImGui::Separator();
 
         DrawSelectedFrame(*lSheet);
+        DrawFrameView(*lSheet, lTexture);
         ImGui::Separator();
 
         DrawFrameList(*lSheet);
@@ -125,6 +187,16 @@ namespace Opaax::Editor
             const ImVec2 lMax = ToScreen(lImgMin, lScale, { lFrame.Offset.x + lFrame.Size.x, lFrame.Offset.y + lFrame.Size.y });
 
             lDraw->AddRect(lMin, lMax, bSelected ? k_SelectedColor : k_FrameColor, 0.f, 0, bSelected ? 2.f : 1.f);
+        }
+
+        // The selected frame's border: shown here, dragged in the frame view below.
+        if (m_Selected >= 0)
+        {
+            const SpriteFrame& lFrame = InSheet.Frames[static_cast<Uint32>(m_Selected)];
+            if (!lFrame.Border.IsZero())
+            {
+                DrawBorderLines(*lDraw, lFrame, ToScreen(lImgMin, lScale, lFrame.Offset), lScale, ERectEdge::None, 1.f);
+            }
         }
 
         if (lScale > 0.f)
@@ -281,6 +353,89 @@ namespace Opaax::Editor
         ImGui::PushID(static_cast<int>(lIndex));
         DrawProperties(m_Context.Widgets, InSheet.Frames[lIndex]);
         ImGui::PopID();
+    }
+
+    void SpriteSheetEditor::DrawFrameView(SpriteSheet& InSheet, const Texture2D* InTexture)
+    {
+        if (m_Selected < 0 || InTexture == nullptr || InTexture->GetTexture() == nullptr
+            || InTexture->GetWidth() == 0u || InTexture->GetHeight() == 0u)
+        {
+            m_BorderLines = ERectEdge::None;
+            return;
+        }
+
+        SpriteFrame& lFrame = InSheet.Frames[static_cast<Uint32>(m_Selected)];
+        if (lFrame.Size.x <= 0.f || lFrame.Size.y <= 0.f)
+        {
+            return;
+        }
+
+        ImGui::SeparatorText("Slice border");
+
+        // The frame alone, as wide as the window, no taller than MAX_FRAME_VIEW_HEIGHT.
+        const float  lAvailable = Maths::Max(ImGui::GetContentRegionAvail().x, 64.f);
+        const float  lScale     = Maths::Min(lAvailable / lFrame.Size.x, MAX_FRAME_VIEW_HEIGHT / lFrame.Size.y);
+        const ImVec2 lSize(lFrame.Size.x * lScale, lFrame.Size.y * lScale);
+        const ImVec2 lMin = ImGui::GetCursorScreenPos();
+        const ImVec2 lMax(lMin.x + lSize.x, lMin.y + lSize.y);
+
+        // Held for the whole drag: the window records it as one undo step.
+        ImGui::InvisibleButton("##frameview", lSize);
+        const bool bClicked = ImGui::IsItemClicked(ImGuiMouseButton_Left);
+        const bool bHeld    = ImGui::IsItemActive();
+        const bool bHovered = ImGui::IsItemHovered();
+
+        ImDrawList* const lDraw = ImGui::GetWindowDrawList();
+
+        const EditorImage lImage = m_Context.UIBackend.GetTextureImage(*InTexture->GetTexture());
+        if (lImage.IsValid())
+        {
+            // The frame's part of the image, between the backend's own corner UVs.
+            const float  lTexW = static_cast<float>(InTexture->GetWidth());
+            const float  lTexH = static_cast<float>(InTexture->GetHeight());
+            const auto   lU    = [&lImage](const float InT) { return lImage.UV0.x + (lImage.UV1.x - lImage.UV0.x) * InT; };
+            const auto   lV    = [&lImage](const float InT) { return lImage.UV0.y + (lImage.UV1.y - lImage.UV0.y) * InT; };
+            const ImVec2 lUV0(lU(lFrame.Offset.x / lTexW), lV(lFrame.Offset.y / lTexH));
+            const ImVec2 lUV1(lU((lFrame.Offset.x + lFrame.Size.x) / lTexW), lV((lFrame.Offset.y + lFrame.Size.y) / lTexH));
+
+            lDraw->AddRectFilled(lMin, lMax, IM_COL32(30, 30, 34, 255));
+            lDraw->AddImage(static_cast<ImTextureID>(lImage.Handle), lMin, lMax, lUV0, lUV1);
+        }
+        lDraw->AddRect(lMin, lMax, k_SelectedColor);
+
+        // The cursor in texture pixels from the frame's top-left corner.
+        const ImVec2   lMouse  = ImGui::GetIO().MousePos;
+        const Vector2F lCursor = { (lMouse.x - lMin.x) / lScale, (lMouse.y - lMin.y) / lScale };
+        const float    lGrab   = GRAB_THICKNESS / lScale;
+
+        if (bClicked)
+        {
+            m_BorderLines = SheetEditing::BorderLinesUnder(lFrame.Border, lFrame.Size, lCursor, lGrab);
+        }
+        else if (!bHeld)
+        {
+            m_BorderLines = ERectEdge::None;
+        }
+
+        if (m_BorderLines != ERectEdge::None && bHeld)
+        {
+            lFrame.Border = SheetEditing::DragBorder(lFrame.Border, lFrame.Size, m_BorderLines, lCursor);
+        }
+
+        // The lines the cursor would take, or holds, are lit, and the cursor says which way they move.
+        const ERectEdge lHot = (m_BorderLines != ERectEdge::None)
+                                   ? m_BorderLines
+                                   : (bHovered ? SheetEditing::BorderLinesUnder(lFrame.Border, lFrame.Size, lCursor, lGrab)
+                                               : ERectEdge::None);
+        if (lHot != ERectEdge::None)
+        {
+            ImGui::SetMouseCursor(CursorFor(lHot));
+        }
+
+        DrawBorderLines(*lDraw, lFrame, lMin, lScale, lHot, 2.f);
+
+        ImGui::TextDisabled("Drag a line: L %.0f  R %.0f  T %.0f  B %.0f px", lFrame.Border.Left, lFrame.Border.Right,
+                            lFrame.Border.Top, lFrame.Border.Bottom);
     }
 
     void SpriteSheetEditor::DrawFrameList(const SpriteSheet& InSheet)
