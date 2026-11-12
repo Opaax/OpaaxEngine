@@ -8,6 +8,7 @@
 #include "Core/String/OpaaxStringID.hpp"
 #include "Editor/UI/EditorRectGeometry.h"   // ERectEdge
 #include "Renderer/Textures/SpriteSheet.h"
+#include "UI/UISlice.h"
 
 namespace Opaax::Editor
 {
@@ -186,6 +187,67 @@ namespace Opaax::Editor
             }
 
             return lBorder;
+        }
+
+        // =============================================================================
+        // The sliced preview: what a UI image or button draws with a frame
+        // =============================================================================
+
+        /** One preview quad: a rect from the preview's top-left (Y down) and the texture's part it shows. */
+        struct PreviewQuad
+        {
+            Vector2F Min   = { 0.f, 0.f };   // canvas units from the preview's top-left
+            Vector2F Max   = { 0.f, 0.f };
+            Vector2F UVMin = { 0.f, 0.f };   // fractions of the texture from its top-left: UVMin is the quad's top-left
+            Vector2F UVMax = { 1.f, 1.f };
+        };
+
+        /**
+         * InFrame drawn over a InPreviewSize rect at InBorderScale, sliced with its own border as UI images
+         * and buttons slice it (BuildSlicedQuads), in the editor's orientation: Y down, UVs from the texture's
+         * top-left. No border gives one quad.
+         * @param InTextureSize The sheet's texture, in pixels
+         */
+        inline TDynArray<PreviewQuad> PreviewQuads(const SpriteFrame& InFrame, const Vector2F InTextureSize,
+                                                   const Vector2F InPreviewSize, const float InBorderScale)
+        {
+            TDynArray<PreviewQuad> lOut;
+            if (InTextureSize.x <= 0.f || InTextureSize.y <= 0.f || InFrame.Size.x <= 0.f || InFrame.Size.y <= 0.f
+                || InPreviewSize.x <= 0.f || InPreviewSize.y <= 0.f)
+            {
+                return lOut;
+            }
+
+            // The UI's own maths, in its space: Y up, UVs 0..1 of the frame with V up.
+            const Bounds2D    lRect = Bounds2D::FromMinMax({ 0.f, 0.f }, InPreviewSize);
+            TDynArray<UIQuad> lQuads;
+            if (InFrame.Border.IsZero())
+            {
+                lQuads.emplace_back().Bounds = lRect;
+            }
+            else
+            {
+                BuildSlicedQuads(lRect, InFrame.Border, InBorderScale, InFrame.Size, lQuads);
+            }
+
+            lOut.reserve(lQuads.size());
+            for (const UIQuad& lQuad : lQuads)
+            {
+                const Vector2F lMin = lQuad.Bounds.Min();
+                const Vector2F lMax = lQuad.Bounds.Max();
+
+                PreviewQuad& lPreview = lOut.emplace_back();
+                lPreview.Min = { lMin.x, InPreviewSize.y - lMax.y };
+                lPreview.Max = { lMax.x, InPreviewSize.y - lMin.y };
+
+                // V up in the frame becomes rows down from the texture's top.
+                lPreview.UVMin = { (InFrame.Offset.x + lQuad.UVMin.x * InFrame.Size.x) / InTextureSize.x,
+                                   (InFrame.Offset.y + (1.f - lQuad.UVMax.y) * InFrame.Size.y) / InTextureSize.y };
+                lPreview.UVMax = { (InFrame.Offset.x + lQuad.UVMax.x * InFrame.Size.x) / InTextureSize.x,
+                                   (InFrame.Offset.y + (1.f - lQuad.UVMin.y) * InFrame.Size.y) / InTextureSize.y };
+            }
+
+            return lOut;
         }
     }
 }
