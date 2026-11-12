@@ -120,6 +120,7 @@ namespace Opaax::Editor
 
         DrawSelectedFrame(*lSheet);
         DrawFrameView(*lSheet, lTexture);
+        DrawPreview(*lSheet, lTexture);
         ImGui::Separator();
 
         DrawFrameList(*lSheet);
@@ -436,6 +437,67 @@ namespace Opaax::Editor
 
         ImGui::TextDisabled("Drag a line: L %.0f  R %.0f  T %.0f  B %.0f px", lFrame.Border.Left, lFrame.Border.Right,
                             lFrame.Border.Top, lFrame.Border.Bottom);
+    }
+
+    void SpriteSheetEditor::DrawPreview(const SpriteSheet& InSheet, const Texture2D* InTexture)
+    {
+        if (m_Selected < 0 || InTexture == nullptr || InTexture->GetTexture() == nullptr)
+        {
+            return;
+        }
+
+        const SpriteFrame& lFrame = InSheet.Frames[static_cast<Uint32>(m_Selected)];
+        if (lFrame.Size.x <= 0.f || lFrame.Size.y <= 0.f)
+        {
+            return;
+        }
+
+        ImGui::SeparatorText("Preview");
+
+        // The window's own: a preview size and scale, not saved with the sheet.
+        ImGui::DragFloat2("Size##preview", &m_PreviewSize.x, 1.f, 1.f, 4096.f, "%.0f");
+        ImGui::DragFloat("BorderScale##preview", &m_PreviewScale, 0.01f, 0.01f, 16.f, "%.2f");
+        ImGui::SameLine();
+        ImGui::TextDisabled("(?)");
+        ImGui::SetItemTooltip("A UI image or button of this size (canvas units) showing this frame,\n"
+                              "with this BorderScale. Only for this window: nothing is saved.");
+
+        const Vector2F lTextureSize = { static_cast<float>(InTexture->GetWidth()), static_cast<float>(InTexture->GetHeight()) };
+        const TDynArray<SheetEditing::PreviewQuad> lQuads =
+            SheetEditing::PreviewQuads(lFrame, lTextureSize, m_PreviewSize, m_PreviewScale);
+        if (lQuads.empty())
+        {
+            return;
+        }
+
+        // One canvas unit is one screen pixel, shrunk when the preview is wider than the window.
+        const float  lAvailable = Maths::Max(ImGui::GetContentRegionAvail().x, 64.f);
+        const float  lFit       = Maths::Min(1.f, lAvailable / m_PreviewSize.x);
+        const ImVec2 lMin       = ImGui::GetCursorScreenPos();
+        const ImVec2 lSize(m_PreviewSize.x * lFit, m_PreviewSize.y * lFit);
+        ImGui::Dummy(lSize);
+
+        ImDrawList* const lDraw = ImGui::GetWindowDrawList();
+        lDraw->AddRectFilled(lMin, ImVec2(lMin.x + lSize.x, lMin.y + lSize.y), IM_COL32(30, 30, 34, 255));
+
+        const EditorImage lImage = m_Context.UIBackend.GetTextureImage(*InTexture->GetTexture());
+        if (!lImage.IsValid())
+        {
+            return;
+        }
+
+        // The texture's fractions to the backend's own corner UVs.
+        const auto lU = [&lImage](const float InT) { return lImage.UV0.x + (lImage.UV1.x - lImage.UV0.x) * InT; };
+        const auto lV = [&lImage](const float InT) { return lImage.UV0.y + (lImage.UV1.y - lImage.UV0.y) * InT; };
+
+        for (const SheetEditing::PreviewQuad& lQuad : lQuads)
+        {
+            lDraw->AddImage(static_cast<ImTextureID>(lImage.Handle),
+                            ImVec2(lMin.x + lQuad.Min.x * lFit, lMin.y + lQuad.Min.y * lFit),
+                            ImVec2(lMin.x + lQuad.Max.x * lFit, lMin.y + lQuad.Max.y * lFit),
+                            ImVec2(lU(lQuad.UVMin.x), lV(lQuad.UVMin.y)),
+                            ImVec2(lU(lQuad.UVMax.x), lV(lQuad.UVMax.y)));
+        }
     }
 
     void SpriteSheetEditor::DrawFrameList(const SpriteSheet& InSheet)

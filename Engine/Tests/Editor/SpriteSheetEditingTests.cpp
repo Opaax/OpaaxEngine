@@ -144,3 +144,90 @@ TEST_CASE("SheetEditing: a dragged line lands on whole pixels, inside the frame,
     const Margin lOut = SheetEditing::DragBorder(lBorder, lSize, ERectEdge::Bottom, { 50.f, 400.f });
     CHECK(lOut.Bottom == doctest::Approx(0.f));
 }
+
+// =============================================================================
+// The sliced preview
+// =============================================================================
+namespace
+{
+    /** Bhop's case: the 256 px Normal cell at (256, 0) of a 512x512 sheet, a 112/112/85/112 border. */
+    SpriteFrame BracketFrame()
+    {
+        SpriteFrame lFrame = MakeFrame("Normal", { 256.f, 0.f }, { 256.f, 256.f });
+        lFrame.Border      = Margin{ 112.f, 112.f, 85.f, 112.f };
+        return lFrame;
+    }
+
+    const SheetEditing::PreviewQuad* PreviewAt(const TDynArray<SheetEditing::PreviewQuad>& InQuads, const Vector2F InMin)
+    {
+        for (const SheetEditing::PreviewQuad& lQuad : InQuads)
+        {
+            if (Maths::Abs(lQuad.Min.x - InMin.x) < 0.01f && Maths::Abs(lQuad.Min.y - InMin.y) < 0.01f)
+            {
+                return &lQuad;
+            }
+        }
+        return nullptr;
+    }
+}
+
+TEST_CASE("SheetEditing: the preview's quads are the UI's slice, one for one, turned Y down")
+{
+    const SpriteFrame lFrame = BracketFrame();
+
+    const TDynArray<SheetEditing::PreviewQuad> lPreview =
+        SheetEditing::PreviewQuads(lFrame, { 512.f, 512.f }, { 420.f, 90.f }, 0.4f);
+
+    TDynArray<UIQuad> lUI;
+    BuildSlicedQuads(Bounds2D::FromMinMax({ 0.f, 0.f }, { 420.f, 90.f }), lFrame.Border, 0.4f, lFrame.Size, lUI);
+
+    REQUIRE(lPreview.size() == 9u);
+    REQUIRE(lPreview.size() == lUI.size());
+    for (Uint64 lIndex = 0; lIndex < lUI.size(); ++lIndex)
+    {
+        CAPTURE(lIndex);
+        CHECK(lPreview[lIndex].Max.x - lPreview[lIndex].Min.x == doctest::Approx(lUI[lIndex].Bounds.Size().x));
+        CHECK(lPreview[lIndex].Max.y - lPreview[lIndex].Min.y == doctest::Approx(lUI[lIndex].Bounds.Size().y));
+        CHECK(lPreview[lIndex].Min.y == doctest::Approx(90.f - lUI[lIndex].Bounds.Max().y));
+    }
+}
+
+TEST_CASE("SheetEditing: the preview's top-left quad shows the frame's top-left pixels, at the scale")
+{
+    const SpriteFrame lFrame = BracketFrame();
+
+    const TDynArray<SheetEditing::PreviewQuad> lQuads =
+        SheetEditing::PreviewQuads(lFrame, { 512.f, 512.f }, { 420.f, 90.f }, 0.4f);
+
+    const SheetEditing::PreviewQuad* lTopLeft = PreviewAt(lQuads, { 0.f, 0.f });
+    REQUIRE(lTopLeft != nullptr);
+    CHECK(lTopLeft->Max.x == doctest::Approx(112.f * 0.4f));
+    CHECK(lTopLeft->Max.y == doctest::Approx(112.f * 0.4f));   // the top border, not the bottom one
+    CHECK(lTopLeft->UVMin.x == doctest::Approx(256.f / 512.f));
+    CHECK(lTopLeft->UVMin.y == doctest::Approx(0.f));
+    CHECK(lTopLeft->UVMax.x == doctest::Approx((256.f + 112.f) / 512.f));
+    CHECK(lTopLeft->UVMax.y == doctest::Approx(112.f / 512.f));
+
+    // The bottom-right one shows the frame's bottom-right pixels.
+    const SheetEditing::PreviewQuad* lBottomRight = PreviewAt(lQuads, { 420.f - 112.f * 0.4f, 90.f - 85.f * 0.4f });
+    REQUIRE(lBottomRight != nullptr);
+    CHECK(lBottomRight->UVMax.x == doctest::Approx(1.f));
+    CHECK(lBottomRight->UVMax.y == doctest::Approx(256.f / 512.f));
+    CHECK(lBottomRight->UVMin.y == doctest::Approx((256.f - 85.f) / 512.f));
+}
+
+TEST_CASE("SheetEditing: a frame with no border previews as one quad over the whole rect")
+{
+    const SpriteFrame lFrame = MakeFrame("Hatch", { 0.f, 256.f }, { 256.f, 256.f });
+
+    const TDynArray<SheetEditing::PreviewQuad> lQuads =
+        SheetEditing::PreviewQuads(lFrame, { 512.f, 512.f }, { 420.f, 90.f }, 1.f);
+
+    REQUIRE(lQuads.size() == 1u);
+    CHECK(lQuads[0].Max.x == doctest::Approx(420.f));
+    CHECK(lQuads[0].Max.y == doctest::Approx(90.f));
+    CHECK(lQuads[0].UVMin.y == doctest::Approx(0.5f));
+    CHECK(lQuads[0].UVMax.y == doctest::Approx(1.f));
+
+    CHECK(SheetEditing::PreviewQuads(lFrame, { 512.f, 512.f }, { 0.f, 90.f }, 1.f).empty());
+}

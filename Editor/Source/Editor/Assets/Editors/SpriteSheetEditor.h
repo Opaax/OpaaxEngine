@@ -25,7 +25,8 @@ namespace Opaax::Editor
     //   click selects the frame under it; dragging the selected frame's middle moves it, its edge or
     //   corner resizes it, inside the texture. Below: the grid and Slice (which replaces the frames),
     //   Auto-Name, the selected frame's fields, the frame alone enlarged with its slice border's four
-    //   lines (dragged there, in whole pixels), and the frame list.
+    //   lines (dragged there, in whole pixels), a preview of the frame sliced as the UI draws it, and the
+    //   frame list.
     // =============================================================================
     class SpriteSheetEditor final : public IAssetEditor
     {
@@ -73,6 +74,12 @@ namespace Opaax::Editor
          */
         void DrawFrameView(SpriteSheet& InSheet, const Texture2D* InTexture);
 
+        /**
+         * The selected frame as a UI image or button draws it: sliced with its border over a rect of the
+         * window's own Width x Height at Scale (not saved), shrunk to fit the window when wider.
+         */
+        void DrawPreview(const SpriteSheet& InSheet, const Texture2D* InTexture);
+
         /** One row per frame: its index, name and rect; the default is marked. */
         void DrawFrameList(const SpriteSheet& InSheet);
 
@@ -93,6 +100,10 @@ namespace Opaax::Editor
 
         /** The border lines held in the frame view (a corner is two), or None. */
         ERectEdge m_BorderLines = ERectEdge::None;
+
+        /** The preview's rect in canvas units and its border scale: the window's own, not saved. */
+        Vector2F m_PreviewSize  = { 420.f, 90.f };
+        float    m_PreviewScale = 1.f;
 
         /** Largest edge the image is drawn at, in pixels. */
         static constexpr float MAX_CANVAS_SIZE = 420.f;
