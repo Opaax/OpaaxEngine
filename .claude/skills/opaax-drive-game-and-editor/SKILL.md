@@ -91,8 +91,9 @@ another name then renamed), wait for `001.response.json`, repeat; send `app.quit
 - Use `world.wait` (game time) rather than `frames.wait` in anything that checks timing.
 - Find names first: `entity.list` (filter with `name` or `component`), then `entity.get` for values.
   Component fields have their saved names (`Transform/Position/x`, `Light2D/Intensity`).
-- Menus and HUD: `ui.list` names the game UI's widgets; `ui.click` clicks one by name (no pixel
-  guessing).
+- Menus and HUD: `ui.list` names the game UI's widgets (with how many quads each draws, and a
+  button's `state`); `ui.click` clicks one by name (no pixel guessing); `ui.hover` points at one,
+  then `input.key Mouse_Left press` holds it pressed for a screenshot.
 - Check with `expect.value` / `expect.count` / `expect.entity`: a script of checks is a test.
   `expect.quit` waits for the game to quit by itself (`QuitGame`). `"expectFailure": true` on a
   request checks a refusal: it passes when the command fails. `"expect": {...}` checks any answer

@@ -118,8 +118,9 @@ whole params. The line is checked against the declared parameters, and an error 
 | `input.rebind` | `action`, `context`, `default`, `key`, `policy` | Gives a mapping the `key` (`None` clears it) as a controls menu does: kept in the player's settings, not saved. `action` alone names a mapping only one known context has; `context` and `default` (the asset's key: `Move`'s `W` or `S`) tell several apart. `policy` settles a conflict within the context: `Refuse` (the default), `Swap` or `Replace`. Answers `result`, the mapping, its `key` and the `others` a swap or a replace changed. A refusal fails, its message starting with why (`Conflict`, `Reserved`, `Locked`, `InvalidKey`, `RefusedByGame`) |
 | `input.resetKeys` | `context`, `action`, `default` | Gives every mapping its asset's key again; `context` only that context's, `action` (named as `input.rebind` takes it) only that mapping. Answers as `input.keys` |
 | `input.capture` | `cancel` | Waits for the next key the player presses, as a menu's "press a key" does: `input.key` presses one, `input.keys` says what it took, and it rebinds nothing. `cancel: true` ends the one under way. Answers `capturing`, `captured` |
-| `ui.list` | `name` | The game UI's widgets: name, type, visible, centre and size in game-view pixels |
+| `ui.list` | `name` | The game UI's widgets: name, type, visible, centre and size in game-view pixels, `quads` (how many it draws: 9 for a sliced image); a button (any `UIButtonBase`) also answers its `state`: `Normal`, `Hovered`, `Pressed` or `Disabled` |
 | `ui.click` | `widget`, `frames` | Clicks a widget of the game's UI by name: the pointer moves to its centre, the left button is tapped |
+| `ui.hover` | `widget` | Moves the game's pointer to a widget's centre by name and answers once the widget is hovered; with `input.key Mouse_Left press` a script then sees it pressed |
 | `world.info` | | The active world: name, mode, paused, timeScale, entities, camera (its view) |
 | `world.pause` | `paused` | Pauses the playing world (`true`) or resumes it (`false`) |
 | `world.step` | | Runs one frame of the paused world, with the fixed steps it owes |
