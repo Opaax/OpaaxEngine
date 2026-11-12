@@ -186,7 +186,7 @@ mounted canvas's root sits in the screen, so a HUD's root stretches over it (anc
 | `UIPanel` | none: a container |
 | `UIImage` | `Texture` or `Sheet` + `Frame`, `Color`, `Border` (nine-slice), `Fill`, `FillAmount`, `FillBinding` |
 | `UIText` | `Text`, `Binding`, `Font` (a `.ttf`), `Size`, `Color`, `HAlign` (`Left`, `Center`, `Right`), `VAlign` (`Top`, `Middle`, `Bottom`), `bWrap`, `LineHeightScale`, `bKerning` |
-| `UIButton` | `Normal`, `Hovered`, `Pressed`, `Disabled` colours, `bEnabled`, `Texture` or `Sheet` + `Frame` |
+| `UIButton` | `Normal`, `Hovered`, `Pressed`, `Disabled` colours, `bIsEnabled`, `Texture` or `Sheet` + `Frame` |
 | `UIStack` | `Axis` (`Vertical`, `Horizontal`), `Spacing`, `Padding`, `ChildAlign` (`Start`, `Center`, `End`, `Stretch`), `bFitContent`: lays its children out in a row or a column |
 | `UIScrollBox` | `Axis`, `Spacing`, `Padding`, `ChildAlign` as a stack's (`Stretch` by default), `ScrollStep` (canvas units a notch of the wheel moves), `bDragToScroll`: a list that scrolls. Its children are laid out as in a stack and show only inside its rect; the wheel over it and a drag with the left button move them. When all of them show, it lets the wheel and presses through |
 | `UIMask` | `Texture` (a shape; empty = the rect), `bShowMaskGraphic`: clips its children, which are hit only inside its rect |
