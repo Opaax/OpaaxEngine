@@ -8,6 +8,8 @@
 #include "Renderer/Textures/SpriteSheet.h"   // complete: a widget class visits its sheet reference
 #include "Renderer/Textures/Texture2D.h"     // and its texture reference
 #include "Resources/Asset/AssetRef.h"
+#include "UI/UIButtonBase.h"
+#include "UI/UIImageSource.h"
 #include "UI/UIWidget.h"
 
 namespace Opaax
@@ -21,9 +23,9 @@ namespace Opaax
     //   Four state colours tint its art (texture or sheet frame). Add a UIText child for a label.
     //   It handles its pointer events, so clicks do not reach the game.
     // =============================================================================
-    class UIButton final : public UIWidget
+    class UIButton final : public UIButtonBase
     {
-        OPAAX_OBJECT(UIButton, UIWidget)
+        OPAAX_OBJECT(UIButton, UIButtonBase)
 
         // =============================================================================
         // Authored state
@@ -33,7 +35,7 @@ namespace Opaax
         LinearColor Hovered  = { 0.35f, 0.35f, 0.40f, 1.f };
         LinearColor Pressed  = { 0.15f, 0.15f, 0.18f, 1.f };
         LinearColor Disabled = { 0.20f, 0.20f, 0.20f, 0.5f };
-        bool        bEnabled = true;
+        //bool        bEnabled = true;
 
         /** The button's art, tinted by the state colour. The sheet wins over the texture. */
         TAssetRef<Texture2D> Texture;
@@ -45,15 +47,15 @@ namespace Opaax
                          OPAAX_PROP(Hovered),
                          OPAAX_PROP(Pressed),
                          OPAAX_PROP(Disabled),
-                         OPAAX_PROP(bEnabled),
+                         // OPAAX_PROP(bEnabled),
                          OPAAX_PROP(Texture),
                          OPAAX_PROP(Sheet).SetTooltip("An icon cut from a sheet. Wins over Texture when set."),
                          OPAAX_PROP(Frame).SetRange(-1.f, 4096.f).SetDragStep(1.f).SetTooltip("-1 is the sheet's own default frame."))
 
         /** Fired on a click (Down + Up inside, enabled). */
-        FOnUIClick OnClick;
+       // FOnUIClick OnClick;
 
-        void        SetEnabled(bool bInEnabled);
+        //void        SetEnabled(bool bInEnabled);
         void        SetTexture(ITexture2D* InTexture);
         ITexture2D* GetTexture() const noexcept { return m_Texture; }
 
@@ -61,10 +63,17 @@ namespace Opaax
         // UIWidget
         // =============================================================================
     public:
-        EUIReply OnPointerEvent(const UIPointerEvent& InEvent) override;
+        //EUIReply OnPointerEvent(const UIPointerEvent& InEvent) override;
 
     protected:
-        void Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads) override;
+        //void Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads) override;
+
+        virtual void RebuildHoveredState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads);
+        virtual void RebuildDisabledState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads);
+        virtual void RebuildPressedState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads);
+        virtual void RebuildNormalState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads); 
+        
+        bool ResolveImage(const UIBuildContext& InContext,TDynArray<UIQuad>& OutQuads, const LinearColor& InColor);
 
         // =============================================================================
         // Members

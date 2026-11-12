@@ -1,0 +1,99 @@
+﻿#include "UIButtonBase.h"
+
+#include "Renderer/Text/FontStyle.h"
+
+void Opaax::UIButtonBase::SetEnabled(bool bInEnabled)
+{
+    bIsEnabled = bInEnabled;
+    InvalidateContent();
+}
+
+Opaax::EUIReply Opaax::UIButtonBase::OnPointerEvent(const UIPointerEvent& InEvent)
+{
+    // A disabled button does not take clicks (they fall through).
+    if (!bIsEnabled)
+    {
+        if (bWasEnabled)
+        {
+            bWasEnabled = false;
+            
+            OnDisabled.Broadcast();
+        }
+        
+        return EUIReply::Unhandled;
+    }
+    
+    {
+        //Trigger enable if needed
+        if (!bWasEnabled)
+        {
+            bWasEnabled = true;
+            OnEnabled.Broadcast();
+        }
+    }
+    
+    switch (InEvent.Type)
+    {
+    case EUIPointerEventType::Enter:
+        bIsHovered = true;
+        InvalidateContent();
+        OnHoveredStart.Broadcast();
+        return EUIReply::Unhandled;   // hover is never consumed
+
+    case EUIPointerEventType::Leave:
+        bIsHovered = false;
+        InvalidateContent();
+        
+        if (bIsPressed)
+        {
+            bIsPressed = false;
+            OnPressedStart.Broadcast();
+        }
+        
+        OnHoveredStop.Broadcast();
+        
+        return EUIReply::Unhandled;
+
+    case EUIPointerEventType::Down:
+        if (InEvent.Button != EUIPointerButton::Primary)
+        {
+            return EUIReply::Unhandled;
+        }
+        
+        bIsPressed = true;
+        InvalidateContent();
+        
+        OnPressedStart.Broadcast();
+        
+        return EUIReply::Handled;
+
+    case EUIPointerEventType::Up:
+        {
+            if (InEvent.Button != EUIPointerButton::Primary) { return EUIReply::Unhandled; }
+
+            const bool lWasPressed = bIsPressed;
+            bIsPressed = false;
+            InvalidateContent();
+
+            // A click needs the release inside; a drag-off cancels but is still consumed (we captured it).
+            if (lWasPressed && GetBounds().Contains(InEvent.Position))
+            {
+                OnPressedStop.Broadcast();
+                OnClick.Broadcast();
+            }
+            
+            return EUIReply::Handled;
+        }
+
+    default:
+        return UIWidget::OnPointerEvent(InEvent);
+    }
+}
+
+void Opaax::UIButtonBase::Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
+{
+    if      (!bIsEnabled)   RebuildDisabledState(InContext, OutQuads);
+    else if (bIsPressed)    RebuildPressedState(InContext, OutQuads);
+    else if (bIsHovered)    RebuildHoveredState(InContext, OutQuads);
+    else                    RebuildNormalState(InContext, OutQuads);
+}

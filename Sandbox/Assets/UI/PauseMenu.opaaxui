@@ -51,10 +51,10 @@
             },
             {
                 "Border": {
-                    "Bottom": 0.0,
-                    "Left": 0.0,
-                    "Right": 0.0,
-                    "Top": 0.0
+                    "Bottom": 50.0,
+                    "Left": 50.0,
+                    "Right": 50.0,
+                    "Top": 50.0
                 },
                 "Children": [
                     {
@@ -204,8 +204,8 @@
                                 "Sheet": "",
                                 "Texture": "",
                                 "Type": "UIButton",
-                                "bEnabled": true,
                                 "bHitTestable": true,
+                                "bIsEnabled": true,
                                 "bVisible": true
                             },
                             {
@@ -307,8 +307,8 @@
                                 "Sheet": "",
                                 "Texture": "",
                                 "Type": "UIButton",
-                                "bEnabled": true,
                                 "bHitTestable": true,
+                                "bIsEnabled": true,
                                 "bVisible": true
                             }
                         ],
@@ -384,7 +384,7 @@
                     }
                 },
                 "Sheet": "",
-                "Texture": "",
+                "Texture": "UI/Panel9.png",
                 "Type": "UIImage",
                 "bHitTestable": true,
                 "bVisible": true
