@@ -16,8 +16,30 @@ namespace Opaax
 
     DECLARE_MULTICAST_DELEGATE(FButtonEventDelegate);
 
+    /** What a button shows: disabled wins, then pressed, then hovered. */
+    enum class EUIButtonState : Uint8
+    {
+        Normal,
+        Hovered,
+        Pressed,
+        Disabled
+    };
+
+    inline const char* ToString(const EUIButtonState InState) noexcept
+    {
+        switch (InState)
+        {
+            case EUIButtonState::Normal:   return "Normal";
+            case EUIButtonState::Hovered:  return "Hovered";
+            case EUIButtonState::Pressed:  return "Pressed";
+            case EUIButtonState::Disabled: return "Disabled";
+        }
+        return "Normal";
+    }
+
     // =============================================================================
-    // UIButtonBase — 
+    // UIButtonBase — a clickable widget: keeps its state from the pointer, fires the events, and
+    //   rebuilds with the function of its state. A subclass draws each state.
     // =============================================================================
     class UIButtonBase : public UIWidget
     {
@@ -38,6 +60,9 @@ namespace Opaax
     public:
         void SetEnabled(bool bInEnabled);
         bool IsEnabled() const noexcept { return bIsEnabled;  }
+
+        /** The state shown now: Disabled, else Pressed, else Hovered, else Normal. */
+        EUIButtonState GetState() const noexcept;
 
         // =============================================================================
         // Override

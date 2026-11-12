@@ -27,7 +27,7 @@
         "params": {
             "entity": "Hud",
             "path": "UIProbe/Widgets",
-            "equals": 4
+            "equals": 6
         }
     },
     {
@@ -38,7 +38,13 @@
         },
         "expect": {
             "widgets": [
-                { "name": "WideImage", "type": "UIImage", "visible": true, "width": 280.0, "height": 60.0 }
+                {
+                    "name": "WideImage",
+                    "type": "UIImage",
+                    "visible": true,
+                    "width": 280.0,
+                    "height": 60.0
+                }
             ]
         }
     },
@@ -50,7 +56,11 @@
         },
         "expect": {
             "widgets": [
-                { "name": "SquareImage", "type": "UIImage", "visible": true }
+                {
+                    "name": "SquareImage",
+                    "type": "UIImage",
+                    "visible": true
+                }
             ]
         }
     },
@@ -61,10 +71,243 @@
         }
     },
     {
-        "id": "screenshot-images",
+        "id": "wide-image-nine-quads",
+        "command": "ui.list",
+        "params": {
+            "name": "WideImage"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "WideImage",
+                    "quads": 9
+                }
+            ]
+        }
+    },
+    {
+        "id": "wide-button-normal",
+        "command": "ui.list",
+        "params": {
+            "name": "WideButton"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "WideButton",
+                    "type": "UIButton",
+                    "state": "Normal",
+                    "quads": 9
+                }
+            ]
+        }
+    },
+    {
+        "id": "big-button-normal",
+        "command": "ui.list",
+        "params": {
+            "name": "BigButton"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "BigButton",
+                    "state": "Normal",
+                    "quads": 9
+                }
+            ]
+        }
+    },
+    {
+        "id": "screenshot-normal",
         "command": "screenshot",
         "params": {
-            "path": "SlicedImages.png"
+            "path": "SlicedNormal.png"
+        }
+    },
+    {
+        "id": "hover-wide",
+        "command": "ui.hover",
+        "params": {
+            "widget": "WideButton"
+        }
+    },
+    {
+        "id": "wide-button-hovered",
+        "command": "ui.list",
+        "params": {
+            "name": "WideButton"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "WideButton",
+                    "state": "Hovered",
+                    "quads": 9
+                }
+            ]
+        }
+    },
+    {
+        "id": "screenshot-hovered",
+        "command": "screenshot",
+        "params": {
+            "path": "SlicedHovered.png"
+        }
+    },
+    {
+        "id": "press-wide",
+        "command": "input.key",
+        "params": {
+            "key": "Mouse_Left",
+            "action": "press"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "wide-button-pressed",
+        "command": "ui.list",
+        "params": {
+            "name": "WideButton"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "WideButton",
+                    "state": "Pressed",
+                    "quads": 9
+                }
+            ]
+        }
+    },
+    {
+        "id": "screenshot-pressed",
+        "command": "screenshot",
+        "params": {
+            "path": "SlicedPressed.png"
+        }
+    },
+    {
+        "id": "release-wide",
+        "command": "input.key",
+        "params": {
+            "key": "Mouse_Left",
+            "action": "release"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "wide-button-hovered-again",
+        "command": "ui.list",
+        "params": {
+            "name": "WideButton"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "WideButton",
+                    "state": "Hovered"
+                }
+            ]
+        }
+    },
+    {
+        "id": "hover-big",
+        "command": "ui.hover",
+        "params": {
+            "widget": "BigButton"
+        }
+    },
+    {
+        "id": "big-button-hovered",
+        "command": "ui.list",
+        "params": {
+            "name": "BigButton"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "BigButton",
+                    "state": "Hovered",
+                    "quads": 9
+                }
+            ]
+        }
+    },
+    {
+        "id": "wide-button-left",
+        "command": "ui.list",
+        "params": {
+            "name": "WideButton"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "WideButton",
+                    "state": "Normal"
+                }
+            ]
+        }
+    },
+    {
+        "id": "press-big",
+        "command": "input.key",
+        "params": {
+            "key": "Mouse_Left",
+            "action": "press"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "big-button-pressed",
+        "command": "ui.list",
+        "params": {
+            "name": "BigButton"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "BigButton",
+                    "state": "Pressed",
+                    "quads": 9
+                }
+            ]
+        }
+    },
+    {
+        "id": "screenshot-big-pressed",
+        "command": "screenshot",
+        "params": {
+            "path": "SlicedBigPressed.png"
+        }
+    },
+    {
+        "id": "release-big",
+        "command": "input.key",
+        "params": {
+            "key": "Mouse_Left",
+            "action": "release"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
         }
     }
 ]

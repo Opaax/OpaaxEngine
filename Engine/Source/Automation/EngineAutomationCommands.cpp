@@ -39,6 +39,7 @@
 #include "Renderer/Camera/CameraZoneStage.h"
 #include "Renderer/Camera/CameraShakeSourceComponent.h"
 #include "Renderer/Camera/CameraShakeSubsystem.h"
+#include "UI/UIButtonBase.h"
 #include "UI/UICanvas.h"
 #include "UI/UISubsystem.h"
 #include "UI/UIWidget.h"
@@ -118,14 +119,23 @@ namespace Opaax::EngineAutomation
                 const Vector2F  lCentre   = InCanvas.CanvasToScreen(lBounds.Center);
                 const float     lPerPixel = InCanvas.UnitsPerPixel();
 
-                OutList.push_back(nlohmann::json{
+                nlohmann::json lRow{
                     { "name",    InWidget.Name },
                     { "type",    InWidget.GetClass().GetName().CStr() },
                     { "visible", IsShown(InWidget) },
                     { "x",       lCentre.x },
                     { "y",       lCentre.y },
                     { "width",   lBounds.HalfExtent.x * 2.f / lPerPixel },
-                    { "height",  lBounds.HalfExtent.y * 2.f / lPerPixel } });
+                    { "height",  lBounds.HalfExtent.y * 2.f / lPerPixel },
+                    { "quads",   InWidget.GetQuads().size() } };
+
+                // Any button, the engine's or a game's, answers the state it shows.
+                if (InWidget.IsA<UIButtonBase>())
+                {
+                    lRow["state"] = ToString(static_cast<const UIButtonBase&>(InWidget).GetState());
+                }
+
+                OutList.push_back(Move(lRow));
             }
 
             for (const TStrongObjectPtr<UIWidget>& lChild : InWidget.GetChildren())
@@ -628,8 +638,9 @@ namespace Opaax::EngineAutomation
         void RegisterUI(ICommandRegistry& InCommands, IEngine& InEngine)
         {
             InCommands.Add(CommandSpec("ui.list",
-                "The game UI's widgets, depth-first: [{name, type, visible, x, y, width, height}], x and y their "
-                "centre in game-view pixels. Filter: {name}.")
+                "The game UI's widgets, depth-first: [{name, type, visible, x, y, width, height, quads}], x and y "
+                "their centre in game-view pixels, quads how many it draws; a button also answers its state "
+                "(Normal, Hovered, Pressed, Disabled). Filter: {name}.")
                     .Param("name", ECommandParamType::String, "only the widgets of this name").Optional(),
                 [&InEngine](const nlohmann::json& InParams)
                 {
@@ -667,6 +678,28 @@ namespace Opaax::EngineAutomation
                     AutomationResult lResult = AutomationResult::Ok(nlohmann::json{ { "x", lPixel.x }, { "y", lPixel.y } });
                     lResult.WaitFrames = Maths::Max(InParams.value("frames", DEFAULT_TAP_FRAMES), 1u);
                     lResult.AfterWait  = [&lInput] { Release(lInput, EKeyCode::Mouse_Left); };
+                    return lResult;
+                });
+
+            InCommands.Add(CommandSpec("ui.hover",
+                "Moves the game's pointer to the centre of the UI widget named {widget}, and answers {x, y} after "
+                "the frame that routes the move (the widget is then hovered).")
+                    .Param("widget", ECommandParamType::String, "the widget's name"),
+                [&InEngine](const nlohmann::json& InParams)
+                {
+                    OpaaxString     lError;
+                    UICanvas* const lCanvas = GameCanvas(InEngine, lError);
+                    Vector2F        lPixel  = { 0.f, 0.f };
+                    if (lCanvas == nullptr
+                        || !FindWidgetCentre(*lCanvas, InParams.value("widget", OpaaxString()), lPixel, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    InEngine.GetInput().OnMouseMoved(lPixel.x, lPixel.y);
+
+                    AutomationResult lResult = AutomationResult::Ok(nlohmann::json{ { "x", lPixel.x }, { "y", lPixel.y } });
+                    lResult.WaitFrames = 2;   // the move is routed, then the widget rebuilds
                     return lResult;
                 });
         }
