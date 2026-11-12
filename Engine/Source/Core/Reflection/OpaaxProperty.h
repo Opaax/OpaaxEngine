@@ -112,7 +112,7 @@ namespace Opaax
     }
 
     /**
-     * InMeta with its unset range and drag step taken from the group above (e.g. a UIMargin is pixels
+     * InMeta with its unset range and drag step taken from the group above (e.g. a Margin is pixels
      * in one place and a fraction in another). A field's own range still wins.
      */
     constexpr PropertyMeta InheritMeta(const PropertyMeta& InMeta, const PropertyMeta& InInherited) noexcept
