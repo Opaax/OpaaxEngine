@@ -65,7 +65,7 @@ TEST_CASE("UIWidget classes: a leaf lists the base's properties first, then its 
     CHECK(PropertyNames(UISafeArea::StaticClass()).size() == 5u + 1u);   // Insets
     CHECK(PropertyNames(UIStack::StaticClass()).size()    == 5u + 5u);   // Axis, Spacing, Padding, ChildAlign, bFitContent
     CHECK(PropertyNames(UIScrollBox::StaticClass()).size() == 5u + 6u);  // a stack's four, ScrollStep, bDragToScroll
-    CHECK(PropertyNames(UIImage::StaticClass()).size()    == 5u + 8u);   // Color ... FillBinding
+    CHECK(PropertyNames(UIImage::StaticClass()).size()    == 5u + 9u);   // Color ... BorderScale ... FillBinding
     CHECK(PropertyNames(UIButton::StaticClass()).size()   == 5u + 8u);   // bIsEnabled, four colours, Texture, Sheet, Frame
     CHECK(PropertyNames(UIText::StaticClass()).size()     == 5u + 10u);
 

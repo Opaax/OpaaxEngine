@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/Sliced.opaaxmap"
+    ],
+    "name": "Sliced",
+    "persistentMap": "Maps/Sliced.opaaxmap",
+    "version": 1
+}

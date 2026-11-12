@@ -37,8 +37,8 @@ namespace Opaax
 
     // =============================================================================
     // UIImage — a colour rect, or an image tinted by it (a texture, or a sheet frame; the sheet wins).
-    //   One quad, or nine with a Border (9-slice). FillAmount crops from the min edge (health bar)
-    //   and works with 9-slice too.
+    //   One quad, or nine with a border (9-slice): its own Border, else the sheet frame's. FillAmount
+    //   crops from the min edge (health bar) and works with 9-slice too.
     // =============================================================================
     class UIImage final : public UIWidget
     {
@@ -64,17 +64,24 @@ namespace Opaax
         Int32 Frame = -1;
 
         /**
-         * 9-slice border in texture pixels (the edges that do not stretch). All zero = one quad.
-         * Ignored without a texture.
+         * 9-slice border in texture pixels (the edges that do not stretch). All zero = the sheet
+         * frame's own border, if it has one. Ignored without a texture.
          */
         UIMargin Border;
+
+        /** Canvas units a border pixel takes on screen: sizes the corners and edges, not what they show. */
+        float BorderScale = 1.f;
 
         OPAAX_PROPERTIES(UIImage,
                          OPAAX_PROP(Color),
                          OPAAX_PROP(Texture),
                          OPAAX_PROP(Sheet).SetTooltip("An icon cut from a sheet. Wins over Texture when set."),
                          OPAAX_PROP(Frame).SetRange(-1.f, 4096.f).SetDragStep(1.f).SetTooltip("-1 is the sheet's own default frame."),
-                         OPAAX_PROP(Border).SetDragStep(1.f),   // pixels
+                         OPAAX_PROP(Border).SetDragStep(1.f)    // pixels
+                             .SetTooltip("9-slice border in texture pixels. All zero: the sheet frame's own."),
+                         OPAAX_PROP(BorderScale).SetRange(0.01f, 16.f).SetDragStep(0.01f)
+                             .SetTooltip("Canvas units a border pixel takes: 0.5 draws the corners\n"
+                                         "half as big, showing the same art."),
                          OPAAX_PROP(Fill),
                          OPAAX_PROP(FillAmount).SetRange(0.f, 1.f),
                          OPAAX_PROP(FillBinding).SetTooltip("Source.Property, pulled each frame into FillAmount."))
@@ -86,6 +93,7 @@ namespace Opaax
         void SetFill(EUIFill InFill, float InAmount);
         void SetFillAmount(float InAmount);
         void SetBorder(const UIMargin& InBorder);
+        void SetBorderScale(float InBorderScale);
 
         /**
          * A runtime texture, borrowed. Wins over the authored path when set.

@@ -65,6 +65,12 @@ namespace Opaax
         InvalidateContent();
     }
 
+    void UIImage::SetBorderScale(const float InBorderScale)
+    {
+        BorderScale = InBorderScale;
+        InvalidateContent();
+    }
+
     void UIImage::SetTexture(ITexture2D* InTexture)
     {
         m_Texture = InTexture;
@@ -114,24 +120,7 @@ namespace Opaax
             return;
         }
 
-        // A border needs an image to measure against (the frame size for a sheet); else one quad.
-        if (!Border.IsZero() && lImage.Texture != nullptr)
-        {
-            BuildSlicedQuads(GetBounds(), Border, lImage.SizePx, OutQuads);
-        }
-        else
-        {
-            OutQuads.emplace_back().Bounds = GetBounds();
-        }
-
-        for (UIQuad& lQuad : OutQuads)
-        {
-            lQuad.Color   = Color;
-            lQuad.Texture = lImage.Texture;
-        }
-
-        // The slice UVs are 0..1 of the image; a frame is a sub-rect of the sheet's texture.
-        MapQuadUVsInto(OutQuads, lImage.UVMin, lImage.UVMax);
+        BuildImageQuads(GetBounds(), lImage, Border, BorderScale, Color, OutQuads);
 
         // The fill clips what was emitted, from the min edge, with its UVs (the texture is cut,
         // not squashed), for 9 quads as for 1.

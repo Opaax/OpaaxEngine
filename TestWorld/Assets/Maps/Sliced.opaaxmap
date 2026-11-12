@@ -1,0 +1,97 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "BlendCurve": "EaseInOut",
+                    "BlendIn": 0.0,
+                    "OrthoSize": 300.0,
+                    "Priority": 0,
+                    "bRotateView": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "3708b72b852d450dba6b37c1d890426f",
+            "name": "Camera",
+            "ownerMap": "Sliced"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3499999940395355,
+                        "y": 0.4000000059604645,
+                        "z": 0.44999998807907104
+                    },
+                    "Frame": -1,
+                    "Layer": "Background",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 1100.0,
+                        "y": 620.0
+                    },
+                    "Texture": "/Engine/Textures/T_Checker_128.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "8bd9bdacce794adeb2881c036fb11535",
+            "name": "Backdrop",
+            "ownerMap": "Sliced"
+        },
+        {
+            "components": {
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                },
+                "UIProbe": {
+                    "Asset": "UI/Sliced.opaaxui",
+                    "Captured": "",
+                    "Clicks": 0,
+                    "CounterText": "",
+                    "GameClicks": 0,
+                    "Widgets": 0,
+                    "bCapture": false,
+                    "bCapturing": false,
+                    "bMounted": false
+                }
+            },
+            "guid": "d975435445824980a3b06f5b0a37e1c3",
+            "name": "Hud",
+            "ownerMap": "Sliced"
+        }
+    ],
+    "mapId": "Sliced",
+    "version": 4
+}
