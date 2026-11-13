@@ -185,6 +185,7 @@ set(OPAAX_TEST_SOURCES
     Physics/PhysicsSubsystemTests.cpp
 
     # RHI
+    RHI/BindGroupLayoutTests.cpp
     RHI/GLSLPortTests.cpp
     RHI/OpenGLDebugTests.cpp
 

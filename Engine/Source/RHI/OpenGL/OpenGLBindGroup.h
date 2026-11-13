@@ -1,16 +1,18 @@
 #pragma once
 
 #include "RHI/BindGroup.h"
+#include "Core/Log/Logger.h"
 #include "Core/OpaaxTypes.h"
 
 namespace Opaax
 {
-    class IUniformBuffer;
-    class ITexture2D;
+    class OpenGLUniformBuffer;
+
+    OPAAX_LOG_CATEGORY(OpenGLBindGroup);
 
     /**
-     * OpenGL IBindGroup: keeps the camera UBO and the textures, and binds the texture units in
-     * Bind. The UBO is bound at its own construction.
+     * OpenGL IBindGroup: keeps the uniform buffers and the textures, and binds them all in Bind:
+     * each buffer to its binding point, each texture to its unit.
      */
     class OpenGLBindGroup final : public IBindGroup
     {
@@ -28,20 +30,29 @@ namespace Opaax
     public:
         void SetUniformBuffer(IUniformBuffer& InUniformBuffer) override;
         void SetTexture(Uint32 InSlot, ITexture2D& InTexture)  override;
+        void SetTexture(Uint32 InSlot, const IFramebuffer& InFramebuffer) override;
         //~End IBindGroup interface
 
         // =============================================================================
         // Function
         // =============================================================================
     public:
-        // Called by OpenGLCommandBuffer::BindBindGroup: binds each texture to its unit.
+        // Called by OpenGLCommandBuffer::BindBindGroup.
         void Bind() const;
 
         // =============================================================================
         // Members
         // =============================================================================
     private:
-        IUniformBuffer*        m_UniformBuffer = nullptr;   // bound at its own construction
-        TDynArray<ITexture2D*> m_Textures;                  // sized to TextureSlotCount
+        /** A sampler slot holds a texture or a framebuffer's colour: at most one is set. */
+        struct TextureSlot
+        {
+            ITexture2D*         Texture     = nullptr;
+            const IFramebuffer* Framebuffer = nullptr;
+        };
+
+        BindGroupLayout                 m_Layout;
+        TDynArray<OpenGLUniformBuffer*> m_UniformBuffers;   // one per binding of the layout, same order
+        TDynArray<TextureSlot>          m_Textures;         // sized to TextureSlotCount
     };
 }

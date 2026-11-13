@@ -25,6 +25,8 @@ namespace Opaax
     // Batch constants. The per-batch limits come from RenderLimits (config).
     // =============================================================================
     static constexpr Uint32 SHADER_TEXTURE_SLOTS = 16;      // length of u_Textures[] in Sprite.glsl
+    static constexpr Uint32 CAMERA_UBO_BINDING   = 1;                          // CameraUBO in Sprite.glsl
+    static constexpr Uint32 LIGHTS_UBO_BINDING   = 3;                          // LightsUBO in Sprite.glsl
     static constexpr Uint32 SHADOW_MAP_SLOT      = SHADER_TEXTURE_SLOTS - 1;   // SHADOW_SLOT in Sprite.glsl
     static constexpr Uint32 AO_MAP_SLOT          = SHADER_TEXTURE_SLOTS - 2;   // AO_SLOT in Sprite.glsl
     static constexpr Uint32 MAX_BATCH_QUADS      = 65536;   // upper bound (~23 MB of vertices)
@@ -78,7 +80,7 @@ namespace Opaax
         TUniquePtr<IUniformBuffer> CameraUBO;  // binding 1: CameraBlock (std140)
         TUniquePtr<IUniformBuffer> LightsUBO;  // binding 3: LightsBlock2D (std140)
         TUniquePtr<IPipeline>      QuadPipeline;     // shader + layout + alpha blend
-        TUniquePtr<IBindGroup>     QuadBindGroup;    // camera UBO + 16 samplers
+        TUniquePtr<IBindGroup>     QuadBindGroup;    // camera and lights UBOs + 16 samplers
         ICommandBuffer*           Cmd          = nullptr;  // set in Begin, not owned
 
         QuadBatchLimits Limits;   // from RenderLimits, at Init
@@ -219,16 +221,18 @@ namespace Opaax
         m_Data->SlotTextures.assign(SHADER_TEXTURE_SLOTS, m_Data->WhiteTexture.get());
 
         m_Data->QuadShader   = InDevice.CreateShader(InShader);
-        m_Data->CameraUBO    = InDevice.CreateUniformBuffer(static_cast<Uint32>(sizeof(CameraBlock)), 1);
+        m_Data->CameraUBO    = InDevice.CreateUniformBuffer(static_cast<Uint32>(sizeof(CameraBlock)), CAMERA_UBO_BINDING);
 
         // No light yet: lit quads see a white ambient, i.e. they are drawn as is.
-        m_Data->LightsUBO = InDevice.CreateUniformBuffer(static_cast<Uint32>(sizeof(LightsBlock2D)), 3);
+        m_Data->LightsUBO = InDevice.CreateUniformBuffer(static_cast<Uint32>(sizeof(LightsBlock2D)), LIGHTS_UBO_BINDING);
         SetLighting(LightsBlock2D{});
         m_Data->QuadPipeline = InDevice.CreatePipeline(MakeSpritePipelineDesc(m_Data->QuadShader.get()));
 
         // Bind all 16 samplers; unused ones get the white texture.
-        m_Data->QuadBindGroup = InDevice.CreateBindGroup(BindGroupLayout{ 1u, SHADER_TEXTURE_SLOTS });
+        m_Data->QuadBindGroup = InDevice.CreateBindGroup(
+            BindGroupLayout{ { CAMERA_UBO_BINDING, LIGHTS_UBO_BINDING }, SHADER_TEXTURE_SLOTS });
         m_Data->QuadBindGroup->SetUniformBuffer(*m_Data->CameraUBO);
+        m_Data->QuadBindGroup->SetUniformBuffer(*m_Data->LightsUBO);
     }
 
     void Renderer2D::Shutdown()

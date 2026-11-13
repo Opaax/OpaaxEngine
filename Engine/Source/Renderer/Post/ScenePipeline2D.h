@@ -19,6 +19,7 @@ namespace Opaax
     class IShader;
     class ITexture2D;
     class IUniformBuffer;
+    class IBindGroup;
     class OffscreenRenderTarget;
     struct ShadowBlock2D;
 
@@ -168,6 +169,7 @@ namespace Opaax
         TUniquePtr<IShader>        m_TonemapShader;
         TUniquePtr<IPipeline>      m_TonemapPipeline;
         TUniquePtr<IUniformBuffer> m_PostUBO;
+        TUniquePtr<IBindGroup>     m_TonemapGroup;   // its block, the scene, the bloom
 
         // Shadows: the casters' coverage (R8), then a distance per light and direction (R16F).
         TUniquePtr<IFramebuffer>          m_Occlusion;
@@ -179,6 +181,7 @@ namespace Opaax
         TUniquePtr<IShader>        m_ShadowShader;
         TUniquePtr<IPipeline>      m_ShadowPipeline;
         TUniquePtr<IUniformBuffer> m_ShadowUBO;
+        TUniquePtr<IBindGroup>     m_ShadowGroup;    // its block, the occlusion map
 
         // Ambient occlusion: two small R8 maps the passes go back and forth between; [0] is the result.
         TUniquePtr<IFramebuffer>          m_AmbientOcclusion[2];
@@ -188,6 +191,7 @@ namespace Opaax
         TUniquePtr<IShader>        m_AmbientOcclusionShader;
         TUniquePtr<IPipeline>      m_AmbientOcclusionPipeline;
         TUniquePtr<IUniformBuffer> m_AmbientOcclusionUBO;
+        TUniquePtr<IBindGroup>     m_AmbientOcclusionGroup;   // its block, the pass's source
 
         // Bloom: a chain of HDR levels, each half the one before; [0] holds the result.
         TDynArray<TUniquePtr<IFramebuffer>>          m_BloomLevels;
@@ -197,5 +201,6 @@ namespace Opaax
         TUniquePtr<IPipeline>      m_BloomPipeline;      // writes
         TUniquePtr<IPipeline>      m_BloomAddPipeline;   // adds (the way back up)
         TUniquePtr<IUniformBuffer> m_BloomUBO;
+        TUniquePtr<IBindGroup>     m_BloomGroup;     // its block, the pass's source
     };
 }

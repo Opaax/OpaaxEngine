@@ -62,7 +62,10 @@ namespace Opaax
         //------------------------------------------------------------------------------
         // Get
 
-        /** Binds the colour attachment to texture unit InSlot, to be sampled by the next draws. */
+        /**
+         * Binds the colour attachment to texture unit InSlot. For the backend's bind groups: a pass
+         * gives the framebuffer to its group (IBindGroup::SetTexture) instead of calling this.
+         */
         virtual void BindColorTexture(Uint32 InSlot) const = 0;
 
         // Raw colour attachment handle, for editor display (ImGui::Image) only.

@@ -4,6 +4,7 @@
 
 #include "Renderer/Lighting/Lighting2D.h"
 #include "Renderer/RenderTarget.hpp"
+#include "RHI/BindGroup.h"
 #include "RHI/Framebuffer.h"
 #include "RHI/ICommandBuffer.h"
 #include "RHI/IRHIDevice.h"
@@ -26,6 +27,9 @@ namespace Opaax
 
         /** The bloom passes' block (BloomUBO in Bloom2D.glsl). */
         constexpr Uint32 BLOOM_UBO_BINDING = 6;
+
+        /** What the tonemap pass samples: the scene (unit 0) and the bloom (unit 1). */
+        constexpr Uint32 TONEMAP_TEXTURES = 2;
 
         /** The modes of Bloom2D.glsl. */
         constexpr Uint32 BLOOM_PASS_FIRST_DOWN = 0;
@@ -51,6 +55,15 @@ namespace Opaax
             lDesc.Blend     = InBlend;
             lDesc.DebugName = InName;
             return InDevice.CreatePipeline(lDesc);
+        }
+
+        /** What one post pass reads: its block and InTextures sampler slots, set before each draw. */
+        TUniquePtr<IBindGroup> MakePassGroup(IRHIDevice& InDevice, IUniformBuffer& InBlock, const Uint32 InBinding,
+                                             const Uint32 InTextures)
+        {
+            TUniquePtr<IBindGroup> lGroup = InDevice.CreateBindGroup(BindGroupLayout{ { InBinding }, InTextures });
+            lGroup->SetUniformBuffer(InBlock);
+            return lGroup;
         }
     }
 
@@ -94,12 +107,14 @@ namespace Opaax
         m_TonemapShader   = InDevice.CreateShader(InShaders.Tonemap);
         m_TonemapPipeline = MakeFullscreenPipeline(InDevice, *m_TonemapShader, "ScenePipeline2D::Tonemap");
         m_PostUBO         = InDevice.CreateUniformBuffer(static_cast<Uint32>(sizeof(Vector4F)), POST_UBO_BINDING);
+        m_TonemapGroup    = MakePassGroup(InDevice, *m_PostUBO, POST_UBO_BINDING, TONEMAP_TEXTURES);
 
         if (HasStages(InShaders.Shadow))
         {
             m_ShadowShader   = InDevice.CreateShader(InShaders.Shadow);
             m_ShadowPipeline = MakeFullscreenPipeline(InDevice, *m_ShadowShader, "ScenePipeline2D::Shadow");
             m_ShadowUBO      = InDevice.CreateUniformBuffer(static_cast<Uint32>(sizeof(ShadowBlock2D)), SHADOW_UBO_BINDING);
+            m_ShadowGroup    = MakePassGroup(InDevice, *m_ShadowUBO, SHADOW_UBO_BINDING, 1);
         }
         else
         {
@@ -113,6 +128,7 @@ namespace Opaax
                                                                 "ScenePipeline2D::AmbientOcclusion");
             m_AmbientOcclusionUBO      = InDevice.CreateUniformBuffer(static_cast<Uint32>(sizeof(Vector4F)),
                                                                       AMBIENT_OCCLUSION_UBO_BINDING);
+            m_AmbientOcclusionGroup    = MakePassGroup(InDevice, *m_AmbientOcclusionUBO, AMBIENT_OCCLUSION_UBO_BINDING, 1);
         }
         else
         {
@@ -126,6 +142,7 @@ namespace Opaax
             m_BloomAddPipeline = MakeFullscreenPipeline(InDevice, *m_BloomShader, "ScenePipeline2D::BloomAdd",
                                                         EBlendMode::Additive);
             m_BloomUBO         = InDevice.CreateUniformBuffer(static_cast<Uint32>(sizeof(Vector4F)), BLOOM_UBO_BINDING);
+            m_BloomGroup       = MakePassGroup(InDevice, *m_BloomUBO, BLOOM_UBO_BINDING, 1);
         }
         else
         {
@@ -137,6 +154,12 @@ namespace Opaax
 
     void ScenePipeline2D::Shutdown()
     {
+        // The groups first: they point at what follows.
+        m_TonemapGroup.reset();
+        m_ShadowGroup.reset();
+        m_AmbientOcclusionGroup.reset();
+        m_BloomGroup.reset();
+
         m_SceneTarget.reset();
         m_Scene.reset();
         m_TonemapPipeline.reset();   // before its shader
@@ -233,17 +256,11 @@ namespace Opaax
         // Every pixel is written: nothing to clear.
         InCmd.BeginRenderPass(InOutput, ELoadOp::Load, Vector4F{ 0.f, 0.f, 0.f, 1.f });
         InCmd.BindPipeline(*m_TonemapPipeline);
-        m_Scene->BindColorTexture(0);
 
         // Without bloom the unit still holds a texture; the shader does not read it.
-        if (lBloomLevels > 0)
-        {
-            m_BloomLevels[0]->BindColorTexture(1);
-        }
-        else
-        {
-            m_Scene->BindColorTexture(1);
-        }
+        m_TonemapGroup->SetTexture(0, *m_Scene);
+        m_TonemapGroup->SetTexture(1, lBloomLevels > 0 ? *m_BloomLevels[0] : *m_Scene);
+        InCmd.BindBindGroup(*m_TonemapGroup);
 
         InCmd.DrawFullscreen();
         InCmd.EndRenderPass();
@@ -307,7 +324,8 @@ namespace Opaax
         // Written whole, or added onto: nothing to clear either way.
         InCmd.BeginRenderPass(InTarget, ELoadOp::Load, Vector4F{ 0.f, 0.f, 0.f, 1.f });
         InCmd.BindPipeline(bInAdd ? *m_BloomAddPipeline : *m_BloomPipeline);
-        InSource.BindColorTexture(0);
+        m_BloomGroup->SetTexture(0, InSource);
+        InCmd.BindBindGroup(*m_BloomGroup);
         InCmd.DrawFullscreen();
         InCmd.EndRenderPass();
     }
@@ -364,7 +382,8 @@ namespace Opaax
         // Every texel is written: nothing to clear.
         InCmd.BeginRenderPass(*m_ShadowMapTarget, ELoadOp::Load, Vector4F{ 1.f, 1.f, 1.f, 1.f });
         InCmd.BindPipeline(*m_ShadowPipeline);
-        m_Occlusion->BindColorTexture(0);
+        m_ShadowGroup->SetTexture(0, *m_Occlusion);
+        InCmd.BindBindGroup(*m_ShadowGroup);
         InCmd.DrawFullscreen();
         InCmd.EndRenderPass();
 
@@ -425,7 +444,8 @@ namespace Opaax
         // Every texel is written: nothing to clear.
         InCmd.BeginRenderPass(InTarget, ELoadOp::Load, Vector4F{ 0.f, 0.f, 0.f, 1.f });
         InCmd.BindPipeline(*m_AmbientOcclusionPipeline);
-        InSource.BindColorTexture(0);
+        m_AmbientOcclusionGroup->SetTexture(0, InSource);
+        InCmd.BindBindGroup(*m_AmbientOcclusionGroup);
         InCmd.DrawFullscreen();
         InCmd.EndRenderPass();
     }
