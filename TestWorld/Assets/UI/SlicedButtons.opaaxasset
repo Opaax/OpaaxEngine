@@ -5,10 +5,10 @@
         "Frames": [
             {
                 "Border": {
-                    "Bottom": 85.0,
-                    "Left": 112.0,
-                    "Right": 112.0,
-                    "Top": 112.0
+                    "Bottom": 83.0,
+                    "Left": 116.0,
+                    "Right": 116.0,
+                    "Top": 115.0
                 },
                 "Name": "Normal",
                 "Offset": {
@@ -18,7 +18,8 @@
                 "Size": {
                     "x": 256.0,
                     "y": 256.0
-                }
+                },
+                "SliceMode": "Stretch"
             },
             {
                 "Border": {
@@ -35,7 +36,8 @@
                 "Size": {
                     "x": 256.0,
                     "y": 256.0
-                }
+                },
+                "SliceMode": "Stretch"
             },
             {
                 "Border": {
@@ -52,7 +54,8 @@
                 "Size": {
                     "x": 256.0,
                     "y": 256.0
-                }
+                },
+                "SliceMode": "Stretch"
             },
             {
                 "Border": {
