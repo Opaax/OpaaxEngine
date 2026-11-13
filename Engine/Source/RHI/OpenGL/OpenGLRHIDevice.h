@@ -60,6 +60,7 @@ namespace Opaax
         void            Resize(Uint32 InWidth, Uint32 InHeight)                         override;
         void            WaitIdle()                                                      override;
         double          GetLastGpuFrameTimeMs() const                                   override { return m_LastGpuMs; }
+        Uint64          GetFramebufferAllocations() const                               override { return m_FramebufferAllocations; }
         bool            ReadBackbufferPixels(Uint32 InWidth, Uint32 InHeight, TDynArray<Uint8>& OutRGBA) override;
         //~End IRHIDevice interface
 
@@ -85,5 +86,8 @@ namespace Opaax
         // Its ErrorChecks says how wrong GL calls reach the log (OpenGLDebug): per call or per frame
         // in a dev build, not at all in a ship build.
         RHICapabilities m_Capabilities;
+
+        // Raised by each framebuffer this device made, when it gets new storage.
+        Uint64 m_FramebufferAllocations = 0;
     };
 }

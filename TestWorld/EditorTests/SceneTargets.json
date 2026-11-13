@@ -1,0 +1,66 @@
+[
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 10
+        }
+    },
+    {
+        "id": "open-preview",
+        "command": "editor.panel",
+        "params": {
+            "panel": "Camera Preview"
+        },
+        "expect": {
+            "visible": true
+        }
+    },
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Lighting.opaaxlevel"
+        },
+        "expect": {
+            "mode": "Play"
+        }
+    },
+    {
+        "id": "select-camera",
+        "command": "entity.select",
+        "params": {
+            "entities": [
+                "Camera"
+            ]
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 60
+        }
+    },
+    {
+        "id": "preview-drawn",
+        "command": "editor.camera.preview",
+        "expect": {
+            "drawn": true
+        }
+    },
+    {
+        "id": "steady-targets",
+        "command": "renderer.info",
+        "expect": {
+            "targets": {
+                "recreated": 0
+            }
+        }
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "EditorSceneTargets.png"
+        }
+    }
+]

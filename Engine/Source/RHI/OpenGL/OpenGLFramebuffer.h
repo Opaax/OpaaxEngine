@@ -19,7 +19,11 @@ namespace Opaax
         // CTOR - DTOR
         // =============================================================================
     public:
-        explicit OpenGLFramebuffer(const FramebufferSpec& InSpec);
+        /**
+         * @param InAllocations Raised each time the framebuffer gets new storage (at creation and
+         *                      at each change of size). Outlives the framebuffer; may be null.
+         */
+        explicit OpenGLFramebuffer(const FramebufferSpec& InSpec, Uint64* InAllocations = nullptr);
         ~OpenGLFramebuffer() override;
 
         // =============================================================================
@@ -65,5 +69,7 @@ namespace Opaax
 
         ETextureFormat m_Format        = ETextureFormat::RGBA8;
         bool           m_bLinearFilter = true;
+
+        Uint64* m_Allocations = nullptr;   // the device's count
     };
 }

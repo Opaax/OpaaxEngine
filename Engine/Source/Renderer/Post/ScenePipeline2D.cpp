@@ -31,6 +31,13 @@ namespace Opaax
         /** What the tonemap pass samples: the scene (unit 0) and the bloom (unit 1). */
         constexpr Uint32 TONEMAP_TEXTURES = 2;
 
+        /** What a kept target holds (RenderTargetKey::Purpose): two alive at once in a view differ here. */
+        constexpr Uint32 PURPOSE_SCENE               = 0;
+        constexpr Uint32 PURPOSE_OCCLUSION           = 1;
+        constexpr Uint32 PURPOSE_AMBIENT_OCCLUSION_A = 2;   // the result
+        constexpr Uint32 PURPOSE_AMBIENT_OCCLUSION_B = 3;
+        constexpr Uint32 PURPOSE_BLOOM_FIRST         = 4;   // then one per level
+
         /** The modes of Bloom2D.glsl. */
         constexpr Uint32 BLOOM_PASS_FIRST_DOWN = 0;
         constexpr Uint32 BLOOM_PASS_DOWN       = 1;
@@ -160,8 +167,11 @@ namespace Opaax
         m_AmbientOcclusionGroup.reset();
         m_BloomGroup.reset();
 
-        m_SceneTarget.reset();
-        m_Scene.reset();
+        m_Scene     = nullptr;
+        m_Occlusion = nullptr;
+        m_BloomLevels.clear();
+        m_Targets.Clear();
+
         m_TonemapPipeline.reset();   // before its shader
         m_TonemapShader.reset();
         m_PostUBO.reset();
@@ -169,24 +179,14 @@ namespace Opaax
         m_ShadowMapTexture.reset();
         m_ShadowMapTarget.reset();
         m_ShadowMap.reset();
-        m_OcclusionTarget.reset();
-        m_Occlusion.reset();
         m_ShadowPipeline.reset();
         m_ShadowShader.reset();
         m_ShadowUBO.reset();
 
-        m_AmbientOcclusionTexture.reset();
-        for (Uint32 lIndex = 0; lIndex < 2; ++lIndex)
-        {
-            m_AmbientOcclusionTarget[lIndex].reset();
-            m_AmbientOcclusion[lIndex].reset();
-        }
         m_AmbientOcclusionPipeline.reset();
         m_AmbientOcclusionShader.reset();
         m_AmbientOcclusionUBO.reset();
 
-        m_BloomTargets.clear();
-        m_BloomLevels.clear();
         m_BloomAddPipeline.reset();
         m_BloomPipeline.reset();
         m_BloomShader.reset();
@@ -218,24 +218,50 @@ namespace Opaax
     // =========================================================================
     // Frame
     // =========================================================================
+    void ScenePipeline2D::EndFrame()
+    {
+        // A target may be released here: nothing points at one between frames.
+        m_Scene     = nullptr;
+        m_Occlusion = nullptr;
+        m_BloomLevels.clear();
+
+        m_Targets.EndFrame();
+    }
+
+    ScenePipeline2D::PostTarget& ScenePipeline2D::AcquireTarget(const Uint32 InPurpose, const Uint32 InWidth,
+                                                                const Uint32 InHeight, const ETextureFormat InFormat)
+    {
+        RenderTargetKey lKey;
+        lKey.Purpose = InPurpose;
+        lKey.Width   = Maths::Max(InWidth, 1u);
+        lKey.Height  = Maths::Max(InHeight, 1u);
+        lKey.Format  = InFormat;
+
+        return m_Targets.Acquire(lKey,
+            [this](const RenderTargetKey& InKey)
+            {
+                FramebufferSpec lSpec;
+                lSpec.Width         = InKey.Width;
+                lSpec.Height        = InKey.Height;
+                lSpec.ColorFormat   = InKey.Format;
+                lSpec.bLinearFilter = InKey.bLinearFilter;
+
+                TUniquePtr<PostTarget> lTarget = MakeUnique<PostTarget>();
+                lTarget->Framebuffer = m_Device->CreateFramebuffer(lSpec);
+                lTarget->Target      = MakeUnique<OffscreenRenderTarget>(lTarget->Framebuffer.get());
+                lTarget->Texture     = MakeUnique<FramebufferTexture>(*lTarget->Framebuffer);
+                return lTarget;
+            },
+            [](PostTarget& InTarget, const RenderTargetKey& InKey)
+            {
+                InTarget.Framebuffer->Resize(InKey.Width, InKey.Height);
+            });
+    }
+
     IRenderTarget& ScenePipeline2D::PrepareScene(const Uint32 InWidth, const Uint32 InHeight)
     {
-        if (m_Scene == nullptr)
-        {
-            FramebufferSpec lSpec;
-            lSpec.Width        = InWidth;
-            lSpec.Height       = InHeight;
-            lSpec.ColorFormat  = ETextureFormat::RGBA16F;
-
-            m_Scene       = m_Device->CreateFramebuffer(lSpec);
-            m_SceneTarget = MakeUnique<OffscreenRenderTarget>(m_Scene.get());
-        }
-        else
-        {
-            m_Scene->Resize(InWidth, InHeight);
-        }
-
-        return *m_SceneTarget;
+        m_Scene = &AcquireTarget(PURPOSE_SCENE, InWidth, InHeight, ETextureFormat::RGBA16F);
+        return *m_Scene->Target;
     }
 
     void ScenePipeline2D::Composite(ICommandBuffer& InCmd, IRenderTarget& InOutput, const PostSettings& InSettings)
@@ -257,8 +283,8 @@ namespace Opaax
         InCmd.BindPipeline(*m_TonemapPipeline);
 
         // Without bloom the unit still holds a texture; the shader does not read it.
-        m_TonemapGroup->SetTexture(0, *m_Scene);
-        m_TonemapGroup->SetTexture(1, lBloomLevels > 0 ? *m_BloomLevels[0] : *m_Scene);
+        m_TonemapGroup->SetTexture(0, *m_Scene->Framebuffer);
+        m_TonemapGroup->SetTexture(1, lBloomLevels > 0 ? *m_BloomLevels[0]->Framebuffer : *m_Scene->Framebuffer);
         InCmd.BindBindGroup(*m_TonemapGroup);
 
         InCmd.DrawFullscreen();
@@ -275,39 +301,31 @@ namespace Opaax
             return 0;
         }
 
-        const TDynArray<BloomLevel2D> lLevels = MakeBloomLevels2D(m_Scene->GetWidth(), m_Scene->GetHeight());
+        const TDynArray<BloomLevel2D> lLevels = MakeBloomLevels2D(m_Scene->Framebuffer->GetWidth(),
+                                                                  m_Scene->Framebuffer->GetHeight());
         const Uint32                  lCount  = static_cast<Uint32>(lLevels.size());
 
-        // The chain follows the scene's size; levels past what it needs now are kept for later.
+        // The chain of this scene's size.
+        m_BloomLevels.clear();
         for (Uint32 lIndex = 0; lIndex < lCount; ++lIndex)
         {
-            if (lIndex >= m_BloomLevels.size())
-            {
-                FramebufferSpec lSpec;
-                lSpec.Width        = lLevels[lIndex].Width;
-                lSpec.Height       = lLevels[lIndex].Height;
-                lSpec.ColorFormat  = ETextureFormat::RGBA16F;
-
-                m_BloomLevels.push_back(m_Device->CreateFramebuffer(lSpec));
-                m_BloomTargets.push_back(MakeUnique<OffscreenRenderTarget>(m_BloomLevels.back().get()));
-            }
-            else
-            {
-                m_BloomLevels[lIndex]->Resize(lLevels[lIndex].Width, lLevels[lIndex].Height);
-            }
+            m_BloomLevels.push_back(&AcquireTarget(PURPOSE_BLOOM_FIRST + lIndex, lLevels[lIndex].Width,
+                                                   lLevels[lIndex].Height, ETextureFormat::RGBA16F));
         }
 
         // Down: the bright light into the first level, then halved level by level.
-        RunBloomPass(InCmd, BLOOM_PASS_FIRST_DOWN, InSettings, *m_Scene, *m_BloomTargets[0], false);
+        RunBloomPass(InCmd, BLOOM_PASS_FIRST_DOWN, InSettings, *m_Scene->Framebuffer, *m_BloomLevels[0]->Target, false);
         for (Uint32 lIndex = 1; lIndex < lCount; ++lIndex)
         {
-            RunBloomPass(InCmd, BLOOM_PASS_DOWN, InSettings, *m_BloomLevels[lIndex - 1], *m_BloomTargets[lIndex], false);
+            RunBloomPass(InCmd, BLOOM_PASS_DOWN, InSettings, *m_BloomLevels[lIndex - 1]->Framebuffer,
+                         *m_BloomLevels[lIndex]->Target, false);
         }
 
         // Up: each level blurred into the one above it, added to what it holds.
         for (Uint32 lIndex = lCount - 1; lIndex > 0; --lIndex)
         {
-            RunBloomPass(InCmd, BLOOM_PASS_UP, InSettings, *m_BloomLevels[lIndex], *m_BloomTargets[lIndex - 1], true);
+            RunBloomPass(InCmd, BLOOM_PASS_UP, InSettings, *m_BloomLevels[lIndex]->Framebuffer,
+                         *m_BloomLevels[lIndex - 1]->Target, true);
         }
 
         return lCount;
@@ -333,23 +351,9 @@ namespace Opaax
     // =========================================================================
     IRenderTarget& ScenePipeline2D::PrepareOcclusion(const Uint32 InWidth, const Uint32 InHeight)
     {
-        if (m_Occlusion == nullptr)
-        {
-            // Filtered, so the shadow pass finds the silhouettes between texels.
-            FramebufferSpec lSpec;
-            lSpec.Width        = InWidth;
-            lSpec.Height       = InHeight;
-            lSpec.ColorFormat  = ETextureFormat::R8;
-
-            m_Occlusion       = m_Device->CreateFramebuffer(lSpec);
-            m_OcclusionTarget = MakeUnique<OffscreenRenderTarget>(m_Occlusion.get());
-        }
-        else
-        {
-            m_Occlusion->Resize(InWidth, InHeight);
-        }
-
-        return *m_OcclusionTarget;
+        // Filtered, so the shadow pass finds the silhouettes between texels.
+        m_Occlusion = &AcquireTarget(PURPOSE_OCCLUSION, InWidth, InHeight, ETextureFormat::R8);
+        return *m_Occlusion->Target;
     }
 
     ITexture2D* ScenePipeline2D::BuildShadowMap(ICommandBuffer& InCmd, const ShadowBlock2D& InShadows)
@@ -378,7 +382,7 @@ namespace Opaax
         // Every texel is written: nothing to clear.
         InCmd.BeginRenderPass(*m_ShadowMapTarget, ELoadOp::Load, Vector4F{ 1.f, 1.f, 1.f, 1.f });
         InCmd.BindPipeline(*m_ShadowPipeline);
-        m_ShadowGroup->SetTexture(0, *m_Occlusion);
+        m_ShadowGroup->SetTexture(0, *m_Occlusion->Framebuffer);
         InCmd.BindBindGroup(*m_ShadowGroup);
         InCmd.DrawFullscreen();
         InCmd.EndRenderPass();
@@ -396,38 +400,18 @@ namespace Opaax
             return nullptr;
         }
 
-        const Uint32 lWidth  = AmbientOcclusionExtent2D(m_Occlusion->GetWidth());
-        const Uint32 lHeight = AmbientOcclusionExtent2D(m_Occlusion->GetHeight());
+        const Uint32 lWidth  = AmbientOcclusionExtent2D(m_Occlusion->Framebuffer->GetWidth());
+        const Uint32 lHeight = AmbientOcclusionExtent2D(m_Occlusion->Framebuffer->GetHeight());
 
-        for (Uint32 lIndex = 0; lIndex < 2; ++lIndex)
-        {
-            if (m_AmbientOcclusion[lIndex] == nullptr)
-            {
-                FramebufferSpec lSpec;
-                lSpec.Width        = lWidth;
-                lSpec.Height       = lHeight;
-                lSpec.ColorFormat  = ETextureFormat::R8;
+        PostTarget& lResult = AcquireTarget(PURPOSE_AMBIENT_OCCLUSION_A, lWidth, lHeight, ETextureFormat::R8);
+        PostTarget& lOther  = AcquireTarget(PURPOSE_AMBIENT_OCCLUSION_B, lWidth, lHeight, ETextureFormat::R8);
 
-                m_AmbientOcclusion[lIndex]       = m_Device->CreateFramebuffer(lSpec);
-                m_AmbientOcclusionTarget[lIndex] = MakeUnique<OffscreenRenderTarget>(m_AmbientOcclusion[lIndex].get());
-            }
-            else
-            {
-                m_AmbientOcclusion[lIndex]->Resize(lWidth, lHeight);
-            }
-        }
+        // Shrink into the result, blur across into the other, blur down back into the result.
+        RunAmbientOcclusionPass(InCmd, AO_PASS_SHRINK,      InSigma, *m_Occlusion->Framebuffer, *lResult.Target);
+        RunAmbientOcclusionPass(InCmd, AO_PASS_BLUR_ACROSS, InSigma, *lResult.Framebuffer,      *lOther.Target);
+        RunAmbientOcclusionPass(InCmd, AO_PASS_BLUR_DOWN,   InSigma, *lOther.Framebuffer,       *lResult.Target);
 
-        if (m_AmbientOcclusionTexture == nullptr)
-        {
-            m_AmbientOcclusionTexture = MakeUnique<FramebufferTexture>(*m_AmbientOcclusion[0]);
-        }
-
-        // Shrink into [0], blur across into [1], blur down back into [0].
-        RunAmbientOcclusionPass(InCmd, AO_PASS_SHRINK,      InSigma, *m_Occlusion,           *m_AmbientOcclusionTarget[0]);
-        RunAmbientOcclusionPass(InCmd, AO_PASS_BLUR_ACROSS, InSigma, *m_AmbientOcclusion[0], *m_AmbientOcclusionTarget[1]);
-        RunAmbientOcclusionPass(InCmd, AO_PASS_BLUR_DOWN,   InSigma, *m_AmbientOcclusion[1], *m_AmbientOcclusionTarget[0]);
-
-        return m_AmbientOcclusionTexture.get();
+        return lResult.Texture.get();
     }
 
     void ScenePipeline2D::RunAmbientOcclusionPass(ICommandBuffer& InCmd, const Uint32 InMode, const float InSigma,

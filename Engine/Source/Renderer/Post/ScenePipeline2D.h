@@ -6,21 +6,20 @@
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
 #include "Renderer/Components/EnvironmentComponent.h"
+#include "Renderer/Post/RenderTargetCache.h"
+#include "Renderer/RenderTarget.hpp"
+#include "RHI/Framebuffer.h"
 #include "RHI/Shader.h"
 
 namespace Opaax
 {
-    class FramebufferTexture;
     class ICommandBuffer;
-    class IFramebuffer;
     class IPipeline;
-    class IRenderTarget;
     class IRHIDevice;
     class IShader;
     class ITexture2D;
     class IUniformBuffer;
     class IBindGroup;
-    class OffscreenRenderTarget;
     struct ShadowBlock2D;
 
     OPAAX_LOG_CATEGORY(ScenePipeline2D);
@@ -80,7 +79,8 @@ namespace Opaax
     //   for each shadowed light, how far it gets in every direction, and the ambient occlusion map
     //   how much of the casters surrounds each point (the coverage shrunk, then blurred).
     //   Bloom is made in the composite: the bright light halved down a chain, then blurred back up.
-    //   Owned by the RenderSystem; its targets follow the size of the view being drawn.
+    //   Owned by the RenderSystem. Its targets are kept per size (TRenderTargetCache): a frame that
+    //   draws views of several sizes (a game view and a camera preview) rebuilds none of them.
     // =============================================================================
     class ScenePipeline2D
     {
@@ -102,6 +102,12 @@ namespace Opaax
         bool Init(IRHIDevice& InDevice, const ScenePipelineShaders& InShaders);
         void Shutdown();
 
+        /** Ends the frame: targets no view used for a while are released. Call once per frame, after every view. */
+        void EndFrame();
+
+        /** Targets kept now, for every size in use. */
+        Uint32 GetTargetCount() const noexcept { return m_Targets.GetCount(); }
+
         bool IsReady() const noexcept;
 
         /** Whether BuildShadowMap can work. */
@@ -117,7 +123,7 @@ namespace Opaax
         // Frame
         // =============================================================================
     public:
-        /** The HDR target the world is drawn into, sized InWidth x InHeight. */
+        /** The HDR target the world is drawn into, sized InWidth x InHeight. The view's until the next call. */
         IRenderTarget& PrepareScene(Uint32 InWidth, Uint32 InHeight);
 
         /** Writes every pixel of InOutput from the scene: bloom, exposure, tonemap, gamma. */
@@ -153,6 +159,17 @@ namespace Opaax
          */
         Uint32 BuildBloom(ICommandBuffer& InCmd, const PostSettings& InSettings);
 
+        /** A kept target: its framebuffer, seen as what a pass draws into and as what one samples. */
+        struct PostTarget
+        {
+            TUniquePtr<IFramebuffer>          Framebuffer;
+            TUniquePtr<OffscreenRenderTarget> Target;
+            TUniquePtr<FramebufferTexture>    Texture;
+        };
+
+        /** The kept target for a use, a size and a format, made or resized when there is none. */
+        PostTarget& AcquireTarget(Uint32 InPurpose, Uint32 InWidth, Uint32 InHeight, ETextureFormat InFormat);
+
         /** One fullscreen pass of the bloom shader, from InSource into InTarget (added into it when bInAdd). */
         void RunBloomPass(ICommandBuffer& InCmd, Uint32 InMode, const PostSettings& InSettings,
                           const IFramebuffer& InSource, IRenderTarget& InTarget, bool bInAdd);
@@ -163,8 +180,11 @@ namespace Opaax
     private:
         IRHIDevice* m_Device = nullptr;
 
-        TUniquePtr<IFramebuffer>          m_Scene;
-        TUniquePtr<OffscreenRenderTarget> m_SceneTarget;
+        // Every target that follows a view's size, kept per size.
+        TRenderTargetCache<PostTarget> m_Targets;
+
+        // The targets of the view being drawn: set by the Prepare and Build calls, null between frames.
+        PostTarget* m_Scene = nullptr;
 
         TUniquePtr<IShader>        m_TonemapShader;
         TUniquePtr<IPipeline>      m_TonemapPipeline;
@@ -172,8 +192,7 @@ namespace Opaax
         TUniquePtr<IBindGroup>     m_TonemapGroup;   // its block, the scene, the bloom
 
         // Shadows: the casters' coverage (R8), then a distance per light and direction (R16F).
-        TUniquePtr<IFramebuffer>          m_Occlusion;
-        TUniquePtr<OffscreenRenderTarget> m_OcclusionTarget;
+        PostTarget*                       m_Occlusion = nullptr;   // the view's, as m_Scene
         TUniquePtr<IFramebuffer>          m_ShadowMap;
         TUniquePtr<OffscreenRenderTarget> m_ShadowMapTarget;
         TUniquePtr<FramebufferTexture>    m_ShadowMapTexture;
@@ -183,19 +202,17 @@ namespace Opaax
         TUniquePtr<IUniformBuffer> m_ShadowUBO;
         TUniquePtr<IBindGroup>     m_ShadowGroup;    // its block, the occlusion map
 
-        // Ambient occlusion: two small R8 maps the passes go back and forth between; [0] is the result.
-        TUniquePtr<IFramebuffer>          m_AmbientOcclusion[2];
-        TUniquePtr<OffscreenRenderTarget> m_AmbientOcclusionTarget[2];
-        TUniquePtr<FramebufferTexture>    m_AmbientOcclusionTexture;
+        // Ambient occlusion: two small R8 maps the passes go back and forth between; the first is the
+        // result. Kept in m_Targets.
 
         TUniquePtr<IShader>        m_AmbientOcclusionShader;
         TUniquePtr<IPipeline>      m_AmbientOcclusionPipeline;
         TUniquePtr<IUniformBuffer> m_AmbientOcclusionUBO;
         TUniquePtr<IBindGroup>     m_AmbientOcclusionGroup;   // its block, the pass's source
 
-        // Bloom: a chain of HDR levels, each half the one before; [0] holds the result.
-        TDynArray<TUniquePtr<IFramebuffer>>          m_BloomLevels;
-        TDynArray<TUniquePtr<OffscreenRenderTarget>> m_BloomTargets;
+        // Bloom: a chain of HDR levels, each half the one before; [0] holds the result. The view's,
+        // as m_Scene; kept in m_Targets.
+        TDynArray<PostTarget*> m_BloomLevels;
 
         TUniquePtr<IShader>        m_BloomShader;
         TUniquePtr<IPipeline>      m_BloomPipeline;      // writes
