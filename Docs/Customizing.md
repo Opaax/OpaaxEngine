@@ -222,6 +222,26 @@ it to `Renderer2D::DrawSprite` (`InUVFrame`, from `MakeUVBounds`).
 `renderer.info` answers the filter in use (`textureFilter`), and `TestWorld/Levels/Filtering` shows
 the three side by side.
 
+### Multisampling
+
+`Multisampling` in `Renderer.config` (`Off`, `X2`, `X4`, `X8`; `Off` by default) draws the world
+with that many samples per pixel, then averages them, so the edges of shapes lose their stair steps:
+a turned quad, a tile, a solid sprite. It applies at once. A driver that gives fewer samples uses its most; `renderer.info`
+answers the samples given for each world view (`views`), and the log says it at each change.
+
+It only sees the edges of what is drawn, not what a texture holds:
+
+- A sprite whose border is transparent texels is not changed: its edge is in the texture (the
+  texture filter decides how it looks).
+- What the sprite shader cuts out with `discard` (hollow quads, masks) stays hard.
+- In a lit world the samples are averaged before the tonemap: on an edge brighter than white (an
+  emissive above 1) the mean still clips, and the edge stays hard.
+- Overlays drawn over the world and the UI are drawn after it, into the view's target, at one sample.
+
+With it on, an unlit world is drawn into a scene target of its own (RGBA8) and copied into the view;
+a lit world's HDR target is multisampled. Its cost is memory and fill: X4 draws four times the
+pixels of the world. `TestWorld/Levels/AntiAliasing` and `AntiAliasingLit` show each case.
+
 ### Shaders
 
 The shaders are in `Engine/Assets/Shaders`, one file per program with `#type vertex` and

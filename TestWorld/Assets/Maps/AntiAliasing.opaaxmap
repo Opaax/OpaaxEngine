@@ -1,0 +1,132 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Size": {
+                        "x": 200.0,
+                        "y": 200.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -300.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 30.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "273d7f83839d517082c4a546e42c364c",
+            "name": "TurnedQuad",
+            "ownerMap": "AntiAliasing"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 200.0,
+                        "y": 200.0
+                    },
+                    "Texture": "Textures/Circle.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 300.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "5706c261e1585e7ca95436a455955038",
+            "name": "Disc",
+            "ownerMap": "AntiAliasing"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "6291925c56cc5577b9a77b22728396a9",
+            "name": "Camera",
+            "ownerMap": "AntiAliasing"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 200.0,
+                        "y": 200.0
+                    },
+                    "Texture": "/Engine/Textures/T_Square_256_White.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 30.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "de9218e44ede566088233544e5f30abc",
+            "name": "TurnedSprite",
+            "ownerMap": "AntiAliasing"
+        }
+    ],
+    "mapId": "AntiAliasing",
+    "version": 4
+}

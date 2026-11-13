@@ -229,13 +229,15 @@ namespace Opaax
     }
 
     ScenePipeline2D::PostTarget& ScenePipeline2D::AcquireTarget(const Uint32 InPurpose, const Uint32 InWidth,
-                                                                const Uint32 InHeight, const ETextureFormat InFormat)
+                                                                const Uint32 InHeight, const ETextureFormat InFormat,
+                                                                const Uint32 InSamples)
     {
         RenderTargetKey lKey;
         lKey.Purpose = InPurpose;
         lKey.Width   = Maths::Max(InWidth, 1u);
         lKey.Height  = Maths::Max(InHeight, 1u);
         lKey.Format  = InFormat;
+        lKey.Samples = Maths::Max(InSamples, 1u);
 
         return m_Targets.Acquire(lKey,
             [this](const RenderTargetKey& InKey)
@@ -245,6 +247,7 @@ namespace Opaax
                 lSpec.Height        = InKey.Height;
                 lSpec.ColorFormat   = InKey.Format;
                 lSpec.bLinearFilter = InKey.bLinearFilter;
+                lSpec.Samples       = InKey.Samples;
 
                 TUniquePtr<PostTarget> lTarget = MakeUnique<PostTarget>();
                 lTarget->Framebuffer = m_Device->CreateFramebuffer(lSpec);
@@ -258,9 +261,10 @@ namespace Opaax
             });
     }
 
-    IRenderTarget& ScenePipeline2D::PrepareScene(const Uint32 InWidth, const Uint32 InHeight, const ETextureFormat InFormat)
+    IRenderTarget& ScenePipeline2D::PrepareScene(const Uint32 InWidth, const Uint32 InHeight, const ETextureFormat InFormat,
+                                                 const Uint32 InSamples)
     {
-        m_Scene = &AcquireTarget(PURPOSE_SCENE, InWidth, InHeight, InFormat);
+        m_Scene = &AcquireTarget(PURPOSE_SCENE, InWidth, InHeight, InFormat, InSamples);
         return *m_Scene->Target;
     }
 

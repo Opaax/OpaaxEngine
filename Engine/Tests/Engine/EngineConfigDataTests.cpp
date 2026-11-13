@@ -308,6 +308,19 @@ TEST_CASE("RendererConfigData: ClearColor is live, the batch limits need a resta
     CHECK_FALSE(HasFlag(FlagsOf(lRenderer, "ClearColor"), EPropertyFlags::NeedRestart));
     CHECK(HasFlag(FlagsOf(lRenderer, "MaxQuadsPerBatch"), EPropertyFlags::NeedRestart));
     CHECK(HasFlag(FlagsOf(lRenderer, "MaxTextureSlots"), EPropertyFlags::NeedRestart));
+    CHECK_FALSE(HasFlag(FlagsOf(lRenderer, "Multisampling"), EPropertyFlags::NeedRestart));
+}
+
+TEST_CASE("RendererConfigData: Multisampling is off unless the file names it, and is written by name")
+{
+    CHECK(nlohmann::json::parse(R"({"ClearColor":{"x":0,"y":0,"z":0,"w":1}})").get<RendererConfigData>().Multisampling
+          == EMultisampling::Off);
+    CHECK(nlohmann::json::parse(R"({"Multisampling":"X8"})").get<RendererConfigData>().Multisampling
+          == EMultisampling::X8);
+
+    RendererConfigData lData;
+    lData.Multisampling = EMultisampling::X2;
+    CHECK(nlohmann::json(lData)["Multisampling"] == "X2");
 }
 
 // =============================================================================

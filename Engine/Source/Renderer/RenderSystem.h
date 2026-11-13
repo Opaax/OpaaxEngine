@@ -121,6 +121,9 @@ namespace Opaax
         void SetSceneTargetSettings(const SceneTargetSettings& InSettings) noexcept { m_SceneTargetSettings = InSettings; }
         const SceneTargetSettings& GetSceneTargetSettings() const noexcept { return m_SceneTargetSettings; }
 
+        /** The most samples per pixel the device gives a target (1 without a device). */
+        Uint32 GetMaxSamples() const;
+
         /**
          * How a world view of InWidth x InHeight is drawn (PlanSceneTarget, on the settings and the
          * device's most samples). Kept for renderer.info: call once per world view drawn.

@@ -1,0 +1,168 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Size": {
+                        "x": 200.0,
+                        "y": 200.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -300.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 30.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "941e09d5f0bf58188109f09001324446",
+            "name": "TurnedQuad",
+            "ownerMap": "AntiAliasingLit"
+        },
+        {
+            "components": {
+                "Environment": {
+                    "AORadius": 48.0,
+                    "AOStrength": 0.0,
+                    "AmbientColor": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "AmbientIntensity": 1.0,
+                    "BloomIntensity": 0.0,
+                    "BloomSoftness": 0.5,
+                    "BloomThreshold": 1.0,
+                    "Exposure": 0.0,
+                    "Tonemapper": "None",
+                    "bAmbientOcclusion": false,
+                    "bBloom": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "b656c9bc31245bf9a07671345d1ebc51",
+            "name": "Environment",
+            "ownerMap": "AntiAliasingLit"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 200.0,
+                        "y": 200.0
+                    },
+                    "Texture": "/Engine/Textures/T_Square_256_White.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 30.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "c3d14dedd08f54408d0795349e9b950c",
+            "name": "TurnedSprite",
+            "ownerMap": "AntiAliasingLit"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "Materials/Glow.opaaxasset",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 200.0,
+                        "y": 200.0
+                    },
+                    "Texture": "/Engine/Textures/T_Square_256_White.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 300.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 30.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "d6e6b54b9a3553118cb1d1ad4e116560",
+            "name": "GlowSprite",
+            "ownerMap": "AntiAliasingLit"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "e62bfe24ddf752fda64dfd81c1683828",
+            "name": "Camera",
+            "ownerMap": "AntiAliasingLit"
+        }
+    ],
+    "mapId": "AntiAliasingLit",
+    "version": 4
+}

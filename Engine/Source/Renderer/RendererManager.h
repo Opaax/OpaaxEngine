@@ -85,9 +85,13 @@ namespace Opaax
         void HandleWindowResize(const WindowResize& InResize);
 
         /**
-         * Renderer.config changed: applies ClearColor. Batch limits need a restart.
+         * Renderer.config changed: applies ClearColor, TextureFilter and the world views' settings.
+         * Batch limits need a restart.
          */
         void HandleRendererConfigChanged();
+
+        /** Gives the RenderSystem Renderer.config's world view settings. Logged when they change. */
+        void ApplySceneTargetSettings();
 
         /** Engine.config changed: applies Render.bInterpolation and Window.bVSync. Backend needs a restart. */
         void HandleEngineConfigChanged();
@@ -443,6 +447,7 @@ namespace Opaax
 
         /** Logged once: a world with lights and no EnvironmentComponent. */
         bool   m_bWarnedLightsIgnored = false;
+        bool   m_bSceneSettingsLogged = false;   // the world view settings were applied once
 
         // Debug shapes. Owned here because the renderer consumes them.
         DebugDraw               m_DebugDraw;

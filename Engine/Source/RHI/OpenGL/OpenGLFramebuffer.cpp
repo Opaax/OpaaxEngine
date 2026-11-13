@@ -18,6 +18,12 @@ namespace Opaax
         , m_bLinearFilter(InSpec.bLinearFilter)
         , m_Allocations(InAllocations)
     {
+        // Within what the driver allows; 1 asks for none.
+        GLint lMaxSamples = 1;
+        glGetIntegerv(GL_MAX_SAMPLES, &lMaxSamples);
+        const Uint32 lMost = lMaxSamples > 1 ? static_cast<Uint32>(lMaxSamples) : 1u;
+        m_Samples = InSpec.Samples < 1 ? 1u : (InSpec.Samples < lMost ? InSpec.Samples : lMost);
+
         Invalidate();
     }
 
@@ -34,6 +40,9 @@ namespace Opaax
         if (m_ColorTexture) { glDeleteTextures(1, &m_ColorTexture);  m_ColorTexture = 0; }
         if (m_DepthRBO)     { glDeleteRenderbuffers(1, &m_DepthRBO); m_DepthRBO     = 0; }
         if (m_FBO)          { glDeleteFramebuffers(1, &m_FBO);       m_FBO          = 0; }
+
+        if (m_MultisampleColor) { glDeleteRenderbuffers(1, &m_MultisampleColor); m_MultisampleColor = 0; }
+        if (m_MultisampleFBO)   { glDeleteFramebuffers(1, &m_MultisampleFBO);    m_MultisampleFBO   = 0; }
     }
 
     void OpenGLFramebuffer::Invalidate()
@@ -70,13 +79,24 @@ namespace Opaax
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glBindTexture(GL_TEXTURE_2D, 0);
 
+        const bool    bMultisampled = m_Samples > 1;
+        const GLsizei lSamples      = static_cast<GLsizei>(m_Samples);
+
+        // The depth-stencil goes with what is drawn into: the multisampled framebuffer when there is one.
         if (m_DepthStencil)
         {
             glGenRenderbuffers(1, &m_DepthRBO);
             glBindRenderbuffer(GL_RENDERBUFFER, m_DepthRBO);
-            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8,
-                static_cast<GLsizei>(m_Width),
-                static_cast<GLsizei>(m_Height));
+            if (bMultisampled)
+            {
+                glRenderbufferStorageMultisample(GL_RENDERBUFFER, lSamples, GL_DEPTH24_STENCIL8,
+                    static_cast<GLsizei>(m_Width), static_cast<GLsizei>(m_Height));
+            }
+            else
+            {
+                glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8,
+                    static_cast<GLsizei>(m_Width), static_cast<GLsizei>(m_Height));
+            }
             glBindRenderbuffer(GL_RENDERBUFFER, 0);
         }
 
@@ -84,7 +104,7 @@ namespace Opaax
         glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
             GL_TEXTURE_2D, m_ColorTexture, 0);
-        if (m_DepthStencil)
+        if (m_DepthStencil && !bMultisampled)
         {
             glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
                 GL_RENDERBUFFER, m_DepthRBO);
@@ -95,12 +115,36 @@ namespace Opaax
             OPAAX_LOG(LogOpenGLFramebuffer, Error, "FBO incomplete at {}x{}!", m_Width, m_Height);
         }
 
+        if (bMultisampled)
+        {
+            glGenRenderbuffers(1, &m_MultisampleColor);
+            glBindRenderbuffer(GL_RENDERBUFFER, m_MultisampleColor);
+            glRenderbufferStorageMultisample(GL_RENDERBUFFER, lSamples, static_cast<GLenum>(lInternal),
+                static_cast<GLsizei>(m_Width), static_cast<GLsizei>(m_Height));
+            glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+            glGenFramebuffers(1, &m_MultisampleFBO);
+            glBindFramebuffer(GL_FRAMEBUFFER, m_MultisampleFBO);
+            glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, m_MultisampleColor);
+            if (m_DepthStencil)
+            {
+                glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_DepthRBO);
+            }
+
+            if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+            {
+                OPAAX_LOG(LogOpenGLFramebuffer, Error, "Multisampled FBO incomplete at {}x{}, {} samples!",
+                          m_Width, m_Height, m_Samples);
+            }
+        }
+
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
     void OpenGLFramebuffer::Bind()
     {
-        glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
+        m_bBound = true;
+        glBindFramebuffer(GL_FRAMEBUFFER, m_MultisampleFBO != 0 ? m_MultisampleFBO : m_FBO);
         // The viewport must match the framebuffer size, not the window.
         glViewport(0, 0,
             static_cast<GLsizei>(m_Width),
@@ -109,6 +153,18 @@ namespace Opaax
 
     void OpenGLFramebuffer::Unbind()
     {
+        // The samples of each pixel averaged into the colour texture, which is what is sampled.
+        if (m_MultisampleFBO != 0 && m_bBound)
+        {
+            const GLint lWidth  = static_cast<GLint>(m_Width);
+            const GLint lHeight = static_cast<GLint>(m_Height);
+
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, m_MultisampleFBO);
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_FBO);
+            glBlitFramebuffer(0, 0, lWidth, lHeight, 0, 0, lWidth, lHeight, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+        }
+
+        m_bBound = false;
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 

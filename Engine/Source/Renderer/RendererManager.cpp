@@ -175,6 +175,7 @@ namespace Opaax
 
         m_Surface = lSurface;
         ApplyVSync();
+        ApplySceneTargetSettings();
 
         // The active world is the one drawn.
         m_WorldManager = &OpaaxApplication::GetAppService<IEngine>().GetWorldManager();
@@ -457,8 +458,8 @@ namespace Opaax
             }
 
             // Overlays meant to be behind the world (the grid) go in with it.
-            m_RenderSystem->BeginPass(lPipeline.PrepareScene(lPlan.Width, lPlan.Height, lPlan.Format), lSceneView,
-                                      ELoadOp::Clear, lClear);
+            IRenderTarget& lScene = lPipeline.PrepareScene(lPlan.Width, lPlan.Height, lPlan.Format, lPlan.Samples);
+            m_RenderSystem->BeginPass(lScene, lSceneView, ELoadOp::Clear, lClear);
             if (InWorld != nullptr) { DrawWorld(*InWorld, lRenderer); }
             if (bInDrawOverlays) { DrawOverlays(InWorld, lRenderer, EOverlayFilter::BehindWorld); }
             m_RenderSystem->EndPass();
@@ -1267,6 +1268,33 @@ namespace Opaax
 
         m_RenderSystem->SetClearColor(m_RendererConfig->GetData().ClearColor);
         m_RenderSystem->SetTextureFilter(m_RendererConfig->GetData().TextureFilter);
+        ApplySceneTargetSettings();
+    }
+
+    void RendererManager::ApplySceneTargetSettings()
+    {
+        if (!m_RenderSystem || m_RendererConfig == nullptr)
+        {
+            return;
+        }
+
+        const RendererConfigData& lData = m_RendererConfig->GetData();
+
+        SceneTargetSettings lSettings = m_RenderSystem->GetSceneTargetSettings();
+        lSettings.Samples = SamplesOf(lData.Multisampling);
+
+        if (m_bSceneSettingsLogged && lSettings.Samples == m_RenderSystem->GetSceneTargetSettings().Samples)
+        {
+            return;
+        }
+
+        m_RenderSystem->SetSceneTargetSettings(lSettings);
+        m_bSceneSettingsLogged = true;
+
+        // What is given, not only what is asked: a driver may have fewer samples.
+        const Uint32 lGiven = PlanSceneTarget(1, 1, true, lSettings, m_RenderSystem->GetMaxSamples()).Samples;
+        OPAAX_LOG(LogRendererManager, Info, "World views: multisampling {} ({} samples asked, {} given)",
+                  ToString(lData.Multisampling), lSettings.Samples, lGiven);
     }
 
     void RendererManager::HandleEngineConfigChanged()

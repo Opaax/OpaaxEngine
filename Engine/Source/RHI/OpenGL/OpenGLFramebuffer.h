@@ -11,7 +11,8 @@ namespace Opaax
     
     /**
      * OpenGL IFramebuffer: one colour texture (RGBA8, RGBA16F, R8 or R16F) and an optional
-     * GL_DEPTH24_STENCIL8 renderbuffer.
+     * GL_DEPTH24_STENCIL8 renderbuffer. Multisampled: drawn into a second framebuffer of
+     * multisampled renderbuffers, blitted into the colour texture by Unbind.
      */
     class OpenGLFramebuffer final : public IFramebuffer
     {
@@ -54,6 +55,7 @@ namespace Opaax
         Uint32 GetColorAttachmentID() const noexcept override { return m_ColorTexture; }
         Uint32 GetWidth()             const noexcept override { return m_Width;        }
         Uint32 GetHeight()            const noexcept override { return m_Height;       }
+        Uint32 GetSamples()           const noexcept override { return m_Samples;      }
         //~End IFramebuffer interface
 
         // =============================================================================
@@ -63,9 +65,13 @@ namespace Opaax
         Uint32 m_FBO          = 0;
         Uint32 m_ColorTexture = 0;
         Uint32 m_DepthRBO     = 0;
+        Uint32 m_MultisampleFBO   = 0;   // drawn into when m_Samples > 1; m_FBO then holds the resolve
+        Uint32 m_MultisampleColor = 0;   // its colour renderbuffer
+        Uint32 m_Samples      = 1;
         Uint32 m_Width        = 1;
         Uint32 m_Height       = 1;
         bool   m_DepthStencil = false;
+        bool   m_bBound       = false;   // drawn into since the last resolve
 
         ETextureFormat m_Format        = ETextureFormat::RGBA8;
         bool           m_bLinearFilter = true;
