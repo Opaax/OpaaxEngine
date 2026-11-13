@@ -231,3 +231,24 @@ TEST_CASE("SheetEditing: a frame with no border previews as one quad over the wh
 
     CHECK(SheetEditing::PreviewQuads(lFrame, { 512.f, 512.f }, { 0.f, 90.f }, 1.f).empty());
 }
+
+TEST_CASE("SheetEditing: a Tile frame previews as the UI tiles it")
+{
+    SpriteFrame lFrame = BracketFrame();
+    lFrame.SliceMode   = ESliceMode::Tile;
+
+    const TDynArray<SheetEditing::PreviewQuad> lPreview =
+        SheetEditing::PreviewQuads(lFrame, { 512.f, 512.f }, { 420.f, 90.f }, 0.4f);
+
+    TDynArray<UIQuad> lUI;
+    REQUIRE(BuildTiledQuads(Bounds2D::FromMinMax({ 0.f, 0.f }, { 420.f, 90.f }), lFrame.Border, 0.4f, lFrame.Size, lUI));
+
+    CHECK(lPreview.size() > 9u);
+    REQUIRE(lPreview.size() == lUI.size());
+    for (Uint64 lIndex = 0; lIndex < lUI.size(); ++lIndex)
+    {
+        CAPTURE(lIndex);
+        CHECK(lPreview[lIndex].Max.x - lPreview[lIndex].Min.x == doctest::Approx(lUI[lIndex].Bounds.Size().x));
+        CHECK(lPreview[lIndex].Min.y == doctest::Approx(90.f - lUI[lIndex].Bounds.Max().y));
+    }
+}

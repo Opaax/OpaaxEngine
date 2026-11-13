@@ -20,6 +20,147 @@ namespace Opaax
                 InOutHigh *= lScale;
             }
         }
+
+        /** One column or row of the grid: where it is on screen and which part of the image it shows. */
+        struct SliceSpan
+        {
+            float From   = 0.f;
+            float To     = 0.f;
+            float UVFrom = 0.f;
+            float UVTo   = 1.f;
+        };
+
+        /** One axis of a slice: the borders' ends on screen, the middle's UVs and its tile length. */
+        struct SliceAxis
+        {
+            float Min = 0.f, Low = 0.f, High = 0.f, Max = 0.f;
+            float UVLow = 0.f, UVHigh = 1.f;
+            float Tile = 0.f;   // a middle tile on screen; 0: stretched
+        };
+
+        /** One axis: the UVs keep the authored border, the geometry is fitted into the rect. */
+        SliceAxis MakeAxis(const float InMin, const float InMax, const float InLowPx, const float InHighPx,
+                           const float InScale, const float InTexturePx) noexcept
+        {
+            float lUvLow = InLowPx, lUvHigh = InHighPx;
+            FitPair(lUvLow, lUvHigh, InTexturePx);
+
+            // On screen a border pixel takes InScale canvas units.
+            float lLow = InLowPx * InScale, lHigh = InHighPx * InScale;
+            FitPair(lLow, lHigh, InMax - InMin);
+
+            SliceAxis lAxis;
+            lAxis.Min    = InMin;
+            lAxis.Low    = InMin + lLow;
+            lAxis.High   = InMax - lHigh;
+            lAxis.Max    = InMax;
+            lAxis.UVLow  = lUvLow / InTexturePx;
+            lAxis.UVHigh = 1.f - lUvHigh / InTexturePx;
+            return lAxis;
+        }
+
+        /** How many spans the middle takes: 1 stretched, else as many tiles as cover it (capped). */
+        Uint64 MiddleCount(const SliceAxis& InAxis) noexcept
+        {
+            const float lLength = InAxis.High - InAxis.Low;
+            if (InAxis.Tile <= 0.f || lLength <= 0.f)
+            {
+                return 1;
+            }
+
+            // A last tile thinner than a thousandth of one is rounding: the one before it is stretched by that much.
+            const float lCount = Maths::Ceil(lLength / InAxis.Tile - 0.001f);
+            if (lCount > static_cast<float>(UI_MAX_TILED_QUADS))
+            {
+                return UI_MAX_TILED_QUADS + 1;
+            }
+
+            return lCount < 1.f ? 1 : static_cast<Uint64>(lCount);
+        }
+
+        /** The axis's spans, low to high; empty ones are left out. */
+        void MakeSpans(const SliceAxis& InAxis, TDynArray<SliceSpan>& OutSpans)
+        {
+            auto lAdd = [&OutSpans](const float InFrom, const float InTo, const float InUVFrom, const float InUVTo)
+            {
+                if (InTo > InFrom)
+                {
+                    OutSpans.push_back({ InFrom, InTo, InUVFrom, InUVTo });
+                }
+            };
+
+            lAdd(InAxis.Min, InAxis.Low, 0.f, InAxis.UVLow);
+
+            if (InAxis.Tile <= 0.f)
+            {
+                lAdd(InAxis.Low, InAxis.High, InAxis.UVLow, InAxis.UVHigh);
+            }
+            else
+            {
+                const Uint64 lCount = MiddleCount(InAxis);
+                for (Uint64 lIndex = 0; lIndex < lCount; ++lIndex)
+                {
+                    const float lFrom = InAxis.Low + InAxis.Tile * static_cast<float>(lIndex);
+                    const float lTo   = lIndex + 1 == lCount ? InAxis.High : lFrom + InAxis.Tile;
+                    const float lPart = Maths::Min(1.f, (lTo - lFrom) / InAxis.Tile);   // below 1 for a cut tile
+                    lAdd(lFrom, lTo, InAxis.UVLow, InAxis.UVLow + (InAxis.UVHigh - InAxis.UVLow) * lPart);
+                }
+            }
+
+            lAdd(InAxis.High, InAxis.Max, InAxis.UVHigh, 1.f);
+        }
+
+        /** The slice as a grid of columns and rows; false, with nothing appended, past the tile cap. */
+        bool BuildGrid(const Bounds2D& InRect, const UIMargin& InBorderPixels, const float InBorderScale,
+                       const Vector2F& InTextureSize, const bool bInTile, TDynArray<UIQuad>& OutQuads)
+        {
+            if (InTextureSize.x <= 0.f || InTextureSize.y <= 0.f)
+            {
+                OutQuads.emplace_back().Bounds = InRect;
+                return true;
+            }
+
+            const float    lScale = SanitizeBorderScale(InBorderScale);
+            const Vector2F lMin   = InRect.Min();
+            const Vector2F lMax   = InRect.Max();
+
+            SliceAxis lX = MakeAxis(lMin.x, lMax.x, InBorderPixels.Left, InBorderPixels.Right, lScale, InTextureSize.x);
+            SliceAxis lY = MakeAxis(lMin.y, lMax.y, InBorderPixels.Bottom, InBorderPixels.Top, lScale, InTextureSize.y);
+
+            if (bInTile)
+            {
+                lX.Tile = (lX.UVHigh - lX.UVLow) * InTextureSize.x * lScale;
+                lY.Tile = (lY.UVHigh - lY.UVLow) * InTextureSize.y * lScale;
+
+                // Counted before anything is made: a tiny scale would ask for millions.
+                if (MiddleCount(lX) > UI_MAX_TILED_QUADS || MiddleCount(lY) > UI_MAX_TILED_QUADS)
+                {
+                    return false;
+                }
+            }
+
+            TDynArray<SliceSpan> lColumns, lRows;
+            MakeSpans(lX, lColumns);
+            MakeSpans(lY, lRows);
+
+            if (bInTile && lColumns.size() * lRows.size() > UI_MAX_TILED_QUADS)
+            {
+                return false;
+            }
+
+            for (const SliceSpan& lRow : lRows)
+            {
+                for (const SliceSpan& lColumn : lColumns)
+                {
+                    UIQuad& lQuad = OutQuads.emplace_back();
+                    lQuad.Bounds  = Bounds2D::FromMinMax({ lColumn.From, lRow.From }, { lColumn.To, lRow.To });
+                    lQuad.UVMin   = { lColumn.UVFrom, lRow.UVFrom };
+                    lQuad.UVMax   = { lColumn.UVTo, lRow.UVTo };
+                }
+            }
+
+            return true;
+        }
     }
 
     float SanitizeBorderScale(const float InBorderScale) noexcept
@@ -36,60 +177,13 @@ namespace Opaax
     void BuildSlicedQuads(const Bounds2D& InRect, const UIMargin& InBorderPixels, const float InBorderScale,
                           const Vector2F& InTextureSize, TDynArray<UIQuad>& OutQuads)
     {
-        const float lScale = SanitizeBorderScale(InBorderScale);
+        BuildGrid(InRect, InBorderPixels, InBorderScale, InTextureSize, false, OutQuads);
+    }
 
-        const Vector2F lMin  = InRect.Min();
-        const Vector2F lMax  = InRect.Max();
-        const Vector2F lSize = InRect.Size();
-
-        if (InTextureSize.x <= 0.f || InTextureSize.y <= 0.f)
-        {
-            UIQuad& lWhole = OutQuads.emplace_back();
-            lWhole.Bounds  = InRect;
-            return;
-        }
-
-        // The UVs keep the authored border; the geometry is fitted into the rect (the corner art
-        // is compressed rather than cut).
-        float lUvLeft = InBorderPixels.Left, lUvRight = InBorderPixels.Right;
-        FitPair(lUvLeft, lUvRight, InTextureSize.x);
-
-        float lUvBottom = InBorderPixels.Bottom, lUvTop = InBorderPixels.Top;
-        FitPair(lUvBottom, lUvTop, InTextureSize.y);
-
-        // On screen a border pixel takes lScale canvas units.
-        float lLeft = InBorderPixels.Left * lScale, lRight = InBorderPixels.Right * lScale;
-        FitPair(lLeft, lRight, lSize.x);
-
-        float lBottom = InBorderPixels.Bottom * lScale, lTop = InBorderPixels.Top * lScale;
-        FitPair(lBottom, lTop, lSize.y);
-
-        const float lXs[4] = { lMin.x, lMin.x + lLeft, lMax.x - lRight, lMax.x };
-        const float lYs[4] = { lMin.y, lMin.y + lBottom, lMax.y - lTop, lMax.y };
-
-        const float lUs[4] = { 0.f, lUvLeft / InTextureSize.x, 1.f - lUvRight / InTextureSize.x, 1.f };
-        const float lVs[4] = { 0.f, lUvBottom / InTextureSize.y, 1.f - lUvTop / InTextureSize.y, 1.f };
-
-        for (Int32 lRow = 0; lRow < 3; ++lRow)
-        {
-            if (lYs[lRow + 1] <= lYs[lRow])
-            {
-                continue;
-            }
-
-            for (Int32 lCol = 0; lCol < 3; ++lCol)
-            {
-                if (lXs[lCol + 1] <= lXs[lCol])
-                {
-                    continue;
-                }
-
-                UIQuad& lQuad = OutQuads.emplace_back();
-                lQuad.Bounds  = Bounds2D::FromMinMax({ lXs[lCol], lYs[lRow] }, { lXs[lCol + 1], lYs[lRow + 1] });
-                lQuad.UVMin   = { lUs[lCol], lVs[lRow] };
-                lQuad.UVMax   = { lUs[lCol + 1], lVs[lRow + 1] };
-            }
-        }
+    bool BuildTiledQuads(const Bounds2D& InRect, const UIMargin& InBorderPixels, const float InBorderScale,
+                         const Vector2F& InTextureSize, TDynArray<UIQuad>& OutQuads)
+    {
+        return BuildGrid(InRect, InBorderPixels, InBorderScale, InTextureSize, true, OutQuads);
     }
 
     void ClipQuadsTo(TDynArray<UIQuad>& InOutQuads, const Bounds2D& InClip)

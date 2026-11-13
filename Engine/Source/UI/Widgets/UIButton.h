@@ -100,5 +100,6 @@ namespace Opaax
         // =============================================================================
     private:
         ITexture2D* m_Texture = nullptr;   // borrowed
+        bool        m_bWarnedTiles = false;   // too many tiles, said once
     };
 }

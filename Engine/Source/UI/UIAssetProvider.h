@@ -5,12 +5,13 @@
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
 #include "Renderer/Text/Text2D.h"
+#include "Renderer/Textures/SliceMode.h"
 
 namespace Opaax
 {
     class ITexture2D;
 
-    /** One sheet frame: the sheet's texture, the frame's UVs, its size and slice border in pixels. */
+    /** One sheet frame: the sheet's texture, the frame's UVs, its size, slice border in pixels and mode. */
     struct UISheetFrameView
     {
         ITexture2D* Texture = nullptr;   // null while uploading, or if nothing loads
@@ -18,6 +19,7 @@ namespace Opaax
         Vector2F    UVMax   = { 1.f, 1.f };
         Vector2F    SizePx  = { 0.f, 0.f };
         Margin      Border;              // all zero: not sliced
+        ESliceMode  SliceMode = ESliceMode::Stretch;
     };
 
     // =============================================================================

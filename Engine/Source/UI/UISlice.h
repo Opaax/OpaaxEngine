@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
+#include "Core/Log/Logger.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/Bounds2D.h"
 #include "Core/Maths/MathTypes.h"
@@ -9,6 +10,11 @@
 
 namespace Opaax
 {
+    OPAAX_LOG_CATEGORY(UISlice);
+
+    /** The most quads a tiled image may take; past it the image is stretched instead. */
+    inline constexpr Uint64 UI_MAX_TILED_QUADS = 1024;
+
     // =============================================================================
     // Rect -> quads geometry (pure functions, testable without GL).
     // =============================================================================
@@ -29,6 +35,16 @@ namespace Opaax
      */
     void BuildSlicedQuads(const Bounds2D& InRect, const UIMargin& InBorderPixels, float InBorderScale,
                           const Vector2F& InTextureSize, TDynArray<UIQuad>& OutQuads);
+
+    /**
+     * 9-slice with the edges and the centre repeated instead of stretched. A tile is its source
+     * pixels times InBorderScale; tiles start at the left and bottom edges and the last one of a run
+     * is cut, its UVs with it. Corners are as BuildSlicedQuads makes them. A zero border repeats the
+     * whole texture both ways; an edge or centre with no source pixels is stretched.
+     * @return False, appending nothing, when it would take more than UI_MAX_TILED_QUADS quads
+     */
+    bool BuildTiledQuads(const Bounds2D& InRect, const UIMargin& InBorderPixels, float InBorderScale,
+                         const Vector2F& InTextureSize, TDynArray<UIQuad>& OutQuads);
 
     /** InBorderScale as a slice uses it: zero or less (or not a number) is 1. */
     float SanitizeBorderScale(float InBorderScale) noexcept;

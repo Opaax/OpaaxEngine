@@ -1,6 +1,7 @@
 #include "UI/Widgets/UIButton.h"
 
 #include "UI/UIImageSource.h"
+#include "UI/UISlice.h"
 
 namespace Opaax
 {
@@ -55,7 +56,12 @@ namespace Opaax
             return false;
         }
 
-        BuildImageQuads(GetBounds(), lImage, Border, BorderScale, InColor, OutQuads);
+        if (!BuildImageQuads(GetBounds(), lImage, Border, BorderScale, InColor, OutQuads) && !m_bWarnedTiles)
+        {
+            m_bWarnedTiles = true;
+            OPAAX_LOG(LogUISlice, Warn, "'{}' would take more than {} tiles: stretched instead (raise BorderScale)",
+                      Name.CStr(), UI_MAX_TILED_QUADS);
+        }
         return true;
     }
 }
