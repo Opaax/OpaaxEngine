@@ -10,12 +10,13 @@ namespace Opaax
     // =============================================================================
     // CTOR - DTOR
     // =============================================================================
-    OpenGLFramebuffer::OpenGLFramebuffer(const FramebufferSpec& InSpec)
+    OpenGLFramebuffer::OpenGLFramebuffer(const FramebufferSpec& InSpec, Uint64* InAllocations)
         : m_Width(InSpec.Width  ? InSpec.Width  : 1u)   // avoid a zero size
         , m_Height(InSpec.Height ? InSpec.Height : 1u)
         , m_DepthStencil(InSpec.DepthStencil)
         , m_Format(InSpec.ColorFormat)
         , m_bLinearFilter(InSpec.bLinearFilter)
+        , m_Allocations(InAllocations)
     {
         Invalidate();
     }
@@ -37,6 +38,11 @@ namespace Opaax
 
     void OpenGLFramebuffer::Invalidate()
     {
+        if (m_Allocations != nullptr)
+        {
+            ++*m_Allocations;
+        }
+
         GLint  lInternal = GL_RGBA8;
         GLenum lFormat   = GL_RGBA;
         GLenum lType     = GL_UNSIGNED_BYTE;

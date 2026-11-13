@@ -21,6 +21,17 @@ namespace Opaax
         Uint32 BackbufferWidth  = 0;
         Uint32 BackbufferHeight = 0;
 
+        /**
+         * Render targets that got new storage (created, or changed size) during the last frame
+         * drawn, and since the start. 0 in a steady frame: a number that stays above 0 means
+         * targets are rebuilt every frame.
+         */
+        Uint32 TargetsRecreated      = 0;
+        Uint64 TargetsAllocatedTotal = 0;
+
+        /** Targets the lit path keeps now, for every view size in use (scene, maps, bloom levels). */
+        Uint32 SceneTargets = 0;
+
         /** GPU time of a recent frame, in milliseconds. Negative before the first result. */
         double GpuFrameMs = -1.0;
     };

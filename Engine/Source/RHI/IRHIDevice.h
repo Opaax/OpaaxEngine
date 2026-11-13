@@ -87,6 +87,13 @@ namespace Opaax
         virtual double          GetLastGpuFrameTimeMs() const                                   = 0;
 
         /**
+         * How many times a framebuffer of this device got new storage since the device started:
+         * once when created, once at each change of size. A count that rises every frame means
+         * targets are rebuilt every frame.
+         */
+        virtual Uint64          GetFramebufferAllocations() const                               = 0;
+
+        /**
          * Reads the backbuffer (the frame drawn so far, before Present).
          * @param OutRGBA Receives InWidth * InHeight RGBA pixels, rows from top to bottom, opaque
          * @return False when it cannot be read

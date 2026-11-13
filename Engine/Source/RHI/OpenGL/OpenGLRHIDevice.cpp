@@ -108,7 +108,7 @@ namespace Opaax
     TUniquePtr<IShader>        OpenGLRHIDevice::CreateShader(const ShaderDesc& InDesc)      { return MakeUnique<OpenGLShader>(InDesc); }
     TUniquePtr<IPipeline>      OpenGLRHIDevice::CreatePipeline(const PipelineDesc& InDesc)  { return MakeUnique<OpenGLPipeline>(InDesc); }
     TUniquePtr<IBindGroup>     OpenGLRHIDevice::CreateBindGroup(const BindGroupLayout& InLayout) { return MakeUnique<OpenGLBindGroup>(InLayout); }
-    TUniquePtr<IFramebuffer>   OpenGLRHIDevice::CreateFramebuffer(const FramebufferSpec& InSpec) { return MakeUnique<OpenGLFramebuffer>(InSpec); }
+    TUniquePtr<IFramebuffer>   OpenGLRHIDevice::CreateFramebuffer(const FramebufferSpec& InSpec) { return MakeUnique<OpenGLFramebuffer>(InSpec, &m_FramebufferAllocations); }
 
     // =========================================================================
     // Frame

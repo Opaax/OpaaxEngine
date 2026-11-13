@@ -165,5 +165,9 @@ namespace Opaax
         TUniquePtr<ScenePipeline2D> m_ScenePipeline;
         TUniquePtr<IRenderTarget> m_Backbuffer;   // window surface
         Vector4F                 m_ClearColor{0.f, 0.f, 0.f, 1.f};
+
+        // The device's framebuffer allocations at the end of the frame before, and how many the last frame made.
+        Uint64 m_AllocationsAtFrameEnd = 0;
+        Uint32 m_TargetsRecreated      = 0;
     };
 }

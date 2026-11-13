@@ -109,8 +109,18 @@ namespace Opaax
         {
             return;
         }
-        
+
+        if (m_ScenePipeline != nullptr)
+        {
+            m_ScenePipeline->EndFrame();
+        }
+
         m_Device->EndFrame();
+
+        // From one frame's end to the next: also counts what was resized between frames (an editor panel).
+        const Uint64 lAllocations = m_Device->GetFramebufferAllocations();
+        m_TargetsRecreated      = static_cast<Uint32>(lAllocations - m_AllocationsAtFrameEnd);
+        m_AllocationsAtFrameEnd = lAllocations;
     }
 
     void RenderSystem::Present()
@@ -140,6 +150,10 @@ namespace Opaax
         lInfo.bValid     = true;
         lInfo.Device     = m_Device->GetCapabilities();
         lInfo.GpuFrameMs = m_Device->GetLastGpuFrameTimeMs();
+
+        lInfo.TargetsRecreated      = m_TargetsRecreated;
+        lInfo.TargetsAllocatedTotal = m_Device->GetFramebufferAllocations();
+        lInfo.SceneTargets          = m_ScenePipeline != nullptr ? m_ScenePipeline->GetTargetCount() : 0;
 
         if (m_Backbuffer != nullptr)
         {

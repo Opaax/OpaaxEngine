@@ -1019,7 +1019,8 @@ namespace Opaax::EngineAutomation
                 "What the renderer is using now: {backend, vendor, gpu, version, shadingLanguage, maxSamples (the "
                 "most a multisampled target can have; 1: none), maxTextureSize, maxTextureUnits, errorChecks (how "
                 "wrong graphics calls reach the log: \"per call\", \"per frame\" or \"none\"), backbuffer {width, "
-                "height}, gpuFrameMs (negative before the first measure)}.",
+                "height}, targets {recreated (render targets that got new storage during the last frame: 0 in a steady "
+                "frame), allocatedTotal (since the start), kept (the lit path's, for every view size in use)}, gpuFrameMs (negative before the first measure)}.",
                 [&InEngine](const nlohmann::json&)
                 {
                     const RendererInfo lInfo = InEngine.GetRendererInfo();
@@ -1040,6 +1041,9 @@ namespace Opaax::EngineAutomation
                         { "errorChecks",     ToString(lInfo.Device.ErrorChecks) },
                         { "backbuffer",      nlohmann::json{ { "width",  lInfo.BackbufferWidth },
                                                              { "height", lInfo.BackbufferHeight } } },
+                        { "targets",         nlohmann::json{ { "recreated",      lInfo.TargetsRecreated },
+                                                             { "allocatedTotal", lInfo.TargetsAllocatedTotal },
+                                                             { "kept",           lInfo.SceneTargets } } },
                         { "gpuFrameMs",      lInfo.GpuFrameMs } });
                 });
 
