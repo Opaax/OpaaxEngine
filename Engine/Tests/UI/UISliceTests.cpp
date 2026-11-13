@@ -269,3 +269,92 @@ TEST_CASE("UISlice: MapQuadUVsInto lands every sliced UV inside the frame's rect
         CHECK(lWhole[lIndex].UVMax.y == doctest::Approx(lUnmapped[lIndex].UVMax.y));
     }
 }
+
+TEST_CASE("UISlice: tiled, the centre and edges repeat at their pixel size and the last tile is cut with its UVs")
+{
+    // 64 px texture, 16 px border: the centre is 32 px, so a 32 unit tile at scale 1. A 136 x 80 rect
+    // leaves a 104 x 48 middle: 3 whole columns and one of 8 (a quarter tile); 1 whole row and one of 16.
+    const Bounds2D    lRect = Bounds2D::FromMinMax({ 0.f, 0.f }, { 136.f, 80.f });
+    TDynArray<UIQuad> lQuads;
+    REQUIRE(BuildTiledQuads(lRect, Uniform(16.f), 1.f, { 64.f, 64.f }, lQuads));
+    CHECK(lQuads.size() == (4u + 2u) * (2u + 2u));
+
+    // A whole tile shows the whole centre: UVs 0.25..0.75.
+    const UIQuad* lWhole = QuadAt(lQuads, { 48.f, 16.f });
+    REQUIRE(lWhole != nullptr);
+    CheckVec(lWhole->Bounds.Size(), { 32.f, 32.f });
+    CheckVec(lWhole->UVMin, { 0.25f, 0.25f });
+    CheckVec(lWhole->UVMax, { 0.75f, 0.75f });
+
+    // The last column is cut to 8 units, and shows the first quarter of the centre.
+    const UIQuad* lCut = QuadAt(lQuads, { 112.f, 48.f });
+    REQUIRE(lCut != nullptr);
+    CheckVec(lCut->Bounds.Size(), { 8.f, 16.f });
+    CheckVec(lCut->UVMin, { 0.25f, 0.25f });
+    CheckVec(lCut->UVMax, { 0.25f + 0.5f * 0.25f, 0.25f + 0.5f * 0.5f });
+
+    // The top edge repeats along x with the centre's columns, its height the border's.
+    const UIQuad* lTopEdge = QuadAt(lQuads, { 48.f, 64.f });
+    REQUIRE(lTopEdge != nullptr);
+    CheckVec(lTopEdge->Bounds.Size(), { 32.f, 16.f });
+    CheckVec(lTopEdge->UVMin, { 0.25f, 0.75f });
+    CheckVec(lTopEdge->UVMax, { 0.75f, 1.f });
+}
+
+TEST_CASE("UISlice: tiled, the corners are the stretched slice's, and the scale sizes the tiles")
+{
+    const Bounds2D    lRect = Bounds2D::FromMinMax({ 0.f, 0.f }, { 300.f, 100.f });
+    TDynArray<UIQuad> lStretched, lTiled;
+    BuildSlicedQuads(lRect, Uniform(16.f), 0.5f, { 64.f, 64.f }, lStretched);
+    REQUIRE(BuildTiledQuads(lRect, Uniform(16.f), 0.5f, { 64.f, 64.f }, lTiled));
+
+    for (const Vector2F lCorner : { Vector2F{ 0.f, 0.f }, Vector2F{ 292.f, 0.f }, Vector2F{ 0.f, 92.f }, Vector2F{ 292.f, 92.f } })
+    {
+        const UIQuad* lA = QuadAt(lStretched, lCorner);
+        const UIQuad* lB = QuadAt(lTiled, lCorner);
+        REQUIRE(lA != nullptr);
+        REQUIRE(lB != nullptr);
+        CheckVec(lA->Bounds.Size(), lB->Bounds.Size());
+        CheckVec(lA->UVMin, lB->UVMin);
+        CheckVec(lA->UVMax, lB->UVMax);
+    }
+
+    // At 0.5 a 32 px centre is a 16 unit tile: the second column starts at 8 + 16.
+    const UIQuad* lSecond = QuadAt(lTiled, { 24.f, 8.f });
+    REQUIRE(lSecond != nullptr);
+    CheckVec(lSecond->Bounds.Size(), { 16.f, 16.f });
+}
+
+TEST_CASE("UISlice: tiled with no border, the whole texture repeats; a middle of exact tiles has no sliver")
+{
+    TDynArray<UIQuad> lQuads;
+    REQUIRE(BuildTiledQuads(Bounds2D::FromMinMax({ 0.f, 0.f }, { 100.f, 40.f }), UIMargin{}, 1.f, { 32.f, 32.f }, lQuads));
+    CHECK(lQuads.size() == 4u * 2u);   // 3 whole and a 4 unit cut across, 1 whole and an 8 unit cut up
+
+    const UIQuad* lFirst = QuadAt(lQuads, { 0.f, 0.f });
+    REQUIRE(lFirst != nullptr);
+    CheckVec(lFirst->UVMin, { 0.f, 0.f });
+    CheckVec(lFirst->UVMax, { 1.f, 1.f });
+
+    lQuads.clear();
+    REQUIRE(BuildTiledQuads(Bounds2D::FromMinMax({ 0.f, 0.f }, { 96.f, 32.f }), UIMargin{}, 1.f, { 32.f, 32.f }, lQuads));
+    CHECK(lQuads.size() == 3u);
+}
+
+TEST_CASE("UISlice: tiled past the cap answers false and appends nothing")
+{
+    // A 2 px centre over 1000 x 1000 is about 500 x 500 tiles.
+    TDynArray<UIQuad> lQuads;
+    lQuads.emplace_back();
+    CHECK_FALSE(BuildTiledQuads(Bounds2D::FromMinMax({ 0.f, 0.f }, { 1000.f, 1000.f }), Uniform(1.f), 1.f, { 4.f, 4.f }, lQuads));
+    CHECK(lQuads.size() == 1u);
+
+    // A scale so small one axis alone would ask for millions: refused before anything is made.
+    CHECK_FALSE(BuildTiledQuads(Bounds2D::FromMinMax({ 0.f, 0.f }, { 1000.f, 10.f }), UIMargin{}, 0.0001f, { 4.f, 4.f }, lQuads));
+    CHECK(lQuads.size() == 1u);
+
+    // Just under: 32 x 32 whole tiles of a borderless texture is 1024.
+    lQuads.clear();
+    CHECK(BuildTiledQuads(Bounds2D::FromMinMax({ 0.f, 0.f }, { 128.f, 128.f }), UIMargin{}, 1.f, { 4.f, 4.f }, lQuads));
+    CHECK(lQuads.size() == UI_MAX_TILED_QUADS);
+}

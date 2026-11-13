@@ -220,6 +220,14 @@ When the scaled borders do not fit the widget, each axis is shrunk in proportion
 squeezed). Art drawn smaller than its pixels is filtered without mipmaps, so it softens below about
 half its size; drawn larger, it turns blocky.
 
+A frame's `SliceMode` says how its edges and centre fill the widget. `Stretch` (the default) stretches
+them. `Tile` repeats them at their size on screen (their pixels times `BorderScale`), from the left
+and bottom edges, the last tile of each run cut; corners are unchanged, and a frame with no border
+repeats whole, both ways. A hatch or a pattern keeps its angle and spacing at any widget size this way.
+Tiles are quads (a frame is a part of its sheet), so an image that would take more than 1024 is
+stretched instead, with one warning: raise `BorderScale` or use bigger art. A plain `Texture` always
+stretches.
+
 A button shows `Frame` in its Normal state, and `HoveredFrame`, `PressedFrame` or `DisabledFrame` in
 the others (-1 keeps `Frame`), each sliced with its own frame's border and tinted by the state's colour:
 
@@ -289,7 +297,7 @@ All three are assets. A sheet cuts a texture into named frames (pixels, from the
 
 A frame's `Border` is its slice border for UI images and buttons ([Sliced art](#sliced-art)), in
 texture pixels inside the frame, `Top` being the top of the art as seen; all zero (or missing) is not
-sliced. An edit keeps it inside its frame: no side negative, and two opposite sides that add up to
+sliced. Its `SliceMode` is `Stretch` (the default) or `Tile`. An edit keeps the border inside its frame: no side negative, and two opposite sides that add up to
 more than the frame shrink in proportion.
 
 A sprite, a `UIImage` or a `UIButton` shows a sheet frame by index (`Frame`; -1 is the sheet's
@@ -303,7 +311,8 @@ Under the selected frame's fields, **Slice border** shows that frame alone, enla
 border's four lines (the image above shows them too, smaller). Dragging a line sets that side in whole
 pixels, never past the opposite line; a press where two lines cross takes both, and a side at zero is
 taken on the frame's edge. **Preview** draws the frame as a UI image or button of `Size` canvas units
-draws it at `BorderScale`; both fields are the window's own and are not saved.
+at `BorderScale`, stretched or tiled as its `SliceMode` says; both fields are the window's own and are
+not saved.
 
 A clip plays frames of a sheet (or whole textures) in order;
 `PlayMode` is `Once`, `Loop` or `PingPong`, and `Hold` keeps a step for that many ticks:

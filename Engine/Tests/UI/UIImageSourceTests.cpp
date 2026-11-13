@@ -45,6 +45,7 @@ namespace
         Uint32      SheetResolves = 0;
         Int32       LastFrame     = -99;
         Margin      FrameBorder;   // the frame's slice border, as the sheet would give it
+        ESliceMode  FrameMode = ESliceMode::Stretch;
 
         FontFaceView ResolveFace(const char*) override { return FontFaceView{}; }
         ITexture2D*  ResolveTexture(const char*) override { return &Plain; }
@@ -61,6 +62,7 @@ namespace
             lView.UVMax   = { 0.375f, 0.875f };
             lView.SizePx  = { 64.f, 64.f };
             lView.Border  = FrameBorder;
+            lView.SliceMode = FrameMode;
             return lView;
         }
     };
@@ -271,6 +273,53 @@ TEST_CASE("UIImage: BorderScale sizes the frame's corners, and a fill still cuts
     // Half filled: the left column whole, the middle one cut, the right one gone.
     lF.Image->SetFill(EUIFill::Horizontal, 0.5f);
     CHECK(lF.Quads().size() == 6u);
+}
+
+TEST_CASE("UIImage: a Tile frame repeats its edges and centre at the frame's own pixel size")
+{
+    // 64 px frame, 8 px border: a 48 px centre tile. 200 wide: 184 of middle is 3 whole tiles and a
+    // cut one; 100 high: 84 is one whole and a cut one. (4 + 2 columns) x (2 + 2 rows) = 24 quads.
+    SlicedFixture lF;
+    lF.Assets.FrameBorder = Margin{ 8.f, 8.f, 8.f, 8.f };
+    lF.Assets.FrameMode   = ESliceMode::Tile;
+
+    const TDynArray<UIQuad>& lQuads = lF.Quads();
+    CHECK(lQuads.size() == 24u);
+    CHECK(lF.CornerWidth() == doctest::Approx(8.f));
+    for (const UIQuad& lQuad : lQuads)
+    {
+        CHECK(lQuad.UVMin.x >= 0.25f - 1e-5f);
+        CHECK(lQuad.UVMax.x <= 0.375f + 1e-5f);
+    }
+
+    // The frame's mode is what tiles: the same frame stretched is nine.
+    lF.Assets.FrameMode = ESliceMode::Stretch;
+    lF.Image->InvalidateContent();
+    CHECK(lF.Quads().size() == 9u);
+}
+
+TEST_CASE("BuildImageQuads: past the tile cap it stretches and says so; a texture never tiles")
+{
+    UIResolvedImage lImage;
+    FakeTexture     lTexture{ 64u };
+    lImage.Texture   = &lTexture;
+    lImage.SizePx    = { 4.f, 4.f };
+    lImage.Border    = Margin{ 1.f, 1.f, 1.f, 1.f };
+    lImage.SliceMode = ESliceMode::Tile;
+
+    // 2 px centre tiles over 1000 x 1000: far past the cap.
+    TDynArray<UIQuad> lQuads;
+    CHECK_FALSE(BuildImageQuads(Bounds2D::FromMinMax({ 0.f, 0.f }, { 1000.f, 1000.f }), lImage, Margin{}, 1.f,
+                                LinearColor{ 1.f, 1.f, 1.f, 1.f }, lQuads));
+    CHECK(lQuads.size() == 9u);
+
+    // A plain texture (Stretch, no border) is one quad, and nothing to report.
+    lImage.SliceMode = ESliceMode::Stretch;
+    lImage.Border    = Margin{};
+    lQuads.clear();
+    CHECK(BuildImageQuads(Bounds2D::FromMinMax({ 0.f, 0.f }, { 1000.f, 1000.f }), lImage, Margin{}, 1.f,
+                          LinearColor{ 1.f, 1.f, 1.f, 1.f }, lQuads));
+    CHECK(lQuads.size() == 1u);
 }
 
 TEST_CASE("BuildImageQuads: appends after what OutQuads holds, and leaves it alone")

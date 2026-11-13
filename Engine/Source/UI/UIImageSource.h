@@ -29,6 +29,7 @@ namespace Opaax
         Vector2F    UVMax   = { 1.f, 1.f };
         Vector2F    SizePx  = { 0.f, 0.f };   // frame or texture size (for 9-slice)
         Margin      Border;                   // a sheet frame's slice border in pixels; none for a texture
+        ESliceMode  SliceMode = ESliceMode::Stretch;   // a sheet frame's; a texture stretches
     };
 
     /**
@@ -44,8 +45,10 @@ namespace Opaax
      * Appends the quads that draw InImage over InRect, tinted InColor: nine for a sliced image, one
      * otherwise (one plain quad without a texture). The border is InOwnBorder when it is not all zero,
      * else the image's own (a sheet frame's); InBorderScale is canvas units per border pixel. The quads
-     * already in OutQuads are left alone. UIImage and UIButton draw with it; a game's widget can too.
+     * already in OutQuads are left alone. A Tile frame repeats its edges and centre (UISlice's
+     * BuildTiledQuads). UIImage and UIButton draw with it; a game's widget can too.
+     * @return False when a tiled image took too many tiles and was stretched instead
      */
-    void BuildImageQuads(const Bounds2D& InRect, const UIResolvedImage& InImage, const Margin& InOwnBorder,
+    bool BuildImageQuads(const Bounds2D& InRect, const UIResolvedImage& InImage, const Margin& InOwnBorder,
                          float InBorderScale, const LinearColor& InColor, TDynArray<UIQuad>& OutQuads);
 }
