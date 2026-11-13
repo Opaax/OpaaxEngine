@@ -1,0 +1,356 @@
+[
+    {
+        "id": "play-AntiAliasing",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/AntiAliasing.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.5
+        }
+    },
+    {
+        "id": "multisampling-Off",
+        "command": "config.set",
+        "params": {
+            "config": "Renderer",
+            "values": {
+                "Multisampling": "Off"
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "AntiAliasing-Off-info",
+        "command": "renderer.info",
+        "expect": {
+            "views": [
+                {
+                    "lit": false,
+                    "samples": 1,
+                    "sceneTarget": false
+                }
+            ]
+        }
+    },
+    {
+        "id": "AntiAliasing-Off-quad-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 408,
+            "y": 340,
+            "width": 20,
+            "height": 40
+        },
+        "expect": {
+            "colors": 2
+        }
+    },
+    {
+        "id": "AntiAliasing-Off-sprite-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 768,
+            "y": 340,
+            "width": 20,
+            "height": 40
+        },
+        "expect": {
+            "colors": 2
+        }
+    },
+    {
+        "id": "AntiAliasing-Off-right-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 1108,
+            "y": 340,
+            "width": 20,
+            "height": 40
+        }
+    },
+    {
+        "id": "AntiAliasing-Off-shot",
+        "command": "screenshot",
+        "params": {
+            "path": "AntiAliasing-Off.png"
+        }
+    },
+    {
+        "id": "multisampling-X4",
+        "command": "config.set",
+        "params": {
+            "config": "Renderer",
+            "values": {
+                "Multisampling": "X4"
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "AntiAliasing-X4-info",
+        "command": "renderer.info",
+        "expect": {
+            "views": [
+                {
+                    "lit": false,
+                    "samples": 4,
+                    "sceneTarget": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "AntiAliasing-X4-quad-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 408,
+            "y": 340,
+            "width": 20,
+            "height": 40
+        },
+        "expect": {
+            "colors": {
+                "$atLeast": 3
+            }
+        }
+    },
+    {
+        "id": "AntiAliasing-X4-sprite-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 768,
+            "y": 340,
+            "width": 20,
+            "height": 40
+        },
+        "expect": {
+            "colors": {
+                "$atLeast": 3
+            }
+        }
+    },
+    {
+        "id": "AntiAliasing-X4-right-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 1108,
+            "y": 340,
+            "width": 20,
+            "height": 40
+        }
+    },
+    {
+        "id": "AntiAliasing-X4-shot",
+        "command": "screenshot",
+        "params": {
+            "path": "AntiAliasing-X4.png"
+        }
+    },
+    {
+        "id": "multisampling-Off",
+        "command": "config.set",
+        "params": {
+            "config": "Renderer",
+            "values": {
+                "Multisampling": "Off"
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "play-AntiAliasingLit",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/AntiAliasingLit.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.5
+        }
+    },
+    {
+        "id": "multisampling-Off",
+        "command": "config.set",
+        "params": {
+            "config": "Renderer",
+            "values": {
+                "Multisampling": "Off"
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "AntiAliasingLit-Off-info",
+        "command": "renderer.info",
+        "expect": {
+            "views": [
+                {
+                    "lit": true,
+                    "samples": 1,
+                    "sceneTarget": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "AntiAliasingLit-Off-quad-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 408,
+            "y": 340,
+            "width": 20,
+            "height": 40
+        },
+        "expect": {
+            "colors": 2
+        }
+    },
+    {
+        "id": "AntiAliasingLit-Off-sprite-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 768,
+            "y": 340,
+            "width": 20,
+            "height": 40
+        },
+        "expect": {
+            "colors": 2
+        }
+    },
+    {
+        "id": "AntiAliasingLit-Off-right-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 1108,
+            "y": 340,
+            "width": 20,
+            "height": 40
+        }
+    },
+    {
+        "id": "AntiAliasingLit-Off-shot",
+        "command": "screenshot",
+        "params": {
+            "path": "AntiAliasingLit-Off.png"
+        }
+    },
+    {
+        "id": "multisampling-X4",
+        "command": "config.set",
+        "params": {
+            "config": "Renderer",
+            "values": {
+                "Multisampling": "X4"
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "AntiAliasingLit-X4-info",
+        "command": "renderer.info",
+        "expect": {
+            "views": [
+                {
+                    "lit": true,
+                    "samples": 4,
+                    "sceneTarget": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "AntiAliasingLit-X4-quad-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 408,
+            "y": 340,
+            "width": 20,
+            "height": 40
+        },
+        "expect": {
+            "colors": {
+                "$atLeast": 3
+            }
+        }
+    },
+    {
+        "id": "AntiAliasingLit-X4-sprite-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 768,
+            "y": 340,
+            "width": 20,
+            "height": 40
+        },
+        "expect": {
+            "colors": {
+                "$atLeast": 3
+            }
+        }
+    },
+    {
+        "id": "AntiAliasingLit-X4-right-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 1108,
+            "y": 340,
+            "width": 20,
+            "height": 40
+        }
+    },
+    {
+        "id": "AntiAliasingLit-X4-shot",
+        "command": "screenshot",
+        "params": {
+            "path": "AntiAliasingLit-X4.png"
+        }
+    },
+    {
+        "id": "multisampling-Off",
+        "command": "config.set",
+        "params": {
+            "config": "Renderer",
+            "values": {
+                "Multisampling": "Off"
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    }
+]

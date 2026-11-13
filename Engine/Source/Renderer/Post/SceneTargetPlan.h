@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/OpaaxTypes.h"
+#include "Core/Reflection/OpaaxEnum.h"   // OPAAX_ENUM_VALUES
 #include "RHI/Framebuffer.h"
 
 namespace Opaax
@@ -8,6 +9,41 @@ namespace Opaax
     /** The least and most render scale a world view takes: its scene target against the view's size. */
     inline constexpr float MIN_RENDER_SCALE = 0.5f;
     inline constexpr float MAX_RENDER_SCALE = 2.f;
+
+    /** Samples per pixel of a world's target (Renderer.config): smooths the edges of quads, tiles and shapes. */
+    enum class EMultisampling : Uint8
+    {
+        Off,
+        X2,
+        X4,
+        X8
+    };
+
+    /** Name for logs and the value written in the config. */
+    inline const char* ToString(const EMultisampling InMultisampling) noexcept
+    {
+        switch (InMultisampling)
+        {
+        case EMultisampling::Off: return "Off";
+        case EMultisampling::X2:  return "X2";
+        case EMultisampling::X4:  return "X4";
+        case EMultisampling::X8:  return "X8";
+        }
+        return "Off";
+    }
+
+    /** The samples per pixel a choice asks for (1 for Off). */
+    constexpr Uint32 SamplesOf(const EMultisampling InMultisampling) noexcept
+    {
+        switch (InMultisampling)
+        {
+        case EMultisampling::Off: return 1;
+        case EMultisampling::X2:  return 2;
+        case EMultisampling::X4:  return 4;
+        case EMultisampling::X8:  return 8;
+        }
+        return 1;
+    }
 
     /** What the project and the player ask of world views (Renderer.config), as the plan reads it. */
     struct SceneTargetSettings
@@ -50,3 +86,5 @@ namespace Opaax
     SceneTargetPlan PlanSceneTarget(Uint32 InWidth, Uint32 InHeight, bool bInLit,
                                     const SceneTargetSettings& InSettings, Uint32 InMaxSamples);
 }
+
+OPAAX_ENUM_VALUES(Opaax::EMultisampling, Off, X2, X4, X8)

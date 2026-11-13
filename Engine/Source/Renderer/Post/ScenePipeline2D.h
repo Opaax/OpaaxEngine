@@ -126,9 +126,11 @@ namespace Opaax
     public:
         /**
          * The target the world is drawn into, sized InWidth x InHeight: RGBA16F for a lit world,
-         * RGBA8 for an unlit one (PlanSceneTarget). The view's until the next call.
+         * RGBA8 for an unlit one, InSamples per pixel (PlanSceneTarget). Multisampled, it is
+         * resolved when its pass ends. The view's until the next call.
          */
-        IRenderTarget& PrepareScene(Uint32 InWidth, Uint32 InHeight, ETextureFormat InFormat = ETextureFormat::RGBA16F);
+        IRenderTarget& PrepareScene(Uint32 InWidth, Uint32 InHeight, ETextureFormat InFormat = ETextureFormat::RGBA16F,
+                                    Uint32 InSamples = 1);
 
         /** Writes every pixel of InOutput from the scene: bloom, exposure, tonemap, gamma. */
         void Composite(ICommandBuffer& InCmd, IRenderTarget& InOutput, const PostSettings& InSettings);
@@ -179,7 +181,8 @@ namespace Opaax
         };
 
         /** The kept target for a use, a size and a format, made or resized when there is none. */
-        PostTarget& AcquireTarget(Uint32 InPurpose, Uint32 InWidth, Uint32 InHeight, ETextureFormat InFormat);
+        PostTarget& AcquireTarget(Uint32 InPurpose, Uint32 InWidth, Uint32 InHeight, ETextureFormat InFormat,
+                                  Uint32 InSamples = 1);
 
         /** One fullscreen pass of the bloom shader, from InSource into InTarget (added into it when bInAdd). */
         void RunBloomPass(ICommandBuffer& InCmd, Uint32 InMode, const PostSettings& InSettings,

@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/AntiAliasing.opaaxmap"
+    ],
+    "name": "AntiAliasing",
+    "persistentMap": "Maps/AntiAliasing.opaaxmap",
+    "version": 1
+}

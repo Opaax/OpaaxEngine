@@ -32,7 +32,9 @@ namespace Opaax
     }
 
     /**
-     * An offscreen render target: one colour attachment and an optional depth/stencil.
+     * An offscreen render target: one colour attachment and an optional depth/stencil. With
+     * Samples above 1 it is drawn multisampled and resolved into its colour texture when its pass
+     * ends: sampling it always reads one sample per pixel.
      * The 2D renderer orders what it draws itself and tests neither depth nor stencil: ask for
      * DepthStencil only for a pass that does.
      */
@@ -45,6 +47,9 @@ namespace Opaax
 
         /** How the colour is filtered when sampled as a texture (off: nearest texel). */
         bool           bLinearFilter = true;
+
+        /** Samples per pixel while drawn. 1: none. Capped by the device's most (RHICapabilities::MaxSamples). */
+        Uint32         Samples       = 1;
     };
 
     // =============================================================================
@@ -68,7 +73,7 @@ namespace Opaax
     public:
         // Makes it the draw target (also sets the viewport to its size).
         virtual void Bind()   = 0;
-        // Restores the default (window) framebuffer.
+        // Restores the default (window) framebuffer. A multisampled one is resolved first.
         virtual void Unbind() = 0;
 
         // Reallocates the attachments at a new size. Ignores a zero dimension.
@@ -87,6 +92,9 @@ namespace Opaax
         virtual Uint32 GetColorAttachmentID() const noexcept = 0;
         virtual Uint32 GetWidth()             const noexcept = 0;
         virtual Uint32 GetHeight()            const noexcept = 0;
+
+        /** Samples per pixel while drawn, as the device gave them. */
+        virtual Uint32 GetSamples()           const noexcept { return 1; }
     };
 
     // =============================================================================

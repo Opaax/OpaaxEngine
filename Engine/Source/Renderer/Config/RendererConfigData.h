@@ -6,7 +6,9 @@
 #include "Core/Color/LinearColorJson.h"
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
+#include "Core/Reflection/OpaaxEnumJson.h"
 #include "Core/Reflection/OpaaxProperty.h"
+#include "Renderer/Post/SceneTargetPlan.h"
 #include "RHI/TextureSampling.h"
 
 namespace Opaax
@@ -14,8 +16,7 @@ namespace Opaax
     // =============================================================================
     // RendererConfigData — <ProjectRoot>/Configs/Renderer.config.
     //   The limits size one draw call (quads and textures per batch); they only change the
-    //   draw call count, never the picture. They need a restart. ClearColor and TextureFilter
-    //   apply live.
+    //   draw call count, never the picture. They need a restart. The others apply live.
     // =============================================================================
     struct RendererConfigData
     {
@@ -24,10 +25,13 @@ namespace Opaax
         /** How the project's colour textures are read at other sizes than their own. Fonts are not concerned. */
         ETextureFilter TextureFilter = ETextureFilter::Pixel;
 
+        /** Samples per pixel of the world's target: smooth edges on quads, tiles and shapes. */
+        EMultisampling Multisampling = EMultisampling::Off;
+
         Uint32 MaxQuadsPerBatch = 10000;
         Uint32 MaxTextureSlots  = 16;   // sampler array length in the sprite shader; 2 = white + one
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(RendererConfigData, ClearColor, TextureFilter,
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(RendererConfigData, ClearColor, TextureFilter, Multisampling,
                                                     MaxQuadsPerBatch, MaxTextureSlots)
 
         OPAAX_PROPERTIES(RendererConfigData,
@@ -46,6 +50,15 @@ namespace Opaax
                                          "on a grid of 8 or 16 texels, or have empty texels between them.\n"
                                          "Costs nothing per frame; the smaller copies take a third more "
                                          "video memory, whatever the choice. Text is not concerned."),
+                         OPAAX_PROP(Multisampling)
+                             .SetTooltip("Smooths the stair steps on the edges of shapes: a turned quad, a tile, "
+                                         "a line, a solid sprite. Applies at once, to the world (not the UI).\n"
+                                         "It does not smooth what is cut inside a texture: the edge of a sprite "
+                                         "with a transparent border, a hollow quad, a mask. Nor an edge brighter "
+                                         "than white in a lit world.\n"
+                                         "Costs memory and fill: the world's target holds that many samples per "
+                                         "pixel (X4: four times the pixels drawn into). A driver that gives fewer "
+                                         "uses its most; renderer.info says how many are used."),
                          OPAAX_PROP(MaxQuadsPerBatch)
                              .SetRange(1.f, 65536.f)
                              .SetFlags(EPropertyFlags::NeedRestart)

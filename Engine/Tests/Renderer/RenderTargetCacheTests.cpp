@@ -64,6 +64,30 @@ TEST_CASE("RenderTargetCache: the same key twice gives one target")
     CHECK(lFixture.Cache.GetCreated() == 1);
 }
 
+TEST_CASE("RenderTargetCache: another sample count is another target, never resized into it")
+{
+    Fixture lFixture;
+
+    RenderTargetKey lMultisampled = Key(SCENE, 1280, 720);
+    lMultisampled.Samples = 4;
+
+    FakeTarget& lOne  = lFixture.Acquire(Key(SCENE, 1280, 720));
+    FakeTarget& lFour = lFixture.Acquire(lMultisampled);
+    CHECK(&lOne != &lFour);
+
+    // Idle for a while, the one-sample target is still not taken for a multisampled size.
+    for (Uint32 lFrame = 0; lFrame < 5; ++lFrame)
+    {
+        lFixture.Cache.EndFrame();
+        lFixture.Acquire(lMultisampled);
+    }
+
+    lMultisampled.Width = 640;
+    lFixture.Acquire(lMultisampled);
+    CHECK(lFixture.Cache.GetResized() == 0);
+    CHECK(lFixture.Cache.GetCreated() == 3);
+}
+
 TEST_CASE("RenderTargetCache: two sizes in a frame get a target each, and none is remade the next frames")
 {
     Fixture lFixture;

@@ -15,17 +15,19 @@ namespace Opaax
         Uint32         Height        = 1;
         ETextureFormat Format        = ETextureFormat::RGBA8;
         bool           bLinearFilter = true;
+        Uint32         Samples       = 1;
 
         bool operator==(const RenderTargetKey& InOther) const noexcept
         {
             return Purpose == InOther.Purpose && Width == InOther.Width && Height == InOther.Height
-                && Format == InOther.Format && bLinearFilter == InOther.bLinearFilter;
+                && IsSameKind(InOther);
         }
 
         /** Same use and same making, the size apart: one can be resized into the other. */
         bool IsSameKind(const RenderTargetKey& InOther) const noexcept
         {
-            return Purpose == InOther.Purpose && Format == InOther.Format && bLinearFilter == InOther.bLinearFilter;
+            return Purpose == InOther.Purpose && Format == InOther.Format && bLinearFilter == InOther.bLinearFilter
+                && Samples == InOther.Samples;
         }
     };
 

@@ -2,6 +2,7 @@
 // format and samples. Pure: no device.
 #include <doctest.h>
 
+#include "Core/String/CString.h"
 #include "Core/Templates/TypeTraits.h"
 #include "Renderer/Post/SceneTargetPlan.h"
 
@@ -68,6 +69,23 @@ TEST_CASE("SceneTargetPlan: samples are capped by the device's most")
     CHECK(PlanSceneTarget(100, 100, false, lSettings, 0).Samples == 1);
     lSettings.Samples = 0;
     CHECK(PlanSceneTarget(100, 100, true, lSettings, 8).Samples == 1);
+}
+
+TEST_CASE("SceneTargetPlan: each multisampling choice asks for its samples, and is named as in the config")
+{
+    CHECK(SamplesOf(EMultisampling::Off) == 1);
+    CHECK(SamplesOf(EMultisampling::X2) == 2);
+    CHECK(SamplesOf(EMultisampling::X4) == 4);
+    CHECK(SamplesOf(EMultisampling::X8) == 8);
+
+    for (const EMultisampling lChoice : TEnumValues<EMultisampling>::Values)
+    {
+        SceneTargetSettings lSettings;
+        lSettings.Samples = SamplesOf(lChoice);
+        CHECK(PlanSceneTarget(100, 100, false, lSettings, 8).bSceneTarget == (lChoice != EMultisampling::Off));
+    }
+
+    CHECK(CString::Equals(ToString(EMultisampling::X4), "X4"));
 }
 
 TEST_CASE("SceneTargetPlan: the scale rounds, is clamped and keeps 1 pixel at least")

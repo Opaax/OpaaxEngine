@@ -87,10 +87,14 @@ namespace Opaax
         return m_Device->CreateTexture(InPixels, InWidth, InHeight, InChannels);
     }
 
+    Uint32 RenderSystem::GetMaxSamples() const
+    {
+        return IsValidDevice() ? m_Device->GetCapabilities().MaxSamples : 1u;
+    }
+
     SceneTargetPlan RenderSystem::PlanWorldView(const Uint32 InWidth, const Uint32 InHeight, const bool bInLit)
     {
-        const Uint32          lMaxSamples = IsValidDevice() ? m_Device->GetCapabilities().MaxSamples : 1u;
-        const SceneTargetPlan lPlan       = PlanSceneTarget(InWidth, InHeight, bInLit, m_SceneTargetSettings, lMaxSamples);
+        const SceneTargetPlan lPlan = PlanSceneTarget(InWidth, InHeight, bInLit, m_SceneTargetSettings, GetMaxSamples());
         m_WorldViews.push_back(lPlan);
         return lPlan;
     }
