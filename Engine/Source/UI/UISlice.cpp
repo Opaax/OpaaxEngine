@@ -239,6 +239,7 @@ namespace Opaax
         {
             lQuad.UVMin = InUVMin + lQuad.UVMin * lSpan;
             lQuad.UVMax = InUVMin + lQuad.UVMax * lSpan;
+            lQuad.UVFrame = MakeUVBounds(InUVMin, InUVMax);
         }
     }
 }

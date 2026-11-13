@@ -210,10 +210,17 @@ Two things hold under every filter:
   not (their alpha stays 0). A paint program leaves any colour there, often black, and a blended read
   at a sprite's edge would draw it as a dark line. An image that keeps data under alpha 0 loses it.
 
-With `Smooth`, the frames of a sheet that touch each other take a line of colour from their
-neighbour when enlarged, and more when drawn small: leave a few empty texels between frames (the
-sheet's `Spacing`). `renderer.info` answers the filter in use (`textureFilter`), and
-`TestWorld/Levels/Filtering` shows the three side by side.
+A sprite or a UI image drawn from a sheet frame reads inside its frame only: each quad carries its
+frame's rectangle and the sprite shader keeps blended reads half a texel inside it, so frames that
+touch do not take colour from each other, enlarged or reduced. One case is left, with `Smooth` and a
+frame drawn much smaller: a mipmap texel covers 2, 4, 8... texels of the sheet, and one that lies
+across two frames holds both colours. Frames whose position and size are multiples of 8 or 16 texels
+(a grid of such cells) stay clean down to an eighth or a sixteenth of their size; otherwise leave a
+few empty texels between frames (the sheet's `Spacing`). Code that draws from a frame itself passes
+it to `Renderer2D::DrawSprite` (`InUVFrame`, from `MakeUVBounds`).
+
+`renderer.info` answers the filter in use (`textureFilter`), and `TestWorld/Levels/Filtering` shows
+the three side by side.
 
 ### Shaders
 

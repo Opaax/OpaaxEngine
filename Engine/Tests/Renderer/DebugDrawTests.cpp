@@ -526,3 +526,48 @@ TEST_CASE("DrawBox carries its ROTATION through to the queue")
     // axis-aligned while the shape it annotated was not.
     CHECK(lDebug.GetBoxes()[0].RotationRad == doctest::Approx(1.25f));
 }
+
+// =============================================================================
+// MakeUVBounds: the sheet frame a quad's blended reads stay inside
+// =============================================================================
+
+TEST_CASE("MakeUVBounds: a frame's corners become its min and its max")
+{
+    const Vector4F lBounds = MakeUVBounds({ 0.25f, 0.5f }, { 0.75f, 1.f });
+
+    CHECK(lBounds.x == doctest::Approx(0.25f));
+    CHECK(lBounds.y == doctest::Approx(0.5f));
+    CHECK(lBounds.z == doctest::Approx(0.75f));
+    CHECK(lBounds.w == doctest::Approx(1.f));
+}
+
+TEST_CASE("MakeUVBounds: a flipped frame has the same bounds")
+{
+    const Vector4F lFlippedX = MakeUVBounds({ 0.75f, 0.5f }, { 0.25f, 1.f });
+    const Vector4F lFlippedY = MakeUVBounds({ 0.25f, 1.f }, { 0.75f, 0.5f });
+
+    CHECK(lFlippedX.x == doctest::Approx(0.25f));
+    CHECK(lFlippedX.z == doctest::Approx(0.75f));
+    CHECK(lFlippedY.y == doctest::Approx(0.5f));
+    CHECK(lFlippedY.w == doctest::Approx(1.f));
+}
+
+TEST_CASE("MakeUVBounds: a whole texture is 0 to 1")
+{
+    const Vector4F lBounds = MakeUVBounds({ 0.f, 0.f }, { 1.f, 1.f });
+
+    CHECK(lBounds.x == 0.f);
+    CHECK(lBounds.y == 0.f);
+    CHECK(lBounds.z == 1.f);
+    CHECK(lBounds.w == 1.f);
+}
+
+TEST_CASE("MakeUVBounds: the whole texture is the default frame of a quad")
+{
+    const Vector4F lWhole = MakeUVBounds({ 0.f, 0.f }, { 1.f, 1.f });
+
+    CHECK(lWhole.x == WHOLE_TEXTURE_UV.x);
+    CHECK(lWhole.y == WHOLE_TEXTURE_UV.y);
+    CHECK(lWhole.z == WHOLE_TEXTURE_UV.z);
+    CHECK(lWhole.w == WHOLE_TEXTURE_UV.w);
+}

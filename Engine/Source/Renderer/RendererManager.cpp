@@ -638,7 +638,8 @@ namespace Opaax
                     if (lSprite->bVisible && ResolveSpriteDraw(*lSprite, lTexture, lUV))
                     {
                         InRenderer.DrawSprite(lPose.Position, lSprite->Size * lPose.Scale, *lTexture, lSprite->Color,
-                                              lRotation, lSprite->Layer, lSprite->OrderInLayer, lUV.UVMin, lUV.UVMax);
+                                              lRotation, lSprite->Layer, lSprite->OrderInLayer, lUV.UVMin, lUV.UVMax,
+                                              QuadMask{}, QuadLighting{}, MakeUVBounds(lUV.UVMin, lUV.UVMax));
                         ++lDrawn;
                     }
                 }
@@ -820,7 +821,7 @@ namespace Opaax
                 InRenderer.DrawSprite(lPose.Position, InSprite.Size * lPose.Scale, *lTexture, InSprite.Color,
                                       Maths::DegreesToRadians(lPose.RotationDeg),
                                       InSprite.Layer, InSprite.OrderInLayer,
-                                      lUV.UVMin, lUV.UVMax, QuadMask{}, lLighting);
+                                      lUV.UVMin, lUV.UVMax, QuadMask{}, lLighting, MakeUVBounds(lUV.UVMin, lUV.UVMax));
             });
     }
 

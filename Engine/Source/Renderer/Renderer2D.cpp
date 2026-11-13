@@ -29,7 +29,7 @@ namespace Opaax
     static constexpr Uint32 LIGHTS_UBO_BINDING   = 3;                          // LightsUBO in Sprite.glsl
     static constexpr Uint32 SHADOW_MAP_SLOT      = SHADER_TEXTURE_SLOTS - 1;   // SHADOW_SLOT in Sprite.glsl
     static constexpr Uint32 AO_MAP_SLOT          = SHADER_TEXTURE_SLOTS - 2;   // AO_SLOT in Sprite.glsl
-    static constexpr Uint32 MAX_BATCH_QUADS      = 65536;   // upper bound (~23 MB of vertices)
+    static constexpr Uint32 MAX_BATCH_QUADS      = 65536;   // upper bound (~27 MB of vertices)
 
     // =============================================================================
     // Vertex layout
@@ -56,16 +56,22 @@ namespace Opaax
         float    NormalIndex;
         Vector4F Emissive;
         Vector2F RotationCS;
+
+        // The sheet frame the quad is drawn from (min u, min v, max u, max v): a blended read
+        // stays inside it, so a frame takes nothing from its neighbours. The whole texture for
+        // a quad that reads freely.
+        Vector4F UVFrame;
     };
 
     // The MaxQuadsPerBatch tooltip quotes this size (four vertices a quad).
-    static_assert(sizeof(QuadVertex) == 88, "QuadVertex changed: update the MaxQuadsPerBatch tooltip");
+    static_assert(sizeof(QuadVertex) == 104, "QuadVertex changed: update the MaxQuadsPerBatch tooltip");
 
     /** The camera block of Sprite.glsl (std140). */
     struct CameraBlock
     {
         glm::mat4 ViewProjection = glm::mat4(1.f);
-        glm::vec4 PassParams     = glm::vec4(0.f);   // x: 1 for a linear-colour (HDR) pass, y: 1 for occlusion
+        // x: 1 for a linear-colour (HDR) pass, y: 1 for occlusion, z: 1 when textures are read through their mipmaps
+        glm::vec4 PassParams     = glm::vec4(0.f);
     };
 
     // =============================================================================
@@ -109,6 +115,7 @@ namespace Opaax
         Renderer2DStats Stats;
 
         bool bLoggedSplit = false;   // logged the first multi-batch pass
+        bool bMipmaps     = false;   // the project's filter reads the textures' mipmaps
     };
 
     // =============================================================================
@@ -142,6 +149,7 @@ namespace Opaax
                 { EShaderDataType::Float  },  // NormalIndex
                 { EShaderDataType::Float4 },  // Emissive (w: lit)
                 { EShaderDataType::Float2 },  // RotationCS
+                { EShaderDataType::Float4 },  // UVFrame
             };
         }
 
@@ -279,8 +287,14 @@ namespace Opaax
         lCamera.ViewProjection = m_Data->ViewProjection;
         lCamera.PassParams.x   = InView.bLinearColor ? 1.f : 0.f;
         lCamera.PassParams.y   = InView.bOcclusion ? 1.f : 0.f;
+        lCamera.PassParams.z   = m_Data->bMipmaps ? 1.f : 0.f;
         m_Data->CameraUBO->SetData(&lCamera, static_cast<Uint32>(sizeof(CameraBlock)));
         StartPass();
+    }
+
+    void Renderer2D::SetTextureFilter(const ETextureFilter InFilter)
+    {
+        m_Data->bMipmaps = MakeSamplerDesc(InFilter).bMipmaps;
     }
 
     void Renderer2D::EndPass()
@@ -470,10 +484,11 @@ namespace Opaax
                                 const Vector2F& InUVMin,
                                 const Vector2F& InUVMax,
                                 const QuadMask& InMask,
-                                const QuadLighting& InLighting)
+                                const QuadLighting& InLighting,
+                                const Vector4F& InUVFrame)
     {
         SubmitQuad(InPosition, InSize, InTint, InRotationRad, InLayer, InOrderInLayer,
-                   GetTextureId(InTexture), InUVMin, InUVMax, { 0.f, 0.f }, InMask, InLighting);
+                   GetTextureId(InTexture), InUVMin, InUVMax, { 0.f, 0.f }, InMask, InLighting, InUVFrame);
     }
 
     Uint32 Renderer2D::GetTextureId(ITexture2D& InTexture)
@@ -537,7 +552,8 @@ namespace Opaax
                                 const Vector2F& InUVMax,
                                 const Vector2F& InInnerHalf,
                                 const QuadMask& InMask,
-                                const QuadLighting& InLighting)
+                                const QuadLighting& InLighting,
+                                const Vector4F& InUVFrame)
     {
         const float lHalfW = InSize.x * 0.5f;
         const float lHalfH = InSize.y * 0.5f;
@@ -581,7 +597,7 @@ namespace Opaax
 
             m_Data->PassVertices.emplace_back(
                 QuadVertex{ { InCorner.x, InCorner.y, 0.f }, InColor, InUV, 0.f, InInnerHalf, lMaskUV, -1.f,
-                            -1.f, lEmissive, lRotationCS });
+                            -1.f, lEmissive, lRotationCS, InUVFrame });
         };
 
         lPush(lBL, { InUVMin.x, InUVMin.y });

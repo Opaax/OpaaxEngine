@@ -199,6 +199,31 @@
         }
     },
     {
+        "id": "nearest-small-frame",
+        "command": "frame.sample",
+        "params": {
+            "x": 290,
+            "y": 500,
+            "width": 20,
+            "height": 20
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                255,
+                0,
+                0,
+                255
+            ],
+            "max": [
+                255,
+                0,
+                0,
+                255
+            ]
+        }
+    },
+    {
         "id": "nearest-enlarged-disc-edge",
         "command": "frame.sample",
         "params": {
@@ -435,6 +460,31 @@
         }
     },
     {
+        "id": "pixel-small-frame",
+        "command": "frame.sample",
+        "params": {
+            "x": 290,
+            "y": 500,
+            "width": 20,
+            "height": 20
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                255,
+                0,
+                0,
+                255
+            ],
+            "max": [
+                255,
+                0,
+                0,
+                255
+            ]
+        }
+    },
+    {
         "id": "pixel-enlarged-disc-edge",
         "command": "frame.sample",
         "params": {
@@ -628,6 +678,56 @@
             "y": 478,
             "width": 64,
             "height": 64
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                255,
+                0,
+                0,
+                255
+            ],
+            "max": [
+                255,
+                0,
+                0,
+                255
+            ]
+        }
+    },
+    {
+        "id": "smooth-enlarged-frame",
+        "command": "frame.sample",
+        "params": {
+            "x": 562,
+            "y": 382,
+            "width": 256,
+            "height": 256
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                255,
+                0,
+                0,
+                255
+            ],
+            "max": [
+                255,
+                0,
+                0,
+                255
+            ]
+        }
+    },
+    {
+        "id": "smooth-small-frame",
+        "command": "frame.sample",
+        "params": {
+            "x": 290,
+            "y": 500,
+            "width": 20,
+            "height": 20
         },
         "expect": {
             "colors": 1,

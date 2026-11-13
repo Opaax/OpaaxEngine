@@ -41,16 +41,16 @@ namespace Opaax
                                          "art.\n"
                                          "Smooth: blended when enlarged, and reduced through smaller copies "
                                          "of the texture (mipmaps), so small art keeps its thin strokes and "
-                                         "does not shimmer. For drawn or painted art. Frames of a sheet need "
-                                         "a few empty texels between them, or a frame's edge takes colour "
-                                         "from its neighbour.\n"
+                                         "does not shimmer. For drawn or painted art. A sheet frame drawn "
+                                         "much smaller can take colour from its neighbour unless frames sit "
+                                         "on a grid of 8 or 16 texels, or have empty texels between them.\n"
                                          "Costs nothing per frame; the smaller copies take a third more "
                                          "video memory, whatever the choice. Text is not concerned."),
                          OPAAX_PROP(MaxQuadsPerBatch)
                              .SetRange(1.f, 65536.f)
                              .SetFlags(EPropertyFlags::NeedRestart)
                              .SetTooltip("How many quads fit in ONE draw call.\n"
-                                         "Sizes a GPU buffer reserved at startup (352 bytes a quad), so this "
+                                         "Sizes a GPU buffer reserved at startup (416 bytes a quad), so this "
                                          "is reserved memory against draw calls: too small and the frame "
                                          "splits constantly, too large and a small scene reserves what it "
                                          "never draws.\n"

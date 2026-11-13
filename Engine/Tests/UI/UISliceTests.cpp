@@ -252,6 +252,13 @@ TEST_CASE("UISlice: MapQuadUVsInto lands every sliced UV inside the frame's rect
         CHECK(lQuad.UVMin.y >= lFrameMin.y - 1e-5f);
         CHECK(lQuad.UVMax.x <= lFrameMax.x + 1e-5f);
         CHECK(lQuad.UVMax.y <= lFrameMax.y + 1e-5f);
+
+        // Every piece is told the whole frame: its blended reads may cross into the next piece,
+        // not into the next frame.
+        CHECK(lQuad.UVFrame.x == doctest::Approx(lFrameMin.x));
+        CHECK(lQuad.UVFrame.y == doctest::Approx(lFrameMin.y));
+        CHECK(lQuad.UVFrame.z == doctest::Approx(lFrameMax.x));
+        CHECK(lQuad.UVFrame.w == doctest::Approx(lFrameMax.y));
     }
 
     // The corners still sample the border: the first quad's UV span is 16/64 of the frame's span.
