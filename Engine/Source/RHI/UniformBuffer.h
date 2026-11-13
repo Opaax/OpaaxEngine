@@ -9,8 +9,9 @@ namespace Opaax
     // IUniformBuffer
     // =============================================================================
     /**
-     * Uniform buffer at a fixed binding point (layout(std140, binding = N) uniform Block).
-     * Created by IRHIDevice::CreateUniformBuffer; written with SetData.
+     * Uniform buffer made for one binding point (layout(std140, binding = N) uniform Block).
+     * Created by IRHIDevice::CreateUniformBuffer; written with SetData. A shader reads it in the
+     * passes whose bind group holds it (IBindGroup::SetUniformBuffer): creating it binds nothing.
      */
     class IUniformBuffer
     {

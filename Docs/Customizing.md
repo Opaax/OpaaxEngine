@@ -205,6 +205,11 @@ ported to GLSL 4.10 at load time (`RHI/OpenGL/GLSLPort`), since macOS stops at O
 | 5 | `AmbientOcclusionUBO` | AmbientOcclusion2D |
 | 6 | `BloomUBO` | Bloom2D |
 
+A pass reads its blocks and its textures through its bind group (`IBindGroup`): the group lists the
+binding points of its blocks, and binding it before the draw is what puts each buffer and each
+texture in place. Creating a uniform buffer binds nothing, so a block a shader reads must be in the
+group of every pass that uses that shader, or the shader reads whatever the pass before left there.
+
 C++ mirrors of these blocks are in `Renderer/Lighting/Lighting2D.h` and `Renderer/Post`; the constants
 a shader repeats from C++ (light counts, slots, sizes) are checked by `EngineShaderTests`, so change
 both sides together. The passes after the world is drawn (shadow and ambient occlusion maps, bloom,

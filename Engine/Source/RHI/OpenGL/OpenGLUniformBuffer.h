@@ -5,7 +5,8 @@
 namespace Opaax
 {
     /**
-     * OpenGL uniform buffer. Bound to its binding point at construction.
+     * OpenGL uniform buffer. Made for one binding point; the bind group that holds it puts it
+     * there when it is bound.
      */
     class OpenGLUniformBuffer final : public IUniformBuffer
     {
@@ -39,10 +40,21 @@ namespace Opaax
         //~End IUniformBuffer interface
 
         // =============================================================================
+        // Functions
+        // =============================================================================
+    public:
+        /** The binding point it was made for. */
+        Uint32 GetBinding() const noexcept { return m_Binding; }
+
+        /** Puts the buffer at its binding point. Called by OpenGLBindGroup::Bind. */
+        void Bind() const;
+
+        // =============================================================================
         // Members
         // =============================================================================
     private:
         Uint32 m_RendererID = 0;
+        Uint32 m_Binding    = 0;
     };
 
 } // namespace Opaax

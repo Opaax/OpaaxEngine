@@ -6,13 +6,18 @@ namespace Opaax
 {
 
     OpenGLUniformBuffer::OpenGLUniformBuffer(Uint32 InSize, Uint32 InBinding)
+        : m_Binding(InBinding)
     {
         glGenBuffers(1, &m_RendererID);
         glBindBuffer(GL_UNIFORM_BUFFER, m_RendererID);
         // GL_DYNAMIC_DRAW: rewritten every frame.
         glBufferData(GL_UNIFORM_BUFFER, InSize, nullptr, GL_DYNAMIC_DRAW);
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
-        glBindBufferBase(GL_UNIFORM_BUFFER, InBinding, m_RendererID);
+    }
+
+    void OpenGLUniformBuffer::Bind() const
+    {
+        glBindBufferBase(GL_UNIFORM_BUFFER, m_Binding, m_RendererID);
     }
 
     OpenGLUniformBuffer::~OpenGLUniformBuffer()
