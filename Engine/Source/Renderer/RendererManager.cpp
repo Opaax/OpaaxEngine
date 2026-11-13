@@ -1044,7 +1044,8 @@ namespace Opaax
         lView.UVMin  = lUV.UVMin;
         lView.UVMax  = lUV.UVMax;
         lView.SizePx = lFrame->Size;
-        lView.Border = lFrame->Border;
+        lView.Border    = lFrame->Border;
+        lView.SliceMode = lFrame->SliceMode;
         return lView;
     }
 

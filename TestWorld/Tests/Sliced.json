@@ -27,7 +27,7 @@
         "params": {
             "entity": "Hud",
             "path": "UIProbe/Widgets",
-            "equals": 6
+            "equals": 8
         }
     },
     {
@@ -114,6 +114,39 @@
                     "name": "BigButton",
                     "state": "Normal",
                     "quads": 9
+                }
+            ]
+        }
+    },
+    {
+        "id": "wide-disabled-tiled",
+        "command": "ui.list",
+        "params": {
+            "name": "WideDisabled"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "WideDisabled",
+                    "type": "UIButton",
+                    "state": "Disabled",
+                    "quads": 5
+                }
+            ]
+        }
+    },
+    {
+        "id": "big-disabled-tiled",
+        "command": "ui.list",
+        "params": {
+            "name": "BigDisabled"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "BigDisabled",
+                    "state": "Disabled",
+                    "quads": 15
                 }
             ]
         }

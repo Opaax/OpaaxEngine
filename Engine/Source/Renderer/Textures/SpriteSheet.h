@@ -7,9 +7,11 @@
 #include "Core/Maths/MathTypes.h"
 #include "Core/Maths/MathsJson.hpp"
 #include "Core/OpaaxTypes.h"
+#include "Core/Reflection/OpaaxEnumJson.h"
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/String/OpaaxStringIDJson.h"
+#include "Renderer/Textures/SliceMode.h"
 #include "Renderer/Textures/Texture2D.h"   // complete: an asset class visits its texture reference
 #include "Resources/Asset/Asset.h"
 #include "Resources/Asset/AssetRef.h"
@@ -38,7 +40,10 @@ namespace Opaax
          */
         Margin Border;
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(SpriteFrame, Name, Offset, Size, Border)
+        /** How the edges and centre fill a sliced image: stretched, or repeated. */
+        ESliceMode SliceMode = ESliceMode::Stretch;
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(SpriteFrame, Name, Offset, Size, Border, SliceMode)
 
         OPAAX_PROPERTIES(SpriteFrame,
                          OPAAX_PROP(Name).SetTooltip("What animation looks this frame up by. Empty is\n"
@@ -48,7 +53,10 @@ namespace Opaax
                          OPAAX_PROP(Border).SetRange(0.f, 4096.f).SetDragStep(1.f)
                              .SetTooltip("Slice border in texture pixels, inside the frame. UI images and\n"
                                          "buttons keep the corners and stretch the edges and centre.\n"
-                                         "All zero: drawn whole."))
+                                         "All zero: drawn whole."),
+                         OPAAX_PROP(SliceMode).SetTooltip("Stretch: edges and centre stretched to fit.\n"
+                                                          "Tile: repeated at their size, the last one cut.\n"
+                                                          "Without a border the whole frame repeats."))
     };
 
     /**

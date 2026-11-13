@@ -279,6 +279,140 @@
                 "bHitTestable": true,
                 "bIsEnabled": true,
                 "bVisible": true
+            },
+            {
+                "Border": {
+                    "Bottom": 0.0,
+                    "Left": 0.0,
+                    "Right": 0.0,
+                    "Top": 0.0
+                },
+                "BorderScale": 0.4,
+                "Disabled": {
+                    "w": 0.6,
+                    "x": 0.6,
+                    "y": 0.6,
+                    "z": 0.6
+                },
+                "DisabledFrame": 3,
+                "Frame": 0,
+                "Hovered": {
+                    "w": 1.0,
+                    "x": 0.6,
+                    "y": 0.85,
+                    "z": 1.0
+                },
+                "HoveredFrame": 1,
+                "Name": "WideDisabled",
+                "Normal": {
+                    "w": 1.0,
+                    "x": 0.95,
+                    "y": 0.9,
+                    "z": 0.75
+                },
+                "Opacity": 1.0,
+                "Pressed": {
+                    "w": 1.0,
+                    "x": 1.0,
+                    "y": 0.75,
+                    "z": 0.35
+                },
+                "PressedFrame": 2,
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": 330.0,
+                        "y": 380.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 420.0,
+                        "y": 90.0
+                    }
+                },
+                "Sheet": "UI/SlicedButtons.opaaxasset",
+                "Texture": "",
+                "Type": "UIButton",
+                "bHitTestable": true,
+                "bIsEnabled": false,
+                "bVisible": true
+            },
+            {
+                "Border": {
+                    "Bottom": 0.0,
+                    "Left": 0.0,
+                    "Right": 0.0,
+                    "Top": 0.0
+                },
+                "BorderScale": 0.5,
+                "Disabled": {
+                    "w": 0.6,
+                    "x": 0.6,
+                    "y": 0.6,
+                    "z": 0.6
+                },
+                "DisabledFrame": 3,
+                "Frame": 0,
+                "Hovered": {
+                    "w": 1.0,
+                    "x": 0.6,
+                    "y": 0.85,
+                    "z": 1.0
+                },
+                "HoveredFrame": 1,
+                "Name": "BigDisabled",
+                "Normal": {
+                    "w": 1.0,
+                    "x": 0.95,
+                    "y": 0.9,
+                    "z": 0.75
+                },
+                "Opacity": 1.0,
+                "Pressed": {
+                    "w": 1.0,
+                    "x": 1.0,
+                    "y": 0.75,
+                    "z": 0.35
+                },
+                "PressedFrame": 2,
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": -420.0,
+                        "y": -290.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 600.0,
+                        "y": 260.0
+                    }
+                },
+                "Sheet": "UI/SlicedButtons.opaaxasset",
+                "Texture": "",
+                "Type": "UIButton",
+                "bHitTestable": true,
+                "bIsEnabled": false,
+                "bVisible": true
             }
         ],
         "Name": "SlicedRoot",

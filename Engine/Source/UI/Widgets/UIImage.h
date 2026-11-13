@@ -116,6 +116,7 @@ namespace Opaax
     private:
         ITexture2D* m_Texture    = nullptr;
         bool        m_bFillBound = false;   // whether a read ever succeeded (log once)
+        bool        m_bWarnedTiles = false; // too many tiles, said once
     };
 }
 

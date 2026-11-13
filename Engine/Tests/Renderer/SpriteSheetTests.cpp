@@ -274,6 +274,7 @@ TEST_CASE("SpriteSheet: save then load round-trips every field")
     FillProbeSheet(lSaved);
     lSaved.Frames[1].Name   = OPAAX_ID("Hero_Idle_1");
     lSaved.Frames[2].Border = Margin{ 12.f, 11.f, 9.f, 10.f };
+    lSaved.Frames[2].SliceMode = ESliceMode::Tile;
 
     REQUIRE(AssetFile::Save(lPath, lSaved));
 
@@ -297,6 +298,8 @@ TEST_CASE("SpriteSheet: save then load round-trips every field")
     CHECK(lLoaded->Frames[2].Border.Bottom == doctest::Approx(9.f));
     CHECK(lLoaded->Frames[2].Border.Top == doctest::Approx(10.f));
     CHECK(lLoaded->Frames[0].Border.IsZero());
+    CHECK(lLoaded->Frames[2].SliceMode == ESliceMode::Tile);
+    CHECK(lLoaded->Frames[0].SliceMode == ESliceMode::Stretch);
 
     // Saving what was loaded writes the same text: the editor's dirty check compares it.
     CHECK(AssetFile::Serialize(*lLoaded) == AssetFile::Serialize(lSaved));
@@ -329,6 +332,7 @@ TEST_CASE("SpriteSheet: a file missing keys keeps the defaults; a wrong type is 
     REQUIRE(lOldSheet->FrameCount() == 1u);
     CHECK(lOldSheet->Frames[0].Size.x == doctest::Approx(64.f));
     CHECK(lOldSheet->Frames[0].Border.IsZero());
+    CHECK(lOldSheet->Frames[0].SliceMode == ESliceMode::Stretch);
 
     const OpaaxString lWrongType = lDir.Sub("WrongType.opaaxasset");
     REQUIRE(FileIO::WriteAllText(lWrongType, OpaaxString(R"({ "Class": "SpriteSheet", "Properties": { "DefaultFrame": "three" } })")));

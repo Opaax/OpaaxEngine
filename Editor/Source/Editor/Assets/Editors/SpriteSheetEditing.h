@@ -221,11 +221,15 @@ namespace Opaax::Editor
             // The UI's own maths, in its space: Y up, UVs 0..1 of the frame with V up.
             const Bounds2D    lRect = Bounds2D::FromMinMax({ 0.f, 0.f }, InPreviewSize);
             TDynArray<UIQuad> lQuads;
-            if (InFrame.Border.IsZero())
+
+            // Tiled as BuildImageQuads tiles; past the cap stretched, as there.
+            const bool bTiled = InFrame.SliceMode == ESliceMode::Tile
+                && BuildTiledQuads(lRect, InFrame.Border, InBorderScale, InFrame.Size, lQuads);
+            if (!bTiled && InFrame.Border.IsZero())
             {
                 lQuads.emplace_back().Bounds = lRect;
             }
-            else
+            else if (!bTiled)
             {
                 BuildSlicedQuads(lRect, InFrame.Border, InBorderScale, InFrame.Size, lQuads);
             }

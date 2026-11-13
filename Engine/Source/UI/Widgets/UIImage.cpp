@@ -120,7 +120,12 @@ namespace Opaax
             return;
         }
 
-        BuildImageQuads(GetBounds(), lImage, Border, BorderScale, Color, OutQuads);
+        if (!BuildImageQuads(GetBounds(), lImage, Border, BorderScale, Color, OutQuads) && !m_bWarnedTiles)
+        {
+            m_bWarnedTiles = true;
+            OPAAX_LOG(LogUISlice, Warn, "'{}' would take more than {} tiles: stretched instead (raise BorderScale)",
+                      Name.CStr(), UI_MAX_TILED_QUADS);
+        }
 
         // The fill clips what was emitted, from the min edge, with its UVs (the texture is cut,
         // not squashed), for 9 quads as for 1.
