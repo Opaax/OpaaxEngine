@@ -1020,7 +1020,7 @@ namespace Opaax::EngineAutomation
                 "most a multisampled target can have; 1: none), maxTextureSize, maxTextureUnits, errorChecks (how "
                 "wrong graphics calls reach the log: \"per call\", \"per frame\" or \"none\"), backbuffer {width, "
                 "height}, targets {recreated (render targets that got new storage during the last frame: 0 in a steady "
-                "frame), allocatedTotal (since the start), kept (the lit path's, for every view size in use)}, gpuFrameMs (negative before the first measure)}.",
+                "frame), allocatedTotal (since the start), kept (the lit path's, for every view size in use)}, textureFilter (how colour textures are read: Renderer.config's), gpuFrameMs (negative before the first measure)}.",
                 [&InEngine](const nlohmann::json&)
                 {
                     const RendererInfo lInfo = InEngine.GetRendererInfo();
@@ -1044,6 +1044,7 @@ namespace Opaax::EngineAutomation
                         { "targets",         nlohmann::json{ { "recreated",      lInfo.TargetsRecreated },
                                                              { "allocatedTotal", lInfo.TargetsAllocatedTotal },
                                                              { "kept",           lInfo.SceneTargets } } },
+                        { "textureFilter",   ToString(lInfo.TextureFilter) },
                         { "gpuFrameMs",      lInfo.GpuFrameMs } });
                 });
 

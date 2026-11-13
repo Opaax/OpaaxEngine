@@ -116,6 +116,9 @@ namespace Opaax
     {
         glActiveTexture(GL_TEXTURE0 + InSlot);
         glBindTexture(GL_TEXTURE_2D, m_ColorTexture);
+
+        // Read with its own parameters, not with the sampler a sprite texture left on the unit.
+        glBindSampler(InSlot, 0);
     }
 
     void OpenGLFramebuffer::Resize(Uint32 InWidth, Uint32 InHeight)

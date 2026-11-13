@@ -11,6 +11,7 @@
 #include "RHI/BindGroup.h"
 #include "RHI/Framebuffer.h"
 #include "RHI/RHICapabilities.h"
+#include "RHI/TextureSampling.h"
 
 namespace Opaax
 {
@@ -53,6 +54,9 @@ namespace Opaax
 
         /**
          * Creates a texture from decoded pixels.
+         * A colour texture (3 or 4 channels) is read with the project's filter (SetTextureFilter),
+         * clamped at its edges, and gets its mipmaps. A coverage texture (1 channel: a font atlas)
+         * keeps its own sampling: blended, clamped, no mipmaps.
          * @param InPixels Tightly packed, InWidth * InHeight * InChannels bytes. Copied.
          * @param InChannels 4 = RGBA8, 3 = RGB8, 1 = R8 (swizzled into alpha)
          */
@@ -85,6 +89,13 @@ namespace Opaax
          *   first result or without timer support
          */
         virtual double          GetLastGpuFrameTimeMs() const                                   = 0;
+
+        /**
+         * How every colour texture of this device is read, the ones made before included.
+         * No texture is touched: it applies from the next draw.
+         */
+        virtual void            SetTextureFilter(ETextureFilter InFilter)                       = 0;
+        virtual ETextureFilter  GetTextureFilter() const                                        = 0;
 
         /**
          * How many times a framebuffer of this device got new storage since the device started:

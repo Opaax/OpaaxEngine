@@ -1,0 +1,715 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Filtering.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.5
+        }
+    },
+    {
+        "id": "default-is-pixel",
+        "command": "renderer.info",
+        "expect": {
+            "textureFilter": "Pixel"
+        }
+    },
+    {
+        "id": "nearest",
+        "command": "config.set",
+        "params": {
+            "config": "Renderer",
+            "values": {
+                "TextureFilter": "Nearest"
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "nearest-in-use",
+        "command": "renderer.info",
+        "expect": {
+            "textureFilter": "Nearest"
+        }
+    },
+    {
+        "id": "nearest-quarter-strokes",
+        "command": "frame.sample",
+        "params": {
+            "x": 232,
+            "y": 202,
+            "width": 16,
+            "height": 16
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                0,
+                0,
+                0,
+                255
+            ],
+            "max": [
+                0,
+                0,
+                0,
+                255
+            ]
+        }
+    },
+    {
+        "id": "nearest-own-size",
+        "command": "frame.sample",
+        "params": {
+            "x": 358,
+            "y": 178,
+            "width": 64,
+            "height": 64
+        },
+        "expect": {
+            "colors": 2,
+            "min": [
+                0,
+                0,
+                0,
+                255
+            ],
+            "max": [
+                240,
+                240,
+                240,
+                255
+            ],
+            "mean": [
+                60,
+                60,
+                60,
+                255
+            ]
+        }
+    },
+    {
+        "id": "nearest-enlarged-strokes",
+        "command": "frame.sample",
+        "params": {
+            "x": 562,
+            "y": 150,
+            "width": 32,
+            "height": 8
+        },
+        "expect": {
+            "colors": 2,
+            "min": [
+                0,
+                0,
+                0,
+                255
+            ],
+            "max": [
+                240,
+                240,
+                240,
+                255
+            ]
+        }
+    },
+    {
+        "id": "nearest-quarter-frame",
+        "command": "frame.sample",
+        "params": {
+            "x": 232,
+            "y": 502,
+            "width": 16,
+            "height": 16
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                255,
+                0,
+                0,
+                255
+            ],
+            "max": [
+                255,
+                0,
+                0,
+                255
+            ]
+        }
+    },
+    {
+        "id": "nearest-own-size-frame",
+        "command": "frame.sample",
+        "params": {
+            "x": 358,
+            "y": 478,
+            "width": 64,
+            "height": 64
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                255,
+                0,
+                0,
+                255
+            ],
+            "max": [
+                255,
+                0,
+                0,
+                255
+            ]
+        }
+    },
+    {
+        "id": "nearest-enlarged-frame",
+        "command": "frame.sample",
+        "params": {
+            "x": 562,
+            "y": 382,
+            "width": 256,
+            "height": 256
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                255,
+                0,
+                0,
+                255
+            ],
+            "max": [
+                255,
+                0,
+                0,
+                255
+            ]
+        }
+    },
+    {
+        "id": "nearest-enlarged-disc-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 925,
+            "y": 215,
+            "width": 290,
+            "height": 290
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                255,
+                220,
+                0,
+                255
+            ],
+            "max": [
+                255,
+                220,
+                0,
+                255
+            ]
+        }
+    },
+    {
+        "id": "nearest-reduced-disc-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 1042,
+            "y": 582,
+            "width": 56,
+            "height": 56
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                255,
+                220,
+                0,
+                255
+            ],
+            "max": [
+                255,
+                220,
+                0,
+                255
+            ]
+        }
+    },
+    {
+        "id": "nearest-screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "Filtering-Nearest.png"
+        }
+    },
+    {
+        "id": "pixel",
+        "command": "config.set",
+        "params": {
+            "config": "Renderer",
+            "values": {
+                "TextureFilter": "Pixel"
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "pixel-in-use",
+        "command": "renderer.info",
+        "expect": {
+            "textureFilter": "Pixel"
+        }
+    },
+    {
+        "id": "pixel-quarter-strokes",
+        "command": "frame.sample",
+        "params": {
+            "x": 232,
+            "y": 202,
+            "width": 16,
+            "height": 16
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                0,
+                0,
+                0,
+                255
+            ],
+            "max": [
+                0,
+                0,
+                0,
+                255
+            ]
+        }
+    },
+    {
+        "id": "pixel-own-size",
+        "command": "frame.sample",
+        "params": {
+            "x": 358,
+            "y": 178,
+            "width": 64,
+            "height": 64
+        },
+        "expect": {
+            "colors": 2,
+            "min": [
+                0,
+                0,
+                0,
+                255
+            ],
+            "max": [
+                240,
+                240,
+                240,
+                255
+            ],
+            "mean": [
+                60,
+                60,
+                60,
+                255
+            ]
+        }
+    },
+    {
+        "id": "pixel-enlarged-strokes",
+        "command": "frame.sample",
+        "params": {
+            "x": 562,
+            "y": 150,
+            "width": 32,
+            "height": 8
+        },
+        "expect": {
+            "colors": 2,
+            "min": [
+                0,
+                0,
+                0,
+                255
+            ],
+            "max": [
+                240,
+                240,
+                240,
+                255
+            ]
+        }
+    },
+    {
+        "id": "pixel-quarter-frame",
+        "command": "frame.sample",
+        "params": {
+            "x": 232,
+            "y": 502,
+            "width": 16,
+            "height": 16
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                255,
+                0,
+                0,
+                255
+            ],
+            "max": [
+                255,
+                0,
+                0,
+                255
+            ]
+        }
+    },
+    {
+        "id": "pixel-own-size-frame",
+        "command": "frame.sample",
+        "params": {
+            "x": 358,
+            "y": 478,
+            "width": 64,
+            "height": 64
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                255,
+                0,
+                0,
+                255
+            ],
+            "max": [
+                255,
+                0,
+                0,
+                255
+            ]
+        }
+    },
+    {
+        "id": "pixel-enlarged-frame",
+        "command": "frame.sample",
+        "params": {
+            "x": 562,
+            "y": 382,
+            "width": 256,
+            "height": 256
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                255,
+                0,
+                0,
+                255
+            ],
+            "max": [
+                255,
+                0,
+                0,
+                255
+            ]
+        }
+    },
+    {
+        "id": "pixel-enlarged-disc-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 925,
+            "y": 215,
+            "width": 290,
+            "height": 290
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                255,
+                220,
+                0,
+                255
+            ],
+            "max": [
+                255,
+                220,
+                0,
+                255
+            ]
+        }
+    },
+    {
+        "id": "pixel-reduced-disc-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 1042,
+            "y": 582,
+            "width": 56,
+            "height": 56
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                255,
+                220,
+                0,
+                255
+            ],
+            "max": [
+                255,
+                220,
+                0,
+                255
+            ]
+        }
+    },
+    {
+        "id": "pixel-screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "Filtering-Pixel.png"
+        }
+    },
+    {
+        "id": "smooth",
+        "command": "config.set",
+        "params": {
+            "config": "Renderer",
+            "values": {
+                "TextureFilter": "Smooth"
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "smooth-in-use",
+        "command": "renderer.info",
+        "expect": {
+            "textureFilter": "Smooth"
+        }
+    },
+    {
+        "id": "smooth-quarter-strokes",
+        "command": "frame.sample",
+        "params": {
+            "x": 232,
+            "y": 202,
+            "width": 16,
+            "height": 16
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                60,
+                60,
+                60,
+                255
+            ],
+            "max": [
+                60,
+                60,
+                60,
+                255
+            ]
+        }
+    },
+    {
+        "id": "smooth-own-size",
+        "command": "frame.sample",
+        "params": {
+            "x": 358,
+            "y": 178,
+            "width": 64,
+            "height": 64
+        },
+        "expect": {
+            "colors": 2,
+            "min": [
+                0,
+                0,
+                0,
+                255
+            ],
+            "max": [
+                240,
+                240,
+                240,
+                255
+            ],
+            "mean": [
+                60,
+                60,
+                60,
+                255
+            ]
+        }
+    },
+    {
+        "id": "smooth-enlarged-strokes",
+        "command": "frame.sample",
+        "params": {
+            "x": 562,
+            "y": 150,
+            "width": 32,
+            "height": 8
+        },
+        "expect": {
+            "colors": 6,
+            "min": [
+                0,
+                0,
+                0,
+                255
+            ],
+            "max": [
+                240,
+                240,
+                240,
+                255
+            ]
+        }
+    },
+    {
+        "id": "smooth-quarter-frame",
+        "command": "frame.sample",
+        "params": {
+            "x": 232,
+            "y": 502,
+            "width": 16,
+            "height": 16
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                255,
+                0,
+                0,
+                255
+            ],
+            "max": [
+                255,
+                0,
+                0,
+                255
+            ]
+        }
+    },
+    {
+        "id": "smooth-own-size-frame",
+        "command": "frame.sample",
+        "params": {
+            "x": 358,
+            "y": 478,
+            "width": 64,
+            "height": 64
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                255,
+                0,
+                0,
+                255
+            ],
+            "max": [
+                255,
+                0,
+                0,
+                255
+            ]
+        }
+    },
+    {
+        "id": "smooth-enlarged-disc-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 925,
+            "y": 215,
+            "width": 290,
+            "height": 290
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                255,
+                220,
+                0,
+                255
+            ],
+            "max": [
+                255,
+                220,
+                0,
+                255
+            ]
+        }
+    },
+    {
+        "id": "smooth-reduced-disc-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 1042,
+            "y": 582,
+            "width": 56,
+            "height": 56
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                255,
+                220,
+                0,
+                255
+            ],
+            "max": [
+                255,
+                220,
+                0,
+                255
+            ]
+        }
+    },
+    {
+        "id": "smooth-screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "Filtering-Smooth.png"
+        }
+    },
+    {
+        "id": "back-to-pixel",
+        "command": "config.set",
+        "params": {
+            "config": "Renderer",
+            "values": {
+                "TextureFilter": "Pixel"
+            }
+        }
+    }
+]

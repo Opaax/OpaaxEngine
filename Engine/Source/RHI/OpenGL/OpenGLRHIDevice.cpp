@@ -39,6 +39,9 @@ namespace Opaax
 
         ReadCapabilities();
 
+        glGenSamplers(1, &m_ProjectSampler);
+        SetTextureFilter(m_TextureFilter);
+
         if (Build::IsDevBuild())
         {
             m_Capabilities.ErrorChecks = OpenGLDebug::Install() ? ERHIErrorChecks::PerCall : ERHIErrorChecks::PerFrame;
@@ -83,8 +86,31 @@ namespace Opaax
         m_Capabilities.MaxSamples = lSamples > 0 ? lSamples : 1;
     }
 
+    void OpenGLRHIDevice::SetTextureFilter(const ETextureFilter InFilter)
+    {
+        m_TextureFilter = InFilter;
+
+        const SamplerDesc lDesc = MakeSamplerDesc(InFilter);
+
+        GLint lReduce = lDesc.Reduce == ESampleFilter::Linear ? GL_LINEAR : GL_NEAREST;
+        if (lDesc.bMipmaps)
+        {
+            lReduce = lDesc.Reduce == ESampleFilter::Linear ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST;
+        }
+
+        const GLint lEnlarge = lDesc.Enlarge == ESampleFilter::Linear ? GL_LINEAR : GL_NEAREST;
+        const GLint lWrap    = lDesc.Wrap == ETextureWrap::Repeat ? GL_REPEAT : GL_CLAMP_TO_EDGE;
+
+        glSamplerParameteri(m_ProjectSampler, GL_TEXTURE_MIN_FILTER, lReduce);
+        glSamplerParameteri(m_ProjectSampler, GL_TEXTURE_MAG_FILTER, lEnlarge);
+        glSamplerParameteri(m_ProjectSampler, GL_TEXTURE_WRAP_S,     lWrap);
+        glSamplerParameteri(m_ProjectSampler, GL_TEXTURE_WRAP_T,     lWrap);
+    }
+
     OpenGLRHIDevice::~OpenGLRHIDevice()
     {
+        glDeleteSamplers(1, &m_ProjectSampler);
+
         if (m_bTimersReady)
         {
             glDeleteQueries(static_cast<GLsizei>(GPU_TIMER_COUNT), m_TimerQueries);
@@ -102,7 +128,8 @@ namespace Opaax
 
     TUniquePtr<ITexture2D>     OpenGLRHIDevice::CreateTexture(const void* InPixels, Uint32 InWidth, Uint32 InHeight, Int32 InChannels)
     {
-        return MakeUnique<OpenGLTexture2D>(static_cast<const unsigned char*>(InPixels), InWidth, InHeight, InChannels);
+        return MakeUnique<OpenGLTexture2D>(static_cast<const unsigned char*>(InPixels), InWidth, InHeight, InChannels,
+                                           m_ProjectSampler);
     }
 
     TUniquePtr<IShader>        OpenGLRHIDevice::CreateShader(const ShaderDesc& InDesc)      { return MakeUnique<OpenGLShader>(InDesc); }

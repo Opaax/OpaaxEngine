@@ -22,17 +22,21 @@ namespace Opaax
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, static_cast<GLsizei>(InWidth), static_cast<GLsizei>(InHeight), 0,
                      GL_RGBA, GL_UNSIGNED_BYTE, lWhite.data());
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glBindTexture(GL_TEXTURE_2D, 0);
 
         m_bLoaded = true;
     }
 
-    OpenGLTexture2D::OpenGLTexture2D(const unsigned char* InData, Uint32 InWidth, Uint32 InHeight, Int32 InChannels)
+    OpenGLTexture2D::OpenGLTexture2D(const unsigned char* InData, Uint32 InWidth, Uint32 InHeight, Int32 InChannels,
+                                     const Uint32 InProjectSampler)
     {
+        // A coverage atlas keeps its own sampling, whatever the project's filter.
+        m_SamplerID = (InChannels == 1) ? 0 : InProjectSampler;
+
         if (!InData)
         {
             OPAAX_ENGINE_LOG(Error, "OpenGLTexture2D: raw upload received null data");
@@ -61,21 +65,21 @@ namespace Opaax
         glGenTextures(1, &m_RendererID);
         glBindTexture(GL_TEXTURE_2D, m_RendererID);
 
+        // The texture's own parameters: what is read where no sampler object is bound (the
+        // editor's previews). Clamped: an edge takes nothing from the opposite side.
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_CLAMP_TO_EDGE);
 
         const bool lIsR8 = (InChannels == 1);
         if (lIsR8)
         {
             // Swizzle coverage into alpha, so the RGBA sprite shader reads (1,1,1,coverage).
-            // LINEAR + CLAMP_TO_EDGE avoids bleeding between atlas cells.
+            // Blended when enlarged too: glyphs are drawn at any size.
             const GLint lSwizzle[4] = { GL_ONE, GL_ONE, GL_ONE, GL_RED };
             glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, lSwizzle);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_CLAMP_TO_EDGE);
         }
 
         // Tightly packed rows: a 1- or 3-byte pixel row is not a multiple of the default 4 bytes.
@@ -88,6 +92,14 @@ namespace Opaax
         glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(lInternalFormat),
                      static_cast<GLsizei>(InWidth), static_cast<GLsizei>(InHeight), 0,
                      lDataFormat, GL_UNSIGNED_BYTE, InData);
+
+        // Made for every colour texture, whatever the filter now: the filter can change while
+        // the game runs, and only the Smooth one reads them.
+        if (m_SamplerID != 0)
+        {
+            glGenerateMipmap(GL_TEXTURE_2D);
+        }
+
         glBindTexture(GL_TEXTURE_2D, 0);
 
         if (bTightRows)
@@ -102,11 +114,15 @@ namespace Opaax
     {
         glActiveTexture(GL_TEXTURE0 + InSlot);
         glBindTexture(GL_TEXTURE_2D, m_RendererID);
+
+        // A sampler object stays on its unit: the unit is set for every texture bound to it.
+        glBindSampler(InSlot, m_SamplerID);
     }
 
     void OpenGLTexture2D::Unbind() const
     {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, 0);
+        glBindSampler(0, 0);
     }
 }

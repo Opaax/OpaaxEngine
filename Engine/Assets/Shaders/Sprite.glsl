@@ -99,26 +99,28 @@ layout(location = 0) out vec4 FragColor;
 
 // One constant index per case: GLSL leaves a sampler index that varies within a draw undefined
 // (some drivers show it), and the sprites of one batch use different textures.
-vec4 SampleSlot(int InSlot, vec2 InUV)
+// InDx and InDy are how fast InUV changes across the screen, taken outside any branch: inside
+// one, the mipmap level picked by texture() is undefined where two sprites meet.
+vec4 SampleSlot(int InSlot, vec2 InUV, vec2 InDx, vec2 InDy)
 {
     switch (InSlot)
     {
-        case 0:  return texture(u_Textures[0],  InUV);
-        case 1:  return texture(u_Textures[1],  InUV);
-        case 2:  return texture(u_Textures[2],  InUV);
-        case 3:  return texture(u_Textures[3],  InUV);
-        case 4:  return texture(u_Textures[4],  InUV);
-        case 5:  return texture(u_Textures[5],  InUV);
-        case 6:  return texture(u_Textures[6],  InUV);
-        case 7:  return texture(u_Textures[7],  InUV);
-        case 8:  return texture(u_Textures[8],  InUV);
-        case 9:  return texture(u_Textures[9],  InUV);
-        case 10: return texture(u_Textures[10], InUV);
-        case 11: return texture(u_Textures[11], InUV);
-        case 12: return texture(u_Textures[12], InUV);
-        case 13: return texture(u_Textures[13], InUV);
-        case 14: return texture(u_Textures[14], InUV);
-        case 15: return texture(u_Textures[15], InUV);
+        case 0:  return textureGrad(u_Textures[0], InUV, InDx, InDy);
+        case 1:  return textureGrad(u_Textures[1], InUV, InDx, InDy);
+        case 2:  return textureGrad(u_Textures[2], InUV, InDx, InDy);
+        case 3:  return textureGrad(u_Textures[3], InUV, InDx, InDy);
+        case 4:  return textureGrad(u_Textures[4], InUV, InDx, InDy);
+        case 5:  return textureGrad(u_Textures[5], InUV, InDx, InDy);
+        case 6:  return textureGrad(u_Textures[6], InUV, InDx, InDy);
+        case 7:  return textureGrad(u_Textures[7], InUV, InDx, InDy);
+        case 8:  return textureGrad(u_Textures[8], InUV, InDx, InDy);
+        case 9:  return textureGrad(u_Textures[9], InUV, InDx, InDy);
+        case 10: return textureGrad(u_Textures[10], InUV, InDx, InDy);
+        case 11: return textureGrad(u_Textures[11], InUV, InDx, InDy);
+        case 12: return textureGrad(u_Textures[12], InUV, InDx, InDy);
+        case 13: return textureGrad(u_Textures[13], InUV, InDx, InDy);
+        case 14: return textureGrad(u_Textures[14], InUV, InDx, InDy);
+        case 15: return textureGrad(u_Textures[15], InUV, InDx, InDy);
     }
     return vec4(1.0, 0.0, 1.0, 1.0);
 }
@@ -269,6 +271,12 @@ vec3 LightAt(vec2 InPosition, vec3 InNormal, bool bInHasNormal, bool bInShadowed
 
 void main()
 {
+    // How fast the texture coordinates change across the screen, read before any branch or discard.
+    vec2 lTexDx  = dFdx(v_TexCoord);
+    vec2 lTexDy  = dFdy(v_TexCoord);
+    vec2 lMaskDx = dFdx(v_MaskUV);
+    vec2 lMaskDy = dFdy(v_MaskUV);
+
     // A hollow quad carves its middle out here. v_InnerHalf is {0,0} for every ordinary draw, so
     // the guard costs one comparison and the branch is never taken.
     //
@@ -296,11 +304,11 @@ void main()
             discard;
         }
 
-        vec4 lMaskSample = SampleSlot(int(v_MaskIndex), v_MaskUV);
+        vec4 lMaskSample = SampleSlot(int(v_MaskIndex), v_MaskUV, lMaskDx, lMaskDy);
         lMask            = lMaskSample.r * lMaskSample.a;
     }
 
-    vec4 lSample = SampleSlot(int(v_TexIndex), v_TexCoord);
+    vec4 lSample = SampleSlot(int(v_TexIndex), v_TexCoord, lTexDx, lTexDy);
 
     // An occlusion pass only records where the shadow casters are: white times their coverage.
     if (u_PassParams.y > 0.5)
@@ -326,7 +334,7 @@ void main()
             if (bHasNormal)
             {
                 // The map is in the sprite's own space: it turns with the sprite.
-                vec3 lMapped = SampleSlot(int(v_NormalIndex), v_TexCoord).xyz * 2.0 - 1.0;
+                vec3 lMapped = SampleSlot(int(v_NormalIndex), v_TexCoord, lTexDx, lTexDy).xyz * 2.0 - 1.0;
                 lNormal = normalize(vec3(v_RotationCS.x * lMapped.x - v_RotationCS.y * lMapped.y,
                                          v_RotationCS.y * lMapped.x + v_RotationCS.x * lMapped.y,
                                          lMapped.z));

@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/Filtering.opaaxmap"
+    ],
+    "name": "Filtering",
+    "persistentMap": "Maps/Filtering.opaaxmap",
+    "version": 1
+}

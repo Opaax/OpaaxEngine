@@ -2,6 +2,7 @@
 
 #include "Core/OpaaxTypes.h"
 #include "RHI/RHICapabilities.h"
+#include "RHI/TextureSampling.h"
 
 namespace Opaax
 {
@@ -31,6 +32,9 @@ namespace Opaax
 
         /** Targets the lit path keeps now, for every view size in use (scene, maps, bloom levels). */
         Uint32 SceneTargets = 0;
+
+        /** How colour textures are read (Renderer.config's TextureFilter). */
+        ETextureFilter TextureFilter = ETextureFilter::Pixel;
 
         /** GPU time of a recent frame, in milliseconds. Negative before the first result. */
         double GpuFrameMs = -1.0;

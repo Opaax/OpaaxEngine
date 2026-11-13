@@ -2,6 +2,7 @@
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"
+#include "Core/Image/AlphaBleed.h"
 #include "Core/IO/FileIO.h"
 
 // stb_image implementation (the only one in the build).
@@ -41,6 +42,12 @@ namespace Opaax
         m_Channels = lChannels;
         m_Pixels.assign(lPixels, lPixels + (lWidth * lHeight * lChannels));
         stbi_image_free(lPixels);
+
+        // The colour under transparent texels must not show at a sprite's blended edge.
+        if (lChannels == 4)
+        {
+            BleedAlphaEdges(m_Pixels.data(), m_Width, m_Height);
+        }
 
         return true;
     }

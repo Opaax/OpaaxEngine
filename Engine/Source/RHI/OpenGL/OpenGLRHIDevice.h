@@ -60,6 +60,8 @@ namespace Opaax
         void            Resize(Uint32 InWidth, Uint32 InHeight)                         override;
         void            WaitIdle()                                                      override;
         double          GetLastGpuFrameTimeMs() const                                   override { return m_LastGpuMs; }
+        void            SetTextureFilter(ETextureFilter InFilter)                       override;
+        ETextureFilter  GetTextureFilter() const                                        override { return m_TextureFilter; }
         Uint64          GetFramebufferAllocations() const                               override { return m_FramebufferAllocations; }
         bool            ReadBackbufferPixels(Uint32 InWidth, Uint32 InHeight, TDynArray<Uint8>& OutRGBA) override;
         //~End IRHIDevice interface
@@ -86,6 +88,11 @@ namespace Opaax
         // Its ErrorChecks says how wrong GL calls reach the log (OpenGLDebug): per call or per frame
         // in a dev build, not at all in a ship build.
         RHICapabilities m_Capabilities;
+
+        // The sampler object every colour texture is read through: changing the project's filter
+        // changes it, and no texture.
+        Uint32         m_ProjectSampler = 0;
+        ETextureFilter m_TextureFilter  = ETextureFilter::Pixel;
 
         // Raised by each framebuffer this device made, when it gets new storage.
         Uint64 m_FramebufferAllocations = 0;
