@@ -377,7 +377,7 @@ namespace Opaax::EngineAutomation
 
                 if (lValue == InValues.end() || !lValue->is_number() || !lLimit.value().is_number())
                 {
-                    OutError += lSeparator + "no measure '" + lName + "' to limit: " + OpaaxString(InValues.dump().c_str());
+                    OutError += lSeparator + "no measure '" + lName + "' to limit: " + ToJsonText(InValues);
                     continue;
                 }
 
@@ -1258,7 +1258,7 @@ namespace Opaax::EngineAutomation
                     const OpaaxString        lJson    = FileSystem::MakeAbsolute(lTrace.Name + ".camera.json");
                     const OpaaxString        lCsv     = FileSystem::MakeAbsolute(lTrace.Name + ".camera.csv");
 
-                    if (!FileIO::WriteAllText(lJson, OpaaxString(TraceToJson(lTrace, lSummary).dump(1).c_str()))
+                    if (!FileIO::WriteAllText(lJson, ToJsonText(TraceToJson(lTrace, lSummary), 1))
                         || !FileIO::WriteAllText(lCsv, CameraTrace::ToCsv(lTrace.Samples, lTrace.HeightPx)))
                     {
                         return AutomationResult::Fail("cannot write the trace's files at '" + lJson + "'");

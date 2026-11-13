@@ -98,7 +98,7 @@ namespace Opaax
         lJson[KEY_REF_HEIGHT] = InReferenceHeight;
         lJson[KEY_ROOT]       = WriteNode(InRoot);
 
-        return OpaaxString(lJson.dump(4).c_str());
+        return ToJsonText(lJson, 4);
     }
 
     OpaaxString UICanvasFile::Serialize(const UICanvasDoc& InDoc)
@@ -109,7 +109,7 @@ namespace Opaax
             lJson[KEY_VERSION]    = UI_FORMAT_VERSION;
             lJson[KEY_REF_HEIGHT] = InDoc.ReferenceHeight;
 
-            return OpaaxString(lJson.dump(4).c_str());
+            return ToJsonText(lJson, 4);
         }
 
         return Serialize(*InDoc.Root, InDoc.ReferenceHeight);
@@ -239,7 +239,7 @@ namespace Opaax
 
     OpaaxString UICanvasFile::SerializeNode(const UIWidget& InWidget)
     {
-        return OpaaxString(WriteNode(InWidget).dump(4).c_str());
+        return ToJsonText(WriteNode(InWidget), 4);
     }
 
     TStrongObjectPtr<UIWidget> UICanvasFile::DeserializeNode(const OpaaxString& InText, const ObjectClassRegistry& InClasses)

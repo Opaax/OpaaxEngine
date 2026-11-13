@@ -374,3 +374,24 @@ TEST_CASE("OpaaxString json: values and keys come across whole, an embedded NUL 
     CHECK(ToJsonText(nlohmann::json{ { "a", 1 } }) == R"({"a":1})");
     CHECK(ToJsonText(nlohmann::json{ { "a", 1 } }, 2).Contains(R"(  "a": 1)"));
 }
+
+TEST_CASE("ToJsonText: a float is written as typed, not as the double it widens to")
+{
+    // 0.4f widens to 0.4000000059604645; the file shows 0.4 and reads back the same float.
+    const nlohmann::json lValues = { { "Scale", 0.4f }, { "Colour", { 0.95f, 0.85f, 0.35f } }, { "Whole", 3.f } };
+    const OpaaxString    lText   = ToJsonText(lValues);
+    CHECK(lText == R"({"Colour":[0.95,0.85,0.35],"Scale":0.4,"Whole":3.0})");
+
+    const nlohmann::json lBack = nlohmann::json::parse(ToJsonString(lText));
+    CHECK(lBack["Scale"].get<float>() == 0.4f);
+    CHECK(lBack["Colour"][2].get<float>() == 0.35f);
+
+    // What is not exactly a float stays as it is: a double, an integer, a value past a float's range.
+    CHECK(ShortestFloatValue(0.1) == 0.1);
+    CHECK(ShortestFloatValue(1e300) == 1e300);
+    CHECK(ShortestFloatValue(static_cast<double>(1e-7f)) == 1e-7);
+    CHECK(ToJsonText(nlohmann::json{ { "n", 7 }, { "d", 0.1 } }) == R"({"d":0.1,"n":7})");
+
+    // The value given is left alone.
+    CHECK(lValues["Scale"].get<double>() == static_cast<double>(0.4f));
+}

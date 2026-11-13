@@ -116,7 +116,7 @@ namespace Opaax
             lJson[KEY_PERSISTENT_MAP] = InData.PersistentMap();
         }
 
-        return OpaaxString(lJson.dump(4).c_str());
+        return ToJsonText(lJson, 4);
     }
 
     bool LevelFile::Save(const OpaaxString& InAbsPath, const LevelData& InData)

@@ -33,7 +33,7 @@ namespace Opaax
         {
             return InValue.get<OpaaxString>();
         }
-        return OpaaxString(InValue.dump(InIndent).c_str());
+        return ToJsonText(InValue, InIndent);
     }
 
     DevConsoleOutput::DevConsoleOutput(const Uint32 InMaxRows)

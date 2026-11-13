@@ -382,7 +382,7 @@ namespace Opaax
                     }
 
                     const OpaaxString lWith = lPair.value().is_string() ? lPair.value().get<OpaaxString>()
-                                                                        : OpaaxString(lPair.value().dump().c_str());
+                                                                        : ToJsonText(lPair.value());
                     lText = lText.Replace(lPlaceholder, lWith);
                 }
                 return nlohmann::json(lText);
