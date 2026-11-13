@@ -2,6 +2,7 @@
 
 #include "Core/Maths/Bounds2D.h"
 #include "Core/Maths/MathTypes.h"
+#include "Renderer/UVBounds.h"
 
 namespace Opaax
 {
@@ -18,6 +19,8 @@ namespace Opaax
         ITexture2D* Texture = nullptr;   // borrowed
         Vector2F    UVMin   = { 0.f, 0.f };
         Vector2F    UVMax   = { 1.f, 1.f };
+        /** The sheet frame the UVs are part of: blended reads stay inside it. The whole texture: reads are free (glyphs). */
+        Vector4F    UVFrame = WHOLE_TEXTURE_UV;
         /** > 0 draws a hollow box with this border width (missing-glyph box). Untextured. */
         float       Outline = 0.f;
     };

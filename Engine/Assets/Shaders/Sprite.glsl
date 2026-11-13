@@ -11,6 +11,7 @@ layout(location = 6) in float a_MaskIndex;
 layout(location = 7) in float a_NormalIndex;
 layout(location = 8) in vec4  a_Emissive;     // rgb: linear glow, w: 0 unlit, 1 lit, 2 lit and never shadowed
 layout(location = 9) in vec2  a_RotationCS;   // the quad's rotation (cos, sin)
+layout(location = 10) in vec4 a_UVFrame;      // the sheet frame the quad is drawn from: min uv, max uv
 
 // SPIR-V forbids default-block uniforms — view-projection rides a UBO. Binding 1 so it shares
 // one Vulkan descriptor set with the sampler array (binding 0) without colliding; on OpenGL the
@@ -18,7 +19,7 @@ layout(location = 9) in vec2  a_RotationCS;   // the quad's rotation (cos, sin)
 layout(std140, binding = 1) uniform CameraUBO
 {
     mat4 u_ViewProjection;
-    vec4 u_PassParams;   // x: 1 when the pass draws linear colour (an HDR target)
+    vec4 u_PassParams;   // x: 1 when the pass draws linear colour (an HDR target), z: 1 when textures are read through mipmaps
 };
 
 layout(location = 0) out vec4  v_Color;
@@ -31,6 +32,7 @@ layout(location = 6) out float v_NormalIndex;
 layout(location = 7) out vec4  v_Emissive;
 layout(location = 8) out vec2  v_RotationCS;
 layout(location = 9) out vec2  v_WorldPosition;
+layout(location = 10) flat out vec4 v_UVFrame;
 
 void main()
 {
@@ -45,6 +47,7 @@ void main()
     v_Emissive      = a_Emissive;
     v_RotationCS    = a_RotationCS;
     v_WorldPosition = a_Position.xy;
+    v_UVFrame      = a_UVFrame;
 }
 
 #type fragment
@@ -60,6 +63,7 @@ layout(location = 6) in float v_NormalIndex;
 layout(location = 7) in vec4  v_Emissive;
 layout(location = 8) in vec2  v_RotationCS;
 layout(location = 9) in vec2  v_WorldPosition;
+layout(location = 10) flat in vec4 v_UVFrame;
 
 // Explicit binding — the array spans texture units 0..15 (replaces the SetIntArray call).
 layout(binding = 0) uniform sampler2D u_Textures[16];
@@ -97,30 +101,51 @@ const float PI            = 3.14159265;
 
 layout(location = 0) out vec4 FragColor;
 
+// Reads a texture inside InBounds (min uv, max uv), the sheet frame a quad is drawn from. A blended
+// read near the frame's edge would take texels of the next frame. The read is kept half a texel
+// inside, the texel being the one of the coarsest mipmap level read.
+// InDx and InDy are how fast InUV changes across the screen.
+vec4 SampleInside(sampler2D InTexture, vec2 InUV, vec2 InDx, vec2 InDy, vec4 InBounds)
+{
+    vec2  lSize  = vec2(textureSize(InTexture, 0));
+    float lLevel = 0.0;
+
+    if (u_PassParams.z > 0.5)
+    {
+        // The level the sampler picks, rounded up: the coarser of the two it blends. Just above
+        // a whole level counts as that level, so an exact half or quarter size is not pushed up.
+        float lTexels = max(length(InDx * lSize), length(InDy * lSize));
+        lLevel        = ceil(max(log2(max(lTexels, 1.0e-6)), 0.0) - 0.01);
+    }
+
+    vec2 lInset = min(0.5 * exp2(lLevel) / lSize, 0.5 * (InBounds.zw - InBounds.xy));
+    return textureGrad(InTexture, clamp(InUV, InBounds.xy + lInset, InBounds.zw - lInset), InDx, InDy);
+}
+
 // One constant index per case: GLSL leaves a sampler index that varies within a draw undefined
 // (some drivers show it), and the sprites of one batch use different textures.
-// InDx and InDy are how fast InUV changes across the screen, taken outside any branch: inside
-// one, the mipmap level picked by texture() is undefined where two sprites meet.
-vec4 SampleSlot(int InSlot, vec2 InUV, vec2 InDx, vec2 InDy)
+// InDx and InDy are taken outside any branch: inside one, the mipmap level picked by texture()
+// is undefined where two sprites meet.
+vec4 SampleSlot(int InSlot, vec2 InUV, vec2 InDx, vec2 InDy, vec4 InBounds)
 {
     switch (InSlot)
     {
-        case 0:  return textureGrad(u_Textures[0], InUV, InDx, InDy);
-        case 1:  return textureGrad(u_Textures[1], InUV, InDx, InDy);
-        case 2:  return textureGrad(u_Textures[2], InUV, InDx, InDy);
-        case 3:  return textureGrad(u_Textures[3], InUV, InDx, InDy);
-        case 4:  return textureGrad(u_Textures[4], InUV, InDx, InDy);
-        case 5:  return textureGrad(u_Textures[5], InUV, InDx, InDy);
-        case 6:  return textureGrad(u_Textures[6], InUV, InDx, InDy);
-        case 7:  return textureGrad(u_Textures[7], InUV, InDx, InDy);
-        case 8:  return textureGrad(u_Textures[8], InUV, InDx, InDy);
-        case 9:  return textureGrad(u_Textures[9], InUV, InDx, InDy);
-        case 10: return textureGrad(u_Textures[10], InUV, InDx, InDy);
-        case 11: return textureGrad(u_Textures[11], InUV, InDx, InDy);
-        case 12: return textureGrad(u_Textures[12], InUV, InDx, InDy);
-        case 13: return textureGrad(u_Textures[13], InUV, InDx, InDy);
-        case 14: return textureGrad(u_Textures[14], InUV, InDx, InDy);
-        case 15: return textureGrad(u_Textures[15], InUV, InDx, InDy);
+        case 0:  return SampleInside(u_Textures[0], InUV, InDx, InDy, InBounds);
+        case 1:  return SampleInside(u_Textures[1], InUV, InDx, InDy, InBounds);
+        case 2:  return SampleInside(u_Textures[2], InUV, InDx, InDy, InBounds);
+        case 3:  return SampleInside(u_Textures[3], InUV, InDx, InDy, InBounds);
+        case 4:  return SampleInside(u_Textures[4], InUV, InDx, InDy, InBounds);
+        case 5:  return SampleInside(u_Textures[5], InUV, InDx, InDy, InBounds);
+        case 6:  return SampleInside(u_Textures[6], InUV, InDx, InDy, InBounds);
+        case 7:  return SampleInside(u_Textures[7], InUV, InDx, InDy, InBounds);
+        case 8:  return SampleInside(u_Textures[8], InUV, InDx, InDy, InBounds);
+        case 9:  return SampleInside(u_Textures[9], InUV, InDx, InDy, InBounds);
+        case 10: return SampleInside(u_Textures[10], InUV, InDx, InDy, InBounds);
+        case 11: return SampleInside(u_Textures[11], InUV, InDx, InDy, InBounds);
+        case 12: return SampleInside(u_Textures[12], InUV, InDx, InDy, InBounds);
+        case 13: return SampleInside(u_Textures[13], InUV, InDx, InDy, InBounds);
+        case 14: return SampleInside(u_Textures[14], InUV, InDx, InDy, InBounds);
+        case 15: return SampleInside(u_Textures[15], InUV, InDx, InDy, InBounds);
     }
     return vec4(1.0, 0.0, 1.0, 1.0);
 }
@@ -304,11 +329,11 @@ void main()
             discard;
         }
 
-        vec4 lMaskSample = SampleSlot(int(v_MaskIndex), v_MaskUV, lMaskDx, lMaskDy);
+        vec4 lMaskSample = SampleSlot(int(v_MaskIndex), v_MaskUV, lMaskDx, lMaskDy, vec4(0.0, 0.0, 1.0, 1.0));
         lMask            = lMaskSample.r * lMaskSample.a;
     }
 
-    vec4 lSample = SampleSlot(int(v_TexIndex), v_TexCoord, lTexDx, lTexDy);
+    vec4 lSample = SampleSlot(int(v_TexIndex), v_TexCoord, lTexDx, lTexDy, v_UVFrame);
 
     // An occlusion pass only records where the shadow casters are: white times their coverage.
     if (u_PassParams.y > 0.5)
@@ -334,7 +359,7 @@ void main()
             if (bHasNormal)
             {
                 // The map is in the sprite's own space: it turns with the sprite.
-                vec3 lMapped = SampleSlot(int(v_NormalIndex), v_TexCoord, lTexDx, lTexDy).xyz * 2.0 - 1.0;
+                vec3 lMapped = SampleSlot(int(v_NormalIndex), v_TexCoord, lTexDx, lTexDy, v_UVFrame).xyz * 2.0 - 1.0;
                 lNormal = normalize(vec3(v_RotationCS.x * lMapped.x - v_RotationCS.y * lMapped.y,
                                          v_RotationCS.y * lMapped.x + v_RotationCS.x * lMapped.y,
                                          lMapped.z));

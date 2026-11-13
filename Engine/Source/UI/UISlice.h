@@ -55,7 +55,7 @@ namespace Opaax
     void ClipQuadsTo(TDynArray<UIQuad>& InOutQuads, const Bounds2D& InClip);
 
     /**
-     * Maps the quads' 0..1 UVs into InUVMin..InUVMax (a sheet frame). Run after the slice, before the clip.
+     * Maps the quads' 0..1 UVs into InUVMin..InUVMax (a sheet frame), which becomes their UVFrame. Run after the slice, before the clip.
      */
     void MapQuadUVsInto(TDynArray<UIQuad>& InOutQuads, const Vector2F& InUVMin, const Vector2F& InUVMax) noexcept;
 }

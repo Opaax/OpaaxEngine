@@ -177,7 +177,8 @@ namespace Opaax
             else if (lQuad.Texture != nullptr)
             {
                 InRenderer.DrawSprite(lQuad.Bounds.Center, lQuad.Bounds.Size(), *lQuad.Texture, lColor,
-                                      0.f, ERenderLayer::UI, lItem.Order, lQuad.UVMin, lQuad.UVMax, lMask);
+                                      0.f, ERenderLayer::UI, lItem.Order, lQuad.UVMin, lQuad.UVMax, lMask,
+                                      QuadLighting{}, lQuad.UVFrame);
             }
             else
             {

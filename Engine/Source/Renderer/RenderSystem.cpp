@@ -92,6 +92,7 @@ namespace Opaax
         if (IsValidDevice())
         {
             m_Device->SetTextureFilter(InFilter);
+            m_Renderer2D->SetTextureFilter(InFilter);
         }
     }
 

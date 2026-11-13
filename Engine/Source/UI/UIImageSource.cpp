@@ -90,6 +90,7 @@ namespace Opaax
             lQuad.Texture = InImage.Texture;
             lQuad.UVMin   = InImage.UVMin + lQuad.UVMin * lSpan;
             lQuad.UVMax   = InImage.UVMin + lQuad.UVMax * lSpan;
+            lQuad.UVFrame = MakeUVBounds(InImage.UVMin, InImage.UVMax);
         }
 
         return bTiled == bTile;

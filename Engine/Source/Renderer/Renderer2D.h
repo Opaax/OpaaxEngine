@@ -8,6 +8,8 @@
 
 #include "Core/Maths/Bounds2D.h"
 #include "Renderer/RenderLayer.h"
+#include "Renderer/UVBounds.h"
+#include "RHI/TextureSampling.h"
 
 namespace Opaax
 {
@@ -122,6 +124,9 @@ namespace Opaax
         // Closes the pass: sorts what was recorded, splits it into batches, draws them.
         void EndPass();
 
+        /** The project's filter: tells the shader whether textures are read through their mipmaps. From the next pass. */
+        void SetTextureFilter(ETextureFilter InFilter);
+
         // =============================================================================
         // Stats
         // =============================================================================
@@ -164,6 +169,8 @@ namespace Opaax
          * @param InLayer Draw layer
          * @param InOrderInLayer Order within the layer, lower = behind
          * @param InUVMin / @param InUVMax Region to sample (default: whole texture)
+         * @param InUVFrame The sheet frame the region is part of (MakeUVBounds): blended reads stay
+         *   inside it. The whole texture by default: reads are free (text, a texture drawn whole).
          */
         void DrawSprite(const Vector2F& InPosition,
                         const Vector2F& InSize,
@@ -175,7 +182,8 @@ namespace Opaax
                         const Vector2F& InUVMin        = { 0.f, 0.f },
                         const Vector2F& InUVMax        = { 1.f, 1.f },
                         const QuadMask& InMask         = {},
-                        const QuadLighting& InLighting = {});
+                        const QuadLighting& InLighting = {},
+                        const Vector4F& InUVFrame      = WHOLE_TEXTURE_UV);
 
         /**
          * Draws a hollow quad: a border of InThickness, empty inside. Untextured.
@@ -237,7 +245,8 @@ namespace Opaax
                           const Vector2F& InUVMax,
                           const Vector2F& InInnerHalf = { 0.f, 0.f },
                           const QuadMask& InMask      = {},
-                          const QuadLighting& InLighting = {});
+                          const QuadLighting& InLighting = {},
+                          const Vector4F& InUVFrame   = WHOLE_TEXTURE_UV);
 
         /**
          * InTexture's id for this pass (existing or new).
