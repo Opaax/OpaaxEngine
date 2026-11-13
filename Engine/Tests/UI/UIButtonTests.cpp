@@ -341,3 +341,62 @@ TEST_CASE("UIButton: the frames, border and scale round-trip through the file; a
     CHECK(lOldButton->Border.IsZero());
     CHECK(lOldButton->BorderScale == doctest::Approx(1.f));
 }
+
+namespace
+{
+    /** Counts each press and hover event of a button. */
+    struct EventCounts
+    {
+        Uint32 PressedStart = 0, PressedStop = 0, HoveredStart = 0, HoveredStop = 0;
+
+        explicit EventCounts(UIButton& InButton)
+        {
+            InButton.OnPressedStart.Add([this]() { ++PressedStart; });
+            InButton.OnPressedStop.Add([this]() { ++PressedStop; });
+            InButton.OnHoveredStart.Add([this]() { ++HoveredStart; });
+            InButton.OnHoveredStop.Add([this]() { ++HoveredStop; });
+        }
+    };
+}
+
+TEST_CASE("UIButton: leaving while pressed cancels the press: it stops once, and coming back to release is no click")
+{
+    Fixture     lF;
+    EventCounts lEvents(*lF.Button);
+
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Move, { 0.f, 0.f }, EUIPointerButton::None));   // Enter
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Down, { 0.f, 0.f }));
+    CHECK(lEvents.PressedStart == 1);
+    CHECK(lF.Button->GetState() == EUIButtonState::Pressed);
+
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Move, { 900.f, 500.f }, EUIPointerButton::Primary));   // Leave
+    CHECK(lEvents.PressedStart == 1);   // not a second start
+    CHECK(lEvents.PressedStop == 1);
+    CHECK(lEvents.HoveredStop == 1);
+    CHECK_FALSE(lF.Button->GetState() == EUIButtonState::Pressed);
+
+    // Back over it, still held, then released inside: the press was cancelled, so nothing.
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Move, { 0.f, 0.f }, EUIPointerButton::Primary));   // Enter
+    CHECK_FALSE(lF.Button->GetState() == EUIButtonState::Pressed);
+    CHECK(lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Up, { 0.f, 0.f })) == EUIReply::Handled);
+    CHECK(lF.Clicks == 0);
+    CHECK(lEvents.PressedStop == 1);
+
+    // The next press clicks as usual.
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Down, { 0.f, 0.f }));
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Up, { 0.f, 0.f }));
+    CHECK(lF.Clicks == 1);
+    CHECK(lEvents.PressedStart == 2);
+    CHECK(lEvents.PressedStop == 2);
+}
+
+TEST_CASE("UIButton: a press released outside without a Leave still stops, and does not click")
+{
+    Fixture     lF;
+    EventCounts lEvents(*lF.Button);
+
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Down, { 0.f, 0.f }));
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Up, { 900.f, 500.f }));
+    CHECK(lEvents.PressedStop == 1);
+    CHECK(lF.Clicks == 0);
+}

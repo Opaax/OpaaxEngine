@@ -79,7 +79,7 @@ namespace Opaax
         // Members
         // =============================================================================
     public:
-        /** Fired on a click (Down + Up inside, enabled). */
+        /** Fired on a click: Down then Up inside, without leaving in between (enabled). */
         FButtonEventDelegate OnClick;
         /** Fired on the pointer start enter (enabled). */
         FButtonEventDelegate OnHoveredStart;
@@ -87,7 +87,7 @@ namespace Opaax
         FButtonEventDelegate OnHoveredStop;
         /** Fired on the pointer with press event start (Down inside, enabled). */
         FButtonEventDelegate OnPressedStart;
-        /** Fired on the pointer with press event end (Down inside, went outside, enabled). */
+        /** Fired when a press ends: released, or cancelled by the pointer leaving (then no click follows). */
         FButtonEventDelegate OnPressedStop;
         /** Fired when the button went from enable true to enable false */
         FButtonEventDelegate OnDisabled;

@@ -60,7 +60,7 @@ namespace Opaax
         static OpaaxString ToText(const TData& InData)
         {
             // dump(4), sorted keys
-            return OpaaxString(nlohmann::json(InData).dump(4).c_str());
+            return ToJsonText(nlohmann::json(InData), 4);
         }
     };
 
