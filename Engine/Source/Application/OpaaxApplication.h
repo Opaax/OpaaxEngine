@@ -261,6 +261,7 @@ namespace Opaax
         //~Begin IAutomationHost interface
     public:
         void   RequestScreenshot(const OpaaxString& InPath) override { m_PendingScreenshot = InPath; }
+        void   RequestFrameRead(FrameReader InReader) override { m_PendingFrameRead = Move(InReader); }
         void   RequestQuit() override { m_bQuitRequested = true; }
         Uint64 GetFrameIndex() const override { return m_FrameIndex; }
         //~End IAutomationHost interface
@@ -290,6 +291,7 @@ namespace Opaax
 
         /** Asked by a command, done at the end of the frame. */
         OpaaxString m_PendingScreenshot;
+        FrameReader m_PendingFrameRead;
         bool        m_bQuitRequested = false;
 
         static AppServiceLocator m_Services;

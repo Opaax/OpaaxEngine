@@ -406,6 +406,23 @@ void OpaaxApplication::RunApplication()
             m_PendingScreenshot.Clear();
         }
 
+        if (m_PendingFrameRead)
+        {
+            TDynArray<Uint8> lPixels;
+            Uint32           lWidth  = 0;
+            Uint32           lHeight = 0;
+            if (!Engine().ReadFrame(lPixels, lWidth, lHeight))
+            {
+                lPixels.clear();
+                lWidth  = 0;
+                lHeight = 0;
+            }
+
+            const FrameReader lReader = Move(m_PendingFrameRead);
+            m_PendingFrameRead = nullptr;
+            lReader(lPixels, lWidth, lHeight);
+        }
+
         const bool bScriptDone = m_Automation != nullptr && m_Automation->EndFrame();
         if (m_bQuitRequested || bScriptDone)
         {

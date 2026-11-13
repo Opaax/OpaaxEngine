@@ -26,6 +26,7 @@
 #include "Input/InputManager.h"
 #include "Renderer/Camera/CameraManager.h"
 #include "Renderer/RendererManager.h"
+#include "Renderer/RendererInfo.h"
 #include "Resources/Asset/AssetHandle.h"
 #include "Resources/Asset/AssetResource.h"
 #include "Resources/ResourceManager.h"
@@ -758,7 +759,7 @@ namespace Opaax
         Uint32           lWidth  = 0;
         Uint32           lHeight = 0;
 
-        if (m_RendererManager == nullptr || !m_RendererManager->CaptureBackbuffer(lPixels, lWidth, lHeight))
+        if (!ReadFrame(lPixels, lWidth, lHeight))
         {
             OPAAX_ENGINE_LOG(Error, "CaptureFrame: no frame to read (no render device)");
             return false;
@@ -772,6 +773,16 @@ namespace Opaax
 
         OPAAX_ENGINE_LOG(Info, "Frame captured to '{}' ({}x{})", InPngPath.CStr(), lWidth, lHeight);
         return true;
+    }
+
+    bool Engine::ReadFrame(TDynArray<Uint8>& OutRGBA, Uint32& OutWidth, Uint32& OutHeight)
+    {
+        return m_RendererManager != nullptr && m_RendererManager->CaptureBackbuffer(OutRGBA, OutWidth, OutHeight);
+    }
+
+    RendererInfo Engine::GetRendererInfo() const
+    {
+        return m_RendererManager != nullptr ? m_RendererManager->GetInfo() : RendererInfo{};
     }
 
     void Engine::SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView, bool bInDrawOverlays,

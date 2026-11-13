@@ -1,6 +1,7 @@
 #include "Renderer/RenderSystem.h"
 
 #include "Renderer/RenderSystemDesc.h"
+#include "Renderer/RendererInfo.h"
 #include "Renderer/RenderView.h"
 #include "Renderer/RenderTarget.hpp"
 #include "Renderer/Renderer2D.h"
@@ -125,6 +126,28 @@ namespace Opaax
     double RenderSystem::GetGpuFrameTimeMs() const
     {
         return IsValidDevice() ? m_Device->GetLastGpuFrameTimeMs() : -1.0;
+    }
+
+    RendererInfo RenderSystem::GetInfo() const
+    {
+        RendererInfo lInfo;
+
+        if (!IsValidDevice())
+        {
+            return lInfo;
+        }
+
+        lInfo.bValid     = true;
+        lInfo.Device     = m_Device->GetCapabilities();
+        lInfo.GpuFrameMs = m_Device->GetLastGpuFrameTimeMs();
+
+        if (m_Backbuffer != nullptr)
+        {
+            lInfo.BackbufferWidth  = m_Backbuffer->GetWidth();
+            lInfo.BackbufferHeight = m_Backbuffer->GetHeight();
+        }
+
+        return lInfo;
     }
 
     bool RenderSystem::CaptureBackbuffer(TDynArray<Uint8>& OutRGBA, Uint32& OutWidth, Uint32& OutHeight) const

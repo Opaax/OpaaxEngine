@@ -26,6 +26,7 @@ namespace Opaax
     class FrameClock;
     class FrameLimiter;
     struct CameraView;
+    struct RendererInfo;
 
     // =============================================================================
     // IEngine — the engine as an application service. Owns the engine subsystems
@@ -118,6 +119,16 @@ namespace Opaax
          * @return False without a render device, or when the file cannot be written (logged)
          */
         virtual bool CaptureFrame(const OpaaxString& InPngPath) = 0;
+
+        /**
+         * The frame drawn so far (world, UI, editor), as pixels. Call before PresentBackbuffer.
+         * @param OutRGBA RGBA, rows from top to bottom, opaque
+         * @return False without a render device, or when the frame cannot be read
+         */
+        virtual bool ReadFrame(TDynArray<Uint8>& OutRGBA, Uint32& OutWidth, Uint32& OutHeight) = 0;
+
+        /** What the renderer is using now (its device, its limits). Not valid without a render device. */
+        virtual RendererInfo GetRendererInfo() const = 0;
 
         /**
          * Draws the active world into InTarget for this frame only. Submit again every frame.

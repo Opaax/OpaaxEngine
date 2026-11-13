@@ -10,6 +10,7 @@
 #include "Input/InputManager.h"
 #include "Resources/ResourceManager.h"
 #include "Renderer/DebugDraw.h"
+#include "Renderer/RendererInfo.h"
 #include "RHI/Framebuffer.h"
 #include "RHI/Texture.h"
 #include "World/WorldManager.h"
@@ -62,6 +63,8 @@ namespace Opaax
 
             void PresentBackbuffer()      override {}
             bool CaptureFrame(const OpaaxString&) override { return false; }
+            bool ReadFrame(TDynArray<Uint8>&, Uint32&, Uint32&) override { return false; }
+            RendererInfo GetRendererInfo() const override { return RendererInfo{}; }
             void SubmitRenderView(IRenderTarget&, const CameraView&, bool, World*, bool) override {}
             void SubmitWorldView(IRenderTarget&, bool, World*, bool) override {}
             void SubmitCameraView(IRenderTarget&, EntityID, bool, CameraView*, World*) override {}

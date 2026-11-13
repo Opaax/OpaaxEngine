@@ -19,6 +19,7 @@ namespace Opaax
     struct FramebufferSpec;
     struct RenderSystemDesc;
     struct RenderView;
+    struct RendererInfo;
 
     // =============================================================================
     // RenderSystem — the renderer. A host owns one per surface. Owns the device, the Renderer2D
@@ -146,6 +147,9 @@ namespace Opaax
          * @return False without a device, or when it cannot be read
          */
         bool CaptureBackbuffer(TDynArray<Uint8>& OutRGBA, Uint32& OutWidth, Uint32& OutHeight) const;
+
+        /** What is in use now: the device's names and limits, the backbuffer's size, the GPU time. */
+        RendererInfo GetInfo() const;
 
         /** Clear colour of passes that clear. Applied from the next frame. */
         void SetClearColor(const Vector4F& InColor) noexcept { m_ClearColor = InColor; }

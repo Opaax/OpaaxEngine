@@ -13,6 +13,7 @@
 #include "Core/Build/BuildInfo.h"
 #include "Core/IO/FileIO.h"
 #include "Core/IO/FileSystem.h"
+#include "Core/Image/ImageSample.h"
 #include "Core/Maths/Maths.h"
 #include "Core/String/OpaaxStringJson.h"
 #include "Core/Time/Clock.h"
@@ -37,6 +38,7 @@
 #include "Renderer/Camera/CameraRigSubsystem.h"
 #include "Renderer/Camera/CameraSpeedZoomStage.h"
 #include "Renderer/Camera/CameraZoneStage.h"
+#include "Renderer/RendererInfo.h"
 #include "Renderer/Camera/CameraShakeSourceComponent.h"
 #include "Renderer/Camera/CameraShakeSubsystem.h"
 #include "UI/UIButtonBase.h"
@@ -1009,6 +1011,96 @@ namespace Opaax::EngineAutomation
         }
 
         // =========================================================================
+        // Renderer: what it is using, and what a part of the frame holds
+        // =========================================================================
+        void RegisterRenderer(ICommandRegistry& InCommands, IEngine& InEngine, IAutomationHost& InHost)
+        {
+            InCommands.Add("renderer.info",
+                "What the renderer is using now: {backend, vendor, gpu, version, shadingLanguage, maxSamples (the "
+                "most a multisampled target can have; 1: none), maxTextureSize, maxTextureUnits, errorChecks (how "
+                "wrong graphics calls reach the log: \"per call\", \"per frame\" or \"none\"), backbuffer {width, "
+                "height}, gpuFrameMs (negative before the first measure)}.",
+                [&InEngine](const nlohmann::json&)
+                {
+                    const RendererInfo lInfo = InEngine.GetRendererInfo();
+                    if (!lInfo.bValid)
+                    {
+                        return AutomationResult::Fail("this app has no render device (it runs without a window)");
+                    }
+
+                    return AutomationResult::Ok(nlohmann::json{
+                        { "backend",         ToJsonString(lInfo.Device.Backend) },
+                        { "vendor",          ToJsonString(lInfo.Device.Vendor) },
+                        { "gpu",             ToJsonString(lInfo.Device.Renderer) },
+                        { "version",         ToJsonString(lInfo.Device.Version) },
+                        { "shadingLanguage", ToJsonString(lInfo.Device.ShadingLanguage) },
+                        { "maxSamples",      lInfo.Device.MaxSamples },
+                        { "maxTextureSize",  lInfo.Device.MaxTextureSize },
+                        { "maxTextureUnits", lInfo.Device.MaxTextureUnits },
+                        { "errorChecks",     ToString(lInfo.Device.ErrorChecks) },
+                        { "backbuffer",      nlohmann::json{ { "width",  lInfo.BackbufferWidth },
+                                                             { "height", lInfo.BackbufferHeight } } },
+                        { "gpuFrameMs",      lInfo.GpuFrameMs } });
+                });
+
+            InCommands.Add(CommandSpec("frame.sample",
+                "Reads a part of this frame, as screenshot would save it: {colors (how many different ones: 1 for "
+                "a flat area, 2 for a hard edge, more for a smoothed one), mean, min, max (each [r, g, b, a], 0 to "
+                "255), x, y, width, height (the part read, cut to the frame), frame {width, height}}. {x, y} is "
+                "the area's top-left in pixels from the frame's top-left. Answers once the frame is drawn.")
+                    .Param("x", ECommandParamType::Int, "pixels from the frame's left")
+                    .Param("y", ECommandParamType::Int, "pixels from the frame's top")
+                    .Param("width", ECommandParamType::Int, "the area's width in pixels (1)").Optional()
+                    .Param("height", ECommandParamType::Int, "the area's height in pixels (1)").Optional(),
+                [&InHost](const nlohmann::json& InParams)
+                {
+                    ImageSample::Rect lArea;
+                    lArea.X      = InParams.value("x", 0);
+                    lArea.Y      = InParams.value("y", 0);
+                    lArea.Width  = InParams.value("width", 1);
+                    lArea.Height = InParams.value("height", 1);
+
+                    // Filled when the frame is drawn, read when the request is answered.
+                    TSharedPtr<AutomationResult> lAnswer =
+                        MakeShared<AutomationResult>(AutomationResult::Fail("the frame was not drawn"));
+
+                    InHost.RequestFrameRead(
+                        [lAnswer, lArea](const TDynArray<Uint8>& InRGBA, const Uint32 InWidth, const Uint32 InHeight)
+                        {
+                            if (InRGBA.empty())
+                            {
+                                *lAnswer = AutomationResult::Fail("there is no frame to read (no render device)");
+                                return;
+                            }
+
+                            ImageSample::Result lSample;
+                            OpaaxString         lError;
+                            if (!ImageSample::Measure(InRGBA.data(), InWidth, InHeight, lArea, lSample, lError))
+                            {
+                                *lAnswer = AutomationResult::Fail(lError);
+                                return;
+                            }
+
+                            *lAnswer = AutomationResult::Ok(nlohmann::json{
+                                { "colors", lSample.Colors },
+                                { "mean",   { lSample.Mean[0], lSample.Mean[1], lSample.Mean[2], lSample.Mean[3] } },
+                                { "min",    { lSample.Min[0], lSample.Min[1], lSample.Min[2], lSample.Min[3] } },
+                                { "max",    { lSample.Max[0], lSample.Max[1], lSample.Max[2], lSample.Max[3] } },
+                                { "x",      lSample.Area.X },
+                                { "y",      lSample.Area.Y },
+                                { "width",  lSample.Area.Width },
+                                { "height", lSample.Area.Height },
+                                { "frame",  nlohmann::json{ { "width", InWidth }, { "height", InHeight } } } });
+                        });
+
+                    AutomationResult lResult;
+                    lResult.WaitFrames = 1;
+                    lResult.Answer     = [lAnswer]() { return *lAnswer; };
+                    return lResult;
+                });
+        }
+
+        // =========================================================================
         // Camera: traces of what it framed, measured
         // =========================================================================
         void RegisterCamera(ICommandRegistry& InCommands, IEngine& InEngine)
@@ -1599,6 +1691,7 @@ namespace Opaax::EngineAutomation
         RegisterLevels(InCommands, InEngine);
         RegisterTime(InCommands, InEngine);
         RegisterWindow(InCommands, InEngine);
+        RegisterRenderer(InCommands, InEngine, InHost);
         RegisterConfig(InCommands);
         RegisterCamera(InCommands, InEngine);
         RegisterExpectations(InCommands, InEngine);

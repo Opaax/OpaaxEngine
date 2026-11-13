@@ -212,7 +212,16 @@ the tonemap composite) are in `Renderer/Post/ScenePipeline2D`: a new post effect
 its settings on the Environment.
 
 To see a change, play a level and take a screenshot: `TestWorld --exec TestWorld/Tests/Lighting.json`
-writes `Lighting.png`, or `Sandbox --capture shot.png --capture-frame 30`.
+writes `Lighting.png`, or `Sandbox --capture shot.png --capture-frame 30`. A script checks a picture
+by itself with `frame.sample`, which counts the colours of a part of the frame, and `renderer.info`
+says what the renderer is using: the GPU, the driver and its limits
+([Automation.md](Automation.md#commands)).
+
+In a dev build, a wrong graphics call is an Error line in the log, in the `OpenGL` category, with
+the driver's own text; doubtful use the driver rates medium or high is a Warn line. Each message is
+logged once. Where the driver cannot report calls (macOS), the error flags are read once a frame:
+the line then says that a call was wrong, not which. `renderer.info` says which of the two is in use
+(`errorChecks`). A ship build checks neither.
 
 ## The editor
 

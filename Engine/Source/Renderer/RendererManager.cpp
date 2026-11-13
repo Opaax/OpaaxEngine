@@ -22,6 +22,7 @@
 #include "Renderer/Camera/CameraManager.h"
 #include "Renderer/RenderSystem.h"
 #include "Renderer/RenderSystemDesc.h"
+#include "Renderer/RendererInfo.h"
 #include "Renderer/RenderView.h"
 #include "Renderer/RenderTarget.hpp"
 #include "Renderer/Renderer2D.h"
@@ -1215,6 +1216,11 @@ namespace Opaax
     bool RendererManager::CaptureBackbuffer(TDynArray<Uint8>& OutRGBA, Uint32& OutWidth, Uint32& OutHeight) const
     {
         return m_RenderSystem != nullptr && m_RenderSystem->CaptureBackbuffer(OutRGBA, OutWidth, OutHeight);
+    }
+
+    RendererInfo RendererManager::GetInfo() const
+    {
+        return m_RenderSystem != nullptr ? m_RenderSystem->GetInfo() : RendererInfo{};
     }
 
     // =========================================================================
