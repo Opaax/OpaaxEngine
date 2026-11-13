@@ -18,6 +18,19 @@ namespace Opaax
         R16F       // one float channel (distances)
     };
 
+    /** The format's name, for logs and renderer.info. */
+    inline const char* ToString(const ETextureFormat InFormat) noexcept
+    {
+        switch (InFormat)
+        {
+        case ETextureFormat::RGBA8:   return "RGBA8";
+        case ETextureFormat::RGBA16F: return "RGBA16F";
+        case ETextureFormat::R8:      return "R8";
+        case ETextureFormat::R16F:    return "R16F";
+        }
+        return "RGBA8";
+    }
+
     /**
      * An offscreen render target: one colour attachment and an optional depth/stencil.
      * The 2D renderer orders what it draws itself and tests neither depth nor stencil: ask for

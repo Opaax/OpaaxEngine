@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/OpaaxTypes.h"
+#include "Renderer/Post/SceneTargetPlan.h"
 #include "RHI/RHICapabilities.h"
 #include "RHI/TextureSampling.h"
 
@@ -32,6 +33,12 @@ namespace Opaax
 
         /** Targets the lit path keeps now, for every view size in use (scene, maps, bloom levels). */
         Uint32 SceneTargets = 0;
+
+        /** What the project and the player ask of world views (Renderer.config). */
+        SceneTargetSettings SceneSettings;
+
+        /** How each world view of the last frame was drawn, in drawing order: straight, or through a scene target. */
+        TDynArray<SceneTargetPlan> WorldViews;
 
         /** How colour textures are read (Renderer.config's TextureFilter). */
         ETextureFilter TextureFilter = ETextureFilter::Pixel;

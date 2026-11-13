@@ -417,41 +417,61 @@ namespace Opaax
         const EnvironmentComponent* lEnvironment = (InWorld != nullptr) ? FindEnvironment(*InWorld) : nullptr;
         ScenePipeline2D&            lPipeline    = m_RenderSystem->GetScenePipeline();
         ICommandBuffer*             lCommands    = m_RenderSystem->GetCommandBuffer();
+        const bool                  bCanPost     = lPipeline.IsReady() && lCommands != nullptr;
 
-        if (lEnvironment != nullptr && lPipeline.IsReady() && lCommands != nullptr)
+        // Through a scene target when lit, or when a setting asks for one; else straight into the target.
+        const SceneTargetPlan lPlan = m_RenderSystem->PlanWorldView(lWidth, lHeight, lEnvironment != nullptr && bCanPost);
+
+        if (lPlan.bSceneTarget && bCanPost)
         {
-            RenderView lSceneView   = lView;
-            lSceneView.bLinearColor = true;
+            RenderView lSceneView = lView;
+            lSceneView.Viewport   = Viewport{ 0, 0, lPlan.Width, lPlan.Height };
 
-            // The clear colour is authored in screen colour too.
-            const Vector4F& lClear = m_RenderSystem->GetClearColor();
-            const Vector4F  lLinearClear{ Maths::Pow(lClear.r, 2.2f), Maths::Pow(lClear.g, 2.2f),
-                                          Maths::Pow(lClear.b, 2.2f), lClear.a };
+            const Vector4F* lClear = nullptr;
+            Vector4F        lLinearClear;
 
-            // The lights that reach this view (a rolled view reaches into its corners).
-            const Bounds2D lViewBounds = ViewBounds(InView, static_cast<float>(lWidth) / static_cast<float>(Maths::Max(lHeight, 1u)));
-            const Vector3F lAmbient{ lEnvironment->AmbientColor.r, lEnvironment->AmbientColor.g, lEnvironment->AmbientColor.b };
+            if (lPlan.bLit)
+            {
+                lSceneView.bLinearColor = true;
 
-            LightsBlock2D lLights;
-            PackLights2D(CollectLights(*InWorld), lViewBounds, lAmbient, lEnvironment->AmbientIntensity, lLights);
+                // The clear colour is authored in screen colour too.
+                const Vector4F& lScreenClear = m_RenderSystem->GetClearColor();
+                lLinearClear = Vector4F{ Maths::Pow(lScreenClear.r, 2.2f), Maths::Pow(lScreenClear.g, 2.2f),
+                                         Maths::Pow(lScreenClear.b, 2.2f), lScreenClear.a };
+                lClear       = &lLinearClear;
 
-            // Shadows and ambient occlusion first: they are drawn from passes of their own.
-            const float        lPixelsPerUnit = static_cast<float>(lHeight) / Maths::Max(2.f * InView.OrthoSize, 1e-3f);
-            const LightingMaps lMaps          = RenderLightingMaps(*InWorld, lRenderer, lViewBounds, lPixelsPerUnit,
-                                                                   *lEnvironment, lLights);
+                // The lights that reach this view (a rolled view reaches into its corners).
+                const Bounds2D lViewBounds = ViewBounds(InView, static_cast<float>(lWidth) / static_cast<float>(Maths::Max(lHeight, 1u)));
+                const Vector3F lAmbient{ lEnvironment->AmbientColor.r, lEnvironment->AmbientColor.g, lEnvironment->AmbientColor.b };
 
-            lRenderer.SetLighting(lLights);
-            lRenderer.SetLightingMaps(lMaps.Shadow, lMaps.AmbientOcclusion);
+                LightsBlock2D lLights;
+                PackLights2D(CollectLights(*InWorld), lViewBounds, lAmbient, lEnvironment->AmbientIntensity, lLights);
+
+                // Shadows and ambient occlusion first: they are drawn from passes of their own.
+                const float        lPixelsPerUnit = static_cast<float>(lHeight) / Maths::Max(2.f * InView.OrthoSize, 1e-3f);
+                const LightingMaps lMaps          = RenderLightingMaps(*InWorld, lRenderer, lViewBounds, lPixelsPerUnit,
+                                                                       *lEnvironment, lLights);
+
+                lRenderer.SetLighting(lLights);
+                lRenderer.SetLightingMaps(lMaps.Shadow, lMaps.AmbientOcclusion);
+            }
 
             // Overlays meant to be behind the world (the grid) go in with it.
-            m_RenderSystem->BeginPass(lPipeline.PrepareScene(lWidth, lHeight), lSceneView, ELoadOp::Clear, &lLinearClear);
-            DrawWorld(*InWorld, lRenderer);
+            m_RenderSystem->BeginPass(lPipeline.PrepareScene(lPlan.Width, lPlan.Height, lPlan.Format), lSceneView,
+                                      ELoadOp::Clear, lClear);
+            if (InWorld != nullptr) { DrawWorld(*InWorld, lRenderer); }
             if (bInDrawOverlays) { DrawOverlays(InWorld, lRenderer, EOverlayFilter::BehindWorld); }
             m_RenderSystem->EndPass();
 
-            lRenderer.SetLightingMaps(nullptr, nullptr);
-
-            lPipeline.Composite(*lCommands, InTarget, PostSettings::From(*lEnvironment));
+            if (lPlan.bLit)
+            {
+                lRenderer.SetLightingMaps(nullptr, nullptr);
+                lPipeline.Composite(*lCommands, InTarget, PostSettings::From(*lEnvironment));
+            }
+            else
+            {
+                lPipeline.CopyScene(*lCommands, InTarget);
+            }
 
             // The other overlays over the finished picture, in screen colour.
             if (bInDrawOverlays)

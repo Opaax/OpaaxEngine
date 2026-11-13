@@ -1020,13 +1020,29 @@ namespace Opaax::EngineAutomation
                 "most a multisampled target can have; 1: none), maxTextureSize, maxTextureUnits, errorChecks (how "
                 "wrong graphics calls reach the log: \"per call\", \"per frame\" or \"none\"), backbuffer {width, "
                 "height}, targets {recreated (render targets that got new storage during the last frame: 0 in a steady "
-                "frame), allocatedTotal (since the start), kept (the lit path's, for every view size in use)}, textureFilter (how colour textures are read: Renderer.config's), gpuFrameMs (negative before the first measure)}.",
+                "frame), allocatedTotal (since the start), kept (the lit path's, for every view size in use)}, sceneSettings {samples, "
+                "fxaa, renderScale} (what world views are asked for), views (each world view of the last frame: "
+                "{sceneTarget (false: drawn straight into its target), lit, width, height, format, samples, fxaaTarget}), "
+                "textureFilter (how colour textures are read: Renderer.config's), gpuFrameMs (negative before the first measure)}.",
                 [&InEngine](const nlohmann::json&)
                 {
                     const RendererInfo lInfo = InEngine.GetRendererInfo();
                     if (!lInfo.bValid)
                     {
                         return AutomationResult::Fail("this app has no render device (it runs without a window)");
+                    }
+
+                    nlohmann::json lViews = nlohmann::json::array();
+                    for (const SceneTargetPlan& lPlan : lInfo.WorldViews)
+                    {
+                        lViews.push_back(nlohmann::json{
+                            { "sceneTarget", lPlan.bSceneTarget },
+                            { "lit",         lPlan.bLit },
+                            { "width",       lPlan.Width },
+                            { "height",      lPlan.Height },
+                            { "format",      ToString(lPlan.Format) },
+                            { "samples",     lPlan.Samples },
+                            { "fxaaTarget",  lPlan.bFXAATarget } });
                     }
 
                     return AutomationResult::Ok(nlohmann::json{
@@ -1044,6 +1060,10 @@ namespace Opaax::EngineAutomation
                         { "targets",         nlohmann::json{ { "recreated",      lInfo.TargetsRecreated },
                                                              { "allocatedTotal", lInfo.TargetsAllocatedTotal },
                                                              { "kept",           lInfo.SceneTargets } } },
+                        { "sceneSettings",   nlohmann::json{ { "samples",     lInfo.SceneSettings.Samples },
+                                                             { "fxaa",        lInfo.SceneSettings.bFXAA },
+                                                             { "renderScale", lInfo.SceneSettings.RenderScale } } },
+                        { "views",           Move(lViews) },
                         { "textureFilter",   ToString(lInfo.TextureFilter) },
                         { "gpuFrameMs",      lInfo.GpuFrameMs } });
                 });

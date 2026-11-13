@@ -62,7 +62,18 @@
             "backbuffer": {
                 "width": 1280,
                 "height": 720
-            }
+            },
+            "sceneSettings": {
+                "samples": 1,
+                "fxaa": false,
+                "renderScale": 1
+            },
+            "views": [
+                {
+                    "sceneTarget": false,
+                    "lit": false
+                }
+            ]
         }
     },
     {

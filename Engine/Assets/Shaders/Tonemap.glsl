@@ -22,7 +22,8 @@ layout(binding = 1) uniform sampler2D u_Bloom;
 
 layout(std140, binding = 2) uniform PostUBO
 {
-    // x: exposure multiplier, y: tonemapper (0 none, 1 Reinhard, 2 ACES), z: bloom strength (0 none)
+    // x: exposure multiplier, y: tonemapper (0 none, 1 Reinhard, 2 ACES), z: bloom strength (0 none),
+    // w: 1 to copy the scene as it is (an unlit world: screen colour, alpha kept)
     vec4 u_Post;
 };
 
@@ -41,6 +42,12 @@ vec3 ACESFilm(vec3 InColor)
 
 void main()
 {
+    if (u_Post.w > 0.5)
+    {
+        FragColor = texture(u_Scene, v_UV);
+        return;
+    }
+
     vec3 lColor = texture(u_Scene, v_UV).rgb;
     if (u_Post.z > 0.0)
     {

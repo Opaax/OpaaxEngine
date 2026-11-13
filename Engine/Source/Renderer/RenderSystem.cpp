@@ -87,6 +87,14 @@ namespace Opaax
         return m_Device->CreateTexture(InPixels, InWidth, InHeight, InChannels);
     }
 
+    SceneTargetPlan RenderSystem::PlanWorldView(const Uint32 InWidth, const Uint32 InHeight, const bool bInLit)
+    {
+        const Uint32          lMaxSamples = IsValidDevice() ? m_Device->GetCapabilities().MaxSamples : 1u;
+        const SceneTargetPlan lPlan       = PlanSceneTarget(InWidth, InHeight, bInLit, m_SceneTargetSettings, lMaxSamples);
+        m_WorldViews.push_back(lPlan);
+        return lPlan;
+    }
+
     void RenderSystem::SetTextureFilter(const ETextureFilter InFilter)
     {
         if (IsValidDevice())
@@ -109,6 +117,8 @@ namespace Opaax
             m_Renderer2D->ResetStats();
         }
 
+        m_WorldViews.clear();
+
         m_Device->BeginFrame();
     }
 
@@ -125,6 +135,8 @@ namespace Opaax
         }
 
         m_Device->EndFrame();
+
+        m_LastFrameWorldViews = m_WorldViews;
 
         // From one frame's end to the next: also counts what was resized between frames (an editor panel).
         const Uint64 lAllocations = m_Device->GetFramebufferAllocations();
@@ -161,6 +173,8 @@ namespace Opaax
         lInfo.GpuFrameMs = m_Device->GetLastGpuFrameTimeMs();
 
         lInfo.TextureFilter = m_Device->GetTextureFilter();
+        lInfo.SceneSettings = m_SceneTargetSettings;
+        lInfo.WorldViews    = m_LastFrameWorldViews;
 
         lInfo.TargetsRecreated      = m_TargetsRecreated;
         lInfo.TargetsAllocatedTotal = m_Device->GetFramebufferAllocations();

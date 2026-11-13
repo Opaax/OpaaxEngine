@@ -4,6 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/MathTypes.h"
 #include "Core/Log/Logger.h"
+#include "Renderer/Post/SceneTargetPlan.h"
 #include "RHI/ICommandBuffer.h"   // ELoadOp
 #include "RHI/TextureSampling.h"
 
@@ -116,6 +117,16 @@ namespace Opaax
         /** How every colour texture is read from the next draw on (Renderer.config's TextureFilter). */
         void SetTextureFilter(ETextureFilter InFilter);
 
+        /** What world views are asked for (samples, FXAA, scale), from the next view on. */
+        void SetSceneTargetSettings(const SceneTargetSettings& InSettings) noexcept { m_SceneTargetSettings = InSettings; }
+        const SceneTargetSettings& GetSceneTargetSettings() const noexcept { return m_SceneTargetSettings; }
+
+        /**
+         * How a world view of InWidth x InHeight is drawn (PlanSceneTarget, on the settings and the
+         * device's most samples). Kept for renderer.info: call once per world view drawn.
+         */
+        SceneTargetPlan PlanWorldView(Uint32 InWidth, Uint32 InHeight, bool bInLit);
+
         // End Resources
         // =============================================================================
 
@@ -173,5 +184,9 @@ namespace Opaax
         // The device's framebuffer allocations at the end of the frame before, and how many the last frame made.
         Uint64 m_AllocationsAtFrameEnd = 0;
         Uint32 m_TargetsRecreated      = 0;
+
+        SceneTargetSettings        m_SceneTargetSettings;
+        TDynArray<SceneTargetPlan> m_WorldViews;            // this frame's, so far
+        TDynArray<SceneTargetPlan> m_LastFrameWorldViews;   // the last frame's
     };
 }

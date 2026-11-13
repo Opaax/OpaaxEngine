@@ -73,8 +73,9 @@ namespace Opaax
     };
 
     // =============================================================================
-    // ScenePipeline2D — the HDR path of a world view: the world is drawn into a linear HDR target,
-    //   then composited (exposure, tonemap, back to the screen's gamma) into the view's target.
+    // ScenePipeline2D — the scene target of a world view. A lit world is drawn into a linear HDR
+    //   target, then composited (exposure, tonemap, back to the screen's gamma) into the view's
+    //   target; an unlit one that a setting sends here is drawn in screen colour, then copied.
     //   The shadow casters come first, drawn into an occlusion map. From it, a shadow map holds,
     //   for each shadowed light, how far it gets in every direction, and the ambient occlusion map
     //   how much of the casters surrounds each point (the coverage shrunk, then blurred).
@@ -123,11 +124,17 @@ namespace Opaax
         // Frame
         // =============================================================================
     public:
-        /** The HDR target the world is drawn into, sized InWidth x InHeight. The view's until the next call. */
-        IRenderTarget& PrepareScene(Uint32 InWidth, Uint32 InHeight);
+        /**
+         * The target the world is drawn into, sized InWidth x InHeight: RGBA16F for a lit world,
+         * RGBA8 for an unlit one (PlanSceneTarget). The view's until the next call.
+         */
+        IRenderTarget& PrepareScene(Uint32 InWidth, Uint32 InHeight, ETextureFormat InFormat = ETextureFormat::RGBA16F);
 
         /** Writes every pixel of InOutput from the scene: bloom, exposure, tonemap, gamma. */
         void Composite(ICommandBuffer& InCmd, IRenderTarget& InOutput, const PostSettings& InSettings);
+
+        /** Writes every pixel of InOutput from the scene as it is, alpha included: an unlit world. */
+        void CopyScene(ICommandBuffer& InCmd, IRenderTarget& InOutput);
 
         /** The target the shadow casters are drawn into (coverage), sized InWidth x InHeight. */
         IRenderTarget& PrepareOcclusion(Uint32 InWidth, Uint32 InHeight);
@@ -149,6 +156,10 @@ namespace Opaax
         // Internal
         // =============================================================================
     private:
+        /** One fullscreen pass of the tonemap shader from the scene into InOutput, with its block InPost. */
+        void RunTonemapPass(ICommandBuffer& InCmd, IRenderTarget& InOutput, const Vector4F& InPost,
+                            const IFramebuffer& InBloom);
+
         /** One fullscreen pass of the ambient occlusion shader, from InSource into InTarget. */
         void RunAmbientOcclusionPass(ICommandBuffer& InCmd, Uint32 InMode, float InSigma, const IFramebuffer& InSource,
                                      IRenderTarget& InTarget);

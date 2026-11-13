@@ -220,6 +220,14 @@ TEST_CASE("Engine shaders: the tonemap shader ports with its scene and post bloc
     const GLSLPort::ResourceBinding* lPost = Find(lBindings, "PostUBO");
     REQUIRE(lPost != nullptr);
     CHECK(lPost->Binding == 2);
+
+    // The copy mode (ScenePipeline2D::CopyScene sets w): the scene as it is, before any curve or gamma.
+    const Int32 lCopy  = lDesc.FragmentSrc.Find("if (u_Post.w > 0.5)");
+    const Int32 lWrite = lDesc.FragmentSrc.Find("FragColor = texture(u_Scene, v_UV);");
+    const Int32 lCurve = lDesc.FragmentSrc.Find("lColor *= u_Post.x;");
+    CHECK(lCopy >= 0);
+    CHECK(lWrite > lCopy);
+    CHECK(lCurve > lWrite);
 }
 
 TEST_CASE("Engine shaders: the bloom shader ports with its source and block")
