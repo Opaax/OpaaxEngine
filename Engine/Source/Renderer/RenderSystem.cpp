@@ -87,6 +87,14 @@ namespace Opaax
         return m_Device->CreateTexture(InPixels, InWidth, InHeight, InChannels);
     }
 
+    void RenderSystem::SetTextureFilter(const ETextureFilter InFilter)
+    {
+        if (IsValidDevice())
+        {
+            m_Device->SetTextureFilter(InFilter);
+        }
+    }
+
     void RenderSystem::BeginFrame()
     {
         if (!IsValidDevice())
@@ -150,6 +158,8 @@ namespace Opaax
         lInfo.bValid     = true;
         lInfo.Device     = m_Device->GetCapabilities();
         lInfo.GpuFrameMs = m_Device->GetLastGpuFrameTimeMs();
+
+        lInfo.TextureFilter = m_Device->GetTextureFilter();
 
         lInfo.TargetsRecreated      = m_TargetsRecreated;
         lInfo.TargetsAllocatedTotal = m_Device->GetFramebufferAllocations();

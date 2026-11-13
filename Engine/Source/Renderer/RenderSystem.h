@@ -5,6 +5,7 @@
 #include "Core/Maths/MathTypes.h"
 #include "Core/Log/Logger.h"
 #include "RHI/ICommandBuffer.h"   // ELoadOp
+#include "RHI/TextureSampling.h"
 
 namespace Opaax
 {
@@ -111,6 +112,9 @@ namespace Opaax
          * @return Null if there is no device
          */
         TUniquePtr<ITexture2D> CreateTexture(const void* InPixels, Uint32 InWidth, Uint32 InHeight, Int32 InChannels);
+
+        /** How every colour texture is read from the next draw on (Renderer.config's TextureFilter). */
+        void SetTextureFilter(ETextureFilter InFilter);
 
         // End Resources
         // =============================================================================

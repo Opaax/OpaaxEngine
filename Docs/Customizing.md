@@ -189,6 +189,32 @@ drawn as they are and lights do nothing (the log says so once).
 | ShadowCaster2D | The entity's sprite (by its alpha) or quad blocks lights that cast shadows, and darkens the ambient light around it |
 | Material2D (an asset) | On a Sprite: lit or not, a normal map (tangent space, Y up, the sprite's layout), an emissive colour and strength |
 
+### Textures
+
+`TextureFilter` in `Renderer.config` (Config panel, Renderer) says how every sprite and UI image is
+read when it is drawn at another size than its pixels. It applies at once, without a restart.
+
+| `TextureFilter` | Drawn smaller | Drawn larger | For |
+|---|---|---|---|
+| `Nearest` | the nearest texel | the nearest texel | Hard pixels at any size; shimmers when small or moving slowly |
+| `Pixel` (the default) | blended | the nearest texel | Pixel art |
+| `Smooth` | blended, through the texture's mipmaps | blended | Drawn or painted art: thin strokes stay when small, no blocks when large |
+
+Every colour texture gets its mipmaps when it is uploaded (a third more video memory), so the choice
+can change while the game runs. Text is not concerned: a font atlas is always blended.
+
+Two things hold under every filter:
+
+- A texture is clamped at its edges: a sprite's border takes nothing from the opposite side.
+- When an image is loaded, its fully transparent texels take the colour of the nearest texel that is
+  not (their alpha stays 0). A paint program leaves any colour there, often black, and a blended read
+  at a sprite's edge would draw it as a dark line. An image that keeps data under alpha 0 loses it.
+
+With `Smooth`, the frames of a sheet that touch each other take a line of colour from their
+neighbour when enlarged, and more when drawn small: leave a few empty texels between frames (the
+sheet's `Spacing`). `renderer.info` answers the filter in use (`textureFilter`), and
+`TestWorld/Levels/Filtering` shows the three side by side.
+
 ### Shaders
 
 The shaders are in `Engine/Assets/Shaders`, one file per program with `#type vertex` and

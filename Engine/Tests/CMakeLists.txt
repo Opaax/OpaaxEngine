@@ -186,6 +186,7 @@ set(OPAAX_TEST_SOURCES
 
     # RHI
     RHI/BindGroupLayoutTests.cpp
+    RHI/TextureSamplingTests.cpp
     RHI/GLSLPortTests.cpp
     RHI/OpenGLDebugTests.cpp
 

@@ -160,6 +160,8 @@ namespace Opaax
             return false;
         }
 
+        m_RenderSystem->SetTextureFilter(lRenderCfg.TextureFilter);
+
         // Window resize comes through the event bus.
         OpaaxApplication::GetAppService<IEngine>().GetEngineEventBus().GetEventBus()
             .Subscribe<WindowResize>(this, &RendererManager::HandleWindowResize);
@@ -1243,6 +1245,7 @@ namespace Opaax
         }
 
         m_RenderSystem->SetClearColor(m_RendererConfig->GetData().ClearColor);
+        m_RenderSystem->SetTextureFilter(m_RendererConfig->GetData().TextureFilter);
     }
 
     void RendererManager::HandleEngineConfigChanged()

@@ -1,0 +1,472 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 360.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "cc7cb35a8db352e2b5c049c3efc32898",
+            "name": "Camera",
+            "ownerMap": "Filtering"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.25,
+                        "y": 0.27,
+                        "z": 0.32
+                    },
+                    "Frame": -1,
+                    "Layer": "Background",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 1400.0,
+                        "y": 1400.0
+                    },
+                    "Texture": "/Engine/Textures/T_Square_256_White.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "472c2b8296c2545bb6e453b9e80c5a95",
+            "name": "Background",
+            "ownerMap": "Filtering"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 16.0,
+                        "y": 16.0
+                    },
+                    "Texture": "Textures/FilterDetail.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -400.0,
+                        "y": 150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "7af5a241687e56b8a3cde2898c14b0c1",
+            "name": "DetailQuarter",
+            "ownerMap": "Filtering"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 64.0,
+                        "y": 64.0
+                    },
+                    "Texture": "Textures/FilterDetail.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -250.0,
+                        "y": 150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "2f65d187b2b2587ba8ab1959ccc03dac",
+            "name": "DetailSame",
+            "ownerMap": "Filtering"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 256.0,
+                        "y": 256.0
+                    },
+                    "Texture": "Textures/FilterDetail.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 50.0,
+                        "y": 150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "b98801a58b755a4eb5099cddf2fd9041",
+            "name": "DetailLarge",
+            "ownerMap": "Filtering"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": 0,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "Textures/FilterSheet.opaaxasset",
+                    "Size": {
+                        "x": 16.0,
+                        "y": 16.0
+                    },
+                    "Texture": "",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -400.0,
+                        "y": -150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "5370da4d05225ffc8379d58d576793af",
+            "name": "SheetQuarter",
+            "ownerMap": "Filtering"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": 0,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "Textures/FilterSheet.opaaxasset",
+                    "Size": {
+                        "x": 20.0,
+                        "y": 20.0
+                    },
+                    "Texture": "",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -340.0,
+                        "y": -150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "0b458e1cde545ef4953cee5db8deb0de",
+            "name": "SheetSmall",
+            "ownerMap": "Filtering"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": 0,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "Textures/FilterSheet.opaaxasset",
+                    "Size": {
+                        "x": 64.0,
+                        "y": 64.0
+                    },
+                    "Texture": "",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -250.0,
+                        "y": -150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "56774e7974b55779a207f2e2e18a0109",
+            "name": "SheetSame",
+            "ownerMap": "Filtering"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": 0,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "Textures/FilterSheet.opaaxasset",
+                    "Size": {
+                        "x": 256.0,
+                        "y": 256.0
+                    },
+                    "Texture": "",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 50.0,
+                        "y": -150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "c6bccb60c12650348520ca99f565aa6b",
+            "name": "SheetLarge",
+            "ownerMap": "Filtering"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 300.0,
+                        "y": 300.0
+                    },
+                    "Texture": "Textures/FilterFlat.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 430.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "ed5b37c920985cc7ab5252b933aecc53",
+            "name": "DiscGround",
+            "ownerMap": "Filtering"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 1,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 256.0,
+                        "y": 256.0
+                    },
+                    "Texture": "Textures/FilterDisc.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 430.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "71965491c66f5610b2254a6f8866c68e",
+            "name": "DiscLarge",
+            "ownerMap": "Filtering"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 60.0,
+                        "y": 60.0
+                    },
+                    "Texture": "Textures/FilterFlat.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 430.0,
+                        "y": -250.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "d85d9f0778a55c81ae06ea38151aaacb",
+            "name": "DiscGroundSmall",
+            "ownerMap": "Filtering"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 1,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 40.0,
+                        "y": 40.0
+                    },
+                    "Texture": "Textures/FilterDisc.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 430.0,
+                        "y": -250.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "1f9fbde08dd25e108603d36b524949db",
+            "name": "DiscSmall",
+            "ownerMap": "Filtering"
+        }
+    ],
+    "mapId": "Filtering",
+    "version": 4
+}

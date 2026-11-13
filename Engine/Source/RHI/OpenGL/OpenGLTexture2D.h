@@ -9,6 +9,8 @@ namespace Opaax
     /**
      * OpenGL ITexture2D. Uploads decoded pixels (R8, RGB or RGBA). R8 is swizzled into alpha,
      * so the RGBA sprite shader reads (1,1,1,coverage). Does not read files (see Texture2D).
+     * A colour texture gets its mipmaps and is read through the device's sampler object (the
+     * project's filter); R8 and the white texture are read with their own parameters.
      */
     class OpenGLTexture2D final : public ITexture2D
     {
@@ -24,8 +26,10 @@ namespace Opaax
         /**
          * Uploads raw pixels. Channels: 4 = RGBA8, 3 = RGB8, 1 = R8 (swizzled into alpha).
          * InData is copied.
+         * @param InProjectSampler The sampler object colour textures are read through; it outlives the texture
          */
-        OpenGLTexture2D(const unsigned char* InData, Uint32 InWidth, Uint32 InHeight, Int32 InChannels);
+        OpenGLTexture2D(const unsigned char* InData, Uint32 InWidth, Uint32 InHeight, Int32 InChannels,
+                        Uint32 InProjectSampler);
 
         ~OpenGLTexture2D();
 
@@ -78,6 +82,7 @@ namespace Opaax
         // =============================================================================
     private:
         Uint32 m_RendererID = 0;
+        Uint32 m_SamplerID  = 0;   // 0: read with the texture's own parameters
         Uint32 m_Width      = 0;
         Uint32 m_Height     = 0;
         bool   m_bLoaded    = false;
