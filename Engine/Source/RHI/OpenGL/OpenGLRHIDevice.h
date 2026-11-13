@@ -30,6 +30,9 @@ namespace Opaax
          */
         void HarvestGpuTimings();
 
+        /** Asks the driver its names and limits. Needs the context current. */
+        void ReadCapabilities();
+
         // =============================================================================
         // Override
         // =============================================================================
@@ -48,6 +51,7 @@ namespace Opaax
         TUniquePtr<IFramebuffer>   CreateFramebuffer(const FramebufferSpec& InSpec)              override;
 
         void            Init(IGraphicsContext& InSurface)                               override;
+        const RHICapabilities& GetCapabilities() const                                  override { return m_Capabilities; }
         void            BeginFrame()                                                    override;
         ICommandBuffer& GetCommandBuffer()                                              override;
         void            EndFrame()                                                      override;
@@ -78,8 +82,8 @@ namespace Opaax
 
         double m_LastGpuMs = -1.0;      // -1 = nothing measured yet
 
-        // Wrong GL calls, in the log (OpenGLDebug). One of the two in a dev build, neither in a ship build.
-        bool   m_bDriverReports = false;   // the driver reports each wrong call
-        bool   m_bCheckErrors   = false;   // the error flags are read at the end of each frame
+        // Its ErrorChecks says how wrong GL calls reach the log (OpenGLDebug): per call or per frame
+        // in a dev build, not at all in a ship build.
+        RHICapabilities m_Capabilities;
     };
 }

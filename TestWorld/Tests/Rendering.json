@@ -55,6 +55,87 @@
         }
     },
     {
+        "id": "renderer",
+        "command": "renderer.info",
+        "expect": {
+            "backend": "OpenGL",
+            "backbuffer": {
+                "width": 1280,
+                "height": 720
+            }
+        }
+    },
+    {
+        "id": "flatSprite",
+        "command": "frame.sample",
+        "params": {
+            "x": 100,
+            "y": 100,
+            "width": 60,
+            "height": 60
+        },
+        "expect": {
+            "colors": 1,
+            "width": 60,
+            "height": 60
+        }
+    },
+    {
+        "id": "checkerHardEdge",
+        "command": "frame.sample",
+        "params": {
+            "x": 400,
+            "y": 80,
+            "width": 96,
+            "height": 40
+        },
+        "expect": {
+            "colors": 2,
+            "min": [0, 0, 0, 255],
+            "max": [255, 255, 255, 255],
+            "mean": [127.5, 127.5, 127.5, 255]
+        }
+    },
+    {
+        "id": "turnedQuadHardEdge",
+        "command": "frame.sample",
+        "params": {
+            "x": 215,
+            "y": 68,
+            "width": 60,
+            "height": 60
+        },
+        "expect": {
+            "colors": 2
+        }
+    },
+    {
+        "id": "sampleCutToFrame",
+        "command": "frame.sample",
+        "params": {
+            "x": 1270,
+            "y": 710,
+            "width": 100,
+            "height": 100
+        },
+        "expect": {
+            "colors": 1,
+            "width": 10,
+            "height": 10
+        }
+    },
+    {
+        "id": "sampleOutsideRefused",
+        "command": "frame.sample",
+        "params": {
+            "x": 5000,
+            "y": 0,
+            "width": 4,
+            "height": 4
+        },
+        "expectFailure": true
+    },
+    {
         "id": "screenshot",
         "command": "screenshot",
         "params": {

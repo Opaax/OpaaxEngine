@@ -37,16 +37,50 @@ namespace Opaax
         // No timer support: timing stays off (GetLastGpuFrameTimeMs returns -1).
         m_bTimersReady = m_TimerQueries[0] != 0;
 
+        ReadCapabilities();
+
         if (Build::IsDevBuild())
         {
-            m_bDriverReports = OpenGLDebug::Install();
-            m_bCheckErrors   = !m_bDriverReports;
+            m_Capabilities.ErrorChecks = OpenGLDebug::Install() ? ERHIErrorChecks::PerCall : ERHIErrorChecks::PerFrame;
         }
 
-        OPAAX_LOG(LogOpenGLRHIDevice, Info, "OpenGL RHI device initialized (GPU timing {}, errors {})",
-                  m_bTimersReady ? "on" : "UNAVAILABLE",
-                  m_bDriverReports ? "reported by the driver, per call"
-                                   : (m_bCheckErrors ? "checked once a frame" : "not checked (ship build)"));
+        OPAAX_LOG(LogOpenGLRHIDevice, Info,
+                  "OpenGL RHI device initialized (GPU timing {}, errors checked: {}, up to {} samples)",
+                  m_bTimersReady ? "on" : "UNAVAILABLE", ToString(m_Capabilities.ErrorChecks),
+                  m_Capabilities.MaxSamples);
+    }
+
+    void OpenGLRHIDevice::ReadCapabilities()
+    {
+        auto lText = [](const GLenum InName) -> OpaaxString
+        {
+            const GLubyte* lValue = glGetString(InName);
+            return OpaaxString(lValue ? reinterpret_cast<const char*>(lValue) : "unknown");
+        };
+
+        auto lNumber = [](const GLenum InName) -> Uint32
+        {
+            GLint lValue = 0;
+            glGetIntegerv(InName, &lValue);
+            return lValue > 0 ? static_cast<Uint32>(lValue) : 0;
+        };
+
+        m_Capabilities.Backend         = "OpenGL";
+        m_Capabilities.Vendor          = lText(GL_VENDOR);
+        m_Capabilities.Renderer        = lText(GL_RENDERER);
+        m_Capabilities.Version         = lText(GL_VERSION);
+        m_Capabilities.ShadingLanguage = lText(GL_SHADING_LANGUAGE_VERSION);
+        m_Capabilities.MaxTextureSize  = lNumber(GL_MAX_TEXTURE_SIZE);
+        m_Capabilities.MaxTextureUnits = lNumber(GL_MAX_TEXTURE_IMAGE_UNITS);
+
+        // A framebuffer takes the least of what colour and depth allow.
+        const Uint32 lColor = lNumber(GL_MAX_COLOR_TEXTURE_SAMPLES);
+        const Uint32 lDepth = lNumber(GL_MAX_DEPTH_TEXTURE_SAMPLES);
+        const Uint32 lAny   = lNumber(GL_MAX_SAMPLES);
+        Uint32 lSamples     = lAny;
+        if (lColor < lSamples) { lSamples = lColor; }
+        if (lDepth < lSamples) { lSamples = lDepth; }
+        m_Capabilities.MaxSamples = lSamples > 0 ? lSamples : 1;
     }
 
     OpenGLRHIDevice::~OpenGLRHIDevice()
@@ -96,7 +130,7 @@ namespace Opaax
 
     void OpenGLRHIDevice::EndFrame()
     {
-        if (m_bCheckErrors)
+        if (m_Capabilities.ErrorChecks == ERHIErrorChecks::PerFrame)
         {
             OpenGLDebug::CheckErrors();
         }

@@ -22,6 +22,7 @@
 namespace Opaax
 {
     class RenderSystem;
+    struct RendererInfo;
     class Renderer2D;
     class Config_Renderer;
     class Config_Engine;
@@ -249,6 +250,9 @@ namespace Opaax
          * @return False if the render core failed to start, or the frame cannot be read
          */
         bool CaptureBackbuffer(TDynArray<Uint8>& OutRGBA, Uint32& OutWidth, Uint32& OutHeight) const;
+
+        /** What the renderer is using now. Not valid if the render core failed to start. */
+        RendererInfo GetInfo() const;
 
         /**
          * Draws the active world into InTarget for this frame only. Submit again every frame.

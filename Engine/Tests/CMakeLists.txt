@@ -54,6 +54,7 @@ set(OPAAX_TEST_SOURCES
     Core/ColorTests.cpp
     Core/CStringTests.cpp
     Core/GuidTests.cpp
+    Core/Image/ImageSampleTests.cpp
     Core/Image/PngWriterTests.cpp
     Core/IO/FileIOTests.cpp
     Core/IO/FileSystemTests.cpp

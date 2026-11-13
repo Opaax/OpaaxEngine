@@ -10,6 +10,7 @@
 #include "RHI/Pipeline.h"
 #include "RHI/BindGroup.h"
 #include "RHI/Framebuffer.h"
+#include "RHI/RHICapabilities.h"
 
 namespace Opaax
 {
@@ -36,6 +37,9 @@ namespace Opaax
          * Starts the device on an existing surface (context).
          */
         virtual void Init(IGraphicsContext& InSurface) = 0;
+
+        /** What the device and its driver are and can do. Filled by Init. */
+        virtual const RHICapabilities& GetCapabilities() const = 0;
 
         // =============================================================================
         // Resource creation

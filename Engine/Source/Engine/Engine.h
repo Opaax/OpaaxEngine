@@ -182,6 +182,8 @@ namespace Opaax
         void                        SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget = nullptr,
                                                    const CameraView* InView = nullptr, Int32 InLayer = 0) override;
         bool                        CaptureFrame(const OpaaxString& InPngPath) override;
+        bool                        ReadFrame(TDynArray<Uint8>& OutRGBA, Uint32& OutWidth, Uint32& OutHeight) override;
+        RendererInfo                GetRendererInfo() const override;
         TUniquePtr<IFramebuffer>    CreateFramebuffer(const FramebufferSpec& InSpec) override;
         TUniquePtr<ITexture2D>      CreateTexture(const void* InPixels, Uint32 InWidth,
                                                   Uint32 InHeight, Int32 InChannels) override;
