@@ -185,6 +185,7 @@ set(OPAAX_TEST_SOURCES
 
     # RHI
     RHI/GLSLPortTests.cpp
+    RHI/OpenGLDebugTests.cpp
 
     # Renderer (the parts that need no GL context)
     Renderer/BatchPlanTests.cpp
