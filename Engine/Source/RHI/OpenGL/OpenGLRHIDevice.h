@@ -77,5 +77,9 @@ namespace Opaax
         bool   m_bTimersReady = false;  // false disables timing
 
         double m_LastGpuMs = -1.0;      // -1 = nothing measured yet
+
+        // Wrong GL calls, in the log (OpenGLDebug). One of the two in a dev build, neither in a ship build.
+        bool   m_bDriverReports = false;   // the driver reports each wrong call
+        bool   m_bCheckErrors   = false;   // the error flags are read at the end of each frame
     };
 }

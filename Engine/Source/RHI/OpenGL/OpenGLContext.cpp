@@ -28,6 +28,14 @@ namespace Opaax
             return false;
         }
 
+        // glad loads by version, and debug output is core from 4.3 only. A 4.1 context has the same
+        // functions under the same names when the driver lists GL_KHR_debug.
+        if (!glad_glDebugMessageCallback && glfwExtensionSupported("GL_KHR_debug"))
+        {
+            glad_glDebugMessageCallback = reinterpret_cast<PFNGLDEBUGMESSAGECALLBACKPROC>(glfwGetProcAddress("glDebugMessageCallback"));
+            glad_glDebugMessageControl  = reinterpret_cast<PFNGLDEBUGMESSAGECONTROLPROC>(glfwGetProcAddress("glDebugMessageControl"));
+        }
+
         // VSync on until the renderer applies Window.bVSync.
         SetSwapInterval(1);
 

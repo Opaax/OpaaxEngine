@@ -2,6 +2,7 @@
 
 #include "Core/Memory/Memory.h"
 
+#include "Core/Build/BuildInfo.h"
 #include "Core/Log/Logger.h"
 
 #include "RHI/RHIDevice.h"
@@ -15,6 +16,7 @@
 #include "RHI/OpenGL/OpenGLPipeline.h"
 #include "RHI/OpenGL/OpenGLBindGroup.h"
 #include "RHI/OpenGL/OpenGLFramebuffer.h"
+#include "RHI/OpenGL/OpenGLDebug.h"
 
 #include <glad/glad.h>
 
@@ -35,8 +37,16 @@ namespace Opaax
         // No timer support: timing stays off (GetLastGpuFrameTimeMs returns -1).
         m_bTimersReady = m_TimerQueries[0] != 0;
 
-        OPAAX_LOG(LogOpenGLRHIDevice, Trace, "OpenGL RHI device initialized (GPU timing {})",
-                  m_bTimersReady ? "on" : "UNAVAILABLE");
+        if (Build::IsDevBuild())
+        {
+            m_bDriverReports = OpenGLDebug::Install();
+            m_bCheckErrors   = !m_bDriverReports;
+        }
+
+        OPAAX_LOG(LogOpenGLRHIDevice, Info, "OpenGL RHI device initialized (GPU timing {}, errors {})",
+                  m_bTimersReady ? "on" : "UNAVAILABLE",
+                  m_bDriverReports ? "reported by the driver, per call"
+                                   : (m_bCheckErrors ? "checked once a frame" : "not checked (ship build)"));
     }
 
     OpenGLRHIDevice::~OpenGLRHIDevice()
@@ -86,7 +96,11 @@ namespace Opaax
 
     void OpenGLRHIDevice::EndFrame()
     {
-        // Only the timer ends here.
+        if (m_bCheckErrors)
+        {
+            OpenGLDebug::CheckErrors();
+        }
+
         if (!m_bTimerOpen)
         {
             return;

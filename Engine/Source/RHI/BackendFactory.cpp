@@ -10,6 +10,7 @@
 
 #include "RHI/OpenGL/OpenGLContext.h"
 
+#include "Core/Build/BuildInfo.h"
 #include "Core/Log/Logger.h"
 
 #include <GLFW/glfw3.h>
@@ -70,6 +71,10 @@ namespace Opaax
                 glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
                 glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
                 glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+
+                // A debug context lets the driver say which call is wrong (OpenGLDebug). Dev builds
+                // only: it costs some speed.
+                glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, Build::IsDevBuild() ? GLFW_TRUE : GLFW_FALSE);
                 break;
         }
     }
