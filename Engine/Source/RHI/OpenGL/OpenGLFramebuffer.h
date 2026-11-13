@@ -61,7 +61,7 @@ namespace Opaax
         Uint32 m_DepthRBO     = 0;
         Uint32 m_Width        = 1;
         Uint32 m_Height       = 1;
-        bool   m_DepthStencil = true;
+        bool   m_DepthStencil = false;
 
         ETextureFormat m_Format        = ETextureFormat::RGBA8;
         bool           m_bLinearFilter = true;

@@ -11,7 +11,7 @@ namespace Opaax
     // =============================================================================
     /**
      * The graphics context of a window: make current, load function pointers, vsync, present.
-     * Created by IGraphicsContext::Create (BackendFactory.cpp). OpenGL only for now.
+     * Created by IGraphicsContext::Create (BackendFactory.cpp). OpenGL is the only backend.
      */
     class IGraphicsContext
     {
@@ -34,8 +34,8 @@ namespace Opaax
         static TUniquePtr<IGraphicsContext> Create(EBackend InBackend, void* InNativeWindow);
 
         /**
-         * Sets backend-specific GLFW window hints. Call before glfwCreateWindow.
-         * OpenGL: nothing. Vulkan: GLFW_NO_API.
+         * Sets the window hints the backend's context needs. Call before the window is created.
+         * OpenGL: version 4.1, core profile, forward compatible, and a debug context in a dev build.
          */
         static void ApplyWindowHints(EBackend InBackend);
 

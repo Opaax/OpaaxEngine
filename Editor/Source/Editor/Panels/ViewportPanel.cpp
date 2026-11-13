@@ -60,8 +60,7 @@ namespace Opaax::Editor
         });
 
         // The engine's device creates the FBO; the panel owns it.
-        m_Framebuffer = m_Context.Engine.CreateFramebuffer(
-            FramebufferSpec{ m_viewportSize.x, m_viewportSize.y, /*DepthStencil*/ true });
+        m_Framebuffer = m_Context.Engine.CreateFramebuffer(FramebufferSpec{ m_viewportSize.x, m_viewportSize.y });
 
         if (m_Framebuffer == nullptr)
         {

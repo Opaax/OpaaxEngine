@@ -33,8 +33,7 @@ namespace Opaax::Editor
     void CameraPreviewPanel::Startup()
     {
         // The engine's device creates the FBO; the panel owns it.
-        m_Framebuffer = m_Context.Engine.CreateFramebuffer(
-            FramebufferSpec{ m_Size.x, m_Size.y, /*DepthStencil*/ true });
+        m_Framebuffer = m_Context.Engine.CreateFramebuffer(FramebufferSpec{ m_Size.x, m_Size.y });
 
         if (m_Framebuffer == nullptr)
         {

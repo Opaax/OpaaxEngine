@@ -20,7 +20,8 @@ namespace Opaax
         if (InLoadOp == ELoadOp::Clear)
         {
             glClearColor(InClearColor.r, InClearColor.g, InClearColor.b, InClearColor.a);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            // Colour only: nothing tests depth or stencil.
+            glClear(GL_COLOR_BUFFER_BIT);
         }
     }
 

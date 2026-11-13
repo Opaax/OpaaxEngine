@@ -11,7 +11,8 @@ namespace Opaax
     // EBackend
     // =============================================================================
     /**
-     * Graphics backend. Only OpenGL exists for now; Vulkan falls back to OpenGL.
+     * Graphics backend. OpenGL is the only one the engine has: Vulkan is a name a config may
+     * hold, and is run as OpenGL (ResolveSupportedBackend).
      */
     enum class EBackend
     {
@@ -27,7 +28,7 @@ namespace Opaax
     const char* ToString(EBackend InBackend) noexcept;
 
     /**
-     * The backend that will actually be used for a requested one (Vulkan -> OpenGL for now), logged.
+     * The backend that is used for a requested one: OpenGL for Vulkan, with a Warn line.
      */
     EBackend ResolveSupportedBackend(EBackend InRequested);
 }
