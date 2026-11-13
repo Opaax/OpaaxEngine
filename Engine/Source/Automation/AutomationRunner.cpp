@@ -25,6 +25,31 @@ namespace Opaax
         {
             const auto lWhere = [&InPath]() { return InPath.IsEmpty() ? OpaaxString("the answer") : InPath; };
 
+            // A bound instead of a value: {"$atLeast": 3}, {"$atMost": 8}, or both.
+            const auto lAtLeast = InExpected.is_object() ? InExpected.find("$atLeast") : InExpected.end();
+            const auto lAtMost  = InExpected.is_object() ? InExpected.find("$atMost")  : InExpected.end();
+            if (lAtLeast != InExpected.end() || lAtMost != InExpected.end())
+            {
+                if (!InActual.is_number())
+                {
+                    OutWhy = lWhere() + " is " + ToJsonText(InActual) + ", expected a number";
+                    return false;
+                }
+
+                const double lValue = InActual.get<double>();
+                if (lAtLeast != InExpected.end() && lValue < lAtLeast->get<double>() - 1e-4)
+                {
+                    OutWhy = lWhere() + " is " + ToJsonText(InActual) + ", expected at least " + ToJsonText(*lAtLeast);
+                    return false;
+                }
+                if (lAtMost != InExpected.end() && lValue > lAtMost->get<double>() + 1e-4)
+                {
+                    OutWhy = lWhere() + " is " + ToJsonText(InActual) + ", expected at most " + ToJsonText(*lAtMost);
+                    return false;
+                }
+                return true;
+            }
+
             if (InExpected.is_object())
             {
                 if (!InActual.is_object())
