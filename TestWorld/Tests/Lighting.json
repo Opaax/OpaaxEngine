@@ -54,6 +54,23 @@
         }
     },
     {
+        "id": "sceneTarget",
+        "command": "renderer.info",
+        "expect": {
+            "views": [
+                {
+                    "sceneTarget": true,
+                    "lit": true,
+                    "width": 1280,
+                    "height": 720,
+                    "format": "RGBA16F",
+                    "samples": 1,
+                    "fxaaTarget": false
+                }
+            ]
+        }
+    },
+    {
         "id": "roll",
         "command": "component.set",
         "params": {

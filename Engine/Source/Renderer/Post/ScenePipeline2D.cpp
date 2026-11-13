@@ -258,9 +258,9 @@ namespace Opaax
             });
     }
 
-    IRenderTarget& ScenePipeline2D::PrepareScene(const Uint32 InWidth, const Uint32 InHeight)
+    IRenderTarget& ScenePipeline2D::PrepareScene(const Uint32 InWidth, const Uint32 InHeight, const ETextureFormat InFormat)
     {
-        m_Scene = &AcquireTarget(PURPOSE_SCENE, InWidth, InHeight, ETextureFormat::RGBA16F);
+        m_Scene = &AcquireTarget(PURPOSE_SCENE, InWidth, InHeight, InFormat);
         return *m_Scene->Target;
     }
 
@@ -276,15 +276,33 @@ namespace Opaax
         const float  lBloom       = (lBloomLevels > 0) ? InSettings.BloomIntensity / static_cast<float>(lBloomLevels) : 0.f;
 
         const Vector4F lPost{ Maths::Exp2(InSettings.ExposureStops), static_cast<float>(InSettings.Tonemapper), lBloom, 0.f };
-        m_PostUBO->SetData(&lPost, static_cast<Uint32>(sizeof(lPost)));
+
+        // Without bloom the unit still holds a texture; the shader does not read it.
+        RunTonemapPass(InCmd, InOutput, lPost, lBloomLevels > 0 ? *m_BloomLevels[0]->Framebuffer : *m_Scene->Framebuffer);
+    }
+
+    void ScenePipeline2D::CopyScene(ICommandBuffer& InCmd, IRenderTarget& InOutput)
+    {
+        if (!IsReady() || m_Scene == nullptr)
+        {
+            return;
+        }
+
+        // The tonemap shader's copy mode (w): no exposure, no curve, no gamma, alpha kept.
+        RunTonemapPass(InCmd, InOutput, Vector4F{ 1.f, 0.f, 0.f, 1.f }, *m_Scene->Framebuffer);
+    }
+
+    void ScenePipeline2D::RunTonemapPass(ICommandBuffer& InCmd, IRenderTarget& InOutput, const Vector4F& InPost,
+                                         const IFramebuffer& InBloom)
+    {
+        m_PostUBO->SetData(&InPost, static_cast<Uint32>(sizeof(InPost)));
 
         // Every pixel is written: nothing to clear.
         InCmd.BeginRenderPass(InOutput, ELoadOp::Load, Vector4F{ 0.f, 0.f, 0.f, 1.f });
         InCmd.BindPipeline(*m_TonemapPipeline);
 
-        // Without bloom the unit still holds a texture; the shader does not read it.
         m_TonemapGroup->SetTexture(0, *m_Scene->Framebuffer);
-        m_TonemapGroup->SetTexture(1, lBloomLevels > 0 ? *m_BloomLevels[0]->Framebuffer : *m_Scene->Framebuffer);
+        m_TonemapGroup->SetTexture(1, InBloom);
         InCmd.BindBindGroup(*m_TonemapGroup);
 
         InCmd.DrawFullscreen();
