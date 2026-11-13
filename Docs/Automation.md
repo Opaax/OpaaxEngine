@@ -53,7 +53,8 @@ command, or a request the app closed before running, still fails.
 To check an answer, add `"expect"` with what it should hold:
 `{ "command": "world.info", "expect": { "mode": "Play" } }`. Objects match by the keys given (others
 are ignored), arrays item by item, numbers within 1e-4; the request fails, saying where the answer
-differs, when it does not hold them.
+differs, when it does not hold them. A number can be given as a bound instead:
+`"expect": { "colors": { "$atLeast": 3 } }` (also `"$atMost"`, or both).
 
 ## Frames
 

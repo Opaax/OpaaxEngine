@@ -336,6 +336,23 @@ TEST_CASE("Automation: an answer matches what is expected by the keys named, ite
     CHECK(lWhy.StartsWith("the answer is"));
 }
 
+TEST_CASE("Automation: an expected number can be a bound")
+{
+    const nlohmann::json lAnswer = nlohmann::json::parse(R"({"colors": 5, "name": "x"})");
+    OpaaxString lWhy;
+
+    CHECK(MatchesExpected(nlohmann::json::parse(R"({"colors": {"$atLeast": 3}})"), lAnswer, lWhy));
+    CHECK(MatchesExpected(nlohmann::json::parse(R"({"colors": {"$atLeast": 5, "$atMost": 5}})"), lAnswer, lWhy));
+    CHECK(MatchesExpected(nlohmann::json::parse(R"({"colors": {"$atMost": 8}})"), lAnswer, lWhy));
+
+    CHECK_FALSE(MatchesExpected(nlohmann::json::parse(R"({"colors": {"$atLeast": 6}})"), lAnswer, lWhy));
+    CHECK(lWhy == "colors is 5, expected at least 6");
+    CHECK_FALSE(MatchesExpected(nlohmann::json::parse(R"({"colors": {"$atMost": 2}})"), lAnswer, lWhy));
+    CHECK(lWhy == "colors is 5, expected at most 2");
+    CHECK_FALSE(MatchesExpected(nlohmann::json::parse(R"({"name": {"$atLeast": 1}})"), lAnswer, lWhy));
+    CHECK(lWhy == "name is \"x\", expected a number");
+}
+
 TEST_CASE("Automation: a request with an expected answer fails when its answer differs")
 {
     Recorder          lRecorder;
