@@ -99,6 +99,8 @@ TEST_CASE("UICanvasFile: every widget type round-trips its own fields and the tr
     lDoc.Root->AddChild(Move(lButton));
 
     const OpaaxString lText1 = UICanvasFile::Serialize(lDoc);
+    CHECK(lText1.Contains("0.85,"));                  // a colour as typed, not 0.8500000238418579
+    CHECK_FALSE(lText1.Contains("0.8500000"));
 
     UICanvasFile::UICanvasDoc lBack;
     REQUIRE(UICanvasFile::Deserialize(lText1, lRegistry, lBack));
