@@ -1,6 +1,6 @@
 // =============================================================================
 // BackendFactory.cpp — the backend-specific factories: backend names and availability,
-// IGraphicsContext::Create and ApplyWindowHints. OpenGL only for now.
+// IGraphicsContext::Create and ApplyWindowHints. OpenGL is the only backend.
 // Resources are created by the device (IRHIDevice::CreateXxx); the context is created here
 // because it must exist before the device.
 // =============================================================================
@@ -24,8 +24,8 @@ namespace Opaax
     {
         if (InRequested == EBackend::Vulkan)
         {
-            OPAAX_ENGINE_LOG(Warn, "RHI: 'Vulkan' requested but the Vulkan backend is parked in Legacy "
-                             "(new path is OpenGL-only) — falling back to OpenGL.");
+            OPAAX_ENGINE_LOG(Warn, "RHI: 'Vulkan' is asked for, and the engine has no Vulkan backend: OpenGL is "
+                             "used. Set Render.Backend to OpenGL in the engine config to drop this line.");
             return EBackend::OpenGL;
         }
 
@@ -54,8 +54,8 @@ namespace Opaax
             default: break;
         }
 
-        OPAAX_ENGINE_LOG(Error, "IGraphicsContext::Create — backend '{}' not available on the new path; "
-                         "no context created.", ToString(InBackend));
+        OPAAX_ENGINE_LOG(Error, "IGraphicsContext::Create: the engine has no '{}' backend, so no context is "
+                         "created. OpenGL is the one it has.", ToString(InBackend));
         return nullptr;
     }
 

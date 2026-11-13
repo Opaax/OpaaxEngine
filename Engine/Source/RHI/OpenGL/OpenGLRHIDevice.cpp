@@ -242,7 +242,7 @@ namespace Opaax
     }
 
     // =========================================================================
-    // Factory — OpenGL only for now.
+    // Factory: OpenGL is the only backend.
     // =========================================================================
     TUniquePtr<IRHIDevice> RHIDevice::Create(EBackend InBackend, IGraphicsContext& InSurface)
     {
@@ -257,7 +257,7 @@ namespace Opaax
             default: break;
         }
 
-        OPAAX_LOG(LogOpenGLRHIDevice, Error, "RHIDevice::Create — backend not available (only OpenGL for now).");
+        OPAAX_LOG(LogOpenGLRHIDevice, Error, "RHIDevice::Create: the engine has no such backend, so no device is created. OpenGL is the one it has.");
         return nullptr;
     }
 }

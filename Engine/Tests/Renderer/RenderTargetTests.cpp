@@ -113,3 +113,15 @@ TEST_CASE("DefaultRenderTarget: backbuffer path reports a null framebuffer")
     lTarget.Bind();   // no-op — the backbuffer is the default framebuffer
     lTarget.Unbind();
 }
+
+TEST_CASE("FramebufferSpec: a target has no depth or stencil unless it is asked for")
+{
+    const FramebufferSpec lDefault;
+    CHECK_FALSE(lDefault.DepthStencil);
+    CHECK(lDefault.ColorFormat == ETextureFormat::RGBA8);
+
+    const FramebufferSpec lSized{ 640u, 360u };
+    CHECK(lSized.Width == 640);
+    CHECK(lSized.Height == 360);
+    CHECK_FALSE(lSized.DepthStencil);
+}

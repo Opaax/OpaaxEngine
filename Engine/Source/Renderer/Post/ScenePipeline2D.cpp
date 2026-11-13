@@ -225,7 +225,6 @@ namespace Opaax
             FramebufferSpec lSpec;
             lSpec.Width        = InWidth;
             lSpec.Height       = InHeight;
-            lSpec.DepthStencil = false;
             lSpec.ColorFormat  = ETextureFormat::RGBA16F;
 
             m_Scene       = m_Device->CreateFramebuffer(lSpec);
@@ -287,7 +286,6 @@ namespace Opaax
                 FramebufferSpec lSpec;
                 lSpec.Width        = lLevels[lIndex].Width;
                 lSpec.Height       = lLevels[lIndex].Height;
-                lSpec.DepthStencil = false;
                 lSpec.ColorFormat  = ETextureFormat::RGBA16F;
 
                 m_BloomLevels.push_back(m_Device->CreateFramebuffer(lSpec));
@@ -341,7 +339,6 @@ namespace Opaax
             FramebufferSpec lSpec;
             lSpec.Width        = InWidth;
             lSpec.Height       = InHeight;
-            lSpec.DepthStencil = false;
             lSpec.ColorFormat  = ETextureFormat::R8;
 
             m_Occlusion       = m_Device->CreateFramebuffer(lSpec);
@@ -368,7 +365,6 @@ namespace Opaax
             FramebufferSpec lSpec;
             lSpec.Width         = SHADOW_MAP_ANGLES_2D;
             lSpec.Height        = MAX_SHADOWED_LIGHTS_2D;
-            lSpec.DepthStencil  = false;
             lSpec.ColorFormat   = ETextureFormat::R16F;
             lSpec.bLinearFilter = false;
 
@@ -410,7 +406,6 @@ namespace Opaax
                 FramebufferSpec lSpec;
                 lSpec.Width        = lWidth;
                 lSpec.Height       = lHeight;
-                lSpec.DepthStencil = false;
                 lSpec.ColorFormat  = ETextureFormat::R8;
 
                 m_AmbientOcclusion[lIndex]       = m_Device->CreateFramebuffer(lSpec);

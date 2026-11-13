@@ -20,12 +20,14 @@ namespace Opaax
 
     /**
      * An offscreen render target: one colour attachment and an optional depth/stencil.
+     * The 2D renderer orders what it draws itself and tests neither depth nor stencil: ask for
+     * DepthStencil only for a pass that does.
      */
     struct FramebufferSpec
     {
         Uint32         Width         = 1;
         Uint32         Height        = 1;
-        bool           DepthStencil  = true;
+        bool           DepthStencil  = false;
         ETextureFormat ColorFormat   = ETextureFormat::RGBA8;
 
         /** How the colour is filtered when sampled as a texture (off: nearest texel). */
@@ -36,7 +38,7 @@ namespace Opaax
     // IFramebuffer
     // =============================================================================
     /**
-     * Offscreen render target (editor viewport, future post-process passes).
+     * Offscreen render target (an editor viewport, the scene and its post-process passes).
      * Created by IRHIDevice::CreateFramebuffer (editor code: IEngine::CreateFramebuffer).
      */
     class IFramebuffer
