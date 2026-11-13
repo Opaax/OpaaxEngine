@@ -70,8 +70,11 @@
         {
             "components": {
                 "Camera": {
+                    "BlendCurve": "EaseInOut",
+                    "BlendIn": 0.0,
                     "OrthoSize": 300.0,
-                    "Priority": 0
+                    "Priority": 0,
+                    "bRotateView": false
                 },
                 "Transform": {
                     "Position": {
@@ -107,7 +110,7 @@
                         "x": 200.0,
                         "y": 200.0
                     },
-                    "Texture": "/Engine/Textures/T_Square_256_White.png",
+                    "Texture": "/Engine/Textures/T_Square_128_White.png",
                     "bVisible": true
                 },
                 "Transform": {
