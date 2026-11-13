@@ -43,11 +43,12 @@ Opaax::EUIReply Opaax::UIButtonBase::OnPointerEvent(const UIPointerEvent& InEven
     case EUIPointerEventType::Leave:
         bIsHovered = false;
         InvalidateContent();
-        
+
+        // Leaving cancels the press: it ends here, and the release, wherever it is, does not click.
         if (bIsPressed)
         {
             bIsPressed = false;
-            OnPressedStart.Broadcast();
+            OnPressedStop.Broadcast();
         }
         
         OnHoveredStop.Broadcast();
@@ -75,11 +76,15 @@ Opaax::EUIReply Opaax::UIButtonBase::OnPointerEvent(const UIPointerEvent& InEven
             bIsPressed = false;
             InvalidateContent();
 
-            // A click needs the release inside; a drag-off cancels but is still consumed (we captured it).
-            if (lWasPressed && GetBounds().Contains(InEvent.Position))
+            // A press ends at its release; it clicks only inside. The Up is consumed either way (we captured it).
+            if (lWasPressed)
             {
                 OnPressedStop.Broadcast();
-                OnClick.Broadcast();
+
+                if (GetBounds().Contains(InEvent.Position))
+                {
+                    OnClick.Broadcast();
+                }
             }
             
             return EUIReply::Handled;
