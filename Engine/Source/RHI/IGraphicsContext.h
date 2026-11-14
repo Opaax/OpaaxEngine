@@ -2,6 +2,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
+#include "RHI/IGLSurface.h"
 #include "RHI/RHIBackend.h"
 
 namespace Opaax
@@ -26,18 +27,16 @@ namespace Opaax
         // =============================================================================
 
         /**
-         * Creates the context for a backend on an existing native window.
-         * @param InBackend      Graphics backend
-         * @param InNativeWindow Native window handle (GLFWwindow*)
+         * Creates the context for a backend on a window's surface, which outlives it.
          * @return The context, or nullptr for an unknown backend (logged)
          */
-        static TUniquePtr<IGraphicsContext> Create(EBackend InBackend, void* InNativeWindow);
+        static TUniquePtr<IGraphicsContext> Create(EBackend InBackend, IGLSurface& InSurface);
 
         /**
-         * Sets the window hints the backend's context needs. Call before the window is created.
+         * What the backend's context asks of the window, given to the window before it is made.
          * OpenGL: version 4.1, core profile, forward compatible, and a debug context in a dev build.
          */
-        static void ApplyWindowHints(EBackend InBackend);
+        static GLSurfaceDesc DescribeSurface(EBackend InBackend);
 
         // =============================================================================
         // Functions
