@@ -83,6 +83,106 @@
         }
     },
     {
+        "id": "graphics-menu-sets",
+        "command": "component.set",
+        "params": {
+            "entity": "Settings",
+            "type": "SettingsProbe",
+            "value": {
+                "Multisampling": "X4",
+                "bFXAA": true,
+                "RenderScale": 0.5,
+                "bSetGraphics": true
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "graphics-menu-taken",
+        "command": "expect.value",
+        "params": {
+            "entity": "Settings",
+            "path": "SettingsProbe/bGraphicsTaken",
+            "equals": true
+        }
+    },
+    {
+        "id": "renderer-follows",
+        "command": "renderer.info",
+        "expect": {
+            "sceneSettings": {
+                "samples": 4,
+                "fxaa": true,
+                "renderScale": 0.5
+            }
+        }
+    },
+    {
+        "id": "renderer-config-reads",
+        "command": "config.get",
+        "params": {
+            "config": "Renderer"
+        },
+        "expect": {
+            "values": {
+                "Multisampling": "X4",
+                "bFXAA": true,
+                "RenderScale": 0.5
+            },
+            "project": {
+                "Multisampling": "Off",
+                "bFXAA": false,
+                "RenderScale": 1.0
+            },
+            "player": {
+                "Multisampling": "X4",
+                "bFXAA": true,
+                "RenderScale": 0.5
+            }
+        }
+    },
+    {
+        "id": "scale-out-of-range",
+        "command": "component.set",
+        "params": {
+            "entity": "Settings",
+            "type": "SettingsProbe",
+            "value": {
+                "RenderScale": 4.0,
+                "bSetGraphics": true
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "scale-refused",
+        "command": "expect.value",
+        "params": {
+            "entity": "Settings",
+            "path": "SettingsProbe/bGraphicsTaken",
+            "equals": false
+        }
+    },
+    {
+        "id": "scale-kept",
+        "command": "renderer.info",
+        "expect": {
+            "sceneSettings": {
+                "renderScale": 0.5
+            }
+        }
+    },
+    {
         "id": "config-reads",
         "command": "config.get",
         "params": {
@@ -190,6 +290,11 @@
                         "Audio": {
                             "MasterVolume": 0.25
                         }
+                    },
+                    "Renderer": {
+                        "Multisampling": "X4",
+                        "bFXAA": true,
+                        "RenderScale": 0.5
                     }
                 }
             }
@@ -216,6 +321,17 @@
         }
     },
     {
+        "id": "reset-renderer",
+        "command": "renderer.info",
+        "expect": {
+            "sceneSettings": {
+                "samples": 1,
+                "fxaa": false,
+                "renderScale": 1.0
+            }
+        }
+    },
+    {
         "id": "reload",
         "command": "settings.load",
         "expect": {
@@ -236,6 +352,17 @@
             "path": "SettingsProbe/MixerVolume",
             "near": 0.25,
             "tolerance": 0.001
+        }
+    },
+    {
+        "id": "reloaded-renderer",
+        "command": "renderer.info",
+        "expect": {
+            "sceneSettings": {
+                "samples": 4,
+                "fxaa": true,
+                "renderScale": 0.5
+            }
         }
     },
     {

@@ -15,6 +15,9 @@ lSettings.SetVSync(false);
 lSettings.SetWindowMode(Opaax::EWindowMode::Fullscreen);
 lSettings.SetResolution(1920, 1080);                    // the window follows at once
 lSettings.SetMaxFrameRate(120);                         // 0 for no cap
+lSettings.SetMultisampling(Opaax::EMultisampling::X4);  // the picture changes at once
+lSettings.SetFXAA(true);
+lSettings.SetRenderScale(0.75f);                        // 0.5 to 2
 lSettings.SetConfigValues("Bhop", R"({"MouseSensitivity": 1.5})");    // a game's own config
 
 lSettings.Save();                                       // kept for the next launch
@@ -68,6 +71,24 @@ Everything changes at once, except the window's title (read when it opens).
 - A driver may show frames at every refresh whatever the swap interval, and a variable-refresh screen
   (G-Sync, FreeSync) shows them at once: the cap sees its frames come early and waits for them
   instead, with an Info line in the log.
+
+## The picture
+
+Three of the renderer's settings are the player's to choose: they trade the GPU's time for smoother
+edges. They go over `Renderer.config`, and the picture changes at once. What each one cures and costs
+is in [Customizing.md](Customizing.md#multisampling).
+
+| Setting | Setter | What it does |
+|---|---|---|
+| `Multisampling` `Off`, `X2`, `X4`, `X8` | `SetMultisampling` | Samples per pixel of the world: smooth edges on quads, tiles and shapes. A driver that has fewer uses its most. |
+| `bFXAA` | `SetFXAA` | Smooths every edge of the finished world picture, inside textures too. The UI stays sharp. |
+| `RenderScale` 0.5 to 2 | `SetRenderScale` | The world's pixels against the view's: below 1 for a slow GPU, above 1 for smoother edges at a high price. A scale outside the range is refused. |
+
+- They change the world only: the UI and the overlays over the world keep the view's own pixels.
+- `TextureFilter` has no setter: how the art is read is the project's choice (art direction), not
+  a quality setting.
+- `renderer.info` answers what the renderer uses (`sceneSettings`, and per world view `samples`),
+  `config.get` with `config: Renderer` the project's and the player's values.
 
 ## The keys
 
@@ -155,7 +176,8 @@ save, holding only what the player changed, shaped like each config's file:
             "Engine": {
                 "Audio": { "Buses": { "Music": { "Volume": 0.25 } }, "MasterVolume": 0.5 },
                 "Window": { "Mode": "Fullscreen" }
-            }
+            },
+            "Renderer": { "Multisampling": "X4", "RenderScale": 0.75 }
         },
         "Keys": {
             "Input/Controls.opaaxasset": { "Jump": { "Space": "E" }, "Move": { "W": "Up", "S": "None" } }
@@ -184,7 +206,8 @@ save, holding only what the player changed, shaped like each config's file:
 - A feature test sets them with `settings.set`, `settings.save`, `settings.load` and `settings.reset`,
   and reads them with `settings.get` and `config.get` ([Automation.md](Automation.md)).
   `TestWorld/Tests/Settings.json` sets the volume from gameplay, as a menu does, and checks the mixer
-  plays at it. `TestWorld/Tests/Window.json` resizes the window, makes it borderless and back, and caps
+  plays at it; it sets the picture's three settings the same way (a render scale of 4 refused) and
+  checks the renderer uses them (`renderer.info`), after a reset and a reload too. `TestWorld/Tests/Window.json` resizes the window, makes it borderless and back, and caps
   the frames at 30 (`window.info` answers the window, its screen's modes and the cap). The feature
   tests share one player's folder: a test that saves settings deletes them at its end (`save.clear`
   with `slot: Settings`).

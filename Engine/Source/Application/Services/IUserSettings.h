@@ -19,6 +19,7 @@ namespace Opaax
     class ISaveStorage;
     class IWindowManager;
     enum class EWindowMode;
+    enum class EMultisampling : Uint8;
 
     inline constexpr LogCategory LogUserSettings{"UserSettings"};
 
@@ -172,6 +173,23 @@ namespace Opaax
 
         /** A bus's volume, 0 to 1 ("Music", "SFX"...; "Master" is SetMasterVolume). False for a bus not listed. */
         bool SetBusVolume(OpaaxStringID InBus, float InVolume);
+
+        // =============================================================================
+        // The renderer's settings — what the renderer reads is in the Renderer config; the texture filter
+        //   stays the project's (art direction)
+        // =============================================================================
+    public:
+        /** Samples per pixel of the world's picture: smooth edges on quads, tiles and shapes. */
+        bool SetMultisampling(EMultisampling InMultisampling);
+
+        /** Smooths every edge of the finished world picture (FXAA); the UI stays sharp. */
+        bool SetFXAA(bool bInFXAA);
+
+        /**
+         * The world's picture against the view: below 1 for a slow GPU, above 1 for smoother edges.
+         * False outside MIN_RENDER_SCALE..MAX_RENDER_SCALE (0.5 to 2).
+         */
+        bool SetRenderScale(float InScale);
 
         //----- null object ----------------------------------------------------
         /** Keeps nothing: every change is refused. */

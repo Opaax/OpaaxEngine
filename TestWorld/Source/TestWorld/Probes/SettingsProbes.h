@@ -5,6 +5,7 @@
 #include "Engine/Config/EngineConfigData.h"
 #include "Input/InputKeyNames.h"
 #include "Input/Mapping/InputMappingSubsystem.h"
+#include "Renderer/Post/SceneTargetPlan.h"
 #include "World/Behaviour/Behaviour.h"
 #include "World/Systems/WorldContext.h"
 
@@ -12,8 +13,9 @@ namespace TestWorld
 {
     // =============================================================================
     // SettingsProbe — what a settings menu does, from gameplay: sets Volume (when 0 or more) as the
-    //   player's master volume through GetUserSettings. Records each frame whether the settings are over
-    //   the configs, the master volume the engine config reads and the one the mixer plays at.
+    //   player's master volume, and with bSetGraphics the graphics choices below, through
+    //   GetUserSettings. Records each frame whether the settings are over the configs, the master volume
+    //   the engine config reads and the one the mixer plays at.
     // =============================================================================
     class SettingsProbe : public Opaax::Behaviour
     {
@@ -25,6 +27,17 @@ namespace TestWorld
 
         /** The last volume set was taken. */
         bool bTaken = false;
+
+        /** Set by a test: the next frame sets Multisampling, bFXAA and RenderScale, then it goes back to false. */
+        bool bSetGraphics = false;
+
+        /** The graphics menu's choices, set as the player's with bSetGraphics. */
+        Opaax::EMultisampling Multisampling = Opaax::EMultisampling::Off;
+        bool                  bFXAA         = false;
+        float                 RenderScale   = 1.f;
+
+        /** The last graphics choices set were all taken. */
+        bool bGraphicsTaken = false;
 
         /** The player's settings are over the configs. */
         bool bActive = false;
@@ -38,8 +51,10 @@ namespace TestWorld
         /** The Music bus's volume in the mixer. */
         float MusicVolume = 0.f;
 
-        OPAAX_PROPERTIES(SettingsProbe, OPAAX_PROP(Volume), OPAAX_PROP(bTaken), OPAAX_PROP(bActive),
-                         OPAAX_PROP(ConfigVolume), OPAAX_PROP(MixerVolume), OPAAX_PROP(MusicVolume))
+        OPAAX_PROPERTIES(SettingsProbe, OPAAX_PROP(Volume), OPAAX_PROP(bTaken), OPAAX_PROP(bSetGraphics),
+                         OPAAX_PROP(Multisampling), OPAAX_PROP(bFXAA), OPAAX_PROP(RenderScale),
+                         OPAAX_PROP(bGraphicsTaken), OPAAX_PROP(bActive), OPAAX_PROP(ConfigVolume),
+                         OPAAX_PROP(MixerVolume), OPAAX_PROP(MusicVolume))
 
         void OnUpdate(float) override
         {
@@ -48,6 +63,15 @@ namespace TestWorld
             {
                 bTaken = lSettings.SetMasterVolume(Volume);
                 Volume = -1.f;
+            }
+
+            if (bSetGraphics)
+            {
+                const bool bSamplesTaken = lSettings.SetMultisampling(Multisampling);
+                const bool bFXAATaken    = lSettings.SetFXAA(bFXAA);
+                const bool bScaleTaken   = lSettings.SetRenderScale(RenderScale);
+                bGraphicsTaken = bSamplesTaken && bFXAATaken && bScaleTaken;
+                bSetGraphics   = false;
             }
 
             bActive      = lSettings.IsActive();
