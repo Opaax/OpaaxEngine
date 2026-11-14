@@ -189,6 +189,22 @@ drawn as they are and lights do nothing (the log says so once).
 | ShadowCaster2D | The entity's sprite (by its alpha) or quad blocks lights that cast shadows, and darkens the ambient light around it |
 | Material2D (an asset) | On a Sprite: lit or not, a normal map (tangent space, Y up, the sprite's layout), an emissive colour and strength |
 
+### Smooth edges: which setting
+
+Jagged or shimmering pictures have several causes in a 2D game, and each has its own cure. All four
+are in `Renderer.config`, apply at once, and are off by default (today's pictures).
+
+| What you see | Why | Setting |
+|---|---|---|
+| Art drawn smaller than its pixels shimmers and loses thin strokes | A reduced texture is read at too few texels | `TextureFilter` `Smooth` (mipmaps) |
+| Art drawn larger than its pixels is blocky | The nearest texel is read when enlarged | `TextureFilter` `Smooth` |
+| Stair steps on the edge of a turned quad, a tile, a solid sprite | One sample per pixel | `Multisampling` |
+| Stair steps inside a texture, on a sprite's transparent border, a hollow quad, an edge brighter than white | Multisampling only sees the edges of what is drawn | `bFXAA` |
+| Everything, at a price; or a GPU too slow for the screen's pixels | | `RenderScale` (above or below 1) |
+
+For a sprite game the texture filter is the largest gain: a sprite's edge is in its texture, where
+multisampling does nothing. The player can choose the last three ([Settings.md](Settings.md#the-picture)).
+
 ### Textures
 
 `TextureFilter` in `Renderer.config` (Config panel, Renderer) says how every sprite and UI image is
@@ -226,8 +242,9 @@ the three side by side.
 
 `Multisampling` in `Renderer.config` (`Off`, `X2`, `X4`, `X8`; `Off` by default) draws the world
 with that many samples per pixel, then averages them, so the edges of shapes lose their stair steps:
-a turned quad, a tile, a solid sprite. It applies at once. A driver that gives fewer samples uses its most; `renderer.info`
-answers the samples given for each world view (`views`), and the log says it at each change.
+a turned quad, a tile, a solid sprite. It applies at once. A driver that gives fewer samples uses
+its most; `renderer.info` answers the samples given for each world view (`views`), and the log says
+it at each change.
 
 It only sees the edges of what is drawn, not what a texture holds:
 
@@ -275,6 +292,20 @@ that scale of the view, then fits it to the view with a blended read. It applies
 
 A player can choose multisampling, FXAA and the render scale in a settings menu; their values go over
 the project's ([Settings.md](Settings.md#the-picture)). The texture filter stays the project's.
+
+### How a world view is drawn
+
+A world view with every setting off and no Environment is drawn straight into its target, as before
+these settings existed. Otherwise it goes through a scene target: RGBA16F when lit, RGBA8 otherwise,
+of the view's size times `RenderScale`, with the samples asked. The world and the overlays behind it
+are drawn there; the samples are averaged; a lit world is bloomed, exposed and tonemapped, an unlit
+one copied; with FXAA that lands in a middle target, which FXAA reads to write the view. The overlays
+over the world and the UI are then drawn into the view's target.
+
+`PlanSceneTarget` (`Renderer/Post/SceneTargetPlan.h`) makes that choice for each view, alone and
+tested. The targets are kept per size, format and samples (`TRenderTargetCache`,
+`Renderer/Post/RenderTargetCache.h`) and dropped once unused for a few frames, so two views of different sizes (the editor's viewport and its camera preview)
+recreate nothing from frame to frame: `renderer.info` answers `targets.recreated`, 0 in a steady frame.
 
 ### Shaders
 

@@ -66,6 +66,10 @@ and the game export. A game is a module of its own types, linked into its runtim
    same alpha as the poses (`SubmitCameraView`): it matches the game's view of that camera exactly.
    What the editor draws on entities (the selection outline, icons, light gizmos) is queued just
    before the frame is drawn (`IEngine::AddBeforeDraw`), at that alpha, so it sits on the sprites.
+   A world view is drawn straight into its target, or, when it is lit or the renderer's settings ask
+   for it (multisampling, FXAA, a render scale), through a scene target that is then tonemapped or
+   copied into it; the overlays over the world and the UI come after, at the view's own pixels
+   ([Customizing.md](Customizing.md#how-a-world-view-is-drawn)).
 6. **Present:** under a frame cap (`Window.MaxFrameRate`, while a game runs) the frame first waits for
    its turn (`FrameLimiter`); with vsync, a cap that divides the screen's rate is the swap interval
    instead, each frame shown for the same whole refreshes, as Unity's `vSyncCount` and Unreal's
@@ -191,6 +195,10 @@ writes in `Platform/Glfw` (`GlfwGLSurface`), as Godot's display servers own thei
 - **Against:** no compute shaders, 16 samplers per stage, fixed budgets (32 lights and 16 shadowed
   lights per view); macOS stops at 4.1 and has deprecated OpenGL, so a Metal or Vulkan backend
   would be the next step, behind the same RHI.
+- **Why it stays:** a 2D renderer needs nothing 4.1 lacks: anti-aliasing (mipmaps, multisampling,
+  FXAA, a render scale) is all core 4.1. The Steam Deck runs OpenGL natively (Mesa's driver, 4.6),
+  so it does not call for Vulkan. What would is macOS dropping OpenGL; the RHI is the seam for it
+  (`EBackend::Vulkan` is there, and falls back to OpenGL with a warning).
 
 ### An editor of commands
 

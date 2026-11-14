@@ -134,7 +134,9 @@ Match the code around you. In short:
   [Docs/Objects.md](Docs/Objects.md).
 - **Renderer feature:** the CPU side (packing, layout, limits) as tested pure functions; the shader in
   `Engine/Assets/Shaders` with its bindings checked in `EngineShaderTests`; a TestWorld level and a
-  screenshot looked at.
+  screenshot looked at. A setting goes in `Renderer.config` and applies live
+  (`RendererManager::HandleRendererConfigChanged`); `renderer.info` answers what is used, and a
+  script checks the picture itself with `frame.sample` (`TestWorld/Tests/AntiAliasing.json`).
 - **Editor feature:** a command (`Editor/Commands`), registered and reachable by tag; edits undoable
   through `EntityOps` or an undo step (`Editor/Undo`); an automation command when an agent should be
   able to use it; driven once through automation before committing.
@@ -159,6 +161,15 @@ Match the code around you. In short:
   everything else LF (`.gitattributes`).
 - A shader that compiles on a desktop driver can fail on Mesa or macOS: keep to GLSL 4.10 features
   (no `binding` in the ported source, constant sampler-array indices).
+- Mesa (CI's Linux render) differs from a desktop driver by a grey level or so in lit pictures: a
+  `frame.sample` check in a lit level expects bounds (`$atLeast`, `$atMost`), not exact colour counts.
+- Multisampling smooths the edges of what is drawn only: a sprite's transparent border, what the
+  sprite shader cuts with `discard` (hollow quads, masks) and an edge brighter than white stay hard
+  (FXAA covers those). Check an anti-aliasing change on a solid shape's edge.
+- With `TextureFilter` `Smooth`, a sheet frame drawn much smaller takes colour from its neighbour
+  through the mipmaps unless frames sit on a grid of 8 or 16 texels or have spacing between them.
+- A uniform block is in place only when the pass's bind group binds it: creating a uniform buffer
+  binds nothing, so a block missing from a pass's group reads what the pass before left there.
 - `--capture` and automation screenshots read the back buffer: in the editor they show the whole
   editor, not only the viewport.
 - Physics bodies of entities spawned this frame are built on first use; behaviours start at the next
