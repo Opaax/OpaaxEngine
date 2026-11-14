@@ -3,8 +3,6 @@
 #include "Core/Log/Logger.h"
 #include "RHI/IGraphicsContext.h"
 
-struct GLFWwindow;
-
 namespace Opaax
 {
     inline constexpr LogCategory LogOpenGLContext{"OpenGLContext"};
@@ -13,7 +11,7 @@ namespace Opaax
     // OpenGLContext
     // =============================================================================
     /**
-     * IGraphicsContext for OpenGL on a GLFW window: make current, glad loading, vsync, swap.
+     * IGraphicsContext for OpenGL on a window's surface: make current, glad loading, vsync, swap.
      */
     class OpenGLContext final : public IGraphicsContext
     {
@@ -21,7 +19,8 @@ namespace Opaax
         // CTOR - DTOR
         // =============================================================================
     public:
-        explicit OpenGLContext(GLFWwindow* InWindow);
+        /** A context on InSurface, which outlives it. Nothing is done before Init. */
+        explicit OpenGLContext(IGLSurface& InSurface);
 
         // =============================================================================
         // Overrides
@@ -45,7 +44,7 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        GLFWwindow* m_Window = nullptr;
+        IGLSurface* m_Surface = nullptr;
     };
 
 } // namespace Opaax

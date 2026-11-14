@@ -6,6 +6,7 @@
 
 namespace Opaax
 {
+    class GlfwGLSurface;
     class IGraphicsContext;
     
     inline constexpr LogCategory LogGlfwWindow{"GlfwWindow"};
@@ -97,6 +98,9 @@ namespace Opaax
         // =============================================================================
     private:
         GLFWwindow* m_Window;
+
+        // What the graphics context uses of the window; declared first, so it outlives the context.
+        TUniquePtr<GlfwGLSurface> m_Surface;
 
         // Graphics context: make-current, glad loading, vsync, present.
         TUniquePtr<IGraphicsContext> m_Context;

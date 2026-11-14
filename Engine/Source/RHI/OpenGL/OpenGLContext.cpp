@@ -1,28 +1,45 @@
 #include "RHI/OpenGL/OpenGLContext.h"
 
 #include <glad/glad.h>
-#include <GLFW/glfw3.h>
 
 #include "Core/Log/Logger.h"
+#include "Core/String/CString.h"
 
 namespace Opaax
 {
+    namespace
+    {
+        /** True when the current context lists the extension InName. */
+        bool HasExtension(const char* InName)
+        {
+            GLint lCount = 0;
+            glGetIntegerv(GL_NUM_EXTENSIONS, &lCount);
+            for (GLint lIndex = 0; lIndex < lCount; ++lIndex)
+            {
+                const GLubyte* lExtension = glGetStringi(GL_EXTENSIONS, static_cast<GLuint>(lIndex));
+                if (lExtension != nullptr && CString::Equals(reinterpret_cast<const char*>(lExtension), InName))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
 
     // =============================================================================
     // OpenGLContext
     // =============================================================================
-    OpenGLContext::OpenGLContext(GLFWwindow* InWindow)
-        : m_Window(InWindow)
+    OpenGLContext::OpenGLContext(IGLSurface& InSurface)
+        : m_Surface(&InSurface)
     {
     }
 
     bool OpenGLContext::Init()
     {
-        OPAAX_CORE_ASSERT(m_Window)
+        m_Surface->MakeCurrent();
 
-        glfwMakeContextCurrent(m_Window);
-
-        if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress)))
+        const GLProcLoader lLoader = m_Surface->GetProcLoader();
+        if (lLoader == nullptr || !gladLoadGLLoader(lLoader))
         {
             OPAAX_LOG(LogOpenGLContext, Error, "Failed to initialize GLAD");
             return false;
@@ -30,10 +47,10 @@ namespace Opaax
 
         // glad loads by version, and debug output is core from 4.3 only. A 4.1 context has the same
         // functions under the same names when the driver lists GL_KHR_debug.
-        if (!glad_glDebugMessageCallback && glfwExtensionSupported("GL_KHR_debug"))
+        if (!glad_glDebugMessageCallback && HasExtension("GL_KHR_debug"))
         {
-            glad_glDebugMessageCallback = reinterpret_cast<PFNGLDEBUGMESSAGECALLBACKPROC>(glfwGetProcAddress("glDebugMessageCallback"));
-            glad_glDebugMessageControl  = reinterpret_cast<PFNGLDEBUGMESSAGECONTROLPROC>(glfwGetProcAddress("glDebugMessageControl"));
+            glad_glDebugMessageCallback = reinterpret_cast<PFNGLDEBUGMESSAGECALLBACKPROC>(lLoader("glDebugMessageCallback"));
+            glad_glDebugMessageControl  = reinterpret_cast<PFNGLDEBUGMESSAGECONTROLPROC>(lLoader("glDebugMessageControl"));
         }
 
         // VSync on until the renderer applies Window.bVSync.
@@ -63,12 +80,12 @@ namespace Opaax
 
     void OpenGLContext::SwapBuffers()
     {
-        glfwSwapBuffers(m_Window);
+        m_Surface->SwapBuffers();
     }
 
     void OpenGLContext::SetSwapInterval(const Uint32 InRefreshes)
     {
-        glfwSwapInterval(static_cast<int>(InRefreshes));
+        m_Surface->SetSwapInterval(InRefreshes);
     }
 
 } // namespace Opaax

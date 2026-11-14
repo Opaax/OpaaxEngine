@@ -9,6 +9,7 @@
 #include "Engine/Config/Config_Engine.h"
 
 #include "Input/InputTypesFwd.hpp"
+#include "Platform/Glfw/GlfwGLSurface.h"
 
 #include "RHI/RHIBackend.h"
 #include "RHI/IGraphicsContext.h"
@@ -66,8 +67,8 @@ namespace Opaax
 		// Backend from the engine config: drives window hints and context creation.
 		const EBackend lBackend = ResolveSupportedBackend(lData.Render.Backend);
 
-		// Must run before glfwCreateWindow (e.g. GLFW_NO_API for Vulkan). Nothing for OpenGL.
-		IGraphicsContext::ApplyWindowHints(lBackend);
+		// What the context asks of the window (version, profile, debug), before the window is made.
+		GlfwGLSurface::ApplyHints(IGraphicsContext::DescribeSurface(lBackend));
 
 		m_Window = glfwCreateWindow(
 			static_cast<int>(Props.Width),
@@ -88,8 +89,9 @@ namespace Opaax
 		m_Data.Width  = static_cast<Uint32>(lWidth);
 		m_Data.Height = static_cast<Uint32>(lHeight);
 
-		// The graphics context does make-current, glad loading and vsync.
-		m_Context = IGraphicsContext::Create(lBackend, m_Window);
+		// The graphics context does make-current, glad loading and vsync, through the window's surface.
+		m_Surface = MakeUnique<GlfwGLSurface>(m_Window);
+		m_Context = IGraphicsContext::Create(lBackend, *m_Surface);
 		OPAAX_CORE_ASSERT(m_Context)
 		if (!m_Context->Init())
 		{
@@ -301,7 +303,8 @@ namespace Opaax
 		}
 		
 		glfwMakeContextCurrent(nullptr);
-		m_Context.reset();         // before its window
+		m_Context.reset();         // before its surface and its window
+		m_Surface.reset();
 		glfwDestroyWindow(m_Window);
 		m_Window = nullptr;        // cannot be destroyed twice
 	}

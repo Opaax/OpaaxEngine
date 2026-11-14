@@ -180,7 +180,10 @@ own.
 ### OpenGL 4.1 everywhere, behind an RHI
 
 One backend runs on Windows, Linux and macOS. Shaders are written once (GLSL 4.50 with explicit
-bindings) and ported to 4.10 when loaded.
+bindings) and ported to 4.10 when loaded. The RHI does not know the window's library: its context
+says what it asks of the window (`GLSurfaceDesc`: version, profile, debug context) and uses the
+window's `IGLSurface` (make current, the function loader, swap, swap interval), which the window
+writes in `Platform/Glfw` (`GlfwGLSurface`), as Godot's display servers own their GL managers.
 
 - **For:** the same picture on every platform, and on Mesa's software renderer, which CI renders
   with; the HDR path brings what the renderer lacked: 2D lights with normal maps and emissive
