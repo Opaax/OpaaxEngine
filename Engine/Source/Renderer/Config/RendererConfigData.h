@@ -28,11 +28,14 @@ namespace Opaax
         /** Samples per pixel of the world's target: smooth edges on quads, tiles and shapes. */
         EMultisampling Multisampling = EMultisampling::Off;
 
+        /** Smooths every edge of the finished world picture (FXAA), before the overlays and the UI. */
+        bool bFXAA = false;
+
         Uint32 MaxQuadsPerBatch = 10000;
         Uint32 MaxTextureSlots  = 16;   // sampler array length in the sprite shader; 2 = white + one
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(RendererConfigData, ClearColor, TextureFilter, Multisampling,
-                                                    MaxQuadsPerBatch, MaxTextureSlots)
+                                                    bFXAA, MaxQuadsPerBatch, MaxTextureSlots)
 
         OPAAX_PROPERTIES(RendererConfigData,
                          OPAAX_PROP(ClearColor),
@@ -59,6 +62,15 @@ namespace Opaax
                                          "Costs memory and fill: the world's target holds that many samples per "
                                          "pixel (X4: four times the pixels drawn into). A driver that gives fewer "
                                          "uses its most; renderer.info says how many are used."),
+                         OPAAX_PROP(bFXAA)
+                             .SetTooltip("Smooths the stair steps of every edge in the finished world picture "
+                                         "(FXAA): also those multisampling cannot see, inside a texture, on a "
+                                         "cut-out or a hollow quad, on an edge brighter than white. Applies at "
+                                         "once, to the world: the editor's overlays and the UI are drawn after "
+                                         "it and stay sharp.\n"
+                                         "It blurs a little: fine lines and small text drawn in the world soften. "
+                                         "Costs one full-screen pass and one more target of the view's size. "
+                                         "Can be used with multisampling."),
                          OPAAX_PROP(MaxQuadsPerBatch)
                              .SetRange(1.f, 65536.f)
                              .SetFlags(EPropertyFlags::NeedRestart)

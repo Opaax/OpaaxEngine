@@ -28,6 +28,9 @@ namespace Opaax
         /** The bloom passes' block (BloomUBO in Bloom2D.glsl). */
         constexpr Uint32 BLOOM_UBO_BINDING = 6;
 
+        /** The FXAA pass's block (FXAAUBO in FXAA.glsl). */
+        constexpr Uint32 FXAA_UBO_BINDING = 7;
+
         /** What the tonemap pass samples: the scene (unit 0) and the bloom (unit 1). */
         constexpr Uint32 TONEMAP_TEXTURES = 2;
 
@@ -36,7 +39,8 @@ namespace Opaax
         constexpr Uint32 PURPOSE_OCCLUSION           = 1;
         constexpr Uint32 PURPOSE_AMBIENT_OCCLUSION_A = 2;   // the result
         constexpr Uint32 PURPOSE_AMBIENT_OCCLUSION_B = 3;
-        constexpr Uint32 PURPOSE_BLOOM_FIRST         = 4;   // then one per level
+        constexpr Uint32 PURPOSE_FXAA_SOURCE         = 4;
+        constexpr Uint32 PURPOSE_BLOOM_FIRST         = 5;   // then one per level
 
         /** The modes of Bloom2D.glsl. */
         constexpr Uint32 BLOOM_PASS_FIRST_DOWN = 0;
@@ -156,6 +160,18 @@ namespace Opaax
             OPAAX_LOG(LogScenePipeline2D, Warn, "No bloom shader: environments get none");
         }
 
+        if (HasStages(InShaders.FXAA))
+        {
+            m_FXAAShader   = InDevice.CreateShader(InShaders.FXAA);
+            m_FXAAPipeline = MakeFullscreenPipeline(InDevice, *m_FXAAShader, "ScenePipeline2D::FXAA");
+            m_FXAAUBO      = InDevice.CreateUniformBuffer(static_cast<Uint32>(sizeof(Vector4F)), FXAA_UBO_BINDING);
+            m_FXAAGroup    = MakePassGroup(InDevice, *m_FXAAUBO, FXAA_UBO_BINDING, 1);
+        }
+        else
+        {
+            OPAAX_LOG(LogScenePipeline2D, Warn, "No FXAA shader: the bFXAA setting does nothing");
+        }
+
         return true;
     }
 
@@ -166,8 +182,10 @@ namespace Opaax
         m_ShadowGroup.reset();
         m_AmbientOcclusionGroup.reset();
         m_BloomGroup.reset();
+        m_FXAAGroup.reset();
 
-        m_Scene     = nullptr;
+        m_Scene      = nullptr;
+        m_FXAASource = nullptr;
         m_Occlusion = nullptr;
         m_BloomLevels.clear();
         m_Targets.Clear();
@@ -192,6 +210,10 @@ namespace Opaax
         m_BloomShader.reset();
         m_BloomUBO.reset();
 
+        m_FXAAPipeline.reset();
+        m_FXAAShader.reset();
+        m_FXAAUBO.reset();
+
         m_Device = nullptr;
     }
 
@@ -215,14 +237,20 @@ namespace Opaax
         return IsReady() && m_BloomPipeline != nullptr && m_BloomAddPipeline != nullptr && m_BloomUBO != nullptr;
     }
 
+    bool ScenePipeline2D::CanFXAA() const noexcept
+    {
+        return IsReady() && m_FXAAPipeline != nullptr && m_FXAAUBO != nullptr;
+    }
+
     // =========================================================================
     // Frame
     // =========================================================================
     void ScenePipeline2D::EndFrame()
     {
         // A target may be released here: nothing points at one between frames.
-        m_Scene     = nullptr;
-        m_Occlusion = nullptr;
+        m_Scene      = nullptr;
+        m_Occlusion  = nullptr;
+        m_FXAASource = nullptr;
         m_BloomLevels.clear();
 
         m_Targets.EndFrame();
@@ -309,6 +337,37 @@ namespace Opaax
         m_TonemapGroup->SetTexture(1, InBloom);
         InCmd.BindBindGroup(*m_TonemapGroup);
 
+        InCmd.DrawFullscreen();
+        InCmd.EndRenderPass();
+    }
+
+    // =========================================================================
+    // FXAA
+    // =========================================================================
+    IRenderTarget& ScenePipeline2D::PrepareFXAA(const Uint32 InWidth, const Uint32 InHeight)
+    {
+        // Filtered: the pass reads between texels to blend across an edge.
+        m_FXAASource = &AcquireTarget(PURPOSE_FXAA_SOURCE, InWidth, InHeight, ETextureFormat::RGBA8);
+        return *m_FXAASource->Target;
+    }
+
+    void ScenePipeline2D::RunFXAA(ICommandBuffer& InCmd, IRenderTarget& InOutput)
+    {
+        if (!CanFXAA() || m_FXAASource == nullptr)
+        {
+            return;
+        }
+
+        const float    lWidth  = static_cast<float>(Maths::Max(m_FXAASource->Framebuffer->GetWidth(), 1u));
+        const float    lHeight = static_cast<float>(Maths::Max(m_FXAASource->Framebuffer->GetHeight(), 1u));
+        const Vector4F lPass{ 1.f / lWidth, 1.f / lHeight, FXAA_SUBPIXEL_2D, 0.f };
+        m_FXAAUBO->SetData(&lPass, static_cast<Uint32>(sizeof(lPass)));
+
+        // Every pixel is written: nothing to clear.
+        InCmd.BeginRenderPass(InOutput, ELoadOp::Load, Vector4F{ 0.f, 0.f, 0.f, 1.f });
+        InCmd.BindPipeline(*m_FXAAPipeline);
+        m_FXAAGroup->SetTexture(0, *m_FXAASource->Framebuffer);
+        InCmd.BindBindGroup(*m_FXAAGroup);
         InCmd.DrawFullscreen();
         InCmd.EndRenderPass();
     }

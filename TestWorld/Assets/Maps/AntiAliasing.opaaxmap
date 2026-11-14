@@ -128,6 +128,32 @@
             "guid": "de9218e44ede566088233544e5f30abc",
             "name": "TurnedSprite",
             "ownerMap": "AntiAliasing"
+        },
+        {
+            "components": {
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                },
+                "UIProbe": {
+                    "Asset": "UI/AntiAliasing.opaaxui",
+                    "Clicks": 0,
+                    "CounterText": "",
+                    "GameClicks": 0,
+                    "Widgets": 0,
+                    "bMounted": false
+                }
+            },
+            "guid": "6715a015939d42bcac8d70c62031f9cf",
+            "name": "Hud",
+            "ownerMap": "AntiAliasing"
         }
     ],
     "mapId": "AntiAliasing",

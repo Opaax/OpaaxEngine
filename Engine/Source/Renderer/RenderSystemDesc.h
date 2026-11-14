@@ -36,6 +36,7 @@ namespace Opaax
         ShaderDesc        ShadowShader;             // empty: lights cast no shadows
         ShaderDesc        AmbientOcclusionShader;   // empty: no ambient occlusion
         ShaderDesc        BloomShader;              // empty: no bloom
+        ShaderDesc        FXAAShader;               // empty: the bFXAA setting does nothing
         Vector4F          ClearColor{0.f, 0.f, 0.f, 1.f};
     };
 }
