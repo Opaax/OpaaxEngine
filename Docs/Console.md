@@ -93,6 +93,23 @@ m_Teleport = GetContext().Commands.Register(
 - `Cheat()`: the command changes the game in a way a player could not (below).
 - `DevOnly()`: not registered in a ship build.
 
+## Looking at the renderer
+
+`renderer.info` prints what the renderer is using now: the GPU and its driver, the most samples a
+multisampled target can have, the texture filter, and each world view's scene target (its size,
+format and samples). A renderer setting is tried while the game runs with `config.set` (a cheat,
+for this run only), and `frame.sample` counts the colours of a part of the frame: 2 across a hard
+edge, more across a smoothed one.
+
+```
+renderer.info
+config.set Renderer {"Multisampling": "X4", "bFXAA": true}
+frame.sample 600 340 width=40
+```
+
+Both are described in [Automation.md](Automation.md#commands); the settings themselves in
+[Customizing.md](Customizing.md#smooth-edges-which-setting).
+
 ## Cheats
 
 A command marked `Cheat()` that answers ok, from the console, a script or anywhere, publishes
