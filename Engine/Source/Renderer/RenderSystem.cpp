@@ -46,7 +46,8 @@ namespace Opaax
 
         m_ScenePipeline = MakeUnique<ScenePipeline2D>();
         m_ScenePipeline->Init(*m_Device, ScenePipelineShaders{ InDesc.TonemapShader, InDesc.ShadowShader,
-                                                               InDesc.AmbientOcclusionShader, InDesc.BloomShader });
+                                                               InDesc.AmbientOcclusionShader, InDesc.BloomShader,
+                                                               InDesc.FXAAShader });
 
         return true;
     }
@@ -94,7 +95,11 @@ namespace Opaax
 
     SceneTargetPlan RenderSystem::PlanWorldView(const Uint32 InWidth, const Uint32 InHeight, const bool bInLit)
     {
-        const SceneTargetPlan lPlan = PlanSceneTarget(InWidth, InHeight, bInLit, m_SceneTargetSettings, GetMaxSamples());
+        SceneTargetSettings lSettings = m_SceneTargetSettings;
+        lSettings.bFXAA = lSettings.bFXAA && m_ScenePipeline != nullptr && m_ScenePipeline->CanFXAA();
+
+        // What is used, not only what is asked: renderer.info answers this.
+        const SceneTargetPlan lPlan = PlanSceneTarget(InWidth, InHeight, bInLit, lSettings, GetMaxSamples());
         m_WorldViews.push_back(lPlan);
         return lPlan;
     }

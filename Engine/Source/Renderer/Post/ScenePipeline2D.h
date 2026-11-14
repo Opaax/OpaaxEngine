@@ -63,13 +63,17 @@ namespace Opaax
      */
     TDynArray<BloomLevel2D> MakeBloomLevels2D(Uint32 InWidth, Uint32 InHeight);
 
-    /** The shaders of the HDR path. Only the tonemap is required: without another, its feature is off (logged). */
+    /** How much FXAA blends a pixel unlike all its neighbours (a lone dot, a thin line), 0 to 1. */
+    inline constexpr float FXAA_SUBPIXEL_2D = 0.75f;
+
+    /** The scene pipeline's shaders. Only the tonemap is required: without another, its feature is off (logged). */
     struct ScenePipelineShaders
     {
         ShaderDesc Tonemap;
         ShaderDesc Shadow;
         ShaderDesc AmbientOcclusion;
         ShaderDesc Bloom;
+        ShaderDesc FXAA;
     };
 
     // =============================================================================
@@ -80,6 +84,8 @@ namespace Opaax
     //   for each shadowed light, how far it gets in every direction, and the ambient occlusion map
     //   how much of the casters surrounds each point (the coverage shrunk, then blurred).
     //   Bloom is made in the composite: the bright light halved down a chain, then blurred back up.
+    //   With FXAA, the composite or the copy writes a middle target of the view's size, and the FXAA
+    //   pass writes the view's target from it.
     //   Owned by the RenderSystem. Its targets are kept per size (TRenderTargetCache): a frame that
     //   draws views of several sizes (a game view and a camera preview) rebuilds none of them.
     // =============================================================================
@@ -120,6 +126,9 @@ namespace Opaax
         /** Whether the composite can add bloom. */
         bool CanBloom() const noexcept;
 
+        /** Whether RunFXAA can work. */
+        bool CanFXAA() const noexcept;
+
         // =============================================================================
         // Frame
         // =============================================================================
@@ -137,6 +146,15 @@ namespace Opaax
 
         /** Writes every pixel of InOutput from the scene as it is, alpha included: an unlit world. */
         void CopyScene(ICommandBuffer& InCmd, IRenderTarget& InOutput);
+
+        /**
+         * The target the composite or the copy writes when FXAA follows: screen colour (RGBA8),
+         * filtered, sized InWidth x InHeight (the view's). The view's until the next call.
+         */
+        IRenderTarget& PrepareFXAA(Uint32 InWidth, Uint32 InHeight);
+
+        /** Writes every pixel of InOutput from the PrepareFXAA target, its edges smoothed (FXAA). */
+        void RunFXAA(ICommandBuffer& InCmd, IRenderTarget& InOutput);
 
         /** The target the shadow casters are drawn into (coverage), sized InWidth x InHeight. */
         IRenderTarget& PrepareOcclusion(Uint32 InWidth, Uint32 InHeight);
@@ -233,5 +251,13 @@ namespace Opaax
         TUniquePtr<IPipeline>      m_BloomAddPipeline;   // adds (the way back up)
         TUniquePtr<IUniformBuffer> m_BloomUBO;
         TUniquePtr<IBindGroup>     m_BloomGroup;     // its block, the pass's source
+
+        // FXAA: the finished picture in screen colour, the view's; kept in m_Targets.
+        PostTarget* m_FXAASource = nullptr;
+
+        TUniquePtr<IShader>        m_FXAAShader;
+        TUniquePtr<IPipeline>      m_FXAAPipeline;
+        TUniquePtr<IUniformBuffer> m_FXAAUBO;
+        TUniquePtr<IBindGroup>     m_FXAAGroup;      // its block, the finished picture
     };
 }

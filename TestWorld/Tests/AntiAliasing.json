@@ -177,6 +177,141 @@
         }
     },
     {
+        "id": "AntiAliasing-Off-text",
+        "command": "frame.sample",
+        "params": {
+            "x": 440,
+            "y": 20,
+            "width": 400,
+            "height": 70
+        },
+        "expect": {
+            "colors": {
+                "$atLeast": 150,
+                "$atMost": 300
+            }
+        }
+    },
+    {
+        "id": "fxaa-on",
+        "command": "config.set",
+        "params": {
+            "config": "Renderer",
+            "values": {
+                "Multisampling": "Off",
+                "bFXAA": true
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "AntiAliasing-FXAA-info",
+        "command": "renderer.info",
+        "expect": {
+            "sceneSettings": {
+                "fxaa": true
+            },
+            "views": [
+                {
+                    "lit": false,
+                    "samples": 1,
+                    "sceneTarget": true,
+                    "fxaaTarget": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "AntiAliasing-FXAA-quad-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 408,
+            "y": 340,
+            "width": 20,
+            "height": 40
+        },
+        "expect": {
+            "colors": {
+                "$atLeast": 3
+            }
+        }
+    },
+    {
+        "id": "AntiAliasing-FXAA-sprite-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 768,
+            "y": 340,
+            "width": 20,
+            "height": 40
+        },
+        "expect": {
+            "colors": {
+                "$atLeast": 3
+            }
+        }
+    },
+    {
+        "id": "AntiAliasing-FXAA-right-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 1108,
+            "y": 340,
+            "width": 20,
+            "height": 40
+        },
+        "expect": {
+            "colors": {
+                "$atLeast": 20
+            }
+        }
+    },
+    {
+        "id": "AntiAliasing-FXAA-text",
+        "command": "frame.sample",
+        "params": {
+            "x": 440,
+            "y": 20,
+            "width": 400,
+            "height": 70
+        },
+        "expect": {
+            "colors": {
+                "$atLeast": 150,
+                "$atMost": 300
+            }
+        }
+    },
+    {
+        "id": "AntiAliasing-FXAA-shot",
+        "command": "screenshot",
+        "params": {
+            "path": "AntiAliasing-FXAA.png"
+        }
+    },
+    {
+        "id": "fxaa-off",
+        "command": "config.set",
+        "params": {
+            "config": "Renderer",
+            "values": {
+                "Multisampling": "Off",
+                "bFXAA": false
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
         "id": "play-AntiAliasingLit",
         "command": "level.play",
         "params": {
@@ -344,6 +479,109 @@
             "config": "Renderer",
             "values": {
                 "Multisampling": "Off"
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "fxaa-on",
+        "command": "config.set",
+        "params": {
+            "config": "Renderer",
+            "values": {
+                "Multisampling": "Off",
+                "bFXAA": true
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "AntiAliasingLit-FXAA-info",
+        "command": "renderer.info",
+        "expect": {
+            "sceneSettings": {
+                "fxaa": true
+            },
+            "views": [
+                {
+                    "lit": true,
+                    "samples": 1,
+                    "sceneTarget": true,
+                    "fxaaTarget": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "AntiAliasingLit-FXAA-quad-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 408,
+            "y": 340,
+            "width": 20,
+            "height": 40
+        },
+        "expect": {
+            "colors": {
+                "$atLeast": 3
+            }
+        }
+    },
+    {
+        "id": "AntiAliasingLit-FXAA-sprite-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 768,
+            "y": 340,
+            "width": 20,
+            "height": 40
+        },
+        "expect": {
+            "colors": {
+                "$atLeast": 3
+            }
+        }
+    },
+    {
+        "id": "AntiAliasingLit-FXAA-right-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 1108,
+            "y": 340,
+            "width": 20,
+            "height": 40
+        },
+        "expect": {
+            "colors": {
+                "$atLeast": 3
+            }
+        }
+    },
+    {
+        "id": "AntiAliasingLit-FXAA-shot",
+        "command": "screenshot",
+        "params": {
+            "path": "AntiAliasingLit-FXAA.png"
+        }
+    },
+    {
+        "id": "fxaa-off",
+        "command": "config.set",
+        "params": {
+            "config": "Renderer",
+            "values": {
+                "Multisampling": "Off",
+                "bFXAA": false
             }
         }
     },

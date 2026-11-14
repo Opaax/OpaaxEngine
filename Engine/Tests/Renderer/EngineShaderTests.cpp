@@ -250,3 +250,27 @@ TEST_CASE("Engine shaders: the bloom shader ports with its source and block")
     REQUIRE(lBlock != nullptr);
     CHECK(lBlock->Binding == 6);
 }
+
+TEST_CASE("Engine shaders: the FXAA shader ports with its source and block")
+{
+    const OpaaxString lSource = ReadShader("FXAA.glsl");
+    REQUIRE_FALSE(lSource.IsEmpty());
+
+    const ShaderDesc lDesc = ShaderSource::FromSource(lSource, OpaaxString("FXAA.glsl"));
+    REQUIRE_FALSE(lDesc.VertexSrc.IsEmpty());
+    REQUIRE_FALSE(lDesc.FragmentSrc.IsEmpty());
+
+    PortStage(lDesc.VertexSrc);
+    const TDynArray<GLSLPort::ResourceBinding> lBindings = PortStage(lDesc.FragmentSrc);
+
+    const GLSLPort::ResourceBinding* lInput = Find(lBindings, "u_Source");
+    REQUIRE(lInput != nullptr);
+    CHECK(lInput->Binding == 0);
+
+    const GLSLPort::ResourceBinding* lBlock = Find(lBindings, "FXAAUBO");
+    REQUIRE(lBlock != nullptr);
+    CHECK(lBlock->Binding == 7);
+
+    // The pixel keeps its own alpha: an unlit world's transparent pixels stay transparent.
+    CHECK(lDesc.FragmentSrc.Find("lCentre.a);") >= 0);
+}

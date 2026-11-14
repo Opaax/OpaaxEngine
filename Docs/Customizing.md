@@ -242,6 +242,21 @@ With it on, an unlit world is drawn into a scene target of its own (RGBA8) and c
 a lit world's HDR target is multisampled. Its cost is memory and fill: X4 draws four times the
 pixels of the world. `TestWorld/Levels/AntiAliasing` and `AntiAliasingLit` show each case.
 
+### FXAA
+
+`bFXAA` in `Renderer.config` (off by default) smooths the finished world picture after the tonemap
+(fast approximate anti-aliasing, after Lottes' FXAA 3.11). It looks for sharp changes of brightness
+in the picture itself, so it sees what multisampling cannot: a sprite's transparent border, a
+`discard` edge, an edge brighter than white. It applies at once, and can be used with multisampling.
+
+- The overlays drawn over the world and the UI come after it: text and editor gizmos stay sharp.
+- It blurs a little: thin lines and small text drawn in the world soften.
+- Its cost is one full-screen pass and one more target of the view's size (RGBA8): the world is
+  written there, then FXAA writes the view.
+
+`renderer.info` answers `fxaa` (asked) and, per world view, `fxaaTarget` (used). Without
+`Engine/Assets/Shaders/FXAA.glsl` the setting does nothing, and the log says so at startup.
+
 ### Shaders
 
 The shaders are in `Engine/Assets/Shaders`, one file per program with `#type vertex` and
@@ -257,6 +272,7 @@ ported to GLSL 4.10 at load time (`RHI/OpenGL/GLSLPort`), since macOS stops at O
 | 4 | `ShadowUBO`: up to 16 shadowed lights | Shadow2D |
 | 5 | `AmbientOcclusionUBO` | AmbientOcclusion2D |
 | 6 | `BloomUBO` | Bloom2D |
+| 7 | `FXAAUBO`: one texel, the sub-pixel blend | FXAA |
 
 A pass reads its blocks and its textures through its bind group (`IBindGroup`): the group lists the
 binding points of its blocks, and binding it before the draw is what puts each buffer and each

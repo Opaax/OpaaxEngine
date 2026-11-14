@@ -134,12 +134,17 @@ namespace Opaax
             OpaaxApplication::GetAppService<IPaths>().EngineToAbsolute("Assets/Shaders/Bloom2D.glsl");
         const OpaaxString lBloomSrc = FileIO::ReadAllText(lBloomPath);
 
+        const OpaaxString lFXAAPath =
+            OpaaxApplication::GetAppService<IPaths>().EngineToAbsolute("Assets/Shaders/FXAA.glsl");
+        const OpaaxString lFXAASrc = FileIO::ReadAllText(lFXAAPath);
+
         RenderSystemDesc lDesc;
         lDesc.TonemapShader = lTonemapSrc.IsEmpty() ? ShaderDesc{} : ShaderSource::FromSource(lTonemapSrc, lTonemapPath);
         lDesc.ShadowShader  = lShadowSrc.IsEmpty() ? ShaderDesc{} : ShaderSource::FromSource(lShadowSrc, lShadowPath);
         lDesc.AmbientOcclusionShader =
             lOcclusionSrc.IsEmpty() ? ShaderDesc{} : ShaderSource::FromSource(lOcclusionSrc, lOcclusionPath);
         lDesc.BloomShader   = lBloomSrc.IsEmpty() ? ShaderDesc{} : ShaderSource::FromSource(lBloomSrc, lBloomPath);
+        lDesc.FXAAShader    = lFXAASrc.IsEmpty() ? ShaderDesc{} : ShaderSource::FromSource(lFXAASrc, lFXAAPath);
         lDesc.Backend      = ResolveSupportedBackend(lEngineCfg.Render.Backend);
         lDesc.Surface      = lSurface;
         lDesc.Width        = lWindow->GetWidth();
@@ -464,14 +469,22 @@ namespace Opaax
             if (bInDrawOverlays) { DrawOverlays(InWorld, lRenderer, EOverlayFilter::BehindWorld); }
             m_RenderSystem->EndPass();
 
+            // With FXAA the finished picture goes to a middle target, and FXAA writes the view's.
+            IRenderTarget& lFinished = lPlan.bFXAATarget ? lPipeline.PrepareFXAA(lWidth, lHeight) : InTarget;
+
             if (lPlan.bLit)
             {
                 lRenderer.SetLightingMaps(nullptr, nullptr);
-                lPipeline.Composite(*lCommands, InTarget, PostSettings::From(*lEnvironment));
+                lPipeline.Composite(*lCommands, lFinished, PostSettings::From(*lEnvironment));
             }
             else
             {
-                lPipeline.CopyScene(*lCommands, InTarget);
+                lPipeline.CopyScene(*lCommands, lFinished);
+            }
+
+            if (lPlan.bFXAATarget)
+            {
+                lPipeline.RunFXAA(*lCommands, InTarget);
             }
 
             // The other overlays over the finished picture, in screen colour.
@@ -1280,10 +1293,13 @@ namespace Opaax
 
         const RendererConfigData& lData = m_RendererConfig->GetData();
 
-        SceneTargetSettings lSettings = m_RenderSystem->GetSceneTargetSettings();
-        lSettings.Samples = SamplesOf(lData.Multisampling);
+        const SceneTargetSettings& lCurrent = m_RenderSystem->GetSceneTargetSettings();
 
-        if (m_bSceneSettingsLogged && lSettings.Samples == m_RenderSystem->GetSceneTargetSettings().Samples)
+        SceneTargetSettings lSettings = lCurrent;
+        lSettings.Samples = SamplesOf(lData.Multisampling);
+        lSettings.bFXAA   = lData.bFXAA;
+
+        if (m_bSceneSettingsLogged && lSettings.Samples == lCurrent.Samples && lSettings.bFXAA == lCurrent.bFXAA)
         {
             return;
         }
@@ -1293,8 +1309,8 @@ namespace Opaax
 
         // What is given, not only what is asked: a driver may have fewer samples.
         const Uint32 lGiven = PlanSceneTarget(1, 1, true, lSettings, m_RenderSystem->GetMaxSamples()).Samples;
-        OPAAX_LOG(LogRendererManager, Info, "World views: multisampling {} ({} samples asked, {} given)",
-                  ToString(lData.Multisampling), lSettings.Samples, lGiven);
+        OPAAX_LOG(LogRendererManager, Info, "World views: multisampling {} ({} samples asked, {} given), FXAA {}",
+                  ToString(lData.Multisampling), lSettings.Samples, lGiven, lSettings.bFXAA ? "on" : "off");
     }
 
     void RendererManager::HandleEngineConfigChanged()

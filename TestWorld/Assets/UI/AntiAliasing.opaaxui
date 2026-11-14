@@ -1,0 +1,79 @@
+{
+    "ReferenceHeight": 1080.0,
+    "Root": {
+        "Name": "AntiAliasingRoot",
+        "Opacity": 1.0,
+        "Rect": {
+            "AnchorMax": {
+                "x": 1,
+                "y": 1
+            },
+            "AnchorMin": {
+                "x": 0,
+                "y": 0
+            },
+            "AnchoredPosition": {
+                "x": 0,
+                "y": 0
+            },
+            "Pivot": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "SizeDelta": {
+                "x": 0,
+                "y": 0
+            }
+        },
+        "Type": "UIPanel",
+        "bHitTestable": false,
+        "bVisible": true,
+        "Children": [
+            {
+                "Name": "Label",
+                "Opacity": 1.0,
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 1.0
+                    },
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 1.0
+                    },
+                    "AnchoredPosition": {
+                        "x": 0.0,
+                        "y": -80.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 900.0,
+                        "y": 80.0
+                    }
+                },
+                "Type": "UIText",
+                "bHitTestable": false,
+                "bVisible": true,
+                "Binding": "",
+                "Color": {
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0,
+                    "w": 1.0
+                },
+                "Font": "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf",
+                "HAlign": "Center",
+                "LineHeightScale": 1.0,
+                "Size": 56.0,
+                "Text": "Anti-aliasing",
+                "VAlign": "Middle",
+                "bKerning": true,
+                "bWrap": false
+            }
+        ]
+    },
+    "Version": 1
+}
