@@ -103,6 +103,12 @@
         }
     },
     {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
         "command": "expect.value",
         "params": {
             "entity": "Director",
@@ -130,6 +136,12 @@
         }
     },
     {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
         "command": "expect.value",
         "params": {
             "entity": "Director",
@@ -154,6 +166,12 @@
         "command": "world.wait",
         "params": {
             "seconds": 0.1
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
         }
     },
     {
