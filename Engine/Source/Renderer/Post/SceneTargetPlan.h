@@ -58,6 +58,9 @@ namespace Opaax
         float RenderScale = 1.f;
     };
 
+    /** InScale clamped to MIN_RENDER_SCALE..MAX_RENDER_SCALE; a scale that is not a number counts as 1. */
+    float ClampRenderScale(float InScale) noexcept;
+
     /** How one world view is drawn: straight into its target, or through a scene target. */
     struct SceneTargetPlan
     {

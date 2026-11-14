@@ -31,11 +31,14 @@ namespace Opaax
         /** Smooths every edge of the finished world picture (FXAA), before the overlays and the UI. */
         bool bFXAA = false;
 
+        /** The world's target against its view: 0.5 draws a quarter of the pixels, 2 four times as many. */
+        float RenderScale = 1.f;
+
         Uint32 MaxQuadsPerBatch = 10000;
         Uint32 MaxTextureSlots  = 16;   // sampler array length in the sprite shader; 2 = white + one
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(RendererConfigData, ClearColor, TextureFilter, Multisampling,
-                                                    bFXAA, MaxQuadsPerBatch, MaxTextureSlots)
+                                                    bFXAA, RenderScale, MaxQuadsPerBatch, MaxTextureSlots)
 
         OPAAX_PROPERTIES(RendererConfigData,
                          OPAAX_PROP(ClearColor),
@@ -71,6 +74,15 @@ namespace Opaax
                                          "It blurs a little: fine lines and small text drawn in the world soften. "
                                          "Costs one full-screen pass and one more target of the view's size. "
                                          "Can be used with multisampling."),
+                         OPAAX_PROP(RenderScale)
+                             .SetRange(0.5f, 2.f)
+                             .SetTooltip("Draws the world at this scale of the view, then fits it to the view. "
+                                         "Applies at once, to the world: the overlays and the UI keep the "
+                                         "view's own pixels.\n"
+                                         "Below 1: fewer pixels, for a slow GPU; the world looks softer. At 0.5 "
+                                         "the world, its shadows and its ambient occlusion cost a quarter.\n"
+                                         "Above 1: smooths every edge, at a price: 2 draws four times the "
+                                         "pixels. renderer.info answers the scene target's size."),
                          OPAAX_PROP(MaxQuadsPerBatch)
                              .SetRange(1.f, 65536.f)
                              .SetFlags(EPropertyFlags::NeedRestart)

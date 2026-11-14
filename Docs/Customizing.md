@@ -257,6 +257,22 @@ in the picture itself, so it sees what multisampling cannot: a sprite's transpar
 `renderer.info` answers `fxaa` (asked) and, per world view, `fxaaTarget` (used). Without
 `Engine/Assets/Shaders/FXAA.glsl` the setting does nothing, and the log says so at startup.
 
+### Render scale
+
+`RenderScale` in `Renderer.config` (0.5 to 2; 1 by default) draws the world into a scene target of
+that scale of the view, then fits it to the view with a blended read. It applies at once.
+
+- Below 1, for a slow GPU: fewer pixels, a softer world. Shadows and ambient occlusion follow the
+  scene's density, so at 0.5 they cost a quarter too.
+- Above 1: every edge is smoothed, inside textures too, at the full price: 2 draws four times the
+  pixels (2 to 1 averages each 2x2 block exactly).
+- The overlays drawn over the world and the UI keep the view's own pixels.
+- In a lit world the fit to the view is made before the tonemap: a coloured emissive above 1 looks
+  white inside, but where its edge is blended with the background its own hue shows as a thin
+  fringe (multisampling does the same, more faintly).
+
+`renderer.info` answers `renderScale` (asked, clamped) and each world view's scene target size.
+
 ### Shaders
 
 The shaders are in `Engine/Assets/Shaders`, one file per program with `#type vertex` and

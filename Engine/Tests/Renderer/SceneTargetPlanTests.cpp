@@ -125,3 +125,13 @@ TEST_CASE("SceneTargetPlan: a scale that is not a number counts as 1")
     CHECK(lLit.Width == 100);
     CHECK(lLit.Height == 100);
 }
+
+TEST_CASE("SceneTargetPlan: ClampRenderScale keeps 0.5 to 2, and a scale that is not a number is 1")
+{
+    CHECK(ClampRenderScale(1.f) == 1.f);
+    CHECK(ClampRenderScale(0.75f) == 0.75f);
+    CHECK(ClampRenderScale(0.1f) == MIN_RENDER_SCALE);
+    CHECK(ClampRenderScale(10.f) == MAX_RENDER_SCALE);
+    CHECK(ClampRenderScale(TNumericLimits<float>::quiet_NaN()) == 1.f);
+    CHECK(ClampRenderScale(TNumericLimits<float>::infinity()) == 1.f);
+}
