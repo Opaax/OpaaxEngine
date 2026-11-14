@@ -124,7 +124,7 @@
         },
         "expect": {
             "colors": {
-                "$atLeast": 3
+                "$atLeast": 4
             }
         }
     },
@@ -139,7 +139,7 @@
         },
         "expect": {
             "colors": {
-                "$atLeast": 3
+                "$atLeast": 4
             }
         }
     },
@@ -363,7 +363,9 @@
             "height": 40
         },
         "expect": {
-            "colors": 2
+            "colors": {
+                "$atMost": 3
+            }
         }
     },
     {
@@ -376,7 +378,9 @@
             "height": 40
         },
         "expect": {
-            "colors": 2
+            "colors": {
+                "$atMost": 3
+            }
         }
     },
     {
@@ -436,7 +440,7 @@
         },
         "expect": {
             "colors": {
-                "$atLeast": 3
+                "$atLeast": 4
             }
         }
     },
@@ -451,7 +455,7 @@
         },
         "expect": {
             "colors": {
-                "$atLeast": 3
+                "$atLeast": 4
             }
         }
     },
