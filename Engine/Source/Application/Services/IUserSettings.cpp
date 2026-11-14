@@ -12,6 +12,8 @@
 #include "Engine/Config/Config_Engine.h"
 #include "Object/ObjectClass.h"
 #include "Platform/Window/Window.h"
+#include "Renderer/Config/Config_Renderer.h"
+#include "Renderer/Post/SceneTargetPlan.h"
 #include "Save/SaveGameFile.h"
 
 namespace Opaax
@@ -55,18 +57,25 @@ namespace Opaax
             FOnUserSectionChanged m_NeverChanges;
         };
 
-        /** The engine config's name, "Engine": a config is named after its file. */
-        const OpaaxString& EngineConfigName()
+        /** The name of the config class TConfigClass ("Engine"): a config is named after its file. */
+        template <typename TConfigClass>
+        const OpaaxString& ConfigNameOf()
         {
             static const OpaaxString s_Name = Config::NameFromFile(
-                static_cast<const Config*>(Config_Engine::StaticClass().GetDefaultObject())->FileName()).ToString();
+                static_cast<const Config*>(TConfigClass::StaticClass().GetDefaultObject())->FileName()).ToString();
             return s_Name;
         }
 
         /** Sets InValues over the engine config's. False when one is refused: nothing changed. */
         bool SetEngineValues(IUserSettings& InSettings, const nlohmann::json& InValues)
         {
-            return InSettings.SetConfigValues(EngineConfigName(), ToJsonText(InValues));
+            return InSettings.SetConfigValues(ConfigNameOf<Config_Engine>(), ToJsonText(InValues));
+        }
+
+        /** Sets InValues over the Renderer config's. False when one is refused: nothing changed. */
+        bool SetRendererValues(IUserSettings& InSettings, const nlohmann::json& InValues)
+        {
+            return InSettings.SetConfigValues(ConfigNameOf<Config_Renderer>(), ToJsonText(InValues));
         }
     }
 
@@ -145,6 +154,38 @@ namespace Opaax
         nlohmann::json lValues;
         lValues["Audio"]["Buses"][InBus.CStr()]["Volume"] = Maths::Clamp(InVolume, 0.f, 1.f);
         return SetEngineValues(*this, lValues);
+    }
+
+    bool IUserSettings::SetMultisampling(const EMultisampling InMultisampling)
+    {
+        if (InMultisampling > EMultisampling::X8)
+        {
+            return false;
+        }
+
+        nlohmann::json lValues;
+        lValues["Multisampling"] = InMultisampling;
+        return SetRendererValues(*this, lValues);
+    }
+
+    bool IUserSettings::SetFXAA(const bool bInFXAA)
+    {
+        nlohmann::json lValues;
+        lValues["bFXAA"] = bInFXAA;
+        return SetRendererValues(*this, lValues);
+    }
+
+    bool IUserSettings::SetRenderScale(const float InScale)
+    {
+        // Written this way, a scale that is not a number is refused too.
+        if (!(InScale >= MIN_RENDER_SCALE && InScale <= MAX_RENDER_SCALE))
+        {
+            return false;
+        }
+
+        nlohmann::json lValues;
+        lValues["RenderScale"] = InScale;
+        return SetRendererValues(*this, lValues);
     }
 
     // =========================================================================

@@ -13,6 +13,7 @@
 #include "Automation/SettingsAutomationCommands.h"
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/Config/TConfig.h"
+#include "Renderer/Config/Config_Renderer.h"
 
 using namespace Opaax;
 
@@ -238,6 +239,65 @@ TEST_CASE("UserSettings: the frame cap and the resolution, read at once; no scre
     // The null window manager has no window, so no screen to list.
     CHECK(lFix.Settings->GetDisplayModes().empty());
     CHECK(IUserSettings::Null().GetDisplayModes().empty());
+}
+
+TEST_CASE("UserSettings: multisampling, FXAA and render scale go over the Renderer config; a scale out of range is refused")
+{
+    Fixture lFix;
+    lFix.Configs->Register<Config_Renderer>();
+    lFix.Settings->Activate();
+
+    const auto lRead = [&lFix]() -> const RendererConfigData& { return lFix.Configs->Get<Config_Renderer>().GetData(); };
+    CHECK(lRead().Multisampling == EMultisampling::Off);
+    CHECK_FALSE(lRead().bFXAA);
+    CHECK(lRead().RenderScale == doctest::Approx(1.f));
+
+    REQUIRE(lFix.Settings->SetMultisampling(EMultisampling::X4));
+    REQUIRE(lFix.Settings->SetFXAA(true));
+    REQUIRE(lFix.Settings->SetRenderScale(0.5f));
+    CHECK(lRead().Multisampling == EMultisampling::X4);
+    CHECK(lRead().bFXAA);
+    CHECK(lRead().RenderScale == doctest::Approx(0.5f));
+
+    // Over the project's values, which stay.
+    const RendererConfigData& lProject = lFix.Configs->Get<Config_Renderer>().GetProjectData();
+    CHECK(lProject.Multisampling == EMultisampling::Off);
+    CHECK_FALSE(lProject.bFXAA);
+    CHECK(lProject.RenderScale == doctest::Approx(1.f));
+
+    // Out of range, not a number, not a choice: refused, nothing changed.
+    CHECK_FALSE(lFix.Settings->SetRenderScale(0.25f));
+    CHECK_FALSE(lFix.Settings->SetRenderScale(3.f));
+    CHECK_FALSE(lFix.Settings->SetRenderScale(TNumericLimits<float>::quiet_NaN()));
+    CHECK_FALSE(lFix.Settings->SetMultisampling(static_cast<EMultisampling>(9)));
+    CHECK(lRead().RenderScale == doctest::Approx(0.5f));
+    CHECK(lRead().Multisampling == EMultisampling::X4);
+
+    // The edges of the range are taken.
+    REQUIRE(lFix.Settings->SetRenderScale(2.f));
+    REQUIRE(lFix.Settings->SetRenderScale(0.5f));
+
+    CHECK((Json(lFix.Settings->GetConfigValues("Renderer").CStr())
+           == Json(R"({"Multisampling": "X4", "bFXAA": true, "RenderScale": 0.5})")));
+
+    // Saved, read again at the next launch: the Renderer config, registered after, gets them.
+    REQUIRE(lFix.Settings->Save() == ESaveResult::Ok);
+    lFix.Relaunch();
+    lFix.Configs->Register<Config_Renderer>();
+    CHECK(lRead().Multisampling == EMultisampling::X4);
+    CHECK(lRead().bFXAA);
+    CHECK(lRead().RenderScale == doctest::Approx(0.5f));
+
+    // Taken off: the project's values again.
+    lFix.Settings->ResetConfig("Renderer");
+    CHECK(lRead().Multisampling == EMultisampling::Off);
+    CHECK_FALSE(lRead().bFXAA);
+    CHECK(lRead().RenderScale == doctest::Approx(1.f));
+
+    // Settings that keep nothing refuse them.
+    CHECK_FALSE(IUserSettings::Null().SetMultisampling(EMultisampling::X2));
+    CHECK_FALSE(IUserSettings::Null().SetFXAA(true));
+    CHECK_FALSE(IUserSettings::Null().SetRenderScale(1.f));
 }
 
 TEST_CASE("UserSettings: a file's value a config does not take is dropped, with a warning; the others are read")

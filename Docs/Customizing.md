@@ -273,6 +273,9 @@ that scale of the view, then fits it to the view with a blended read. It applies
 
 `renderer.info` answers `renderScale` (asked, clamped) and each world view's scene target size.
 
+A player can choose multisampling, FXAA and the render scale in a settings menu; their values go over
+the project's ([Settings.md](Settings.md#the-picture)). The texture filter stays the project's.
+
 ### Shaders
 
 The shaders are in `Engine/Assets/Shaders`, one file per program with `#type vertex` and
