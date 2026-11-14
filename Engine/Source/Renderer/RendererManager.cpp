@@ -453,8 +453,9 @@ namespace Opaax
                 LightsBlock2D lLights;
                 PackLights2D(CollectLights(*InWorld), lViewBounds, lAmbient, lEnvironment->AmbientIntensity, lLights);
 
-                // Shadows and ambient occlusion first: they are drawn from passes of their own.
-                const float        lPixelsPerUnit = static_cast<float>(lHeight) / Maths::Max(2.f * InView.OrthoSize, 1e-3f);
+                // Shadows and ambient occlusion first: they are drawn from passes of their own, at the
+                // scene's density, so a render scale below 1 makes them cheaper too.
+                const float        lPixelsPerUnit = static_cast<float>(lPlan.Height) / Maths::Max(2.f * InView.OrthoSize, 1e-3f);
                 const LightingMaps lMaps          = RenderLightingMaps(*InWorld, lRenderer, lViewBounds, lPixelsPerUnit,
                                                                        *lEnvironment, lLights);
 
@@ -1297,9 +1298,11 @@ namespace Opaax
 
         SceneTargetSettings lSettings = lCurrent;
         lSettings.Samples = SamplesOf(lData.Multisampling);
-        lSettings.bFXAA   = lData.bFXAA;
+        lSettings.bFXAA       = lData.bFXAA;
+        lSettings.RenderScale = ClampRenderScale(lData.RenderScale);
 
-        if (m_bSceneSettingsLogged && lSettings.Samples == lCurrent.Samples && lSettings.bFXAA == lCurrent.bFXAA)
+        if (m_bSceneSettingsLogged && lSettings.Samples == lCurrent.Samples && lSettings.bFXAA == lCurrent.bFXAA
+            && lSettings.RenderScale == lCurrent.RenderScale)
         {
             return;
         }
@@ -1309,8 +1312,10 @@ namespace Opaax
 
         // What is given, not only what is asked: a driver may have fewer samples.
         const Uint32 lGiven = PlanSceneTarget(1, 1, true, lSettings, m_RenderSystem->GetMaxSamples()).Samples;
-        OPAAX_LOG(LogRendererManager, Info, "World views: multisampling {} ({} samples asked, {} given), FXAA {}",
-                  ToString(lData.Multisampling), lSettings.Samples, lGiven, lSettings.bFXAA ? "on" : "off");
+        OPAAX_LOG(LogRendererManager, Info,
+                  "World views: multisampling {} ({} samples asked, {} given), FXAA {}, render scale {}",
+                  ToString(lData.Multisampling), lSettings.Samples, lGiven, lSettings.bFXAA ? "on" : "off",
+                  lSettings.RenderScale);
     }
 
     void RendererManager::HandleEngineConfigChanged()

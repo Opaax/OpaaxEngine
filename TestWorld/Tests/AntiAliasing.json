@@ -312,6 +312,157 @@
         }
     },
     {
+        "id": "scale-2",
+        "command": "config.set",
+        "params": {
+            "config": "Renderer",
+            "values": {
+                "Multisampling": "Off",
+                "bFXAA": false,
+                "RenderScale": 2.0
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "AntiAliasing-Scale2-info",
+        "command": "renderer.info",
+        "expect": {
+            "sceneSettings": {
+                "renderScale": 2.0
+            },
+            "views": [
+                {
+                    "lit": false,
+                    "samples": 1,
+                    "sceneTarget": true,
+                    "width": 2560,
+                    "height": 1440
+                }
+            ]
+        }
+    },
+    {
+        "id": "AntiAliasing-Scale2-quad-edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 408,
+            "y": 340,
+            "width": 20,
+            "height": 40
+        },
+        "expect": {
+            "colors": {
+                "$atLeast": 3
+            }
+        }
+    },
+    {
+        "id": "AntiAliasing-Scale2-text",
+        "command": "frame.sample",
+        "params": {
+            "x": 440,
+            "y": 20,
+            "width": 400,
+            "height": 70
+        },
+        "expect": {
+            "colors": {
+                "$atLeast": 150,
+                "$atMost": 300
+            }
+        }
+    },
+    {
+        "id": "AntiAliasing-Scale2-shot",
+        "command": "screenshot",
+        "params": {
+            "path": "AntiAliasing-Scale2.png"
+        }
+    },
+    {
+        "id": "scale-half",
+        "command": "config.set",
+        "params": {
+            "config": "Renderer",
+            "values": {
+                "Multisampling": "Off",
+                "bFXAA": false,
+                "RenderScale": 0.5
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "AntiAliasing-ScaleHalf-info",
+        "command": "renderer.info",
+        "expect": {
+            "sceneSettings": {
+                "renderScale": 0.5
+            },
+            "views": [
+                {
+                    "lit": false,
+                    "samples": 1,
+                    "sceneTarget": true,
+                    "width": 640,
+                    "height": 360
+                }
+            ]
+        }
+    },
+    {
+        "id": "AntiAliasing-ScaleHalf-text",
+        "command": "frame.sample",
+        "params": {
+            "x": 440,
+            "y": 20,
+            "width": 400,
+            "height": 70
+        },
+        "expect": {
+            "colors": {
+                "$atLeast": 150,
+                "$atMost": 300
+            }
+        }
+    },
+    {
+        "id": "AntiAliasing-ScaleHalf-shot",
+        "command": "screenshot",
+        "params": {
+            "path": "AntiAliasing-ScaleHalf.png"
+        }
+    },
+    {
+        "id": "scale-1",
+        "command": "config.set",
+        "params": {
+            "config": "Renderer",
+            "values": {
+                "Multisampling": "Off",
+                "bFXAA": false,
+                "RenderScale": 1.0
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
         "id": "play-AntiAliasingLit",
         "command": "level.play",
         "params": {
@@ -586,6 +737,67 @@
             "values": {
                 "Multisampling": "Off",
                 "bFXAA": false
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "scale-half",
+        "command": "config.set",
+        "params": {
+            "config": "Renderer",
+            "values": {
+                "Multisampling": "Off",
+                "bFXAA": false,
+                "RenderScale": 0.5
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "AntiAliasingLit-ScaleHalf-info",
+        "command": "renderer.info",
+        "expect": {
+            "sceneSettings": {
+                "renderScale": 0.5
+            },
+            "views": [
+                {
+                    "lit": true,
+                    "samples": 1,
+                    "sceneTarget": true,
+                    "width": 640,
+                    "height": 360
+                }
+            ]
+        }
+    },
+    {
+        "id": "AntiAliasingLit-ScaleHalf-shot",
+        "command": "screenshot",
+        "params": {
+            "path": "AntiAliasingLit-ScaleHalf.png"
+        }
+    },
+    {
+        "id": "scale-1",
+        "command": "config.set",
+        "params": {
+            "config": "Renderer",
+            "values": {
+                "Multisampling": "Off",
+                "bFXAA": false,
+                "RenderScale": 1.0
             }
         }
     },

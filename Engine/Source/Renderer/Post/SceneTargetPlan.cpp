@@ -13,6 +13,11 @@ namespace Opaax
         }
     }
 
+    float ClampRenderScale(const float InScale) noexcept
+    {
+        return Maths::IsFinite(InScale) ? Maths::Clamp(InScale, MIN_RENDER_SCALE, MAX_RENDER_SCALE) : 1.f;
+    }
+
     SceneTargetPlan PlanSceneTarget(const Uint32 InWidth, const Uint32 InHeight, const bool bInLit,
                                     const SceneTargetSettings& InSettings, const Uint32 InMaxSamples)
     {
@@ -20,10 +25,7 @@ namespace Opaax
         lPlan.bLit    = bInLit;
         lPlan.Samples = Maths::Clamp(InSettings.Samples, 1u, Maths::Max(InMaxSamples, 1u));
 
-        // A scale that is not a number counts as 1.
-        const float lScale = Maths::IsFinite(InSettings.RenderScale)
-                           ? Maths::Clamp(InSettings.RenderScale, MIN_RENDER_SCALE, MAX_RENDER_SCALE)
-                           : 1.f;
+        const float lScale = ClampRenderScale(InSettings.RenderScale);
 
         lPlan.bFXAATarget  = InSettings.bFXAA;
         lPlan.bSceneTarget = bInLit || lPlan.Samples > 1 || lPlan.bFXAATarget || lScale != 1.f;
