@@ -205,6 +205,28 @@ actions alone. A scroll box's code moves it with `SetScroll` and reads `GetScrol
 While a controls menu waits for a key (`BeginKeyCapture`, [Settings.md](Settings.md#press-a-key)),
 the UI gets no input at all, until the key taken is released.
 
+### Modifiers
+
+A node may hold a `Modifiers` list, after its own fields and before its `Children`: each a `Type`
+(the modifier's class) and its fields, in the order they apply. A node without the key has none, so
+files written before modifiers read as they did, and an older build skips the key.
+
+```json
+{
+    "Type": "UIButton", "Name": "Play",
+    "Modifiers": [
+        { "Type": "UITransitionModifier", "Name": "Feel", "bEnabled": true, "bMovesHitArea": false,
+          "Pivot": { "x": 0.5, "y": 0.5 }, "Preset": "UI/Presets/ButtonFeel.opaaxasset" },
+        { "Type": "UIShadowModifier", "Offset": { "x": 4.0, "y": -4.0 },
+          "Color": { "x": 0.0, "y": 0.0, "z": 0.0, "w": 0.5 } }
+    ],
+    "Children": []
+}
+```
+
+An unknown modifier type is skipped with a warning and the rest loads; a value of the wrong type
+refuses the file, as a widget's does. What each modifier holds: [UIModifiers.md](UIModifiers.md).
+
 ### Sliced art
 
 An image or a button drawn bigger than its art keeps the art's corners and stretches the rest: it is
@@ -358,6 +380,24 @@ converted once by starting the editor with `--upgrade-assets`: each becomes an `
 same name (its class appended when that name is taken), and the paths that named it in levels, maps,
 prefabs, canvases, assets and configs are rewritten. Paths written in game code are not: one that
 still names an old file loads the converted one, with a warning to update it.
+
+## UI presets (`UITransition`, `UITween`)
+
+Two asset classes hold what UI modifiers share, made with New Asset > UI. A **UI Transition**
+(`UITransition`) is what a `UITransitionModifier` names as its `Preset`: `Duration`, `Ease`, and a
+pose for `Hovered`, `Pressed`, `Focused` and `Disabled`. A **UI Tween** (`UITween`) is what a
+`UITweenModifier` names as its `Tween`: `Keys` in time order, each a `Time`, the `Ease` into it and a
+`Pose`, then `Loop` (`Once`, `Loop`, `PingPong`) and `bHoldEnd`. A pose is `Translation`, `Scale`,
+`Rotation` (degrees), `Opacity` and `Tint`; a missing field keeps its rest value.
+
+```json
+{ "Class": "UITween", "Version": 1, "Properties": { "Loop": "Once", "bHoldEnd": true, "Keys": [
+    { "Time": 0.0,  "Ease": "Linear",  "Pose": { "Scale": { "x": 0.8, "y": 0.8 }, "Opacity": 0.0 } },
+    { "Time": 0.18, "Ease": "BackOut", "Pose": { "Scale": { "x": 1.0, "y": 1.0 }, "Opacity": 1.0 } } ] } }
+```
+
+The curves (`EEase`) are `Linear`; `Quad`, `Cubic`, `Sine` and `Back`, each `In`, `Out` and `InOut`
+(`QuadOut`, `BackInOut`...); `ElasticOut` and `BounceOut`.
 
 ## Sound (`AudioClipDef`, `AudioBank`)
 

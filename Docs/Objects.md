@@ -257,6 +257,15 @@ other code. `UIWidget::Create(name, classes)` makes one by class name. A parent 
 `TStrongObjectPtr`; code that keeps a widget it does not own can hold a `TWeakObjectPtr`, which reads
 null once the widget is gone.
 
+## UI modifiers
+
+A widget's modifiers (a transition, a tween, a shadow, an aspect ratio) are objects of `UIModifier`
+subclasses, owned by their widget in the order added. As for widgets, the class is the `Type` a node's
+`Modifiers` list saves and its properties are the fields the file holds and the UI panel draws: a new
+modifier is a class with `OPAAX_OBJECT`, `OPAAX_PROPERTIES` and one `OPAAX_REGISTER_OBJECT` line.
+`UIModifier::Create(name, classes)` makes one by class name. The presets they name, `UITransition` and
+`UITween`, are assets. How they run and how to write one: [UIModifiers.md](UIModifiers.md).
+
 ## Behaviours
 
 A behaviour (gameplay code on an entity) is an object of a `Behaviour` subclass, declared with

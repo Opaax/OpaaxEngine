@@ -94,6 +94,11 @@ another name then renamed), wait for `001.response.json`, repeat; send `app.quit
 - Menus and HUD: `ui.list` names the game UI's widgets (with how many quads each draws, and a
   button's `state`); `ui.click` clicks one by name (no pixel guessing); `ui.hover` points at one,
   then `input.key Mouse_Left press` holds it pressed for a screenshot.
+- UI animation (Docs/UIModifiers.md): `ui.list` also answers each widget's `modifiers` (`playing`),
+  its pose as drawn (`drawn`, `scale`, `rotation`, `alpha`), `interaction` and `hiding`; `ui.tween`,
+  `ui.show`, `ui.hide` drive tweens. Pace the frames (`time.pace`) and check with bounds
+  (`$atLeast`/`$atMost`) mid-motion. In the editor, `ui.modifier.*` edits a selected widget's
+  modifiers and `ui.preview.play` / `ui.preview.hover` run the UI panel's preview.
 - Check with `expect.value` / `expect.count` / `expect.entity`: a script of checks is a test.
   `expect.quit` waits for the game to quit by itself (`QuitGame`). `"expectFailure": true` on a
   request checks a refusal: it passes when the command fails. `"expect": {...}` checks any answer

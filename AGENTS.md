@@ -124,6 +124,12 @@ Match the code around you. In short:
 - **UI widget:** a `UIWidget` subclass with `OPAAX_OBJECT`, its saved fields in `OPAAX_PROPERTIES`, and
   one `OPAAX_REGISTER_OBJECT` line: canvases save it, the UI panel offers and draws it. Made with
   `NewObject<T>()` in code; its parent owns it.
+- **UI modifier:** a `UIModifier` subclass (`UIPoseModifier` for a pose) with `OPAAX_OBJECT`, its fields
+  in `OPAAX_PROPERTIES` (a default on each) and one `OPAAX_REGISTER_OBJECT` line: nodes save it, the UI
+  panel offers it. Override only the hooks of its stages, and invalidate what its result feeds
+  (`InvalidatePose`, `InvalidateOwnerContent`, `InvalidateOwnerLayout`, also from `PostEditChange`);
+  ticked only while woken (`WakeUp`). Its logic in tested pure functions; a TestWorld canvas and
+  script when it shows. See [Docs/UIModifiers.md](Docs/UIModifiers.md).
 - **Asset class:** an `Asset` subclass with `OPAAX_OBJECT` and `OPAAX_PROPERTIES` (a default on every
   field), one `OPAAX_REGISTER_OBJECT` line, unit tests for its file round trip and its hooks
   (`PostEditChange`). In the editor, an `AssetTypes()` entry for its label, category and glyph; an
