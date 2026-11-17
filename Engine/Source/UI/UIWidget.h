@@ -13,6 +13,7 @@
 #include "UI/UIEvents.h"
 #include "UI/UIAssetProvider.h"
 #include "UI/UIModifier.h"
+#include "UI/UIPose.h"
 #include "UI/UIQuad.h"
 #include "UI/UIRect.h"
 
@@ -196,12 +197,25 @@ namespace Opaax
         /** My quads must be rebuilt (the rect is unchanged). */
         void InvalidateContent();
 
+        /** My poses must be composed again (a pose modifier changed); layout and quads are kept. */
+        void InvalidatePose();
+
         // =============================================================================
         // Resolved state (from the last canvas Update)
         // =============================================================================
     public:
+        /** My layout rect, in canvas units. Poses do not change it. */
         const Bounds2D&          GetBounds() const noexcept { return m_Bounds; }
         const TDynArray<UIQuad>& GetQuads()  const noexcept { return m_Quads; }
+
+        /** My own poses composed (my parents' not included). */
+        const UIComposedPose&    GetPose()   const noexcept { return m_Pose; }
+
+        /** Where I am drawn: my parents' poses, then mine, in canvas space. Identity when nothing is posed. */
+        Affine2D GetDrawTransform() const noexcept;
+
+        /** The opacity I am drawn with: every Opacity and pose opacity from the root down to me. */
+        float GetDrawnOpacity() const noexcept;
 
         // =============================================================================
         // Leaf contract
@@ -255,6 +269,9 @@ namespace Opaax
         void MarkSubtreeUp();
         void SetCanvasRecursive(UICanvas* InCanvas);
 
+        /** m_Pose from my enabled pose modifiers, about pivots in my current bounds. */
+        void ComposePose();
+
         // =============================================================================
         // Members
         // =============================================================================
@@ -266,9 +283,13 @@ namespace Opaax
 
         Bounds2D           m_Bounds;
         TDynArray<UIQuad>  m_Quads;
+        UIComposedPose     m_Pose;
 
         bool m_bLayoutDirty  = true;
         bool m_bContentDirty = true;
         bool m_bSubtreeDirty = false;
+        bool m_bPoseDirty    = false;
+        /** Set while I am destroyed: my modifiers' detach must not reach my parents. */
+        bool m_bDestroying   = false;
     };
 }

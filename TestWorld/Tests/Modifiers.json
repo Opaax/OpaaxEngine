@@ -1,0 +1,141 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Modifiers.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.2
+        }
+    },
+    {
+        "id": "mounted",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "UIProbe/bMounted",
+            "equals": true
+        }
+    },
+    {
+        "id": "plain-at-rest",
+        "command": "ui.list",
+        "params": {
+            "name": "Plain"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "Plain",
+                    "width": { "$atLeast": 133.23, "$atMost": 133.43 },
+                    "rotation": 0.0,
+                    "scale": { "x": 1.0, "y": 1.0 },
+                    "alpha": 1.0,
+                    "drawn": { "width": { "$atLeast": 133.23, "$atMost": 133.43 }, "height": { "$atLeast": 133.23, "$atMost": 133.43 } }
+                }
+            ]
+        }
+    },
+    {
+        "id": "turned-30",
+        "command": "ui.list",
+        "params": {
+            "name": "Turned"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "Turned",
+                    "width": { "$atLeast": 133.23, "$atMost": 133.43 },
+                    "rotation": { "$atLeast": 29.99, "$atMost": 30.01 },
+                    "modifiers": [ { "class": "UITransformModifier", "name": "Turn", "enabled": true } ],
+                    "drawn": { "width": { "$atLeast": 182.04, "$atMost": 182.24 } }
+                }
+            ]
+        }
+    },
+    {
+        "id": "text-grows-right",
+        "command": "ui.list",
+        "params": {
+            "name": "BigText"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "BigText",
+                    "width": { "$atLeast": 239.90, "$atMost": 240.10 },
+                    "x": { "$atLeast": 306.57, "$atMost": 306.77 },
+                    "scale": { "x": 1.5, "y": 1.5 },
+                    "drawn": {
+                        "width": { "$atLeast": 359.90, "$atMost": 360.10 },
+                        "x": { "$atLeast": 366.57, "$atMost": 366.77 }
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "id": "child-fades-with-panel",
+        "command": "ui.list",
+        "params": {
+            "name": "FadedChild"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "FadedChild",
+                    "alpha": 0.5
+                }
+            ]
+        }
+    },
+    {
+        "id": "masked-bar-turns-with-mask",
+        "command": "ui.list",
+        "params": {
+            "name": "MaskedBar"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "MaskedBar",
+                    "rotation": { "$atLeast": 19.99, "$atMost": 20.01 }
+                }
+            ]
+        }
+    },
+    {
+        "id": "moved-300-right",
+        "command": "ui.list",
+        "params": {
+            "name": "Moved"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "Moved",
+                    "x": { "$atLeast": 706.57, "$atMost": 706.77 },
+                    "drawn": { "x": { "$atLeast": 906.57, "$atMost": 906.77 } }
+                }
+            ]
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "Modifiers.png"
+        }
+    }
+]

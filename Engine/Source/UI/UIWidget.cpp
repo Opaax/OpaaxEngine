@@ -10,6 +10,7 @@ namespace Opaax
 {
     UIWidget::~UIWidget()
     {
+        m_bDestroying = true;
         for (const TStrongObjectPtr<UIModifier>& lModifier : m_Modifiers)
         {
             lModifier->OnDetach();
@@ -197,6 +198,7 @@ namespace Opaax
     {
         m_bLayoutDirty  = true;
         m_bContentDirty = true;
+        m_bPoseDirty    = m_bPoseDirty || !m_Modifiers.empty();   // the editor's way to say a modifier was edited
         MarkSubtreeUp();
 
         // Up through every ancestor whose layout depends on its children (containers).
@@ -211,6 +213,66 @@ namespace Opaax
     {
         m_bContentDirty = true;
         MarkSubtreeUp();
+    }
+
+    void UIWidget::InvalidatePose()
+    {
+        if (m_bDestroying)
+        {
+            return;
+        }
+
+        m_bPoseDirty = true;
+        MarkSubtreeUp();
+    }
+
+    // =============================================================================
+    // Poses
+    // =============================================================================
+
+    void UIWidget::ComposePose()
+    {
+        m_Pose = UIComposedPose{};
+
+        for (const TStrongObjectPtr<UIModifier>& lModifier : m_Modifiers)
+        {
+            const UIPoseModifier* lPoser = Cast<UIPoseModifier>(lModifier.Get());
+
+            UIPose lPose;
+            if (lPoser == nullptr || !lPoser->bEnabled || !lPoser->GetPose(lPose))
+            {
+                continue;
+            }
+
+            const Vector2F lMin   = m_Bounds.Min();
+            const Vector2F lSize  = m_Bounds.Size();
+            const Vector2F lPivot = { lMin.x + lPoser->Pivot.x * lSize.x, lMin.y + lPoser->Pivot.y * lSize.y };
+            const Affine2D lStep  = Affine2D::FromPose(lPose.Translation, lPose.Rotation, lPose.Scale, lPivot);
+
+            // On top of the earlier ones: applied after them.
+            m_Pose.Draw = lStep * m_Pose.Draw;
+            if (lPoser->bMovesHitArea)
+            {
+                m_Pose.Hit = lStep * m_Pose.Hit;
+            }
+
+            m_Pose.Opacity *= lPose.Opacity;
+            m_Pose.Tint     = { m_Pose.Tint.x * lPose.Tint.r, m_Pose.Tint.y * lPose.Tint.g,
+                                m_Pose.Tint.z * lPose.Tint.b, m_Pose.Tint.w * lPose.Tint.a };
+            m_Pose.bRest    = false;
+        }
+    }
+
+    Affine2D UIWidget::GetDrawTransform() const noexcept
+    {
+        const Affine2D lParent = m_Parent != nullptr ? m_Parent->GetDrawTransform() : Affine2D::Identity();
+        return m_Pose.bRest ? lParent : lParent * m_Pose.Draw;
+    }
+
+    float UIWidget::GetDrawnOpacity() const noexcept
+    {
+        const float lParent = m_Parent != nullptr ? m_Parent->GetDrawnOpacity() : 1.f;
+        return lParent * Opacity * m_Pose.Opacity;
     }
 
     void UIWidget::MarkSubtreeUp()
@@ -233,10 +295,12 @@ namespace Opaax
         const bool lLayout  = m_bLayoutDirty || bInParentChanged;
         bool       lContent = m_bContentDirty;
         const bool lSubtree = m_bSubtreeDirty;
+        const bool lPose    = m_bPoseDirty;
 
         m_bLayoutDirty  = false;
         m_bContentDirty = false;
         m_bSubtreeDirty = false;
+        m_bPoseDirty    = false;
 
         bool lChanged = false;
 
@@ -250,6 +314,12 @@ namespace Opaax
             lChanged = lBounds.Center != m_Bounds.Center || lBounds.HalfExtent != m_Bounds.HalfExtent;
             m_Bounds = lBounds;
             lContent = lContent || lChanged;
+        }
+
+        // Pivots are points of the layout rect: a moved rect moves them.
+        if (lPose || (lChanged && !m_Modifiers.empty()))
+        {
+            ComposePose();
         }
 
         if (lContent)

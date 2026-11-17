@@ -20,8 +20,17 @@ namespace Opaax
     {
         const UIQuad*   Quad  = nullptr;   // not owned
         const UIWidget* Mask  = nullptr;   // nearest ancestor that clips its children (a mask, a scroll box), or null
-        float           Alpha = 1.f;       // ancestors' opacity times the widget's own
+        float           Alpha = 1.f;       // ancestors' opacity times the widget's own, poses included
         Int16           Order = 0;         // tree order
+
+        // The quad as drawn: its widget's and its parents' poses applied. The quad's own values when
+        // nothing is posed.
+        Vector2F Center   = { 0.f, 0.f };
+        Vector2F Size     = { 0.f, 0.f };
+        float    Rotation = 0.f;                      // radians, counter-clockwise
+        Vector4F Color    = { 1.f, 1.f, 1.f, 1.f };   // the quad's colour times the tints, its alpha times Alpha
+        /** The posed mask's box (its bounding box when turned); empty without a mask. */
+        Bounds2D MaskRect;
     };
 
     /** What one Update did. Zero on an idle frame. */
