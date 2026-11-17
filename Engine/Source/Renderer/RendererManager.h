@@ -215,6 +215,7 @@ namespace Opaax
         FontFaceView     ResolveFace(const char* InAssetPath) override;
         ITexture2D*      ResolveTexture(const char* InAssetPath) override;
         UISheetFrameView ResolveSheetFrame(const char* InSheetPath, Int32 InFrame) override;
+        const Asset*     ResolveAsset(const char* InAssetPath) override;
 
         /**
          * The font family InRef names. Loaded once and cached. Null for an empty reference.
@@ -461,6 +462,9 @@ namespace Opaax
 
         /** Sprite sheets by path, kept for the session (a saved sheet reloads in place). */
         TUnorderedMap<Uint32, TAssetHandle<SpriteSheet>> m_SheetCache;
+
+        /** The UI's other assets by path (modifier presets), kept for the session (a saved one reloads in place). */
+        TUnorderedMap<Uint32, TAssetHandle<Asset>> m_UIAssetCache;
 
         /** Materials by path, kept for the session (a saved material reloads in place). */
         TUnorderedMap<Uint32, TAssetHandle<Material2D>> m_MaterialCache;

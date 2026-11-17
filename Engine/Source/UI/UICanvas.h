@@ -152,6 +152,9 @@ namespace Opaax
         /** How many modifiers the next Tick runs (none on an idle canvas). */
         Uint64 GetAwakeCount() const noexcept { return m_Awake.size(); }
 
+        /** The asset provider of the last Update (modifiers resolve their presets with it), or null. */
+        IUIAssetProvider* GetAssets() const noexcept { return m_Assets; }
+
         // =============================================================================
         // Members
         // =============================================================================
@@ -194,6 +197,9 @@ namespace Opaax
         UIWidget*        m_Pressed      = nullptr;   // captured between Down and Up
         EUIPointerButton m_PressButton  = EUIPointerButton::None;
         UIWidget*        m_Focused      = nullptr;
+
+        /** From the last Update's context: not owned. */
+        IUIAssetProvider* m_Assets = nullptr;
 
         /** The modifiers the next Tick runs. Weak: a destroyed one is skipped. */
         TDynArray<TWeakObjectPtr<UIModifier>> m_Awake;

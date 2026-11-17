@@ -1,6 +1,7 @@
 // The UI module's types. Each registers itself; see Engine/Registries/AutoRegistration.h.
 #include "Engine/Registries/AutoRegistration.h"
 #include "Renderer/Textures/SpriteSheet.h"   // completes the widgets' sheet references
+#include "UI/Animation/UITransition.h"
 #include "UI/Modifiers/UITransformModifier.h"
 #include "UI/Modifiers/UITransitionModifier.h"
 #include "UI/UICanvasAsset.h"
@@ -32,6 +33,9 @@ namespace Opaax
 
     // A pose per interaction state (hovered, pressed...), eased to when the state changes.
     OPAAX_REGISTER_OBJECT(UITransitionModifier);
+
+    // A transition's values as a preset asset, shared by the modifiers that name it.
+    OPAAX_REGISTER_OBJECT(UITransition);
 
     // Masks its children: white shows, black hides.
     OPAAX_REGISTER_OBJECT(UIMask);
