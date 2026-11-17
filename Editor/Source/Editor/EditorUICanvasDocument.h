@@ -32,7 +32,8 @@ namespace Opaax::Editor
         // Ctor
         // =============================================================================
     public:
-        EditorUICanvasDocument() = default;
+        /** Its canvas is not ticked: tweens that play on show do not start in the editor. */
+        EditorUICanvasDocument() { m_Canvas.SetTicked(false); }
 
         EditorUICanvasDocument(const EditorUICanvasDocument&)            = delete;
         EditorUICanvasDocument& operator=(const EditorUICanvasDocument&) = delete;

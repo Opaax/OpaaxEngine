@@ -31,4 +31,18 @@ namespace Opaax
             m_Owner->GetCanvas()->AddAwake(*this);
         }
     }
+
+    void UIModifier::Sleep()
+    {
+        if (!m_bAwake)
+        {
+            return;
+        }
+
+        m_bAwake = false;
+        if (m_Owner != nullptr && m_Owner->GetCanvas() != nullptr)
+        {
+            m_Owner->GetCanvas()->RemoveAwake(*this);
+        }
+    }
 }

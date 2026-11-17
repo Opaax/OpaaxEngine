@@ -68,6 +68,7 @@
                     "Asset": "UI/Modifiers.opaaxui",
                     "HitOffClicks": 0,
                     "HitOnClicks": 0,
+                    "TweensFinished": 0,
                     "bMounted": false
                 },
                 "Transform": {

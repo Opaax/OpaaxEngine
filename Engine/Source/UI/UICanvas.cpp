@@ -457,6 +457,18 @@ namespace Opaax
         m_Awake.push_back(TWeakObjectPtr<UIModifier>(&InModifier));
     }
 
+    void UICanvas::RemoveAwake(const UIModifier& InModifier)
+    {
+        for (auto lIt = m_Awake.begin(); lIt != m_Awake.end(); ++lIt)
+        {
+            if (lIt->Get() == &InModifier)
+            {
+                m_Awake.erase(lIt);
+                return;
+            }
+        }
+    }
+
     UICanvas::InteractionSnapshot UICanvas::SnapshotInteraction() const noexcept
     {
         return InteractionSnapshot{ m_Hovered, m_Pressed, m_Focused };

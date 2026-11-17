@@ -41,6 +41,7 @@
 #include "Renderer/RendererInfo.h"
 #include "Renderer/Camera/CameraShakeSourceComponent.h"
 #include "Renderer/Camera/CameraShakeSubsystem.h"
+#include "UI/Modifiers/UITweenModifier.h"
 #include "UI/UIButtonBase.h"
 #include "UI/UICanvas.h"
 #include "UI/UISubsystem.h"
@@ -159,7 +160,8 @@ namespace Opaax::EngineAutomation
                     {
                         lModifiers.push_back({ { "class",   lModifier->GetClass().GetName().CStr() },
                                                { "name",    lModifier->Name },   // empty when unnamed
-                                               { "enabled", lModifier->bEnabled } });
+                                               { "enabled", lModifier->bEnabled },
+                                               { "playing", lModifier->IsAwake() } });
                     }
                     lRow["modifiers"] = Move(lModifiers);
                 }
@@ -681,6 +683,41 @@ namespace Opaax::EngineAutomation
                     }
                     return AutomationResult::Ok(nlohmann::json{
                         { "widgets", DescribeWidgets(*lCanvas, InParams.value("name", OpaaxString())) } });
+                });
+
+            InCommands.Add(CommandSpec("ui.tween",
+                "Plays the tween modifier named {tween} on the game UI's widget named {widget} from its start, or "
+                "stops it with {stop}: true. Answers whether it {playing}.")
+                    .Param("widget", ECommandParamType::String, "the widget's name")
+                    .Param("tween", ECommandParamType::String, "the tween modifier's name")
+                    .Param("stop", ECommandParamType::Bool, "stop it instead (false)").Optional(),
+                [&InEngine](const nlohmann::json& InParams)
+                {
+                    OpaaxString     lError;
+                    UICanvas* const lCanvas = GameCanvas(InEngine, lError);
+                    if (lCanvas == nullptr)
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    const OpaaxString lWidgetName = InParams.value("widget", OpaaxString());
+                    UIWidget* const   lWidget     = lWidgetName.IsEmpty() ? nullptr : lCanvas->Root().FindByName(lWidgetName);
+                    if (lWidget == nullptr)
+                    {
+                        return AutomationResult::Fail("no widget named '" + lWidgetName + "' in the game's UI (ui.list lists them)");
+                    }
+
+                    const OpaaxString      lTweenName = InParams.value("tween", OpaaxString());
+                    UITweenModifier* const lTween     = lWidget->FindModifier<UITweenModifier>(OpaaxStringID(lTweenName));
+                    if (lTween == nullptr)
+                    {
+                        return AutomationResult::Fail("'" + lWidgetName + "' has no tween modifier named '" + lTweenName
+                                                      + "' (ui.list answers its modifiers)");
+                    }
+
+                    if (InParams.value("stop", false)) { lTween->Stop(); }
+                    else                               { lTween->Play(); }
+                    return AutomationResult::Ok(nlohmann::json{ { "playing", lTween->IsPlaying() } });
                 });
 
             InCommands.Add(CommandSpec("ui.click",

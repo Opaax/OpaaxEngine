@@ -197,6 +197,15 @@ namespace Opaax
         return EUIInteractionState::Normal;
     }
 
+    bool UIWidget::IsShownInTree() const noexcept
+    {
+        for (const UIWidget* lNode = this; lNode != nullptr; lNode = lNode->m_Parent)
+        {
+            if (!lNode->bVisible) { return false; }
+        }
+        return true;
+    }
+
     void UIWidget::NotifyStateChanged()
     {
         const EUIInteractionState lNow = GetInteractionState();
@@ -252,12 +261,15 @@ namespace Opaax
     {
         m_Canvas = InCanvas;
 
-        // Modifiers woken while out of a canvas start ticking in this one.
+        // Modifiers woken while out of a canvas start ticking in this one; joining a ticked canvas
+        // shown, I am shown.
         if (m_Canvas != nullptr)
         {
+            const bool bShown = m_Canvas->IsTicked() && IsShownInTree();
             for (const TStrongObjectPtr<UIModifier>& lModifier : m_Modifiers)
             {
                 if (lModifier->m_bAwake) { m_Canvas->AddAwake(*lModifier); }
+                if (bShown)              { lModifier->OnShow(); }
             }
         }
 

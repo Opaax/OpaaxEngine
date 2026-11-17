@@ -88,6 +88,12 @@ namespace Opaax
         /** I am leaving GetOwner()'s list (removed, or the widget is destroyed); GetOwner() is still set. */
         virtual void OnDetach() {}
 
+        /**
+         * My owner was shown: it joined a canvas the game ticks, shown (an editor's document is not
+         * ticked: nothing plays there until its preview does).
+         */
+        virtual void OnShow() {}
+
         /** My owner's interaction state changed (UIWidget::GetInteractionState). */
         virtual void OnStateChanged(EUIInteractionState InFrom, EUIInteractionState InTo) { (void)InFrom; (void)InTo; }
 
@@ -100,6 +106,9 @@ namespace Opaax
 
         /** Ticked from the next Tick of my owner's canvas (from when I join one, if I am in none). */
         void WakeUp();
+
+        /** Not ticked any more, from now (Tick answering false does the same at its end). */
+        void Sleep();
 
     private:
         UIWidget* m_Owner  = nullptr;   // not owned: it owns me
