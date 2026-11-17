@@ -189,6 +189,9 @@ namespace Opaax
         /** Works my state out again and tells my modifiers if it changed. Called when IsInteractable changes. */
         void NotifyStateChanged();
 
+        /** Whether I and every parent have bVisible on. */
+        bool IsShownInTree() const noexcept;
+
         // =============================================================================
         // Input — override to handle an event; the default lets it bubble
         // =============================================================================

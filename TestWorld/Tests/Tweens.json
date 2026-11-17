@@ -1,0 +1,329 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Modifiers.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 1.0
+        }
+    },
+    {
+        "id": "mounted",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "ModifierProbe/bMounted",
+            "equals": true
+        }
+    },
+    {
+        "id": "shown-tweens-finished",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "ModifierProbe/TweensFinished",
+            "equals": 4
+        }
+    },
+    {
+        "id": "popup-in",
+        "command": "ui.list",
+        "params": {
+            "name": "Popup"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "alpha": {
+                        "$atLeast": 0.999,
+                        "$atMost": 1.001
+                    },
+                    "scale": {
+                        "x": {
+                            "$atLeast": 0.999,
+                            "$atMost": 1.001
+                        }
+                    },
+                    "name": "Popup"
+                }
+            ]
+        }
+    },
+    {
+        "id": "last-row-in",
+        "command": "ui.list",
+        "params": {
+            "name": "Row3"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "alpha": {
+                        "$atLeast": 0.999,
+                        "$atMost": 1.001
+                    },
+                    "name": "Row3"
+                }
+            ]
+        }
+    },
+    {
+        "id": "badge-pulses",
+        "command": "ui.list",
+        "params": {
+            "name": "Badge"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "modifiers": [
+                        {
+                            "name": "Pulse",
+                            "playing": true
+                        }
+                    ],
+                    "name": "Badge"
+                }
+            ]
+        }
+    },
+    {
+        "id": "label-waits",
+        "command": "ui.list",
+        "params": {
+            "name": "ShakeLabel"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "modifiers": [
+                        {
+                            "name": "Shake",
+                            "playing": false
+                        }
+                    ],
+                    "name": "ShakeLabel"
+                }
+            ]
+        }
+    },
+    {
+        "repeat": [
+            {
+                "tag": "60",
+                "pacing": "60",
+                "settle": 60,
+                "shakeMid": 3,
+                "afterPop": 5,
+                "afterShake": 6
+            },
+            {
+                "tag": "240",
+                "pacing": "240",
+                "settle": 240,
+                "shakeMid": 12,
+                "afterPop": 7,
+                "afterShake": 8
+            }
+        ],
+        "requests": [
+            {
+                "command": "time.pace",
+                "params": {
+                    "pacing": "{pacing}"
+                }
+            },
+            {
+                "command": "frames.wait",
+                "params": {
+                    "count": 2
+                }
+            },
+            {
+                "id": "popin-{tag}",
+                "command": "ui.tween",
+                "params": {
+                    "widget": "Popup",
+                    "tween": "PopIn"
+                },
+                "expect": {
+                    "playing": true
+                }
+            },
+            {
+                "command": "frames.wait",
+                "params": {
+                    "count": 2
+                }
+            },
+            {
+                "id": "popin-early-{tag}",
+                "command": "ui.list",
+                "params": {
+                    "name": "Popup"
+                },
+                "expect": {
+                    "widgets": [
+                        {
+                            "alpha": {
+                                "$atLeast": 0.01,
+                                "$atMost": 0.95
+                            },
+                            "name": "Popup"
+                        }
+                    ]
+                }
+            },
+            {
+                "id": "screenshot-popin-{tag}",
+                "command": "screenshot",
+                "params": {
+                    "path": "TweenPopIn{tag}.png"
+                }
+            },
+            {
+                "command": "frames.wait",
+                "params": {
+                    "count": "{settle}"
+                }
+            },
+            {
+                "id": "popin-done-{tag}",
+                "command": "ui.list",
+                "params": {
+                    "name": "Popup"
+                },
+                "expect": {
+                    "widgets": [
+                        {
+                            "alpha": {
+                                "$atLeast": 0.999,
+                                "$atMost": 1.001
+                            },
+                            "scale": {
+                                "x": {
+                                    "$atLeast": 0.999,
+                                    "$atMost": 1.001
+                                }
+                            },
+                            "modifiers": [
+                                {
+                                    "name": "PopIn",
+                                    "playing": false
+                                }
+                            ],
+                            "name": "Popup"
+                        }
+                    ]
+                }
+            },
+            {
+                "id": "popin-finished-{tag}",
+                "command": "expect.value",
+                "params": {
+                    "entity": "Hud",
+                    "path": "ModifierProbe/TweensFinished",
+                    "equals": "{afterPop}"
+                }
+            },
+            {
+                "id": "shake-{tag}",
+                "command": "ui.tween",
+                "params": {
+                    "widget": "ShakeLabel",
+                    "tween": "Shake"
+                }
+            },
+            {
+                "command": "frames.wait",
+                "params": {
+                    "count": "{shakeMid}"
+                }
+            },
+            {
+                "id": "shaking-{tag}",
+                "command": "ui.list",
+                "params": {
+                    "name": "ShakeLabel"
+                },
+                "expect": {
+                    "widgets": [
+                        {
+                            "drawn": {
+                                "x": {
+                                    "$atMost": 1012.333
+                                }
+                            },
+                            "modifiers": [
+                                {
+                                    "name": "Shake",
+                                    "playing": true
+                                }
+                            ],
+                            "name": "ShakeLabel"
+                        }
+                    ]
+                }
+            },
+            {
+                "command": "frames.wait",
+                "params": {
+                    "count": "{settle}"
+                }
+            },
+            {
+                "id": "shaken-{tag}",
+                "command": "ui.list",
+                "params": {
+                    "name": "ShakeLabel"
+                },
+                "expect": {
+                    "widgets": [
+                        {
+                            "drawn": {
+                                "x": {
+                                    "$atLeast": 1013.233,
+                                    "$atMost": 1013.433
+                                }
+                            },
+                            "modifiers": [
+                                {
+                                    "name": "Shake",
+                                    "playing": false
+                                }
+                            ],
+                            "name": "ShakeLabel"
+                        }
+                    ]
+                }
+            },
+            {
+                "id": "shake-finished-{tag}",
+                "command": "expect.value",
+                "params": {
+                    "entity": "Hud",
+                    "path": "ModifierProbe/TweensFinished",
+                    "equals": "{afterShake}"
+                }
+            }
+        ]
+    },
+    {
+        "id": "screenshot-settled",
+        "command": "screenshot",
+        "params": {
+            "path": "Tweens.png"
+        }
+    },
+    {
+        "command": "time.pace",
+        "params": {
+            "pacing": "off"
+        }
+    }
+]

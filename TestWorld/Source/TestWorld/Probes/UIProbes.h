@@ -4,6 +4,7 @@
 #include "Input/InputKeyNames.h"
 #include "Input/Mapping/InputMappingSubsystem.h"
 #include "UI/UIBinding.h"
+#include "UI/Modifiers/UITweenModifier.h"
 #include "UI/UISubsystem.h"
 #include "UI/Widgets/UIButton.h"
 #include "UI/Widgets/UIScrollBox.h"
@@ -211,8 +212,9 @@ namespace TestWorld
     };
 
     // =============================================================================
-    // ModifierProbe — mounts the canvas Asset (UI/Modifiers.opaaxui) while it lives, and counts the clicks
-    //   on its two moved buttons: HitOn's pose moves its hit area with it, HitOff's does not.
+    // ModifierProbe — mounts the canvas Asset (UI/Modifiers.opaaxui) while it lives, counts the clicks
+    //   on its two moved buttons (HitOn's pose moves its hit area with it, HitOff's does not) and the
+    //   tweens that reach their end (OnFinished of every tween modifier in the canvas).
     // =============================================================================
     class ModifierProbe : public Opaax::Behaviour
     {
@@ -221,12 +223,13 @@ namespace TestWorld
     public:
         Opaax::OpaaxString Asset = "UI/Modifiers.opaaxui";
 
-        bool         bMounted     = false;
-        Opaax::Int32 HitOnClicks  = 0;
-        Opaax::Int32 HitOffClicks = 0;
+        bool         bMounted       = false;
+        Opaax::Int32 HitOnClicks    = 0;
+        Opaax::Int32 HitOffClicks   = 0;
+        Opaax::Int32 TweensFinished = 0;
 
         OPAAX_PROPERTIES(ModifierProbe, OPAAX_PROP(Asset), OPAAX_PROP(bMounted), OPAAX_PROP(HitOnClicks),
-                         OPAAX_PROP(HitOffClicks))
+                         OPAAX_PROP(HitOffClicks), OPAAX_PROP(TweensFinished))
 
         void OnStart() override
         {
@@ -242,6 +245,8 @@ namespace TestWorld
             {
                 return;
             }
+
+            BindTweens(*m_Tree);
 
             if (auto* lOn = dynamic_cast<Opaax::UIButton*>(m_Tree->FindByName(Opaax::OpaaxString("HitOn"))))
             {
@@ -266,6 +271,23 @@ namespace TestWorld
     private:
         void OnHitOn()  { ++HitOnClicks; }
         void OnHitOff() { ++HitOffClicks; }
+        void OnTweenFinished() { ++TweensFinished; }
+
+        /** Hears every tween modifier under InWidget. The mount already played the Show ones: they finish later. */
+        void BindTweens(Opaax::UIWidget& InWidget)
+        {
+            for (const Opaax::TStrongObjectPtr<Opaax::UIModifier>& lModifier : InWidget.GetModifiers())
+            {
+                if (auto* lTween = Opaax::Cast<Opaax::UITweenModifier>(lModifier.Get()))
+                {
+                    lTween->OnFinished.AddMember(this, &ModifierProbe::OnTweenFinished);
+                }
+            }
+            for (const Opaax::TStrongObjectPtr<Opaax::UIWidget>& lChild : InWidget.GetChildren())
+            {
+                BindTweens(*lChild);
+            }
+        }
 
         Opaax::UIWidget* m_Tree = nullptr;   // owned by the game's canvas
     };

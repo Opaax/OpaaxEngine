@@ -152,6 +152,13 @@ namespace Opaax
         /** How many modifiers the next Tick runs (none on an idle canvas). */
         Uint64 GetAwakeCount() const noexcept { return m_Awake.size(); }
 
+        /**
+         * Whether the host ticks this canvas (a game does; the editor's document does only while its
+         * preview plays). Widgets joining a ticked canvas are shown: their Show tweens play.
+         */
+        bool IsTicked() const noexcept { return m_bTicked; }
+        void SetTicked(bool bInTicked) noexcept { m_bTicked = bInTicked; }
+
         /** The asset provider of the last Update (modifiers resolve their presets with it), or null. */
         IUIAssetProvider* GetAssets() const noexcept { return m_Assets; }
 
@@ -170,6 +177,9 @@ namespace Opaax
 
         /** Ticked from the next Tick (once, whatever how many times it is woken). */
         void AddAwake(UIModifier& InModifier);
+
+        /** Not ticked any more. */
+        void RemoveAwake(const UIModifier& InModifier);
 
         struct InteractionSnapshot
         {
@@ -197,6 +207,8 @@ namespace Opaax
         UIWidget*        m_Pressed      = nullptr;   // captured between Down and Up
         EUIPointerButton m_PressButton  = EUIPointerButton::None;
         UIWidget*        m_Focused      = nullptr;
+
+        bool m_bTicked = true;
 
         /** From the last Update's context: not owned. */
         IUIAssetProvider* m_Assets = nullptr;

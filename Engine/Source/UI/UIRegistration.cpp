@@ -5,6 +5,7 @@
 #include "UI/Animation/UITween.h"
 #include "UI/Modifiers/UITransformModifier.h"
 #include "UI/Modifiers/UITransitionModifier.h"
+#include "UI/Modifiers/UITweenModifier.h"
 #include "UI/UICanvasAsset.h"
 #include "UI/UISubsystem.h"
 #include "UI/Widgets/UIButton.h"
@@ -40,6 +41,9 @@ namespace Opaax
 
     // Keyed poses over time as a preset asset: a pop-in, a fade, a pulse, a shake.
     OPAAX_REGISTER_OBJECT(UITween);
+
+    // Plays a tween on its widget: on show, on hide, or when asked.
+    OPAAX_REGISTER_OBJECT(UITweenModifier);
 
     // Masks its children: white shows, black hides.
     OPAAX_REGISTER_OBJECT(UIMask);

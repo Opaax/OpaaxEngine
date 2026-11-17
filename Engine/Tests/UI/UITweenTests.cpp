@@ -7,6 +7,10 @@
 #include "Object/ObjectClassRegistry.h"
 #include "Resources/Asset/AssetFile.h"
 #include "UI/Animation/UITween.h"
+#include "UI/Modifiers/UITweenModifier.h"
+#include "UI/UICanvas.h"
+#include "UI/Widgets/UIImage.h"
+#include "UI/Widgets/UIPanel.h"
 
 using namespace Opaax;
 
@@ -159,4 +163,188 @@ TEST_CASE("UITween asset: save then load round-trips every field; edited keys ar
 
     bool lFinished = false;
     CHECK(SampleTween(lEdited, 0.25f, lFinished).Scale.x == doctest::Approx(2.5f));
+}
+
+// =============================================================================
+// The tween modifier
+// =============================================================================
+
+namespace
+{
+    /** A canvas and an image with a tween modifier; frames ticked then drawn. */
+    struct TweenFixture
+    {
+        UICanvas         Canvas{ 1080.f };
+        UIWidget*        Image = nullptr;
+        UITweenModifier* Tween = nullptr;
+        Int32            Finished = 0;
+
+        TweenFixture()
+        {
+            Canvas.SetTargetSize(1920, 1080);
+            Image = Canvas.Root().AddChild(NewObject<UIImage>());
+            UIRect lRect;
+            lRect.SizeDelta = { 100.f, 100.f };
+            Image->SetRect(lRect);
+
+            Tween = &Image->AddModifier<UITweenModifier>();
+            Tween->Keys = Grow();   // 0.5 at 0.1 s, 1 at 0.3 s
+            Tween->OnFinished.Add([this]() { ++Finished; });
+            Canvas.Update();
+        }
+
+        void Run(const float InSeconds, const float InHz = 60.f)
+        {
+            const Int32 lFrames = static_cast<Int32>(InSeconds * InHz + 0.5f);
+            for (Int32 lFrame = 0; lFrame < lFrames; ++lFrame)
+            {
+                Canvas.Tick(1.f / InHz);
+                Canvas.Update();
+            }
+        }
+
+        float Scale()
+        {
+            Canvas.Update();
+            return Image->GetDrawTransform().Decompose().Scale.x;
+        }
+    };
+}
+
+TEST_CASE("UITweenModifier: Play starts at the first key, at once")
+{
+    TweenFixture lF;
+    CHECK(lF.Scale() == doctest::Approx(1.f));   // not playing: at rest
+    CHECK_FALSE(lF.Tween->IsPlaying());
+
+    lF.Tween->Play();
+    CHECK(lF.Tween->IsPlaying());
+    CHECK(lF.Scale() == doctest::Approx(0.5f));   // before any tick: no flash at full size
+
+    lF.Run(0.2f);
+    CHECK(lF.Scale() == doctest::Approx(0.75f).epsilon(1e-3));
+}
+
+TEST_CASE("UITweenModifier: Delay holds the first key before it moves")
+{
+    TweenFixture lF;
+    lF.Tween->SetDelay(0.2f);
+    lF.Tween->Play();
+
+    lF.Run(0.25f);   // 0.05 s into the keys: still before the first one at 0.1 s
+    CHECK(lF.Scale() == doctest::Approx(0.5f));
+    lF.Run(0.15f);   // 0.2 s into the keys
+    CHECK(lF.Scale() == doctest::Approx(0.75f).epsilon(1e-3));
+}
+
+TEST_CASE("UITweenModifier: OnFinished fires once at the end; the last pose holds; Stop goes to rest and sleeps")
+{
+    TweenFixture lF;
+    lF.Tween->Play();
+    lF.Run(1.f);
+    CHECK(lF.Finished == 1);
+    CHECK_FALSE(lF.Tween->IsPlaying());
+    CHECK(lF.Canvas.GetAwakeCount() == 0u);
+    CHECK(lF.Scale() == doctest::Approx(1.f));   // held: Grow ends at 1
+
+    // Held at a pose that is not the rest pose: Stop puts it back.
+    lF.Tween->Keys[1].Pose.Scale = { 2.f, 2.f };
+    lF.Tween->Play();
+    lF.Run(1.f);
+    CHECK(lF.Finished == 2);
+    CHECK(lF.Scale() == doctest::Approx(2.f));
+    lF.Tween->Stop();
+    CHECK(lF.Scale() == doctest::Approx(1.f));
+
+    // Stopped while playing: at rest, asleep, and no OnFinished.
+    lF.Tween->Play();
+    lF.Run(0.1f);
+    lF.Tween->Stop();
+    CHECK_FALSE(lF.Tween->IsPlaying());
+    CHECK_FALSE(lF.Tween->IsAwake());
+    CHECK(lF.Canvas.GetAwakeCount() == 0u);
+    lF.Run(1.f);
+    CHECK(lF.Finished == 2);
+    CHECK(lF.Scale() == doctest::Approx(1.f));
+}
+
+TEST_CASE("UITweenModifier: a loop never finishes")
+{
+    TweenFixture lF;
+    lF.Tween->Loop = EUILoop::PingPong;
+    lF.Tween->Play();
+    lF.Run(5.f);
+    CHECK(lF.Tween->IsPlaying());
+    CHECK(lF.Finished == 0);
+    CHECK(lF.Canvas.GetAwakeCount() == 1u);
+}
+
+TEST_CASE("UITweenModifier: the same pose at the same moment at 60 and 240 Hz")
+{
+    TweenFixture l60;
+    TweenFixture l240;
+    l60.Tween->Keys[1].Ease  = EEase::BackOut;
+    l240.Tween->Keys[1].Ease = EEase::BackOut;
+    l60.Tween->Play();
+    l240.Tween->Play();
+
+    l60.Run(0.2f, 60.f);
+    l240.Run(0.2f, 240.f);
+    CHECK(l60.Scale() == doctest::Approx(l240.Scale()).epsilon(1e-4));
+}
+
+TEST_CASE("UITweenModifier: a Tween asset's keys win over its own; a Show tween plays when shown on a ticked canvas")
+{
+    TweenFixture lF;
+
+    struct OneTween final : IUIAssetProvider
+    {
+        const Asset* Tween = nullptr;
+        FontFaceView ResolveFace(const char*) override { return {}; }
+        ITexture2D*  ResolveTexture(const char*) override { return nullptr; }
+        const Asset* ResolveAsset(const char* InPath) override
+        {
+            return OpaaxString(InPath) == OpaaxString("UI/PopIn.opaaxasset") ? Tween : nullptr;
+        }
+    };
+
+    TStrongObjectPtr<UITween> lAsset = NewObject<UITween>();
+    lAsset->Keys = { Key(0.f, 3.f), Key(0.1f, 3.f) };
+    OneTween lAssets;
+    lAssets.Tween = lAsset.Get();
+    lF.Canvas.Update(UIBuildContext{ &lAssets });
+
+    lF.Tween->SetTween("UI/PopIn.opaaxasset");
+    CHECK(lF.Tween->GetTween() == lAsset.Get());
+    lF.Tween->Play();
+    lF.Canvas.Update(UIBuildContext{ &lAssets });
+    CHECK(lF.Image->GetDrawTransform().Decompose().Scale.x == doctest::Approx(3.f));
+
+    // A Show tween plays when its widget joins a ticked canvas shown...
+    UICanvas lGame{ 1080.f };
+    auto lPanel = NewObject<UIPanel>();
+    UITweenModifier& lShow = lPanel->AddModifier<UITweenModifier>().SetPlayOn(EUITweenPlay::Show);
+    lShow.Keys = Grow();
+    lGame.Root().AddChild(Move(lPanel));
+    CHECK(lShow.IsPlaying());
+
+    // ...not on a canvas nobody ticks (an editor's document)...
+    UICanvas lDocument{ 1080.f };
+    lDocument.SetTicked(false);
+    auto lOther = NewObject<UIPanel>();
+    UITweenModifier& lStill = lOther->AddModifier<UITweenModifier>().SetPlayOn(EUITweenPlay::Show);
+    lDocument.Root().AddChild(Move(lOther));
+    CHECK_FALSE(lStill.IsPlaying());
+
+    // ...nor hidden; and a Manual one never by itself.
+    auto lHidden = NewObject<UIPanel>();
+    lHidden->bVisible = false;
+    UITweenModifier& lHiddenTween = lHidden->AddModifier<UITweenModifier>().SetPlayOn(EUITweenPlay::Show);
+    lGame.Root().AddChild(Move(lHidden));
+    CHECK_FALSE(lHiddenTween.IsPlaying());
+
+    auto lManual = NewObject<UIPanel>();
+    UITweenModifier& lManualTween = lManual->AddModifier<UITweenModifier>();
+    lGame.Root().AddChild(Move(lManual));
+    CHECK_FALSE(lManualTween.IsPlaying());
 }
