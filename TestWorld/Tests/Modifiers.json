@@ -405,6 +405,64 @@
         }
     },
     {
+        "id": "fitted-16-9",
+        "command": "ui.list",
+        "params": {
+            "name": "Fit169"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "Fit169",
+                    "width": {
+                        "$atLeast": 93.233,
+                        "$atMost": 93.433
+                    },
+                    "height": {
+                        "$atLeast": 52.4,
+                        "$atMost": 52.6
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "id": "row-clamped",
+        "command": "ui.list",
+        "params": {
+            "name": "LimitRow2"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "LimitRow2",
+                    "height": {
+                        "$atLeast": 13.233,
+                        "$atMost": 13.433
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "id": "next-row-moved-up",
+        "command": "ui.list",
+        "params": {
+            "name": "LimitRow3"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "LimitRow3",
+                    "y": {
+                        "$atLeast": 589.9,
+                        "$atMost": 590.1
+                    }
+                }
+            ]
+        }
+    },
+    {
         "id": "screenshot",
         "command": "screenshot",
         "params": {

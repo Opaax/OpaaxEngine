@@ -224,6 +224,7 @@ set(OPAAX_TEST_SOURCES
     UI/UIEventTests.cpp
     UI/UIImageSourceTests.cpp
     UI/UIInputRouterTests.cpp
+    UI/UILayoutModifierTests.cpp
     UI/UIMaskTests.cpp
     UI/UIModifierTests.cpp
     UI/UIPoseTests.cpp

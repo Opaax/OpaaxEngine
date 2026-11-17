@@ -62,7 +62,7 @@ namespace Opaax
         void Arrange(const Bounds2D& InBounds, const TDynArray<Vector2F>& InSizes, float InScroll,
                      TDynArray<Bounds2D>& OutSlots) const;
 
-        /** The desired sizes of InChildren (their Rect.SizeDelta), in order. */
+        /** The desired sizes of InChildren (GetDesiredSize: their Rect.SizeDelta, as their modifiers change it), in order. */
         template<typename TChildren>
         static TDynArray<Vector2F> DesiredSizes(const TChildren& InChildren)
         {
@@ -70,7 +70,7 @@ namespace Opaax
             lSizes.reserve(InChildren.size());
             for (const auto& lChild : InChildren)
             {
-                lSizes.emplace_back(lChild->Rect.SizeDelta);
+                lSizes.emplace_back(lChild->GetDesiredSize());
             }
             return lSizes;
         }

@@ -3,8 +3,10 @@
 #include "Renderer/Textures/SpriteSheet.h"   // completes the widgets' sheet references
 #include "UI/Animation/UITransition.h"
 #include "UI/Animation/UITween.h"
+#include "UI/Modifiers/UIAspectRatioModifier.h"
 #include "UI/Modifiers/UIOutlineModifier.h"
 #include "UI/Modifiers/UIShadowModifier.h"
+#include "UI/Modifiers/UISizeLimitModifier.h"
 #include "UI/Modifiers/UITransformModifier.h"
 #include "UI/Modifiers/UITransitionModifier.h"
 #include "UI/Modifiers/UITweenModifier.h"
@@ -50,6 +52,10 @@ namespace Opaax
     // Quad effects: a drop shadow, and a rim, drawn under the widget's own quads.
     OPAAX_REGISTER_OBJECT(UIShadowModifier);
     OPAAX_REGISTER_OBJECT(UIOutlineModifier);
+
+    // Layout: a rect kept at an aspect ratio, a size kept between limits (stacks reserve the limited size).
+    OPAAX_REGISTER_OBJECT(UIAspectRatioModifier);
+    OPAAX_REGISTER_OBJECT(UISizeLimitModifier);
 
     // Masks its children: white shows, black hides.
     OPAAX_REGISTER_OBJECT(UIMask);
