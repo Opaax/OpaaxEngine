@@ -348,3 +348,152 @@ TEST_CASE("UITweenModifier: a Tween asset's keys win over its own; a Show tween 
     lGame.Root().AddChild(Move(lManual));
     CHECK_FALSE(lManualTween.IsPlaying());
 }
+
+// =============================================================================
+// Show and hide
+// =============================================================================
+
+namespace
+{
+    /** An image that fades out over 0.2 s when hidden (FadeOut, held at its end). */
+    struct HideFixture
+    {
+        UICanvas         Canvas{ 1080.f };
+        UIWidget*        Image = nullptr;
+        UITweenModifier* Fade  = nullptr;
+
+        HideFixture()
+        {
+            Canvas.SetTargetSize(1920, 1080);
+            Image = Canvas.Root().AddChild(NewObject<UIImage>());
+            UIRect lRect;
+            lRect.SizeDelta = { 100.f, 100.f };
+            Image->SetRect(lRect);
+
+            UITweenKey lFrom;
+            UITweenKey lTo;
+            lTo.Time         = 0.2f;
+            lTo.Pose.Opacity = 0.f;
+            Fade = &Image->AddModifier<UITweenModifier>().SetPlayOn(EUITweenPlay::Hide);
+            Fade->Keys = { lFrom, lTo };
+            Canvas.Update();
+        }
+
+        void Run(const float InSeconds)
+        {
+            const Int32 lFrames = static_cast<Int32>(InSeconds * 60.f + 0.5f);
+            for (Int32 lFrame = 0; lFrame < lFrames; ++lFrame)
+            {
+                Canvas.Tick(1.f / 60.f);
+                Canvas.Update();
+            }
+        }
+    };
+}
+
+TEST_CASE("UIWidget::Hide: without a hide tween, hidden at once; writing bVisible stays instant")
+{
+    TweenFixture lF;   // its tween plays on demand only
+    lF.Image->Hide();
+    CHECK_FALSE(lF.Image->bVisible);
+    CHECK_FALSE(lF.Image->IsHiding());
+
+    lF.Image->Show();
+    CHECK(lF.Image->bVisible);
+
+    HideFixture lH;
+    lH.Image->bVisible = false;   // the instant way: no tween, no hiding
+    CHECK_FALSE(lH.Fade->IsPlaying());
+    CHECK_FALSE(lH.Image->IsHiding());
+    lH.Image->bVisible = true;
+}
+
+TEST_CASE("UIWidget::Hide: with a hide tween, hidden when it ends, drawn but not hit meanwhile")
+{
+    HideFixture lH;
+    CHECK(lH.Canvas.HitTest({ 0.f, 0.f }) == lH.Image);
+
+    lH.Image->Hide();
+    CHECK(lH.Image->IsHiding());
+    CHECK(lH.Image->bVisible);
+    CHECK(lH.Fade->IsPlaying());
+    CHECK(lH.Canvas.HitTest({ 0.f, 0.f }) == nullptr);
+
+    lH.Run(0.1f);
+    CHECK(lH.Image->IsHiding());
+    CHECK(lH.Image->GetDrawnOpacity() == doctest::Approx(0.5f).epsilon(1e-3));
+    TDynArray<UIDrawItem> lItems;
+    lH.Canvas.BuildDrawList(lItems);
+    CHECK(lItems.size() == 1u);   // still drawn, fading
+
+    lH.Run(0.2f);
+    CHECK_FALSE(lH.Image->IsHiding());
+    CHECK_FALSE(lH.Image->bVisible);
+    lH.Canvas.BuildDrawList(lItems);
+    CHECK(lItems.empty());
+
+    // A second Hide does nothing; Show brings it back without the faded pose.
+    lH.Image->Hide();
+    CHECK_FALSE(lH.Image->IsHiding());
+    lH.Image->Show();
+    lH.Canvas.Update();
+    CHECK(lH.Image->bVisible);
+    CHECK(lH.Image->GetDrawnOpacity() == doctest::Approx(1.f));
+    CHECK(lH.Canvas.HitTest({ 0.f, 0.f }) == lH.Image);
+}
+
+TEST_CASE("UIWidget::Show during a hide cancels it and drops its pose")
+{
+    HideFixture lH;
+    lH.Image->Hide();
+    lH.Run(0.1f);
+
+    lH.Image->Show();
+    CHECK_FALSE(lH.Image->IsHiding());
+    CHECK(lH.Image->bVisible);
+    CHECK_FALSE(lH.Fade->IsPlaying());
+    lH.Canvas.Update();
+    CHECK(lH.Image->GetDrawnOpacity() == doctest::Approx(1.f));
+
+    // The cancelled hide never comes back to hide it.
+    lH.Run(0.5f);
+    CHECK(lH.Image->bVisible);
+}
+
+TEST_CASE("UIWidget::Show plays the Show tweens of the shown widgets under it; a parent's hide takes its children")
+{
+    TweenFixture lF;
+    UIWidget* lChild = lF.Image->AddChild(NewObject<UIImage>());
+    UITweenModifier& lChildShow = lChild->AddModifier<UITweenModifier>().SetPlayOn(EUITweenPlay::Show);
+    lChildShow.Keys = Grow();
+
+    UIWidget* lHiddenChild = lF.Image->AddChild(NewObject<UIImage>());
+    lHiddenChild->bVisible = false;
+    UITweenModifier& lHiddenShow = lHiddenChild->AddModifier<UITweenModifier>().SetPlayOn(EUITweenPlay::Show);
+    lHiddenShow.Keys = Grow();
+
+    // Joining the canvas played the shown one already: stop it, then Show the parent.
+    lChildShow.Stop();
+    lF.Image->Show();
+    CHECK(lChildShow.IsPlaying());
+    CHECK_FALSE(lHiddenShow.IsPlaying());
+
+    // A child's hide tween does not play when its parent hides: it goes with the parent.
+    UITweenModifier& lChildHide = lChild->AddModifier<UITweenModifier>().SetPlayOn(EUITweenPlay::Hide);
+    lChildHide.Keys = Grow();
+    lF.Image->Hide();
+    CHECK_FALSE(lF.Image->bVisible);
+    CHECK_FALSE(lChildHide.IsPlaying());
+    CHECK_FALSE(lChild->IsShownInTree());
+}
+
+TEST_CASE("UIWidget::Hide: a hide tween removed while it plays lets the hide end")
+{
+    HideFixture lH;
+    lH.Image->Hide();
+    REQUIRE(lH.Image->IsHiding());
+
+    lH.Image->RemoveModifier(*lH.Fade);
+    CHECK_FALSE(lH.Image->IsHiding());
+    CHECK_FALSE(lH.Image->bVisible);
+}

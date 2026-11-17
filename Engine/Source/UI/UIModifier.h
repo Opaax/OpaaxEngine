@@ -94,6 +94,13 @@ namespace Opaax
          */
         virtual void OnShow() {}
 
+        /**
+         * My owner is being hidden with Hide().
+         * @return True while hiding takes time (a fade): the widget hides once every such modifier
+         *   called FinishHide
+         */
+        virtual bool OnHide() { return false; }
+
         /** My owner's interaction state changed (UIWidget::GetInteractionState). */
         virtual void OnStateChanged(EUIInteractionState InFrom, EUIInteractionState InTo) { (void)InFrom; (void)InTo; }
 
@@ -109,6 +116,9 @@ namespace Opaax
 
         /** Not ticked any more, from now (Tick answering false does the same at its end). */
         void Sleep();
+
+        /** What OnHide waited for is done: once every such modifier says so, the owner hides. */
+        void FinishHide();
 
     private:
         UIWidget* m_Owner  = nullptr;   // not owned: it owns me

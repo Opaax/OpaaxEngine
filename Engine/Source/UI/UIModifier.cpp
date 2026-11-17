@@ -32,6 +32,14 @@ namespace Opaax
         }
     }
 
+    void UIModifier::FinishHide()
+    {
+        if (m_Owner != nullptr)
+        {
+            m_Owner->OnHideStepDone();
+        }
+    }
+
     void UIModifier::Sleep()
     {
         if (!m_bAwake)

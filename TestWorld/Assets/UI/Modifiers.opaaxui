@@ -1138,6 +1138,22 @@
                         "bEnabled": true,
                         "bHoldEnd": true,
                         "bMovesHitArea": true
+                    },
+                    {
+                        "Delay": 0.0,
+                        "Keys": [],
+                        "Loop": "Once",
+                        "Name": "FadeOut",
+                        "Pivot": {
+                            "x": 0.5,
+                            "y": 0.5
+                        },
+                        "PlayOn": "Hide",
+                        "Tween": "UI/Presets/FadeOut.opaaxasset",
+                        "Type": "UITweenModifier",
+                        "bEnabled": true,
+                        "bHoldEnd": true,
+                        "bMovesHitArea": true
                     }
                 ],
                 "Name": "Popup",

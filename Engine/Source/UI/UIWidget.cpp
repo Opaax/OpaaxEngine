@@ -197,6 +197,83 @@ namespace Opaax
         return EUIInteractionState::Normal;
     }
 
+    // =============================================================================
+    // Show and hide
+    // =============================================================================
+
+    void UIWidget::Show()
+    {
+        // Cancelled before the modifiers hear it, so a hide tween stopping now does not finish the hide.
+        m_bHiding     = false;
+        m_HideWaiting = 0;
+
+        bVisible = true;   // drawing reads it: nothing to invalidate
+
+        if (IsShownInTree())
+        {
+            ShowRecursive();
+        }
+    }
+
+    void UIWidget::Hide()
+    {
+        if (!bVisible || m_bHiding)
+        {
+            return;
+        }
+
+        m_bHiding     = true;
+        m_HideWaiting = 0;
+
+        // A modifier that waits finishes later, from its Tick: never inside OnHide.
+        for (const TStrongObjectPtr<UIModifier>& lModifier : m_Modifiers)
+        {
+            if (lModifier->bEnabled && lModifier->OnHide())
+            {
+                ++m_HideWaiting;
+            }
+        }
+
+        if (m_HideWaiting == 0)
+        {
+            m_bHiding = false;
+            bVisible  = false;
+        }
+    }
+
+    void UIWidget::OnHideStepDone()
+    {
+        if (!m_bHiding || m_bDestroying)
+        {
+            return;
+        }
+
+        if (m_HideWaiting > 0)
+        {
+            --m_HideWaiting;
+        }
+        if (m_HideWaiting == 0)
+        {
+            m_bHiding = false;
+            bVisible  = false;
+        }
+    }
+
+    void UIWidget::ShowRecursive()
+    {
+        for (const TStrongObjectPtr<UIModifier>& lModifier : m_Modifiers)
+        {
+            lModifier->OnShow();
+        }
+        for (const TStrongObjectPtr<UIWidget>& lChild : m_Children)
+        {
+            if (lChild->bVisible)
+            {
+                lChild->ShowRecursive();
+            }
+        }
+    }
+
     bool UIWidget::IsShownInTree() const noexcept
     {
         for (const UIWidget* lNode = this; lNode != nullptr; lNode = lNode->m_Parent)
@@ -484,7 +561,8 @@ namespace Opaax
 
     UIWidget* UIWidget::HitTest(const Vector2F& InPoint, const Affine2D& InParentHit, const bool bInParentPosed)
     {
-        if (!bVisible)
+        // Hiding: still drawn while it fades, not there for the pointer.
+        if (!bVisible || m_bHiding)
         {
             return nullptr;
         }
