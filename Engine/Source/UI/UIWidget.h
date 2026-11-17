@@ -217,6 +217,19 @@ namespace Opaax
         /** The opacity I am drawn with: every Opacity and pose opacity from the root down to me. */
         float GetDrawnOpacity() const noexcept;
 
+        /**
+         * Where my hit area is: my parents' poses, then mine, keeping only the poses that move the hit
+         * area (bMovesHitArea). Identity when none does: I am hit on my layout rect.
+         */
+        Affine2D GetHitTransform() const noexcept;
+
+        /**
+         * InCanvasPoint in my layout space (through the inverse of my hit transform): where pointer
+         * events reach me, so a widget compares them with GetBounds() whatever its pose. Far outside
+         * every rect when a pose flattens me (a scale of 0).
+         */
+        Vector2F CanvasToLayout(const Vector2F& InCanvasPoint) const noexcept;
+
         // =============================================================================
         // Leaf contract
         // =============================================================================
@@ -260,8 +273,11 @@ namespace Opaax
         void UpdateTree(const Bounds2D& InParentBounds, const Bounds2D* InSlot, bool bInParentChanged,
                         const UIBuildContext& InContext, UICanvasStats& OutStats);
 
-        /** The deepest visible, hit-testable widget (or me) containing InPoint, top-most first. */
-        UIWidget* HitTest(const Vector2F& InPoint);
+        /**
+         * The deepest visible, hit-testable widget (or me) containing InPoint, top-most first. Each
+         * widget tests the point mapped into its layout space through InParentHit then its own hit pose.
+         */
+        UIWidget* HitTest(const Vector2F& InPoint, const Affine2D& InParentHit, bool bInParentPosed);
 
         /** OnPullBindings on me, then every descendant. */
         void PullBindings(UIBindingTable& InBindings);

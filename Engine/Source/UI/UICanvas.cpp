@@ -14,6 +14,13 @@ namespace Opaax
     {
         constexpr Int32 MAX_ORDER = TNumericLimits<Int16>::max();
 
+        /** InEvent with its position in InWidget's layout space: what each widget compares with its rect. */
+        UIPointerEvent InLayoutSpace(const UIWidget& InWidget, UIPointerEvent InEvent)
+        {
+            InEvent.Position = InWidget.CanvasToLayout(InEvent.Position);
+            return InEvent;
+        }
+
         /** What the walk hands down: the parents' accumulated pose and the nearest clip. */
         struct UICollectState
         {
@@ -252,7 +259,7 @@ namespace Opaax
 
     UIWidget* UICanvas::HitTest(const Vector2F& InCanvasPoint)
     {
-        return m_Root->HitTest(InCanvasPoint);
+        return m_Root->HitTest(InCanvasPoint, Affine2D::Identity(), false);
     }
 
     // =============================================================================
@@ -263,7 +270,7 @@ namespace Opaax
     {
         for (UIWidget* lNode = InFrom; lNode != nullptr; lNode = lNode->GetParent())
         {
-            if (lNode->OnPointerEvent(InEvent) == EUIReply::Handled)
+            if (lNode->OnPointerEvent(InLayoutSpace(*lNode, InEvent)) == EUIReply::Handled)
             {
                 return lNode;
             }
@@ -281,19 +288,19 @@ namespace Opaax
                 // Enter/Leave are sent to the widget, not bubbled.
                 if (m_Hovered != nullptr)
                 {
-                    m_Hovered->OnPointerEvent({ EUIPointerEventType::Leave, InEvent.Position, InEvent.Button });
+                    m_Hovered->OnPointerEvent(InLayoutSpace(*m_Hovered, { EUIPointerEventType::Leave, InEvent.Position, InEvent.Button }));
                 }
                 m_Hovered = lHit;
                 if (m_Hovered != nullptr)
                 {
-                    m_Hovered->OnPointerEvent({ EUIPointerEventType::Enter, InEvent.Position, InEvent.Button });
+                    m_Hovered->OnPointerEvent(InLayoutSpace(*m_Hovered, { EUIPointerEventType::Enter, InEvent.Position, InEvent.Button }));
                 }
             }
 
             // A captured widget still gets the move.
             if (m_Pressed != nullptr)
             {
-                m_Pressed->OnPointerEvent(InEvent);
+                m_Pressed->OnPointerEvent(InLayoutSpace(*m_Pressed, InEvent));
                 return EUIReply::Handled;
             }
             return EUIReply::Unhandled;

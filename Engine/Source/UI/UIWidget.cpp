@@ -269,6 +269,29 @@ namespace Opaax
         return m_Pose.bRest ? lParent : lParent * m_Pose.Draw;
     }
 
+    Affine2D UIWidget::GetHitTransform() const noexcept
+    {
+        const Affine2D lParent = m_Parent != nullptr ? m_Parent->GetHitTransform() : Affine2D::Identity();
+        return m_Pose.bRest ? lParent : lParent * m_Pose.Hit;
+    }
+
+    Vector2F UIWidget::CanvasToLayout(const Vector2F& InCanvasPoint) const noexcept
+    {
+        const Affine2D lHit = GetHitTransform();
+        if (lHit.IsIdentity())
+        {
+            return InCanvasPoint;
+        }
+
+        Affine2D lInverse;
+        if (!lHit.Inverse(lInverse))
+        {
+            const float lFar = TNumericLimits<float>::max();
+            return { lFar, lFar };
+        }
+        return lInverse.TransformPoint(InCanvasPoint);
+    }
+
     float UIWidget::GetDrawnOpacity() const noexcept
     {
         const float lParent = m_Parent != nullptr ? m_Parent->GetDrawnOpacity() : 1.f;
@@ -370,26 +393,46 @@ namespace Opaax
         }
     }
 
-    UIWidget* UIWidget::HitTest(const Vector2F& InPoint)
+    UIWidget* UIWidget::HitTest(const Vector2F& InPoint, const Affine2D& InParentHit, const bool bInParentPosed)
     {
         if (!bVisible)
         {
             return nullptr;
         }
 
+        // My hit area: my parents' moving poses, then mine. Nothing posed: the point as it is.
+        Affine2D lHit    = InParentHit;
+        bool     bPosed  = bInParentPosed;
+        if (!m_Pose.bRest && !m_Pose.Hit.IsIdentity())
+        {
+            lHit   = InParentHit * m_Pose.Hit;
+            bPosed = true;
+        }
+
+        Vector2F lLocal = InPoint;
+        if (bPosed)
+        {
+            Affine2D lInverse;
+            if (!lHit.Inverse(lInverse))
+            {
+                return nullptr;   // flattened (a scale of 0): nothing of it, or under it, can be hit
+            }
+            lLocal = lInverse.TransformPoint(InPoint);
+        }
+
         // Drawn last = on top, so the last child is checked first. What I clip is not there outside my
         // rect, for the pointer either.
-        if (!m_bClipsChildren || m_Bounds.Contains(InPoint))
+        if (!m_bClipsChildren || m_Bounds.Contains(lLocal))
         {
             for (auto lIt = m_Children.rbegin(); lIt != m_Children.rend(); ++lIt)
             {
-                if (UIWidget* lHit = (*lIt)->HitTest(InPoint))
+                if (UIWidget* lFound = (*lIt)->HitTest(InPoint, lHit, bPosed))
                 {
-                    return lHit;
+                    return lFound;
                 }
             }
         }
 
-        return (bHitTestable && m_Bounds.Contains(InPoint)) ? this : nullptr;
+        return (bHitTestable && m_Bounds.Contains(lLocal)) ? this : nullptr;
     }
 }

@@ -17,7 +17,7 @@
         "command": "expect.value",
         "params": {
             "entity": "Hud",
-            "path": "UIProbe/bMounted",
+            "path": "ModifierProbe/bMounted",
             "equals": true
         }
     },
@@ -31,11 +31,26 @@
             "widgets": [
                 {
                     "name": "Plain",
-                    "width": { "$atLeast": 133.23, "$atMost": 133.43 },
+                    "width": {
+                        "$atLeast": 133.23,
+                        "$atMost": 133.43
+                    },
                     "rotation": 0.0,
-                    "scale": { "x": 1.0, "y": 1.0 },
+                    "scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    },
                     "alpha": 1.0,
-                    "drawn": { "width": { "$atLeast": 133.23, "$atMost": 133.43 }, "height": { "$atLeast": 133.23, "$atMost": 133.43 } }
+                    "drawn": {
+                        "width": {
+                            "$atLeast": 133.23,
+                            "$atMost": 133.43
+                        },
+                        "height": {
+                            "$atLeast": 133.23,
+                            "$atMost": 133.43
+                        }
+                    }
                 }
             ]
         }
@@ -50,10 +65,27 @@
             "widgets": [
                 {
                     "name": "Turned",
-                    "width": { "$atLeast": 133.23, "$atMost": 133.43 },
-                    "rotation": { "$atLeast": 29.99, "$atMost": 30.01 },
-                    "modifiers": [ { "class": "UITransformModifier", "name": "Turn", "enabled": true } ],
-                    "drawn": { "width": { "$atLeast": 182.04, "$atMost": 182.24 } }
+                    "width": {
+                        "$atLeast": 133.23,
+                        "$atMost": 133.43
+                    },
+                    "rotation": {
+                        "$atLeast": 29.99,
+                        "$atMost": 30.01
+                    },
+                    "modifiers": [
+                        {
+                            "class": "UITransformModifier",
+                            "name": "Turn",
+                            "enabled": true
+                        }
+                    ],
+                    "drawn": {
+                        "width": {
+                            "$atLeast": 182.04,
+                            "$atMost": 182.24
+                        }
+                    }
                 }
             ]
         }
@@ -68,12 +100,27 @@
             "widgets": [
                 {
                     "name": "BigText",
-                    "width": { "$atLeast": 239.90, "$atMost": 240.10 },
-                    "x": { "$atLeast": 306.57, "$atMost": 306.77 },
-                    "scale": { "x": 1.5, "y": 1.5 },
+                    "width": {
+                        "$atLeast": 239.9,
+                        "$atMost": 240.1
+                    },
+                    "x": {
+                        "$atLeast": 306.57,
+                        "$atMost": 306.77
+                    },
+                    "scale": {
+                        "x": 1.5,
+                        "y": 1.5
+                    },
                     "drawn": {
-                        "width": { "$atLeast": 359.90, "$atMost": 360.10 },
-                        "x": { "$atLeast": 366.57, "$atMost": 366.77 }
+                        "width": {
+                            "$atLeast": 359.9,
+                            "$atMost": 360.1
+                        },
+                        "x": {
+                            "$atLeast": 366.57,
+                            "$atMost": 366.77
+                        }
                     }
                 }
             ]
@@ -104,7 +151,10 @@
             "widgets": [
                 {
                     "name": "MaskedBar",
-                    "rotation": { "$atLeast": 19.99, "$atMost": 20.01 }
+                    "rotation": {
+                        "$atLeast": 19.99,
+                        "$atMost": 20.01
+                    }
                 }
             ]
         }
@@ -119,10 +169,191 @@
             "widgets": [
                 {
                     "name": "Moved",
-                    "x": { "$atLeast": 706.57, "$atMost": 706.77 },
-                    "drawn": { "x": { "$atLeast": 906.57, "$atMost": 906.77 } }
+                    "x": {
+                        "$atLeast": 706.57,
+                        "$atMost": 706.77
+                    },
+                    "drawn": {
+                        "x": {
+                            "$atLeast": 906.57,
+                            "$atMost": 906.77
+                        }
+                    }
                 }
             ]
+        }
+    },
+    {
+        "id": "hit-on-drawn",
+        "command": "ui.list",
+        "params": {
+            "name": "HitOn"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "HitOn",
+                    "x": {
+                        "$atLeast": 206.57,
+                        "$atMost": 206.77
+                    },
+                    "drawn": {
+                        "x": {
+                            "$atLeast": 406.57,
+                            "$atMost": 406.77
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "id": "click-hit-on",
+        "command": "ui.click",
+        "params": {
+            "widget": "HitOn"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "hit-on-clicked-where-drawn",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "ModifierProbe/HitOnClicks",
+            "equals": 1
+        }
+    },
+    {
+        "id": "tap-hit-on-layout",
+        "command": "input.mouse",
+        "params": {
+            "x": 206.667,
+            "y": 613.333
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "Mouse_Left",
+            "action": "press"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "Mouse_Left",
+            "action": "release"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "hit-on-not-at-layout",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "ModifierProbe/HitOnClicks",
+            "equals": 1
+        }
+    },
+    {
+        "id": "tap-hit-off-drawn",
+        "command": "input.mouse",
+        "params": {
+            "x": 740.0,
+            "y": 613.333
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "Mouse_Left",
+            "action": "press"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "command": "input.key",
+        "params": {
+            "key": "Mouse_Left",
+            "action": "release"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "hit-off-not-where-drawn",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "ModifierProbe/HitOffClicks",
+            "equals": 0
+        }
+    },
+    {
+        "id": "click-hit-off",
+        "command": "ui.click",
+        "params": {
+            "widget": "HitOff"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "hit-off-clicked-at-layout",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "ModifierProbe/HitOffClicks",
+            "equals": 1
+        }
+    },
+    {
+        "command": "input.mouse",
+        "params": {
+            "x": 1200.0,
+            "y": 40.0
         }
     },
     {

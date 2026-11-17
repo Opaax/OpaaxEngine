@@ -64,6 +64,12 @@
         },
         {
             "components": {
+                "ModifierProbe": {
+                    "Asset": "UI/Modifiers.opaaxui",
+                    "HitOffClicks": 0,
+                    "HitOnClicks": 0,
+                    "bMounted": false
+                },
                 "Transform": {
                     "Position": {
                         "x": 0.0,
@@ -74,17 +80,6 @@
                         "x": 1.0,
                         "y": 1.0
                     }
-                },
-                "UIProbe": {
-                    "Asset": "UI/Modifiers.opaaxui",
-                    "Captured": "",
-                    "Clicks": 0,
-                    "CounterText": "",
-                    "GameClicks": 0,
-                    "Widgets": 0,
-                    "bCapture": false,
-                    "bCapturing": false,
-                    "bMounted": false
                 }
             },
             "guid": "b2515354ceaa445896c0a15263d7d67e",
