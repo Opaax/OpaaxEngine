@@ -448,6 +448,16 @@ namespace Opaax
         }
     }
 
+    void UICanvas::ResetRuntime()
+    {
+        // The pointer first: the widgets hear Leave and let go of a press.
+        ClearPointer();
+        SetFocus(nullptr);
+
+        m_Root->ResetRuntimeRecursive();
+        m_Awake.clear();
+    }
+
     void UICanvas::AddAwake(UIModifier& InModifier)
     {
         for (const TWeakObjectPtr<UIModifier>& lAwake : m_Awake)

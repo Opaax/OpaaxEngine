@@ -1418,6 +1418,51 @@ namespace Opaax::Editor::EditorAutomation
                     return AutomationResult::Ok();
                 });
 
+            InCommands.Register("ui.preview.play",
+                "Plays the UI panel's preview ({on}: true, the default) as the game would: ticked, Show tweens "
+                "played, the pointer routed to it; false stops it, everything back at rest. Answers {playing} and "
+                "whether the document is {dirty} (a play never makes it so).",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    EditorUICanvasDocument& lDocument = InContext.UICanvasDocument;
+                    if (!lDocument.IsOpen())
+                    {
+                        return AutomationResult::Fail("no canvas is open in the UI panel: asset.open opens one");
+                    }
+
+                    lDocument.SetPreviewPlaying(InParams.value("on", true));
+                    return AutomationResult::Ok(nlohmann::json{ { "playing", lDocument.IsPreviewPlaying() },
+                                                                { "dirty", lDocument.IsDirty() } });
+                });
+
+            InCommands.Register("ui.preview.hover",
+                "Puts the playing preview's pointer over the widget named {widget} (its hit area's centre), as a "
+                "mouse over the image would. Answers the {hovered} widget's name and its {interaction} state.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    EditorUICanvasDocument& lDocument = InContext.UICanvasDocument;
+                    if (!lDocument.IsOpen() || !lDocument.IsPreviewPlaying())
+                    {
+                        return AutomationResult::Fail("the UI panel's preview is not playing: ui.preview.play starts it");
+                    }
+
+                    const OpaaxString lName   = InParams.value("widget", OpaaxString());
+                    UIWidget* const   lWidget = lName.IsEmpty() ? nullptr : lDocument.GetCanvas().Root().FindByName(lName);
+                    if (lWidget == nullptr)
+                    {
+                        return AutomationResult::Fail("no widget named '" + lName + "' (ui.widget.list)");
+                    }
+
+                    UICanvas&      lCanvas = lDocument.GetCanvas();
+                    const Vector2F lAt     = lWidget->GetHitTransform().TransformPoint(lWidget->GetBounds().Center);
+                    lCanvas.RoutePointer(UIPointerEvent{ EUIPointerEventType::Move, lAt, EUIPointerButton::None });
+
+                    const UIWidget* lHovered = lCanvas.GetHovered();
+                    return AutomationResult::Ok(nlohmann::json{
+                        { "hovered", lHovered != nullptr ? nlohmann::json(lHovered->Name) : nlohmann::json() },
+                        { "interaction", ToString(lWidget->GetInteractionState()) } });
+                });
+
             InCommands.Register("ui.modifier.move",
                 "Moves the selected widget's modifier at {index} by {delta} places (-1: up; clamped). List order is "
                 "the order poses apply in. Undoable.",

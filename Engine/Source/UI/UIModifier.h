@@ -101,6 +101,12 @@ namespace Opaax
          */
         virtual bool OnHide() { return false; }
 
+        /**
+         * Back at rest, as if nothing had played (the editor's preview Stop): no motion, no hide to
+         * finish. My canvas forgets I was awake.
+         */
+        virtual void OnReset() {}
+
         /** My owner's interaction state changed (UIWidget::GetInteractionState). */
         virtual void OnStateChanged(EUIInteractionState InFrom, EUIInteractionState InTo) { (void)InFrom; (void)InTo; }
 

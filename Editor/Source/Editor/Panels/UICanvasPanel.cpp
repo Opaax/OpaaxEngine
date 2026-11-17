@@ -21,6 +21,7 @@
 #include "RHI/Framebuffer.h"
 #include "Renderer/RenderTarget.hpp"             // OffscreenRenderTarget
 #include "Object/ObjectClassRegistry.h"
+#include "UI/Modifiers/UITweenModifier.h"
 #include "UI/UICanvasFile.h"
 #include "UI/UIWidget.h"
 #include "UI/Widgets/UIButton.h"
@@ -90,6 +91,12 @@ namespace Opaax::Editor
         }
 
         UICanvas& lCanvas = m_Context.UICanvasDocument.GetCanvas();
+
+        // Playing: animated on the editor's frame time, as the game's UI is on its own.
+        if (m_Context.UICanvasDocument.IsPreviewPlaying())
+        {
+            lCanvas.Tick(Maths::Min(ImGui::GetIO().DeltaTime, 0.1f));
+        }
 
         // The canvas lays out at the chosen aspect (as the game shows it); the view decides what the
         // image shows.
@@ -469,6 +476,12 @@ namespace Opaax::Editor
             if (ImGui::Button("X", ImVec2(ImGui::GetFrameHeight(), 0.f))) { m_PendingModifierVerb = { EKind::Remove, lIndex, {} }; }
             if (ImGui::IsItemHovered()) { ImGui::SetTooltip("Remove this modifier"); }
 
+            if (bOpen && lModifier.IsA<UITweenModifier>())
+            {
+                if (ImGui::SmallButton("Play tween")) { m_PendingModifierVerb = { EKind::PlayTween, lIndex, {} }; }
+                if (ImGui::IsItemHovered()) { ImGui::SetTooltip("Plays it in the preview (which starts playing)."); }
+            }
+
             if (bOpen)
             {
                 ImGui::Indent();
@@ -509,6 +522,20 @@ namespace Opaax::Editor
         case EKind::Remove:   UICanvasOps::RemoveModifier(m_Context, lPath, lVerb.Index);       break;
         case EKind::MoveUp:   UICanvasOps::MoveModifier(m_Context, lPath, lVerb.Index, -1);     break;
         case EKind::MoveDown: UICanvasOps::MoveModifier(m_Context, lPath, lVerb.Index, 1);      break;
+        case EKind::PlayTween:
+        {
+            // Not an edit: no undo step. The preview plays so the tween is ticked.
+            UIWidget* const lWidget = m_Context.UICanvasDocument.Resolve(lPath);
+            if (lWidget != nullptr && lVerb.Index < lWidget->GetModifiers().size())
+            {
+                if (auto* lTween = Cast<UITweenModifier>(lWidget->GetModifiers()[lVerb.Index].Get()))
+                {
+                    m_Context.UICanvasDocument.SetPreviewPlaying(true);
+                    lTween->Play();
+                }
+            }
+            break;
+        }
         case EKind::None:     break;
         }
     }
@@ -606,12 +633,67 @@ namespace Opaax::Editor
             m_bFitPending = true;
         }
 
+        if (m_Context.UICanvasDocument.IsPreviewPlaying())
+        {
+            RoutePreviewPointer(lHovered, lOrigin);
+            return;   // no selection, drag or outline while it plays
+        }
+
         MeasurePreviewGesture(lHovered, lOrigin);
         DrawPreviewOverlay(lOrigin);
     }
 
+    void UICanvasPanel::RoutePreviewPointer(const bool bInHovered, const Vector2F& InOrigin)
+    {
+        UICanvas&      lCanvas = m_Context.UICanvasDocument.GetCanvas();
+        const ImGuiIO& lIO     = ImGui::GetIO();
+        const Vector2F lAt     = PreviewToCanvas({ lIO.MousePos.x - InOrigin.x, lIO.MousePos.y - InOrigin.y });
+
+        const auto lRoute = [&lCanvas, &lAt](const EUIPointerEventType InType, const EUIPointerButton InButton)
+        {
+            lCanvas.RoutePointer(UIPointerEvent{ InType, lAt, InButton });
+        };
+
+        if (bInHovered)
+        {
+            lRoute(EUIPointerEventType::Move, EUIPointerButton::None);
+            if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) { lRoute(EUIPointerEventType::Down, EUIPointerButton::Primary); }
+            m_bPointerInPreview = true;
+        }
+
+        // A release anywhere ends a press made over the image.
+        if (m_bPointerInPreview && ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+        {
+            lRoute(EUIPointerEventType::Up, EUIPointerButton::Primary);
+        }
+
+        if (!bInHovered && m_bPointerInPreview)
+        {
+            lCanvas.ClearPointer();
+            m_bPointerInPreview = false;
+        }
+    }
+
     void UICanvasPanel::DrawPreviewToolbar()
     {
+        EditorUICanvasDocument& lDoc     = m_Context.UICanvasDocument;
+        const bool              bPlaying = lDoc.IsPreviewPlaying();
+
+        if (bPlaying) { ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.5f, 0.25f, 1.f)); }
+        if (ImGui::SmallButton(bPlaying ? "Stop" : "Play"))
+        {
+            lDoc.SetPreviewPlaying(!bPlaying);
+            m_bPointerInPreview = false;
+        }
+        if (bPlaying) { ImGui::PopStyleColor(); }
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip(bPlaying ? "Stop: everything back at rest. Nothing saved changed."
+                                       : "Play the canvas as the game would: transitions under the pointer,\n"
+                                         "Show tweens, clicks. Selecting and dragging pause meanwhile.");
+        }
+        ImGui::SameLine();
+
         ImGui::SetNextItemWidth(80.f);
         if (ImGui::BeginCombo("##UIPreviewAspect", ToString(m_Aspect)))
         {

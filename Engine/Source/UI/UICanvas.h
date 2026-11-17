@@ -149,6 +149,13 @@ namespace Opaax
          */
         void Tick(float InSeconds);
 
+        /**
+         * Everything that ran goes back to rest: the pointer and the focus let go, every transition and
+         * tween at rest and asleep, no hide under way. Saved fields are not touched (the editor's preview
+         * Stop: the document is as it was).
+         */
+        void ResetRuntime();
+
         /** How many modifiers the next Tick runs (none on an idle canvas). */
         Uint64 GetAwakeCount() const noexcept { return m_Awake.size(); }
 

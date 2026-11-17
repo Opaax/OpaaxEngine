@@ -100,6 +100,7 @@ namespace Opaax
     protected:
         //~Begin UIModifier interface
         void OnDetach() override;
+        void OnReset() override;
         void OnShow() override;
         bool OnHide() override;
         bool Tick(float InSeconds) override;

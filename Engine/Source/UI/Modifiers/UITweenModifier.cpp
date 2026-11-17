@@ -131,6 +131,16 @@ namespace Opaax
         UIPoseModifier::OnDetach();
     }
 
+    void UITweenModifier::OnReset()
+    {
+        // At rest; a hide it played for is over (its widget's hide is cleared with it).
+        m_Time     = 0.f;
+        m_bPlaying = false;
+        m_bForHide = false;
+        m_Shown    = UIPose{};
+        InvalidatePose();
+    }
+
     void UITweenModifier::OnShow()
     {
         if (PlayOn == EUITweenPlay::Show)

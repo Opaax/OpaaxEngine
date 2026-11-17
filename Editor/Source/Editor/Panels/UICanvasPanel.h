@@ -95,6 +95,12 @@ namespace Opaax::Editor
         /** The selection's rect and grips (and the hovered one, faintly) over the image. */
         void DrawPreviewOverlay(const Vector2F& InOrigin);
 
+        /**
+         * While the preview plays: the pointer over the image goes to the canvas (hover, press, release),
+         * as the game's would. Leaving the image lets go of it.
+         */
+        void RoutePreviewPointer(bool bInHovered, const Vector2F& InOrigin);
+
         /** Moves the selected widget by InDelta canvas units, as one step labelled InLabel. */
         void NudgeSelected(const Vector2F& InDelta, const char* InLabel);
 
@@ -171,7 +177,7 @@ namespace Opaax::Editor
         /** A modifier verb pressed this frame, run once the field gesture is closed. */
         struct PendingModifierVerb
         {
-            enum class EKind : Uint8 { None, Add, Remove, MoveUp, MoveDown };
+            enum class EKind : Uint8 { None, Add, Remove, MoveUp, MoveDown, PlayTween };
 
             EKind         Kind  = EKind::None;
             Uint32        Index = 0;
@@ -191,6 +197,9 @@ namespace Opaax::Editor
         /** The grip the press landed on (None = a move), and the selection's pixel rect at the press. */
         ERectEdge          m_PreviewEdge = ERectEdge::None;
         TEditorRect<float> m_PressRectPx;
+
+        /** Playing: the pointer was over the image last frame (the canvas has it). */
+        bool m_bPointerInPreview = false;
 
         // =============================================================================
         // The view: measured in the ImGui pass, applied in OnPreRender. Not saved, no undo.
