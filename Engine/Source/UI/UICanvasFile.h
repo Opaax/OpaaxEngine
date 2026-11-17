@@ -15,7 +15,8 @@ namespace Opaax
 
     // =============================================================================
     // UICanvasFile — reads and writes .opaaxui files. A node names its widget class ("Type") and holds
-    //   that class's properties; the class registry makes the widget and the class reads them. Unknown
+    //   that class's properties, then its "Modifiers" (each a "Type" and its properties, optional) and
+    //   its "Children"; the class registry makes the objects and each class reads its fields. Unknown
     //   types are skipped (with one warning); a value of the wrong type refuses the whole read.
     // =============================================================================
     namespace UICanvasFile

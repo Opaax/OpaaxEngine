@@ -137,6 +137,18 @@ namespace Opaax::EngineAutomation
                     lRow["state"] = ToString(static_cast<const UIButtonBase&>(InWidget).GetState());
                 }
 
+                if (!InWidget.GetModifiers().empty())
+                {
+                    nlohmann::json lModifiers = nlohmann::json::array();
+                    for (const TStrongObjectPtr<UIModifier>& lModifier : InWidget.GetModifiers())
+                    {
+                        lModifiers.push_back({ { "class",   lModifier->GetClass().GetName().CStr() },
+                                               { "name",    lModifier->Name },   // empty when unnamed
+                                               { "enabled", lModifier->bEnabled } });
+                    }
+                    lRow["modifiers"] = Move(lModifiers);
+                }
+
                 OutList.push_back(Move(lRow));
             }
 
