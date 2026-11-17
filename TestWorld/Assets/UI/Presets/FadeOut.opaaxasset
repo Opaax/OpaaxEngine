@@ -1,0 +1,54 @@
+{
+    "Class": "UITween",
+    "Properties": {
+        "Keys": [
+            {
+                "Ease": "Linear",
+                "Pose": {
+                    "Opacity": 1.0,
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    },
+                    "Tint": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Translation": {
+                        "x": 0.0,
+                        "y": 0.0
+                    }
+                },
+                "Time": 0.0
+            },
+            {
+                "Ease": "QuadIn",
+                "Pose": {
+                    "Opacity": 0.0,
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    },
+                    "Tint": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Translation": {
+                        "x": 0.0,
+                        "y": 0.0
+                    }
+                },
+                "Time": 0.25
+            }
+        ],
+        "Loop": "Once",
+        "bHoldEnd": true
+    },
+    "Version": 1
+}
