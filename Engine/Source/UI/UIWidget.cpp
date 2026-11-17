@@ -455,6 +455,16 @@ namespace Opaax
         return m_Pose.bRest ? lParent : lParent * m_Pose.Draw;
     }
 
+    Vector2F UIWidget::GetDesiredSize() const
+    {
+        Vector2F lSize = Rect.SizeDelta;
+        for (const TStrongObjectPtr<UIModifier>& lModifier : m_Modifiers)
+        {
+            if (lModifier->bEnabled) { lModifier->ModifyDesiredSize(lSize); }
+        }
+        return lSize;
+    }
+
     Affine2D UIWidget::GetHitTransform() const noexcept
     {
         const Affine2D lParent = m_Parent != nullptr ? m_Parent->GetHitTransform() : Affine2D::Identity();
@@ -515,8 +525,13 @@ namespace Opaax
 
         if (lLayout)
         {
-            // Placed by my parent: the slot is my rect. Otherwise my anchors decide.
-            const Bounds2D lBounds = InSlot != nullptr ? *InSlot : ResolveBounds(InParentBounds);
+            // Placed by my parent: the slot is my rect. Otherwise my anchors decide. Then my layout
+            // modifiers, in order (an aspect ratio, a size limit).
+            Bounds2D lBounds = InSlot != nullptr ? *InSlot : ResolveBounds(InParentBounds);
+            for (const TStrongObjectPtr<UIModifier>& lModifier : m_Modifiers)
+            {
+                if (lModifier->bEnabled) { lModifier->ModifyBounds(lBounds, InParentBounds); }
+            }
             ++OutStats.Layouts;
 
             // Same rect from a changed parent: nothing below me moved.

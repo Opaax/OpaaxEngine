@@ -7,6 +7,7 @@
 #include "Core/String/OpaaxStringIDJson.h"
 #include "Object/ObjectMacros.h"
 #include "Object/ObjectPtr.h"
+#include "Core/Maths/Bounds2D.h"
 #include "UI/UIQuad.h"
 
 namespace Opaax
@@ -114,6 +115,16 @@ namespace Opaax
          */
         virtual void ModifyQuads(TDynArray<UIQuad>& InOutQuads) const { (void)InOutQuads; }
 
+        /**
+         * Changes my owner's rect right after it resolved (from its anchors, or its container's slot),
+         * in modifier order: an aspect ratio, a size limit. Runs only when its layout is resolved again:
+         * call InvalidateOwnerLayout when my fields change.
+         */
+        virtual void ModifyBounds(Bounds2D& InOutBounds, const Bounds2D& InParent) const { (void)InOutBounds; (void)InParent; }
+
+        /** Changes the size my owner asks of a container that lays it out (a stack reads it). */
+        virtual void ModifyDesiredSize(Vector2F& InOutSize) const { (void)InOutSize; }
+
         /** My owner's interaction state changed (UIWidget::GetInteractionState). */
         virtual void OnStateChanged(EUIInteractionState InFrom, EUIInteractionState InTo) { (void)InFrom; (void)InTo; }
 
@@ -135,6 +146,9 @@ namespace Opaax
 
         /** My owner's quads are rebuilt before it is next drawn (ModifyQuads runs again). */
         void InvalidateOwnerContent();
+
+        /** My owner's rect is resolved again, its container's too (ModifyBounds, ModifyDesiredSize). */
+        void InvalidateOwnerLayout();
 
     private:
         UIWidget* m_Owner  = nullptr;   // not owned: it owns me

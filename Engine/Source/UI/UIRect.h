@@ -57,6 +57,19 @@ namespace Opaax
      */
     void FitRect(UIRect& InOutRect, const Bounds2D& InTarget, const Bounds2D& InParent) noexcept;
 
+    /**
+     * InBounds at InSize, the point at InPivot (0..1 of the box, 0,0 bottom-left) where it was: what a
+     * layout modifier does to a resolved rect.
+     */
+    inline Bounds2D ResizeAboutPivot(const Bounds2D& InBounds, const Vector2F& InSize, const Vector2F& InPivot) noexcept
+    {
+        const Vector2F lMin   = InBounds.Min();
+        const Vector2F lSize  = InBounds.Size();
+        const Vector2F lFixed = { lMin.x + InPivot.x * lSize.x, lMin.y + InPivot.y * lSize.y };
+        const Vector2F lNewMin = { lFixed.x - InPivot.x * InSize.x, lFixed.y - InPivot.y * InSize.y };
+        return Bounds2D::FromCenterSize({ lNewMin.x + InSize.x * 0.5f, lNewMin.y + InSize.y * 0.5f }, InSize);
+    }
+
     // =============================================================================
     // Anchor presets — Unity's 4x4 grid
     // =============================================================================

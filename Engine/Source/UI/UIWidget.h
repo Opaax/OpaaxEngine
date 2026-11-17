@@ -246,6 +246,12 @@ namespace Opaax
         const Bounds2D&          GetBounds() const noexcept { return m_Bounds; }
         const TDynArray<UIQuad>& GetQuads()  const noexcept { return m_Quads; }
 
+        /**
+         * The size I ask of a container that lays me out: Rect.SizeDelta, as my modifiers change it
+         * (a size limit clamps it). What UIStackLayout reserves for me.
+         */
+        Vector2F GetDesiredSize() const;
+
         /** My own poses composed (my parents' not included). */
         const UIComposedPose&    GetPose()   const noexcept { return m_Pose; }
 
