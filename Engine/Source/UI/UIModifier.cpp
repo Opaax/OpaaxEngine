@@ -32,6 +32,14 @@ namespace Opaax
         }
     }
 
+    void UIModifier::InvalidateOwnerContent()
+    {
+        if (m_Owner != nullptr)
+        {
+            m_Owner->InvalidateContent();
+        }
+    }
+
     void UIModifier::FinishHide()
     {
         if (m_Owner != nullptr)

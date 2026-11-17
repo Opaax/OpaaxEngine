@@ -536,6 +536,12 @@ namespace Opaax
             m_Quads.clear();
             Rebuild(InContext, m_Quads);
             ++OutStats.Rebuilds;
+
+            // Quad effects in list order, each on what the earlier ones left.
+            for (const TStrongObjectPtr<UIModifier>& lModifier : m_Modifiers)
+            {
+                if (lModifier->bEnabled) { lModifier->ModifyQuads(m_Quads); }
+            }
         }
 
         if (!m_bArrangesChildren)

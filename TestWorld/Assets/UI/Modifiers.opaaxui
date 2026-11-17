@@ -958,6 +958,109 @@
                 "Type": "UIButton"
             },
             {
+                "Color": {
+                    "w": 1.0,
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0
+                },
+                "Font": "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf",
+                "HAlign": "Center",
+                "Modifiers": [
+                    {
+                        "Color": {
+                            "w": 0.8,
+                            "x": 0.0,
+                            "y": 0.0,
+                            "z": 0.0
+                        },
+                        "Name": "Shadow",
+                        "Offset": {
+                            "x": 4.0,
+                            "y": -4.0
+                        },
+                        "Type": "UIShadowModifier",
+                        "bEnabled": true
+                    }
+                ],
+                "Name": "ShadowTitle",
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": -20.0,
+                        "y": -20.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 300.0,
+                        "y": 60.0
+                    }
+                },
+                "Size": 40.0,
+                "Text": "Shadowed",
+                "Type": "UIText",
+                "VAlign": "Middle",
+                "bHitTestable": false
+            },
+            {
+                "Color": {
+                    "w": 1.0,
+                    "x": 0.95,
+                    "y": 0.85,
+                    "z": 0.2
+                },
+                "Modifiers": [
+                    {
+                        "Color": {
+                            "w": 1.0,
+                            "x": 0.1,
+                            "y": 0.1,
+                            "z": 0.1
+                        },
+                        "Distance": 4.0,
+                        "Name": "Rim",
+                        "Type": "UIOutlineModifier",
+                        "bEnabled": true
+                    }
+                ],
+                "Name": "OutlinedIcon",
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": 300.0,
+                        "y": -20.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 50.0,
+                        "y": 50.0
+                    }
+                },
+                "Texture": "",
+                "Type": "UIImage",
+                "bHitTestable": false
+            },
+            {
                 "Children": [
                     {
                         "Color": {
