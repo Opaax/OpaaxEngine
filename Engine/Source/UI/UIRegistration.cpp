@@ -3,6 +3,8 @@
 #include "Renderer/Textures/SpriteSheet.h"   // completes the widgets' sheet references
 #include "UI/Animation/UITransition.h"
 #include "UI/Animation/UITween.h"
+#include "UI/Modifiers/UIOutlineModifier.h"
+#include "UI/Modifiers/UIShadowModifier.h"
 #include "UI/Modifiers/UITransformModifier.h"
 #include "UI/Modifiers/UITransitionModifier.h"
 #include "UI/Modifiers/UITweenModifier.h"
@@ -44,6 +46,10 @@ namespace Opaax
 
     // Plays a tween on its widget: on show, on hide, or when asked.
     OPAAX_REGISTER_OBJECT(UITweenModifier);
+
+    // Quad effects: a drop shadow, and a rim, drawn under the widget's own quads.
+    OPAAX_REGISTER_OBJECT(UIShadowModifier);
+    OPAAX_REGISTER_OBJECT(UIOutlineModifier);
 
     // Masks its children: white shows, black hides.
     OPAAX_REGISTER_OBJECT(UIMask);

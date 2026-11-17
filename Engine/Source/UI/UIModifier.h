@@ -7,6 +7,7 @@
 #include "Core/String/OpaaxStringIDJson.h"
 #include "Object/ObjectMacros.h"
 #include "Object/ObjectPtr.h"
+#include "UI/UIQuad.h"
 
 namespace Opaax
 {
@@ -107,6 +108,12 @@ namespace Opaax
          */
         virtual void OnReset() {}
 
+        /**
+         * Changes my owner's quads right after it rebuilt them (in modifier order): a shadow, an outline.
+         * Runs only when the owner's content is rebuilt: call InvalidateOwnerContent when my fields change.
+         */
+        virtual void ModifyQuads(TDynArray<UIQuad>& InOutQuads) const { (void)InOutQuads; }
+
         /** My owner's interaction state changed (UIWidget::GetInteractionState). */
         virtual void OnStateChanged(EUIInteractionState InFrom, EUIInteractionState InTo) { (void)InFrom; (void)InTo; }
 
@@ -125,6 +132,9 @@ namespace Opaax
 
         /** What OnHide waited for is done: once every such modifier says so, the owner hides. */
         void FinishHide();
+
+        /** My owner's quads are rebuilt before it is next drawn (ModifyQuads runs again). */
+        void InvalidateOwnerContent();
 
     private:
         UIWidget* m_Owner  = nullptr;   // not owned: it owns me

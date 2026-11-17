@@ -363,6 +363,48 @@
         }
     },
     {
+        "id": "icon-outlined",
+        "command": "ui.list",
+        "params": {
+            "name": "OutlinedIcon"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "OutlinedIcon",
+                    "quads": 5,
+                    "modifiers": [
+                        {
+                            "class": "UIOutlineModifier",
+                            "name": "Rim"
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "id": "title-shadowed",
+        "command": "ui.list",
+        "params": {
+            "name": "ShadowTitle"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "ShadowTitle",
+                    "quads": 16,
+                    "modifiers": [
+                        {
+                            "class": "UIShadowModifier",
+                            "name": "Shadow"
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    {
         "id": "screenshot",
         "command": "screenshot",
         "params": {
