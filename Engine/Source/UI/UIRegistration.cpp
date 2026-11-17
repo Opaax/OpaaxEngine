@@ -21,6 +21,9 @@ namespace Opaax
     OPAAX_REGISTER_OBJECT(UIText);
     OPAAX_REGISTER_OBJECT(UIButton);
 
+    // The base of what a node's "Modifiers" can name. Unknown types in a file are skipped.
+    OPAAX_REGISTER_OBJECT(UIModifier);
+
     // Masks its children: white shows, black hides.
     OPAAX_REGISTER_OBJECT(UIMask);
 

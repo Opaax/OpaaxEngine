@@ -7,10 +7,12 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/String/OpaaxStringJson.h"
+#include "Core/Templates/TypeTraits.h"
 #include "Object/ObjectMacros.h"
 #include "Object/ObjectPtr.h"
 #include "UI/UIEvents.h"
 #include "UI/UIAssetProvider.h"
+#include "UI/UIModifier.h"
 #include "UI/UIQuad.h"
 #include "UI/UIRect.h"
 
@@ -41,6 +43,10 @@ namespace Opaax
         OPAAX_ABSTRACT_OBJECT(UIWidget, Object)
 
         friend class UICanvas;
+
+    public:
+        /** Detaches my modifiers before they go. */
+        ~UIWidget() override;
 
         // =============================================================================
         // Authored state (public for reflection; use the setters in code)
@@ -115,6 +121,56 @@ namespace Opaax
          * Gameplay uses it to find authored widgets after loading a .opaaxui.
          */
         UIWidget* FindByName(const OpaaxString& InName);
+
+        // =============================================================================
+        // Modifiers — owned, in the order added (UIModifier.h)
+        // =============================================================================
+    public:
+        /** A new modifier of class T at the end of my list; its setters chain. */
+        template<CDerivedFrom<UIModifier> T>
+        T& AddModifier()
+        {
+            return static_cast<T&>(*AddModifier(NewObject<T>()));
+        }
+
+        /**
+         * Takes the modifier (its only owner should be the one given), at the end of my list.
+         * @return Null when InModifier is empty or already belongs to a widget
+         */
+        UIModifier* AddModifier(TStrongObjectPtr<UIModifier> InModifier);
+
+        /** Takes the modifier, at InIndex in my list (clamped). */
+        UIModifier* AddModifier(TStrongObjectPtr<UIModifier> InModifier, Uint64 InIndex);
+
+        /** Gives the modifier back (for undo), detached. Empty if InModifier is not mine. */
+        TStrongObjectPtr<UIModifier> RemoveModifier(UIModifier& InModifier);
+
+        /** Moves InModifier to InIndex in my list (clamped). False if it is not mine. */
+        bool MoveModifier(UIModifier& InModifier, Uint64 InIndex);
+
+        /** My first modifier of class T (or a subclass), or null. */
+        template<CDerivedFrom<UIModifier> T>
+        T* FindModifier() const noexcept
+        {
+            for (const TStrongObjectPtr<UIModifier>& lModifier : m_Modifiers)
+            {
+                if (lModifier->IsA<T>()) { return static_cast<T*>(lModifier.Get()); }
+            }
+            return nullptr;
+        }
+
+        /** My first modifier of class T named InName, or null. */
+        template<CDerivedFrom<UIModifier> T>
+        T* FindModifier(const OpaaxStringID InName) const noexcept
+        {
+            for (const TStrongObjectPtr<UIModifier>& lModifier : m_Modifiers)
+            {
+                if (lModifier->Name == InName && lModifier->IsA<T>()) { return static_cast<T*>(lModifier.Get()); }
+            }
+            return nullptr;
+        }
+
+        const TDynArray<TStrongObjectPtr<UIModifier>>& GetModifiers() const noexcept { return m_Modifiers; }
 
         // =============================================================================
         // Input — override to handle an event; the default lets it bubble
@@ -203,9 +259,10 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        UIWidget*                             m_Parent = nullptr;   // not owned
-        UICanvas*                             m_Canvas = nullptr;   // not owned; set on attach
-        TDynArray<TStrongObjectPtr<UIWidget>> m_Children;
+        UIWidget*                               m_Parent = nullptr;   // not owned
+        UICanvas*                               m_Canvas = nullptr;   // not owned; set on attach
+        TDynArray<TStrongObjectPtr<UIWidget>>   m_Children;
+        TDynArray<TStrongObjectPtr<UIModifier>> m_Modifiers;
 
         Bounds2D           m_Bounds;
         TDynArray<UIQuad>  m_Quads;

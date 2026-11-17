@@ -474,3 +474,168 @@ TEST_CASE("UIWidget: AddChild at an index inserts there, and past the end append
     CHECK(lParent.GetChildren()[3].Get() == lD);
     CHECK(lB->GetParent() == &lParent);
 }
+
+// =============================================================================
+// Modifiers in a node
+// =============================================================================
+
+namespace
+{
+    /** A modifier with a field of its own, for the file's round trips. */
+    class UIFileTestModifier final : public UIModifier
+    {
+        OPAAX_OBJECT(UIFileTestModifier, UIModifier)
+
+    public:
+        float    Strength = 1.f;
+        Vector2F Offset   = { 0.f, 0.f };
+
+        OPAAX_PROPERTIES(UIFileTestModifier, OPAAX_PROP(Strength), OPAAX_PROP(Offset))
+    };
+
+    /** The widget classes, and the modifier classes a node may name. */
+    struct ModifierClasses final : ObjectClassRegistry
+    {
+        ModifierClasses()
+        {
+            Register<UIWidget>();
+            Register<UIPanel>();
+            Register<UIImage>();
+            Register<UIModifier>();
+            Register<UIFileTestModifier>();
+        }
+    };
+
+    const UIFileTestModifier* ModifierAt(const UIWidget& InWidget, const Uint64 InIndex)
+    {
+        return InIndex < InWidget.GetModifiers().size()
+                   ? Cast<UIFileTestModifier>(InWidget.GetModifiers()[InIndex].Get())
+                   : nullptr;
+    }
+}
+
+TEST_CASE("UICanvasFile: a node's modifiers round-trip in order, with their fields")
+{
+    const ModifierClasses lRegistry;
+
+    UICanvasFile::UICanvasDoc lDoc = UICanvasFile::MakeEmpty(1080.f);
+    UIWidget* const lImage = lDoc.Root->AddChild(NewObject<UIImage>());
+    lImage->Name = "Badge";
+
+    UIFileTestModifier& lFirst = lImage->AddModifier<UIFileTestModifier>();
+    lFirst.Name     = OPAAX_ID("Glow");
+    lFirst.Strength = 3.5f;
+    lFirst.Offset   = { 4.f, -4.f };
+
+    UIFileTestModifier& lSecond = lImage->AddModifier<UIFileTestModifier>();
+    lSecond.bEnabled = false;
+
+    const OpaaxString lText = UICanvasFile::Serialize(lDoc);
+    CHECK(lText.Find("\"Modifiers\"") >= 0);
+
+    UICanvasFile::UICanvasDoc lBack;
+    REQUIRE(UICanvasFile::Deserialize(lText, lRegistry, lBack));
+
+    const UIWidget& lRead = *lBack.Root->GetChildren()[0];
+    REQUIRE(lRead.GetModifiers().size() == 2u);
+
+    const UIFileTestModifier* lReadFirst  = ModifierAt(lRead, 0);
+    const UIFileTestModifier* lReadSecond = ModifierAt(lRead, 1);
+    REQUIRE(lReadFirst != nullptr);
+    REQUIRE(lReadSecond != nullptr);
+
+    CHECK(lReadFirst->Name == OPAAX_ID("Glow"));
+    CHECK(lReadFirst->Strength == doctest::Approx(3.5f));
+    CheckVec(lReadFirst->Offset, { 4.f, -4.f });
+    CHECK(lReadFirst->bEnabled);
+    CHECK(lReadFirst->GetOwner() == &lRead);
+
+    CHECK_FALSE(lReadSecond->Name.IsValid());
+    CHECK_FALSE(lReadSecond->bEnabled);
+
+    // Written again, the same text: nothing is lost or reordered.
+    CHECK(UICanvasFile::Serialize(lBack) == lText);
+}
+
+TEST_CASE("UICanvasFile: a node without modifiers writes no key, and a file without the key has none")
+{
+    const ModifierClasses lRegistry;
+
+    UICanvasFile::UICanvasDoc lDoc = UICanvasFile::MakeEmpty(1080.f);
+    lDoc.Root->AddChild(NewObject<UIImage>());
+    CHECK(UICanvasFile::Serialize(lDoc).Find("Modifiers") < 0);
+
+    const OpaaxString lOld = OpaaxString(R"({
+    "Root": { "Type": "UIPanel", "Children": [ { "Type": "UIImage", "Name": "Old" } ] },
+    "Version": 1
+})");
+
+    UICanvasFile::UICanvasDoc lBack;
+    REQUIRE(UICanvasFile::Deserialize(lOld, lRegistry, lBack));
+    REQUIRE(lBack.Root->GetChildren().size() == 1u);
+    CHECK(lBack.Root->GetChildren()[0]->GetModifiers().empty());
+}
+
+TEST_CASE("UICanvasFile: an unknown modifier costs that modifier, not the widget")
+{
+    const ModifierClasses lRegistry;
+
+    const OpaaxString lText = OpaaxString(R"({
+    "Root": { "Type": "UIPanel", "Children": [ { "Type": "UIImage", "Name": "Kept", "Modifiers": [
+        { "Type": "UIFileTestModifier", "Strength": 2.0 },
+        { "Type": "UIFromTheFuture", "Wobble": 9 },
+        "not an object",
+        { "Type": "UIFileTestModifier", "Strength": 7.0 }
+    ] } ] },
+    "Version": 1
+})");
+
+    UICanvasFile::UICanvasDoc lDoc;
+    REQUIRE(UICanvasFile::Deserialize(lText, lRegistry, lDoc));
+
+    const UIWidget& lKept = *lDoc.Root->GetChildren()[0];
+    CHECK(lKept.Name == OpaaxString("Kept"));
+    REQUIRE(lKept.GetModifiers().size() == 2u);
+    CHECK(ModifierAt(lKept, 0)->Strength == doctest::Approx(2.f));
+    CHECK(ModifierAt(lKept, 1)->Strength == doctest::Approx(7.f));
+}
+
+TEST_CASE("UICanvasFile: a modifier's value of the wrong type refuses the file")
+{
+    const ModifierClasses lRegistry;
+
+    UICanvasFile::UICanvasDoc lDoc;
+    lDoc.ReferenceHeight = 999.f;
+
+    CHECK_FALSE(UICanvasFile::Deserialize(OpaaxString(R"({
+    "Root": { "Type": "UIPanel", "Modifiers": [ { "Type": "UIFileTestModifier", "Strength": "very" } ] },
+    "Version": 1
+})"), lRegistry, lDoc));
+
+    CHECK(lDoc.ReferenceHeight == doctest::Approx(999.f));
+}
+
+TEST_CASE("UICanvasFile: CloneWidget and a node's text carry the modifiers")
+{
+    const ModifierClasses lRegistry;
+
+    TStrongObjectPtr<UIPanel> lPanel = NewObject<UIPanel>();
+    lPanel->AddModifier<UIFileTestModifier>().Strength = 5.f;
+    UIWidget* const lChild = lPanel->AddChild(NewObject<UIImage>());
+    lChild->AddModifier<UIFileTestModifier>().Strength = 6.f;
+
+    TStrongObjectPtr<UIWidget> lClone = UICanvasFile::CloneWidget(*lPanel, lRegistry);
+    REQUIRE(lClone != nullptr);
+    REQUIRE(ModifierAt(*lClone, 0) != nullptr);
+    CHECK(ModifierAt(*lClone, 0)->Strength == doctest::Approx(5.f));
+    CHECK(ModifierAt(*lClone->GetChildren()[0], 0)->Strength == doctest::Approx(6.f));
+
+    // A copy, not the same objects.
+    CHECK(lClone->GetModifiers()[0].Get() != lPanel->GetModifiers()[0].Get());
+    CHECK(lClone->GetModifiers()[0]->GetOwner() == lClone.Get());
+
+    TStrongObjectPtr<UIWidget> lPasted = UICanvasFile::DeserializeNode(UICanvasFile::SerializeNode(*lPanel), lRegistry);
+    REQUIRE(lPasted != nullptr);
+    REQUIRE(ModifierAt(*lPasted, 0) != nullptr);
+    CHECK(ModifierAt(*lPasted, 0)->Strength == doctest::Approx(5.f));
+}

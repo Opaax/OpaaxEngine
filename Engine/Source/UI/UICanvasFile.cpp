@@ -17,14 +17,31 @@ namespace Opaax
         constexpr const char* KEY_ROOT      = "Root";
         constexpr const char* KEY_TYPE      = "Type";
         constexpr const char* KEY_CHILDREN  = "Children";
+        constexpr const char* KEY_MODIFIERS = "Modifiers";
 
-        /** One node: its class, its properties, then its children. */
+        /** One node: its class, its properties, its modifiers, then its children. */
         nlohmann::json WriteNode(const UIWidget& InWidget)
         {
             const ObjectClass& lClass = InWidget.GetClass();
 
             nlohmann::json lJson = lClass.WriteProperties(InWidget);
             lJson[KEY_TYPE] = lClass.GetName().CStr();
+
+            // Optional: a node without modifiers is written as before, so older builds read it unchanged.
+            const TDynArray<TStrongObjectPtr<UIModifier>>& lModifiers = InWidget.GetModifiers();
+            if (!lModifiers.empty())
+            {
+                nlohmann::json lArray = nlohmann::json::array();
+                for (const TStrongObjectPtr<UIModifier>& lModifier : lModifiers)
+                {
+                    const ObjectClass& lModifierClass = lModifier->GetClass();
+
+                    nlohmann::json lModifierJson = lModifierClass.WriteProperties(*lModifier);
+                    lModifierJson[KEY_TYPE] = lModifierClass.GetName().CStr();
+                    lArray.emplace_back(Move(lModifierJson));
+                }
+                lJson[KEY_MODIFIERS] = Move(lArray);
+            }
 
             const TDynArray<TStrongObjectPtr<UIWidget>>& lChildren = InWidget.GetChildren();
             if (!lChildren.empty())
@@ -71,6 +88,35 @@ namespace Opaax
             }
 
             lWidget->PostLoad();
+
+            if (const auto lIt = InJson.find(KEY_MODIFIERS); lIt != InJson.end() && lIt->is_array())
+            {
+                for (const nlohmann::json& lModifierJson : *lIt)
+                {
+                    // Unknown type: skip this modifier (one warning), keep the widget and the rest.
+                    const OpaaxString lModifierType = lModifierJson.is_object()
+                                                          ? lModifierJson.value(KEY_TYPE, OpaaxString())
+                                                          : OpaaxString();
+                    TStrongObjectPtr<UIModifier> lModifier = UIModifier::Create(OpaaxStringID(lModifierType), InClasses);
+                    if (!lModifier)
+                    {
+                        OPAAX_LOG(LogUICanvasFile, Warn, "Unknown modifier type '{}' on '{}' — that modifier was skipped",
+                                  lModifierType.CStr(), lWidget->Name.CStr());
+                        continue;
+                    }
+
+                    lModifier->GetClass().ReadProperties(*lModifier, lModifierJson, &lBadFields);
+                    if (!lBadFields.empty())
+                    {
+                        OutBadValue = OpaaxString::Format("{}.{}.{}", lType.CStr(), lModifierType.CStr(),
+                                                          lBadFields.front().CStr());
+                        return nullptr;
+                    }
+
+                    lModifier->PostLoad();
+                    lWidget->AddModifier(Move(lModifier));
+                }
+            }
 
             if (const auto lIt = InJson.find(KEY_CHILDREN); lIt != InJson.end() && lIt->is_array())
             {

@@ -8,6 +8,15 @@
 
 namespace Opaax
 {
+    UIWidget::~UIWidget()
+    {
+        for (const TStrongObjectPtr<UIModifier>& lModifier : m_Modifiers)
+        {
+            lModifier->OnDetach();
+            lModifier->m_Owner = nullptr;
+        }
+    }
+
     // =============================================================================
     // Authored state
     // =============================================================================
@@ -109,6 +118,66 @@ namespace Opaax
         }
 
         return nullptr;
+    }
+
+    // =============================================================================
+    // Modifiers
+    // =============================================================================
+
+    UIModifier* UIWidget::AddModifier(TStrongObjectPtr<UIModifier> InModifier)
+    {
+        return AddModifier(Move(InModifier), m_Modifiers.size());
+    }
+
+    UIModifier* UIWidget::AddModifier(TStrongObjectPtr<UIModifier> InModifier, const Uint64 InIndex)
+    {
+        if (!InModifier || InModifier->m_Owner != nullptr)
+        {
+            return nullptr;
+        }
+
+        UIModifier* lModifier = InModifier.Get();
+        lModifier->m_Owner    = this;
+        m_Modifiers.emplace(m_Modifiers.begin() + static_cast<PtrDiff>(Maths::Min(InIndex, static_cast<Uint64>(m_Modifiers.size()))),
+                            Move(InModifier));
+
+        lModifier->OnAttach();
+        return lModifier;
+    }
+
+    TStrongObjectPtr<UIModifier> UIWidget::RemoveModifier(UIModifier& InModifier)
+    {
+        const auto lIt = Algo::FindIf(m_Modifiers,
+                                      [&InModifier](const TStrongObjectPtr<UIModifier>& InOwned) { return InOwned.Get() == &InModifier; });
+        if (lIt == m_Modifiers.end())
+        {
+            return nullptr;
+        }
+
+        TStrongObjectPtr<UIModifier> lRemoved = Move(*lIt);
+        m_Modifiers.erase(lIt);
+
+        lRemoved->OnDetach();
+        lRemoved->m_Owner = nullptr;
+        return lRemoved;
+    }
+
+    bool UIWidget::MoveModifier(UIModifier& InModifier, const Uint64 InIndex)
+    {
+        const auto lIt = Algo::FindIf(m_Modifiers,
+                                      [&InModifier](const TStrongObjectPtr<UIModifier>& InOwned) { return InOwned.Get() == &InModifier; });
+        if (lIt == m_Modifiers.end())
+        {
+            return false;
+        }
+
+        // Taken out and put back without a detach: it stays mine.
+        TStrongObjectPtr<UIModifier> lMoved = Move(*lIt);
+        m_Modifiers.erase(lIt);
+
+        const Uint64 lIndex = Maths::Min(InIndex, static_cast<Uint64>(m_Modifiers.size()));
+        m_Modifiers.emplace(m_Modifiers.begin() + static_cast<PtrDiff>(lIndex), Move(lMoved));
+        return true;
     }
 
     void UIWidget::SetCanvasRecursive(UICanvas* InCanvas)
