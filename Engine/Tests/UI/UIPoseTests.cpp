@@ -6,6 +6,7 @@
 #include "Core/Maths/MathsStatics.h"
 #include "UI/Modifiers/UITransformModifier.h"
 #include "UI/UICanvas.h"
+#include "UI/Widgets/UIButton.h"
 #include "UI/Widgets/UIImage.h"
 #include "UI/Widgets/UIMask.h"
 #include "UI/Widgets/UIPanel.h"
@@ -269,4 +270,167 @@ TEST_CASE("UIPose: a modifier removed with its widget leaves nothing behind")
     TStrongObjectPtr<UIWidget> lRemoved = lF.Canvas.Root().RemoveChild(*lParent);
     lRemoved.Reset();
     CHECK(lF.DrawList().empty());
+}
+
+// =============================================================================
+// The hit area (bMovesHitArea)
+// =============================================================================
+
+namespace
+{
+    /** Takes presses and keeps where each pointer event reached it. */
+    class UIPointerRecorder final : public UIWidget
+    {
+        OPAAX_OBJECT(UIPointerRecorder, UIWidget)
+
+    public:
+        TDynArray<Vector2F> Positions;
+
+        EUIReply OnPointerEvent(const UIPointerEvent& InEvent) override
+        {
+            Positions.push_back(InEvent.Position);
+            return InEvent.Type == EUIPointerEventType::Down ? EUIReply::Handled : EUIReply::Unhandled;
+        }
+    };
+
+    UIPose Moved(const Vector2F& InBy)
+    {
+        UIPose lPose;
+        lPose.Translation = InBy;
+        return lPose;
+    }
+
+    UIPointerEvent Ev(const EUIPointerEventType InType, const Vector2F& InAt)
+    {
+        return UIPointerEvent{ InType, InAt, EUIPointerButton::Primary };
+    }
+}
+
+TEST_CASE("UIPose hit area: on, the widget is hit where it is drawn; off, where its layout is")
+{
+    Fixture lF;
+    UIWidget* lMoving = AddImage(lF.Canvas.Root(), { 100.f, 100.f }, { 0.f, 200.f });
+    UIWidget* lStaying = AddImage(lF.Canvas.Root(), { 100.f, 100.f }, { 0.f, -200.f });
+
+    lMoving->AddModifier<UITransformModifier>().SetPose(Moved({ 300.f, 0.f }));
+    lStaying->AddModifier<UITransformModifier>().SetPose(Moved({ 300.f, 0.f })).SetMovesHitArea(false);
+    lF.DrawList();
+
+    // On: at its drawn place only.
+    CHECK(lF.Canvas.HitTest({ 300.f, 200.f }) == lMoving);
+    CHECK(lF.Canvas.HitTest({ 0.f, 200.f }) == nullptr);
+
+    // Off: drawn at 300, still hit at its layout rect.
+    CHECK(lF.Canvas.HitTest({ 0.f, -200.f }) == lStaying);
+    CHECK(lF.Canvas.HitTest({ 300.f, -200.f }) == nullptr);
+
+    CHECK(lMoving->GetHitTransform().TransformPoint({ 0.f, 200.f }).x == doctest::Approx(300.f));
+    CHECK(lStaying->GetHitTransform().IsIdentity());
+
+    // With every pose off, hit testing is as it was without poses.
+    lMoving->GetModifiers()[0].Get()->bEnabled = false;
+    lMoving->InvalidatePose();
+    lF.DrawList();
+    CHECK(lF.Canvas.HitTest({ 0.f, 200.f }) == lMoving);
+}
+
+TEST_CASE("UIPose hit area: a widget turned 45 degrees is hit inside its turned box only")
+{
+    Fixture lF;
+    UIWidget* lImage = AddImage(lF.Canvas.Root(), { 100.f, 100.f });
+    lImage->AddModifier<UITransformModifier>().SetPose(Turned(45.f));
+    lF.DrawList();
+
+    // A corner of the turned square reaches 70.7 along the axis, past the layout's 50.
+    CHECK(lF.Canvas.HitTest({ 65.f, 0.f }) == lImage);
+    // Inside the layout square's corner, outside the turned one.
+    CHECK(lF.Canvas.HitTest({ 45.f, 45.f }) == nullptr);
+    CHECK(lF.Canvas.HitTest({ 0.f, 0.f }) == lImage);
+}
+
+TEST_CASE("UIPose hit area: a parent's pose moves its children's areas when on")
+{
+    Fixture lF;
+    UIWidget* lParent = AddImage(lF.Canvas.Root(), { 200.f, 200.f });
+    lParent->bHitTestable = false;
+    UIWidget* lChild = AddImage(*lParent, { 20.f, 20.f }, { 50.f, 0.f });
+
+    UITransformModifier& lTurn = lParent->AddModifier<UITransformModifier>().SetPose(Turned(90.f));
+    lF.DrawList();
+
+    // Right of the parent's centre, turned a quarter: above it, and hit there.
+    CHECK(lF.Canvas.HitTest({ 0.f, 50.f }) == lChild);
+    CHECK(lF.Canvas.HitTest({ 50.f, 0.f }) == nullptr);
+
+    // Off on the parent: the child is hit at its layout, though drawn above.
+    lTurn.SetMovesHitArea(false);
+    lF.DrawList();
+    CHECK(lF.Canvas.HitTest({ 50.f, 0.f }) == lChild);
+    CHECK(lF.Canvas.HitTest({ 0.f, 50.f }) == nullptr);
+}
+
+TEST_CASE("UIPose hit area: a scale of 0 makes nothing hit, and a mask clips in its posed space")
+{
+    Fixture lF;
+    UIWidget* lImage = AddImage(lF.Canvas.Root(), { 100.f, 100.f });
+    lImage->AddModifier<UITransformModifier>().SetPose(Scaled(0.f));
+    lF.DrawList();
+    CHECK(lF.Canvas.HitTest({ 0.f, 0.f }) == nullptr);
+
+    auto lMaskNode = NewObject<UIMask>();
+    lMaskNode->SetRect(Centred({ 100.f, 100.f }, { 400.f, 0.f }));
+    UIWidget* lMask  = lF.Canvas.Root().AddChild(Move(lMaskNode));
+    UIWidget* lInner = AddImage(*lMask, { 300.f, 40.f });   // wider than the mask
+    lMask->AddModifier<UITransformModifier>().SetPose(Scaled(2.f));
+    lF.DrawList();
+
+    // Scaled by 2 the mask covers 300..500 in x: the inner bar is hit there, not beyond.
+    CHECK(lF.Canvas.HitTest({ 490.f, 0.f }) == lInner);
+    CHECK(lF.Canvas.HitTest({ 520.f, 0.f }) == nullptr);
+}
+
+TEST_CASE("UIPose hit area: pointer events reach a widget in its layout space")
+{
+    Fixture lF;
+    UIPointerRecorder* lRecorder = static_cast<UIPointerRecorder*>(lF.Canvas.Root().AddChild(NewObject<UIPointerRecorder>()));
+    lRecorder->SetRect(Centred({ 100.f, 100.f }));
+    lRecorder->AddModifier<UITransformModifier>().SetPose(Scaled(2.f));
+    lF.DrawList();
+
+    // At 80 in canvas units, 40 in its own: a drag reads layout units, not screen ones (a scroll box
+    // scaled by 2 moves its content as far as the pointer moved over it).
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Move, { 80.f, 0.f }));   // Enter
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Down, { 80.f, 0.f }));
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Move, { 90.f, 20.f }));  // captured
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Up, { 90.f, 20.f }));
+
+    REQUIRE(lRecorder->Positions.size() >= 3u);
+    for (const Vector2F& lAt : lRecorder->Positions)
+    {
+        CHECK(lAt.x <= 45.f);   // never the canvas's 80 or 90
+    }
+    CheckVec(lRecorder->Positions.front(), { 40.f, 0.f });
+    CheckVec(lRecorder->Positions.back(), { 45.f, 10.f });
+}
+
+TEST_CASE("UIPose hit area: a button moved by a pose clicks where it is drawn")
+{
+    Fixture lF;
+    UIButton* lButton = static_cast<UIButton*>(lF.Canvas.Root().AddChild(NewObject<UIButton>()));
+    lButton->SetRect(Centred({ 200.f, 80.f }));
+    Uint32 lClicks = 0;
+    lButton->OnClick.Add([&lClicks]() { ++lClicks; });
+
+    lButton->AddModifier<UITransformModifier>().SetPose(Moved({ 300.f, 0.f }));
+    lF.DrawList();
+
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Move, { 300.f, 0.f }));
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Down, { 300.f, 0.f }));
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Up, { 310.f, 5.f }));
+    CHECK(lClicks == 1u);
+
+    // Released past its drawn edge: no click, as without a pose.
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Down, { 300.f, 0.f }));
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Up, { 450.f, 0.f }));
+    CHECK(lClicks == 1u);
 }

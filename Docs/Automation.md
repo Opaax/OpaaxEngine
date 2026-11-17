@@ -122,8 +122,8 @@ whole params. The line is checked against the declared parameters, and an error 
 | `input.resetKeys` | `context`, `action`, `default` | Gives every mapping its asset's key again; `context` only that context's, `action` (named as `input.rebind` takes it) only that mapping. Answers as `input.keys` |
 | `input.capture` | `cancel` | Waits for the next key the player presses, as a menu's "press a key" does: `input.key` presses one, `input.keys` says what it took, and it rebinds nothing. `cancel: true` ends the one under way. Answers `capturing`, `captured` |
 | `ui.list` | `name` | The game UI's widgets: name, type, visible, centre and size in game-view pixels, `quads` (how many it draws: 9 for a sliced image, more for a tiled one); a button (any `UIButtonBase`) also answers its `state`: `Normal`, `Hovered`, `Pressed` or `Disabled`; a widget with modifiers answers `modifiers` (`class`, `name`, `enabled`, in order). As drawn, its poses and its parents' applied: `drawn` (`x`, `y`, `width`, `height` of the box that covers it, pixels), `scale` (`x`, `y`), `rotation` (degrees) and `alpha` (every opacity from the root down); at rest `drawn` is the layout box |
-| `ui.click` | `widget`, `frames` | Clicks a widget of the game's UI by name: the pointer moves to its centre, the left button is tapped |
-| `ui.hover` | `widget` | Moves the game's pointer to a widget's centre by name and answers once the widget is hovered; with `input.key Mouse_Left press` a script then sees it pressed |
+| `ui.click` | `widget`, `frames` | Clicks a widget of the game's UI by name: the pointer moves to its centre (its hit area's, when a pose moves it: `bMovesHitArea`), the left button is tapped |
+| `ui.hover` | `widget` | Moves the game's pointer to a widget's centre (its hit area's) by name and answers once the widget is hovered; with `input.key Mouse_Left press` a script then sees it pressed |
 | `world.info` | | The active world: name, mode, paused, timeScale, entities, camera (its view) |
 | `world.pause` | `paused` | Pauses the playing world (`true`) or resumes it (`false`) |
 | `world.step` | | Runs one frame of the paused world, with the fixed steps it owes |

@@ -1772,7 +1772,8 @@ namespace Opaax::EngineAutomation
             return false;
         }
 
-        OutPixel = InCanvas.CanvasToScreen(lWidget->GetBounds().Center);
+        // The hit area's centre: where a click reaches it, posed or not.
+        OutPixel = InCanvas.CanvasToScreen(lWidget->GetHitTransform().TransformPoint(lWidget->GetBounds().Center));
         return true;
     }
 

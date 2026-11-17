@@ -811,6 +811,26 @@ namespace Opaax::Editor
         }
         lOutline(lDoc.SelectedPath(), IM_COL32(255, 170, 40, 255), 2.f);
 
+        // Where clicks reach the selection when a pose moves its hit area (bMovesHitArea): its layout
+        // rect through that pose, turned if the pose turns it. The orange rect and grips stay the layout.
+        if (const UIWidget* const lSelected = lDoc.SelectedPath().empty() ? nullptr : lDoc.SelectedWidget())
+        {
+            const Affine2D lHit = lSelected->GetHitTransform();
+            if (!lHit.IsIdentity())
+            {
+                const Bounds2D& lBounds = lSelected->GetBounds();
+                const Vector2F  lCorners[4] = { lBounds.Min(), { lBounds.Max().x, lBounds.Min().y },
+                                                lBounds.Max(), { lBounds.Min().x, lBounds.Max().y } };
+                ImVec2 lPoints[4];
+                for (Uint32 lIndex = 0; lIndex < 4; ++lIndex)
+                {
+                    const Vector2F lPx = CanvasToPreview(lHit.TransformPoint(lCorners[lIndex])) + InOrigin;
+                    lPoints[lIndex] = ImVec2(lPx.x, lPx.y);
+                }
+                lDraw->AddPolyline(lPoints, 4, IM_COL32(80, 200, 255, 255), ImDrawFlags_Closed, 1.5f);
+            }
+        }
+
         // The eight grips, on the rect the hit-test uses.
         if (!lDoc.SelectedPath().empty() && lDoc.SelectedWidget() != nullptr)
         {

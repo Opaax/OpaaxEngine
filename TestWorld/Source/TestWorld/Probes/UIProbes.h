@@ -209,4 +209,64 @@ namespace TestWorld
         Opaax::UIWidget*    m_Tree = nullptr;   // owned by the game's canvas
         Opaax::UIScrollBox* m_List = nullptr;
     };
+
+    // =============================================================================
+    // ModifierProbe — mounts the canvas Asset (UI/Modifiers.opaaxui) while it lives, and counts the clicks
+    //   on its two moved buttons: HitOn's pose moves its hit area with it, HitOff's does not.
+    // =============================================================================
+    class ModifierProbe : public Opaax::Behaviour
+    {
+        OPAAX_OBJECT(ModifierProbe, Opaax::Behaviour)
+
+    public:
+        Opaax::OpaaxString Asset = "UI/Modifiers.opaaxui";
+
+        bool         bMounted     = false;
+        Opaax::Int32 HitOnClicks  = 0;
+        Opaax::Int32 HitOffClicks = 0;
+
+        OPAAX_PROPERTIES(ModifierProbe, OPAAX_PROP(Asset), OPAAX_PROP(bMounted), OPAAX_PROP(HitOnClicks),
+                         OPAAX_PROP(HitOffClicks))
+
+        void OnStart() override
+        {
+            Opaax::UISubsystem* const lUI = GetContext().UI;
+            if (lUI == nullptr)
+            {
+                return;
+            }
+
+            m_Tree   = lUI->MountAsset(Asset);
+            bMounted = (m_Tree != nullptr);
+            if (!bMounted)
+            {
+                return;
+            }
+
+            if (auto* lOn = dynamic_cast<Opaax::UIButton*>(m_Tree->FindByName(Opaax::OpaaxString("HitOn"))))
+            {
+                lOn->OnClick.AddMember(this, &ModifierProbe::OnHitOn);
+            }
+            if (auto* lOff = dynamic_cast<Opaax::UIButton*>(m_Tree->FindByName(Opaax::OpaaxString("HitOff"))))
+            {
+                lOff->OnClick.AddMember(this, &ModifierProbe::OnHitOff);
+            }
+        }
+
+        void OnDestroy() override
+        {
+            Opaax::UISubsystem* const lUI = GetContext().UI;
+            if (lUI != nullptr && m_Tree != nullptr)
+            {
+                lUI->GetCanvas().Root().RemoveChild(*m_Tree);
+            }
+            m_Tree = nullptr;
+        }
+
+    private:
+        void OnHitOn()  { ++HitOnClicks; }
+        void OnHitOff() { ++HitOffClicks; }
+
+        Opaax::UIWidget* m_Tree = nullptr;   // owned by the game's canvas
+    };
 }
