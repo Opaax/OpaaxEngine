@@ -70,6 +70,7 @@ namespace Opaax
     protected:
         //~Begin UIModifier interface
         void OnAttach() override;
+        void OnReset() override;
         void OnStateChanged(EUIInteractionState InFrom, EUIInteractionState InTo) override;
         bool Tick(float InSeconds) override;
         //~End UIModifier interface

@@ -32,6 +32,8 @@ namespace Opaax::Editor
             return false;   // UICanvasFile logged why; the previous document stays open
         }
 
+        SetPreviewPlaying(false);   // the next document opens still
+
         // Clear first, then adopt: no widgets left from the previous canvas.
         while (!m_Canvas.Root().GetChildren().empty())
         {
@@ -57,8 +59,31 @@ namespace Opaax::Editor
         return true;
     }
 
+    void EditorUICanvasDocument::SetPreviewPlaying(const bool bInPlaying)
+    {
+        if (bInPlaying == m_bPreviewPlaying)
+        {
+            return;
+        }
+
+        m_bPreviewPlaying = bInPlaying;
+        if (bInPlaying)
+        {
+            // As when the game mounts it: ticked, then shown (its Show tweens play).
+            m_Canvas.SetTicked(true);
+            m_Canvas.Root().Show();
+        }
+        else
+        {
+            m_Canvas.ResetRuntime();
+            m_Canvas.SetTicked(false);
+        }
+    }
+
     void EditorUICanvasDocument::Close()
     {
+        SetPreviewPlaying(false);
+
         while (!m_Canvas.Root().GetChildren().empty())
         {
             m_Canvas.Root().RemoveChild(*m_Canvas.Root().GetChildren().front());

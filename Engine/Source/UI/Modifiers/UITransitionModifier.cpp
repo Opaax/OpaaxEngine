@@ -106,6 +106,14 @@ namespace Opaax
         UIPoseModifier::OnAttach();
     }
 
+    void UITransitionModifier::OnReset()
+    {
+        // At its owner's state now, without a motion (as when it joined).
+        m_State   = GetOwner() != nullptr ? GetOwner()->GetInteractionState() : EUIInteractionState::Normal;
+        m_Elapsed = 0.f;
+        InvalidatePose();
+    }
+
     void UITransitionModifier::OnStateChanged(const EUIInteractionState InFrom, const EUIInteractionState InTo)
     {
         (void)InFrom;

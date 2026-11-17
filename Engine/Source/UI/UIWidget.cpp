@@ -259,6 +259,26 @@ namespace Opaax
         }
     }
 
+    void UIWidget::ResetRuntimeRecursive()
+    {
+        m_bHiding     = false;
+        m_HideWaiting = 0;
+
+        for (const TStrongObjectPtr<UIModifier>& lModifier : m_Modifiers)
+        {
+            lModifier->m_bAwake = false;   // the canvas empties its list
+            lModifier->OnReset();
+        }
+
+        // Told nothing: the modifiers just put themselves at the state there is now.
+        m_State = GetInteractionState();
+
+        for (const TStrongObjectPtr<UIWidget>& lChild : m_Children)
+        {
+            lChild->ResetRuntimeRecursive();
+        }
+    }
+
     void UIWidget::ShowRecursive()
     {
         for (const TStrongObjectPtr<UIModifier>& lModifier : m_Modifiers)

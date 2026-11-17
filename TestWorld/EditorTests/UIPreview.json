@@ -1,0 +1,83 @@
+[
+    {
+        "id": "open",
+        "command": "asset.open",
+        "params": {
+            "path": "UI/Modifiers.opaaxui"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "hover-before-play-refused",
+        "command": "ui.preview.hover",
+        "params": {
+            "widget": "Feel"
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "play",
+        "command": "ui.preview.play",
+        "params": {
+            "on": true
+        },
+        "expect": {
+            "playing": true,
+            "dirty": false
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 10
+        }
+    },
+    {
+        "id": "hover-feel",
+        "command": "ui.preview.hover",
+        "params": {
+            "widget": "Feel"
+        },
+        "expect": {
+            "hovered": "Feel",
+            "interaction": "Hovered"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 30
+        }
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "EditorUIPreview.png"
+        }
+    },
+    {
+        "id": "stop",
+        "command": "ui.preview.play",
+        "params": {
+            "on": false
+        },
+        "expect": {
+            "playing": false,
+            "dirty": false
+        }
+    },
+    {
+        "id": "hover-after-stop-refused",
+        "command": "ui.preview.hover",
+        "params": {
+            "widget": "Feel"
+        },
+        "expectFailure": true
+    }
+]

@@ -332,6 +332,9 @@ namespace Opaax
         /** One of my modifiers finished what OnHide waited for (UIModifier::FinishHide). */
         void OnHideStepDone();
 
+        /** No hide under way, my modifiers at rest and asleep, my state worked out again; then my children. */
+        void ResetRuntimeRecursive();
+
         friend class UIModifier;
 
         // =============================================================================

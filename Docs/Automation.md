@@ -219,6 +219,8 @@ The editor adds:
 | `ui.modifier.list` | | The selected widget's modifiers in order: `class`, `name`, `enabled`, `properties` |
 | `ui.modifier.set` | `index`, `values` | Merges `values` into the fields of the selected widget's modifier at `index` as one undo step; a nested field keeps its siblings (`{"Pose": {"Rotation": 30}}`). A value of the wrong type changes nothing |
 | `ui.modifier.remove` | `index` | Removes the selected widget's modifier at `index` |
+| `ui.preview.play` | `on` | Plays the UI panel's preview as the game would (`on`: true, the default): ticked, Show tweens played, the pointer over the image routed to it; `false` stops it, everything back at rest. Answers `playing` and `dirty` (a play never makes the document dirty) |
+| `ui.preview.hover` | `widget` | Puts the playing preview's pointer over a widget (its hit area's centre). Answers the `hovered` widget's name and the named widget's `interaction` |
 | `ui.modifier.move` | `index`, `delta` | Moves it by `delta` places (-1: up; clamped): list order is the order poses apply in |
 | `asset.classes` | | The asset classes a project can make: name, label, category, and properties at their defaults |
 | `asset.new` | `path`, `class`, `properties` | Creates an asset of a class, every field at its default, then sets `properties`, saves and opens it; refuses a file that exists |

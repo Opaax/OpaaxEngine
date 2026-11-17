@@ -55,6 +55,16 @@ namespace Opaax::Editor
         bool RestoreFrom(const OpaaxString& InText, const ObjectClassRegistry& InClasses);
 
         // =============================================================================
+        // Preview play — the canvas runs as in the game: ticked, its Show tweens played, the pointer
+        // routed to it. Nothing saved changes; stopping puts everything back at rest.
+        // =============================================================================
+    public:
+        bool IsPreviewPlaying() const noexcept { return m_bPreviewPlaying; }
+
+        /** On: the canvas is ticked and shown. Off: UICanvas::ResetRuntime, then not ticked. */
+        void SetPreviewPlaying(bool bInPlaying);
+
+        // =============================================================================
         // Get
         // =============================================================================
     public:
@@ -108,5 +118,7 @@ namespace Opaax::Editor
 
         /** The serialized text at the last Open/Save (what IsDirty compares against). */
         OpaaxString m_Baseline;
+
+        bool m_bPreviewPlaying = false;
     };
 }

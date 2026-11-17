@@ -3,6 +3,10 @@
 #include <doctest.h>
 
 #include "UI/UICanvas.h"
+#include "UI/UICanvasFile.h"
+#include "UI/Modifiers/UITransitionModifier.h"
+#include "UI/Modifiers/UITweenModifier.h"
+#include "UI/Widgets/UIButton.h"
 #include "UI/Widgets/UIImage.h"
 #include "UI/Widgets/UIPanel.h"
 
@@ -363,4 +367,63 @@ TEST_CASE("UICanvas: Opacity multiplies down the tree, a subtree at 0 emits noth
     CHECK(lCanvas.HitTest({ 0.f, 0.f }) == lOther);     // the later sibling, as before
     lOther->bVisible = false;
     CHECK(lCanvas.HitTest({ 0.f, 0.f }) == lLeaf);      // invisible by opacity, still a target
+}
+
+TEST_CASE("UICanvas::ResetRuntime: every pose at rest, no pointer state, nothing awake, nothing saved changed")
+{
+    UICanvas lCanvas(1080.f);
+    lCanvas.SetTargetSize(1920, 1080);
+
+    UIButton* lButton = static_cast<UIButton*>(lCanvas.Root().AddChild(NewObject<UIButton>()));
+    lButton->SetRect(Centred({ 200.f, 80.f }));
+    UITransitionModifier& lFeel = lButton->AddModifier<UITransitionModifier>();
+    lFeel.Hovered.Scale = { 1.2f, 1.2f };
+
+    UIWidget* lPanel = lCanvas.Root().AddChild(NewObject<UIImage>());
+    lPanel->SetRect(Centred({ 50.f, 50.f }, { 500.f, 0.f }));
+    UITweenModifier& lPulse = lPanel->AddModifier<UITweenModifier>();
+    UITweenKey lFrom;
+    UITweenKey lTo;
+    lTo.Time       = 1.f;
+    lTo.Pose.Scale = { 2.f, 2.f };
+    lPulse.Keys = { lFrom, lTo };
+    lPulse.Loop = EUILoop::PingPong;
+
+    UITweenModifier& lFade = lPanel->AddModifier<UITweenModifier>().SetPlayOn(EUITweenPlay::Hide);
+    lFade.Keys = { lFrom, lTo };
+    lCanvas.Update();
+
+    const OpaaxString lBefore = UICanvasFile::Serialize(lCanvas.Root(), 1080.f);
+
+    // Play: hovered and pressed, a loop running, a hide under way.
+    lCanvas.RoutePointer(UIPointerEvent{ EUIPointerEventType::Move, { 0.f, 0.f } });
+    lCanvas.RoutePointer(UIPointerEvent{ EUIPointerEventType::Down, { 0.f, 0.f }, EUIPointerButton::Primary });
+    lPulse.Play();
+    lPanel->Hide();
+    for (Int32 lFrame = 0; lFrame < 10; ++lFrame) { lCanvas.Tick(1.f / 60.f); lCanvas.Update(); }
+    REQUIRE(lCanvas.GetAwakeCount() > 0u);
+    REQUIRE(lPanel->IsHiding());
+    REQUIRE(lButton->GetState() == EUIButtonState::Pressed);
+
+    lCanvas.ResetRuntime();
+    lCanvas.Update();
+
+    CHECK(lCanvas.GetAwakeCount() == 0u);
+    CHECK(lCanvas.GetHovered() == nullptr);
+    CHECK(lCanvas.GetPressed() == nullptr);
+    CHECK(lButton->GetState() == EUIButtonState::Normal);
+    CHECK(lButton->GetInteractionState() == EUIInteractionState::Normal);
+    CHECK(lFeel.GetState() == EUIInteractionState::Normal);
+    CHECK_FALSE(lPulse.IsPlaying());
+    CHECK_FALSE(lFade.IsPlaying());
+    CHECK_FALSE(lPanel->IsHiding());
+    CHECK(lPanel->bVisible);
+    CHECK(lButton->GetDrawTransform().IsIdentity());
+    CHECK(lPanel->GetDrawTransform().IsIdentity());
+
+    // The hide it cleared never comes back.
+    for (Int32 lFrame = 0; lFrame < 120; ++lFrame) { lCanvas.Tick(1.f / 60.f); }
+    CHECK(lPanel->bVisible);
+
+    CHECK(UICanvasFile::Serialize(lCanvas.Root(), 1080.f) == lBefore);
 }
