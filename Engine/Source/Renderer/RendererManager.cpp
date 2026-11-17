@@ -216,6 +216,7 @@ namespace Opaax
         m_FaceCache.clear();     // holds the font atlases
         m_FamilyCache.clear();
         m_MaterialCache.clear();
+        m_UIAssetCache.clear();
         m_MissingTexture.reset();
 
         m_RenderSystem.reset(); // waits idle, then tears down
@@ -1044,6 +1045,29 @@ namespace Opaax
         TAssetRef<Texture2D> lRef;
         lRef.Path = OpaaxString(InAssetPath);
         return ResolveTexture(lRef);
+    }
+
+    const Asset* RendererManager::ResolveAsset(const char* InAssetPath)
+    {
+        if (InAssetPath == nullptr || *InAssetPath == 0)
+        {
+            return nullptr;
+        }
+
+        const OpaaxStringID lKey(InAssetPath);
+
+        auto lIt = m_UIAssetCache.find(lKey.GetId());
+        if (lIt == m_UIAssetCache.end())
+        {
+            // Cached even when loading failed, so a missing file is not retried every frame; the
+            // modifier that asked says what it does instead.
+            lIt = m_UIAssetCache.emplace(lKey.GetId(),
+                                         LoadAsset<Asset>(OpaaxApplication::GetAppService<IEngine>().GetResources(),
+                                                          OpaaxApplication::GetAppService<IPaths>(),
+                                                          OpaaxString(InAssetPath))).first;
+        }
+
+        return lIt->second.Get();
     }
 
     UISheetFrameView RendererManager::ResolveSheetFrame(const char* InSheetPath, const Int32 InFrame)

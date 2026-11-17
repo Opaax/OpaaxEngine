@@ -192,6 +192,7 @@ namespace Opaax
     UICanvasStats UICanvas::Update(const UIBuildContext& InContext)
     {
         UICanvasStats lStats;
+        m_Assets = InContext.Assets;
 
         // Read the bindings (widgets only invalidate on change). Skipped when there are no sources.
         if (m_Bindings.Count() > 0)

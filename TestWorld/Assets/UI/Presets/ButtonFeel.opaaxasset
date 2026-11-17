@@ -1,0 +1,80 @@
+{
+    "Class": "UITransition",
+    "Properties": {
+        "Disabled": {
+            "Opacity": 1.0,
+            "Rotation": 0.0,
+            "Scale": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "Tint": {
+                "w": 1.0,
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+            },
+            "Translation": {
+                "x": 0.0,
+                "y": 0.0
+            }
+        },
+        "Duration": 0.12,
+        "Ease": "QuadOut",
+        "Focused": {
+            "Opacity": 1.0,
+            "Rotation": 0.0,
+            "Scale": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "Tint": {
+                "w": 1.0,
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+            },
+            "Translation": {
+                "x": 0.0,
+                "y": 0.0
+            }
+        },
+        "Hovered": {
+            "Opacity": 1.0,
+            "Rotation": 0.0,
+            "Scale": {
+                "x": 1.1,
+                "y": 1.1
+            },
+            "Tint": {
+                "w": 1.0,
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+            },
+            "Translation": {
+                "x": 0.0,
+                "y": 0.0
+            }
+        },
+        "Pressed": {
+            "Opacity": 1.0,
+            "Rotation": 0.0,
+            "Scale": {
+                "x": 0.92,
+                "y": 0.92
+            },
+            "Tint": {
+                "w": 1.0,
+                "x": 0.7,
+                "y": 0.7,
+                "z": 0.7
+            },
+            "Translation": {
+                "x": 0.0,
+                "y": 0.0
+            }
+        }
+    },
+    "Version": 1
+}

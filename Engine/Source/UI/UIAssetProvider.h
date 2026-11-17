@@ -9,6 +9,7 @@
 
 namespace Opaax
 {
+    class Asset;
     class ITexture2D;
 
     /** One sheet frame: the sheet's texture, the frame's UVs, its size, slice border in pixels and mode. */
@@ -50,6 +51,17 @@ namespace Opaax
         {
             (void)InSheetPath; (void)InFrame;
             return {};
+        }
+
+        /**
+         * An asset by path (a modifier's preset), kept loaded for the session: a saved file reloads in
+         * place, so the pointer is read again each time, never kept across frames. Defaults to nothing.
+         * @return Null when nothing loads (the caller falls back and says so)
+         */
+        virtual const Asset* ResolveAsset(const char* InAssetPath)
+        {
+            (void)InAssetPath;
+            return nullptr;
         }
     };
 

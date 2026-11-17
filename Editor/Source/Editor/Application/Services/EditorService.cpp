@@ -38,6 +38,7 @@
 #include "Resources/Asset/AssetResource.h"
 #include "Editor/Panels/UICanvasPanel.h"
 #include "Editor/EditorUICanvasDocument.h"
+#include "UI/Animation/UITransition.h"
 #include "UI/UICanvasFile.h"
 #include "UI/Widgets/UIButton.h"
 #include "UI/Widgets/UIImage.h"
@@ -592,6 +593,11 @@ namespace Opaax::Editor
             .SetLabel(OpaaxString("Camera Shake"))
             .SetCategory(OpaaxString("Rendering"))
             .SetGlyph(OpaaxString("[CS]"));
+        // A transition's feel, shared by the buttons that name it (UITransitionModifier's Preset).
+        lTypes.Register<UITransition>()
+            .SetLabel(OpaaxString("UI Transition"))
+            .SetCategory(OpaaxString("UI"))
+            .SetGlyph(OpaaxString("[UT]"));
         lTypes.Register<AudioClipDef>().SetCategory(OpaaxString("Audio"));
         lTypes.Register<AudioBank>().SetCategory(OpaaxString("Audio"));
 
