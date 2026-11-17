@@ -60,8 +60,10 @@ set(OPAAX_TEST_SOURCES
     Core/IO/FileSystemTests.cpp
     Core/Log/LogHistoryTests.cpp
     Core/Log/LoggerTests.cpp
+    Core/Maths/Affine2DTests.cpp
     Core/Maths/AngleTests.cpp
     Core/Maths/Bounds2DTests.cpp
+    Core/Maths/EasingTests.cpp
     Core/Maths/MarginTests.cpp
     Core/Maths/MathsTests.cpp
     Core/Maths/RandomStreamTests.cpp
