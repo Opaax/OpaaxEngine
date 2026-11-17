@@ -14,7 +14,7 @@ namespace Opaax
     {
         Manual,   // only when asked (Play, ui.tween)
         Show,     // when its widget is shown (it joins the game's canvas shown, or Show())
-        Hide      // when its widget is hidden with Hide(): the widget hides once it is done
+        Hide      // when its widget is hidden with Hide(): the widget hides once it is done (a loop never is)
     };
 
     inline const char* ToString(const EUITweenPlay InPlay) noexcept
@@ -99,7 +99,9 @@ namespace Opaax
 
     protected:
         //~Begin UIModifier interface
+        void OnDetach() override;
         void OnShow() override;
+        bool OnHide() override;
         bool Tick(float InSeconds) override;
         //~End UIModifier interface
 
@@ -107,8 +109,13 @@ namespace Opaax
         /** The pose at m_Time, and whether a Once tween is past its end. */
         UIPose Sample(bool& OutFinished) const;
 
+        /** Lets its owner's hide finish (at its end, or when stopped). */
+        void EndHide();
+
         float  m_Time     = 0.f;
         bool   m_bPlaying = false;
+        /** Playing for a Hide(): the widget hides when it ends. */
+        bool   m_bForHide = false;
         /** What it shows: while playing, at the end it holds, or the rest pose. */
         UIPose m_Shown;
 

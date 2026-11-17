@@ -146,6 +146,7 @@ namespace Opaax::EngineAutomation
                 lRow["rotation"] = lParts.Rotation;
                 lRow["alpha"]    = InWidget.GetDrawnOpacity();
                 lRow["interaction"] = ToString(InWidget.GetInteractionState());
+                lRow["hiding"]      = InWidget.IsHiding();
 
                 // Any button, the engine's or a game's, answers the state it shows.
                 if (InWidget.IsA<UIButtonBase>())
@@ -719,6 +720,38 @@ namespace Opaax::EngineAutomation
                     else                               { lTween->Play(); }
                     return AutomationResult::Ok(nlohmann::json{ { "playing", lTween->IsPlaying() } });
                 });
+
+            // Show() and Hide(), with the tweens that animate them.
+            const auto lShowHide = [&InCommands, &InEngine](const char* InName, const char* InHelp, const bool bInShow)
+            {
+                InCommands.Add(CommandSpec(InName, InHelp)
+                                   .Param("widget", ECommandParamType::String, "the widget's name"),
+                    [&InEngine, bInShow](const nlohmann::json& InParams)
+                    {
+                        OpaaxString     lError;
+                        UICanvas* const lCanvas = GameCanvas(InEngine, lError);
+                        if (lCanvas == nullptr)
+                        {
+                            return AutomationResult::Fail(lError);
+                        }
+
+                        const OpaaxString lName   = InParams.value("widget", OpaaxString());
+                        UIWidget* const   lWidget = lName.IsEmpty() ? nullptr : lCanvas->Root().FindByName(lName);
+                        if (lWidget == nullptr)
+                        {
+                            return AutomationResult::Fail("no widget named '" + lName + "' in the game's UI (ui.list lists them)");
+                        }
+
+                        if (bInShow) { lWidget->Show(); }
+                        else         { lWidget->Hide(); }
+                        return AutomationResult::Ok(nlohmann::json{ { "visible", lWidget->bVisible },
+                                                                    { "hiding", lWidget->IsHiding() } });
+                    });
+            };
+            lShowHide("ui.show", "Shows the game UI's widget named {widget} (Show(): its Show tweens play, a hide under "
+                                 "way is cancelled). Answers {visible, hiding}.", true);
+            lShowHide("ui.hide", "Hides the game UI's widget named {widget} (Hide(): its Hide tweens play, then it is "
+                                 "hidden; at once without one). Answers {visible, hiding}.", false);
 
             InCommands.Add(CommandSpec("ui.click",
                 "Clicks the game UI's widget named {widget}: the pointer moves to its centre and the left button "

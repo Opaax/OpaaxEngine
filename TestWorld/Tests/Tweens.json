@@ -215,6 +215,10 @@
                                 {
                                     "name": "PopIn",
                                     "playing": false
+                                },
+                                {
+                                    "name": "FadeOut",
+                                    "playing": false
                                 }
                             ],
                             "name": "Popup"
@@ -318,6 +322,151 @@
         "command": "screenshot",
         "params": {
             "path": "Tweens.png"
+        }
+    },
+    {
+        "id": "hide",
+        "command": "ui.hide",
+        "params": {
+            "widget": "Popup"
+        },
+        "expect": {
+            "visible": true,
+            "hiding": true
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 24
+        }
+    },
+    {
+        "id": "fading",
+        "command": "ui.list",
+        "params": {
+            "name": "Popup"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "visible": true,
+                    "hiding": true,
+                    "alpha": {
+                        "$atLeast": 0.05,
+                        "$atMost": 0.95
+                    },
+                    "name": "Popup"
+                }
+            ]
+        }
+    },
+    {
+        "id": "screenshot-fading",
+        "command": "screenshot",
+        "params": {
+            "path": "TweenFading.png"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 240
+        }
+    },
+    {
+        "id": "hidden",
+        "command": "ui.list",
+        "params": {
+            "name": "Popup"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "visible": false,
+                    "hiding": false,
+                    "name": "Popup"
+                }
+            ]
+        }
+    },
+    {
+        "id": "fade-finished",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "ModifierProbe/TweensFinished",
+            "equals": 9
+        }
+    },
+    {
+        "id": "show",
+        "command": "ui.show",
+        "params": {
+            "widget": "Popup"
+        },
+        "expect": {
+            "visible": true,
+            "hiding": false
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 240
+        }
+    },
+    {
+        "id": "shown",
+        "command": "ui.list",
+        "params": {
+            "name": "Popup"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "visible": true,
+                    "alpha": {
+                        "$atLeast": 0.999,
+                        "$atMost": 1.001
+                    },
+                    "scale": {
+                        "x": {
+                            "$atLeast": 0.999,
+                            "$atMost": 1.001
+                        }
+                    },
+                    "name": "Popup"
+                }
+            ]
+        }
+    },
+    {
+        "id": "rows-shown",
+        "command": "ui.list",
+        "params": {
+            "name": "Row3"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "visible": true,
+                    "alpha": {
+                        "$atLeast": 0.999,
+                        "$atMost": 1.001
+                    },
+                    "name": "Row3"
+                }
+            ]
+        }
+    },
+    {
+        "id": "popped-in-again",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "ModifierProbe/TweensFinished",
+            "equals": 13
         }
     },
     {

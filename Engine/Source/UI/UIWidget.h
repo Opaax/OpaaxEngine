@@ -193,6 +193,25 @@ namespace Opaax
         bool IsShownInTree() const noexcept;
 
         // =============================================================================
+        // Show and hide — with the modifiers that animate them. Writing bVisible stays the instant way.
+        // =============================================================================
+    public:
+        /**
+         * Shows me (bVisible on) and plays the Show tweens of me and the shown widgets under me. Cancels
+         * a hide under way, dropping the pose its tweens held.
+         */
+        void Show();
+
+        /**
+         * Hides me: my Hide tweens play first, and bVisible goes off when the last one ends (at once
+         * without one). Not hit while hiding. My children go with me; their own hide tweens do not play.
+         */
+        void Hide();
+
+        /** Between Hide() and the end of its tweens: still drawn, not hit. */
+        bool IsHiding() const noexcept { return m_bHiding; }
+
+        // =============================================================================
         // Input — override to handle an event; the default lets it bubble
         // =============================================================================
     public:
@@ -307,6 +326,14 @@ namespace Opaax
         /** m_Pose from my enabled pose modifiers, about pivots in my current bounds. */
         void ComposePose();
 
+        /** OnShow on my modifiers, then on the shown widgets under me. */
+        void ShowRecursive();
+
+        /** One of my modifiers finished what OnHide waited for (UIModifier::FinishHide). */
+        void OnHideStepDone();
+
+        friend class UIModifier;
+
         // =============================================================================
         // Members
         // =============================================================================
@@ -326,6 +353,9 @@ namespace Opaax
         bool m_bPoseDirty    = false;
         /** The state my modifiers were last told. */
         EUIInteractionState m_State = EUIInteractionState::Normal;
+        /** Between Hide() and its end; how many modifiers it still waits for. */
+        bool   m_bHiding     = false;
+        Uint32 m_HideWaiting = 0;
         /** Set while I am destroyed: my modifiers' detach must not reach my parents. */
         bool m_bDestroying   = false;
     };

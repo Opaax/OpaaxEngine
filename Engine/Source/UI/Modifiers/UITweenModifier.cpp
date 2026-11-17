@@ -32,6 +32,16 @@ namespace Opaax
         m_Shown    = UIPose{};
         InvalidatePose();
         Sleep();
+        EndHide();   // a hide it was playing for ends now
+    }
+
+    void UITweenModifier::EndHide()
+    {
+        if (m_bForHide)
+        {
+            m_bForHide = false;
+            FinishHide();
+        }
     }
 
     const UITween* UITweenModifier::GetTween() const
@@ -115,12 +125,34 @@ namespace Opaax
     // UIModifier
     // =============================================================================
 
+    void UITweenModifier::OnDetach()
+    {
+        EndHide();   // removed while its widget waits for it: the hide does not wait for ever
+        UIPoseModifier::OnDetach();
+    }
+
     void UITweenModifier::OnShow()
     {
         if (PlayOn == EUITweenPlay::Show)
         {
             Play();
         }
+        else if (PlayOn == EUITweenPlay::Hide)
+        {
+            Stop();   // shown again: the pose a hide held (faded out) goes
+        }
+    }
+
+    bool UITweenModifier::OnHide()
+    {
+        if (PlayOn != EUITweenPlay::Hide)
+        {
+            return false;
+        }
+
+        Play();
+        m_bForHide = true;
+        return true;
     }
 
     bool UITweenModifier::Tick(const float InSeconds)
@@ -139,6 +171,7 @@ namespace Opaax
         if (lFinished)
         {
             m_bPlaying = false;
+            EndHide();   // hidden before OnFinished: a listener sees the widget gone
             OnFinished.Broadcast();
             return false;
         }
