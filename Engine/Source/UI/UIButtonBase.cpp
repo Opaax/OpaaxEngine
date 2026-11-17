@@ -6,6 +6,7 @@ void Opaax::UIButtonBase::SetEnabled(bool bInEnabled)
 {
     bIsEnabled = bInEnabled;
     InvalidateContent();
+    NotifyStateChanged();
 }
 
 Opaax::EUIReply Opaax::UIButtonBase::OnPointerEvent(const UIPointerEvent& InEvent)

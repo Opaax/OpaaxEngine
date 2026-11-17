@@ -144,6 +144,7 @@ namespace Opaax::EngineAutomation
                 lRow["scale"]    = { { "x", lParts.Scale.x }, { "y", lParts.Scale.y } };
                 lRow["rotation"] = lParts.Rotation;
                 lRow["alpha"]    = InWidget.GetDrawnOpacity();
+                lRow["interaction"] = ToString(InWidget.GetInteractionState());
 
                 // Any button, the engine's or a game's, answers the state it shows.
                 if (InWidget.IsA<UIButtonBase>())

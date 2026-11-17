@@ -280,6 +280,14 @@ namespace Opaax
 
     EUIReply UICanvas::RoutePointer(const UIPointerEvent& InEvent)
     {
+        const InteractionSnapshot lBefore = SnapshotInteraction();
+        const EUIReply            lReply  = RoutePointerTo(InEvent);
+        RefreshStates(lBefore);
+        return lReply;
+    }
+
+    EUIReply UICanvas::RoutePointerTo(const UIPointerEvent& InEvent)
+    {
         if (InEvent.Type == EUIPointerEventType::Move)
         {
             UIWidget* lHit = HitTest(InEvent.Position);
@@ -356,11 +364,14 @@ namespace Opaax
 
     void UICanvas::SetFocus(UIWidget* InWidget) noexcept
     {
+        const InteractionSnapshot lBefore = SnapshotInteraction();
         m_Focused = InWidget;
+        RefreshStates(lBefore);
     }
 
     void UICanvas::ClearPointer()
     {
+        const InteractionSnapshot lBefore = SnapshotInteraction();
         if (m_Hovered != nullptr)
         {
             m_Hovered->OnPointerEvent({ EUIPointerEventType::Leave, { 0.f, 0.f }, EUIPointerButton::None });
@@ -368,6 +379,7 @@ namespace Opaax
         }
         m_Pressed     = nullptr;
         m_PressButton = EUIPointerButton::None;
+        RefreshStates(lBefore);
     }
 
     void UICanvas::OnDetached(UIWidget& InSubtreeRoot)
@@ -382,12 +394,88 @@ namespace Opaax
             return false;
         };
 
+        const InteractionSnapshot lBefore = SnapshotInteraction();
+
         if (lUnderSubtree(m_Hovered)) { m_Hovered = nullptr; }
         if (lUnderSubtree(m_Focused)) { m_Focused = nullptr; }
         if (lUnderSubtree(m_Pressed))
         {
             m_Pressed     = nullptr;
             m_PressButton = EUIPointerButton::None;
+        }
+        RefreshStates(lBefore);
+
+        // Its modifiers stop ticking here; still awake, they tick again in the canvas they join.
+        TDynArray<TWeakObjectPtr<UIModifier>> lKept;
+        for (const TWeakObjectPtr<UIModifier>& lAwake : m_Awake)
+        {
+            const UIModifier* lModifier = lAwake.Get();
+            if (lModifier != nullptr && !lUnderSubtree(lModifier->GetOwner()))
+            {
+                lKept.push_back(lAwake);
+            }
+        }
+        m_Awake = Move(lKept);
+    }
+
+    // =============================================================================
+    // Clock and interaction state
+    // =============================================================================
+
+    void UICanvas::Tick(const float InSeconds)
+    {
+        // Taken out first: a modifier may wake another while it ticks (that one joins the next list).
+        TDynArray<TWeakObjectPtr<UIModifier>> lTicking = Move(m_Awake);
+        m_Awake.clear();
+
+        for (const TWeakObjectPtr<UIModifier>& lEntry : lTicking)
+        {
+            UIModifier* lModifier = lEntry.Get();
+            if (lModifier == nullptr || !lModifier->m_bAwake)
+            {
+                continue;   // destroyed, or put to sleep meanwhile
+            }
+
+            lModifier->m_bAwake = false;
+            const bool bStay = lModifier->Tick(InSeconds);
+
+            if (bStay && !lModifier->m_bAwake)
+            {
+                lModifier->m_bAwake = true;
+                m_Awake.push_back(lEntry);
+            }
+        }
+    }
+
+    void UICanvas::AddAwake(UIModifier& InModifier)
+    {
+        for (const TWeakObjectPtr<UIModifier>& lAwake : m_Awake)
+        {
+            if (lAwake.Get() == &InModifier) { return; }
+        }
+        m_Awake.push_back(TWeakObjectPtr<UIModifier>(&InModifier));
+    }
+
+    UICanvas::InteractionSnapshot UICanvas::SnapshotInteraction() const noexcept
+    {
+        return InteractionSnapshot{ m_Hovered, m_Pressed, m_Focused };
+    }
+
+    void UICanvas::RefreshStates(const InteractionSnapshot& InBefore)
+    {
+        if (InBefore.Hovered == m_Hovered && InBefore.Pressed == m_Pressed && InBefore.Focused == m_Focused)
+        {
+            return;
+        }
+
+        // Only the widgets on the old and the new chains can have changed.
+        UIWidget* const lChains[] = { InBefore.Hovered, InBefore.Pressed, InBefore.Focused, m_Hovered, m_Pressed, m_Focused };
+        for (UIWidget* lStart : lChains)
+        {
+            for (UIWidget* lNode = lStart; lNode != nullptr; lNode = lNode->GetParent())
+            {
+                lNode->NotifyStateChanged();
+            }
         }
     }
 }

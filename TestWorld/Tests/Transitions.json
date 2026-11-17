@@ -1,0 +1,335 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Modifiers.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.2
+        }
+    },
+    {
+        "id": "mounted",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "ModifierProbe/bMounted",
+            "equals": true
+        }
+    },
+    {
+        "repeat": [
+            {
+                "tag": "60",
+                "pacing": "60",
+                "half": 3,
+                "settle": 30
+            },
+            {
+                "tag": "240",
+                "pacing": "240",
+                "half": 12,
+                "settle": 120
+            }
+        ],
+        "requests": [
+            {
+                "command": "time.pace",
+                "params": {
+                    "pacing": "{pacing}"
+                }
+            },
+            {
+                "command": "input.mouse",
+                "params": {
+                    "x": 1200.0,
+                    "y": 40.0
+                }
+            },
+            {
+                "command": "frames.wait",
+                "params": {
+                    "count": "{settle}"
+                }
+            },
+            {
+                "id": "rest-{tag}",
+                "command": "ui.list",
+                "params": {
+                    "name": "Feel"
+                },
+                "expect": {
+                    "widgets": [
+                        {
+                            "name": "Feel",
+                            "scale": {
+                                "x": {
+                                    "$atLeast": 0.999,
+                                    "$atMost": 1.001
+                                }
+                            },
+                            "interaction": "Normal"
+                        }
+                    ]
+                }
+            },
+            {
+                "id": "hover-{tag}",
+                "command": "ui.hover",
+                "params": {
+                    "widget": "Feel"
+                }
+            },
+            {
+                "command": "frames.wait",
+                "params": {
+                    "count": "{half}"
+                }
+            },
+            {
+                "id": "hover-halfway-{tag}",
+                "command": "ui.list",
+                "params": {
+                    "name": "Feel"
+                },
+                "expect": {
+                    "widgets": [
+                        {
+                            "name": "Feel",
+                            "scale": {
+                                "x": {
+                                    "$atLeast": 1.0090000000000001,
+                                    "$atMost": 1.0999999999999999
+                                }
+                            },
+                            "interaction": "Hovered"
+                        }
+                    ]
+                }
+            },
+            {
+                "id": "screenshot-halfway-{tag}",
+                "command": "screenshot",
+                "params": {
+                    "path": "TransitionHalf{tag}.png"
+                }
+            },
+            {
+                "command": "frames.wait",
+                "params": {
+                    "count": "{settle}"
+                }
+            },
+            {
+                "id": "hovered-{tag}",
+                "command": "ui.list",
+                "params": {
+                    "name": "Feel"
+                },
+                "expect": {
+                    "widgets": [
+                        {
+                            "name": "Feel",
+                            "scale": {
+                                "x": {
+                                    "$atLeast": 1.0990000000000002,
+                                    "$atMost": 1.101
+                                }
+                            },
+                            "interaction": "Hovered"
+                        }
+                    ]
+                }
+            },
+            {
+                "id": "press-{tag}",
+                "command": "input.key",
+                "params": {
+                    "key": "Mouse_Left",
+                    "action": "press"
+                }
+            },
+            {
+                "command": "frames.wait",
+                "params": {
+                    "count": "{settle}"
+                }
+            },
+            {
+                "id": "pressed-{tag}",
+                "command": "ui.list",
+                "params": {
+                    "name": "Feel"
+                },
+                "expect": {
+                    "widgets": [
+                        {
+                            "name": "Feel",
+                            "scale": {
+                                "x": {
+                                    "$atLeast": 0.919,
+                                    "$atMost": 0.921
+                                }
+                            },
+                            "interaction": "Pressed"
+                        }
+                    ]
+                }
+            },
+            {
+                "id": "screenshot-pressed-{tag}",
+                "command": "screenshot",
+                "params": {
+                    "path": "TransitionPressed{tag}.png"
+                }
+            },
+            {
+                "id": "release-{tag}",
+                "command": "input.key",
+                "params": {
+                    "key": "Mouse_Left",
+                    "action": "release"
+                }
+            },
+            {
+                "command": "frames.wait",
+                "params": {
+                    "count": "{settle}"
+                }
+            },
+            {
+                "id": "released-{tag}",
+                "command": "ui.list",
+                "params": {
+                    "name": "Feel"
+                },
+                "expect": {
+                    "widgets": [
+                        {
+                            "name": "Feel",
+                            "scale": {
+                                "x": {
+                                    "$atLeast": 1.0990000000000002,
+                                    "$atMost": 1.101
+                                }
+                            },
+                            "interaction": "Hovered"
+                        }
+                    ]
+                }
+            },
+            {
+                "command": "input.mouse",
+                "params": {
+                    "x": 1200.0,
+                    "y": 40.0
+                },
+                "id": "leave-{tag}"
+            },
+            {
+                "command": "frames.wait",
+                "params": {
+                    "count": "{settle}"
+                }
+            },
+            {
+                "id": "left-{tag}",
+                "command": "ui.list",
+                "params": {
+                    "name": "Feel"
+                },
+                "expect": {
+                    "widgets": [
+                        {
+                            "name": "Feel",
+                            "scale": {
+                                "x": {
+                                    "$atLeast": 0.999,
+                                    "$atMost": 1.001
+                                }
+                            },
+                            "interaction": "Normal"
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    {
+        "command": "time.pace",
+        "params": {
+            "pacing": "60"
+        }
+    },
+    {
+        "id": "pause",
+        "command": "world.pause",
+        "params": {
+            "paused": true
+        }
+    },
+    {
+        "id": "hover-paused",
+        "command": "ui.hover",
+        "params": {
+            "widget": "Feel"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 30
+        }
+    },
+    {
+        "id": "hovered-while-paused",
+        "command": "ui.list",
+        "params": {
+            "name": "Feel"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "Feel",
+                    "scale": {
+                        "x": {
+                            "$atLeast": 1.0990000000000002,
+                            "$atMost": 1.101
+                        }
+                    },
+                    "interaction": "Hovered"
+                }
+            ]
+        }
+    },
+    {
+        "id": "resume",
+        "command": "world.pause",
+        "params": {
+            "paused": false
+        }
+    },
+    {
+        "command": "input.mouse",
+        "params": {
+            "x": 1200.0,
+            "y": 40.0
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 30
+        }
+    },
+    {
+        "command": "time.pace",
+        "params": {
+            "pacing": "off"
+        }
+    }
+]

@@ -37,6 +37,12 @@ namespace Opaax
                 && Tint.r == 1.f && Tint.g == 1.f && Tint.b == 1.f && Tint.a == 1.f;
         }
 
+        /**
+         * The pose InAlpha of the way from InFrom to InTo, each field on a line (InAlpha may leave [0, 1]:
+         * Back and Elastic overshoot). Rotation is blended as written: 0 to 360 is a whole turn.
+         */
+        static UIPose Lerp(const UIPose& InFrom, const UIPose& InTo, float InAlpha) noexcept;
+
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(UIPose, Translation, Scale, Rotation, Opacity, Tint)
 
         OPAAX_PROPERTIES(UIPose,

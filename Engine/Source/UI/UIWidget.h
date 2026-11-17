@@ -174,6 +174,22 @@ namespace Opaax
         const TDynArray<TStrongObjectPtr<UIModifier>>& GetModifiers() const noexcept { return m_Modifiers; }
 
         // =============================================================================
+        // Interaction state — what transitions react to (UIModifier.h)
+        // =============================================================================
+    public:
+        /** False when I take no input now (a disabled button): my state is Disabled. */
+        virtual bool IsInteractable() const { return true; }
+
+        /**
+         * My state now, from my canvas's pointer and focus: Disabled, else Pressed (held on me or a
+         * widget in me, and the pointer still over it), else Hovered, else Focused, else Normal.
+         */
+        EUIInteractionState GetInteractionState() const;
+
+        /** Works my state out again and tells my modifiers if it changed. Called when IsInteractable changes. */
+        void NotifyStateChanged();
+
+        // =============================================================================
         // Input — override to handle an event; the default lets it bubble
         // =============================================================================
     public:
@@ -305,6 +321,8 @@ namespace Opaax
         bool m_bContentDirty = true;
         bool m_bSubtreeDirty = false;
         bool m_bPoseDirty    = false;
+        /** The state my modifiers were last told. */
+        EUIInteractionState m_State = EUIInteractionState::Normal;
         /** Set while I am destroyed: my modifiers' detach must not reach my parents. */
         bool m_bDestroying   = false;
     };
