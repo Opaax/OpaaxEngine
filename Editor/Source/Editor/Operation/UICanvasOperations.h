@@ -1,5 +1,7 @@
 #pragma once
 
+#include <nlohmann/json.hpp>
+
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
@@ -44,6 +46,27 @@ namespace Opaax::Editor
 
         /** Pastes a subtree from text under InParent. @return Its path, empty when the text is not a widget */
         UIWidgetPath PasteWidget(EditorContext& InContext, const OpaaxString& InText, const UIWidgetPath& InParent);
+
+        // A widget's modifiers, by index in its list (UIModifier.h). One undo step each.
+
+        /**
+         * Adds a modifier of class InType at the end of the list of the widget at InPath.
+         * @return Its index, or -1 when nothing is open, the widget is gone or the class is not a modifier
+         */
+        Int32 AddModifier(EditorContext& InContext, const UIWidgetPath& InPath, OpaaxStringID InType);
+
+        /** Removes the widget's modifier at InIndex. */
+        bool RemoveModifier(EditorContext& InContext, const UIWidgetPath& InPath, Uint32 InIndex);
+
+        /** Moves the widget's modifier at InIndex by InDelta places (clamped). List order is pose order. */
+        bool MoveModifier(EditorContext& InContext, const UIWidgetPath& InPath, Uint32 InIndex, Int32 InDelta);
+
+        /**
+         * Merges InValues into the fields of the widget's modifier at InIndex, as one undo step.
+         * @param OutError Why nothing changed (no such modifier, a value of the wrong type)
+         */
+        bool SetModifier(EditorContext& InContext, const UIWidgetPath& InPath, Uint32 InIndex,
+                         const nlohmann::json& InValues, OpaaxString* OutError = nullptr);
 
         // The selection and the editor's clipboard: what the panel's chords and its automation run.
 

@@ -74,6 +74,15 @@ namespace Opaax::Editor
         /** The 4x4 anchor grid for InWidget. One undo step; the widget stays in place. */
         void DrawAnchorPresets(UIWidget& InWidget);
 
+        /**
+         * InWidget's modifiers: a header per modifier with its fields, up, down and remove, then Add
+         * Modifier. Fields edit under the inspector's gesture; a verb is queued in m_PendingModifierVerb.
+         */
+        void DrawModifiers(UIWidget& InWidget);
+
+        /** Runs the verb DrawModifiers queued (after the gesture closed), as its own undo step. */
+        void RunPendingModifierVerb();
+
         /** The canvas rendered into this panel's framebuffer, and the designer over it. */
         void DrawPreview();
 
@@ -158,6 +167,17 @@ namespace Opaax::Editor
 
         /** The node being dragged (stored at the drag source). */
         UIWidgetPath m_DragPath;
+
+        /** A modifier verb pressed this frame, run once the field gesture is closed. */
+        struct PendingModifierVerb
+        {
+            enum class EKind : Uint8 { None, Add, Remove, MoveUp, MoveDown };
+
+            EKind         Kind  = EKind::None;
+            Uint32        Index = 0;
+            OpaaxStringID Type;   // Add
+        };
+        PendingModifierVerb m_PendingModifierVerb;
 
         // =============================================================================
         // The preview gesture: a press over the image, applied on release

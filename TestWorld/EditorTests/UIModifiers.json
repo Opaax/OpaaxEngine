@@ -1,0 +1,234 @@
+[
+    {
+        "id": "new-canvas",
+        "command": "ui.new",
+        "params": {
+            "path": "Scratch/UIModifiers.opaaxui"
+        }
+    },
+    {
+        "id": "add-image",
+        "command": "ui.widget.add",
+        "params": {
+            "type": "UIImage"
+        },
+        "expect": {
+            "name": "UIImage"
+        }
+    },
+    {
+        "id": "nothing-selected-refused",
+        "command": "ui.modifier.add",
+        "params": {
+            "type": "UITransformModifier"
+        },
+        "expectFailure": true
+    },
+    {
+        "command": "ui.widget.select",
+        "params": {
+            "name": "UIImage"
+        }
+    },
+    {
+        "id": "not-a-modifier-refused",
+        "command": "ui.modifier.add",
+        "params": {
+            "type": "UIImage"
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "add-turn",
+        "command": "ui.modifier.add",
+        "params": {
+            "type": "UITransformModifier"
+        },
+        "expect": {
+            "index": 0
+        }
+    },
+    {
+        "id": "set-turn",
+        "command": "ui.modifier.set",
+        "params": {
+            "index": 0,
+            "values": {
+                "Name": "Turn",
+                "Pose": {
+                    "Rotation": 30.0
+                }
+            }
+        },
+        "expect": {
+            "modifiers": [
+                {
+                    "class": "UITransformModifier",
+                    "name": "Turn",
+                    "properties": {
+                        "Pose": {
+                            "Rotation": 30.0,
+                            "Opacity": 1.0,
+                            "Scale": { "x": 1.0, "y": 1.0 }
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "id": "wrong-value-refused",
+        "command": "ui.modifier.set",
+        "params": {
+            "index": 0,
+            "values": {
+                "Pose": {
+                    "Rotation": "a lot"
+                }
+            }
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "add-grow",
+        "command": "ui.modifier.add",
+        "params": {
+            "type": "UITransformModifier"
+        },
+        "expect": {
+            "index": 1
+        }
+    },
+    {
+        "command": "ui.modifier.set",
+        "params": {
+            "index": 1,
+            "values": {
+                "Name": "Grow",
+                "Pose": {
+                    "Scale": { "x": 1.5, "y": 1.5 }
+                }
+            }
+        }
+    },
+    {
+        "id": "move-grow-up",
+        "command": "ui.modifier.move",
+        "params": {
+            "index": 1,
+            "delta": -1
+        }
+    },
+    {
+        "id": "grow-first",
+        "command": "ui.modifier.list",
+        "expect": {
+            "modifiers": [
+                { "name": "Grow" },
+                { "name": "Turn" }
+            ]
+        }
+    },
+    {
+        "id": "undo-move",
+        "command": "editor.undo"
+    },
+    {
+        "id": "turn-first-again",
+        "command": "ui.modifier.list",
+        "expect": {
+            "modifiers": [
+                { "name": "Turn" },
+                { "name": "Grow" }
+            ]
+        }
+    },
+    {
+        "id": "redo-move",
+        "command": "editor.redo"
+    },
+    {
+        "id": "grow-first-again",
+        "command": "ui.modifier.list",
+        "expect": {
+            "modifiers": [
+                { "name": "Grow" },
+                { "name": "Turn" }
+            ]
+        }
+    },
+    {
+        "id": "remove-grow",
+        "command": "ui.modifier.remove",
+        "params": {
+            "index": 0
+        }
+    },
+    {
+        "id": "only-turn",
+        "command": "ui.modifier.list",
+        "expect": {
+            "modifiers": [
+                { "name": "Turn" }
+            ]
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "EditorUIModifiers.png"
+        }
+    },
+    {
+        "id": "save",
+        "command": "editor.command",
+        "params": {
+            "tag": "Editor.Command.SaveUI"
+        }
+    },
+    {
+        "id": "open-another",
+        "command": "ui.new",
+        "params": {
+            "path": "Scratch/UIModifiersOther.opaaxui"
+        }
+    },
+    {
+        "id": "reopen",
+        "command": "asset.open",
+        "params": {
+            "path": "Scratch/UIModifiers.opaaxui"
+        }
+    },
+    {
+        "command": "ui.widget.select",
+        "params": {
+            "name": "UIImage"
+        }
+    },
+    {
+        "id": "file-holds-it",
+        "command": "ui.modifier.list",
+        "expect": {
+            "modifiers": [
+                {
+                    "class": "UITransformModifier",
+                    "name": "Turn",
+                    "enabled": true,
+                    "properties": {
+                        "Pose": {
+                            "Rotation": 30.0
+                        }
+                    }
+                }
+            ]
+        }
+    }
+]

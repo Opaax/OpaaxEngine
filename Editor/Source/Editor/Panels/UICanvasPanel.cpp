@@ -396,6 +396,8 @@ namespace Opaax::Editor
 
             // Its class's properties: the base fields every widget has (Name, Rect, visibility), then its own.
             DrawObjectProperties(m_Context.Widgets, *lWidget);
+
+            DrawModifiers(*lWidget);
         }
 
         // One undo step per gesture: opens on the first active frame of these fields, closes when
@@ -415,10 +417,99 @@ namespace Opaax::Editor
 
         m_bWasItemActive = lActive;
 
-        // The widget may have changed under the drawer: re-layout.
+        // The widget may have changed under the drawer: re-layout (its poses too).
         if (lWidget != nullptr)
         {
             lWidget->InvalidateLayout();
+        }
+
+        // After the gesture: a verb's step is its own, never folded into a field edit.
+        RunPendingModifierVerb();
+    }
+
+    void UICanvasPanel::DrawModifiers(UIWidget& InWidget)
+    {
+        using EKind = PendingModifierVerb::EKind;
+
+        ImGui::Spacing();
+        ImGui::SeparatorText("Modifiers");
+
+        const TDynArray<TStrongObjectPtr<UIModifier>>& lModifiers = InWidget.GetModifiers();
+        if (lModifiers.empty())
+        {
+            ImGui::TextDisabled("None. A modifier animates, poses or decorates this widget.");
+        }
+
+        for (Uint32 lIndex = 0; lIndex < lModifiers.size(); ++lIndex)
+        {
+            UIModifier& lModifier = *lModifiers[lIndex];
+            ImGui::PushID(static_cast<int>(lIndex));
+
+            // The header: its class, its name when it has one, dimmed when off.
+            const OpaaxString lTitle = lModifier.Name.IsValid()
+                                           ? OpaaxString::Format("{}  \"{}\"", lModifier.GetClass().GetName().CStr(),
+                                                                 lModifier.Name.CStr())
+                                           : OpaaxString(lModifier.GetClass().GetName().CStr());
+
+            if (!lModifier.bEnabled) { ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled)); }
+            const bool bOpen = ImGui::CollapsingHeader(lTitle.CStr(), ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_AllowOverlap);
+            if (!lModifier.bEnabled) { ImGui::PopStyleColor(); }
+
+            // The verbs, at the header's right end.
+            const float lButtons = ImGui::GetFrameHeight() * 3.f + ImGui::GetStyle().ItemSpacing.x * 2.f;
+            ImGui::SameLine(ImGui::GetContentRegionMax().x - lButtons);
+            ImGui::BeginDisabled(lIndex == 0);
+            if (ImGui::ArrowButton("##Up", ImGuiDir_Up)) { m_PendingModifierVerb = { EKind::MoveUp, lIndex, {} }; }
+            ImGui::EndDisabled();
+            ImGui::SameLine();
+            ImGui::BeginDisabled(lIndex + 1 >= lModifiers.size());
+            if (ImGui::ArrowButton("##Down", ImGuiDir_Down)) { m_PendingModifierVerb = { EKind::MoveDown, lIndex, {} }; }
+            ImGui::EndDisabled();
+            ImGui::SameLine();
+            if (ImGui::Button("X", ImVec2(ImGui::GetFrameHeight(), 0.f))) { m_PendingModifierVerb = { EKind::Remove, lIndex, {} }; }
+            if (ImGui::IsItemHovered()) { ImGui::SetTooltip("Remove this modifier"); }
+
+            if (bOpen)
+            {
+                ImGui::Indent();
+                DrawObjectProperties(m_Context.Widgets, lModifier);
+                ImGui::Unindent();
+            }
+
+            ImGui::PopID();
+        }
+
+        if (ImGui::Button("Add Modifier")) { ImGui::OpenPopup("UIAddModifier"); }
+
+        if (ImGui::BeginPopup("UIAddModifier"))
+        {
+            // Every registered modifier class (a game's show up too).
+            for (const ObjectClass* lClass : Classes().GetClassesOf(UIModifier::StaticClass(), /*bInConcreteOnly*/true))
+            {
+                if (ImGui::Selectable(lClass->GetName().CStr()))
+                {
+                    m_PendingModifierVerb = { EKind::Add, 0, lClass->GetName() };
+                }
+            }
+            ImGui::EndPopup();
+        }
+    }
+
+    void UICanvasPanel::RunPendingModifierVerb()
+    {
+        using EKind = PendingModifierVerb::EKind;
+
+        const PendingModifierVerb lVerb = m_PendingModifierVerb;
+        m_PendingModifierVerb = {};
+
+        const UIWidgetPath lPath = m_Context.UICanvasDocument.SelectedPath();
+        switch (lVerb.Kind)
+        {
+        case EKind::Add:      UICanvasOps::AddModifier(m_Context, lPath, lVerb.Type);           break;
+        case EKind::Remove:   UICanvasOps::RemoveModifier(m_Context, lPath, lVerb.Index);       break;
+        case EKind::MoveUp:   UICanvasOps::MoveModifier(m_Context, lPath, lVerb.Index, -1);     break;
+        case EKind::MoveDown: UICanvasOps::MoveModifier(m_Context, lPath, lVerb.Index, 1);      break;
+        case EKind::None:     break;
         }
     }
 
