@@ -217,6 +217,109 @@ namespace Opaax::Editor
         return InContext.UICanvasDocument.PathOf(*lAdded);
     }
 
+    // =============================================================================
+    // Modifiers
+    // =============================================================================
+
+    Int32 UICanvasOps::AddModifier(EditorContext& InContext, const UIWidgetPath& InPath, const OpaaxStringID InType)
+    {
+        if (!InContext.UICanvasDocument.IsOpen()) { return -1; }
+
+        UIWidget* const lWidget = InContext.UICanvasDocument.Resolve(InPath);
+        if (lWidget == nullptr) { return -1; }
+
+        TStrongObjectPtr<UIModifier> lModifier = UIModifier::Create(InType, Classes());
+        if (!lModifier)
+        {
+            OPAAX_LOG(LogEditorUICanvasDocument, Warn, "Add Modifier — '{}' is not a registered modifier class", InType);
+            return -1;
+        }
+
+        OpaaxString lBefore = Snapshot(InContext);
+
+        lWidget->AddModifier(Move(lModifier));
+        Record(InContext, Move(lBefore), "Add Modifier");
+
+        return static_cast<Int32>(lWidget->GetModifiers().size()) - 1;
+    }
+
+    bool UICanvasOps::RemoveModifier(EditorContext& InContext, const UIWidgetPath& InPath, const Uint32 InIndex)
+    {
+        if (!InContext.UICanvasDocument.IsOpen()) { return false; }
+
+        UIWidget* const lWidget = InContext.UICanvasDocument.Resolve(InPath);
+        if (lWidget == nullptr || InIndex >= lWidget->GetModifiers().size()) { return false; }
+
+        OpaaxString lBefore = Snapshot(InContext);
+
+        lWidget->RemoveModifier(*lWidget->GetModifiers()[InIndex]);
+        Record(InContext, Move(lBefore), "Remove Modifier");
+        return true;
+    }
+
+    bool UICanvasOps::MoveModifier(EditorContext& InContext, const UIWidgetPath& InPath, const Uint32 InIndex,
+                                   const Int32 InDelta)
+    {
+        if (!InContext.UICanvasDocument.IsOpen() || InDelta == 0) { return false; }
+
+        UIWidget* const lWidget = InContext.UICanvasDocument.Resolve(InPath);
+        if (lWidget == nullptr || InIndex >= lWidget->GetModifiers().size()) { return false; }
+
+        const Int64 lCount = static_cast<Int64>(lWidget->GetModifiers().size());
+        const Int64 lTo    = Maths::Clamp(static_cast<Int64>(InIndex) + InDelta, Int64{ 0 }, lCount - 1);
+        if (lTo == static_cast<Int64>(InIndex)) { return false; }   // already at that end
+
+        OpaaxString lBefore = Snapshot(InContext);
+
+        lWidget->MoveModifier(*lWidget->GetModifiers()[InIndex], static_cast<Uint64>(lTo));
+        Record(InContext, Move(lBefore), InDelta < 0 ? "Move Modifier Up" : "Move Modifier Down");
+        return true;
+    }
+
+    bool UICanvasOps::SetModifier(EditorContext& InContext, const UIWidgetPath& InPath, const Uint32 InIndex,
+                                  const nlohmann::json& InValues, OpaaxString* OutError)
+    {
+        const auto lFail = [OutError](const char* InWhy)
+        {
+            if (OutError != nullptr) { *OutError = InWhy; }
+            return false;
+        };
+
+        if (!InContext.UICanvasDocument.IsOpen()) { return lFail("no canvas is open in the UI panel"); }
+
+        UIWidget* const lWidget = InContext.UICanvasDocument.Resolve(InPath);
+        if (lWidget == nullptr || InIndex >= lWidget->GetModifiers().size())
+        {
+            return lFail("the widget has no modifier at that index");
+        }
+        if (!InValues.is_object()) { return lFail("the values are an object of fields"); }
+
+        UIModifier&        lModifier = *lWidget->GetModifiers()[InIndex];
+        const ObjectClass& lClass    = lModifier.GetClass();
+
+        // Merged into what it holds, so a nested field ("Pose": {"Rotation": 30}) keeps its siblings.
+        nlohmann::json lMerged = lClass.WriteProperties(lModifier);
+        lMerged.merge_patch(InValues);
+
+        // Checked on a scratch copy first: a refused value changes nothing.
+        TStrongObjectPtr<UIModifier> lCheck = UIModifier::Create(lClass.GetName(), Classes());
+        TDynArray<OpaaxString>       lBadFields;
+        if (!lCheck || !lClass.ReadProperties(*lCheck, lMerged, &lBadFields) || !lBadFields.empty())
+        {
+            return lFail("a value has the wrong type for its field");
+        }
+
+        OpaaxString lBefore = Snapshot(InContext);
+
+        lClass.ReadProperties(lModifier, lMerged);
+        lModifier.PostEditChange();
+        lWidget->InvalidateLayout();
+
+        if (Snapshot(InContext) == lBefore) { return true; }   // the same values: not a step
+        Record(InContext, Move(lBefore), "Edit Modifier");
+        return true;
+    }
+
     bool UICanvasOps::CopySelected(EditorContext& InContext)
     {
         const OpaaxString lText = CopyWidget(InContext, InContext.UICanvasDocument.SelectedPath());

@@ -213,6 +213,11 @@ The editor adds:
 | `ui.widget.add` | `type`, `parent` | Adds a widget of `type` (`UIPanel`, `UIText`...) to the canvas open in the UI panel, under the widget named `parent` (the top level by default), named after its type and numbered when taken. Answers its `name` |
 | `ui.widget.select` | `name` | Selects a widget of the UI panel's canvas by name (an empty name clears): what `Editor.Command.CopyUIWidget`, `CutUIWidget`, `PasteUIWidget` and `DuplicateUIWidget` act on |
 | `ui.widget.list` | | The canvas's widgets in tree order (`name`, `type`, `parent`) and the `selected` one's name |
+| `ui.modifier.add` | `type` | Adds a modifier of `type` (`UITransformModifier`...) at the end of the selected widget's list, as the inspector's Add Modifier does. Answers its `index` |
+| `ui.modifier.list` | | The selected widget's modifiers in order: `class`, `name`, `enabled`, `properties` |
+| `ui.modifier.set` | `index`, `values` | Merges `values` into the fields of the selected widget's modifier at `index` as one undo step; a nested field keeps its siblings (`{"Pose": {"Rotation": 30}}`). A value of the wrong type changes nothing |
+| `ui.modifier.remove` | `index` | Removes the selected widget's modifier at `index` |
+| `ui.modifier.move` | `index`, `delta` | Moves it by `delta` places (-1: up; clamped): list order is the order poses apply in |
 | `asset.classes` | | The asset classes a project can make: name, label, category, and properties at their defaults |
 | `asset.new` | `path`, `class`, `properties` | Creates an asset of a class, every field at its default, then sets `properties`, saves and opens it; refuses a file that exists |
 | `asset.open` | `path` | Opens an asset in its window: `path`, `class`, `properties`, `unsaved`, `canUndo`, `canRedo`, `fromSourceFile` (an image and the like: read-only). A class with a document of its own opens there, as a double-click does (a prefab in the Prefab panel): `path`, `class`, `document` |

@@ -1197,6 +1197,8 @@ namespace Opaax::Editor::EditorAutomation
         // =========================================================================
         // UI canvases
         // =========================================================================
+        void RegisterUIModifiers(Commands& InCommands, EditorContext& InContext);
+
         void RegisterUI(Commands& InCommands, EditorContext& InContext)
         {
             InCommands.Register("ui.new",
@@ -1311,6 +1313,125 @@ namespace Opaax::Editor::EditorAutomation
                     return AutomationResult::Ok(nlohmann::json{
                         { "widgets", lWidgets },
                         { "selected", lSelected != nullptr ? nlohmann::json(lSelected->Name) : nlohmann::json() } });
+                });
+
+            RegisterUIModifiers(InCommands, InContext);
+        }
+
+        /** The selected widget of the UI panel's canvas, or null with OutError saying what to do. */
+        UIWidget* SelectedUIWidget(EditorContext& InContext, OpaaxString& OutError)
+        {
+            EditorUICanvasDocument& lDocument = InContext.UICanvasDocument;
+            if (!lDocument.IsOpen())
+            {
+                OutError = "no canvas is open in the UI panel: ui.new makes one";
+                return nullptr;
+            }
+            if (lDocument.SelectedPath().empty() || lDocument.SelectedWidget() == nullptr)
+            {
+                OutError = "no widget is selected: ui.widget.select names one";
+                return nullptr;
+            }
+            return lDocument.SelectedWidget();
+        }
+
+        /** A widget's modifiers, in order: class, name, enabled and their fields. */
+        nlohmann::json DescribeModifiers(const UIWidget& InWidget)
+        {
+            nlohmann::json lList = nlohmann::json::array();
+            for (const TStrongObjectPtr<UIModifier>& lModifier : InWidget.GetModifiers())
+            {
+                lList.push_back(nlohmann::json{ { "class",      lModifier->GetClass().GetName().CStr() },
+                                                { "name",       lModifier->Name },
+                                                { "enabled",    lModifier->bEnabled },
+                                                { "properties", lModifier->GetClass().WriteProperties(*lModifier) } });
+            }
+            return lList;
+        }
+
+        void RegisterUIModifiers(Commands& InCommands, EditorContext& InContext)
+        {
+            InCommands.Register("ui.modifier.add",
+                "Adds a modifier of {type} (UITransformModifier...) at the end of the selected widget's list, as the "
+                "inspector's Add Modifier does. Undoable. Answers its {index}.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString lError;
+                    if (SelectedUIWidget(InContext, lError) == nullptr) { return AutomationResult::Fail(lError); }
+
+                    const Int32 lIndex = UICanvasOps::AddModifier(InContext, InContext.UICanvasDocument.SelectedPath(),
+                                                                  OpaaxStringID(InParams.value("type", OpaaxString())));
+                    if (lIndex < 0)
+                    {
+                        return AutomationResult::Fail("not added: \"type\" names a registered modifier class "
+                                                      "(UITransformModifier...)");
+                    }
+                    return AutomationResult::Ok(nlohmann::json{ { "index", lIndex } });
+                });
+
+            InCommands.Register("ui.modifier.list",
+                "The selected widget's modifiers, in order: {modifiers: [{class, name, enabled, properties}]}.",
+                [&InContext](const nlohmann::json&)
+                {
+                    OpaaxString     lError;
+                    const UIWidget* lWidget = SelectedUIWidget(InContext, lError);
+                    if (lWidget == nullptr) { return AutomationResult::Fail(lError); }
+
+                    return AutomationResult::Ok(nlohmann::json{ { "modifiers", DescribeModifiers(*lWidget) } });
+                });
+
+            InCommands.Register("ui.modifier.set",
+                "Merges {values} into the fields of the selected widget's modifier at {index} (\"Pose\": {\"Rotation\": "
+                "30} keeps the pose's other fields), as one undo step. A value of the wrong type changes nothing.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString     lError;
+                    const UIWidget* lWidget = SelectedUIWidget(InContext, lError);
+                    if (lWidget == nullptr) { return AutomationResult::Fail(lError); }
+
+                    const auto lValues = InParams.find("values");
+                    if (lValues == InParams.end() || !lValues->is_object())
+                    {
+                        return AutomationResult::Fail("\"values\" is an object of the fields to change");
+                    }
+
+                    if (!UICanvasOps::SetModifier(InContext, InContext.UICanvasDocument.SelectedPath(),
+                                                  InParams.value("index", 0u), *lValues, &lError))
+                    {
+                        return AutomationResult::Fail(lError + " (ui.modifier.list)");
+                    }
+                    return AutomationResult::Ok(nlohmann::json{ { "modifiers", DescribeModifiers(*lWidget) } });
+                });
+
+            InCommands.Register("ui.modifier.remove",
+                "Removes the selected widget's modifier at {index}. Undoable.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString lError;
+                    if (SelectedUIWidget(InContext, lError) == nullptr) { return AutomationResult::Fail(lError); }
+
+                    if (!UICanvasOps::RemoveModifier(InContext, InContext.UICanvasDocument.SelectedPath(),
+                                                     InParams.value("index", 0u)))
+                    {
+                        return AutomationResult::Fail("the selected widget has no modifier at that index (ui.modifier.list)");
+                    }
+                    return AutomationResult::Ok();
+                });
+
+            InCommands.Register("ui.modifier.move",
+                "Moves the selected widget's modifier at {index} by {delta} places (-1: up; clamped). List order is "
+                "the order poses apply in. Undoable.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString lError;
+                    if (SelectedUIWidget(InContext, lError) == nullptr) { return AutomationResult::Fail(lError); }
+
+                    if (!UICanvasOps::MoveModifier(InContext, InContext.UICanvasDocument.SelectedPath(),
+                                                   InParams.value("index", 0u), InParams.value("delta", 0)))
+                    {
+                        return AutomationResult::Fail("nothing moved: no modifier at that index, or already at that end");
+                    }
+                    return AutomationResult::Ok();
                 });
         }
 
