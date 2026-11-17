@@ -71,6 +71,9 @@ namespace Opaax
     public:
         EUIReply OnPointerEvent(const UIPointerEvent& InEvent) override;
 
+        /** False while disabled: its transitions show Disabled. */
+        bool IsInteractable() const override { return bIsEnabled; }
+
     protected:
         void Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads) override;
         //~End UIWidget Interface

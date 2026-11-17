@@ -143,7 +143,74 @@ namespace Opaax
                             Move(InModifier));
 
         lModifier->OnAttach();
+
+        // Woken before it had a canvas to tick it: this one does.
+        if (lModifier->m_bAwake && m_Canvas != nullptr)
+        {
+            m_Canvas->AddAwake(*lModifier);
+        }
         return lModifier;
+    }
+
+    // =============================================================================
+    // Interaction state
+    // =============================================================================
+
+    namespace
+    {
+        /** Whether InNode is InWidget or under it. */
+        bool IsSelfOrUnder(const UIWidget& InWidget, const UIWidget* InNode)
+        {
+            for (; InNode != nullptr; InNode = InNode->GetParent())
+            {
+                if (InNode == &InWidget) { return true; }
+            }
+            return false;
+        }
+    }
+
+    EUIInteractionState UIWidget::GetInteractionState() const
+    {
+        if (!IsInteractable())
+        {
+            return EUIInteractionState::Disabled;
+        }
+        if (m_Canvas == nullptr)
+        {
+            return EUIInteractionState::Normal;
+        }
+
+        // A press shows only while the pointer is over it: leaving cancels a button's press.
+        const bool bHovered = IsSelfOrUnder(*this, m_Canvas->GetHovered());
+        if (bHovered && IsSelfOrUnder(*this, m_Canvas->GetPressed()))
+        {
+            return EUIInteractionState::Pressed;
+        }
+        if (bHovered)
+        {
+            return EUIInteractionState::Hovered;
+        }
+        if (IsSelfOrUnder(*this, m_Canvas->GetFocus()))
+        {
+            return EUIInteractionState::Focused;
+        }
+        return EUIInteractionState::Normal;
+    }
+
+    void UIWidget::NotifyStateChanged()
+    {
+        const EUIInteractionState lNow = GetInteractionState();
+        if (lNow == m_State)
+        {
+            return;
+        }
+
+        const EUIInteractionState lWas = m_State;
+        m_State = lNow;
+        for (const TStrongObjectPtr<UIModifier>& lModifier : m_Modifiers)
+        {
+            lModifier->OnStateChanged(lWas, lNow);
+        }
     }
 
     TStrongObjectPtr<UIModifier> UIWidget::RemoveModifier(UIModifier& InModifier)
@@ -184,6 +251,16 @@ namespace Opaax
     void UIWidget::SetCanvasRecursive(UICanvas* InCanvas)
     {
         m_Canvas = InCanvas;
+
+        // Modifiers woken while out of a canvas start ticking in this one.
+        if (m_Canvas != nullptr)
+        {
+            for (const TStrongObjectPtr<UIModifier>& lModifier : m_Modifiers)
+            {
+                if (lModifier->m_bAwake) { m_Canvas->AddAwake(*lModifier); }
+            }
+        }
+
         for (const TStrongObjectPtr<UIWidget>& lChild : m_Children)
         {
             lChild->SetCanvasRecursive(InCanvas);

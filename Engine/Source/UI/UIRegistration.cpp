@@ -2,6 +2,7 @@
 #include "Engine/Registries/AutoRegistration.h"
 #include "Renderer/Textures/SpriteSheet.h"   // completes the widgets' sheet references
 #include "UI/Modifiers/UITransformModifier.h"
+#include "UI/Modifiers/UITransitionModifier.h"
 #include "UI/UICanvasAsset.h"
 #include "UI/UISubsystem.h"
 #include "UI/Widgets/UIButton.h"
@@ -28,6 +29,9 @@ namespace Opaax
 
     // A pose that stays: turned, scaled, moved, faded or tinted without touching layout.
     OPAAX_REGISTER_OBJECT(UITransformModifier);
+
+    // A pose per interaction state (hovered, pressed...), eased to when the state changes.
+    OPAAX_REGISTER_OBJECT(UITransitionModifier);
 
     // Masks its children: white shows, black hides.
     OPAAX_REGISTER_OBJECT(UIMask);

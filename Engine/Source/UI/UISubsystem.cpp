@@ -177,6 +177,11 @@ namespace Opaax
             m_Mapping->ConsumeThisFrame(lConsumed);
         }
 
+        // Animations after the input, so a press shows from its own frame; on the frame's own time, so
+        // menus animate while the game is paused or slowed.
+        m_Canvas.Tick(static_cast<float>(InDeltaTime));
+        m_LoadingCanvas.Tick(static_cast<float>(InDeltaTime));
+
         // Submitted every frame. The loading screen goes after, so it draws on top.
         IEngine& lEngine = OpaaxApplication::GetAppService<IEngine>();
         lEngine.SubmitUICanvas(m_Canvas);

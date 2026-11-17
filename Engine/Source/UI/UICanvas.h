@@ -140,11 +140,45 @@ namespace Opaax
         void OnDetached(UIWidget& InSubtreeRoot);
 
         // =============================================================================
+        // Clock — the modifiers that animate (UIModifier::WakeUp)
+        // =============================================================================
+    public:
+        /**
+         * Ticks the awake modifiers with the frame's own time, and lets go of those that answer false.
+         * Once per frame, after the input is routed and before the canvas is drawn.
+         */
+        void Tick(float InSeconds);
+
+        /** How many modifiers the next Tick runs (none on an idle canvas). */
+        Uint64 GetAwakeCount() const noexcept { return m_Awake.size(); }
+
+        // =============================================================================
         // Members
         // =============================================================================
     private:
+        friend class UIModifier;
+        friend class UIWidget;
+
         /** Walks up from InFrom; returns the widget that handled it, or null. */
         UIWidget* BubblePointer(UIWidget* InFrom, const UIPointerEvent& InEvent);
+
+        /** RoutePointer's work; RoutePointer then tells the widgets whose state changed. */
+        EUIReply RoutePointerTo(const UIPointerEvent& InEvent);
+
+        /** Ticked from the next Tick (once, whatever how many times it is woken). */
+        void AddAwake(UIModifier& InModifier);
+
+        struct InteractionSnapshot
+        {
+            UIWidget* Hovered = nullptr;
+            UIWidget* Pressed = nullptr;
+            UIWidget* Focused = nullptr;
+        };
+
+        InteractionSnapshot SnapshotInteraction() const noexcept;
+
+        /** Tells every widget on the old and the new pointer and focus chains to work its state out again. */
+        void RefreshStates(const InteractionSnapshot& InBefore);
 
         float    m_ReferenceHeight;
         Uint32   m_TargetWidth  = 0;
@@ -160,5 +194,8 @@ namespace Opaax
         UIWidget*        m_Pressed      = nullptr;   // captured between Down and Up
         EUIPointerButton m_PressButton  = EUIPointerButton::None;
         UIWidget*        m_Focused      = nullptr;
+
+        /** The modifiers the next Tick runs. Weak: a destroyed one is skipped. */
+        TDynArray<TWeakObjectPtr<UIModifier>> m_Awake;
     };
 }

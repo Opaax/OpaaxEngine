@@ -1,6 +1,8 @@
 #include "UI/UIModifier.h"
 
 #include "Object/ObjectClassRegistry.h"
+#include "UI/UICanvas.h"
+#include "UI/UIWidget.h"
 
 namespace Opaax
 {
@@ -14,5 +16,19 @@ namespace Opaax
         }
 
         return Cast<UIModifier>(lClass->CreateInstance());
+    }
+
+    void UIModifier::WakeUp()
+    {
+        if (m_bAwake)
+        {
+            return;
+        }
+
+        m_bAwake = true;
+        if (m_Owner != nullptr && m_Owner->GetCanvas() != nullptr)
+        {
+            m_Owner->GetCanvas()->AddAwake(*this);
+        }
     }
 }
