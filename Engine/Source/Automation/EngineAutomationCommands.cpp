@@ -131,6 +131,20 @@ namespace Opaax::EngineAutomation
                     { "height",  lBounds.HalfExtent.y * 2.f / lPerPixel },
                     { "quads",   InWidget.GetQuads().size() } };
 
+                // As drawn: the poses of the widget and its parents applied (the layout's values at rest).
+                const Affine2D      lDraw  = InWidget.GetDrawTransform();
+                const Bounds2D      lDrawn = lDraw.TransformBox(lBounds);
+                const Vector2F      lDrawnCentre = InCanvas.CanvasToScreen(lDrawn.Center);
+                const Affine2DParts lParts = lDraw.Decompose();
+
+                lRow["drawn"]    = { { "x",      lDrawnCentre.x },
+                                     { "y",      lDrawnCentre.y },
+                                     { "width",  lDrawn.HalfExtent.x * 2.f / lPerPixel },
+                                     { "height", lDrawn.HalfExtent.y * 2.f / lPerPixel } };
+                lRow["scale"]    = { { "x", lParts.Scale.x }, { "y", lParts.Scale.y } };
+                lRow["rotation"] = lParts.Rotation;
+                lRow["alpha"]    = InWidget.GetDrawnOpacity();
+
                 // Any button, the engine's or a game's, answers the state it shows.
                 if (InWidget.IsA<UIButtonBase>())
                 {

@@ -1,6 +1,7 @@
 // The UI module's types. Each registers itself; see Engine/Registries/AutoRegistration.h.
 #include "Engine/Registries/AutoRegistration.h"
 #include "Renderer/Textures/SpriteSheet.h"   // completes the widgets' sheet references
+#include "UI/Modifiers/UITransformModifier.h"
 #include "UI/UICanvasAsset.h"
 #include "UI/UISubsystem.h"
 #include "UI/Widgets/UIButton.h"
@@ -23,6 +24,10 @@ namespace Opaax
 
     // The base of what a node's "Modifiers" can name. Unknown types in a file are skipped.
     OPAAX_REGISTER_OBJECT(UIModifier);
+    OPAAX_REGISTER_OBJECT(UIPoseModifier);
+
+    // A pose that stays: turned, scaled, moved, faded or tinted without touching layout.
+    OPAAX_REGISTER_OBJECT(UITransformModifier);
 
     // Masks its children: white shows, black hides.
     OPAAX_REGISTER_OBJECT(UIMask);

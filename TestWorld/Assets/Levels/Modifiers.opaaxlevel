@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/Modifiers.opaaxmap"
+    ],
+    "name": "Modifiers",
+    "persistentMap": "Maps/Modifiers.opaaxmap",
+    "version": 1
+}

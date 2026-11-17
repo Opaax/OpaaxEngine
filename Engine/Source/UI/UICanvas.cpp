@@ -14,42 +14,99 @@ namespace Opaax
     {
         constexpr Int32 MAX_ORDER = TNumericLimits<Int16>::max();
 
+        /** What the walk hands down: the parents' accumulated pose and the nearest clip. */
+        struct UICollectState
+        {
+            const UIWidget* Mask     = nullptr;   // nearest ancestor that clips its children
+            Bounds2D        MaskRect;             // its posed box
+            float           Alpha    = 1.f;       // the ancestors' opacity product
+            Affine2D        Draw;                 // the ancestors' poses
+            Vector4F        Tint     = { 1.f, 1.f, 1.f, 1.f };
+            bool            bPosed   = false;     // Draw is not identity
+        };
+
         /**
-         * Tree order, parents first. InMask is the nearest ancestor that clips its children (a widget
-         * that clips replaces it); InAlpha is the ancestors' opacity product. A subtree at 0 alpha
-         * emits nothing.
+         * Tree order, parents first. A widget that clips replaces the mask for its subtree. A subtree
+         * at 0 alpha emits nothing. Without a pose anywhere above, quads keep their own values.
          */
-        void CollectTree(const UIWidget& InWidget, const UIWidget* InMask, const float InAlpha, Int32& InOutOrder,
+        void CollectTree(const UIWidget& InWidget, const UICollectState& InState, Int32& InOutOrder,
                          TDynArray<UIDrawItem>& OutItems)
         {
-            const float lAlpha = InAlpha * InWidget.Opacity;
+            const UIComposedPose& lPose = InWidget.GetPose();
 
-            if (!InWidget.bVisible || lAlpha <= 0.f)
+            UICollectState lState = InState;
+            lState.Alpha = InState.Alpha * InWidget.Opacity * lPose.Opacity;
+
+            if (!InWidget.bVisible || lState.Alpha <= 0.f)
             {
                 return;
             }
 
-            // A clip applies to everything below it.
-            const UIWidget* lMask = InWidget.ClipsChildren() ? &InWidget : InMask;
+            if (!lPose.bRest)
+            {
+                lState.Draw   = InState.Draw * lPose.Draw;
+                lState.Tint   = { InState.Tint.x * lPose.Tint.x, InState.Tint.y * lPose.Tint.y,
+                                  InState.Tint.z * lPose.Tint.z, InState.Tint.w * lPose.Tint.w };
+                lState.bPosed = !lState.Draw.IsIdentity();
+            }
+
+            // A clip applies to everything below it, posed with its widget.
+            if (InWidget.ClipsChildren())
+            {
+                lState.Mask     = &InWidget;
+                lState.MaskRect = lState.bPosed ? lState.Draw.TransformBox(InWidget.GetBounds()) : InWidget.GetBounds();
+            }
 
             // A quad wholly outside its clip shows nothing: the rows a scroll box has scrolled away.
-            const bool lCulls = lMask != nullptr && lMask->GetBounds().HalfExtent.x > 0.f
-                             && lMask->GetBounds().HalfExtent.y > 0.f;
+            const bool lCulls = lState.Mask != nullptr && lState.MaskRect.HalfExtent.x > 0.f
+                             && lState.MaskRect.HalfExtent.y > 0.f;
+
+            const Affine2DParts lParts = lState.bPosed ? lState.Draw.Decompose() : Affine2DParts{};
+            const float         lTurn  = Maths::DegreesToRadians(lParts.Rotation);
 
             for (const UIQuad& lQuad : InWidget.GetQuads())
             {
-                if (lCulls && !lMask->GetBounds().Intersects(lQuad.Bounds))
+                UIDrawItem lItem;
+                lItem.Quad  = &lQuad;
+                lItem.Mask  = lState.Mask;
+                lItem.Alpha = lState.Alpha;
+
+                if (lState.bPosed)
                 {
-                    continue;
+                    lItem.Center   = lState.Draw.TransformPoint(lQuad.Bounds.Center);
+                    lItem.Size     = { lQuad.Bounds.Size().x * lParts.Scale.x, lQuad.Bounds.Size().y * lParts.Scale.y };
+                    lItem.Rotation = lTurn;
+                }
+                else
+                {
+                    lItem.Center = lQuad.Bounds.Center;
+                    lItem.Size   = lQuad.Bounds.Size();
                 }
 
-                const Int16 lOrder = static_cast<Int16>(InOutOrder < MAX_ORDER ? InOutOrder++ : MAX_ORDER);
-                OutItems.emplace_back(UIDrawItem{ &lQuad, lMask, lAlpha, lOrder });
+                if (lCulls)
+                {
+                    const Bounds2D lDrawn = lState.bPosed ? lState.Draw.TransformBox(lQuad.Bounds) : lQuad.Bounds;
+                    if (!lState.MaskRect.Intersects(lDrawn))
+                    {
+                        continue;
+                    }
+                    lItem.MaskRect = lState.MaskRect;
+                }
+                else if (lState.Mask != nullptr)
+                {
+                    lItem.MaskRect = lState.MaskRect;
+                }
+
+                lItem.Color = { lQuad.Color.x * lState.Tint.x, lQuad.Color.y * lState.Tint.y,
+                                lQuad.Color.z * lState.Tint.z, lQuad.Color.w * lState.Tint.w * lState.Alpha };
+
+                lItem.Order = static_cast<Int16>(InOutOrder < MAX_ORDER ? InOutOrder++ : MAX_ORDER);
+                OutItems.emplace_back(lItem);
             }
 
             for (const TStrongObjectPtr<UIWidget>& lChild : InWidget.GetChildren())
             {
-                CollectTree(*lChild, lMask, lAlpha, InOutOrder, OutItems);
+                CollectTree(*lChild, lState, InOutOrder, OutItems);
             }
         }
     }
@@ -146,7 +203,7 @@ namespace Opaax
         OutItems.clear();
 
         Int32 lOrder = 0;
-        CollectTree(*m_Root, nullptr, 1.f, lOrder, OutItems);
+        CollectTree(*m_Root, UICollectState{}, lOrder, OutItems);
     }
 
     void UICanvas::Submit(Renderer2D& InRenderer) const
@@ -158,32 +215,29 @@ namespace Opaax
         {
             const UIQuad& lQuad = *lItem.Quad;
 
-            // The mask goes with the quad.
+            // The mask goes with the quad, posed with its widget.
             QuadMask lMask;
             if (lItem.Mask != nullptr)
             {
-                lMask.Rect    = lItem.Mask->GetBounds();
+                lMask.Rect    = lItem.MaskRect;
                 lMask.Texture = lItem.Mask->GetClipTexture();   // null = clip to the rect
             }
 
-            Vector4F lColor = lQuad.Color;
-            lColor.a *= lItem.Alpha;
-
             if (lQuad.Outline > 0.f)
             {
-                InRenderer.DrawQuadOutline(lQuad.Bounds.Center, lQuad.Bounds.Size(), lColor, lQuad.Outline,
-                                           0.f, ERenderLayer::UI, lItem.Order, lMask);
+                InRenderer.DrawQuadOutline(lItem.Center, lItem.Size, lItem.Color, lQuad.Outline,
+                                           lItem.Rotation, ERenderLayer::UI, lItem.Order, lMask);
             }
             else if (lQuad.Texture != nullptr)
             {
-                InRenderer.DrawSprite(lQuad.Bounds.Center, lQuad.Bounds.Size(), *lQuad.Texture, lColor,
-                                      0.f, ERenderLayer::UI, lItem.Order, lQuad.UVMin, lQuad.UVMax, lMask,
+                InRenderer.DrawSprite(lItem.Center, lItem.Size, *lQuad.Texture, lItem.Color,
+                                      lItem.Rotation, ERenderLayer::UI, lItem.Order, lQuad.UVMin, lQuad.UVMax, lMask,
                                       QuadLighting{}, lQuad.UVFrame);
             }
             else
             {
-                InRenderer.DrawQuad(lQuad.Bounds.Center, lQuad.Bounds.Size(), lColor,
-                                    0.f, ERenderLayer::UI, lItem.Order, lMask);
+                InRenderer.DrawQuad(lItem.Center, lItem.Size, lItem.Color,
+                                    lItem.Rotation, ERenderLayer::UI, lItem.Order, lMask);
             }
         }
 

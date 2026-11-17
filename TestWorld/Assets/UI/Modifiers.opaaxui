@@ -1,0 +1,490 @@
+{
+    "ReferenceHeight": 1080.0,
+    "Root": {
+        "Children": [
+            {
+                "Color": {
+                    "w": 1.0,
+                    "x": 0.12,
+                    "y": 0.14,
+                    "z": 0.2
+                },
+                "Name": "Backdrop",
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 1600.0,
+                        "y": 900.0
+                    }
+                },
+                "Texture": "",
+                "Type": "UIImage",
+                "bHitTestable": false
+            },
+            {
+                "Color": {
+                    "w": 1.0,
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0
+                },
+                "Name": "Plain",
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": -650.0,
+                        "y": 150.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 200.0,
+                        "y": 200.0
+                    }
+                },
+                "Texture": "/Engine/Textures/T_Checker_128.png",
+                "Type": "UIImage",
+                "bHitTestable": false
+            },
+            {
+                "Color": {
+                    "w": 1.0,
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0
+                },
+                "Modifiers": [
+                    {
+                        "Name": "Turn",
+                        "Pivot": {
+                            "x": 0.5,
+                            "y": 0.5
+                        },
+                        "Pose": {
+                            "Opacity": 1.0,
+                            "Rotation": 30.0,
+                            "Scale": {
+                                "x": 1.0,
+                                "y": 1.0
+                            },
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 1.0,
+                                "y": 1.0,
+                                "z": 1.0
+                            },
+                            "Translation": {
+                                "x": 0.0,
+                                "y": 0.0
+                            }
+                        },
+                        "Type": "UITransformModifier",
+                        "bEnabled": true,
+                        "bMovesHitArea": true
+                    }
+                ],
+                "Name": "Turned",
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": -350.0,
+                        "y": 150.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 200.0,
+                        "y": 200.0
+                    }
+                },
+                "Texture": "/Engine/Textures/T_Checker_128.png",
+                "Type": "UIImage",
+                "bHitTestable": false
+            },
+            {
+                "Color": {
+                    "w": 1.0,
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0
+                },
+                "Font": "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf",
+                "HAlign": "Left",
+                "Modifiers": [
+                    {
+                        "Name": "Grow",
+                        "Pivot": {
+                            "x": 0.0,
+                            "y": 0.5
+                        },
+                        "Pose": {
+                            "Opacity": 1.0,
+                            "Rotation": 0.0,
+                            "Scale": {
+                                "x": 1.5,
+                                "y": 1.5
+                            },
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 1.0,
+                                "y": 1.0,
+                                "z": 1.0
+                            },
+                            "Translation": {
+                                "x": 0.0,
+                                "y": 0.0
+                            }
+                        },
+                        "Type": "UITransformModifier",
+                        "bEnabled": true,
+                        "bMovesHitArea": true
+                    }
+                ],
+                "Name": "BigText",
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": -500.0,
+                        "y": -150.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 360.0,
+                        "y": 80.0
+                    }
+                },
+                "Size": 48.0,
+                "Text": "Scaled 1.5x",
+                "Type": "UIText",
+                "VAlign": "Middle",
+                "bHitTestable": false
+            },
+            {
+                "Children": [
+                    {
+                        "Color": {
+                            "w": 1.0,
+                            "x": 0.2,
+                            "y": 0.4,
+                            "z": 1.0
+                        },
+                        "Name": "FadedChild",
+                        "Rect": {
+                            "AnchorMax": {
+                                "x": 0.5,
+                                "y": 0.5
+                            },
+                            "AnchorMin": {
+                                "x": 0.5,
+                                "y": 0.5
+                            },
+                            "AnchoredPosition": {
+                                "x": 0.0,
+                                "y": 0.0
+                            },
+                            "Pivot": {
+                                "x": 0.5,
+                                "y": 0.5
+                            },
+                            "SizeDelta": {
+                                "x": 120.0,
+                                "y": 120.0
+                            }
+                        },
+                        "Texture": "",
+                        "Type": "UIImage",
+                        "bHitTestable": false
+                    }
+                ],
+                "Color": {
+                    "w": 1.0,
+                    "x": 0.9,
+                    "y": 0.9,
+                    "z": 0.9
+                },
+                "Modifiers": [
+                    {
+                        "Name": "Fade",
+                        "Pivot": {
+                            "x": 0.5,
+                            "y": 0.5
+                        },
+                        "Pose": {
+                            "Opacity": 0.5,
+                            "Rotation": 0.0,
+                            "Scale": {
+                                "x": 1.0,
+                                "y": 1.0
+                            },
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 1.0,
+                                "y": 0.6,
+                                "z": 0.6
+                            },
+                            "Translation": {
+                                "x": 0.0,
+                                "y": 0.0
+                            }
+                        },
+                        "Type": "UITransformModifier",
+                        "bEnabled": true,
+                        "bMovesHitArea": true
+                    }
+                ],
+                "Name": "FadedPanel",
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": 100.0,
+                        "y": 150.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 300.0,
+                        "y": 220.0
+                    }
+                },
+                "Texture": "",
+                "Type": "UIImage",
+                "bHitTestable": false
+            },
+            {
+                "Children": [
+                    {
+                        "Color": {
+                            "w": 1.0,
+                            "x": 1.0,
+                            "y": 0.6,
+                            "z": 0.2
+                        },
+                        "Name": "MaskedBar",
+                        "Rect": {
+                            "AnchorMax": {
+                                "x": 0.5,
+                                "y": 0.5
+                            },
+                            "AnchorMin": {
+                                "x": 0.5,
+                                "y": 0.5
+                            },
+                            "AnchoredPosition": {
+                                "x": 0.0,
+                                "y": 0.0
+                            },
+                            "Pivot": {
+                                "x": 0.5,
+                                "y": 0.5
+                            },
+                            "SizeDelta": {
+                                "x": 480.0,
+                                "y": 100.0
+                            }
+                        },
+                        "Texture": "",
+                        "Type": "UIImage",
+                        "bHitTestable": false
+                    }
+                ],
+                "Modifiers": [
+                    {
+                        "Name": "Tilt",
+                        "Pivot": {
+                            "x": 0.5,
+                            "y": 0.5
+                        },
+                        "Pose": {
+                            "Opacity": 1.0,
+                            "Rotation": 20.0,
+                            "Scale": {
+                                "x": 1.0,
+                                "y": 1.0
+                            },
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 1.0,
+                                "y": 1.0,
+                                "z": 1.0
+                            },
+                            "Translation": {
+                                "x": 0.0,
+                                "y": 0.0
+                            }
+                        },
+                        "Type": "UITransformModifier",
+                        "bEnabled": true,
+                        "bMovesHitArea": true
+                    }
+                ],
+                "Name": "TurnedMask",
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": 500.0,
+                        "y": 150.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 240.0,
+                        "y": 240.0
+                    }
+                },
+                "Type": "UIMask",
+                "bShowMaskGraphic": true
+            },
+            {
+                "Color": {
+                    "w": 1.0,
+                    "x": 0.3,
+                    "y": 0.8,
+                    "z": 0.5
+                },
+                "Modifiers": [
+                    {
+                        "Name": "Slide",
+                        "Pivot": {
+                            "x": 0.5,
+                            "y": 0.5
+                        },
+                        "Pose": {
+                            "Opacity": 1.0,
+                            "Rotation": 0.0,
+                            "Scale": {
+                                "x": 1.0,
+                                "y": 1.0
+                            },
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 1.0,
+                                "y": 1.0,
+                                "z": 1.0
+                            },
+                            "Translation": {
+                                "x": 300.0,
+                                "y": 0.0
+                            }
+                        },
+                        "Type": "UITransformModifier",
+                        "bEnabled": true,
+                        "bMovesHitArea": true
+                    }
+                ],
+                "Name": "Moved",
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": 100.0,
+                        "y": -250.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 160.0,
+                        "y": 100.0
+                    }
+                },
+                "Texture": "",
+                "Type": "UIImage",
+                "bHitTestable": false
+            }
+        ],
+        "Name": "Root",
+        "Rect": {
+            "AnchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "AnchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "AnchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "Pivot": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "SizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            }
+        },
+        "Type": "UIPanel",
+        "bHitTestable": false
+    },
+    "Version": 1
+}
