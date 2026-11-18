@@ -260,8 +260,8 @@ the others (-1 keeps `Frame`), each sliced with its own frame's border and tinte
 
 A game's own button derives from `UIButtonBase` (`UI/UIButtonBase.h`), which keeps the state
 (`GetState()`), fires the events and calls one of `RebuildNormalState`, `RebuildHoveredState`,
-`RebuildPressedState`, `RebuildDisabledState`; each can draw with `BuildImageQuads`
-(`UI/UIImageSource.h`), the routine images and buttons slice with.
+`RebuildPressedState`, `RebuildDisabledState`; each can draw a `UIBrush` (a tint, a texture or a
+sheet frame, a border) with `DrawBrush` (`UI/UIBrush.h`), as images and buttons do.
 
 ## Input (`InputActionAsset`, `InputMappingContextAsset`)
 

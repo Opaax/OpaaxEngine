@@ -1,6 +1,6 @@
 #include "UI/Widgets/UIButton.h"
 
-#include "UI/UIImageSource.h"
+#include "UI/UIBrush.h"
 #include "UI/UISlice.h"
 
 namespace Opaax
@@ -24,44 +24,59 @@ namespace Opaax
         return lFrame >= 0 ? lFrame : Frame;
     }
 
+    UIBrush UIButton::GetStateBrush(const EUIButtonState InState) const
+    {
+        UIBrush lBrush;
+        switch (InState)
+        {
+            case EUIButtonState::Normal:   lBrush.Tint = Normal;   break;
+            case EUIButtonState::Hovered:  lBrush.Tint = Hovered;  break;
+            case EUIButtonState::Pressed:  lBrush.Tint = Pressed;  break;
+            case EUIButtonState::Disabled: lBrush.Tint = Disabled; break;
+        }
+        lBrush.Texture     = Texture;
+        lBrush.Sheet       = Sheet;
+        lBrush.Frame       = GetStateFrame(InState);
+        lBrush.Border      = Border;
+        lBrush.BorderScale = BorderScale;
+        return lBrush;
+    }
+
     void UIButton::RebuildNormalState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
     {
-        DrawImage(InContext, OutQuads, GetStateFrame(EUIButtonState::Normal), Normal);
+        DrawState(InContext, OutQuads, EUIButtonState::Normal);
     }
 
     void UIButton::RebuildHoveredState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
     {
-        DrawImage(InContext, OutQuads, GetStateFrame(EUIButtonState::Hovered), Hovered);
+        DrawState(InContext, OutQuads, EUIButtonState::Hovered);
     }
 
     void UIButton::RebuildPressedState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
     {
-        DrawImage(InContext, OutQuads, GetStateFrame(EUIButtonState::Pressed), Pressed);
+        DrawState(InContext, OutQuads, EUIButtonState::Pressed);
     }
 
     void UIButton::RebuildDisabledState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
     {
-        DrawImage(InContext, OutQuads, GetStateFrame(EUIButtonState::Disabled), Disabled);
+        DrawState(InContext, OutQuads, EUIButtonState::Disabled);
     }
 
-    bool UIButton::DrawImage(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads, const Int32 InFrame,
-                             const LinearColor& InColor)
+    void UIButton::DrawState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads, const EUIButtonState InState)
     {
         // Same rule as UIImage: named but not ready draws nothing and retries; nothing named is a plain quad.
-        UIResolvedImage lImage;
-        bool            bNamed = false;
-        if (!ResolveImageSource(InContext, m_Texture, Texture, Sheet, InFrame, lImage, bNamed) && bNamed)
+        const EUIBrushDraw lDraw = DrawBrush(InContext, GetBounds(), GetStateBrush(InState), m_Texture, OutQuads);
+        if (lDraw == EUIBrushDraw::NotReady)
         {
             InvalidateContent();
-            return false;
+            return;
         }
 
-        if (!BuildImageQuads(GetBounds(), lImage, Border, BorderScale, InColor, OutQuads) && !m_bWarnedTiles)
+        if (lDraw == EUIBrushDraw::Stretched && !m_bWarnedTiles)
         {
             m_bWarnedTiles = true;
             OPAAX_LOG(LogUISlice, Warn, "'{}' would take more than {} tiles: stretched instead (raise BorderScale)",
                       Name.CStr(), UI_MAX_TILED_QUADS);
         }
-        return true;
     }
 }

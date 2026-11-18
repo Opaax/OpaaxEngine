@@ -9,6 +9,7 @@
 #include "Renderer/Textures/SpriteSheet.h"   // complete: a widget class visits its sheet reference
 #include "Renderer/Textures/Texture2D.h"     // and its texture reference
 #include "Resources/Asset/AssetRef.h"
+#include "UI/UIBrush.h"
 #include "UI/UIMargin.h"
 #include "UI/UIWidget.h"
 
@@ -109,6 +110,10 @@ namespace Opaax
 
     protected:
         void Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads) override;
+
+    private:
+        /** The brush its image fields make. */
+        UIBrush MakeBrush() const;
 
         // =============================================================================
         // Members

@@ -217,6 +217,7 @@ set(OPAAX_TEST_SOURCES
 
     # Runtime UI (layout, events, serialization; no GL context needed)
     UI/UIBindingTests.cpp
+    UI/UIBrushTests.cpp
     UI/UIButtonTests.cpp
     UI/UICanvasFileTests.cpp
     UI/UILayerTests.cpp
