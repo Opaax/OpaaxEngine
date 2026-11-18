@@ -92,4 +92,30 @@ namespace Opaax
     {
         return SampleTweenKeys(InTween.Keys, InTween.Loop, InTween.bHoldEnd, InTime, OutFinished);
     }
+
+    float TweenCycleLength(const TDynArray<UITweenKey>& InKeys, const EUILoop InLoop) noexcept
+    {
+        const float lLength = InKeys.empty() ? 0.f : InKeys.back().Time;
+        if (lLength <= 0.f)
+        {
+            return 0.f;
+        }
+
+        switch (InLoop)
+        {
+        case EUILoop::Loop:     return lLength;
+        case EUILoop::PingPong: return lLength * 2.f;
+        case EUILoop::Once:     break;
+        }
+        return 0.f;
+    }
+
+    float CycleEndAfter(const float InTime, const float InCycle) noexcept
+    {
+        if (InCycle <= 0.f || InTime <= 0.f)
+        {
+            return Maths::Max(InTime, 0.f);
+        }
+        return Maths::CeilToFloat(InTime / InCycle) * InCycle;
+    }
 }

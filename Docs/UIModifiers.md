@@ -114,7 +114,11 @@ the same whatever the frame rate.
 
 - `Play()` starts it from its first key, shown at once; `Stop()` puts the widget back at rest.
 - `Delay` holds the first key's pose before it moves: rows sharing one tween follow one by one.
-- `PlayOn`: `Manual` (only when asked), `Show` (when the widget is shown), `Hide` (when it is hidden).
+- `PlayOn`: `Manual` (only when asked), `Show` (when the widget is shown), `Hide` (when it is hidden),
+  or a state: `Hovered`, `Pressed`, `Focused`, `Disabled`, when the widget (or the button it follows)
+  enters it. When the state ends, a `Once` tween plays to its end and a `Loop` or `PingPong` one finishes
+  its cycle and rests, so a pulse ends where it started; entering again before then keeps it going
+  rather than starting over. A widget shown already in its state (a button loaded disabled) plays it.
 - `OnFinished` fires once when a `Once` tween ends.
 
 `ui.tween {widget, tween}` plays one by name in a running game.
