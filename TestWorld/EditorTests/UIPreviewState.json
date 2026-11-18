@@ -1,0 +1,192 @@
+[
+    {
+        "id": "open",
+        "command": "asset.open",
+        "params": {
+            "path": "UI/Sliced.opaaxui"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "unknown-state-refused",
+        "command": "ui.preview.state",
+        "params": {
+            "widget": "BigButton",
+            "state": "Sleepy"
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "state-hovered",
+        "command": "ui.preview.state",
+        "params": {
+            "widget": "BigButton",
+            "state": "Hovered"
+        },
+        "expect": {
+            "interaction": "Hovered",
+            "brush": "UI/SlicedButtons.opaaxasset#1"
+        }
+    },
+    {
+        "id": "state-pressed",
+        "command": "ui.preview.state",
+        "params": {
+            "widget": "BigButton",
+            "state": "Pressed"
+        },
+        "expect": {
+            "interaction": "Pressed",
+            "brush": "UI/SlicedButtons.opaaxasset#2"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "listed-pressed",
+        "command": "ui.widget.list",
+        "expect": {
+            "widgets": [
+                {},
+                {},
+                {},
+                {},
+                {
+                    "name": "BigButton",
+                    "interaction": "Pressed",
+                    "brush": "UI/SlicedButtons.opaaxasset#2"
+                },
+                {},
+                {}
+            ]
+        }
+    },
+    {
+        "id": "screenshot-pressed",
+        "command": "screenshot",
+        "params": {
+            "path": "EditorPreviewStatePressed.png"
+        }
+    },
+    {
+        "id": "state-disabled",
+        "command": "ui.preview.state",
+        "params": {
+            "widget": "BigButton",
+            "state": "Disabled"
+        },
+        "expect": {
+            "interaction": "Disabled",
+            "brush": "UI/SlicedButtons.opaaxasset#3"
+        }
+    },
+    {
+        "id": "state-focused",
+        "command": "ui.preview.state",
+        "params": {
+            "widget": "BigButton",
+            "state": "Focused"
+        },
+        "expect": {
+            "interaction": "Focused",
+            "brush": "UI/SlicedButtons.opaaxasset#0"
+        }
+    },
+    {
+        "id": "state-normal",
+        "command": "ui.preview.state",
+        "params": {
+            "widget": "BigButton",
+            "state": "Normal"
+        },
+        "expect": {
+            "interaction": "Normal",
+            "brush": "UI/SlicedButtons.opaaxasset#0"
+        }
+    },
+    {
+        "id": "live",
+        "command": "ui.preview.state",
+        "params": {
+            "widget": "BigButton",
+            "state": "Live"
+        },
+        "expect": {
+            "interaction": "Normal",
+            "brush": "UI/SlicedButtons.opaaxasset#0"
+        }
+    },
+    {
+        "id": "play",
+        "command": "ui.preview.play",
+        "params": {
+            "on": true
+        },
+        "expect": {
+            "playing": true,
+            "dirty": false
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "pressed-while-playing",
+        "command": "ui.preview.state",
+        "params": {
+            "widget": "BigButton",
+            "state": "Pressed"
+        },
+        "expect": {
+            "interaction": "Pressed"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "stop-clears-it",
+        "command": "ui.preview.play",
+        "params": {
+            "on": false
+        },
+        "expect": {
+            "playing": false,
+            "dirty": false
+        }
+    },
+    {
+        "id": "stop-cleared-it",
+        "command": "ui.widget.list",
+        "expect": {
+            "widgets": [
+                {},
+                {},
+                {},
+                {},
+                {
+                    "name": "BigButton",
+                    "interaction": "Normal",
+                    "brush": "UI/SlicedButtons.opaaxasset#0"
+                },
+                {},
+                {}
+            ]
+        }
+    }
+]

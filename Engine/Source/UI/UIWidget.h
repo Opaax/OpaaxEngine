@@ -189,6 +189,14 @@ namespace Opaax
         /** Works my state out again and tells my modifiers if it changed. Called when IsInteractable changes. */
         void NotifyStateChanged();
 
+        /**
+         * Shows InState whatever the pointer and focus do (the editor's Preview state): my art, my
+         * transitions, my state tweens. Empty gives me back to the pointer. Runtime only: not saved, and
+         * ResetRuntime clears it.
+         */
+        void SetPreviewState(const TOptional<EUIInteractionState>& InState);
+        const TOptional<EUIInteractionState>& GetPreviewState() const noexcept { return m_PreviewState; }
+
         /** Whether I and every parent have bVisible on. */
         bool IsShownInTree() const noexcept;
 
@@ -411,5 +419,7 @@ namespace Opaax
         bool m_bDestroying   = false;
         /** Asked to be ticked (WakeUp), until Tick answers false or Sleep. */
         bool m_bAwake        = false;
+        /** The state shown whatever the pointer does (SetPreviewState), or none. */
+        TOptional<EUIInteractionState> m_PreviewState;
     };
 }

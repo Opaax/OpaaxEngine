@@ -171,6 +171,10 @@ namespace Opaax
 
     EUIInteractionState UIWidget::GetInteractionState() const
     {
+        if (m_PreviewState.has_value())
+        {
+            return *m_PreviewState;
+        }
         if (!IsInteractable())
         {
             return EUIInteractionState::Disabled;
@@ -299,6 +303,7 @@ namespace Opaax
         }
 
         m_bAwake = false;
+        m_PreviewState = NullOpt;
         OnReset();
 
         // Told nothing: the modifiers just put themselves at the state there is now.
@@ -338,6 +343,13 @@ namespace Opaax
             if (!lNode->bVisible) { return false; }
         }
         return true;
+    }
+
+    void UIWidget::SetPreviewState(const TOptional<EUIInteractionState>& InState)
+    {
+        m_PreviewState = InState;
+        NotifyStateChanged();
+        InvalidateContent();
     }
 
     void UIWidget::NotifyStateChanged()
