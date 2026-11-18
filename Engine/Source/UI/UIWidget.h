@@ -244,6 +244,12 @@ namespace Opaax
         /** Back at rest, as if nothing had played (the editor's preview Stop). I am asleep after it. */
         virtual void OnReset() {}
 
+        /** My interaction state changed (GetInteractionState), before my modifiers hear it. */
+        virtual void OnInteractionStateChanged(EUIInteractionState InFrom, EUIInteractionState InTo)
+        {
+            (void)InFrom; (void)InTo;
+        }
+
         // =============================================================================
         // Input — override to handle an event; the default lets it bubble
         // =============================================================================

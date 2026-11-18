@@ -1,6 +1,6 @@
 #include "UI/Widgets/UIButton.h"
 
-#include "UI/UIBrush.h"
+#include "UI/UICanvas.h"
 #include "UI/UISlice.h"
 
 namespace Opaax
@@ -11,61 +11,98 @@ namespace Opaax
         InvalidateContent();
     }
 
-    Int32 UIButton::GetStateFrame(const EUIButtonState InState) const noexcept
+    OpaaxString UIButton::DescribeBrush() const
     {
-        Int32 lFrame = -1;
-        switch (InState)
+        return Opaax::DescribeBrush(GetStateBrush(GetInteractionState()), m_Texture != nullptr, m_DrawnClip);
+    }
+
+    void UIButton::PostEditChange()
+    {
+        UIButtonBase::PostEditChange();
+        Brushes.Sanitize();
+        m_bWarnedClip = false;
+        InvalidateContent();
+    }
+
+    void UIButton::OnInteractionStateChanged(EUIInteractionState, EUIInteractionState)
+    {
+        // The tint fades from the one on screen; the new state's clip starts over. The image swaps at once.
+        m_FadeFrom     = m_ShownTint;
+        m_FadeSeconds  = 0.f;
+        m_StateSeconds = 0.f;
+        m_DrawnClip    = {};
+        InvalidateContent();
+        WakeUp();
+    }
+
+    bool UIButton::Tick(const float InSeconds)
+    {
+        const float lFadeBefore = m_FadeSeconds;
+        m_FadeSeconds  += InSeconds;
+        m_StateSeconds += InSeconds;
+
+        bool bStay = false;
+
+        // Redrawn every frame of the fade, and once past its end so the last tint is exact.
+        if (lFadeBefore < Brushes.FadeDuration)
         {
-            case EUIButtonState::Hovered:  lFrame = HoveredFrame;  break;
-            case EUIButtonState::Pressed:  lFrame = PressedFrame;  break;
-            case EUIButtonState::Disabled: lFrame = DisabledFrame; break;
-            case EUIButtonState::Normal:   break;
+            InvalidateContent();
+            bStay = m_FadeSeconds < Brushes.FadeDuration;
         }
-        return lFrame >= 0 ? lFrame : Frame;
-    }
 
-    UIBrush UIButton::GetStateBrush(const EUIButtonState InState) const
-    {
-        UIBrush lBrush;
-        switch (InState)
+        UICanvas* const   lCanvas = GetCanvas();
+        const UIBrushClip lClip   = SampleBrushClip(lCanvas != nullptr ? lCanvas->GetAssets() : nullptr,
+                                                    GetStateBrush(GetInteractionState()), m_StateSeconds);
+        if (lClip.Clip != nullptr)
         {
-            case EUIButtonState::Normal:   lBrush.Tint = Normal;   break;
-            case EUIButtonState::Hovered:  lBrush.Tint = Hovered;  break;
-            case EUIButtonState::Pressed:  lBrush.Tint = Pressed;  break;
-            case EUIButtonState::Disabled: lBrush.Tint = Disabled; break;
+            if (lClip.Step != m_DrawnClip.Step || m_DrawnClip.Clip == nullptr)
+            {
+                InvalidateContent();
+            }
+            bStay = bStay || !lClip.bFinished;
         }
-        lBrush.Texture     = Texture;
-        lBrush.Sheet       = Sheet;
-        lBrush.Frame       = GetStateFrame(InState);
-        lBrush.Border      = Border;
-        lBrush.BorderScale = BorderScale;
-        return lBrush;
+        return bStay;
     }
 
-    void UIButton::RebuildNormalState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
+    void UIButton::OnReset()
     {
-        DrawState(InContext, OutQuads, EUIButtonState::Normal);
+        m_StateSeconds = 0.f;
+        m_FadeSeconds  = 0.f;
+        m_bDrawnOnce   = false;
+        m_DrawnClip    = {};
+        InvalidateContent();
     }
 
-    void UIButton::RebuildHoveredState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
+    void UIButton::Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
     {
-        DrawState(InContext, OutQuads, EUIButtonState::Hovered);
-    }
+        UIBrush lBrush = GetStateBrush(GetInteractionState());
 
-    void UIButton::RebuildPressedState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
-    {
-        DrawState(InContext, OutQuads, EUIButtonState::Pressed);
-    }
+        // The first draw, and a canvas nobody ticks (the editor's document), show the tint at once.
+        const UICanvas* lCanvas = GetCanvas();
+        if (!m_bDrawnOnce || lCanvas == nullptr || !lCanvas->IsTicked())
+        {
+            m_FadeSeconds = Brushes.FadeDuration;
+        }
+        lBrush.Tint  = FadeTint(m_FadeFrom, lBrush.Tint, m_FadeSeconds, Brushes.FadeDuration, Brushes.FadeEase);
+        m_ShownTint  = lBrush.Tint;
+        m_bDrawnOnce = true;
 
-    void UIButton::RebuildDisabledState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
-    {
-        DrawState(InContext, OutQuads, EUIButtonState::Disabled);
-    }
-
-    void UIButton::DrawState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads, const EUIButtonState InState)
-    {
         // Same rule as UIImage: named but not ready draws nothing and retries; nothing named is a plain quad.
-        const EUIBrushDraw lDraw = DrawBrush(InContext, GetBounds(), GetStateBrush(InState), m_Texture, 0.f, OutQuads);
+        const EUIBrushDraw lDraw = DrawBrush(InContext, GetBounds(), lBrush, m_Texture, m_StateSeconds, OutQuads,
+                                             &m_DrawnClip);
+
+        if (m_DrawnClip.Issue != EUIBrushIssue::None && !m_bWarnedClip)
+        {
+            m_bWarnedClip = true;
+            OPAAX_LOG(LogUIBrush, Warn, "'{}': {}", Name.CStr(), DescribeBrushIssue(lBrush, m_DrawnClip).CStr());
+        }
+
+        // A state's clip that can still change keeps me ticking (only a ticked canvas runs it).
+        if (m_DrawnClip.Clip != nullptr && !m_DrawnClip.bFinished && !IsAwake())
+        {
+            WakeUp();
+        }
+
         if (lDraw == EUIBrushDraw::NotReady)
         {
             InvalidateContent();

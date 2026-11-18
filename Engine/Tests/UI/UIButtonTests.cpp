@@ -73,12 +73,16 @@ namespace
             UIRect lRect;
             lRect.SizeDelta = { 420.f, 90.f };
             Button->SetRect(lRect);
-            Button->Sheet.Path    = "UI/Buttons.opaaxasset";
-            Button->Frame         = 0;
-            Button->HoveredFrame  = 1;
-            Button->PressedFrame  = 2;
-            Button->DisabledFrame = 3;
-            Button->BorderScale   = 0.4f;
+            // Each state its own frame of one sheet, in its own tint; the tint jumps (no fade).
+            UIBrush* const lStates[] = { &Button->Brushes.Normal, &Button->Brushes.Hovered,
+                                         &Button->Brushes.Pressed, &Button->Brushes.Disabled };
+            for (Int32 lIndex = 0; lIndex < 4; ++lIndex)
+            {
+                lStates[lIndex]->Sheet.Path  = "UI/Buttons.opaaxasset";
+                lStates[lIndex]->Frame       = lIndex;
+                lStates[lIndex]->BorderScale = 0.4f;
+            }
+            Button->Brushes.FadeDuration = 0.f;
             Button->InvalidateContent();
         }
 
@@ -124,6 +128,7 @@ namespace
             lRect.SizeDelta = { 200.f, 80.f };
             Button->SetRect(lRect);
             Button->OnClick.Add([this]() { ++Clicks; });
+            Button->Brushes.FadeDuration = 0.f;   // the tint jumps: one Update shows the new state's
             Canvas.Update();
         }
 
@@ -175,15 +180,15 @@ TEST_CASE("UIButton: disabled falls through and wears the Disabled colour")
     CHECK(lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Down, { 0.f, 0.f })) == EUIReply::Unhandled);
     lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Up, { 0.f, 0.f }));
     CHECK(lF.Clicks == 0);
-    CHECK(lF.QuadColor().a == doctest::Approx(lF.Button->Disabled.a));
+    CHECK(lF.QuadColor().a == doctest::Approx(lF.Button->Brushes.Disabled.Tint.a));
 }
 
 TEST_CASE("UIButton: the quad's colour follows Normal -> Hovered -> Pressed -> Hovered -> Normal")
 {
     Fixture lF;
-    lF.Button->Normal  = { 0.1f, 0.f, 0.f, 1.f };
-    lF.Button->Hovered = { 0.2f, 0.f, 0.f, 1.f };
-    lF.Button->Pressed = { 0.3f, 0.f, 0.f, 1.f };
+    lF.Button->Brushes.Normal.Tint  = { 0.1f, 0.f, 0.f, 1.f };
+    lF.Button->Brushes.Hovered.Tint = { 0.2f, 0.f, 0.f, 1.f };
+    lF.Button->Brushes.Pressed.Tint = { 0.3f, 0.f, 0.f, 1.f };
     lF.Button->InvalidateContent();
 
     CHECK(lF.QuadColor().r == doctest::Approx(0.1f));
@@ -233,7 +238,7 @@ TEST_CASE("UIButton: draws the same quads as an image showing the same frame")
     lImage->SetRect(lRect);
     lImage->SetSheetFrame(OpaaxString("UI/Buttons.opaaxasset"), 0);
     lImage->SetBorderScale(0.4f);
-    lImage->SetColor(lF.Button->Normal);
+    lImage->SetColor(lF.Button->Brushes.Normal.Tint);
     lF.Canvas.Update(lF.Context);
 
     const TDynArray<UIQuad>& lImageQuads = lImage->GetQuads();
@@ -256,9 +261,9 @@ TEST_CASE("UIButton: draws the same quads as an image showing the same frame")
 TEST_CASE("UIButton: each state shows its own frame, sliced with that frame's border, tinted as before")
 {
     SheetFixture lF;
-    lF.Button->Normal  = { 0.1f, 0.f, 0.f, 1.f };
-    lF.Button->Hovered = { 0.2f, 0.f, 0.f, 1.f };
-    lF.Button->Pressed = { 0.3f, 0.f, 0.f, 1.f };
+    lF.Button->Brushes.Normal.Tint  = { 0.1f, 0.f, 0.f, 1.f };
+    lF.Button->Brushes.Hovered.Tint = { 0.2f, 0.f, 0.f, 1.f };
+    lF.Button->Brushes.Pressed.Tint = { 0.3f, 0.f, 0.f, 1.f };
     lF.Button->InvalidateContent();
 
     CHECK(lF.Quads().size() == 9u);
@@ -283,64 +288,71 @@ TEST_CASE("UIButton: each state shows its own frame, sliced with that frame's bo
     REQUIRE(lF.Quads().size() == 1u);
     CHECK(lF.Assets.LastFrame == 3);
     CHECK(lF.Quads()[0].UVMin.x == doctest::Approx(0.3f));
-    CHECK(lF.Quads()[0].Color.a == doctest::Approx(lF.Button->Disabled.a));
+    CHECK(lF.Quads()[0].Color.a == doctest::Approx(lF.Button->Brushes.Disabled.Tint.a));
 }
 
-TEST_CASE("UIButton: a state frame of -1 shows Frame; the button's own border wins over the frame's")
+TEST_CASE("UIButton: a state brush with no image shows Normal's image and border, in its own tint")
 {
     SheetFixture lF;
-    lF.Button->HoveredFrame = -1;
-    lF.Button->Frame        = 2;
+    lF.Button->Brushes.Hovered.Sheet.Path = "";
+    lF.Button->Brushes.Hovered.Tint       = { 0.6f, 0.f, 0.f, 1.f };
+    lF.Button->Brushes.Normal.Frame       = 2;
     lF.Button->InvalidateContent();
 
     lF.Route(EUIPointerEventType::Move, { 0.f, 0.f }, EUIPointerButton::None);
-    lF.Quads();
-    CHECK(lF.Assets.LastFrame == 2);
-    CHECK(lF.Button->GetStateFrame(EUIButtonState::Hovered) == 2);
-    CHECK(lF.Button->GetStateFrame(EUIButtonState::Pressed) == 2);   // its own, set by the fixture
+    CHECK(lF.Quads()[0].Color.r == doctest::Approx(0.6f));
+    CHECK(lF.Assets.LastFrame == 2);   // Normal's frame
+    CHECK(lF.Button->GetStateBrush(EUIInteractionState::Hovered).Frame == 2);
+    CHECK(lF.Button->GetStateBrush(EUIInteractionState::Pressed).Frame == 2);   // its own, set by the fixture
 
-    lF.Button->Border = UIMargin{ 20.f, 20.f, 20.f, 20.f };
+    // Normal's border too: its own border wins over the frame's.
+    lF.Button->Brushes.Normal.Border = UIMargin{ 20.f, 20.f, 20.f, 20.f };
     lF.Button->InvalidateContent();
     CHECK(lF.Quads()[0].Bounds.Size().x == doctest::Approx(20.f * 0.4f));
 }
 
-TEST_CASE("UIButton: the frames, border and scale round-trip through the file; an old file reads the defaults")
+TEST_CASE("UIButton: the brushes round-trip through the file; a version 1 button reads into them")
 {
     const WidgetClasses lRegistry;
 
     UICanvasFile::UICanvasDoc lDoc;
     lDoc.Root = NewObject<UIPanel>();
 
-    auto lButton           = NewObject<UIButton>();
-    lButton->Sheet.Path    = "UI/Buttons.opaaxasset";
-    lButton->Frame         = 0;
-    lButton->HoveredFrame  = 1;
-    lButton->PressedFrame  = 2;
-    lButton->DisabledFrame = 3;
-    lButton->Border        = UIMargin{ 1.f, 2.f, 3.f, 4.f };
-    lButton->BorderScale   = 0.4f;
+    auto lButton = NewObject<UIButton>();
+    lButton->Brushes.Hovered.Sheet.Path  = "UI/Buttons.opaaxasset";
+    lButton->Brushes.Hovered.Frame       = 1;
+    lButton->Brushes.Pressed.Border      = UIMargin{ 1.f, 2.f, 3.f, 4.f };
+    lButton->Brushes.Disabled.BorderScale = 0.4f;
+    lButton->Brushes.FadeDuration        = 0.25f;
+    lButton->Brushes.FadeEase            = EEase::Linear;
     lDoc.Root->AddChild(Move(lButton));
 
     UICanvasFile::UICanvasDoc lBack;
     REQUIRE(UICanvasFile::Deserialize(UICanvasFile::Serialize(lDoc), lRegistry, lBack));
     REQUIRE(lBack.Root->GetChildren().size() == 1u);
     const auto* lRead = static_cast<const UIButton*>(lBack.Root->GetChildren()[0].Get());
-    CHECK(lRead->HoveredFrame == 1);
-    CHECK(lRead->PressedFrame == 2);
-    CHECK(lRead->DisabledFrame == 3);
-    CHECK(lRead->Border.Top == doctest::Approx(4.f));
-    CHECK(lRead->BorderScale == doctest::Approx(0.4f));
+    CHECK(lRead->Brushes.Hovered.Sheet.Path == OpaaxString("UI/Buttons.opaaxasset"));
+    CHECK(lRead->Brushes.Hovered.Frame == 1);
+    CHECK(lRead->Brushes.Pressed.Border.Top == doctest::Approx(4.f));
+    CHECK(lRead->Brushes.Disabled.BorderScale == doctest::Approx(0.4f));
+    CHECK(lRead->Brushes.FadeDuration == doctest::Approx(0.25f));
+    CHECK(lRead->Brushes.FadeEase == EEase::Linear);
 
+    // Version 1: one frame for all, -1 states showing Frame, default colours, and no fade.
     UICanvasFile::UICanvasDoc lOld;
     REQUIRE(UICanvasFile::Deserialize(OpaaxString(R"({"Version":1,"Root":{"Type":"UIPanel","Children":[{"Type":"UIButton","Frame":2}]}})"),
                                       lRegistry, lOld));
     const auto* lOldButton = static_cast<const UIButton*>(lOld.Root->GetChildren()[0].Get());
-    CHECK(lOldButton->Frame == 2);
-    CHECK(lOldButton->HoveredFrame == -1);
-    CHECK(lOldButton->PressedFrame == -1);
-    CHECK(lOldButton->DisabledFrame == -1);
-    CHECK(lOldButton->Border.IsZero());
-    CHECK(lOldButton->BorderScale == doctest::Approx(1.f));
+    CHECK(lOldButton->Brushes.Normal.Frame == 2);
+    CHECK(lOldButton->Brushes.Hovered.Frame == 2);
+    CHECK(lOldButton->Brushes.Pressed.Frame == 2);
+    CHECK(lOldButton->Brushes.Disabled.Frame == 2);
+    CHECK(lOldButton->Brushes.Focused.Frame == 2);
+    CHECK(lOldButton->Brushes.Hovered.Tint.x == doctest::Approx(0.35f));
+    CHECK(lOldButton->Brushes.Disabled.Tint.w == doctest::Approx(0.5f));
+    CHECK(lOldButton->Brushes.Normal.Border.IsZero());
+    CHECK(lOldButton->Brushes.Normal.BorderScale == doctest::Approx(1.f));
+    CHECK(lOldButton->Brushes.FadeDuration == doctest::Approx(0.f));
 }
 
 namespace

@@ -355,15 +355,15 @@ TEST_CASE("UIButton: its art resolves like an image's, tinted by the state colou
     lCanvas.SetTargetSize(1920, 1080);
 
     UIButton* lButton = static_cast<UIButton*>(lCanvas.Root().AddChild(NewObject<UIButton>()));
-    lButton->Texture.Path = "UI/Button.png";
+    lButton->Brushes.Normal.Texture.Path = "UI/Button.png";
     lCanvas.Update(lContext);
 
     REQUIRE(lButton->GetQuads().size() == 1u);
     CHECK(lButton->GetQuads()[0].Texture == &lAssets.Plain);
-    CHECK(lButton->GetQuads()[0].Color.r == doctest::Approx(lButton->Normal.r));
+    CHECK(lButton->GetQuads()[0].Color.r == doctest::Approx(lButton->Brushes.Normal.Tint.r));
 
-    lButton->Sheet.Path = "UI/Icons.opaaxasset";
-    lButton->Frame      = 1;
+    lButton->Brushes.Normal.Sheet.Path = "UI/Icons.opaaxasset";
+    lButton->Brushes.Normal.Frame      = 1;
     lButton->InvalidateContent();
     lCanvas.Update(lContext);
     CHECK(lButton->GetQuads()[0].Texture == &lAssets.Atlas);   // the sheet wins
@@ -390,9 +390,9 @@ TEST_CASE("UIImageSource: the new fields round-trip through the file, and a file
     lDoc.Root->AddChild(Move(lImage));
 
     auto lButton = NewObject<UIButton>();
-    lButton->Texture.Path = "UI/Button.png";
-    lButton->Sheet.Path   = "UI/Icons.opaaxasset";
-    lButton->Frame        = 2;
+    lButton->Brushes.Normal.Texture.Path = "UI/Button.png";
+    lButton->Brushes.Normal.Sheet.Path   = "UI/Icons.opaaxasset";
+    lButton->Brushes.Normal.Frame        = 2;
     lDoc.Root->AddChild(Move(lButton));
 
     UICanvasFile::UICanvasDoc lBack;
@@ -404,16 +404,16 @@ TEST_CASE("UIImageSource: the new fields round-trip through the file, and a file
     CHECK(lReadImage->Brush.Sheet.Path == OpaaxString("UI/Icons.opaaxasset"));
     CHECK(lReadImage->Brush.Frame == 7);
     CHECK(lReadImage->Brush.BorderScale == doctest::Approx(0.4f));
-    CHECK(lReadButton->Texture.Path == OpaaxString("UI/Button.png"));
-    CHECK(lReadButton->Sheet.Path == OpaaxString("UI/Icons.opaaxasset"));
-    CHECK(lReadButton->Frame == 2);
+    CHECK(lReadButton->Brushes.Normal.Texture.Path == OpaaxString("UI/Button.png"));
+    CHECK(lReadButton->Brushes.Normal.Sheet.Path == OpaaxString("UI/Icons.opaaxasset"));
+    CHECK(lReadButton->Brushes.Normal.Frame == 2);
 
     UICanvasFile::UICanvasDoc lOld;
     REQUIRE(UICanvasFile::Deserialize(OpaaxString(R"({"Version":1,"Root":{"Type":"UIPanel","Children":[{"Type":"UIButton"},{"Type":"UIImage"}]}})"),
                                       lRegistry, lOld));
     const auto* lOldButton = static_cast<const UIButton*>(lOld.Root->GetChildren()[0].Get());
-    CHECK(lOldButton->Texture.IsEmpty());
-    CHECK(lOldButton->Frame == -1);
+    CHECK(lOldButton->Brushes.Normal.Texture.IsEmpty());
+    CHECK(lOldButton->Brushes.Normal.Frame == -1);
     const auto* lOldImage = static_cast<const UIImage*>(lOld.Root->GetChildren()[1].Get());
     CHECK(lOldImage->Brush.BorderScale == doctest::Approx(1.f));
 }

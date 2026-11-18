@@ -27,7 +27,7 @@ namespace Opaax
 
         /**
          * Format version. A newer version is refused. 2: an image's Color, Texture, Sheet, Frame, Border
-         * and BorderScale are in its Brush (Color as Tint).
+         * and BorderScale are in its Brush (Color as Tint); a button's colours and frames are its Brushes.
          */
         inline constexpr Uint32 UI_FORMAT_VERSION = 2;
 
