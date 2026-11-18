@@ -17,15 +17,19 @@ namespace Opaax
     // UICanvasFile — reads and writes .opaaxui files. A node names its widget class ("Type") and holds
     //   that class's properties, then its "Modifiers" (each a "Type" and its properties, optional) and
     //   its "Children"; the class registry makes the objects and each class reads its fields. Unknown
-    //   types are skipped (with one warning); a value of the wrong type refuses the whole read.
+    //   types are skipped (with one warning); a value of the wrong type refuses the whole read. An
+    //   older version's nodes are upgraded when read (UpgradeCanvasNode), and the current one is written.
     // =============================================================================
     namespace UICanvasFile
     {
         /** File extension. */
         inline constexpr const char* UI_EXTENSION = ".opaaxui";
 
-        /** Format version. A newer version is refused. */
-        inline constexpr Uint32 UI_FORMAT_VERSION = 1;
+        /**
+         * Format version. A newer version is refused. 2: an image's Color, Texture, Sheet, Frame, Border
+         * and BorderScale are in its Brush (Color as Tint).
+         */
+        inline constexpr Uint32 UI_FORMAT_VERSION = 2;
 
         /** A canvas file: reference height and the root's children. */
         struct UICanvasDoc
@@ -70,10 +74,13 @@ namespace Opaax
         // One node (the clipboard unit, so paste works across documents).
         // =============================================================================
 
-        /** InWidget and its subtree as text. */
+        /** InWidget and its subtree as text, with the format version beside its type. */
         OpaaxString SerializeNode(const UIWidget& InWidget);
 
-        /** A new subtree from InText, or null if it is not a node. */
+        /**
+         * A new subtree from InText, or null if it is not a node or is of a newer version. A node with
+         * no version is from version 1 and is upgraded.
+         */
         TStrongObjectPtr<UIWidget> DeserializeNode(const OpaaxString& InText, const ObjectClassRegistry& InClasses);
 
         /** A deep copy through the file format. */
