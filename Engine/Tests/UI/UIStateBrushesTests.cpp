@@ -251,3 +251,33 @@ TEST_CASE("UIButton: focused, it draws the Focused brush")
     CHECK(lF.Button->GetInteractionState() == EUIInteractionState::Focused);
     CHECK(lF.Button->GetQuads()[0].Color.z == doctest::Approx(1.f));
 }
+
+// =============================================================================
+// Preview state (the editor's)
+// =============================================================================
+TEST_CASE("UIButton: a preview state wins over the pointer; empty gives it back; ResetRuntime clears it")
+{
+    ButtonFixture lF;
+    lF.Button->Brushes.Pressed.Tint = { 0.f, 1.f, 0.f, 1.f };
+    lF.Button->Brushes.FadeDuration = 0.f;
+
+    lF.Button->SetPreviewState(EUIInteractionState::Pressed);
+    lF.Canvas.Update(lF.Context);
+    CHECK(lF.Button->GetInteractionState() == EUIInteractionState::Pressed);
+    CHECK(lF.Button->GetQuads()[0].Color.y == doctest::Approx(1.f));   // without any pointer event
+
+    lF.Hover();   // the pointer does not change it
+    CHECK(lF.Button->GetInteractionState() == EUIInteractionState::Pressed);
+
+    lF.Button->SetPreviewState(NullOpt);
+    lF.Canvas.Update(lF.Context);
+    CHECK(lF.Button->GetInteractionState() == EUIInteractionState::Hovered);   // the pointer's again
+
+    // Disabled shows even on an enabled button, and Stop (ResetRuntime) takes it away.
+    lF.Button->SetPreviewState(EUIInteractionState::Disabled);
+    CHECK(lF.Button->GetInteractionState() == EUIInteractionState::Disabled);
+    CHECK(lF.Button->IsEnabled());
+    lF.Canvas.ResetRuntime();
+    CHECK_FALSE(lF.Button->GetPreviewState().has_value());
+    CHECK(lF.Button->GetInteractionState() == EUIInteractionState::Normal);
+}
