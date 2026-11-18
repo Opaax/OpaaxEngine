@@ -420,9 +420,11 @@ same name (its class appended when that name is taken), and the paths that named
 prefabs, canvases, assets and configs are rewritten. Paths written in game code are not: one that
 still names an old file loads the converted one, with a warning to update it.
 
-## UI presets (`UITransition`, `UITween`, `UIButtonStyle`)
+## UI presets (`UITransition`, `UITween`, `UIButtonStyle`, `UISoundSet`)
 
-Three asset classes hold what widgets share, made with New Asset > UI. A **UI Button Style**
+Four asset classes hold what widgets share, made with New Asset > UI. A **UI Sounds** (`UISoundSet`)
+is what a `UISoundModifier` names as its `Preset`: `Sounds`, with `Hover`, `Press`, `Click`, `Show`,
+`Hide` (each a sound file or a clip definition, empty for none) and `Volume`. A **UI Button Style**
 (`UIButtonStyle`) is what a `UIButton` names as its `Style`: `Brushes`, the same fields as a button's
 own (a brush per state, `FadeDuration`, `FadeEase`; a state's `Tint` defaults to a new button's grey, so
 art meant to show as drawn gives it white). A button naming one draws it and not its own

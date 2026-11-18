@@ -39,6 +39,7 @@
 #include "Editor/Panels/UICanvasPanel.h"
 #include "Editor/EditorUICanvasDocument.h"
 #include "UI/Animation/UITransition.h"
+#include "UI/Sounds/UISoundSet.h"
 #include "UI/Styles/UIButtonStyle.h"
 #include "UI/Animation/UITween.h"
 #include "UI/UICanvasFile.h"
@@ -606,6 +607,12 @@ namespace Opaax::Editor
             .SetLabel(OpaaxString("UI Button Style"))
             .SetCategory(OpaaxString("UI"))
             .SetGlyph(OpaaxString("[BS]"));
+
+        // A widget's sounds, shared by the sound modifiers that name it (UISoundModifier's Preset).
+        lTypes.Register<UISoundSet>()
+            .SetLabel(OpaaxString("UI Sounds"))
+            .SetCategory(OpaaxString("UI"))
+            .SetGlyph(OpaaxString("[SN]"));
 
         // Keyed poses over time, played on a widget (a pop-in, a fade, a pulse, a shake).
         lTypes.Register<UITween>()

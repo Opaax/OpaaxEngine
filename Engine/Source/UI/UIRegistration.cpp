@@ -11,6 +11,8 @@
 #include "UI/Modifiers/UITransformModifier.h"
 #include "UI/Modifiers/UITransitionModifier.h"
 #include "UI/Modifiers/UITweenModifier.h"
+#include "UI/Modifiers/UISoundModifier.h"
+#include "UI/Sounds/UISoundSet.h"
 #include "UI/UICanvasAsset.h"
 #include "UI/UISubsystem.h"
 #include "UI/Widgets/UIButton.h"
@@ -50,6 +52,8 @@ namespace Opaax
 
     // Plays a tween on its widget: on show, on hide, or when asked.
     OPAAX_REGISTER_OBJECT(UITweenModifier);
+    OPAAX_REGISTER_OBJECT(UISoundModifier);
+    OPAAX_REGISTER_OBJECT(UISoundSet);
 
     // Quad effects: a drop shadow, and a rim, drawn under the widget's own quads.
     OPAAX_REGISTER_OBJECT(UIShadowModifier);

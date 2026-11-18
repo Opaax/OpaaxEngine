@@ -236,6 +236,7 @@ set(OPAAX_TEST_SOURCES
     UI/UIRectTests.cpp
     UI/UISafeAreaTests.cpp
     UI/UIScrollBoxTests.cpp
+    UI/UISoundModifierTests.cpp
     UI/UISliceTests.cpp
     UI/UIStackTests.cpp
     UI/UIStateBrushesTests.cpp

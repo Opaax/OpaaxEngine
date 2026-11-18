@@ -1,0 +1,14 @@
+{
+    "Class": "UISoundSet",
+    "Properties": {
+        "Sounds": {
+            "Click": "Audio/Beep.wav",
+            "Hide": "",
+            "Hover": "Audio/Step0.wav",
+            "Press": "",
+            "Show": "",
+            "Volume": 0.6
+        }
+    },
+    "Version": 1
+}

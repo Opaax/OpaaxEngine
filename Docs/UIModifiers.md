@@ -129,6 +129,17 @@ the same whatever the frame rate.
 
 `ui.tween {widget, tween}` plays one by name in a running game.
 
+## Sounds
+
+`UISoundModifier` plays its widget's sounds through the canvas's audio: `Hover` (once per coming over:
+a released press is not a new hover), `Press`, `Click` (the Activate stage), `Show` and `Hide` (which
+does not wait for it), each a sound file or a clip definition, at `Volume`. A `Preset` names a **UI
+Sounds** asset (New Asset > UI > UI Sounds) holding the same fields, which wins when it loads, so a
+menu's buttons share their sounds. On a widget following a button it plays on the button's hover and
+click; a disabled button is never hovered, so it is silent. Sounds are a modifier, not part of the
+button style: any widget can play them. `ui.list` answers each sound modifier's `lastSound` and
+`sounds` (how many it asked for), so a script checks what a player would hear.
+
 ## Show and hide
 
 `Hide()` plays the widget's `Hide` tweens, then turns `bVisible` off when the last one ends (at once
