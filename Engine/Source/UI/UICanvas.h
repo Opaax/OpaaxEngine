@@ -136,6 +136,12 @@ namespace Opaax
         /** Leaves the hovered widget and releases capture. */
         void ClearPointer();
 
+        /**
+         * Releases the capture when InWidget holds it: its press ended without a release (a button
+         * disabled while held). The Up that follows goes to the widget under the pointer.
+         */
+        void ReleaseCapture(const UIWidget& InWidget);
+
         /** A subtree is being removed: forget any pointer state under it. */
         void OnDetached(UIWidget& InSubtreeRoot);
 
