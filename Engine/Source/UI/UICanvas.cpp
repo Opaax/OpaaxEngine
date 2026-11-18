@@ -430,6 +430,18 @@ namespace Opaax
             }
         }
         m_Awake = Move(lKept);
+
+        // Its awake widgets too; still awake, they tick in the canvas they join.
+        TDynArray<TWeakObjectPtr<UIWidget>> lKeptWidgets;
+        for (const TWeakObjectPtr<UIWidget>& lAwake : m_AwakeWidgets)
+        {
+            const UIWidget* lWidget = lAwake.Get();
+            if (lWidget != nullptr && !lUnderSubtree(lWidget))
+            {
+                lKeptWidgets.push_back(lAwake);
+            }
+        }
+        m_AwakeWidgets = Move(lKeptWidgets);
     }
 
     // =============================================================================
@@ -438,6 +450,28 @@ namespace Opaax
 
     void UICanvas::Tick(const float InSeconds)
     {
+        // Taken out first: a widget may wake another while it ticks (that one joins the next list).
+        TDynArray<TWeakObjectPtr<UIWidget>> lWidgets = Move(m_AwakeWidgets);
+        m_AwakeWidgets.clear();
+
+        for (const TWeakObjectPtr<UIWidget>& lEntry : lWidgets)
+        {
+            UIWidget* lWidget = lEntry.Get();
+            if (lWidget == nullptr || !lWidget->m_bAwake || !lWidget->IsShownInTree())
+            {
+                continue;   // destroyed, put to sleep meanwhile, or hidden: Show brings it back
+            }
+
+            lWidget->m_bAwake = false;
+            const bool bStay = lWidget->Tick(InSeconds);
+
+            if (bStay && !lWidget->m_bAwake)
+            {
+                lWidget->m_bAwake = true;
+                m_AwakeWidgets.push_back(lEntry);
+            }
+        }
+
         // Taken out first: a modifier may wake another while it ticks (that one joins the next list).
         TDynArray<TWeakObjectPtr<UIModifier>> lTicking = Move(m_Awake);
         m_Awake.clear();
@@ -469,6 +503,7 @@ namespace Opaax
 
         m_Root->ResetRuntimeRecursive();
         m_Awake.clear();
+        m_AwakeWidgets.clear();
     }
 
     void UICanvas::AddAwake(UIModifier& InModifier)
@@ -487,6 +522,27 @@ namespace Opaax
             if (lIt->Get() == &InModifier)
             {
                 m_Awake.erase(lIt);
+                return;
+            }
+        }
+    }
+
+    void UICanvas::AddAwake(UIWidget& InWidget)
+    {
+        for (const TWeakObjectPtr<UIWidget>& lAwake : m_AwakeWidgets)
+        {
+            if (lAwake.Get() == &InWidget) { return; }
+        }
+        m_AwakeWidgets.push_back(TWeakObjectPtr<UIWidget>(&InWidget));
+    }
+
+    void UICanvas::RemoveAwake(const UIWidget& InWidget)
+    {
+        for (auto lIt = m_AwakeWidgets.begin(); lIt != m_AwakeWidgets.end(); ++lIt)
+        {
+            if (lIt->Get() == &InWidget)
+            {
+                m_AwakeWidgets.erase(lIt);
                 return;
             }
         }

@@ -427,3 +427,152 @@ TEST_CASE("UICanvas::ResetRuntime: every pose at rest, no pointer state, nothing
 
     CHECK(UICanvasFile::Serialize(lCanvas.Root(), 1080.f) == lBefore);
 }
+
+// =============================================================================
+// A widget's clock
+// =============================================================================
+namespace
+{
+    /** Counts its ticks; stays awake for TicksLeft of them. */
+    class TickingWidget final : public UIWidget
+    {
+        OPAAX_OBJECT(TickingWidget, UIWidget)
+
+    public:
+        Uint32 TicksLeft = 0;
+        Uint32 Ticks     = 0;
+        float  Seconds   = 0.f;
+        Uint32 Resets    = 0;
+
+    protected:
+        bool Tick(const float InSeconds) override
+        {
+            ++Ticks;
+            Seconds += InSeconds;
+            if (TicksLeft > 0) { --TicksLeft; }
+            return TicksLeft > 0;
+        }
+
+        void OnReset() override { ++Resets; }
+    };
+
+    struct ClockFixture
+    {
+        UICanvas       Canvas{ 1080.f };
+        TickingWidget* Widget = nullptr;
+
+        ClockFixture()
+        {
+            Canvas.SetTargetSize(1920, 1080);
+            Widget = static_cast<TickingWidget*>(Canvas.Root().AddChild(NewObject<TickingWidget>()));
+            Canvas.Update();
+        }
+
+        void Frames(const Int32 InCount)
+        {
+            for (Int32 lFrame = 0; lFrame < InCount; ++lFrame) { Canvas.Tick(0.5f); }
+        }
+    };
+}
+
+TEST_CASE("UIWidget clock: an idle canvas ticks no widget")
+{
+    ClockFixture lF;
+    lF.Frames(5);
+
+    CHECK(lF.Widget->Ticks == 0u);
+    CHECK_FALSE(lF.Widget->IsAwake());
+    CHECK(lF.Canvas.GetAwakeWidgetCount() == 0u);
+}
+
+TEST_CASE("UIWidget clock: a woken widget ticks once a frame until it answers false, then sleeps")
+{
+    ClockFixture lF;
+    lF.Widget->TicksLeft = 3;
+    lF.Widget->WakeUp();
+    lF.Widget->WakeUp();   // twice is still once a frame
+    CHECK(lF.Canvas.GetAwakeWidgetCount() == 1u);
+
+    lF.Frames(5);
+    CHECK(lF.Widget->Ticks == 3u);
+    CHECK(lF.Widget->Seconds == doctest::Approx(1.5f));
+    CHECK_FALSE(lF.Widget->IsAwake());
+    CHECK(lF.Canvas.GetAwakeWidgetCount() == 0u);
+
+    // Sleep stops it at once.
+    lF.Widget->TicksLeft = 10;
+    lF.Widget->WakeUp();
+    lF.Frames(1);
+    lF.Widget->Sleep();
+    lF.Frames(3);
+    CHECK(lF.Widget->Ticks == 4u);
+    CHECK(lF.Canvas.GetAwakeWidgetCount() == 0u);
+}
+
+TEST_CASE("UIWidget clock: woken out of a canvas, it ticks in the one it joins; removed, it stops")
+{
+    UICanvas lCanvas{ 1080.f };
+    lCanvas.SetTargetSize(1920, 1080);
+
+    auto lOwned = NewObject<TickingWidget>();
+    lOwned->TicksLeft = 100;
+    lOwned->WakeUp();
+    TickingWidget* lWidget = static_cast<TickingWidget*>(lCanvas.Root().AddChild(Move(lOwned)));
+    lCanvas.Tick(0.1f);
+    CHECK(lWidget->Ticks == 1u);
+
+    TStrongObjectPtr<UIWidget> lRemoved = lCanvas.Root().RemoveChild(*lWidget);
+    CHECK(lCanvas.GetAwakeWidgetCount() == 0u);
+    lCanvas.Tick(0.1f);
+    CHECK(lWidget->Ticks == 1u);
+    CHECK(lWidget->IsAwake());   // still asks: it ticks again where it lands
+
+    UICanvas lOther{ 1080.f };
+    lOther.Root().AddChild(Move(lRemoved));
+    lOther.Tick(0.1f);
+    CHECK(lWidget->Ticks == 2u);
+
+    // Removed and dropped (destroyed): the list forgot it, nothing ticks a dead widget.
+    lOther.Root().RemoveChild(*lWidget);
+    lOther.Tick(0.1f);
+    CHECK(lOther.GetAwakeWidgetCount() == 0u);
+}
+
+TEST_CASE("UIWidget clock: hidden it is not ticked and stays awake; Show brings it back")
+{
+    ClockFixture lF;
+    UIWidget* lParent = lF.Canvas.Root().AddChild(NewObject<UIPanel>());
+    TickingWidget* lChild = static_cast<TickingWidget*>(lParent->AddChild(NewObject<TickingWidget>()));
+    lChild->TicksLeft = 100;
+    lChild->WakeUp();
+
+    lF.Frames(1);
+    CHECK(lChild->Ticks == 1u);
+
+    lParent->Hide();   // no hide tween: hidden at once, and the child with it
+    lF.Frames(3);
+    CHECK(lChild->Ticks == 1u);
+    CHECK(lChild->IsAwake());
+    CHECK(lF.Canvas.GetAwakeWidgetCount() == 0u);   // the hidden one left the list
+
+    lParent->Show();
+    CHECK(lF.Canvas.GetAwakeWidgetCount() == 1u);
+    lF.Frames(2);
+    CHECK(lChild->Ticks == 3u);
+}
+
+TEST_CASE("UIWidget clock: ResetRuntime puts every widget to rest and asleep")
+{
+    ClockFixture lF;
+    lF.Widget->TicksLeft = 100;
+    lF.Widget->WakeUp();
+    lF.Frames(2);
+
+    lF.Canvas.ResetRuntime();
+    CHECK(lF.Widget->Resets == 1u);
+    CHECK_FALSE(lF.Widget->IsAwake());
+    CHECK(lF.Canvas.GetAwakeWidgetCount() == 0u);
+
+    lF.Frames(3);
+    CHECK(lF.Widget->Ticks == 2u);
+}

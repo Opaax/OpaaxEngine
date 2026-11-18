@@ -212,6 +212,33 @@ namespace Opaax
         bool IsHiding() const noexcept { return m_bHiding; }
 
         // =============================================================================
+        // Clock — a widget that animates itself (a clip) ticks while awake and shown
+        // =============================================================================
+    public:
+        /**
+         * Ticked from my canvas's next Tick (from when I join one, if I am in none). While I am not shown
+         * I am not ticked; Show() brings me back. Writing bVisible does not: call WakeUp again.
+         */
+        void WakeUp();
+
+        /** Not ticked any more, from now (Tick answering false does the same at its end). */
+        void Sleep();
+
+        /** Whether I asked to be ticked (I may wait for Show while hidden). */
+        bool IsAwake() const noexcept { return m_bAwake; }
+
+    protected:
+        /**
+         * Runs once per frame while I am awake and shown, with the frame's own time (the game's pause and
+         * time scale do not reach the UI).
+         * @return False to sleep: not ticked again until WakeUp
+         */
+        virtual bool Tick(float InSeconds) { (void)InSeconds; return false; }
+
+        /** Back at rest, as if nothing had played (the editor's preview Stop). I am asleep after it. */
+        virtual void OnReset() {}
+
+        // =============================================================================
         // Input — override to handle an event; the default lets it bubble
         // =============================================================================
     public:
@@ -338,7 +365,7 @@ namespace Opaax
         /** One of my modifiers finished what OnHide waited for (UIModifier::FinishHide). */
         void OnHideStepDone();
 
-        /** No hide under way, my modifiers at rest and asleep, my state worked out again; then my children. */
+        /** No hide under way, my modifiers and I at rest and asleep, my state worked out again; then my children. */
         void ResetRuntimeRecursive();
 
         friend class UIModifier;
@@ -367,5 +394,7 @@ namespace Opaax
         Uint32 m_HideWaiting = 0;
         /** Set while I am destroyed: my modifiers' detach must not reach my parents. */
         bool m_bDestroying   = false;
+        /** Asked to be ticked (WakeUp), until Tick answers false or Sleep. */
+        bool m_bAwake        = false;
     };
 }
