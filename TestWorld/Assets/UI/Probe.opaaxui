@@ -92,24 +92,26 @@
                         "Type": "UIImage",
                         "bHitTestable": false,
                         "bVisible": true,
-                        "Border": {
-                            "Bottom": 0.0,
-                            "Left": 0.0,
-                            "Right": 0.0,
-                            "Top": 0.0
-                        },
-                        "Color": {
-                            "x": 0.05,
-                            "y": 0.06,
-                            "z": 0.08,
-                            "w": 0.85
+                        "Brush": {
+                            "Border": {
+                                "Bottom": 0.0,
+                                "Left": 0.0,
+                                "Right": 0.0,
+                                "Top": 0.0
+                            },
+                            "Frame": -1,
+                            "Sheet": "",
+                            "Texture": "",
+                            "Tint": {
+                                "x": 0.05,
+                                "y": 0.06,
+                                "z": 0.08,
+                                "w": 0.85
+                            }
                         },
                         "Fill": "None",
                         "FillAmount": 1.0,
-                        "FillBinding": "",
-                        "Frame": -1,
-                        "Sheet": "",
-                        "Texture": ""
+                        "FillBinding": ""
                     },
                     {
                         "Name": "Column",
@@ -402,24 +404,26 @@
                                 "Type": "UIImage",
                                 "bHitTestable": false,
                                 "bVisible": true,
-                                "Border": {
-                                    "Bottom": 0.0,
-                                    "Left": 0.0,
-                                    "Right": 0.0,
-                                    "Top": 0.0
-                                },
-                                "Color": {
-                                    "x": 1.0,
-                                    "y": 0.6,
-                                    "z": 0.2,
-                                    "w": 1.0
+                                "Brush": {
+                                    "Border": {
+                                        "Bottom": 0.0,
+                                        "Left": 0.0,
+                                        "Right": 0.0,
+                                        "Top": 0.0
+                                    },
+                                    "Frame": -1,
+                                    "Sheet": "",
+                                    "Texture": "",
+                                    "Tint": {
+                                        "x": 1.0,
+                                        "y": 0.6,
+                                        "z": 0.2,
+                                        "w": 1.0
+                                    }
                                 },
                                 "Fill": "None",
                                 "FillAmount": 1.0,
-                                "FillBinding": "",
-                                "Frame": -1,
-                                "Sheet": "",
-                                "Texture": ""
+                                "FillBinding": ""
                             }
                         ]
                     },
@@ -480,24 +484,26 @@
                                 "Type": "UIImage",
                                 "bHitTestable": false,
                                 "bVisible": true,
-                                "Border": {
-                                    "Bottom": 0.0,
-                                    "Left": 0.0,
-                                    "Right": 0.0,
-                                    "Top": 0.0
-                                },
-                                "Color": {
-                                    "x": 0.3,
-                                    "y": 0.8,
-                                    "z": 0.5,
-                                    "w": 1.0
+                                "Brush": {
+                                    "Border": {
+                                        "Bottom": 0.0,
+                                        "Left": 0.0,
+                                        "Right": 0.0,
+                                        "Top": 0.0
+                                    },
+                                    "Frame": -1,
+                                    "Sheet": "",
+                                    "Texture": "",
+                                    "Tint": {
+                                        "x": 0.3,
+                                        "y": 0.8,
+                                        "z": 0.5,
+                                        "w": 1.0
+                                    }
                                 },
                                 "Fill": "None",
                                 "FillAmount": 1.0,
-                                "FillBinding": "",
-                                "Frame": -1,
-                                "Sheet": "",
-                                "Texture": ""
+                                "FillBinding": ""
                             }
                         ]
                     }
@@ -505,5 +511,5 @@
             }
         ]
     },
-    "Version": 1
+    "Version": 2
 }

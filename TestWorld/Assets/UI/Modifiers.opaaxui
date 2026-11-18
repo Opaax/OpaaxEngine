@@ -3,11 +3,14 @@
     "Root": {
         "Children": [
             {
-                "Color": {
-                    "w": 1.0,
-                    "x": 0.12,
-                    "y": 0.14,
-                    "z": 0.2
+                "Brush": {
+                    "Texture": "",
+                    "Tint": {
+                        "w": 1.0,
+                        "x": 0.12,
+                        "y": 0.14,
+                        "z": 0.2
+                    }
                 },
                 "Name": "Backdrop",
                 "Rect": {
@@ -32,16 +35,18 @@
                         "y": 900.0
                     }
                 },
-                "Texture": "",
                 "Type": "UIImage",
                 "bHitTestable": false
             },
             {
-                "Color": {
-                    "w": 1.0,
-                    "x": 1.0,
-                    "y": 1.0,
-                    "z": 1.0
+                "Brush": {
+                    "Texture": "/Engine/Textures/T_Checker_128.png",
+                    "Tint": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    }
                 },
                 "Name": "Plain",
                 "Rect": {
@@ -66,16 +71,18 @@
                         "y": 200.0
                     }
                 },
-                "Texture": "/Engine/Textures/T_Checker_128.png",
                 "Type": "UIImage",
                 "bHitTestable": false
             },
             {
-                "Color": {
-                    "w": 1.0,
-                    "x": 1.0,
-                    "y": 1.0,
-                    "z": 1.0
+                "Brush": {
+                    "Texture": "/Engine/Textures/T_Checker_128.png",
+                    "Tint": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    }
                 },
                 "Modifiers": [
                     {
@@ -130,7 +137,6 @@
                         "y": 200.0
                     }
                 },
-                "Texture": "/Engine/Textures/T_Checker_128.png",
                 "Type": "UIImage",
                 "bHitTestable": false
             },
@@ -203,13 +209,25 @@
                 "bHitTestable": false
             },
             {
+                "Brush": {
+                    "Texture": "",
+                    "Tint": {
+                        "w": 1.0,
+                        "x": 0.9,
+                        "y": 0.9,
+                        "z": 0.9
+                    }
+                },
                 "Children": [
                     {
-                        "Color": {
-                            "w": 1.0,
-                            "x": 0.2,
-                            "y": 0.4,
-                            "z": 1.0
+                        "Brush": {
+                            "Texture": "",
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 0.2,
+                                "y": 0.4,
+                                "z": 1.0
+                            }
                         },
                         "Name": "FadedChild",
                         "Rect": {
@@ -234,17 +252,10 @@
                                 "y": 120.0
                             }
                         },
-                        "Texture": "",
                         "Type": "UIImage",
                         "bHitTestable": false
                     }
                 ],
-                "Color": {
-                    "w": 1.0,
-                    "x": 0.9,
-                    "y": 0.9,
-                    "z": 0.9
-                },
                 "Modifiers": [
                     {
                         "Name": "Fade",
@@ -298,18 +309,20 @@
                         "y": 220.0
                     }
                 },
-                "Texture": "",
                 "Type": "UIImage",
                 "bHitTestable": false
             },
             {
                 "Children": [
                     {
-                        "Color": {
-                            "w": 1.0,
-                            "x": 1.0,
-                            "y": 0.6,
-                            "z": 0.2
+                        "Brush": {
+                            "Texture": "",
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 1.0,
+                                "y": 0.6,
+                                "z": 0.2
+                            }
                         },
                         "Name": "MaskedBar",
                         "Rect": {
@@ -334,7 +347,6 @@
                                 "y": 100.0
                             }
                         },
-                        "Texture": "",
                         "Type": "UIImage",
                         "bHitTestable": false
                     }
@@ -396,11 +408,14 @@
                 "bShowMaskGraphic": true
             },
             {
-                "Color": {
-                    "w": 1.0,
-                    "x": 0.3,
-                    "y": 0.8,
-                    "z": 0.5
+                "Brush": {
+                    "Texture": "",
+                    "Tint": {
+                        "w": 1.0,
+                        "x": 0.3,
+                        "y": 0.8,
+                        "z": 0.5
+                    }
                 },
                 "Modifiers": [
                     {
@@ -455,7 +470,6 @@
                         "y": 100.0
                     }
                 },
-                "Texture": "",
                 "Type": "UIImage",
                 "bHitTestable": false
             },
@@ -1013,11 +1027,14 @@
                 "bHitTestable": false
             },
             {
-                "Color": {
-                    "w": 1.0,
-                    "x": 0.95,
-                    "y": 0.85,
-                    "z": 0.2
+                "Brush": {
+                    "Texture": "",
+                    "Tint": {
+                        "w": 1.0,
+                        "x": 0.95,
+                        "y": 0.85,
+                        "z": 0.2
+                    }
                 },
                 "Modifiers": [
                     {
@@ -1056,18 +1073,29 @@
                         "y": 50.0
                     }
                 },
-                "Texture": "",
                 "Type": "UIImage",
                 "bHitTestable": false
             },
             {
+                "Brush": {
+                    "Texture": "",
+                    "Tint": {
+                        "w": 1.0,
+                        "x": 0.3,
+                        "y": 0.32,
+                        "z": 0.4
+                    }
+                },
                 "Children": [
                     {
-                        "Color": {
-                            "w": 1.0,
-                            "x": 1.0,
-                            "y": 1.0,
-                            "z": 1.0
+                        "Brush": {
+                            "Texture": "/Engine/Textures/T_Checker_128.png",
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 1.0,
+                                "y": 1.0,
+                                "z": 1.0
+                            }
                         },
                         "Modifiers": [
                             {
@@ -1101,17 +1129,10 @@
                                 "y": 0.0
                             }
                         },
-                        "Texture": "/Engine/Textures/T_Checker_128.png",
                         "Type": "UIImage",
                         "bHitTestable": false
                     }
                 ],
-                "Color": {
-                    "w": 1.0,
-                    "x": 0.3,
-                    "y": 0.32,
-                    "z": 0.4
-                },
                 "Name": "FitFrame",
                 "Rect": {
                     "AnchorMax": {
@@ -1135,7 +1156,6 @@
                         "y": 140.0
                     }
                 },
-                "Texture": "",
                 "Type": "UIImage",
                 "bHitTestable": false
             },
@@ -1144,11 +1164,14 @@
                 "ChildAlign": "Center",
                 "Children": [
                     {
-                        "Color": {
-                            "w": 1.0,
-                            "x": 0.4,
-                            "y": 0.7,
-                            "z": 0.9
+                        "Brush": {
+                            "Texture": "",
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 0.4,
+                                "y": 0.7,
+                                "z": 0.9
+                            }
                         },
                         "Name": "LimitRow1",
                         "Rect": {
@@ -1173,16 +1196,18 @@
                                 "y": 40.0
                             }
                         },
-                        "Texture": "",
                         "Type": "UIImage",
                         "bHitTestable": false
                     },
                     {
-                        "Color": {
-                            "w": 1.0,
-                            "x": 0.9,
-                            "y": 0.5,
-                            "z": 0.4
+                        "Brush": {
+                            "Texture": "",
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 0.9,
+                                "y": 0.5,
+                                "z": 0.4
+                            }
                         },
                         "Modifiers": [
                             {
@@ -1222,16 +1247,18 @@
                                 "y": 60.0
                             }
                         },
-                        "Texture": "",
                         "Type": "UIImage",
                         "bHitTestable": false
                     },
                     {
-                        "Color": {
-                            "w": 1.0,
-                            "x": 0.4,
-                            "y": 0.7,
-                            "z": 0.9
+                        "Brush": {
+                            "Texture": "",
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 0.4,
+                                "y": 0.7,
+                                "z": 0.9
+                            }
                         },
                         "Name": "LimitRow3",
                         "Rect": {
@@ -1256,7 +1283,6 @@
                                 "y": 40.0
                             }
                         },
-                        "Texture": "",
                         "Type": "UIImage",
                         "bHitTestable": false
                     }
@@ -1289,13 +1315,25 @@
                 "bFitContent": false
             },
             {
+                "Brush": {
+                    "Texture": "",
+                    "Tint": {
+                        "w": 1.0,
+                        "x": 0.25,
+                        "y": 0.28,
+                        "z": 0.4
+                    }
+                },
                 "Children": [
                     {
-                        "Color": {
-                            "w": 1.0,
-                            "x": 0.9,
-                            "y": 0.75,
-                            "z": 0.3
+                        "Brush": {
+                            "Texture": "",
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 0.9,
+                                "y": 0.75,
+                                "z": 0.3
+                            }
                         },
                         "Modifiers": [
                             {
@@ -1338,16 +1376,18 @@
                                 "y": 80.0
                             }
                         },
-                        "Texture": "",
                         "Type": "UIImage",
                         "bHitTestable": false
                     },
                     {
-                        "Color": {
-                            "w": 1.0,
-                            "x": 0.9,
-                            "y": 0.75,
-                            "z": 0.3
+                        "Brush": {
+                            "Texture": "",
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 0.9,
+                                "y": 0.75,
+                                "z": 0.3
+                            }
                         },
                         "Modifiers": [
                             {
@@ -1390,16 +1430,18 @@
                                 "y": 80.0
                             }
                         },
-                        "Texture": "",
                         "Type": "UIImage",
                         "bHitTestable": false
                     },
                     {
-                        "Color": {
-                            "w": 1.0,
-                            "x": 0.9,
-                            "y": 0.75,
-                            "z": 0.3
+                        "Brush": {
+                            "Texture": "",
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 0.9,
+                                "y": 0.75,
+                                "z": 0.3
+                            }
                         },
                         "Modifiers": [
                             {
@@ -1442,17 +1484,10 @@
                                 "y": 80.0
                             }
                         },
-                        "Texture": "",
                         "Type": "UIImage",
                         "bHitTestable": false
                     }
                 ],
-                "Color": {
-                    "w": 1.0,
-                    "x": 0.25,
-                    "y": 0.28,
-                    "z": 0.4
-                },
                 "Modifiers": [
                     {
                         "Delay": 0.0,
@@ -1510,16 +1545,18 @@
                         "y": 120.0
                     }
                 },
-                "Texture": "",
                 "Type": "UIImage",
                 "bHitTestable": false
             },
             {
-                "Color": {
-                    "w": 1.0,
-                    "x": 0.9,
-                    "y": 0.3,
-                    "z": 0.35
+                "Brush": {
+                    "Texture": "",
+                    "Tint": {
+                        "w": 1.0,
+                        "x": 0.9,
+                        "y": 0.3,
+                        "z": 0.35
+                    }
                 },
                 "Modifiers": [
                     {
@@ -1562,7 +1599,6 @@
                         "y": 70.0
                     }
                 },
-                "Texture": "",
                 "Type": "UIImage",
                 "bHitTestable": false
             },
@@ -1649,5 +1685,5 @@
         "Type": "UIPanel",
         "bHitTestable": false
     },
-    "Version": 1
+    "Version": 2
 }
