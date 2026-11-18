@@ -63,6 +63,12 @@ namespace Opaax
             (void)InAssetPath;
             return nullptr;
         }
+
+        /**
+         * Changes when an asset it answers for is reloaded (a saved file): a canvas then rebuilds every
+         * widget once, so a saved style or clip shows without a pointer event. Defaults to never.
+         */
+        virtual Uint64 GetRevision() { return 0; }
     };
 
     /** What a rebuild may use from its host. Every pointer is optional. */

@@ -1070,6 +1070,11 @@ namespace Opaax
         return lIt->second.Get();
     }
 
+    Uint64 RendererManager::GetRevision()
+    {
+        return OpaaxApplication::GetAppService<IEngine>().GetResources().GetReloadCount();
+    }
+
     UISheetFrameView RendererManager::ResolveSheetFrame(const char* InSheetPath, const Int32 InFrame)
     {
         TAssetRef<SpriteSheet> lRef;

@@ -368,6 +368,9 @@ namespace Opaax
         void MarkSubtreeUp();
         void SetCanvasRecursive(UICanvas* InCanvas);
 
+        /** InvalidateContent on me and every widget under me. */
+        void InvalidateContentRecursive();
+
         /** m_Pose from my enabled pose modifiers, about pivots in my current bounds. */
         void ComposePose();
 

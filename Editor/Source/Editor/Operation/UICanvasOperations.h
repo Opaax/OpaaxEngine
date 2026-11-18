@@ -62,6 +62,13 @@ namespace Opaax::Editor
         bool MoveModifier(EditorContext& InContext, const UIWidgetPath& InPath, Uint32 InIndex, Int32 InDelta);
 
         /**
+         * Merges InValues into the widget's own fields (a button's Style, an image's Brush), as one undo step.
+         * @param OutError Why nothing changed (no such widget, a value of the wrong type)
+         */
+        bool SetWidget(EditorContext& InContext, const UIWidgetPath& InPath, const nlohmann::json& InValues,
+                       OpaaxString* OutError = nullptr);
+
+        /**
          * Merges InValues into the fields of the widget's modifier at InIndex, as one undo step.
          * @param OutError Why nothing changed (no such modifier, a value of the wrong type)
          */

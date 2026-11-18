@@ -39,6 +39,7 @@
 #include "Editor/Panels/UICanvasPanel.h"
 #include "Editor/EditorUICanvasDocument.h"
 #include "UI/Animation/UITransition.h"
+#include "UI/Styles/UIButtonStyle.h"
 #include "UI/Animation/UITween.h"
 #include "UI/UICanvasFile.h"
 #include "UI/Widgets/UIButton.h"
@@ -599,6 +600,12 @@ namespace Opaax::Editor
             .SetLabel(OpaaxString("UI Transition"))
             .SetCategory(OpaaxString("UI"))
             .SetGlyph(OpaaxString("[UT]"));
+
+        // A button's look per state, shared by the buttons that name it (UIButton's Style).
+        lTypes.Register<UIButtonStyle>()
+            .SetLabel(OpaaxString("UI Button Style"))
+            .SetCategory(OpaaxString("UI"))
+            .SetGlyph(OpaaxString("[BS]"));
 
         // Keyed poses over time, played on a widget (a pop-in, a fade, a pulse, a shake).
         lTypes.Register<UITween>()

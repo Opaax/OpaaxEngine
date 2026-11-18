@@ -176,6 +176,7 @@
                 {
                     "name": "WideButton",
                     "state": "Hovered",
+                    "brush": "UI/SlicedButtons.opaaxasset#1",
                     "quads": 9
                 }
             ]

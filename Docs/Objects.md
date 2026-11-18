@@ -264,7 +264,7 @@ subclasses, owned by their widget in the order added. As for widgets, the class 
 `Modifiers` list saves and its properties are the fields the file holds and the UI panel draws: a new
 modifier is a class with `OPAAX_OBJECT`, `OPAAX_PROPERTIES` and one `OPAAX_REGISTER_OBJECT` line.
 `UIModifier::Create(name, classes)` makes one by class name. The presets they name, `UITransition` and
-`UITween`, are assets. How they run and how to write one: [UIModifiers.md](UIModifiers.md).
+`UITween`, are assets, as is the `UIButtonStyle` a button names. How they run and how to write one: [UIModifiers.md](UIModifiers.md).
 
 ## Behaviours
 
