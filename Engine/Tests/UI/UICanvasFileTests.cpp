@@ -757,3 +757,49 @@ TEST_CASE("UICanvasFile: a node's text carries version 2; a pasted node without 
     CHECK(lIcon->Brush.Tint.z == doctest::Approx(1.f));
     CHECK(lIcon->Brush.Tint.x == doctest::Approx(0.f));
 }
+
+TEST_CASE("UICanvasFile: a version 1 button reads each state's colour and frame into its brushes")
+{
+    const WidgetClasses lRegistry;
+
+    const OpaaxString lV1 = OpaaxString(R"({
+    "Root": { "Type": "UIPanel", "Children": [
+        { "Type": "UIButton", "Name": "Play", "Sheet": "UI/Buttons.opaaxasset", "Frame": 0,
+          "HoveredFrame": 1, "PressedFrame": -1, "DisabledFrame": 3, "BorderScale": 0.4,
+          "Border": { "Left": 2.0, "Right": 2.0, "Bottom": 2.0, "Top": 2.0 },
+          "Normal":   { "x": 0.1, "y": 0.0, "z": 0.0, "w": 1.0 },
+          "Hovered":  { "x": 0.2, "y": 0.0, "z": 0.0, "w": 1.0 },
+          "Pressed":  { "x": 0.3, "y": 0.0, "z": 0.0, "w": 1.0 },
+          "Disabled": { "x": 0.4, "y": 0.0, "z": 0.0, "w": 0.5 } }
+    ] },
+    "Version": 1
+})");
+
+    UICanvasFile::UICanvasDoc lDoc;
+    REQUIRE(UICanvasFile::Deserialize(lV1, lRegistry, lDoc));
+    const auto* lButton = dynamic_cast<const UIButton*>(lDoc.Root->GetChildren()[0].Get());
+    REQUIRE(lButton != nullptr);
+
+    const UIStateBrushes& lBrushes = lButton->Brushes;
+    CHECK(lBrushes.Normal.Frame == 0);
+    CHECK(lBrushes.Hovered.Frame == 1);
+    CHECK(lBrushes.Pressed.Frame == 0);    // -1 shows Frame
+    CHECK(lBrushes.Disabled.Frame == 3);
+    CHECK(lBrushes.Normal.Tint.x == doctest::Approx(0.1f));
+    CHECK(lBrushes.Hovered.Tint.x == doctest::Approx(0.2f));
+    CHECK(lBrushes.Pressed.Tint.x == doctest::Approx(0.3f));
+    CHECK(lBrushes.Disabled.Tint.w == doctest::Approx(0.5f));
+    CHECK(lBrushes.Hovered.Sheet.Path == OpaaxString("UI/Buttons.opaaxasset"));   // the art reaches every state
+    CHECK(lBrushes.Disabled.BorderScale == doctest::Approx(0.4f));
+    CHECK(lBrushes.Pressed.Border.Left == doctest::Approx(2.f));
+
+    // Focused is Normal's, and no fade: it looks as it did.
+    CHECK(lBrushes.Focused.Frame == 0);
+    CHECK(lBrushes.Focused.Tint.x == doctest::Approx(0.1f));
+    CHECK(lBrushes.FadeDuration == doctest::Approx(0.f));
+
+    // Written back, it is version 2 with Brushes and none of the older keys.
+    const OpaaxString lText = UICanvasFile::Serialize(lDoc);
+    CHECK(lText.Find("\"Brushes\"") >= 0);
+    CHECK(lText.Find("\"HoveredFrame\"") < 0);
+}
