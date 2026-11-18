@@ -37,6 +37,11 @@ namespace Opaax
 
         BuildLoadingCover();
 
+        m_Audio = MakeUnique<UIAudioPlayer>(OpaaxApplication::GetAppService<IEngine>().GetAudio(),
+                                            GetContext().Resources, GetContext().Paths);
+        m_Canvas.SetAudio(&*m_Audio);
+        m_LoadingCanvas.SetAudio(&*m_Audio);
+
         GetContext().Events.GetEventBus().Subscribe<LevelLoadRequested>(this, &UISubsystem::OnLevelLoadRequested);
         GetContext().Events.GetEventBus().Subscribe<LevelLoadFinished>(this, &UISubsystem::OnLevelLoadFinished);
 
@@ -191,5 +196,9 @@ namespace Opaax
     void UISubsystem::Shutdown()
     {
         GetContext().Events.GetEventBus().UnsubscribeAll(this);
+
+        m_Canvas.SetAudio(nullptr);
+        m_LoadingCanvas.SetAudio(nullptr);
+        m_Audio.reset();
     }
 }

@@ -4,6 +4,7 @@
 #include "Core/Log/Logger.h"
 #include "Engine/GameInstance/GameInstanceSubsystem.h"
 #include "UI/UIInputMode.h"
+#include "UI/UIAudioPlayer.h"
 #include "UI/UICanvas.h"
 
 namespace Opaax
@@ -100,6 +101,8 @@ namespace Opaax
         UICanvas               m_Canvas;
         UICanvas               m_LoadingCanvas;
         EUIInputMode           m_InputMode = EUIInputMode::GameAndUI;
+        /** The canvases' sounds, on the UI bus: a paused world does not silence them. */
+        TUniquePtr<UIAudioPlayer> m_Audio;
 
         /** Loading screen timer: time shown, minimum time, and whether loading is done. */
         double m_CoverElapsed    = 0.0;

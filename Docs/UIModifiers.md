@@ -50,6 +50,7 @@ no work: no modifier is visited on a frame where nothing changed.
 | Attach | added, removed, its widget destroyed | `OnAttach`, `OnDetach` |
 | Show and hide | `Show()`, `Hide()`, joining the game's canvas shown | `OnShow`, `OnHide` |
 | State | hovered, pressed, focused or disabled changes | `OnStateChanged` |
+| Activate | the widget's action fires (a button's click), before its `OnClick`; widgets following the button hear it too | `OnActivated` |
 | Tick | each frame, while it is awake | `Tick` (false sleeps; `WakeUp` wakes) |
 | Layout | the widget's rect resolves | `ModifyBounds`, `ModifyDesiredSize` |
 | Rebuild | the widget's quads are rebuilt | `ModifyQuads` |
@@ -58,6 +59,11 @@ no work: no modifier is visited on a frame where nothing changed.
 
 The UI ticks on the frame's own time, after the input is routed and before it is drawn: menus animate
 while the game is paused or slowed down.
+
+A modifier plays a sound through its canvas: `GetOwner()->GetCanvas()->GetAudio()` (an `IUIAudio`,
+`UI/UIAudio.h`; null is silence), `PlaySound(path, volume)` with a sound file or a clip definition. The
+game's UI subsystem and the UI panel's Play give theirs (`UIAudioPlayer`), which plays on the `UI` bus:
+a pause menu is heard while the world is paused. The editor's document is silent while it is edited.
 
 ## Poses
 
