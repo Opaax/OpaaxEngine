@@ -3,17 +3,20 @@
     "Root": {
         "Children": [
             {
-                "Border": {
-                    "Bottom": 0.0,
-                    "Left": 0.0,
-                    "Right": 0.0,
-                    "Top": 0.0
-                },
-                "Color": {
-                    "w": 1.0,
-                    "x": 0.0,
-                    "y": 0.0,
-                    "z": 0.0
+                "Brush": {
+                    "Border": {
+                        "Bottom": 0.0,
+                        "Left": 0.0,
+                        "Right": 0.0,
+                        "Top": 0.0
+                    },
+                    "Texture": "",
+                    "Tint": {
+                        "w": 1.0,
+                        "x": 0.0,
+                        "y": 0.0,
+                        "z": 0.0
+                    }
                 },
                 "Fill": "None",
                 "FillAmount": 1.0,
@@ -42,7 +45,6 @@
                         "y": 0.0
                     }
                 },
-                "Texture": "",
                 "Type": "UIImage",
                 "bHitTestable": true,
                 "bVisible": true
@@ -120,5 +122,5 @@
         "bHitTestable": false,
         "bVisible": true
     },
-    "Version": 1
+    "Version": 2
 }

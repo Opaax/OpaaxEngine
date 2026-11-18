@@ -57,24 +57,26 @@
                 "Type": "UIImage",
                 "bHitTestable": false,
                 "bVisible": true,
-                "Border": {
-                    "Bottom": 0.0,
-                    "Left": 0.0,
-                    "Right": 0.0,
-                    "Top": 0.0
-                },
-                "Color": {
-                    "w": 0.85,
-                    "x": 0.05,
-                    "y": 0.06,
-                    "z": 0.08
+                "Brush": {
+                    "Border": {
+                        "Bottom": 0.0,
+                        "Left": 0.0,
+                        "Right": 0.0,
+                        "Top": 0.0
+                    },
+                    "Frame": -1,
+                    "Sheet": "",
+                    "Texture": "",
+                    "Tint": {
+                        "w": 0.85,
+                        "x": 0.05,
+                        "y": 0.06,
+                        "z": 0.08
+                    }
                 },
                 "Fill": "None",
                 "FillAmount": 1.0,
-                "FillBinding": "",
-                "Frame": -1,
-                "Sheet": "",
-                "Texture": ""
+                "FillBinding": ""
             },
             {
                 "Name": "Title",
@@ -188,24 +190,26 @@
                         "Type": "UIImage",
                         "bHitTestable": true,
                         "bVisible": true,
-                        "Border": {
-                            "Bottom": 0.0,
-                            "Left": 0.0,
-                            "Right": 0.0,
-                            "Top": 0.0
-                        },
-                        "Color": {
-                            "w": 1.0,
-                            "x": 0.18,
-                            "y": 0.3,
-                            "z": 0.58
+                        "Brush": {
+                            "Border": {
+                                "Bottom": 0.0,
+                                "Left": 0.0,
+                                "Right": 0.0,
+                                "Top": 0.0
+                            },
+                            "Frame": -1,
+                            "Sheet": "",
+                            "Texture": "",
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 0.18,
+                                "y": 0.3,
+                                "z": 0.58
+                            }
                         },
                         "Fill": "None",
                         "FillAmount": 1.0,
                         "FillBinding": "",
-                        "Frame": -1,
-                        "Sheet": "",
-                        "Texture": "",
                         "Children": [
                             {
                                 "Name": "Label1",
@@ -281,24 +285,26 @@
                         "Type": "UIImage",
                         "bHitTestable": true,
                         "bVisible": true,
-                        "Border": {
-                            "Bottom": 0.0,
-                            "Left": 0.0,
-                            "Right": 0.0,
-                            "Top": 0.0
-                        },
-                        "Color": {
-                            "w": 1.0,
-                            "x": 0.22,
-                            "y": 0.46,
-                            "z": 0.3
+                        "Brush": {
+                            "Border": {
+                                "Bottom": 0.0,
+                                "Left": 0.0,
+                                "Right": 0.0,
+                                "Top": 0.0
+                            },
+                            "Frame": -1,
+                            "Sheet": "",
+                            "Texture": "",
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 0.22,
+                                "y": 0.46,
+                                "z": 0.3
+                            }
                         },
                         "Fill": "None",
                         "FillAmount": 1.0,
                         "FillBinding": "",
-                        "Frame": -1,
-                        "Sheet": "",
-                        "Texture": "",
                         "Children": [
                             {
                                 "Name": "Label2",
@@ -374,24 +380,26 @@
                         "Type": "UIImage",
                         "bHitTestable": true,
                         "bVisible": true,
-                        "Border": {
-                            "Bottom": 0.0,
-                            "Left": 0.0,
-                            "Right": 0.0,
-                            "Top": 0.0
-                        },
-                        "Color": {
-                            "w": 1.0,
-                            "x": 0.18,
-                            "y": 0.3,
-                            "z": 0.58
+                        "Brush": {
+                            "Border": {
+                                "Bottom": 0.0,
+                                "Left": 0.0,
+                                "Right": 0.0,
+                                "Top": 0.0
+                            },
+                            "Frame": -1,
+                            "Sheet": "",
+                            "Texture": "",
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 0.18,
+                                "y": 0.3,
+                                "z": 0.58
+                            }
                         },
                         "Fill": "None",
                         "FillAmount": 1.0,
                         "FillBinding": "",
-                        "Frame": -1,
-                        "Sheet": "",
-                        "Texture": "",
                         "Children": [
                             {
                                 "Name": "Label3",
@@ -467,24 +475,26 @@
                         "Type": "UIImage",
                         "bHitTestable": true,
                         "bVisible": true,
-                        "Border": {
-                            "Bottom": 0.0,
-                            "Left": 0.0,
-                            "Right": 0.0,
-                            "Top": 0.0
-                        },
-                        "Color": {
-                            "w": 1.0,
-                            "x": 0.22,
-                            "y": 0.46,
-                            "z": 0.3
+                        "Brush": {
+                            "Border": {
+                                "Bottom": 0.0,
+                                "Left": 0.0,
+                                "Right": 0.0,
+                                "Top": 0.0
+                            },
+                            "Frame": -1,
+                            "Sheet": "",
+                            "Texture": "",
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 0.22,
+                                "y": 0.46,
+                                "z": 0.3
+                            }
                         },
                         "Fill": "None",
                         "FillAmount": 1.0,
                         "FillBinding": "",
-                        "Frame": -1,
-                        "Sheet": "",
-                        "Texture": "",
                         "Children": [
                             {
                                 "Name": "Label4",
@@ -560,24 +570,26 @@
                         "Type": "UIImage",
                         "bHitTestable": true,
                         "bVisible": true,
-                        "Border": {
-                            "Bottom": 0.0,
-                            "Left": 0.0,
-                            "Right": 0.0,
-                            "Top": 0.0
-                        },
-                        "Color": {
-                            "w": 1.0,
-                            "x": 0.18,
-                            "y": 0.3,
-                            "z": 0.58
+                        "Brush": {
+                            "Border": {
+                                "Bottom": 0.0,
+                                "Left": 0.0,
+                                "Right": 0.0,
+                                "Top": 0.0
+                            },
+                            "Frame": -1,
+                            "Sheet": "",
+                            "Texture": "",
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 0.18,
+                                "y": 0.3,
+                                "z": 0.58
+                            }
                         },
                         "Fill": "None",
                         "FillAmount": 1.0,
                         "FillBinding": "",
-                        "Frame": -1,
-                        "Sheet": "",
-                        "Texture": "",
                         "Children": [
                             {
                                 "Name": "Label5",
@@ -653,24 +665,26 @@
                         "Type": "UIImage",
                         "bHitTestable": true,
                         "bVisible": true,
-                        "Border": {
-                            "Bottom": 0.0,
-                            "Left": 0.0,
-                            "Right": 0.0,
-                            "Top": 0.0
-                        },
-                        "Color": {
-                            "w": 1.0,
-                            "x": 0.22,
-                            "y": 0.46,
-                            "z": 0.3
+                        "Brush": {
+                            "Border": {
+                                "Bottom": 0.0,
+                                "Left": 0.0,
+                                "Right": 0.0,
+                                "Top": 0.0
+                            },
+                            "Frame": -1,
+                            "Sheet": "",
+                            "Texture": "",
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 0.22,
+                                "y": 0.46,
+                                "z": 0.3
+                            }
                         },
                         "Fill": "None",
                         "FillAmount": 1.0,
                         "FillBinding": "",
-                        "Frame": -1,
-                        "Sheet": "",
-                        "Texture": "",
                         "Children": [
                             {
                                 "Name": "Label6",
@@ -746,24 +760,26 @@
                         "Type": "UIImage",
                         "bHitTestable": true,
                         "bVisible": true,
-                        "Border": {
-                            "Bottom": 0.0,
-                            "Left": 0.0,
-                            "Right": 0.0,
-                            "Top": 0.0
-                        },
-                        "Color": {
-                            "w": 1.0,
-                            "x": 0.18,
-                            "y": 0.3,
-                            "z": 0.58
+                        "Brush": {
+                            "Border": {
+                                "Bottom": 0.0,
+                                "Left": 0.0,
+                                "Right": 0.0,
+                                "Top": 0.0
+                            },
+                            "Frame": -1,
+                            "Sheet": "",
+                            "Texture": "",
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 0.18,
+                                "y": 0.3,
+                                "z": 0.58
+                            }
                         },
                         "Fill": "None",
                         "FillAmount": 1.0,
                         "FillBinding": "",
-                        "Frame": -1,
-                        "Sheet": "",
-                        "Texture": "",
                         "Children": [
                             {
                                 "Name": "Label7",
@@ -839,24 +855,26 @@
                         "Type": "UIImage",
                         "bHitTestable": true,
                         "bVisible": true,
-                        "Border": {
-                            "Bottom": 0.0,
-                            "Left": 0.0,
-                            "Right": 0.0,
-                            "Top": 0.0
-                        },
-                        "Color": {
-                            "w": 1.0,
-                            "x": 0.22,
-                            "y": 0.46,
-                            "z": 0.3
+                        "Brush": {
+                            "Border": {
+                                "Bottom": 0.0,
+                                "Left": 0.0,
+                                "Right": 0.0,
+                                "Top": 0.0
+                            },
+                            "Frame": -1,
+                            "Sheet": "",
+                            "Texture": "",
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 0.22,
+                                "y": 0.46,
+                                "z": 0.3
+                            }
                         },
                         "Fill": "None",
                         "FillAmount": 1.0,
                         "FillBinding": "",
-                        "Frame": -1,
-                        "Sheet": "",
-                        "Texture": "",
                         "Children": [
                             {
                                 "Name": "Label8",
@@ -932,24 +950,26 @@
                         "Type": "UIImage",
                         "bHitTestable": true,
                         "bVisible": true,
-                        "Border": {
-                            "Bottom": 0.0,
-                            "Left": 0.0,
-                            "Right": 0.0,
-                            "Top": 0.0
-                        },
-                        "Color": {
-                            "w": 1.0,
-                            "x": 0.18,
-                            "y": 0.3,
-                            "z": 0.58
+                        "Brush": {
+                            "Border": {
+                                "Bottom": 0.0,
+                                "Left": 0.0,
+                                "Right": 0.0,
+                                "Top": 0.0
+                            },
+                            "Frame": -1,
+                            "Sheet": "",
+                            "Texture": "",
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 0.18,
+                                "y": 0.3,
+                                "z": 0.58
+                            }
                         },
                         "Fill": "None",
                         "FillAmount": 1.0,
                         "FillBinding": "",
-                        "Frame": -1,
-                        "Sheet": "",
-                        "Texture": "",
                         "Children": [
                             {
                                 "Name": "Label9",
@@ -1025,24 +1045,26 @@
                         "Type": "UIImage",
                         "bHitTestable": true,
                         "bVisible": true,
-                        "Border": {
-                            "Bottom": 0.0,
-                            "Left": 0.0,
-                            "Right": 0.0,
-                            "Top": 0.0
-                        },
-                        "Color": {
-                            "w": 1.0,
-                            "x": 0.22,
-                            "y": 0.46,
-                            "z": 0.3
+                        "Brush": {
+                            "Border": {
+                                "Bottom": 0.0,
+                                "Left": 0.0,
+                                "Right": 0.0,
+                                "Top": 0.0
+                            },
+                            "Frame": -1,
+                            "Sheet": "",
+                            "Texture": "",
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 0.22,
+                                "y": 0.46,
+                                "z": 0.3
+                            }
                         },
                         "Fill": "None",
                         "FillAmount": 1.0,
                         "FillBinding": "",
-                        "Frame": -1,
-                        "Sheet": "",
-                        "Texture": "",
                         "Children": [
                             {
                                 "Name": "Label10",
@@ -1118,24 +1140,26 @@
                         "Type": "UIImage",
                         "bHitTestable": true,
                         "bVisible": true,
-                        "Border": {
-                            "Bottom": 0.0,
-                            "Left": 0.0,
-                            "Right": 0.0,
-                            "Top": 0.0
-                        },
-                        "Color": {
-                            "w": 1.0,
-                            "x": 0.18,
-                            "y": 0.3,
-                            "z": 0.58
+                        "Brush": {
+                            "Border": {
+                                "Bottom": 0.0,
+                                "Left": 0.0,
+                                "Right": 0.0,
+                                "Top": 0.0
+                            },
+                            "Frame": -1,
+                            "Sheet": "",
+                            "Texture": "",
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 0.18,
+                                "y": 0.3,
+                                "z": 0.58
+                            }
                         },
                         "Fill": "None",
                         "FillAmount": 1.0,
                         "FillBinding": "",
-                        "Frame": -1,
-                        "Sheet": "",
-                        "Texture": "",
                         "Children": [
                             {
                                 "Name": "Label11",
@@ -1211,24 +1235,26 @@
                         "Type": "UIImage",
                         "bHitTestable": true,
                         "bVisible": true,
-                        "Border": {
-                            "Bottom": 0.0,
-                            "Left": 0.0,
-                            "Right": 0.0,
-                            "Top": 0.0
-                        },
-                        "Color": {
-                            "w": 1.0,
-                            "x": 0.22,
-                            "y": 0.46,
-                            "z": 0.3
+                        "Brush": {
+                            "Border": {
+                                "Bottom": 0.0,
+                                "Left": 0.0,
+                                "Right": 0.0,
+                                "Top": 0.0
+                            },
+                            "Frame": -1,
+                            "Sheet": "",
+                            "Texture": "",
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 0.22,
+                                "y": 0.46,
+                                "z": 0.3
+                            }
                         },
                         "Fill": "None",
                         "FillAmount": 1.0,
                         "FillBinding": "",
-                        "Frame": -1,
-                        "Sheet": "",
-                        "Texture": "",
                         "Children": [
                             {
                                 "Name": "Label12",
@@ -1280,5 +1306,5 @@
             }
         ]
     },
-    "Version": 1
+    "Version": 2
 }
