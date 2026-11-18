@@ -3,23 +3,27 @@
     "Root": {
         "Children": [
             {
-                "Border": {
-                    "Bottom": 0.0,
-                    "Left": 0.0,
-                    "Right": 0.0,
-                    "Top": 0.0
-                },
-                "BorderScale": 1.0,
-                "Color": {
-                    "w": 1.0,
-                    "x": 0.11999999731779099,
-                    "y": 0.14000000059604645,
-                    "z": 0.20000000298023224
+                "Brush": {
+                    "Border": {
+                        "Bottom": 0.0,
+                        "Left": 0.0,
+                        "Right": 0.0,
+                        "Top": 0.0
+                    },
+                    "BorderScale": 1.0,
+                    "Frame": -1,
+                    "Sheet": "",
+                    "Texture": "",
+                    "Tint": {
+                        "w": 1.0,
+                        "x": 0.11999999731779099,
+                        "y": 0.14000000059604645,
+                        "z": 0.20000000298023224
+                    }
                 },
                 "Fill": "None",
                 "FillAmount": 1.0,
                 "FillBinding": "",
-                "Frame": -1,
                 "Name": "Backdrop",
                 "Opacity": 1.0,
                 "Rect": {
@@ -44,30 +48,32 @@
                         "y": 900.0
                     }
                 },
-                "Sheet": "",
-                "Texture": "",
                 "Type": "UIImage",
                 "bHitTestable": true,
                 "bVisible": true
             },
             {
-                "Border": {
-                    "Bottom": 0.0,
-                    "Left": 0.0,
-                    "Right": 0.0,
-                    "Top": 0.0
-                },
-                "BorderScale": 0.4000000059604645,
-                "Color": {
-                    "w": 1.0,
-                    "x": 0.949999988079071,
-                    "y": 0.8999999761581421,
-                    "z": 0.75
+                "Brush": {
+                    "Border": {
+                        "Bottom": 0.0,
+                        "Left": 0.0,
+                        "Right": 0.0,
+                        "Top": 0.0
+                    },
+                    "BorderScale": 0.4000000059604645,
+                    "Frame": 0,
+                    "Sheet": "UI/SlicedButtons.opaaxasset",
+                    "Texture": "",
+                    "Tint": {
+                        "w": 1.0,
+                        "x": 0.949999988079071,
+                        "y": 0.8999999761581421,
+                        "z": 0.75
+                    }
                 },
                 "Fill": "None",
                 "FillAmount": 1.0,
                 "FillBinding": "",
-                "Frame": 0,
                 "Name": "WideImage",
                 "Opacity": 1.0,
                 "Rect": {
@@ -92,30 +98,32 @@
                         "y": 90.0
                     }
                 },
-                "Sheet": "UI/SlicedButtons.opaaxasset",
-                "Texture": "",
                 "Type": "UIImage",
                 "bHitTestable": true,
                 "bVisible": true
             },
             {
-                "Border": {
-                    "Bottom": 0.0,
-                    "Left": 0.0,
-                    "Right": 0.0,
-                    "Top": 0.0
-                },
-                "BorderScale": 0.8100000023841858,
-                "Color": {
-                    "w": 1.0,
-                    "x": 0.949999988079071,
-                    "y": 0.8999999761581421,
-                    "z": 0.75
+                "Brush": {
+                    "Border": {
+                        "Bottom": 0.0,
+                        "Left": 0.0,
+                        "Right": 0.0,
+                        "Top": 0.0
+                    },
+                    "BorderScale": 0.8100000023841858,
+                    "Frame": 0,
+                    "Sheet": "UI/SlicedButtons.opaaxasset",
+                    "Texture": "",
+                    "Tint": {
+                        "w": 1.0,
+                        "x": 0.949999988079071,
+                        "y": 0.8999999761581421,
+                        "z": 0.75
+                    }
                 },
                 "Fill": "None",
                 "FillAmount": 1.0,
                 "FillBinding": "",
-                "Frame": 0,
                 "Name": "SquareImage",
                 "Opacity": 1.0,
                 "Rect": {
@@ -140,8 +148,6 @@
                         "y": 160.0
                     }
                 },
-                "Sheet": "UI/SlicedButtons.opaaxasset",
-                "Texture": "",
                 "Type": "UIImage",
                 "bHitTestable": true,
                 "bVisible": true
@@ -443,5 +449,5 @@
         "bHitTestable": false,
         "bVisible": true
     },
-    "Version": 1
+    "Version": 2
 }
