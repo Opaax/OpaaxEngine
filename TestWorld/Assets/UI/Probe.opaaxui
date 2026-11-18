@@ -270,33 +270,64 @@
                         "Type": "UIButton",
                         "bHitTestable": true,
                         "bVisible": true,
-                        "Disabled": {
-                            "x": 0.2,
-                            "y": 0.2,
-                            "z": 0.2,
-                            "w": 0.5
+                        "Brushes": {
+                            "Disabled": {
+                                "Frame": -1,
+                                "Sheet": "",
+                                "Texture": "",
+                                "Tint": {
+                                    "x": 0.2,
+                                    "y": 0.2,
+                                    "z": 0.2,
+                                    "w": 0.5
+                                }
+                            },
+                            "FadeDuration": 0.0,
+                            "Focused": {
+                                "Frame": -1,
+                                "Sheet": "",
+                                "Texture": "",
+                                "Tint": {
+                                    "x": 0.2,
+                                    "y": 0.35,
+                                    "z": 0.75,
+                                    "w": 1.0
+                                }
+                            },
+                            "Hovered": {
+                                "Frame": -1,
+                                "Sheet": "",
+                                "Texture": "",
+                                "Tint": {
+                                    "x": 0.3,
+                                    "y": 0.5,
+                                    "z": 0.9,
+                                    "w": 1.0
+                                }
+                            },
+                            "Normal": {
+                                "Frame": -1,
+                                "Sheet": "",
+                                "Texture": "",
+                                "Tint": {
+                                    "x": 0.2,
+                                    "y": 0.35,
+                                    "z": 0.75,
+                                    "w": 1.0
+                                }
+                            },
+                            "Pressed": {
+                                "Frame": -1,
+                                "Sheet": "",
+                                "Texture": "",
+                                "Tint": {
+                                    "x": 0.12,
+                                    "y": 0.2,
+                                    "z": 0.45,
+                                    "w": 1.0
+                                }
+                            }
                         },
-                        "Frame": -1,
-                        "Hovered": {
-                            "x": 0.3,
-                            "y": 0.5,
-                            "z": 0.9,
-                            "w": 1.0
-                        },
-                        "Normal": {
-                            "x": 0.2,
-                            "y": 0.35,
-                            "z": 0.75,
-                            "w": 1.0
-                        },
-                        "Pressed": {
-                            "x": 0.12,
-                            "y": 0.2,
-                            "z": 0.45,
-                            "w": 1.0
-                        },
-                        "Sheet": "",
-                        "Texture": "",
                         "bIsEnabled": true,
                         "Children": [
                             {
