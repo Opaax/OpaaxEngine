@@ -40,19 +40,77 @@ namespace Opaax
         }
 
         /**
+         * A button's Normal, Hovered, Pressed and Disabled colours and their frames go into Brushes: each
+         * state's brush takes its colour as Tint, the shared Texture, Sheet, Border and BorderScale, and
+         * its frame (Frame when its own is -1). Focused is Normal's; FadeDuration 0, so it looks as before.
+         */
+        void UpgradeButtonToBrushes(nlohmann::json& InOutNode)
+        {
+            constexpr const char* STATES[] = { "Normal", "Hovered", "Pressed", "Disabled" };
+            constexpr const char* FRAMES[] = { "Frame", "HoveredFrame", "PressedFrame", "DisabledFrame" };
+            constexpr const char* SHARED[] = { "Texture", "Sheet", "Border", "BorderScale" };
+
+            // A colour the node lacks is the default the older fields had.
+            const nlohmann::json DEFAULT_TINTS[] = {
+                { { "x", 0.25f }, { "y", 0.25f }, { "z", 0.28f }, { "w", 1.f } },
+                { { "x", 0.35f }, { "y", 0.35f }, { "z", 0.40f }, { "w", 1.f } },
+                { { "x", 0.15f }, { "y", 0.15f }, { "z", 0.18f }, { "w", 1.f } },
+                { { "x", 0.20f }, { "y", 0.20f }, { "z", 0.20f }, { "w", 0.5f } } };
+
+            nlohmann::json lShared = nlohmann::json::object();
+            for (const char* lKey : SHARED)
+            {
+                if (const auto lIt = InOutNode.find(lKey); lIt != InOutNode.end())
+                {
+                    lShared[lKey] = *lIt;
+                }
+            }
+
+            const Int32 lFrame = InOutNode.value("Frame", -1);
+
+            nlohmann::json lBrushes = nlohmann::json::object();
+            for (Uint64 lIndex = 0; lIndex < 4; ++lIndex)
+            {
+                nlohmann::json lBrush = lShared;
+
+                const auto lTint = InOutNode.find(STATES[lIndex]);
+                lBrush["Tint"]   = lTint != InOutNode.end() ? *lTint : DEFAULT_TINTS[lIndex];
+
+                const Int32 lOwn = lIndex == 0 ? lFrame : InOutNode.value(FRAMES[lIndex], -1);
+                lBrush["Frame"]  = lOwn >= 0 ? lOwn : lFrame;
+
+                lBrushes[STATES[lIndex]] = Move(lBrush);
+            }
+            lBrushes["Focused"]      = lBrushes["Normal"];
+            lBrushes["FadeDuration"] = 0.f;
+
+            for (const char* lKey : STATES) { InOutNode.erase(lKey); }
+            for (const char* lKey : FRAMES) { InOutNode.erase(lKey); }
+            for (const char* lKey : SHARED) { InOutNode.erase(lKey); }
+            InOutNode["Brushes"] = Move(lBrushes);
+        }
+
+        /**
          * Brings InOutNode and its subtree from InVersion to UI_FORMAT_VERSION, in place, before its
          * properties are read. Throws on a "Type" that is not text, as the reader does.
          */
         void UpgradeCanvasNode(nlohmann::json& InOutNode, const Uint32 InVersion)
         {
-            if (InVersion >= UICanvasFile::UI_FORMAT_VERSION || !InOutNode.is_object())
+            if (!InOutNode.is_object())
             {
                 return;
             }
 
-            if (InVersion < 2 && InOutNode.value(KEY_TYPE, OpaaxString()) == OpaaxString("UIImage"))
+            const OpaaxString lType = InOutNode.value(KEY_TYPE, OpaaxString());
+            if (InVersion < 2 && lType == OpaaxString("UIImage"))
             {
                 UpgradeImageToBrush(InOutNode);
+            }
+
+            // Any button node without Brushes holds the older colour and frame fields.
+            if (InVersion <= 2 && lType == OpaaxString("UIButton") && !InOutNode.contains("Brushes"))
+            {
+                UpgradeButtonToBrushes(InOutNode);
             }
 
             if (const auto lIt = InOutNode.find(KEY_CHILDREN); lIt != InOutNode.end() && lIt->is_array())

@@ -350,6 +350,7 @@ namespace Opaax
 
         const EUIInteractionState lWas = m_State;
         m_State = lNow;
+        OnInteractionStateChanged(lWas, lNow);
         for (const TStrongObjectPtr<UIModifier>& lModifier : m_Modifiers)
         {
             lModifier->OnStateChanged(lWas, lNow);

@@ -186,7 +186,7 @@ mounted canvas's root sits in the screen, so a HUD's root stretches over it (anc
 | `UIPanel` | none: a container |
 | `UIImage` | `Brush` (below), `Fill`, `FillAmount`, `FillBinding` |
 | `UIText` | `Text`, `Binding`, `Font` (a `.ttf`), `Size`, `Color`, `HAlign` (`Left`, `Center`, `Right`), `VAlign` (`Top`, `Middle`, `Bottom`), `bWrap`, `LineHeightScale`, `bKerning` |
-| `UIButton` | `Normal`, `Hovered`, `Pressed`, `Disabled` colours, `bIsEnabled`, `Texture` or `Sheet` + `Frame`, `HoveredFrame`, `PressedFrame`, `DisabledFrame` (-1 shows `Frame`), `Border` and `BorderScale` (nine-slice, [below](#sliced-art)) |
+| `UIButton` | `bIsEnabled`, `Brushes`: a brush (below) for each of `Normal`, `Hovered`, `Pressed`, `Focused`, `Disabled`, then `FadeDuration` (seconds the tint takes to reach a new state's; 0 jumps) and `FadeEase` |
 | `UIStack` | `Axis` (`Vertical`, `Horizontal`), `Spacing`, `Padding`, `ChildAlign` (`Start`, `Center`, `End`, `Stretch`), `bFitContent`: lays its children out in a row or a column |
 | `UIScrollBox` | `Axis`, `Spacing`, `Padding`, `ChildAlign` as a stack's (`Stretch` by default), `ScrollStep` (canvas units a notch of the wheel moves), `bDragToScroll`: a list that scrolls. Its children are laid out as in a stack and show only inside its rect; the wheel over it and a drag with the left button move them. When all of them show, it lets the wheel and presses through |
 | `UIMask` | `Texture` (a shape; empty = the rect), `bShowMaskGraphic`: clips its children, which are hit only inside its rect |
@@ -210,7 +210,8 @@ default frame; each says so once in the log (`UIBrush`).
 
 `Version` is 2. A version 1 file (or one with no `Version`) is upgraded when read: an image's
 `Color`, `Texture`, `Sheet`, `Frame`, `Border` and `BorderScale` move into its `Brush`, `Color` as
-`Tint`, a missing key keeping its default; saving it writes version 2. A file of a newer version is
+`Tint`, a missing key keeping its default, and a button's colours and frames into its `Brushes`
+([below](#sliced-art)); saving it writes version 2. A file of a newer version is
 refused, as is a widget pasted from a newer editor. A widget copied in the editor carries the version
 beside its `Type`; one with none is read as version 1.
 
@@ -272,13 +273,23 @@ Tiles are quads (a frame is a part of its sheet), so an image that would take mo
 stretched instead, with one warning: raise `BorderScale` or use bigger art. A plain `Texture` always
 stretches.
 
-A button shows `Frame` in its Normal state, and `HoveredFrame`, `PressedFrame` or `DisabledFrame` in
-the others (-1 keeps `Frame`), each sliced with its own frame's border and tinted by the state's colour:
+A button draws the brush of its state: `Normal`, `Hovered`, `Pressed`, `Focused` or `Disabled`, each
+sliced with its own frame's border. A state brush that names no image (no clip, sheet or texture)
+shows Normal's image and border in its own `Tint`, so one art with a colour per state needs one image.
+On a state change the image swaps at once, the tint fades from the one on screen over `FadeDuration`,
+and the state's clip starts again from its first step:
 
 ```json
-{ "Type": "UIButton", "Name": "Play", "Sheet": "UI/Buttons.opaaxasset",
-  "Frame": 0, "HoveredFrame": 1, "PressedFrame": 2, "DisabledFrame": 3, "BorderScale": 0.4 }
+{ "Type": "UIButton", "Name": "Play", "Brushes": {
+    "Normal":  { "Sheet": "UI/Buttons.opaaxasset", "Frame": 0, "BorderScale": 0.4 },
+    "Hovered": { "Sheet": "UI/Buttons.opaaxasset", "Frame": 1, "BorderScale": 0.4 },
+    "Pressed": { "Tint": { "x": 0.8, "y": 0.8, "z": 0.8, "w": 1.0 } },
+    "FadeDuration": 0.1 } }
 ```
+
+A button written before it had brushes (version 1, with `Normal`... colours and `Frame`,
+`HoveredFrame`... frames) is read into them: each state takes its colour and frame (-1 is `Frame`),
+`Focused` takes Normal's, and `FadeDuration` is 0, so it looks as it did.
 
 A game's own button derives from `UIButtonBase` (`UI/UIButtonBase.h`), which keeps the state
 (`GetState()`), fires the events and calls one of `RebuildNormalState`, `RebuildHoveredState`,
