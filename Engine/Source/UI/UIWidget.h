@@ -209,6 +209,13 @@ namespace Opaax
         /** StateSource; my state is worked out again. */
         void SetStateSource(EUIStateSource InSource);
 
+        /**
+         * My action fired (a button's click): OnActivated on my enabled modifiers, then on the widgets that
+         * follow me. Called by the widget whose action it is, before its own event (a click handler may
+         * close the canvas).
+         */
+        void NotifyActivated();
+
         //~Begin Object interface
         /** An edited StateSource (or anything my state reads) is worked out again. */
         void PostEditChange() override;

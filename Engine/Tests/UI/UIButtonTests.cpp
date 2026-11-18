@@ -7,6 +7,7 @@
 #include "Object/ObjectClassRegistry.h"
 #include "RHI/Texture.h"
 #include "UI/UICanvas.h"
+#include "UI/UIAudio.h"
 #include "UI/UICanvasFile.h"
 #include "UI/Widgets/UIButton.h"
 #include "UI/Widgets/UIImage.h"
@@ -515,4 +516,126 @@ TEST_CASE("UIButton: disabled then enabled back during a press, its release does
     CHECK(lF.Button->GetState() == EUIButtonState::Hovered);
     lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Up, { 0.f, 0.f }));
     CHECK(lF.Clicks == 0);
+}
+
+// =============================================================================
+// The Activate stage, and the canvas's audio
+// =============================================================================
+namespace
+{
+    /** Counts its owner's activations, and plays a click on the canvas's audio for each. */
+    class ActivateCounter final : public UIModifier
+    {
+        OPAAX_OBJECT(ActivateCounter, UIModifier)
+
+    public:
+        Uint32 Activations = 0;
+
+    protected:
+        void OnActivated() override
+        {
+            ++Activations;
+            if (IUIAudio* lAudio = GetOwner()->GetCanvas()->GetAudio())
+            {
+                lAudio->PlaySound(OpaaxString("Audio/Click.wav"), 0.5f);
+            }
+        }
+    };
+
+    /** Remembers what it was asked to play. */
+    class StubAudio final : public IUIAudio
+    {
+    public:
+        TDynArray<OpaaxString> Played;
+        float                  LastVolume = 0.f;
+
+        void PlaySound(const OpaaxString& InPath, const float InVolume) override
+        {
+            Played.push_back(InPath);
+            LastVolume = InVolume;
+        }
+    };
+}
+
+TEST_CASE("UIButton: a click runs the Activate stage once, before OnClick; the canvas's audio plays it")
+{
+    Fixture         lF;
+    StubAudio       lAudio;
+    ActivateCounter& lCounter = lF.Button->AddModifier<ActivateCounter>();
+    lF.Canvas.SetAudio(&lAudio);
+    CHECK(lF.Canvas.GetAudio() == &lAudio);
+
+    Uint32 lActivationsAtClick = 99;
+    lF.Button->OnClick.Add([&]() { lActivationsAtClick = lCounter.Activations; });
+
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Down, { 0.f, 0.f }));
+    CHECK(lCounter.Activations == 0u);   // a press is not an action
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Up, { 0.f, 0.f }));
+    CHECK(lCounter.Activations == 1u);
+    CHECK(lActivationsAtClick == 1u);    // the stage ran before OnClick
+    REQUIRE(lAudio.Played.size() == 1u);
+    CHECK(lAudio.Played[0] == OpaaxString("Audio/Click.wav"));
+    CHECK(lAudio.LastVolume == doctest::Approx(0.5f));
+
+    // No audio: silence, and nothing breaks.
+    lF.Canvas.SetAudio(nullptr);
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Down, { 0.f, 0.f }));
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Up, { 0.f, 0.f }));
+    CHECK(lCounter.Activations == 2u);
+    CHECK(lAudio.Played.size() == 1u);
+}
+
+TEST_CASE("UIButton: no Activate on a cancelled press, a release outside, a disabled button or a disabled modifier")
+{
+    Fixture          lF;
+    ActivateCounter& lCounter = lF.Button->AddModifier<ActivateCounter>();
+
+    // Pressed, left (the press is cancelled), released back over it.
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Move, { 0.f, 0.f }, EUIPointerButton::None));
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Down, { 0.f, 0.f }));
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Move, { 900.f, 500.f }, EUIPointerButton::Primary));
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Move, { 0.f, 0.f }, EUIPointerButton::Primary));
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Up, { 0.f, 0.f }));
+    CHECK(lCounter.Activations == 0u);
+
+    // Released outside.
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Down, { 0.f, 0.f }));
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Up, { 900.f, 500.f }));
+    CHECK(lCounter.Activations == 0u);
+
+    // Disabled: clicks fall through.
+    lF.Button->SetEnabled(false);
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Down, { 0.f, 0.f }));
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Up, { 0.f, 0.f }));
+    CHECK(lCounter.Activations == 0u);
+
+    // Enabled again, but the modifier off: a click, and no stage for it.
+    lF.Button->SetEnabled(true);
+    lCounter.bEnabled = false;
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Down, { 0.f, 0.f }));
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Up, { 0.f, 0.f }));
+    CHECK(lF.Clicks == 1);
+    CHECK(lCounter.Activations == 0u);
+}
+
+TEST_CASE("UIButton: a widget following the button hears its Activate; a nested button's followers do not")
+{
+    Fixture lF;
+    UIWidget* lLabel = lF.Button->AddChild(NewObject<UIImage>());
+    lLabel->bHitTestable = false;
+    lLabel->SetStateSource(EUIStateSource::Button);
+    ActivateCounter& lLabelCounter = lLabel->AddModifier<ActivateCounter>();
+
+    UIWidget* lInner = lF.Button->AddChild(NewObject<UIButton>());
+    lInner->bHitTestable = false;
+    UIWidget* lInnerLabel = lInner->AddChild(NewObject<UIImage>());
+    lInnerLabel->bHitTestable = false;   // the click lands on the outer button
+    lInnerLabel->SetStateSource(EUIStateSource::Button);
+    ActivateCounter& lInnerCounter = lInnerLabel->AddModifier<ActivateCounter>();
+    lF.Canvas.Update();
+
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Down, { 0.f, 0.f }));
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Up, { 0.f, 0.f }));
+    CHECK(lLabelCounter.Activations == 1u);
+    CHECK(lInnerCounter.Activations == 0u);
 }

@@ -77,7 +77,7 @@ namespace Opaax
         // Members
         // =============================================================================
     public:
-        /** Fired on a click: Down then Up inside, without leaving in between (enabled). */
+        /** Fired on a click: Down then Up inside, without leaving in between (enabled), after the Activate stage. */
         FButtonEventDelegate OnClick;
         /** Fired on the pointer start enter (enabled). */
         FButtonEventDelegate OnHoveredStart;

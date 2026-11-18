@@ -3,6 +3,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
+#include "UI/UIAudioPlayer.h"
 #include "UI/UICanvas.h"
 
 namespace Opaax
@@ -114,6 +115,8 @@ namespace Opaax::Editor
     private:
         OpaaxString  m_AbsPath;
         UICanvas     m_Canvas;
+        /** The preview's sounds (UI bus), made when it first plays; silent without an audio device. */
+        TUniquePtr<UIAudioPlayer> m_Audio;
         UIWidgetPath m_Selected;
 
         /** The serialized text at the last Open/Save (what IsDirty compares against). */

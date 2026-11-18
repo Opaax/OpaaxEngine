@@ -375,6 +375,40 @@ namespace Opaax
         NotifyStateChanged();
     }
 
+    void UIWidget::NotifyActivated()
+    {
+        for (const TStrongObjectPtr<UIModifier>& lModifier : m_Modifiers)
+        {
+            if (lModifier->bEnabled)
+            {
+                lModifier->OnActivated();
+            }
+        }
+
+        if (!IsStateOwner())
+        {
+            return;
+        }
+
+        // The widgets that follow me, down to the next state owner.
+        const TFunction<void(UIWidget&)> lTell = [&lTell](UIWidget& InNode)
+        {
+            for (const TStrongObjectPtr<UIWidget>& lChild : InNode.m_Children)
+            {
+                if (lChild->IsStateOwner()) { continue; }
+                if (lChild->StateSource == EUIStateSource::Button)
+                {
+                    for (const TStrongObjectPtr<UIModifier>& lModifier : lChild->m_Modifiers)
+                    {
+                        if (lModifier->bEnabled) { lModifier->OnActivated(); }
+                    }
+                }
+                lTell(*lChild);
+            }
+        };
+        lTell(*this);
+    }
+
     void UIWidget::NotifyFollowers()
     {
         for (const TStrongObjectPtr<UIWidget>& lChild : m_Children)

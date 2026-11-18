@@ -2,6 +2,9 @@
 
 #include "Core/Algo/Algo.h"
 
+#include "Application/OpaaxApplication.h"
+#include "Application/Services/IEngine.h"
+#include "Application/Services/IPaths.h"
 #include "Core/String/OpaaxPathString.h"
 #include "UI/UICanvasFile.h"
 #include "UI/UIWidget.h"
@@ -69,7 +72,14 @@ namespace Opaax::Editor
         m_bPreviewPlaying = bInPlaying;
         if (bInPlaying)
         {
-            // As when the game mounts it: ticked, then shown (its Show tweens play).
+            // As when the game mounts it: ticked, with sounds, then shown (its Show tweens play).
+            if (!m_Audio)
+            {
+                IEngine& lEngine = OpaaxApplication::GetAppService<IEngine>();
+                m_Audio = MakeUnique<UIAudioPlayer>(lEngine.GetAudio(), lEngine.GetResources(),
+                                                    OpaaxApplication::GetAppService<IPaths>());
+            }
+            m_Canvas.SetAudio(&*m_Audio);
             m_Canvas.SetTicked(true);
             m_Canvas.Root().Show();
         }
@@ -77,6 +87,7 @@ namespace Opaax::Editor
         {
             m_Canvas.ResetRuntime();
             m_Canvas.SetTicked(false);
+            m_Canvas.SetAudio(nullptr);   // the document is silent while it is edited
         }
     }
 
