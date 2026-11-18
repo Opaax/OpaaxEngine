@@ -373,6 +373,11 @@
                         "PlayOn": "Hovered",
                         "Tween": "UI/Presets/Pulse.opaaxasset",
                         "Type": "UITweenModifier"
+                    },
+                    {
+                        "Name": "Sounds",
+                        "Preset": "UI/Sounds/Menu.opaaxasset",
+                        "Type": "UISoundModifier"
                     }
                 ],
                 "Name": "FollowButton",

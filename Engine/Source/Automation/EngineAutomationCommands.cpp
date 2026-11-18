@@ -42,6 +42,7 @@
 #include "Renderer/Camera/CameraShakeSourceComponent.h"
 #include "Renderer/Camera/CameraShakeSubsystem.h"
 #include "UI/Modifiers/UITweenModifier.h"
+#include "UI/Modifiers/UISoundModifier.h"
 #include "UI/UIButtonBase.h"
 #include "UI/UICanvas.h"
 #include "UI/UISubsystem.h"
@@ -165,10 +166,18 @@ namespace Opaax::EngineAutomation
                     nlohmann::json lModifiers = nlohmann::json::array();
                     for (const TStrongObjectPtr<UIModifier>& lModifier : InWidget.GetModifiers())
                     {
-                        lModifiers.push_back({ { "class",   lModifier->GetClass().GetName().CStr() },
-                                               { "name",    lModifier->Name },   // empty when unnamed
-                                               { "enabled", lModifier->bEnabled },
-                                               { "playing", lModifier->IsAwake() } });
+                        nlohmann::json lRow{ { "class",   lModifier->GetClass().GetName().CStr() },
+                                             { "name",    lModifier->Name },   // empty when unnamed
+                                             { "enabled", lModifier->bEnabled },
+                                             { "playing", lModifier->IsAwake() } };
+
+                        // A sound modifier says what it played: a script checks it without listening.
+                        if (const UISoundModifier* lSound = Cast<UISoundModifier>(lModifier.Get()))
+                        {
+                            lRow["lastSound"] = lSound->GetLastSound();
+                            lRow["sounds"]    = lSound->GetSoundCount();
+                        }
+                        lModifiers.push_back(Move(lRow));
                     }
                     lRow["modifiers"] = Move(lModifiers);
                 }
