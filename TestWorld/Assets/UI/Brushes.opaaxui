@@ -1,0 +1,274 @@
+{
+    "ReferenceHeight": 1080.0,
+    "Root": {
+        "Children": [
+            {
+                "Brush": {
+                    "Tint": {
+                        "w": 1.0,
+                        "x": 0.12,
+                        "y": 0.14,
+                        "z": 0.2
+                    }
+                },
+                "Name": "Backdrop",
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 1600.0,
+                        "y": 900.0
+                    }
+                },
+                "Type": "UIImage",
+                "bHitTestable": false
+            },
+            {
+                "Color": {
+                    "w": 1.0,
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0
+                },
+                "Font": "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf",
+                "HAlign": "Center",
+                "Name": "SpinnerLabel",
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": -450.0,
+                        "y": 180.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 300.0,
+                        "y": 60.0
+                    }
+                },
+                "Size": 36.0,
+                "Text": "Loop",
+                "Type": "UIText",
+                "VAlign": "Middle",
+                "bHitTestable": false
+            },
+            {
+                "Brush": {
+                    "Animation": "Anims/Cycle.opaaxasset"
+                },
+                "Name": "Spinner",
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": -450.0,
+                        "y": 0.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 256.0,
+                        "y": 256.0
+                    }
+                },
+                "Type": "UIImage",
+                "bHitTestable": false
+            },
+            {
+                "Color": {
+                    "w": 1.0,
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0
+                },
+                "Font": "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf",
+                "HAlign": "Center",
+                "Name": "PopLabel",
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": 0.0,
+                        "y": 180.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 300.0,
+                        "y": 60.0
+                    }
+                },
+                "Size": 36.0,
+                "Text": "Once",
+                "Type": "UIText",
+                "VAlign": "Middle",
+                "bHitTestable": false
+            },
+            {
+                "Brush": {
+                    "Animation": "Anims/Pop.opaaxasset"
+                },
+                "Name": "Pop",
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 256.0,
+                        "y": 256.0
+                    }
+                },
+                "Type": "UIImage",
+                "bHitTestable": false
+            },
+            {
+                "Color": {
+                    "w": 1.0,
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0
+                },
+                "Font": "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf",
+                "HAlign": "Center",
+                "Name": "FallbackLabel",
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": 450.0,
+                        "y": 180.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 300.0,
+                        "y": 60.0
+                    }
+                },
+                "Size": 36.0,
+                "Text": "Missing clip",
+                "Type": "UIText",
+                "VAlign": "Middle",
+                "bHitTestable": false
+            },
+            {
+                "Brush": {
+                    "Animation": "Anims/Missing.opaaxasset",
+                    "Frame": 1,
+                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset"
+                },
+                "Name": "Fallback",
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": 450.0,
+                        "y": 0.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 256.0,
+                        "y": 256.0
+                    }
+                },
+                "Type": "UIImage",
+                "bHitTestable": false
+            }
+        ],
+        "Name": "Root",
+        "Rect": {
+            "AnchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "AnchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "AnchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "Pivot": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "SizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            }
+        },
+        "Type": "UIPanel",
+        "bHitTestable": false
+    },
+    "Version": 2
+}

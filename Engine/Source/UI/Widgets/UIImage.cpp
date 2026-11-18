@@ -5,6 +5,7 @@
 #include "Core/Reflection/OpaaxEnumJson.h"
 #include "UI/UIBinding.h"
 #include "UI/UIBrush.h"
+#include "UI/UICanvas.h"
 #include "UI/UISlice.h"
 
 namespace Opaax
@@ -30,6 +31,14 @@ namespace Opaax
     void UIImage::SetColor(const LinearColor& InColor)
     {
         Brush.Tint = InColor;
+        InvalidateContent();
+    }
+
+    void UIImage::SetAnimation(const OpaaxString& InClipPath)
+    {
+        Brush.Animation.Path = InClipPath;
+        m_ClipSeconds        = 0.f;
+        m_bWarnedClip        = false;
         InvalidateContent();
     }
 
@@ -110,9 +119,22 @@ namespace Opaax
             return;
         }
 
-        // Runtime pointer > sheet frame > texture. Named but not ready: draw nothing and retry;
+        // Runtime pointer > clip > sheet frame > texture. Named but not ready: draw nothing and retry;
         // nothing named: a plain colour.
-        const EUIBrushDraw lDraw = DrawBrush(InContext, GetBounds(), Brush, m_Texture, OutQuads);
+        const EUIBrushDraw lDraw = DrawBrush(InContext, GetBounds(), Brush, m_Texture, m_ClipSeconds, OutQuads, &m_DrawnClip);
+
+        if (m_DrawnClip.Issue != EUIBrushIssue::None && !m_bWarnedClip)
+        {
+            m_bWarnedClip = true;
+            OPAAX_LOG(LogUIBrush, Warn, "'{}': {}", Name.CStr(), DescribeBrushIssue(Brush, m_DrawnClip).CStr());
+        }
+
+        // A clip that can still change keeps me ticking (only a ticked canvas runs it).
+        if (m_DrawnClip.Clip != nullptr && !m_DrawnClip.bFinished && !IsAwake())
+        {
+            WakeUp();
+        }
+
         if (lDraw == EUIBrushDraw::NotReady)
         {
             InvalidateContent();
@@ -132,5 +154,36 @@ namespace Opaax
         {
             ClipQuadsTo(OutQuads, FillClip(GetBounds(), Fill, lAmount));
         }
+    }
+
+    bool UIImage::Tick(const float InSeconds)
+    {
+        m_ClipSeconds += InSeconds;
+
+        UICanvas* const   lCanvas = GetCanvas();
+        const UIBrushClip lClip   = SampleBrushClip(lCanvas != nullptr ? lCanvas->GetAssets() : nullptr, Brush, m_ClipSeconds);
+        if (lClip.Clip == nullptr)
+        {
+            return false;   // no clip any more: nothing to play
+        }
+
+        // Rebuilt only when the step shown changes.
+        if (lClip.Step != m_DrawnClip.Step || m_DrawnClip.Clip == nullptr)
+        {
+            InvalidateContent();
+        }
+        return !lClip.bFinished;
+    }
+
+    void UIImage::OnReset()
+    {
+        m_ClipSeconds = 0.f;
+        m_DrawnClip   = {};
+        InvalidateContent();
+    }
+
+    OpaaxString UIImage::DescribeBrush() const
+    {
+        return Opaax::DescribeBrush(Brush, m_Texture != nullptr, m_DrawnClip);
     }
 }
