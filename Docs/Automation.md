@@ -214,7 +214,8 @@ The editor adds:
 | `ui.new` | `path` | Creates an empty UI canvas (a root panel at the project's reference height); its widgets are written in the file |
 | `ui.widget.add` | `type`, `parent` | Adds a widget of `type` (`UIPanel`, `UIText`...) to the canvas open in the UI panel, under the widget named `parent` (the top level by default), named after its type and numbered when taken. Answers its `name` |
 | `ui.widget.select` | `name` | Selects a widget of the UI panel's canvas by name (an empty name clears): what `Editor.Command.CopyUIWidget`, `CutUIWidget`, `PasteUIWidget` and `DuplicateUIWidget` act on |
-| `ui.widget.list` | | The canvas's widgets in tree order (`name`, `type`, `parent`) and the `selected` one's name |
+| `ui.widget.list` | | The canvas's widgets in tree order (`name`, `type`, `parent`, `interaction`, and `brush` for an image or a button: what it draws now, as `ui.list` answers it) and the `selected` one's name |
+| `ui.widget.set` | `values` | Merges `values` into the selected widget's own fields as one undo step, as the inspector does (`{"Style": "UI/Styles/Pixel.opaaxasset"}` on a button; a nested field keeps its siblings: `{"Brush": {"Frame": 2}}`). A value of the wrong type changes nothing. Answers its `brush` |
 | `ui.modifier.add` | `type` | Adds a modifier of `type` (`UITransformModifier`...) at the end of the selected widget's list, as the inspector's Add Modifier does. Answers its `index` |
 | `ui.modifier.list` | | The selected widget's modifiers in order: `class`, `name`, `enabled`, `properties` |
 | `ui.modifier.set` | `index`, `values` | Merges `values` into the fields of the selected widget's modifier at `index` as one undo step; a nested field keeps its siblings (`{"Pose": {"Rotation": 30}}`). A value of the wrong type changes nothing |

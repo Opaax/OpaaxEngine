@@ -1,0 +1,105 @@
+{
+    "Class": "UIButtonStyle",
+    "Properties": {
+        "Brushes": {
+            "Disabled": {
+                "Animation": "",
+                "Border": {
+                    "Bottom": 0.0,
+                    "Left": 0.0,
+                    "Right": 0.0,
+                    "Top": 0.0
+                },
+                "BorderScale": 0.4,
+                "Frame": 3,
+                "Sheet": "UI/SlicedButtons.opaaxasset",
+                "Texture": "",
+                "Tint": {
+                    "w": 0.6,
+                    "x": 0.6,
+                    "y": 0.6,
+                    "z": 0.6
+                }
+            },
+            "FadeDuration": 0.15,
+            "FadeEase": "QuadOut",
+            "Focused": {
+                "Animation": "",
+                "Border": {
+                    "Bottom": 0.0,
+                    "Left": 0.0,
+                    "Right": 0.0,
+                    "Top": 0.0
+                },
+                "BorderScale": 0.4,
+                "Frame": 0,
+                "Sheet": "UI/SlicedButtons.opaaxasset",
+                "Texture": "",
+                "Tint": {
+                    "w": 1.0,
+                    "x": 0.95,
+                    "y": 0.9,
+                    "z": 0.75
+                }
+            },
+            "Hovered": {
+                "Animation": "Anims/Glow.opaaxasset",
+                "Border": {
+                    "Bottom": 0.0,
+                    "Left": 0.0,
+                    "Right": 0.0,
+                    "Top": 0.0
+                },
+                "BorderScale": 0.4,
+                "Frame": 1,
+                "Sheet": "UI/SlicedButtons.opaaxasset",
+                "Texture": "",
+                "Tint": {
+                    "w": 1.0,
+                    "x": 0.6,
+                    "y": 0.85,
+                    "z": 1.0
+                }
+            },
+            "Normal": {
+                "Animation": "",
+                "Border": {
+                    "Bottom": 0.0,
+                    "Left": 0.0,
+                    "Right": 0.0,
+                    "Top": 0.0
+                },
+                "BorderScale": 0.4,
+                "Frame": 0,
+                "Sheet": "UI/SlicedButtons.opaaxasset",
+                "Texture": "",
+                "Tint": {
+                    "w": 1.0,
+                    "x": 0.95,
+                    "y": 0.9,
+                    "z": 0.75
+                }
+            },
+            "Pressed": {
+                "Animation": "",
+                "Border": {
+                    "Bottom": 0.0,
+                    "Left": 0.0,
+                    "Right": 0.0,
+                    "Top": 0.0
+                },
+                "BorderScale": 0.4,
+                "Frame": 2,
+                "Sheet": "UI/SlicedButtons.opaaxasset",
+                "Texture": "",
+                "Tint": {
+                    "w": 1.0,
+                    "x": 1.0,
+                    "y": 0.75,
+                    "z": 0.35
+                }
+            }
+        }
+    },
+    "Version": 1
+}

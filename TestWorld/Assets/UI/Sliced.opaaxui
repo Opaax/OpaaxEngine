@@ -4,6 +4,7 @@
         "Children": [
             {
                 "Brush": {
+                    "Animation": "",
                     "Border": {
                         "Bottom": 0.0,
                         "Left": 0.0,
@@ -16,9 +17,9 @@
                     "Texture": "",
                     "Tint": {
                         "w": 1.0,
-                        "x": 0.11999999731779099,
-                        "y": 0.14000000059604645,
-                        "z": 0.20000000298023224
+                        "x": 0.12,
+                        "y": 0.14,
+                        "z": 0.2
                     }
                 },
                 "Fill": "None",
@@ -54,20 +55,21 @@
             },
             {
                 "Brush": {
+                    "Animation": "",
                     "Border": {
                         "Bottom": 0.0,
                         "Left": 0.0,
                         "Right": 0.0,
                         "Top": 0.0
                     },
-                    "BorderScale": 0.4000000059604645,
+                    "BorderScale": 0.4,
                     "Frame": 0,
                     "Sheet": "UI/SlicedButtons.opaaxasset",
                     "Texture": "",
                     "Tint": {
                         "w": 1.0,
-                        "x": 0.949999988079071,
-                        "y": 0.8999999761581421,
+                        "x": 0.95,
+                        "y": 0.9,
                         "z": 0.75
                     }
                 },
@@ -104,20 +106,21 @@
             },
             {
                 "Brush": {
+                    "Animation": "",
                     "Border": {
                         "Bottom": 0.0,
                         "Left": 0.0,
                         "Right": 0.0,
                         "Top": 0.0
                     },
-                    "BorderScale": 0.8100000023841858,
+                    "BorderScale": 0.81,
                     "Frame": 0,
                     "Sheet": "UI/SlicedButtons.opaaxasset",
                     "Texture": "",
                     "Tint": {
                         "w": 1.0,
-                        "x": 0.949999988079071,
-                        "y": 0.8999999761581421,
+                        "x": 0.95,
+                        "y": 0.9,
                         "z": 0.75
                     }
                 },
@@ -155,86 +158,92 @@
             {
                 "Brushes": {
                     "Disabled": {
+                        "Animation": "",
                         "Border": {
                             "Bottom": 0.0,
                             "Left": 0.0,
                             "Right": 0.0,
                             "Top": 0.0
                         },
-                        "BorderScale": 0.4000000059604645,
+                        "BorderScale": 0.4,
                         "Frame": 3,
                         "Sheet": "UI/SlicedButtons.opaaxasset",
                         "Texture": "",
                         "Tint": {
-                            "w": 0.6000000238418579,
-                            "x": 0.6000000238418579,
-                            "y": 0.6000000238418579,
-                            "z": 0.6000000238418579
+                            "w": 0.6,
+                            "x": 0.6,
+                            "y": 0.6,
+                            "z": 0.6
                         }
                     },
                     "FadeDuration": 0.0,
+                    "FadeEase": "QuadOut",
                     "Focused": {
+                        "Animation": "",
                         "Border": {
                             "Bottom": 0.0,
                             "Left": 0.0,
                             "Right": 0.0,
                             "Top": 0.0
                         },
-                        "BorderScale": 0.4000000059604645,
+                        "BorderScale": 0.4,
                         "Frame": 0,
                         "Sheet": "UI/SlicedButtons.opaaxasset",
                         "Texture": "",
                         "Tint": {
                             "w": 1.0,
-                            "x": 0.949999988079071,
-                            "y": 0.8999999761581421,
+                            "x": 0.95,
+                            "y": 0.9,
                             "z": 0.75
                         }
                     },
                     "Hovered": {
+                        "Animation": "",
                         "Border": {
                             "Bottom": 0.0,
                             "Left": 0.0,
                             "Right": 0.0,
                             "Top": 0.0
                         },
-                        "BorderScale": 0.4000000059604645,
+                        "BorderScale": 0.4,
                         "Frame": 1,
                         "Sheet": "UI/SlicedButtons.opaaxasset",
                         "Texture": "",
                         "Tint": {
                             "w": 1.0,
-                            "x": 0.6000000238418579,
-                            "y": 0.8500000238418579,
+                            "x": 0.6,
+                            "y": 0.85,
                             "z": 1.0
                         }
                     },
                     "Normal": {
+                        "Animation": "",
                         "Border": {
                             "Bottom": 0.0,
                             "Left": 0.0,
                             "Right": 0.0,
                             "Top": 0.0
                         },
-                        "BorderScale": 0.4000000059604645,
+                        "BorderScale": 0.4,
                         "Frame": 0,
                         "Sheet": "UI/SlicedButtons.opaaxasset",
                         "Texture": "",
                         "Tint": {
                             "w": 1.0,
-                            "x": 0.949999988079071,
-                            "y": 0.8999999761581421,
+                            "x": 0.95,
+                            "y": 0.9,
                             "z": 0.75
                         }
                     },
                     "Pressed": {
+                        "Animation": "",
                         "Border": {
                             "Bottom": 0.0,
                             "Left": 0.0,
                             "Right": 0.0,
                             "Top": 0.0
                         },
-                        "BorderScale": 0.4000000059604645,
+                        "BorderScale": 0.4,
                         "Frame": 2,
                         "Sheet": "UI/SlicedButtons.opaaxasset",
                         "Texture": "",
@@ -242,7 +251,7 @@
                             "w": 1.0,
                             "x": 1.0,
                             "y": 0.75,
-                            "z": 0.3499999940395355
+                            "z": 0.35
                         }
                     }
                 },
@@ -270,6 +279,7 @@
                         "y": 90.0
                     }
                 },
+                "Style": "UI/Styles/Pixel.opaaxasset",
                 "Type": "UIButton",
                 "bHitTestable": true,
                 "bIsEnabled": true,
@@ -278,6 +288,7 @@
             {
                 "Brushes": {
                     "Disabled": {
+                        "Animation": "",
                         "Border": {
                             "Bottom": 0.0,
                             "Left": 0.0,
@@ -289,14 +300,16 @@
                         "Sheet": "UI/SlicedButtons.opaaxasset",
                         "Texture": "",
                         "Tint": {
-                            "w": 0.6000000238418579,
-                            "x": 0.6000000238418579,
-                            "y": 0.6000000238418579,
-                            "z": 0.6000000238418579
+                            "w": 0.6,
+                            "x": 0.6,
+                            "y": 0.6,
+                            "z": 0.6
                         }
                     },
                     "FadeDuration": 0.0,
+                    "FadeEase": "QuadOut",
                     "Focused": {
+                        "Animation": "",
                         "Border": {
                             "Bottom": 0.0,
                             "Left": 0.0,
@@ -309,12 +322,13 @@
                         "Texture": "",
                         "Tint": {
                             "w": 1.0,
-                            "x": 0.949999988079071,
-                            "y": 0.8999999761581421,
+                            "x": 0.95,
+                            "y": 0.9,
                             "z": 0.75
                         }
                     },
                     "Hovered": {
+                        "Animation": "",
                         "Border": {
                             "Bottom": 0.0,
                             "Left": 0.0,
@@ -327,12 +341,13 @@
                         "Texture": "",
                         "Tint": {
                             "w": 1.0,
-                            "x": 0.6000000238418579,
-                            "y": 0.8500000238418579,
+                            "x": 0.6,
+                            "y": 0.85,
                             "z": 1.0
                         }
                     },
                     "Normal": {
+                        "Animation": "",
                         "Border": {
                             "Bottom": 0.0,
                             "Left": 0.0,
@@ -345,12 +360,13 @@
                         "Texture": "",
                         "Tint": {
                             "w": 1.0,
-                            "x": 0.949999988079071,
-                            "y": 0.8999999761581421,
+                            "x": 0.95,
+                            "y": 0.9,
                             "z": 0.75
                         }
                     },
                     "Pressed": {
+                        "Animation": "",
                         "Border": {
                             "Bottom": 0.0,
                             "Left": 0.0,
@@ -365,7 +381,7 @@
                             "w": 1.0,
                             "x": 1.0,
                             "y": 0.75,
-                            "z": 0.3499999940395355
+                            "z": 0.35
                         }
                     }
                 },
@@ -401,6 +417,7 @@
             {
                 "Brushes": {
                     "Disabled": {
+                        "Animation": "",
                         "Border": {
                             "Bottom": 0.0,
                             "Left": 0.0,
@@ -412,14 +429,16 @@
                         "Sheet": "UI/SlicedButtons.opaaxasset",
                         "Texture": "",
                         "Tint": {
-                            "w": 0.6000000238418579,
-                            "x": 0.6000000238418579,
-                            "y": 0.6000000238418579,
-                            "z": 0.6000000238418579
+                            "w": 0.6,
+                            "x": 0.6,
+                            "y": 0.6,
+                            "z": 0.6
                         }
                     },
                     "FadeDuration": 0.0,
+                    "FadeEase": "QuadOut",
                     "Focused": {
+                        "Animation": "",
                         "Border": {
                             "Bottom": 0.0,
                             "Left": 0.0,
@@ -432,12 +451,13 @@
                         "Texture": "",
                         "Tint": {
                             "w": 1.0,
-                            "x": 0.949999988079071,
-                            "y": 0.8999999761581421,
+                            "x": 0.95,
+                            "y": 0.9,
                             "z": 0.75
                         }
                     },
                     "Hovered": {
+                        "Animation": "",
                         "Border": {
                             "Bottom": 0.0,
                             "Left": 0.0,
@@ -450,12 +470,13 @@
                         "Texture": "",
                         "Tint": {
                             "w": 1.0,
-                            "x": 0.6000000238418579,
-                            "y": 0.8500000238418579,
+                            "x": 0.6,
+                            "y": 0.85,
                             "z": 1.0
                         }
                     },
                     "Normal": {
+                        "Animation": "",
                         "Border": {
                             "Bottom": 0.0,
                             "Left": 0.0,
@@ -468,12 +489,13 @@
                         "Texture": "",
                         "Tint": {
                             "w": 1.0,
-                            "x": 0.949999988079071,
-                            "y": 0.8999999761581421,
+                            "x": 0.95,
+                            "y": 0.9,
                             "z": 0.75
                         }
                     },
                     "Pressed": {
+                        "Animation": "",
                         "Border": {
                             "Bottom": 0.0,
                             "Left": 0.0,
@@ -488,7 +510,7 @@
                             "w": 1.0,
                             "x": 1.0,
                             "y": 0.75,
-                            "z": 0.3499999940395355
+                            "z": 0.35
                         }
                     }
                 },
@@ -516,6 +538,7 @@
                         "y": 90.0
                     }
                 },
+                "Style": "UI/Styles/Pixel.opaaxasset",
                 "Type": "UIButton",
                 "bHitTestable": true,
                 "bIsEnabled": false,
@@ -524,6 +547,7 @@
             {
                 "Brushes": {
                     "Disabled": {
+                        "Animation": "",
                         "Border": {
                             "Bottom": 0.0,
                             "Left": 0.0,
@@ -535,14 +559,16 @@
                         "Sheet": "UI/SlicedButtons.opaaxasset",
                         "Texture": "",
                         "Tint": {
-                            "w": 0.6000000238418579,
-                            "x": 0.6000000238418579,
-                            "y": 0.6000000238418579,
-                            "z": 0.6000000238418579
+                            "w": 0.6,
+                            "x": 0.6,
+                            "y": 0.6,
+                            "z": 0.6
                         }
                     },
                     "FadeDuration": 0.0,
+                    "FadeEase": "QuadOut",
                     "Focused": {
+                        "Animation": "",
                         "Border": {
                             "Bottom": 0.0,
                             "Left": 0.0,
@@ -555,12 +581,13 @@
                         "Texture": "",
                         "Tint": {
                             "w": 1.0,
-                            "x": 0.949999988079071,
-                            "y": 0.8999999761581421,
+                            "x": 0.95,
+                            "y": 0.9,
                             "z": 0.75
                         }
                     },
                     "Hovered": {
+                        "Animation": "",
                         "Border": {
                             "Bottom": 0.0,
                             "Left": 0.0,
@@ -573,12 +600,13 @@
                         "Texture": "",
                         "Tint": {
                             "w": 1.0,
-                            "x": 0.6000000238418579,
-                            "y": 0.8500000238418579,
+                            "x": 0.6,
+                            "y": 0.85,
                             "z": 1.0
                         }
                     },
                     "Normal": {
+                        "Animation": "",
                         "Border": {
                             "Bottom": 0.0,
                             "Left": 0.0,
@@ -591,12 +619,13 @@
                         "Texture": "",
                         "Tint": {
                             "w": 1.0,
-                            "x": 0.949999988079071,
-                            "y": 0.8999999761581421,
+                            "x": 0.95,
+                            "y": 0.9,
                             "z": 0.75
                         }
                     },
                     "Pressed": {
+                        "Animation": "",
                         "Border": {
                             "Bottom": 0.0,
                             "Left": 0.0,
@@ -611,7 +640,7 @@
                             "w": 1.0,
                             "x": 1.0,
                             "y": 0.75,
-                            "z": 0.3499999940395355
+                            "z": 0.35
                         }
                     }
                 },

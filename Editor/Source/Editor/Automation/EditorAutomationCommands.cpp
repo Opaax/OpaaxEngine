@@ -1286,8 +1286,8 @@ namespace Opaax::Editor::EditorAutomation
                 });
 
             InCommands.Register("ui.widget.list",
-                "The widgets of the UI panel's canvas, in tree order: {widgets: [{name, type, parent}]}, and the "
-                "{selected} one's name.",
+                "The widgets of the UI panel's canvas, in tree order: {widgets: [{name, type, parent, interaction, "
+                "brush}]} (brush: what an image or a button draws now), and the {selected} one's name.",
                 [&InContext](const nlohmann::json&)
                 {
                     EditorUICanvasDocument& lDocument = InContext.UICanvasDocument;
@@ -1301,9 +1301,15 @@ namespace Opaax::Editor::EditorAutomation
                     {
                         for (const TStrongObjectPtr<UIWidget>& lChild : InWidget.GetChildren())
                         {
-                            lWidgets.push_back(nlohmann::json{ { "name", lChild->Name },
-                                                               { "type", lChild->GetClass().GetName().CStr() },
-                                                               { "parent", InWidget.Name } });
+                            nlohmann::json lRow{ { "name", lChild->Name },
+                                                 { "type", lChild->GetClass().GetName().CStr() },
+                                                 { "parent", InWidget.Name },
+                                                 { "interaction", ToString(lChild->GetInteractionState()) } };
+                            if (const OpaaxString lBrush = lChild->DescribeBrush(); !lBrush.IsEmpty())
+                            {
+                                lRow["brush"] = lBrush;
+                            }
+                            lWidgets.push_back(Move(lRow));
                             lWalk(*lChild);
                         }
                     };
@@ -1378,6 +1384,29 @@ namespace Opaax::Editor::EditorAutomation
                     if (lWidget == nullptr) { return AutomationResult::Fail(lError); }
 
                     return AutomationResult::Ok(nlohmann::json{ { "modifiers", DescribeModifiers(*lWidget) } });
+                });
+
+            InCommands.Register("ui.widget.set",
+                "Merges {values} into the selected widget's own fields (\"Style\" on a button, \"Brush\": {\"Frame\": 2} "
+                "on an image keeps the brush's other fields), as one undo step. A value of the wrong type changes "
+                "nothing. Answers its {brush} (what it draws now, an image or a button).",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString     lError;
+                    const UIWidget* lWidget = SelectedUIWidget(InContext, lError);
+                    if (lWidget == nullptr) { return AutomationResult::Fail(lError); }
+
+                    const auto lValues = InParams.find("values");
+                    if (lValues == InParams.end() || !lValues->is_object())
+                    {
+                        return AutomationResult::Fail("\"values\" is an object of the fields to change");
+                    }
+
+                    if (!UICanvasOps::SetWidget(InContext, InContext.UICanvasDocument.SelectedPath(), *lValues, &lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+                    return AutomationResult::Ok(nlohmann::json{ { "brush", lWidget->DescribeBrush() } });
                 });
 
             InCommands.Register("ui.modifier.set",

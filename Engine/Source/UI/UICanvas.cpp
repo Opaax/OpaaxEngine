@@ -194,6 +194,17 @@ namespace Opaax
         UICanvasStats lStats;
         m_Assets = InContext.Assets;
 
+        // An asset was saved and reloaded: every widget draws again, with what it names now.
+        if (m_Assets != nullptr)
+        {
+            const Uint64 lRevision = m_Assets->GetRevision();
+            if (lRevision != m_AssetsRevision)
+            {
+                m_AssetsRevision = lRevision;
+                m_Root->InvalidateContentRecursive();
+            }
+        }
+
         // Read the bindings (widgets only invalidate on change). Skipped when there are no sources.
         if (m_Bindings.Count() > 0)
         {

@@ -1,0 +1,21 @@
+{
+    "Class": "AnimationClip",
+    "Properties": {
+        "Fps": 4.0,
+        "PlayMode": "Loop",
+        "Sheet": "UI/SlicedButtons.opaaxasset",
+        "Steps": [
+            {
+                "Frame": "Normal",
+                "Hold": 1,
+                "Texture": ""
+            },
+            {
+                "Frame": "Hovered",
+                "Hold": 1,
+                "Texture": ""
+            }
+        ]
+    },
+    "Version": 1
+}

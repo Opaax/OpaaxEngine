@@ -216,6 +216,7 @@ namespace Opaax
         ITexture2D*      ResolveTexture(const char* InAssetPath) override;
         UISheetFrameView ResolveSheetFrame(const char* InSheetPath, Int32 InFrame) override;
         const Asset*     ResolveAsset(const char* InAssetPath) override;
+        Uint64           GetRevision() override;
 
         /**
          * The font family InRef names. Loaded once and cached. Null for an empty reference.

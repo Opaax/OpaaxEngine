@@ -186,7 +186,7 @@ mounted canvas's root sits in the screen, so a HUD's root stretches over it (anc
 | `UIPanel` | none: a container |
 | `UIImage` | `Brush` (below), `Fill`, `FillAmount`, `FillBinding` |
 | `UIText` | `Text`, `Binding`, `Font` (a `.ttf`), `Size`, `Color`, `HAlign` (`Left`, `Center`, `Right`), `VAlign` (`Top`, `Middle`, `Bottom`), `bWrap`, `LineHeightScale`, `bKerning` |
-| `UIButton` | `bIsEnabled`, `Brushes`: a brush (below) for each of `Normal`, `Hovered`, `Pressed`, `Focused`, `Disabled`, then `FadeDuration` (seconds the tint takes to reach a new state's; 0 jumps) and `FadeEase` |
+| `UIButton` | `bIsEnabled`, `Style` (a UI Button Style, [below](#ui-presets-uitransition-uitween-uibuttonstyle): when it loads, its brushes are drawn), `Brushes`: a brush (below) for each of `Normal`, `Hovered`, `Pressed`, `Focused`, `Disabled`, then `FadeDuration` (seconds the tint takes to reach a new state's; 0 jumps) and `FadeEase` |
 | `UIStack` | `Axis` (`Vertical`, `Horizontal`), `Spacing`, `Padding`, `ChildAlign` (`Start`, `Center`, `End`, `Stretch`), `bFitContent`: lays its children out in a row or a column |
 | `UIScrollBox` | `Axis`, `Spacing`, `Padding`, `ChildAlign` as a stack's (`Stretch` by default), `ScrollStep` (canvas units a notch of the wheel moves), `bDragToScroll`: a list that scrolls. Its children are laid out as in a stack and show only inside its rect; the wheel over it and a drag with the left button move them. When all of them show, it lets the wheel and presses through |
 | `UIMask` | `Texture` (a shape; empty = the rect), `bShowMaskGraphic`: clips its children, which are hit only inside its rect |
@@ -414,9 +414,22 @@ same name (its class appended when that name is taken), and the paths that named
 prefabs, canvases, assets and configs are rewritten. Paths written in game code are not: one that
 still names an old file loads the converted one, with a warning to update it.
 
-## UI presets (`UITransition`, `UITween`)
+## UI presets (`UITransition`, `UITween`, `UIButtonStyle`)
 
-Two asset classes hold what UI modifiers share, made with New Asset > UI. A **UI Transition**
+Three asset classes hold what widgets share, made with New Asset > UI. A **UI Button Style**
+(`UIButtonStyle`) is what a `UIButton` names as its `Style`: `Brushes`, the same fields as a button's
+own (a brush per state, `FadeDuration`, `FadeEase`). A button naming one draws it and not its own
+`Brushes`, which show again when the style does not load (said once in the log). Saving a style reaches
+every button showing it, in the editor's canvas and in a running game.
+
+```json
+{ "Class": "UIButtonStyle", "Version": 1, "Properties": { "Brushes": {
+    "Normal":  { "Sheet": "UI/SlicedButtons.opaaxasset", "Frame": 0, "BorderScale": 0.4 },
+    "Hovered": { "Animation": "Anims/Glow.opaaxasset", "BorderScale": 0.4 },
+    "FadeDuration": 0.15 } } }
+```
+
+A **UI Transition**
 (`UITransition`) is what a `UITransitionModifier` names as its `Preset`: `Duration`, `Ease`, and a
 pose for `Hovered`, `Pressed`, `Focused` and `Disabled`. A **UI Tween** (`UITween`) is what a
 `UITweenModifier` names as its `Tween`: `Keys` in time order, each a `Time`, the `Ease` into it and a
