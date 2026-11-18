@@ -227,6 +227,12 @@ namespace Opaax
         /** Whether I asked to be ticked (I may wait for Show while hidden). */
         bool IsAwake() const noexcept { return m_bAwake; }
 
+        /**
+         * What I draw now, for automation (ui.list's "brush"): "clip#step", "sheet#frame", a texture path,
+         * "none". Empty for a widget that draws no brush.
+         */
+        virtual OpaaxString DescribeBrush() const { return OpaaxString(); }
+
     protected:
         /**
          * Runs once per frame while I am awake and shown, with the frame's own time (the game's pause and

@@ -1,0 +1,100 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Brushes.opaaxlevel"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "mounted",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "UIProbe/bMounted",
+            "equals": true
+        }
+    },
+    {
+        "id": "pop-first-step",
+        "command": "ui.list",
+        "params": {
+            "name": "Pop"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "Pop",
+                    "brush": "Anims/Pop.opaaxasset#0",
+                    "quads": 1
+                }
+            ]
+        }
+    },
+    {
+        "id": "spinner-plays",
+        "command": "ui.list",
+        "params": {
+            "name": "Spinner"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "Spinner",
+                    "visible": true,
+                    "quads": 1
+                }
+            ]
+        }
+    },
+    {
+        "id": "missing-clip-shows-its-frame",
+        "command": "ui.list",
+        "params": {
+            "name": "Fallback"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "Fallback",
+                    "brush": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset#1",
+                    "quads": 1
+                }
+            ]
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 1.5
+        }
+    },
+    {
+        "id": "pop-last-step",
+        "command": "ui.list",
+        "params": {
+            "name": "Pop"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "Pop",
+                    "brush": "Anims/Pop.opaaxasset#1"
+                }
+            ]
+        }
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "Brushes.png"
+        }
+    }
+]

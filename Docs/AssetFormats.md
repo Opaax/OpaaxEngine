@@ -192,9 +192,16 @@ mounted canvas's root sits in the screen, so a HUD's root stretches over it (anc
 | `UIMask` | `Texture` (a shape; empty = the rect), `bShowMaskGraphic`: clips its children, which are hit only inside its rect |
 | `UISafeArea` | `Insets`: keeps its children inside the screen's safe part |
 
-A brush is what fills a widget's rect: `Tint` (the colour, multiplying the image), `Texture` or
-`Sheet` + `Frame` (the sheet wins; -1 is its default frame), `Border` and `BorderScale` (nine-slice,
-[below](#sliced-art)). A brush with no image is a plain `Tint` rect.
+A brush is what fills a widget's rect: `Tint` (the colour, multiplying the image), `Animation`, `Texture`
+or `Sheet` + `Frame` (the clip wins, then the sheet; -1 is the sheet's default frame), `Border` and
+`BorderScale` (nine-slice, [below](#sliced-art)). A brush with no image is a plain `Tint` rect.
+
+`Animation` names an `AnimationClip`, the one sprites play: each step shows its frame of the clip's
+sheet, found by name, or its own texture. An image plays it from its first step while it is shown on a
+canvas that ticks (a running game; the UI panel's **Play**), and rebuilds only when the step changes;
+a `Once` clip stops on its last step. Without Play the editor shows the first step. A clip that does not
+load leaves the brush's `Sheet` or `Texture`, and a frame name its sheet lacks shows the sheet's
+default frame; each says so once in the log (`UIBrush`).
 
 ```json
 { "Type": "UIImage", "Name": "Icon",
