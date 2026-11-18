@@ -91,10 +91,10 @@ TEST_CASE("UICanvasFile: every widget type round-trips its own fields and the tr
 
     auto lButton = NewObject<UIButton>();
     lButton->Name     = "Menu";
-    lButton->Normal   = { 0.11f, 0.f, 0.f, 1.f };
-    lButton->Hovered  = { 0.22f, 0.f, 0.f, 1.f };
-    lButton->Pressed  = { 0.33f, 0.f, 0.f, 1.f };
-    lButton->Disabled = { 0.44f, 0.f, 0.f, 0.5f };
+    lButton->Brushes.Normal.Tint   = { 0.11f, 0.f, 0.f, 1.f };
+    lButton->Brushes.Hovered.Tint  = { 0.22f, 0.f, 0.f, 1.f };
+    lButton->Brushes.Pressed.Tint  = { 0.33f, 0.f, 0.f, 1.f };
+    lButton->Brushes.Disabled.Tint = { 0.44f, 0.f, 0.f, 0.5f };
     lButton->SetEnabled(false);
     lDoc.Root->AddChild(Move(lButton));
 
@@ -141,7 +141,7 @@ TEST_CASE("UICanvasFile: every widget type round-trips its own fields and the tr
     const auto* lBackButton = dynamic_cast<const UIButton*>(lBack.Root->GetChildren()[1].Get());
     REQUIRE(lBackButton != nullptr);
     CHECK_FALSE(lBackButton->IsEnabled());
-    CHECK(lBackButton->Pressed.r == doctest::Approx(0.33f));
+    CHECK(lBackButton->Brushes.Pressed.Tint.r == doctest::Approx(0.33f));
 
     // And the text is STABLE: writing what was read gives the same bytes, which is what makes a
     // dirty check a string compare instead of a tree diff.

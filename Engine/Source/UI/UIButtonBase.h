@@ -1,19 +1,11 @@
 ﻿#pragma once
 
-#include "Core/Color/LinearColor.h"
-#include "Core/Color/LinearColorJson.h"
 #include "Core/Events/Delegate.h"
 #include "Core/OpaaxTypes.h"
-#include "Core/String/OpaaxStringID.hpp"
-#include "Renderer/Textures/SpriteSheet.h"   // complete: a widget class visits its sheet reference
-#include "Renderer/Textures/Texture2D.h"     // and its texture reference
-#include "Resources/Asset/AssetRef.h"
 #include "UI/UIWidget.h"
 
 namespace Opaax
 {
-    class ITexture2D;
-
     DECLARE_MULTICAST_DELEGATE(FButtonEventDelegate);
 
     /** What a button shows: disabled wins, then pressed, then hovered. */

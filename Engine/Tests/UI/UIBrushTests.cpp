@@ -283,31 +283,6 @@ TEST_CASE("UIBrush: an image draws the quads of the brush its fields make")
     CheckSameQuads(lImage->GetQuads(), lExpected);
 }
 
-TEST_CASE("UIBrush: each button state's brush has its colour and its frame (-1 shows Frame)")
-{
-    auto lButton = NewObject<UIButton>();
-    lButton->Sheet.Path    = "UI/Buttons.opaaxasset";
-    lButton->Frame         = 4;
-    lButton->HoveredFrame  = 1;
-    lButton->PressedFrame  = -1;
-    lButton->DisabledFrame = 3;
-    lButton->Border        = UIMargin{ 1.f, 2.f, 3.f, 4.f };
-    lButton->BorderScale   = 0.25f;
-
-    const UIBrush lHovered = lButton->GetStateBrush(EUIButtonState::Hovered);
-    CHECK(lHovered.Frame == 1);
-    CHECK(lHovered.Tint.r == doctest::Approx(lButton->Hovered.r));
-    CHECK(lHovered.Sheet.Path == lButton->Sheet.Path);
-    CHECK(lHovered.Border.Top == doctest::Approx(4.f));
-    CHECK(lHovered.BorderScale == doctest::Approx(0.25f));
-
-    CHECK(lButton->GetStateBrush(EUIButtonState::Normal).Frame == 4);
-    CHECK(lButton->GetStateBrush(EUIButtonState::Pressed).Frame == 4);
-    CHECK(lButton->GetStateBrush(EUIButtonState::Pressed).Tint.r == doctest::Approx(lButton->Pressed.r));
-    CHECK(lButton->GetStateBrush(EUIButtonState::Disabled).Frame == 3);
-    CHECK(lButton->GetStateBrush(EUIButtonState::Disabled).Tint.a == doctest::Approx(lButton->Disabled.a));
-}
-
 TEST_CASE("UIBrush: a button draws its state's brush, Normal then Hovered")
 {
     StubAssets     lAssets;
@@ -319,14 +294,16 @@ TEST_CASE("UIBrush: a button draws its state's brush, Normal then Hovered")
     UIRect    lRect;
     lRect.SizeDelta = { 200.f, 100.f };
     lButton->SetRect(lRect);
-    lButton->Sheet.Path   = "UI/Buttons.opaaxasset";
-    lButton->Frame        = 0;
-    lButton->HoveredFrame = 2;
+    lButton->Brushes.Normal.Sheet.Path  = "UI/Buttons.opaaxasset";
+    lButton->Brushes.Normal.Frame       = 0;
+    lButton->Brushes.Hovered.Sheet.Path = "UI/Buttons.opaaxasset";
+    lButton->Brushes.Hovered.Frame      = 2;
+    lButton->Brushes.FadeDuration       = 0.f;
     lButton->InvalidateContent();
     lCanvas.Update(lContext);
 
     TDynArray<UIQuad> lExpected;
-    DrawBrush(lContext, lButton->GetBounds(), lButton->GetStateBrush(EUIButtonState::Normal), nullptr, 0.f, lExpected);
+    DrawBrush(lContext, lButton->GetBounds(), lButton->GetStateBrush(EUIInteractionState::Normal), nullptr, 0.f, lExpected);
     CheckSameQuads(lButton->GetQuads(), lExpected);
 
     lCanvas.RoutePointer(UIPointerEvent{ EUIPointerEventType::Move, { 0.f, 0.f }, EUIPointerButton::None });
@@ -334,7 +311,7 @@ TEST_CASE("UIBrush: a button draws its state's brush, Normal then Hovered")
     REQUIRE(lButton->GetState() == EUIButtonState::Hovered);
 
     lExpected.clear();
-    DrawBrush(lContext, lButton->GetBounds(), lButton->GetStateBrush(EUIButtonState::Hovered), nullptr, 0.f, lExpected);
+    DrawBrush(lContext, lButton->GetBounds(), lButton->GetStateBrush(EUIInteractionState::Hovered), nullptr, 0.f, lExpected);
     CHECK(lExpected[0].UVMin.x == doctest::Approx(0.2f));   // frame 2
     CheckSameQuads(lButton->GetQuads(), lExpected);
 }

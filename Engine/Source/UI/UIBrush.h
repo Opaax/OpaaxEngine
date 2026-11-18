@@ -49,6 +49,14 @@ namespace Opaax
         /** Canvas units a border pixel takes on screen: sizes the corners and edges, not what they show. */
         float BorderScale = 1.f;
 
+        /** A plain InTint rect (no image). */
+        static UIBrush FromTint(const LinearColor& InTint)
+        {
+            UIBrush lBrush;
+            lBrush.Tint = InTint;
+            return lBrush;
+        }
+
         /** True when it names an image (a clip, a sheet or a texture); false for a plain colour. */
         bool HasImage() const noexcept { return !Animation.IsEmpty() || !Sheet.IsEmpty() || !Texture.IsEmpty(); }
 

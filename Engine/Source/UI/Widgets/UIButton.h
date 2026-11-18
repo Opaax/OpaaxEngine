@@ -1,29 +1,21 @@
 #pragma once
 
 #include "Core/Color/LinearColor.h"
-#include "Core/Color/LinearColorJson.h"
-#include "Core/Events/Delegate.h"
 #include "Core/OpaaxTypes.h"
-#include "Core/String/OpaaxStringID.hpp"
-#include "Renderer/Textures/SpriteSheet.h"   // complete: a widget class visits its sheet reference
-#include "Renderer/Textures/Texture2D.h"     // and its texture reference
-#include "Resources/Asset/AssetRef.h"
-#include "UI/UIButtonBase.h"
 #include "UI/UIBrush.h"
-#include "UI/UIMargin.h"
+#include "UI/UIButtonBase.h"
+#include "UI/UIStateBrushes.h"
 #include "UI/UIWidget.h"
 
 namespace Opaax
 {
     class ITexture2D;
 
-    DECLARE_MULTICAST_DELEGATE(FOnUIClick)
-
     // =============================================================================
     // UIButton — a clickable image. A click is Down then Up still inside (a drag-off does not fire).
-    //   Each state shows its own sheet frame (or Frame) tinted by its colour, sliced like a UIImage
-    //   with the frame's border. Add a UIText child for a label.
-    //   It handles its pointer events, so clicks do not reach the game.
+    //   Each interaction state draws its brush (UIStateBrushes): the image swaps at once, the tint
+    //   fades over FadeDuration, and a state's clip starts over when the state is entered. Add a UIText
+    //   child for a label. It handles its pointer events, so clicks do not reach the game.
     // =============================================================================
     class UIButton final : public UIButtonBase
     {
@@ -33,75 +25,52 @@ namespace Opaax
         // Authored state
         // =============================================================================
     public:
-        LinearColor Normal   = { 0.25f, 0.25f, 0.28f, 1.f };
-        LinearColor Hovered  = { 0.35f, 0.35f, 0.40f, 1.f };
-        LinearColor Pressed  = { 0.15f, 0.15f, 0.18f, 1.f };
-        LinearColor Disabled = { 0.20f, 0.20f, 0.20f, 0.5f };
-
-        /** The button's art, tinted by the state colour. The sheet wins over the texture. */
-        TAssetRef<Texture2D>   Texture;
-        TAssetRef<SpriteSheet> Sheet;
-
-        /** The sheet frame shown in Normal, and in any state whose own frame is -1. */
-        Int32 Frame = -1;
-
-        /** The sheet frames of the other states; -1 shows Frame. */
-        Int32 HoveredFrame  = -1;
-        Int32 PressedFrame  = -1;
-        Int32 DisabledFrame = -1;
-
-        /** 9-slice border in texture pixels. All zero = each state's frame's own border. */
-        UIMargin Border;
-
-        /** Canvas units a border pixel takes on screen: sizes the corners and edges, not what they show. */
-        float BorderScale = 1.f;
+        /** What each state draws, and the tint's fade between them. */
+        UIStateBrushes Brushes;
 
         OPAAX_PROPERTIES(UIButton,
-                         OPAAX_PROP(Normal),
-                         OPAAX_PROP(Hovered),
-                         OPAAX_PROP(Pressed),
-                         OPAAX_PROP(Disabled),
-                         OPAAX_PROP(Texture),
-                         OPAAX_PROP(Sheet).SetTooltip("The art cut from a sheet. Wins over Texture when set."),
-                         OPAAX_PROP(Frame).SetRange(-1.f, 4096.f).SetDragStep(1.f)
-                             .SetTooltip("Shown in Normal, and in a state whose frame is -1.\n"
-                                         "-1 is the sheet's own default frame."),
-                         OPAAX_PROP(HoveredFrame).SetRange(-1.f, 4096.f).SetDragStep(1.f).SetTooltip("-1 shows Frame."),
-                         OPAAX_PROP(PressedFrame).SetRange(-1.f, 4096.f).SetDragStep(1.f).SetTooltip("-1 shows Frame."),
-                         OPAAX_PROP(DisabledFrame).SetRange(-1.f, 4096.f).SetDragStep(1.f).SetTooltip("-1 shows Frame."),
-                         OPAAX_PROP(Border).SetDragStep(1.f)    // pixels
-                             .SetTooltip("9-slice border in texture pixels. All zero: each frame's own."),
-                         OPAAX_PROP(BorderScale).SetRange(0.01f, 16.f).SetDragStep(0.01f)
-                             .SetTooltip("Canvas units a border pixel takes: 0.5 draws the corners\n"
-                                         "half as big, showing the same art."))
+                         OPAAX_PROP(Brushes))
 
+        /** A runtime texture, borrowed: every state shows it, in its own tint. */
         void        SetTexture(ITexture2D* InTexture);
         ITexture2D* GetTexture() const noexcept { return m_Texture; }
 
-        /** The sheet frame InState shows: its own, or Frame when that is -1. */
-        Int32 GetStateFrame(EUIButtonState InState) const noexcept;
+        /** What InState draws (UIStateBrushes::For). */
+        UIBrush GetStateBrush(EUIInteractionState InState) const { return Brushes.For(InState); }
 
-        /** What InState draws: its colour and frame, with the button's art and border. */
-        UIBrush GetStateBrush(EUIButtonState InState) const;
+        /** The tint drawn now, partway through a fade. */
+        const LinearColor& GetShownTint() const noexcept { return m_ShownTint; }
 
         // =============================================================================
-        // UIButtonBase
+        // UIWidget
         // =============================================================================
+    public:
+        OpaaxString DescribeBrush() const override;
+        void        PostEditChange() override;
+
     protected:
-        void RebuildNormalState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads) override;
-        void RebuildHoveredState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads) override;
-        void RebuildPressedState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads) override;
-        void RebuildDisabledState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads) override;
-
-    private:
-        /** Draws InState's brush; named but not ready draws nothing and rebuilds later. */
-        void DrawState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads, EUIButtonState InState);
+        void Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads) override;
+        bool Tick(float InSeconds) override;
+        void OnReset() override;
+        void OnInteractionStateChanged(EUIInteractionState InFrom, EUIInteractionState InTo) override;
 
         // =============================================================================
         // Members
         // =============================================================================
     private:
-        ITexture2D* m_Texture = nullptr;   // borrowed
-        bool        m_bWarnedTiles = false;   // too many tiles, said once
+        ITexture2D* m_Texture      = nullptr;   // borrowed
+        bool        m_bWarnedTiles = false;     // too many tiles, said once
+        bool        m_bWarnedClip  = false;     // a clip problem, said once
+
+        /** Seconds since the state was entered (its clip's time). */
+        float m_StateSeconds = 0.f;
+        bool  m_bDrawnOnce   = false;   // the first draw jumps to its tint
+
+        /** The tint's fade: from the one shown when the state changed. */
+        LinearColor m_FadeFrom;
+        LinearColor m_ShownTint;
+        float       m_FadeSeconds = 0.f;
+
+        UIBrushClip m_DrawnClip;   // where the state's clip was when last drawn; its Clip only tested for null later
     };
 }
