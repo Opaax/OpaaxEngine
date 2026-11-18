@@ -9,7 +9,7 @@
 #include "Renderer/Textures/Texture2D.h"     // and its texture reference
 #include "Resources/Asset/AssetRef.h"
 #include "UI/UIButtonBase.h"
-#include "UI/UIImageSource.h"
+#include "UI/UIBrush.h"
 #include "UI/UIMargin.h"
 #include "UI/UIWidget.h"
 
@@ -81,6 +81,9 @@ namespace Opaax
         /** The sheet frame InState shows: its own, or Frame when that is -1. */
         Int32 GetStateFrame(EUIButtonState InState) const noexcept;
 
+        /** What InState draws: its colour and frame, with the button's art and border. */
+        UIBrush GetStateBrush(EUIButtonState InState) const;
+
         // =============================================================================
         // UIButtonBase
         // =============================================================================
@@ -91,9 +94,8 @@ namespace Opaax
         void RebuildDisabledState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads) override;
 
     private:
-        /** Draws InFrame (sheet) or the texture, tinted InColor. False when named but not ready (re-armed). */
-        bool DrawImage(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads, Int32 InFrame,
-                       const LinearColor& InColor);
+        /** Draws InState's brush; named but not ready draws nothing and rebuilds later. */
+        void DrawState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads, EUIButtonState InState);
 
         // =============================================================================
         // Members
