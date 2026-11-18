@@ -37,9 +37,9 @@ namespace Opaax
     }
 
     // =============================================================================
-    // UIImage — a colour rect, or an image tinted by it (a texture, or a sheet frame; the sheet wins).
-    //   One quad, or nine with a border (9-slice): its own Border, else the sheet frame's. FillAmount
-    //   crops from the min edge (health bar) and works with 9-slice too.
+    // UIImage — draws its brush: a colour rect, or an image tinted by it (a texture, or a sheet frame;
+    //   the sheet wins). One quad, or nine with a border (9-slice): the brush's Border, else the sheet
+    //   frame's. FillAmount crops from the min edge (health bar) and works with 9-slice too.
     // =============================================================================
     class UIImage final : public UIWidget
     {
@@ -49,47 +49,25 @@ namespace Opaax
         // Authored state
         // =============================================================================
     public:
-        LinearColor Color;
+        /** What it draws: the tint, the texture or sheet frame, the 9-slice border. */
+        UIBrush     Brush;
         EUIFill     Fill       = EUIFill::None;
         float       FillAmount = 1.f;
         /** "Source.Property" to read FillAmount from (0..1); empty = the authored value. */
         OpaaxString FillBinding;
 
-        /** A texture path (accepts a dropped .png). */
-        TAssetRef<Texture2D> Texture;
-
-        /** A sheet path. Wins over Texture. */
-        TAssetRef<SpriteSheet> Sheet;
-
-        /** Sheet frame; -1 = the sheet's default. */
-        Int32 Frame = -1;
-
-        /**
-         * 9-slice border in texture pixels (the edges that do not stretch). All zero = the sheet
-         * frame's own border, if it has one. Ignored without a texture.
-         */
-        UIMargin Border;
-
-        /** Canvas units a border pixel takes on screen: sizes the corners and edges, not what they show. */
-        float BorderScale = 1.f;
-
         OPAAX_PROPERTIES(UIImage,
-                         OPAAX_PROP(Color),
-                         OPAAX_PROP(Texture),
-                         OPAAX_PROP(Sheet).SetTooltip("An icon cut from a sheet. Wins over Texture when set."),
-                         OPAAX_PROP(Frame).SetRange(-1.f, 4096.f).SetDragStep(1.f).SetTooltip("-1 is the sheet's own default frame."),
-                         OPAAX_PROP(Border).SetDragStep(1.f)    // pixels
-                             .SetTooltip("9-slice border in texture pixels. All zero: the sheet frame's own."),
-                         OPAAX_PROP(BorderScale).SetRange(0.01f, 16.f).SetDragStep(0.01f)
-                             .SetTooltip("Canvas units a border pixel takes: 0.5 draws the corners\n"
-                                         "half as big, showing the same art."),
+                         OPAAX_PROP(Brush),
                          OPAAX_PROP(Fill),
                          OPAAX_PROP(FillAmount).SetRange(0.f, 1.f),
                          OPAAX_PROP(FillBinding).SetTooltip("Source.Property, pulled each frame into FillAmount."))
 
+        /** Brush.Texture. */
         void SetTexturePath(const OpaaxString& InAssetPath);
+        /** Brush.Sheet and Brush.Frame. */
         void SetSheetFrame(const OpaaxString& InSheetPath, Int32 InFrame);
 
+        /** Brush.Tint. */
         void SetColor(const LinearColor& InColor);
         void SetFill(EUIFill InFill, float InAmount);
         void SetFillAmount(float InAmount);
@@ -110,10 +88,6 @@ namespace Opaax
 
     protected:
         void Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads) override;
-
-    private:
-        /** The brush its image fields make. */
-        UIBrush MakeBrush() const;
 
         // =============================================================================
         // Members

@@ -384,9 +384,9 @@ TEST_CASE("UIImageSource: the new fields round-trip through the file, and a file
     lDoc.Root = NewObject<UIPanel>();
 
     auto lImage = NewObject<UIImage>();
-    lImage->Sheet.Path  = "UI/Icons.opaaxasset";
-    lImage->Frame       = 7;
-    lImage->BorderScale = 0.4f;
+    lImage->Brush.Sheet.Path  = "UI/Icons.opaaxasset";
+    lImage->Brush.Frame       = 7;
+    lImage->Brush.BorderScale = 0.4f;
     lDoc.Root->AddChild(Move(lImage));
 
     auto lButton = NewObject<UIButton>();
@@ -401,9 +401,9 @@ TEST_CASE("UIImageSource: the new fields round-trip through the file, and a file
 
     const auto* lReadImage  = static_cast<const UIImage*>(lBack.Root->GetChildren()[0].Get());
     const auto* lReadButton = static_cast<const UIButton*>(lBack.Root->GetChildren()[1].Get());
-    CHECK(lReadImage->Sheet.Path == OpaaxString("UI/Icons.opaaxasset"));
-    CHECK(lReadImage->Frame == 7);
-    CHECK(lReadImage->BorderScale == doctest::Approx(0.4f));
+    CHECK(lReadImage->Brush.Sheet.Path == OpaaxString("UI/Icons.opaaxasset"));
+    CHECK(lReadImage->Brush.Frame == 7);
+    CHECK(lReadImage->Brush.BorderScale == doctest::Approx(0.4f));
     CHECK(lReadButton->Texture.Path == OpaaxString("UI/Button.png"));
     CHECK(lReadButton->Sheet.Path == OpaaxString("UI/Icons.opaaxasset"));
     CHECK(lReadButton->Frame == 2);
@@ -415,5 +415,5 @@ TEST_CASE("UIImageSource: the new fields round-trip through the file, and a file
     CHECK(lOldButton->Texture.IsEmpty());
     CHECK(lOldButton->Frame == -1);
     const auto* lOldImage = static_cast<const UIImage*>(lOld.Root->GetChildren()[1].Get());
-    CHECK(lOldImage->BorderScale == doctest::Approx(1.f));
+    CHECK(lOldImage->Brush.BorderScale == doctest::Approx(1.f));
 }
