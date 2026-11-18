@@ -146,12 +146,13 @@ namespace Opaax
         void OnDetached(UIWidget& InSubtreeRoot);
 
         // =============================================================================
-        // Clock — the modifiers that animate (UIModifier::WakeUp)
+        // Clock — the widgets and modifiers that animate (UIWidget::WakeUp, UIModifier::WakeUp)
         // =============================================================================
     public:
         /**
-         * Ticks the awake modifiers with the frame's own time, and lets go of those that answer false.
-         * Once per frame, after the input is routed and before the canvas is drawn.
+         * Ticks the awake widgets that are shown, then the awake modifiers, with the frame's own time,
+         * and lets go of those that answer false. An awake widget that is not shown leaves the list
+         * until Show. Once per frame, after the input is routed and before the canvas is drawn.
          */
         void Tick(float InSeconds);
 
@@ -164,6 +165,9 @@ namespace Opaax
 
         /** How many modifiers the next Tick runs (none on an idle canvas). */
         Uint64 GetAwakeCount() const noexcept { return m_Awake.size(); }
+
+        /** How many widgets the next Tick may run (none on an idle canvas; a hidden one leaves it then). */
+        Uint64 GetAwakeWidgetCount() const noexcept { return m_AwakeWidgets.size(); }
 
         /**
          * Whether the host ticks this canvas (a game does; the editor's document does only while its
@@ -193,6 +197,12 @@ namespace Opaax
 
         /** Not ticked any more. */
         void RemoveAwake(const UIModifier& InModifier);
+
+        /** Ticked from the next Tick while shown (once, whatever how many times it is woken). */
+        void AddAwake(UIWidget& InWidget);
+
+        /** Not ticked any more. */
+        void RemoveAwake(const UIWidget& InWidget);
 
         struct InteractionSnapshot
         {
@@ -228,5 +238,8 @@ namespace Opaax
 
         /** The modifiers the next Tick runs. Weak: a destroyed one is skipped. */
         TDynArray<TWeakObjectPtr<UIModifier>> m_Awake;
+
+        /** The widgets the next Tick runs when shown. Weak: a destroyed one is skipped. */
+        TDynArray<TWeakObjectPtr<UIWidget>> m_AwakeWidgets;
     };
 }
