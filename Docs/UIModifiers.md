@@ -158,7 +158,10 @@ the pointer over the image hovering and pressing it; selecting and dragging paus
 tween modifier has a **Play tween** button. **Stop** puts everything back at rest
 (`UICanvas::ResetRuntime`): nothing saved changes, so a play never makes the document dirty. Without
 Play, the editor's canvas is not ticked and nothing animates in it by itself.
-`ui.preview.play` and `ui.preview.hover` drive it.
+**Preview state**, beside it, shows the selected widget in a state without the pointer: Normal,
+Hovered, Pressed, Focused or Disabled (a button's art for that state; its transitions and state tweens
+while Play runs). **Live** gives it back to the pointer; Stop clears it, and nothing saved changes.
+`ui.preview.play`, `ui.preview.hover` and `ui.preview.state` drive them.
 
 ## Writing one
 

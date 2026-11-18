@@ -656,8 +656,12 @@ namespace Opaax::Editor
 
         if (bInHovered)
         {
-            lRoute(EUIPointerEventType::Move, EUIPointerButton::None);
-            if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) { lRoute(EUIPointerEventType::Down, EUIPointerButton::Primary); }
+            // Routed when the mouse enters, moves or clicks: a still mouse leaves a scripted hover
+            // (ui.preview.hover) where it is, wherever the cursor happens to sit.
+            const bool bMoved = !m_bPointerInPreview || lIO.MouseDelta.x != 0.f || lIO.MouseDelta.y != 0.f;
+            const bool bClick = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
+            if (bMoved || bClick) { lRoute(EUIPointerEventType::Move, EUIPointerButton::None); }
+            if (bClick)           { lRoute(EUIPointerEventType::Down, EUIPointerButton::Primary); }
             m_bPointerInPreview = true;
         }
 
@@ -708,6 +712,42 @@ namespace Opaax::Editor
             ImGui::EndCombo();
         }
         if (ImGui::IsItemHovered()) { ImGui::SetTooltip("The aspect the canvas lays out at — what the game's window would be."); }
+
+        // The selected widget shown in a state of its own, without the pointer. Runtime only: Stop clears it.
+        ImGui::SameLine();
+        UIWidget* const lSelected = lDoc.Resolve(lDoc.SelectedPath());
+        ImGui::BeginDisabled(lSelected == nullptr);
+        {
+            const TOptional<EUIInteractionState> lForced = lSelected != nullptr ? lSelected->GetPreviewState()
+                                                                                 : TOptional<EUIInteractionState>();
+            ImGui::SetNextItemWidth(90.f);
+            if (ImGui::BeginCombo("##UIPreviewState", lForced.has_value() ? ToString(*lForced) : "Live"))
+            {
+                if (ImGui::Selectable("Live", !lForced.has_value()) && lSelected != nullptr)
+                {
+                    lSelected->SetPreviewState(NullOpt);
+                }
+                constexpr EUIInteractionState STATES[] = { EUIInteractionState::Normal, EUIInteractionState::Hovered,
+                                                           EUIInteractionState::Pressed, EUIInteractionState::Focused,
+                                                           EUIInteractionState::Disabled };
+                for (const EUIInteractionState lState : STATES)
+                {
+                    const bool bChosen = lForced.has_value() && *lForced == lState;
+                    if (ImGui::Selectable(ToString(lState), bChosen) && lSelected != nullptr)
+                    {
+                        lSelected->SetPreviewState(lState);
+                    }
+                }
+                ImGui::EndCombo();
+            }
+        }
+        ImGui::EndDisabled();
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+        {
+            ImGui::SetTooltip("Preview state: the selected widget shows this state without the pointer\n"
+                              "(its art; its transitions and state tweens while Play runs).\n"
+                              "Live gives it back to the pointer. Nothing saved changes; Stop clears it.");
+        }
 
         ImGui::SameLine();
         if (ImGui::SmallButton("Fit")) { m_bFitPending = true; }

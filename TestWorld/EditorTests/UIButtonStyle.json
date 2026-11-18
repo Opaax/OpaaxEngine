@@ -171,6 +171,17 @@
         }
     },
     {
+        "id": "still-hovered",
+        "command": "ui.widget.list",
+        "expect": {
+            "widgets": [
+                {
+                    "interaction": "Hovered"
+                }
+            ]
+        }
+    },
+    {
         "id": "hovered-frame-shown",
         "command": "ui.widget.list",
         "expect": {

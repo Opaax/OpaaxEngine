@@ -1492,6 +1492,48 @@ namespace Opaax::Editor::EditorAutomation
                         { "interaction", ToString(lWidget->GetInteractionState()) } });
                 });
 
+            InCommands.Register("ui.preview.state",
+                "Shows the widget named {widget} in {state} (Normal, Hovered, Pressed, Focused, Disabled) whatever the "
+                "pointer does, as the UI panel's Preview state; \"Live\" gives it back to the pointer. Runtime only: "
+                "nothing saved changes, and stopping the preview clears it. Answers its {interaction} and {brush}.",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    EditorUICanvasDocument& lDocument = InContext.UICanvasDocument;
+                    if (!lDocument.IsOpen())
+                    {
+                        return AutomationResult::Fail("no canvas is open in the UI panel: asset.open opens one");
+                    }
+
+                    const OpaaxString lName   = InParams.value("widget", OpaaxString());
+                    UIWidget* const   lWidget = lName.IsEmpty() ? nullptr : lDocument.GetCanvas().Root().FindByName(lName);
+                    if (lWidget == nullptr)
+                    {
+                        return AutomationResult::Fail("no widget named '" + lName + "' (ui.widget.list)");
+                    }
+
+                    const OpaaxString lStateName = InParams.value("state", OpaaxString("Live"));
+                    TOptional<EUIInteractionState> lState;
+                    if (lStateName != OpaaxString("Live"))
+                    {
+                        constexpr EUIInteractionState STATES[] = { EUIInteractionState::Normal, EUIInteractionState::Hovered,
+                                                                   EUIInteractionState::Pressed, EUIInteractionState::Focused,
+                                                                   EUIInteractionState::Disabled };
+                        for (const EUIInteractionState lCandidate : STATES)
+                        {
+                            if (lStateName == OpaaxString(ToString(lCandidate))) { lState = lCandidate; }
+                        }
+                        if (!lState.has_value())
+                        {
+                            return AutomationResult::Fail("state is Live, Normal, Hovered, Pressed, Focused or Disabled, not '"
+                                                          + lStateName + "'");
+                        }
+                    }
+
+                    lWidget->SetPreviewState(lState);
+                    return AutomationResult::Ok(nlohmann::json{ { "interaction", ToString(lWidget->GetInteractionState()) },
+                                                                { "brush", lWidget->DescribeBrush() } });
+                });
+
             InCommands.Register("ui.modifier.move",
                 "Moves the selected widget's modifier at {index} by {delta} places (-1: up; clamped). List order is "
                 "the order poses apply in. Undoable.",
