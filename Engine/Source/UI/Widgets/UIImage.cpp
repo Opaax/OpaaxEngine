@@ -4,7 +4,7 @@
 
 #include "Core/Reflection/OpaaxEnumJson.h"
 #include "UI/UIBinding.h"
-#include "UI/UIImageSource.h"
+#include "UI/UIBrush.h"
 #include "UI/UISlice.h"
 
 namespace Opaax
@@ -77,6 +77,18 @@ namespace Opaax
         InvalidateContent();
     }
 
+    UIBrush UIImage::MakeBrush() const
+    {
+        UIBrush lBrush;
+        lBrush.Tint        = Color;
+        lBrush.Texture     = Texture;
+        lBrush.Sheet       = Sheet;
+        lBrush.Frame       = Frame;
+        lBrush.Border      = Border;
+        lBrush.BorderScale = BorderScale;
+        return lBrush;
+    }
+
     void UIImage::OnPullBindings(UIBindingTable& InBindings)
     {
         if (FillBinding.IsEmpty())
@@ -112,15 +124,14 @@ namespace Opaax
 
         // Runtime pointer > sheet frame > texture. Named but not ready: draw nothing and retry;
         // nothing named: a plain colour.
-        UIResolvedImage lImage;
-        bool            bNamed = false;
-        if (!ResolveImageSource(InContext, m_Texture, Texture, Sheet, Frame, lImage, bNamed) && bNamed)
+        const EUIBrushDraw lDraw = DrawBrush(InContext, GetBounds(), MakeBrush(), m_Texture, OutQuads);
+        if (lDraw == EUIBrushDraw::NotReady)
         {
             InvalidateContent();
             return;
         }
 
-        if (!BuildImageQuads(GetBounds(), lImage, Border, BorderScale, Color, OutQuads) && !m_bWarnedTiles)
+        if (lDraw == EUIBrushDraw::Stretched && !m_bWarnedTiles)
         {
             m_bWarnedTiles = true;
             OPAAX_LOG(LogUISlice, Warn, "'{}' would take more than {} tiles: stretched instead (raise BorderScale)",
