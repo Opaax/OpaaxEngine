@@ -116,7 +116,7 @@ namespace Opaax
         switch (InClip.Issue)
         {
             case EUIBrushIssue::ClipMissing:
-                return OpaaxString::Format("clip '{}' did not load: its Sheet or Texture shows instead",
+                return OpaaxString::Format("clip '{}' did not load as an animation clip: its Sheet or Texture shows instead",
                                            InBrush.Animation.Path.CStr());
             case EUIBrushIssue::SheetMissing:
                 return OpaaxString::Format("the sheet of clip '{}' did not load: its default frame shows",
