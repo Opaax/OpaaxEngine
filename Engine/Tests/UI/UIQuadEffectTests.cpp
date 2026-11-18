@@ -24,7 +24,7 @@ namespace
             UIRect lRect;
             lRect.SizeDelta = { 100.f, 40.f };
             Image->SetRect(lRect);
-            Image->Color = LinearColor(1.f, 0.5f, 0.25f, 0.8f);
+            Image->Brush.Tint = LinearColor(1.f, 0.5f, 0.25f, 0.8f);
             Canvas.Update();
         }
 

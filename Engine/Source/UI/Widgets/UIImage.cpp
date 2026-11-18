@@ -29,7 +29,7 @@ namespace Opaax
 
     void UIImage::SetColor(const LinearColor& InColor)
     {
-        Color = InColor;
+        Brush.Tint = InColor;
         InvalidateContent();
     }
 
@@ -48,26 +48,26 @@ namespace Opaax
 
     void UIImage::SetTexturePath(const OpaaxString& InAssetPath)
     {
-        Texture.Path = InAssetPath;
+        Brush.Texture.Path = InAssetPath;
         InvalidateContent();
     }
 
     void UIImage::SetSheetFrame(const OpaaxString& InSheetPath, const Int32 InFrame)
     {
-        Sheet.Path = InSheetPath;
-        Frame      = InFrame;
+        Brush.Sheet.Path = InSheetPath;
+        Brush.Frame      = InFrame;
         InvalidateContent();
     }
 
     void UIImage::SetBorder(const UIMargin& InBorder)
     {
-        Border = InBorder;
+        Brush.Border = InBorder;
         InvalidateContent();
     }
 
     void UIImage::SetBorderScale(const float InBorderScale)
     {
-        BorderScale = InBorderScale;
+        Brush.BorderScale = InBorderScale;
         InvalidateContent();
     }
 
@@ -75,18 +75,6 @@ namespace Opaax
     {
         m_Texture = InTexture;
         InvalidateContent();
-    }
-
-    UIBrush UIImage::MakeBrush() const
-    {
-        UIBrush lBrush;
-        lBrush.Tint        = Color;
-        lBrush.Texture     = Texture;
-        lBrush.Sheet       = Sheet;
-        lBrush.Frame       = Frame;
-        lBrush.Border      = Border;
-        lBrush.BorderScale = BorderScale;
-        return lBrush;
     }
 
     void UIImage::OnPullBindings(UIBindingTable& InBindings)
@@ -124,7 +112,7 @@ namespace Opaax
 
         // Runtime pointer > sheet frame > texture. Named but not ready: draw nothing and retry;
         // nothing named: a plain colour.
-        const EUIBrushDraw lDraw = DrawBrush(InContext, GetBounds(), MakeBrush(), m_Texture, OutQuads);
+        const EUIBrushDraw lDraw = DrawBrush(InContext, GetBounds(), Brush, m_Texture, OutQuads);
         if (lDraw == EUIBrushDraw::NotReady)
         {
             InvalidateContent();

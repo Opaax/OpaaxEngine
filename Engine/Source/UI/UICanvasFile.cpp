@@ -19,6 +19,51 @@ namespace Opaax
         constexpr const char* KEY_CHILDREN  = "Children";
         constexpr const char* KEY_MODIFIERS = "Modifiers";
 
+        /** Version 1 to 2: an image's Color, Texture, Sheet, Frame, Border and BorderScale go into its Brush. */
+        void UpgradeImageToBrush(nlohmann::json& InOutNode)
+        {
+            constexpr const char* FIELDS[][2] = { { "Color", "Tint" }, { "Texture", "Texture" }, { "Sheet", "Sheet" },
+                                                  { "Frame", "Frame" }, { "Border", "Border" },
+                                                  { "BorderScale", "BorderScale" } };
+
+            // A key the node lacks stays out: the brush's default is version 1's.
+            nlohmann::json lBrush = nlohmann::json::object();
+            for (const auto& lField : FIELDS)
+            {
+                if (const auto lIt = InOutNode.find(lField[0]); lIt != InOutNode.end())
+                {
+                    lBrush[lField[1]] = Move(*lIt);
+                    InOutNode.erase(lIt);
+                }
+            }
+            InOutNode["Brush"] = Move(lBrush);
+        }
+
+        /**
+         * Brings InOutNode and its subtree from InVersion to UI_FORMAT_VERSION, in place, before its
+         * properties are read. Throws on a "Type" that is not text, as the reader does.
+         */
+        void UpgradeCanvasNode(nlohmann::json& InOutNode, const Uint32 InVersion)
+        {
+            if (InVersion >= UICanvasFile::UI_FORMAT_VERSION || !InOutNode.is_object())
+            {
+                return;
+            }
+
+            if (InVersion < 2 && InOutNode.value(KEY_TYPE, OpaaxString()) == OpaaxString("UIImage"))
+            {
+                UpgradeImageToBrush(InOutNode);
+            }
+
+            if (const auto lIt = InOutNode.find(KEY_CHILDREN); lIt != InOutNode.end() && lIt->is_array())
+            {
+                for (nlohmann::json& lChild : *lIt)
+                {
+                    UpgradeCanvasNode(lChild, InVersion);
+                }
+            }
+        }
+
         /** One node: its class, its properties, its modifiers, then its children. */
         nlohmann::json WriteNode(const UIWidget& InWidget)
         {
@@ -163,7 +208,7 @@ namespace Opaax
 
     bool UICanvasFile::Deserialize(const OpaaxString& InText, const ObjectClassRegistry& InClasses, UICanvasDoc& OutDoc)
     {
-        const nlohmann::json lJson = nlohmann::json::parse(InText.CStr(), nullptr, false);
+        nlohmann::json lJson = nlohmann::json::parse(InText.CStr(), nullptr, false);
 
         if (lJson.is_discarded() || !lJson.is_object())
         {
@@ -190,6 +235,7 @@ namespace Opaax
         {
             if (const auto lIt = lJson.find(KEY_ROOT); lIt != lJson.end())
             {
+                UpgradeCanvasNode(*lIt, lVersion);
                 lDoc.Root = ReadNode(*lIt, InClasses, lSkipped, lBadValue);
             }
         }
@@ -285,12 +331,14 @@ namespace Opaax
 
     OpaaxString UICanvasFile::SerializeNode(const UIWidget& InWidget)
     {
-        return ToJsonText(WriteNode(InWidget), 4);
+        nlohmann::json lJson = WriteNode(InWidget);
+        lJson[KEY_VERSION]   = UI_FORMAT_VERSION;
+        return ToJsonText(lJson, 4);
     }
 
     TStrongObjectPtr<UIWidget> UICanvasFile::DeserializeNode(const OpaaxString& InText, const ObjectClassRegistry& InClasses)
     {
-        const nlohmann::json lJson = nlohmann::json::parse(InText.CStr(), nullptr, false);
+        nlohmann::json lJson = nlohmann::json::parse(InText.CStr(), nullptr, false);
         if (lJson.is_discarded() || !lJson.is_object())
         {
             return nullptr;   // not a node (e.g. unrelated clipboard text)
@@ -301,6 +349,16 @@ namespace Opaax
         TStrongObjectPtr<UIWidget> lNode;
         try
         {
+            // Copied by a build that wrote no version: version 1.
+            const Uint32 lVersion = lJson.value(KEY_VERSION, 1u);
+            if (lVersion > UI_FORMAT_VERSION)
+            {
+                OPAAX_LOG(LogUICanvasFile, Error, "Node format version {} is newer than this build reads ({})",
+                          lVersion, UI_FORMAT_VERSION);
+                return nullptr;
+            }
+
+            UpgradeCanvasNode(lJson, lVersion);
             lNode = ReadNode(lJson, InClasses, lSkipped, lBadValue);
         }
         catch (const nlohmann::json::exception& InError)

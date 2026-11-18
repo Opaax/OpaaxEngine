@@ -84,7 +84,7 @@ TEST_CASE("UICanvasFile: every widget type round-trips its own fields and the tr
 
     auto lImage = NewObject<UIImage>();
     lImage->Name       = "SpeedFill";
-    lImage->Color      = { 0.2f, 0.85f, 0.35f, 1.f };
+    lImage->Brush.Tint = { 0.2f, 0.85f, 0.35f, 1.f };
     lImage->Fill       = EUIFill::Horizontal;
     lImage->FillAmount = 0.5f;
     lPanel->AddChild(Move(lImage));
@@ -136,7 +136,7 @@ TEST_CASE("UICanvasFile: every widget type round-trips its own fields and the tr
     REQUIRE(lBackImage != nullptr);
     CHECK(lBackImage->Fill == EUIFill::Horizontal);
     CHECK(lBackImage->FillAmount == doctest::Approx(0.5f));
-    CHECK(lBackImage->Color.g == doctest::Approx(0.85f));
+    CHECK(lBackImage->Brush.Tint.g == doctest::Approx(0.85f));
 
     const auto* lBackButton = dynamic_cast<const UIButton*>(lBack.Root->GetChildren()[1].Get());
     REQUIRE(lBackButton != nullptr);
@@ -336,7 +336,7 @@ TEST_CASE("UICanvasFile: U5b's two new fields round-trip, and a file without the
 
     auto lImage = NewObject<UIImage>();
     lImage->Name   = "Frame";
-    lImage->Border = UIMargin{ 12.f, 13.f, 14.f, 15.f };
+    lImage->Brush.Border = UIMargin{ 12.f, 13.f, 14.f, 15.f };
     lDoc.Root->AddChild(Move(lImage));
 
     auto lSafe = NewObject<UISafeArea>();
@@ -352,10 +352,10 @@ TEST_CASE("UICanvasFile: U5b's two new fields round-trip, and a file without the
     REQUIRE(lBackImage != nullptr);
     REQUIRE(lBackSafe  != nullptr);
 
-    CHECK(lBackImage->Border.Left  == doctest::Approx(12.f));
-    CHECK(lBackImage->Border.Right == doctest::Approx(13.f));
-    CHECK(lBackImage->Border.Bottom == doctest::Approx(14.f));
-    CHECK(lBackImage->Border.Top   == doctest::Approx(15.f));
+    CHECK(lBackImage->Brush.Border.Left  == doctest::Approx(12.f));
+    CHECK(lBackImage->Brush.Border.Right == doctest::Approx(13.f));
+    CHECK(lBackImage->Brush.Border.Bottom == doctest::Approx(14.f));
+    CHECK(lBackImage->Brush.Border.Top   == doctest::Approx(15.f));
     CHECK(lBackSafe->Insets.Left == doctest::Approx(0.1f));
     CHECK(lBackSafe->Insets.Top  == doctest::Approx(0.4f));
 
@@ -371,7 +371,7 @@ TEST_CASE("UICanvasFile: U5b's two new fields round-trip, and a file without the
 
     const auto* lOldImage = dynamic_cast<const UIImage*>(lOld.Root->GetChildren()[0].Get());
     REQUIRE(lOldImage != nullptr);
-    CHECK(lOldImage->Border.IsZero());
+    CHECK(lOldImage->Brush.Border.IsZero());
 }
 
 TEST_CASE("UICanvasFile: a file written when the asset fields were STRINGS still reads")
@@ -407,7 +407,7 @@ TEST_CASE("UICanvasFile: a file written when the asset fields were STRINGS still
     REQUIRE(lMask  != nullptr);
 
     CHECK(lText->Font.Path == OpaaxString("/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf"));
-    CHECK(lImage->Texture.Path == OpaaxString("UI/Art.png"));
+    CHECK(lImage->Brush.Texture.Path == OpaaxString("UI/Art.png"));
     CHECK(lMask->Texture.Path == OpaaxString("UI/MaskDisc.png"));
 
     // And it writes back as bare strings, so the file does not churn on the next save.
@@ -638,4 +638,122 @@ TEST_CASE("UICanvasFile: CloneWidget and a node's text carry the modifiers")
     REQUIRE(lPasted != nullptr);
     REQUIRE(ModifierAt(*lPasted, 0) != nullptr);
     CHECK(ModifierAt(*lPasted, 0)->Strength == doctest::Approx(5.f));
+}
+
+// =============================================================================
+// Format version 2: an image's fields in its brush
+// =============================================================================
+TEST_CASE("UICanvasFile: a version 1 image reads into its brush; a key it lacks takes version 1's default")
+{
+    const WidgetClasses lRegistry;
+
+    const OpaaxString lV1 = OpaaxString(R"({
+    "Root": { "Type": "UIPanel", "Children": [
+        { "Type": "UIImage", "Name": "Full", "Color": { "x": 0.1, "y": 0.2, "z": 0.3, "w": 0.4 },
+          "Texture": "UI/Art.png", "Sheet": "UI/Icons.opaaxasset", "Frame": 5,
+          "Border": { "Left": 1.0, "Right": 2.0, "Bottom": 3.0, "Top": 4.0 }, "BorderScale": 0.5,
+          "Fill": "Horizontal", "FillAmount": 0.25 },
+        { "Type": "UIImage", "Name": "Bare" }
+    ] },
+    "Version": 1
+})");
+
+    UICanvasFile::UICanvasDoc lDoc;
+    REQUIRE(UICanvasFile::Deserialize(lV1, lRegistry, lDoc));
+    REQUIRE(lDoc.Root->GetChildren().size() == 2u);
+
+    const auto* lFull = dynamic_cast<const UIImage*>(lDoc.Root->GetChildren()[0].Get());
+    REQUIRE(lFull != nullptr);
+    CHECK(lFull->Brush.Tint.y == doctest::Approx(0.2f));
+    CHECK(lFull->Brush.Tint.w == doctest::Approx(0.4f));
+    CHECK(lFull->Brush.Texture.Path == OpaaxString("UI/Art.png"));
+    CHECK(lFull->Brush.Sheet.Path == OpaaxString("UI/Icons.opaaxasset"));
+    CHECK(lFull->Brush.Frame == 5);
+    CHECK(lFull->Brush.Border.Bottom == doctest::Approx(3.f));
+    CHECK(lFull->Brush.BorderScale == doctest::Approx(0.5f));
+    CHECK(lFull->Fill == EUIFill::Horizontal);        // the fields outside the brush are untouched
+    CHECK(lFull->FillAmount == doctest::Approx(0.25f));
+
+    const auto* lBare = dynamic_cast<const UIImage*>(lDoc.Root->GetChildren()[1].Get());
+    REQUIRE(lBare != nullptr);
+    CHECK(lBare->Brush.Tint.x == doctest::Approx(1.f));   // version 1's white
+    CHECK(lBare->Brush.Tint.w == doctest::Approx(1.f));
+    CHECK_FALSE(lBare->Brush.HasImage());
+    CHECK(lBare->Brush.Frame == -1);
+    CHECK(lBare->Brush.BorderScale == doctest::Approx(1.f));
+
+    // A file with no version at all is version 1 too.
+    UICanvasFile::UICanvasDoc lUnversioned;
+    REQUIRE(UICanvasFile::Deserialize(OpaaxString(R"({"Root":{"Type":"UIPanel","Children":[{"Type":"UIImage","Frame":3}]}})"),
+                                      lRegistry, lUnversioned));
+    CHECK(dynamic_cast<const UIImage*>(lUnversioned.Root->GetChildren()[0].Get())->Brush.Frame == 3);
+}
+
+TEST_CASE("UICanvasFile: version 2 is written, with the image's brush, and reads back the same")
+{
+    const WidgetClasses lRegistry;
+
+    UICanvasFile::UICanvasDoc lDoc = UICanvasFile::MakeEmpty(1080.f);
+    UIWidget* const lPanel = lDoc.Root->AddChild(NewObject<UIPanel>());
+    auto lImage = NewObject<UIImage>();
+    lImage->SetColor({ 0.5f, 0.6f, 0.7f, 0.8f });
+    lImage->SetSheetFrame(OpaaxString("UI/Icons.opaaxasset"), 2);
+    lImage->SetBorderScale(0.25f);
+    lPanel->AddChild(Move(lImage));   // nested: the version reaches every node
+
+    const OpaaxString lText = UICanvasFile::Serialize(lDoc);
+    CHECK(lText.Find("\"Version\": 2") >= 0);
+    CHECK(lText.Find("\"Brush\"") >= 0);
+    CHECK(lText.Find("\"Color\"") < 0);
+
+    UICanvasFile::UICanvasDoc lBack;
+    REQUIRE(UICanvasFile::Deserialize(lText, lRegistry, lBack));
+    const auto* lRead = dynamic_cast<const UIImage*>(lBack.Root->GetChildren()[0]->GetChildren()[0].Get());
+    REQUIRE(lRead != nullptr);
+    CHECK(lRead->Brush.Tint.z == doctest::Approx(0.7f));
+    CHECK(lRead->Brush.Sheet.Path == OpaaxString("UI/Icons.opaaxasset"));
+    CHECK(lRead->Brush.Frame == 2);
+    CHECK(lRead->Brush.BorderScale == doctest::Approx(0.25f));
+
+    // Written again, the same text: a version 2 file is not upgraded twice.
+    CHECK(UICanvasFile::Serialize(lBack) == lText);
+}
+
+TEST_CASE("UICanvasFile: a version 3 file and a version 3 node are refused")
+{
+    const WidgetClasses lRegistry;
+
+    UICanvasFile::UICanvasDoc lDoc;
+    lDoc.ReferenceHeight = 999.f;
+    CHECK_FALSE(UICanvasFile::Deserialize(OpaaxString(R"({"Version": 3, "Root": {"Type": "UIPanel"}})"),
+                                          lRegistry, lDoc));
+    CHECK(lDoc.ReferenceHeight == doctest::Approx(999.f));
+
+    CHECK(UICanvasFile::DeserializeNode(OpaaxString(R"({"Version": 3, "Type": "UIImage"})"), lRegistry) == nullptr);
+}
+
+TEST_CASE("UICanvasFile: a node's text carries version 2; a pasted node without one upgrades as version 1")
+{
+    const WidgetClasses lRegistry;
+
+    auto lImage = NewObject<UIImage>();
+    lImage->SetColor({ 0.f, 1.f, 0.f, 1.f });
+    const OpaaxString lText = UICanvasFile::SerializeNode(*lImage);
+    CHECK(lText.Find("\"Version\": 2") >= 0);
+
+    TStrongObjectPtr<UIWidget> lPasted = UICanvasFile::DeserializeNode(lText, lRegistry);
+    REQUIRE(lPasted != nullptr);
+    CHECK(static_cast<const UIImage*>(lPasted.Get())->Brush.Tint.y == doctest::Approx(1.f));
+
+    // Copied by an older editor: no version, version 1 fields, an image under a panel.
+    const OpaaxString lOld = OpaaxString(R"({ "Type": "UIPanel", "Name": "Group", "Children": [
+        { "Type": "UIImage", "Name": "Icon", "Texture": "UI/Art.png", "Color": { "x": 0.0, "y": 0.0, "z": 1.0, "w": 1.0 } } ] })");
+    TStrongObjectPtr<UIWidget> lOldPasted = UICanvasFile::DeserializeNode(lOld, lRegistry);
+    REQUIRE(lOldPasted != nullptr);
+    REQUIRE(lOldPasted->GetChildren().size() == 1u);
+    const auto* lIcon = dynamic_cast<const UIImage*>(lOldPasted->GetChildren()[0].Get());
+    REQUIRE(lIcon != nullptr);
+    CHECK(lIcon->Brush.Texture.Path == OpaaxString("UI/Art.png"));
+    CHECK(lIcon->Brush.Tint.z == doctest::Approx(1.f));
+    CHECK(lIcon->Brush.Tint.x == doctest::Approx(0.f));
 }
