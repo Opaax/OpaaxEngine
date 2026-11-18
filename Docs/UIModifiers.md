@@ -86,6 +86,12 @@ Every widget has one, the strongest first: `Disabled` (it takes no input: a disa
 pressed and focused reach the parents: a panel is hovered while a widget in it is. `ui.list` answers
 it as `interaction`.
 
+A widget whose `StateSource` is `Button` takes the state of the nearest button above it instead of its
+own, so a label inside a button can tint on the button's hover and sink 2 units on its press with a
+transition of its own: Unreal's pressed padding and foreground colour, as modifiers. Its transitions and
+state tweens play on the button's changes, once each, and the UI panel's Preview state on the button
+reaches it too.
+
 ## Transitions
 
 `UITransitionModifier` holds a pose for `Hovered`, `Pressed`, `Focused` and `Disabled` (`Normal` is

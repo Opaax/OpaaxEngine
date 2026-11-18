@@ -42,6 +42,35 @@ namespace Opaax
         InvalidateContent();
     }
 
+    void UIImage::SetStyle(const OpaaxString& InStylePath)
+    {
+        Style.Path    = InStylePath;
+        m_ClipSeconds = 0.f;
+        InvalidateContent();
+    }
+
+    UIBrush UIImage::GetDrawnBrush() const
+    {
+        const UICanvas* lCanvas = GetCanvas();
+        if (Style.IsEmpty() || lCanvas == nullptr || lCanvas->GetAssets() == nullptr)
+        {
+            return Brush;
+        }
+
+        const UIButtonStyle* lStyle = ResolveButtonStyle(lCanvas->GetAssets(), Style);
+        if (lStyle == nullptr)
+        {
+            if (m_WarnedStyle != Style.Path)
+            {
+                m_WarnedStyle = Style.Path;
+                OPAAX_LOG(LogUIBrush, Warn, "Style '{}' did not load as a UI Button Style: '{}' draws its own Brush",
+                          Style.Path.CStr(), Name.IsEmpty() ? "an image" : Name.CStr());
+            }
+            return Brush;
+        }
+        return lStyle->Brushes.For(GetInteractionState());
+    }
+
     void UIImage::SetFill(const EUIFill InFill, const float InAmount)
     {
         Fill       = InFill;
@@ -121,12 +150,13 @@ namespace Opaax
 
         // Runtime pointer > clip > sheet frame > texture. Named but not ready: draw nothing and retry;
         // nothing named: a plain colour.
-        const EUIBrushDraw lDraw = DrawBrush(InContext, GetBounds(), Brush, m_Texture, m_ClipSeconds, OutQuads, &m_DrawnClip);
+        const UIBrush      lBrush = GetDrawnBrush();
+        const EUIBrushDraw lDraw  = DrawBrush(InContext, GetBounds(), lBrush, m_Texture, m_ClipSeconds, OutQuads, &m_DrawnClip);
 
         if (m_DrawnClip.Issue != EUIBrushIssue::None && !m_bWarnedClip)
         {
             m_bWarnedClip = true;
-            OPAAX_LOG(LogUIBrush, Warn, "'{}': {}", Name.CStr(), DescribeBrushIssue(Brush, m_DrawnClip).CStr());
+            OPAAX_LOG(LogUIBrush, Warn, "'{}': {}", Name.CStr(), DescribeBrushIssue(lBrush, m_DrawnClip).CStr());
         }
 
         // A clip that can still change keeps me ticking (only a ticked canvas runs it).
@@ -161,7 +191,8 @@ namespace Opaax
         m_ClipSeconds += InSeconds;
 
         UICanvas* const   lCanvas = GetCanvas();
-        const UIBrushClip lClip   = SampleBrushClip(lCanvas != nullptr ? lCanvas->GetAssets() : nullptr, Brush, m_ClipSeconds);
+        const UIBrushClip lClip   = SampleBrushClip(lCanvas != nullptr ? lCanvas->GetAssets() : nullptr, GetDrawnBrush(),
+                                                    m_ClipSeconds);
         if (lClip.Clip == nullptr)
         {
             return false;   // no clip any more: nothing to play
@@ -182,8 +213,19 @@ namespace Opaax
         InvalidateContent();
     }
 
+    void UIImage::OnInteractionStateChanged(EUIInteractionState, EUIInteractionState)
+    {
+        // Only a style draws per state: its new state's art at once, its clip from the first step.
+        if (!Style.IsEmpty())
+        {
+            m_ClipSeconds = 0.f;
+            m_DrawnClip   = {};
+            InvalidateContent();
+        }
+    }
+
     OpaaxString UIImage::DescribeBrush() const
     {
-        return Opaax::DescribeBrush(Brush, m_Texture != nullptr, m_DrawnClip);
+        return Opaax::DescribeBrush(GetDrawnBrush(), m_Texture != nullptr, m_DrawnClip);
     }
 }

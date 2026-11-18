@@ -25,8 +25,7 @@ namespace Opaax
             return Brushes;   // none named, or not drawn yet: no way to load it
         }
 
-        // Read again each time: a saved style reloads in place.
-        const UIButtonStyle* lStyle = Cast<UIButtonStyle>(lCanvas->GetAssets()->ResolveAsset(Style.Path.CStr()));
+        const UIButtonStyle* lStyle = ResolveButtonStyle(lCanvas->GetAssets(), Style);
         if (lStyle == nullptr)
         {
             if (m_WarnedStyle != Style.Path)

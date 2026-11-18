@@ -1,0 +1,64 @@
+{
+    "Class": "UIButtonStyle",
+    "Properties": {
+        "Brushes": {
+            "Disabled": {
+                "BorderScale": 1.0,
+                "Frame": 3,
+                "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset",
+                "Tint": {
+                    "w": 1.0,
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0
+                }
+            },
+            "FadeDuration": 0.0,
+            "Focused": {
+                "BorderScale": 1.0,
+                "Frame": 0,
+                "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset",
+                "Tint": {
+                    "w": 1.0,
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0
+                }
+            },
+            "Hovered": {
+                "BorderScale": 1.0,
+                "Frame": 1,
+                "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset",
+                "Tint": {
+                    "w": 1.0,
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0
+                }
+            },
+            "Normal": {
+                "BorderScale": 1.0,
+                "Frame": 0,
+                "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset",
+                "Tint": {
+                    "w": 1.0,
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0
+                }
+            },
+            "Pressed": {
+                "BorderScale": 1.0,
+                "Frame": 2,
+                "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset",
+                "Tint": {
+                    "w": 1.0,
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0
+                }
+            }
+        }
+    },
+    "Version": 1
+}
