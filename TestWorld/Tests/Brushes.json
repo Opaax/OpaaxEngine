@@ -286,5 +286,90 @@
         "params": {
             "count": 2
         }
+    },
+    {
+        "id": "pulse-plays-while-hovered",
+        "command": "ui.list",
+        "params": {
+            "name": "FollowButton"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "FollowButton",
+                    "interaction": "Hovered",
+                    "modifiers": [
+                        {
+                            "name": "Pulse",
+                            "playing": true
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "id": "leave-follow",
+        "command": "ui.hover",
+        "params": {
+            "widget": "SpinnerLabel"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "pulse-finishes-its-cycle",
+        "command": "ui.list",
+        "params": {
+            "name": "FollowButton"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "FollowButton",
+                    "interaction": "Normal",
+                    "modifiers": [
+                        {
+                            "name": "Pulse",
+                            "playing": true
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 1.2
+        }
+    },
+    {
+        "id": "pulse-at-rest",
+        "command": "ui.list",
+        "params": {
+            "name": "FollowButton"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "FollowButton",
+                    "scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    },
+                    "modifiers": [
+                        {
+                            "name": "Pulse",
+                            "playing": false
+                        }
+                    ]
+                }
+            ]
+        }
     }
 ]

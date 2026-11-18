@@ -67,6 +67,18 @@ namespace Opaax
     /** Puts keys in time order (equal times keep their order). */
     void SortTweenKeys(TDynArray<UITweenKey>& InOutKeys);
 
+    /**
+     * Seconds one cycle of keys InKeys takes when they repeat: the last key's time for Loop, twice it for
+     * PingPong (there and back). 0 for Once, or keys that take no time.
+     */
+    float TweenCycleLength(const TDynArray<UITweenKey>& InKeys, EUILoop InLoop) noexcept;
+
+    /**
+     * When the cycle under way at InTime ends: the next multiple of InCycle at or after InTime, where a
+     * repeating tween is back at its first key's pose. InTime when InCycle is 0.
+     */
+    float CycleEndAfter(float InTime, float InCycle) noexcept;
+
     // =============================================================================
     // UITween — keyed poses over time as an asset (a "UI Tween" preset: a pop-in, a fade, a pulse, a
     //   shake). A UITweenModifier plays one on a widget; many widgets share it.

@@ -367,6 +367,14 @@
                         "bHitTestable": false
                     }
                 ],
+                "Modifiers": [
+                    {
+                        "Name": "Pulse",
+                        "PlayOn": "Hovered",
+                        "Tween": "UI/Presets/Pulse.opaaxasset",
+                        "Type": "UITweenModifier"
+                    }
+                ],
                 "Name": "FollowButton",
                 "Rect": {
                     "AnchorMax": {
