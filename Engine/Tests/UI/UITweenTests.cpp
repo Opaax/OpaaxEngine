@@ -9,6 +9,7 @@
 #include "UI/Animation/UITween.h"
 #include "UI/Modifiers/UITweenModifier.h"
 #include "UI/UICanvas.h"
+#include "UI/Widgets/UIButton.h"
 #include "UI/Widgets/UIImage.h"
 #include "UI/Widgets/UIPanel.h"
 
@@ -496,4 +497,169 @@ TEST_CASE("UIWidget::Hide: a hide tween removed while it plays lets the hide end
     lH.Image->RemoveModifier(*lH.Fade);
     CHECK_FALSE(lH.Image->IsHiding());
     CHECK_FALSE(lH.Image->bVisible);
+}
+
+// =============================================================================
+// Tweens on states
+// =============================================================================
+TEST_CASE("UITween: a repeating tween's cycle, and when the cycle under way ends")
+{
+    const TDynArray<UITweenKey> lKeys = { Key(0.f, 1.f), Key(0.5f, 1.5f), Key(1.f, 1.f) };
+    CHECK(TweenCycleLength(lKeys, EUILoop::Loop) == doctest::Approx(1.f));
+    CHECK(TweenCycleLength(lKeys, EUILoop::PingPong) == doctest::Approx(2.f));
+    CHECK(TweenCycleLength(lKeys, EUILoop::Once) == doctest::Approx(0.f));
+    CHECK(TweenCycleLength({}, EUILoop::Loop) == doctest::Approx(0.f));
+
+    CHECK(CycleEndAfter(0.3f, 1.f) == doctest::Approx(1.f));
+    CHECK(CycleEndAfter(1.f, 1.f) == doctest::Approx(1.f));    // at a cycle's end already
+    CHECK(CycleEndAfter(1.2f, 1.f) == doctest::Approx(2.f));
+    CHECK(CycleEndAfter(0.f, 1.f) == doctest::Approx(0.f));
+    CHECK(CycleEndAfter(0.3f, 0.f) == doctest::Approx(0.3f));
+}
+
+namespace
+{
+    /** A pulse: rest, 1.5 at 0.5 s, rest at 1 s, looping. */
+    TDynArray<UITweenKey> Pulse()
+    {
+        return { Key(0.f, 1.f), Key(0.5f, 1.5f), Key(1.f, 1.f) };
+    }
+
+    /** A 200x80 button at the origin with a looping pulse tween played on Hovered. */
+    struct StateTweenFixture
+    {
+        UICanvas         Canvas{ 1080.f };
+        UIButton*        Button = nullptr;
+        UITweenModifier* Tween  = nullptr;
+
+        StateTweenFixture()
+        {
+            Canvas.SetTargetSize(1920, 1080);
+            Button = static_cast<UIButton*>(Canvas.Root().AddChild(NewObject<UIButton>()));
+            UIRect lRect;
+            lRect.SizeDelta = { 200.f, 80.f };
+            Button->SetRect(lRect);
+
+            Tween = &Button->AddModifier<UITweenModifier>().SetPlayOn(EUITweenPlay::Hovered);
+            Tween->Keys = Pulse();
+            Tween->Loop = EUILoop::Loop;
+            Canvas.Update();
+        }
+
+        void Hover()   { Canvas.RoutePointer(UIPointerEvent{ EUIPointerEventType::Move, { 0.f, 0.f } }); }
+        void Unhover() { Canvas.RoutePointer(UIPointerEvent{ EUIPointerEventType::Move, { 900.f, 500.f } }); }
+
+        void Run(const float InSeconds)
+        {
+            const Int32 lFrames = static_cast<Int32>(InSeconds * 60.f + 0.5f);
+            for (Int32 lFrame = 0; lFrame < lFrames; ++lFrame)
+            {
+                Canvas.Tick(1.f / 60.f);
+                Canvas.Update();
+            }
+        }
+
+        float Scale() const { return Button->GetDrawTransform().Decompose().Scale.x; }
+    };
+}
+
+TEST_CASE("UITweenModifier: a state tween plays when its widget enters the state")
+{
+    StateTweenFixture lF;
+    CHECK_FALSE(lF.Tween->IsPlaying());
+
+    lF.Hover();
+    CHECK(lF.Tween->IsPlaying());
+    lF.Run(0.25f);
+    CHECK(lF.Scale() == doctest::Approx(1.25f).epsilon(0.02));
+}
+
+TEST_CASE("UITweenModifier: a loop whose state ends finishes its cycle, then rests where it started")
+{
+    StateTweenFixture lF;
+    lF.Hover();
+    lF.Run(0.25f);
+    lF.Unhover();
+    CHECK(lF.Tween->IsPlaying());
+    CHECK(lF.Tween->IsEnding());
+
+    lF.Run(0.5f);                                   // 0.75 s: on its way back down, no jump
+    CHECK(lF.Tween->IsPlaying());
+    CHECK(lF.Scale() == doctest::Approx(1.25f).epsilon(0.02));
+
+    lF.Run(0.3f);                                   // past 1 s: the cycle is done
+    CHECK_FALSE(lF.Tween->IsPlaying());
+    CHECK(lF.Scale() == doctest::Approx(1.f));
+    CHECK_FALSE(lF.Tween->IsAwake());
+}
+
+TEST_CASE("UITweenModifier: entering its state again mid-cycle keeps it going, not from the start")
+{
+    StateTweenFixture lF;
+    lF.Hover();
+    lF.Run(0.25f);
+    lF.Unhover();
+    lF.Run(0.1f);
+    const float lTime = lF.Tween->GetTime();
+
+    lF.Hover();
+    CHECK(lF.Tween->IsPlaying());
+    CHECK_FALSE(lF.Tween->IsEnding());
+    CHECK(lF.Tween->GetTime() == doctest::Approx(lTime));   // not reset
+
+    lF.Run(1.f);                                    // well past where the old cycle would have ended
+    CHECK(lF.Tween->IsPlaying());
+}
+
+TEST_CASE("UITweenModifier: a Once tween on Pressed plays to its end after the press ends")
+{
+    StateTweenFixture lF;
+    UITweenModifier& lBounce = lF.Button->AddModifier<UITweenModifier>().SetPlayOn(EUITweenPlay::Pressed);
+    lBounce.Keys = { Key(0.f, 1.f), Key(0.2f, 0.9f), Key(0.4f, 1.f) };
+    Int32 lFinished = 0;
+    lBounce.OnFinished.Add([&lFinished]() { ++lFinished; });
+
+    lF.Hover();
+    lF.Canvas.RoutePointer(UIPointerEvent{ EUIPointerEventType::Down, { 0.f, 0.f }, EUIPointerButton::Primary });
+    CHECK(lBounce.IsPlaying());
+    lF.Run(0.1f);
+    lF.Canvas.RoutePointer(UIPointerEvent{ EUIPointerEventType::Up, { 0.f, 0.f }, EUIPointerButton::Primary });
+    CHECK(lBounce.IsPlaying());                     // released early: it goes on
+    CHECK_FALSE(lBounce.IsEnding());
+
+    lF.Run(0.5f);
+    CHECK_FALSE(lBounce.IsPlaying());
+    CHECK(lFinished == 1);
+}
+
+TEST_CASE("UITweenModifier: a state tween on a follower plays on its button's state")
+{
+    StateTweenFixture lF;
+    UIWidget* lIcon = lF.Button->AddChild(NewObject<UIImage>());
+    lIcon->bHitTestable = false;
+    lIcon->SetStateSource(EUIStateSource::Button);
+    UITweenModifier& lIconPulse = lIcon->AddModifier<UITweenModifier>().SetPlayOn(EUITweenPlay::Hovered);
+    lIconPulse.Keys = Pulse();
+    lIconPulse.Loop = EUILoop::Loop;
+    lF.Canvas.Update();
+
+    lF.Hover();
+    CHECK(lIconPulse.IsPlaying());
+    lF.Unhover();
+    CHECK(lIconPulse.IsEnding());
+}
+
+TEST_CASE("UITweenModifier: a widget already in its state when shown plays it (a button loaded disabled)")
+{
+    UICanvas lCanvas{ 1080.f };
+    lCanvas.SetTargetSize(1920, 1080);
+
+    auto lButton = NewObject<UIButton>();
+    lButton->SetEnabled(false);
+    UITweenModifier& lDim = lButton->AddModifier<UITweenModifier>().SetPlayOn(EUITweenPlay::Disabled);
+    lDim.Keys = Pulse();
+    lDim.Loop = EUILoop::Loop;
+
+    lCanvas.Root().AddChild(Move(lButton));   // joins a ticked canvas shown
+    CHECK(lDim.IsPlaying());
 }

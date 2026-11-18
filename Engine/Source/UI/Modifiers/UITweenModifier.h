@@ -9,27 +9,52 @@
 
 namespace Opaax
 {
-    /** When a tween modifier plays by itself. */
+    /**
+     * When a tween modifier plays by itself. The state ones play when the widget (or the button it
+     * follows) enters that state; when the state ends, a Once tween plays to its end and a repeating one
+     * finishes its cycle and rests.
+     */
     enum class EUITweenPlay : Uint8
     {
         Manual,   // only when asked (Play, ui.tween)
         Show,     // when its widget is shown (it joins the game's canvas shown, or Show())
-        Hide      // when its widget is hidden with Hide(): the widget hides once it is done (a loop never is)
+        Hide,     // when its widget is hidden with Hide(): the widget hides once it is done (a loop never is)
+        Hovered,  // a pulse while hovered
+        Pressed,  // a bounce on press
+        Focused,
+        Disabled
     };
 
     inline const char* ToString(const EUITweenPlay InPlay) noexcept
     {
         switch (InPlay)
         {
-        case EUITweenPlay::Manual: return "Manual";
-        case EUITweenPlay::Show:   return "Show";
-        case EUITweenPlay::Hide:   return "Hide";
+        case EUITweenPlay::Manual:   return "Manual";
+        case EUITweenPlay::Show:     return "Show";
+        case EUITweenPlay::Hide:     return "Hide";
+        case EUITweenPlay::Hovered:  return "Hovered";
+        case EUITweenPlay::Pressed:  return "Pressed";
+        case EUITweenPlay::Focused:  return "Focused";
+        case EUITweenPlay::Disabled: return "Disabled";
         }
         return "Manual";
     }
+
+    /** The interaction state InPlay plays on, when it is one of the state values. */
+    inline bool TweenPlaysOnState(const EUITweenPlay InPlay, EUIInteractionState& OutState) noexcept
+    {
+        switch (InPlay)
+        {
+        case EUITweenPlay::Hovered:  OutState = EUIInteractionState::Hovered;  return true;
+        case EUITweenPlay::Pressed:  OutState = EUIInteractionState::Pressed;  return true;
+        case EUITweenPlay::Focused:  OutState = EUIInteractionState::Focused;  return true;
+        case EUITweenPlay::Disabled: OutState = EUIInteractionState::Disabled; return true;
+        default:                     return false;
+        }
+    }
 }
 
-OPAAX_ENUM_VALUES(Opaax::EUITweenPlay, Manual, Show, Hide)
+OPAAX_ENUM_VALUES(Opaax::EUITweenPlay, Manual, Show, Hide, Hovered, Pressed, Focused, Disabled)
 
 namespace Opaax
 {
@@ -64,7 +89,10 @@ namespace Opaax
                          OPAAX_PROP(bHoldEnd).SetTooltip("Once: the last pose stays at the end.\n"
                                                          "Off, the widget goes back to rest."),
                          OPAAX_PROP(PlayOn).SetTooltip("Manual: only when asked. Show: when the widget is shown.\n"
-                                                       "Hide: when it is hidden, which waits for it."),
+                                                       "Hide: when it is hidden, which waits for it.\n"
+                                                       "Hovered, Pressed, Focused, Disabled: when the widget (or the button\n"
+                                                       "it follows) enters that state; when it leaves, a loop finishes\n"
+                                                       "its cycle and rests, a Once tween plays to its end."),
                          OPAAX_PROP(Delay).SetRange(0.f, 60.f).SetDragStep(0.01f)
                                           .SetTooltip("Seconds the first key's pose holds before it moves.\n"
                                                       "Stagger a list sharing one tween."))
@@ -77,6 +105,9 @@ namespace Opaax
 
         /** Whether it moves now (a delay included). A finished Once tween is not playing. */
         bool IsPlaying() const noexcept { return m_bPlaying; }
+
+        /** A state tween whose state ended: it plays on to the end of its cycle, then rests. */
+        bool IsEnding() const noexcept { return m_bEnding; }
 
         /** Seconds since Play, the delay included. */
         float GetTime() const noexcept { return m_Time; }
@@ -104,11 +135,15 @@ namespace Opaax
         void OnShow() override;
         bool OnHide() override;
         bool Tick(float InSeconds) override;
+        void OnStateChanged(EUIInteractionState InFrom, EUIInteractionState InTo) override;
         //~End UIModifier interface
 
     private:
         /** The pose at m_Time, and whether a Once tween is past its end. */
         UIPose Sample(bool& OutFinished) const;
+
+        /** Seconds one cycle of the keys in use takes when they repeat (0 for Once). */
+        float GetCycleLength() const;
 
         /** Lets its owner's hide finish (at its end, or when stopped). */
         void EndHide();
@@ -117,6 +152,9 @@ namespace Opaax
         bool   m_bPlaying = false;
         /** Playing for a Hide(): the widget hides when it ends. */
         bool   m_bForHide = false;
+        /** Its state ended: it rests once its time (past Delay) reaches m_EndAt. */
+        bool   m_bEnding  = false;
+        float  m_EndAt    = 0.f;
         /** What it shows: while playing, at the end it holds, or the rest pose. */
         UIPose m_Shown;
 

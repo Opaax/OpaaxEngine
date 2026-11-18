@@ -17,6 +17,7 @@ namespace Opaax
     {
         m_Time     = 0.f;
         m_bPlaying = true;
+        m_bEnding  = false;
 
         // The first key's pose from now: a pop-in does not flash at full size before its first tick.
         bool lFinished = false;
@@ -29,6 +30,7 @@ namespace Opaax
     void UITweenModifier::Stop()
     {
         m_bPlaying = false;
+        m_bEnding  = false;
         m_Shown    = UIPose{};
         InvalidatePose();
         Sleep();
@@ -78,6 +80,15 @@ namespace Opaax
             return SampleTween(*lTween, lTime, OutFinished);
         }
         return SampleTweenKeys(Keys, Loop, bHoldEnd, lTime, OutFinished);
+    }
+
+    float UITweenModifier::GetCycleLength() const
+    {
+        if (const UITween* lTween = GetTween())
+        {
+            return TweenCycleLength(lTween->Keys, lTween->Loop);
+        }
+        return TweenCycleLength(Keys, Loop);
     }
 
     // =============================================================================
@@ -137,6 +148,7 @@ namespace Opaax
         m_Time     = 0.f;
         m_bPlaying = false;
         m_bForHide = false;
+        m_bEnding  = false;
         m_Shown    = UIPose{};
         InvalidatePose();
     }
@@ -150,6 +162,42 @@ namespace Opaax
         else if (PlayOn == EUITweenPlay::Hide)
         {
             Stop();   // shown again: the pose a hide held (faded out) goes
+        }
+
+        // Shown already in its state (a button loaded disabled): it plays, as if the state was entered.
+        EUIInteractionState lState;
+        if (TweenPlaysOnState(PlayOn, lState) && GetOwner() != nullptr && GetOwner()->GetInteractionState() == lState
+            && !m_bPlaying)
+        {
+            Play();
+        }
+    }
+
+    void UITweenModifier::OnStateChanged(const EUIInteractionState InFrom, const EUIInteractionState InTo)
+    {
+        EUIInteractionState lState;
+        if (!TweenPlaysOnState(PlayOn, lState))
+        {
+            return;
+        }
+
+        if (InTo == lState)
+        {
+            // Entered again mid-cycle: it goes on rather than starting over (no jump).
+            if (m_bPlaying) { m_bEnding = false; }
+            else            { Play(); }
+            return;
+        }
+
+        // Left: a Once tween plays to its end by itself; a repeating one finishes its cycle, then rests.
+        if (InFrom == lState && m_bPlaying)
+        {
+            const float lCycle = GetCycleLength();
+            if (lCycle > 0.f)
+            {
+                m_bEnding = true;
+                m_EndAt   = CycleEndAfter(Maths::Max(m_Time - Delay, 0.f), lCycle);
+            }
         }
     }
 
@@ -173,6 +221,16 @@ namespace Opaax
         }
 
         m_Time += InSeconds;
+
+        // Its state ended and its cycle is done: at rest, where a repeating tween started.
+        if (m_bEnding && Maths::Max(m_Time - Delay, 0.f) >= m_EndAt)
+        {
+            m_bPlaying = false;
+            m_bEnding  = false;
+            m_Shown    = UIPose{};
+            InvalidatePose();
+            return false;
+        }
 
         bool lFinished = false;
         m_Shown = Sample(lFinished);
