@@ -235,6 +235,7 @@ namespace Opaax
 
         /** From the last Update's context: not owned. */
         IUIAssetProvider* m_Assets = nullptr;
+        Uint64            m_AssetsRevision = 0;   // its GetRevision when last seen
 
         /** The modifiers the next Tick runs. Weak: a destroyed one is skipped. */
         TDynArray<TWeakObjectPtr<UIModifier>> m_Awake;

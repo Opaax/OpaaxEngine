@@ -66,7 +66,7 @@ TEST_CASE("UIWidget classes: a leaf lists the base's properties first, then its 
     CHECK(PropertyNames(UIStack::StaticClass()).size()    == 5u + 5u);   // Axis, Spacing, Padding, ChildAlign, bFitContent
     CHECK(PropertyNames(UIScrollBox::StaticClass()).size() == 5u + 6u);  // a stack's four, ScrollStep, bDragToScroll
     CHECK(PropertyNames(UIImage::StaticClass()).size()    == 5u + 4u);   // Brush, Fill, FillAmount, FillBinding
-    CHECK(PropertyNames(UIButton::StaticClass()).size()   == 5u + 2u);   // bIsEnabled, Brushes
+    CHECK(PropertyNames(UIButton::StaticClass()).size()   == 5u + 3u);   // bIsEnabled, Style, Brushes
     CHECK(PropertyNames(UIText::StaticClass()).size()     == 5u + 10u);
 
     const TDynArray<OpaaxString> lMask = PropertyNames(UIMask::StaticClass());

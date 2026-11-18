@@ -2,6 +2,7 @@
 #include "Engine/Registries/AutoRegistration.h"
 #include "Renderer/Textures/SpriteSheet.h"   // completes the widgets' sheet references
 #include "UI/Animation/UITransition.h"
+#include "UI/Styles/UIButtonStyle.h"
 #include "UI/Animation/UITween.h"
 #include "UI/Modifiers/UIAspectRatioModifier.h"
 #include "UI/Modifiers/UIOutlineModifier.h"
@@ -42,6 +43,7 @@ namespace Opaax
 
     // A transition's values as a preset asset, shared by the modifiers that name it.
     OPAAX_REGISTER_OBJECT(UITransition);
+    OPAAX_REGISTER_OBJECT(UIButtonStyle);
 
     // Keyed poses over time as a preset asset: a pop-in, a fade, a pulse, a shake.
     OPAAX_REGISTER_OBJECT(UITween);

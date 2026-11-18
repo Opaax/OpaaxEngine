@@ -276,6 +276,46 @@ namespace Opaax::Editor
         return true;
     }
 
+    bool UICanvasOps::SetWidget(EditorContext& InContext, const UIWidgetPath& InPath, const nlohmann::json& InValues,
+                                OpaaxString* OutError)
+    {
+        const auto lFail = [OutError](const char* InWhy)
+        {
+            if (OutError != nullptr) { *OutError = InWhy; }
+            return false;
+        };
+
+        if (!InContext.UICanvasDocument.IsOpen()) { return lFail("no canvas is open in the UI panel"); }
+
+        UIWidget* const lWidget = InContext.UICanvasDocument.Resolve(InPath);
+        if (lWidget == nullptr)        { return lFail("no such widget"); }
+        if (!InValues.is_object())     { return lFail("the values are an object of fields"); }
+
+        const ObjectClass& lClass = lWidget->GetClass();
+
+        // Merged into what it holds, so a nested field ("Brush": {"Frame": 2}) keeps its siblings.
+        nlohmann::json lMerged = lClass.WriteProperties(*lWidget);
+        lMerged.merge_patch(InValues);
+
+        // Checked on a scratch copy first: a refused value changes nothing.
+        TStrongObjectPtr<UIWidget> lCheck = UIWidget::Create(lClass.GetName(), Classes());
+        TDynArray<OpaaxString>     lBadFields;
+        if (!lCheck || !lClass.ReadProperties(*lCheck, lMerged, &lBadFields) || !lBadFields.empty())
+        {
+            return lFail("a value has the wrong type for its field");
+        }
+
+        OpaaxString lBefore = Snapshot(InContext);
+
+        lClass.ReadProperties(*lWidget, lMerged);
+        lWidget->PostEditChange();
+        lWidget->InvalidateLayout();
+
+        if (Snapshot(InContext) == lBefore) { return true; }   // the same values: not a step
+        Record(InContext, Move(lBefore), "Edit Widget");
+        return true;
+    }
+
     bool UICanvasOps::SetModifier(EditorContext& InContext, const UIWidgetPath& InPath, const Uint32 InIndex,
                                   const nlohmann::json& InValues, OpaaxString* OutError)
     {

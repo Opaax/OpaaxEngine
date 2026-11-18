@@ -242,6 +242,33 @@
                 },
                 "Type": "UIImage",
                 "bHitTestable": false
+            },
+            {
+                "Name": "StyledButton",
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": 0.0,
+                        "y": -300.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 420.0,
+                        "y": 90.0
+                    }
+                },
+                "Style": "UI/Styles/Animated.opaaxasset",
+                "Type": "UIButton"
             }
         ],
         "Name": "Root",

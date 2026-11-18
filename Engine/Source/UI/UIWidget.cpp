@@ -435,6 +435,15 @@ namespace Opaax
         }
     }
 
+    void UIWidget::InvalidateContentRecursive()
+    {
+        InvalidateContent();
+        for (const TStrongObjectPtr<UIWidget>& lChild : m_Children)
+        {
+            lChild->InvalidateContentRecursive();
+        }
+    }
+
     void UIWidget::InvalidateContent()
     {
         m_bContentDirty = true;

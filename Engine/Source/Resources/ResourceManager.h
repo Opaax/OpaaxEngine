@@ -158,6 +158,13 @@ namespace Opaax
          */
         Uint64 GetPumpEpoch() const noexcept { return m_PumpEpoch; }
 
+        /** How many reloads replaced a resident resource (a saved file): a cache built on them is stale when it changes. */
+        Uint64 GetReloadCount() const
+        {
+            TLockGuard<RecursiveMutex> lLock(m_Mutex);
+            return m_ReloadCount;
+        }
+
     public:
         template<CResource T> Uint32 GetLoadedCount();
         template<CResource T> Uint32 GetLoadingCount();
@@ -211,6 +218,7 @@ namespace Opaax
          * releases children on the same thread. Never held during T::Load.
          */
         mutable RecursiveMutex              m_Mutex;
+        Uint64                              m_ReloadCount = 0;   // under m_Mutex
         TDynArray<TUniquePtr<IResourcePool>> m_Pools; // indexed by ResourceTypeID::Get<T>()
         ResourceDependencyGraph             m_Deps;
         IJobSystem*                         m_Jobs = &IJobSystem::Null(); // LoadAsync worker pool
@@ -413,6 +421,7 @@ namespace Opaax
 
         if (lSwapped)
         {
+            ++m_ReloadCount;
             OPAAX_LOG(LogResourceManager, Info, "Reloaded '{}'", InPath);
         }
 

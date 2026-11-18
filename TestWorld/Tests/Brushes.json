@@ -96,5 +96,63 @@
         "params": {
             "path": "Brushes.png"
         }
+    },
+    {
+        "id": "styled-button-normal",
+        "command": "ui.list",
+        "params": {
+            "name": "StyledButton"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "StyledButton",
+                    "state": "Normal",
+                    "brush": "UI/SlicedButtons.opaaxasset#0",
+                    "quads": 9
+                }
+            ]
+        }
+    },
+    {
+        "id": "hover-styled",
+        "command": "ui.hover",
+        "params": {
+            "widget": "StyledButton"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "styled-button-hovered",
+        "command": "ui.list",
+        "params": {
+            "name": "StyledButton"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "StyledButton",
+                    "state": "Hovered"
+                }
+            ]
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.4
+        }
+    },
+    {
+        "id": "screenshot-styled-hovered",
+        "command": "screenshot",
+        "params": {
+            "path": "BrushesStyledHovered.png"
+        }
     }
 ]

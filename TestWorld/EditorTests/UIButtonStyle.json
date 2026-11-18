@@ -1,0 +1,203 @@
+[
+    {
+        "id": "new-style",
+        "command": "asset.new",
+        "params": {
+            "path": "Scratch/ButtonStyle.opaaxasset",
+            "class": "UIButtonStyle",
+            "properties": {
+                "Brushes": {
+                    "Normal": {
+                        "Sheet": "UI/SlicedButtons.opaaxasset",
+                        "Frame": 0,
+                        "BorderScale": 0.4
+                    },
+                    "Hovered": {
+                        "Sheet": "UI/SlicedButtons.opaaxasset",
+                        "Frame": 0,
+                        "BorderScale": 0.4
+                    },
+                    "FadeDuration": 0.0
+                }
+            }
+        },
+        "expect": {
+            "path": "Scratch/ButtonStyle.opaaxasset",
+            "class": "UIButtonStyle"
+        }
+    },
+    {
+        "id": "hovered-frame",
+        "command": "asset.set",
+        "params": {
+            "path": "Scratch/ButtonStyle.opaaxasset",
+            "properties": {
+                "Brushes": {
+                    "Hovered": {
+                        "Frame": 2
+                    }
+                }
+            }
+        }
+    },
+    {
+        "id": "hovered-kept-its-sheet",
+        "command": "asset.get",
+        "params": {
+            "path": "Scratch/ButtonStyle.opaaxasset"
+        },
+        "expect": {
+            "properties": {
+                "Brushes": {
+                    "Hovered": {
+                        "Frame": 2,
+                        "Sheet": "UI/SlicedButtons.opaaxasset"
+                    }
+                }
+            }
+        }
+    },
+    {
+        "id": "save-style",
+        "command": "asset.save",
+        "params": {
+            "path": "Scratch/ButtonStyle.opaaxasset"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "canvas",
+        "command": "ui.new",
+        "params": {
+            "path": "Scratch/ButtonStyle.opaaxui"
+        }
+    },
+    {
+        "id": "add-button",
+        "command": "ui.widget.add",
+        "params": {
+            "type": "UIButton"
+        },
+        "expect": {
+            "name": "UIButton"
+        }
+    },
+    {
+        "command": "ui.widget.select",
+        "params": {
+            "name": "UIButton"
+        }
+    },
+    {
+        "id": "wrong-type-refused",
+        "command": "ui.widget.set",
+        "params": {
+            "values": {
+                "Style": 42
+            }
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "name-the-style",
+        "command": "ui.widget.set",
+        "params": {
+            "values": {
+                "Style": "Scratch/ButtonStyle.opaaxasset",
+                "Rect": {
+                    "SizeDelta": {
+                        "x": 420.0,
+                        "y": 90.0
+                    }
+                }
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "draws-the-style",
+        "command": "ui.widget.list",
+        "expect": {
+            "widgets": [
+                {
+                    "name": "UIButton",
+                    "interaction": "Normal",
+                    "brush": "UI/SlicedButtons.opaaxasset#0"
+                }
+            ]
+        }
+    },
+    {
+        "id": "play",
+        "command": "ui.preview.play",
+        "params": {
+            "on": true
+        },
+        "expect": {
+            "playing": true
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "hover",
+        "command": "ui.preview.hover",
+        "params": {
+            "widget": "UIButton"
+        },
+        "expect": {
+            "hovered": "UIButton",
+            "interaction": "Hovered"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "hovered-frame-shown",
+        "command": "ui.widget.list",
+        "expect": {
+            "widgets": [
+                {
+                    "name": "UIButton",
+                    "interaction": "Hovered",
+                    "brush": "UI/SlicedButtons.opaaxasset#2"
+                }
+            ]
+        }
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "EditorUIButtonStyle.png"
+        }
+    },
+    {
+        "id": "stop",
+        "command": "ui.preview.play",
+        "params": {
+            "on": false
+        },
+        "expect": {
+            "playing": false
+        }
+    }
+]
