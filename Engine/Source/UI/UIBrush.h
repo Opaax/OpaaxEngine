@@ -81,7 +81,7 @@ namespace Opaax
     enum class EUIBrushIssue : Uint8
     {
         None,
-        ClipMissing,     // the clip did not load: the brush's Sheet or Texture shows
+        ClipMissing,     // no animation clip loads from the path: the brush's Sheet or Texture shows
         SheetMissing,    // the clip's sheet did not load: no frame name resolves, its default frame shows
         FrameUnknown     // a step names a frame its sheet does not have: the sheet's default frame shows
     };

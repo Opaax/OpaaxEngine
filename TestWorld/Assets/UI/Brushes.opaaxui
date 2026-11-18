@@ -213,7 +213,7 @@
             },
             {
                 "Brush": {
-                    "Animation": "Anims/Missing.opaaxasset",
+                    "Animation": "UI/Sounds/Menu.opaaxasset",
                     "Frame": 1,
                     "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset"
                 },
