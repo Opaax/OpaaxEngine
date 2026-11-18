@@ -1,0 +1,60 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "BlendCurve": "EaseInOut",
+                    "BlendIn": 0.0,
+                    "OrthoSize": 300.0,
+                    "Priority": 0,
+                    "bRotateView": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "61226f7ca2c84e88a9ecec5d3bf65825",
+            "name": "Camera",
+            "ownerMap": "Brushes"
+        },
+        {
+            "components": {
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                },
+                "UIProbe": {
+                    "Asset": "UI/Brushes.opaaxui",
+                    "Captured": "",
+                    "Clicks": 0,
+                    "CounterText": "",
+                    "GameClicks": 0,
+                    "Widgets": 0,
+                    "bCapture": false,
+                    "bCapturing": false,
+                    "bMounted": false
+                }
+            },
+            "guid": "d4ac81f1d03d4e27a1c3af95e3f3ce19",
+            "name": "Hud",
+            "ownerMap": "Brushes"
+        }
+    ],
+    "mapId": "Brushes",
+    "version": 4
+}

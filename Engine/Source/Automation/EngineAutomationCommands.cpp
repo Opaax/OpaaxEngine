@@ -148,6 +148,12 @@ namespace Opaax::EngineAutomation
                 lRow["interaction"] = ToString(InWidget.GetInteractionState());
                 lRow["hiding"]      = InWidget.IsHiding();
 
+                // What it draws now, for a widget that draws a brush (an image): checked without a screenshot.
+                if (const OpaaxString lBrush = InWidget.DescribeBrush(); !lBrush.IsEmpty())
+                {
+                    lRow["brush"] = lBrush;
+                }
+
                 // Any button, the engine's or a game's, answers the state it shows.
                 if (InWidget.IsA<UIButtonBase>())
                 {

@@ -37,9 +37,10 @@ namespace Opaax
     }
 
     // =============================================================================
-    // UIImage — draws its brush: a colour rect, or an image tinted by it (a texture, or a sheet frame;
-    //   the sheet wins). One quad, or nine with a border (9-slice): the brush's Border, else the sheet
-    //   frame's. FillAmount crops from the min edge (health bar) and works with 9-slice too.
+    // UIImage — draws its brush: a colour rect, or an image tinted by it (a clip, a sheet frame or a
+    //   texture). One quad, or nine with a border (9-slice): the brush's Border, else the sheet
+    //   frame's. FillAmount crops from the min edge (health bar) and works with 9-slice too. A clip
+    //   plays from its first step while the image is shown on a ticked canvas (a running game, Play).
     // =============================================================================
     class UIImage final : public UIWidget
     {
@@ -69,6 +70,10 @@ namespace Opaax
 
         /** Brush.Tint. */
         void SetColor(const LinearColor& InColor);
+
+        /** Brush.Animation, played again from its first step. */
+        void SetAnimation(const OpaaxString& InClipPath);
+
         void SetFill(EUIFill InFill, float InAmount);
         void SetFillAmount(float InAmount);
         void SetBorder(const UIMargin& InBorder);
@@ -85,9 +90,12 @@ namespace Opaax
         // =============================================================================
     public:
         void OnPullBindings(UIBindingTable& InBindings) override;
+        OpaaxString DescribeBrush() const override;
 
     protected:
         void Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads) override;
+        bool Tick(float InSeconds) override;
+        void OnReset() override;
 
         // =============================================================================
         // Members
@@ -96,6 +104,10 @@ namespace Opaax
         ITexture2D* m_Texture    = nullptr;
         bool        m_bFillBound = false;   // whether a read ever succeeded (log once)
         bool        m_bWarnedTiles = false; // too many tiles, said once
+        bool        m_bWarnedClip  = false; // a clip problem, said once
+
+        float       m_ClipSeconds = 0.f;    // since the clip started
+        UIBrushClip m_DrawnClip;            // where the clip was when last drawn; its Clip only tested for null later
     };
 }
 

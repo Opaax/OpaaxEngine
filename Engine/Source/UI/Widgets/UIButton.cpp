@@ -65,7 +65,7 @@ namespace Opaax
     void UIButton::DrawState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads, const EUIButtonState InState)
     {
         // Same rule as UIImage: named but not ready draws nothing and retries; nothing named is a plain quad.
-        const EUIBrushDraw lDraw = DrawBrush(InContext, GetBounds(), GetStateBrush(InState), m_Texture, OutQuads);
+        const EUIBrushDraw lDraw = DrawBrush(InContext, GetBounds(), GetStateBrush(InState), m_Texture, 0.f, OutQuads);
         if (lDraw == EUIBrushDraw::NotReady)
         {
             InvalidateContent();
