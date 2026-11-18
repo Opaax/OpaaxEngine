@@ -288,6 +288,30 @@
         }
     },
     {
+        "id": "sounds-hover-then-click",
+        "command": "ui.list",
+        "params": {
+            "name": "FollowButton"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "FollowButton",
+                    "modifiers": [
+                        {
+                            "name": "Pulse"
+                        },
+                        {
+                            "name": "Sounds",
+                            "lastSound": "Audio/Beep.wav",
+                            "sounds": 2
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    {
         "id": "pulse-plays-while-hovered",
         "command": "ui.list",
         "params": {
@@ -302,6 +326,9 @@
                         {
                             "name": "Pulse",
                             "playing": true
+                        },
+                        {
+                            "name": "Sounds"
                         }
                     ]
                 }
@@ -336,6 +363,9 @@
                         {
                             "name": "Pulse",
                             "playing": true
+                        },
+                        {
+                            "name": "Sounds"
                         }
                     ]
                 }
@@ -366,6 +396,9 @@
                         {
                             "name": "Pulse",
                             "playing": false
+                        },
+                        {
+                            "name": "Sounds"
                         }
                     ]
                 }
