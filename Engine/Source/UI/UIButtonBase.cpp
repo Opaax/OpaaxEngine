@@ -1,12 +1,44 @@
 ﻿#include "UIButtonBase.h"
 
 #include "Renderer/Text/FontStyle.h"
+#include "UI/UICanvas.h"
 
 void Opaax::UIButtonBase::SetEnabled(bool bInEnabled)
 {
+    if (bIsEnabled == bInEnabled)
+    {
+        return;
+    }
+
     bIsEnabled = bInEnabled;
+
+    // A press held while disabled ends here, and the canvas lets go of it: its release does not click.
+    const bool lEndsPress = !bIsEnabled && bIsPressed;
+    if (lEndsPress)
+    {
+        bIsPressed = false;
+        if (UICanvas* lCanvas = GetCanvas())
+        {
+            lCanvas->ReleaseCapture(*this);
+        }
+    }
+
     InvalidateContent();
     NotifyStateChanged();
+
+    if (lEndsPress)
+    {
+        OnPressedStop.Broadcast();
+    }
+
+    if (bIsEnabled)
+    {
+        OnEnabled.Broadcast();
+    }
+    else
+    {
+        OnDisabled.Broadcast();
+    }
 }
 
 Opaax::EUIReply Opaax::UIButtonBase::OnPointerEvent(const UIPointerEvent& InEvent)
@@ -14,25 +46,9 @@ Opaax::EUIReply Opaax::UIButtonBase::OnPointerEvent(const UIPointerEvent& InEven
     // A disabled button does not take clicks (they fall through).
     if (!bIsEnabled)
     {
-        if (bWasEnabled)
-        {
-            bWasEnabled = false;
-            
-            OnDisabled.Broadcast();
-        }
-        
         return EUIReply::Unhandled;
     }
-    
-    {
-        //Trigger enable if needed
-        if (!bWasEnabled)
-        {
-            bWasEnabled = true;
-            OnEnabled.Broadcast();
-        }
-    }
-    
+
     switch (InEvent.Type)
     {
     case EUIPointerEventType::Enter:

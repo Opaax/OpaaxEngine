@@ -92,21 +92,19 @@ namespace Opaax
         FButtonEventDelegate OnPressedStart;
         /** Fired when a press ends: released, or cancelled by the pointer leaving (then no click follows). */
         FButtonEventDelegate OnPressedStop;
-        /** Fired when the button went from enable true to enable false */
+        /** Fired by SetEnabled(false) on an enabled button, after a held press has stopped. */
         FButtonEventDelegate OnDisabled;
-        /** Fired when the button went from enable false to enable true */
+        /** Fired by SetEnabled(true) on a disabled button. */
         FButtonEventDelegate OnEnabled;
-        
+
     private:
-        
-        bool bIsEnabled   = true; 
-        bool bWasEnabled  = true; //True at first to call event first frame if needed.
-        
+
+        bool bIsEnabled   = true;
+
         bool bIsHovered   = false;
-        
+
         bool bIsPressed   = false;
-        bool bWasPressed  = false;
-        
+
         // =============================================================================
         // Props
         // =============================================================================

@@ -383,6 +383,19 @@ namespace Opaax
         RefreshStates(lBefore);
     }
 
+    void UICanvas::ReleaseCapture(const UIWidget& InWidget)
+    {
+        if (m_Pressed != &InWidget)
+        {
+            return;
+        }
+
+        const InteractionSnapshot lBefore = SnapshotInteraction();
+        m_Pressed     = nullptr;
+        m_PressButton = EUIPointerButton::None;
+        RefreshStates(lBefore);
+    }
+
     void UICanvas::OnDetached(UIWidget& InSubtreeRoot)
     {
         // Forget any pointer state on a node under InSubtreeRoot before it is destroyed.
