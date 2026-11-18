@@ -174,7 +174,7 @@ A tree of widgets, designed at `ReferenceHeight` (the canvas scales to the scree
 ```
 
 `Type` is the widget's class and the other keys are its properties, the base's (`Name`, `Rect`,
-`Opacity`, `bVisible`, `bHitTestable`, which every widget has) then its own; `Children` holds the
+`Opacity`, `bVisible`, `bHitTestable`, `StateSource`, which every widget has) then its own; `Children` holds the
 widgets under it. A game's widget class is written the same way, under its class name. A
 `Rect` anchors the widget in its parent (`AnchorMin`/`AnchorMax`, fractions; equal = a point, apart =
 stretch), places its `Pivot` at `AnchoredPosition` (canvas units, Y up) and gives its `SizeDelta`. A
@@ -184,7 +184,7 @@ mounted canvas's root sits in the screen, so a HUD's root stretches over it (anc
 | Type | Its fields |
 |---|---|
 | `UIPanel` | none: a container |
-| `UIImage` | `Brush` (below), `Fill`, `FillAmount`, `FillBinding` |
+| `UIImage` | `Brush` (below), `Style` (a UI Button Style: when it loads, the brush of the image's state is drawn instead of `Brush`), `Fill`, `FillAmount`, `FillBinding` |
 | `UIText` | `Text`, `Binding`, `Font` (a `.ttf`), `Size`, `Color`, `HAlign` (`Left`, `Center`, `Right`), `VAlign` (`Top`, `Middle`, `Bottom`), `bWrap`, `LineHeightScale`, `bKerning` |
 | `UIButton` | `bIsEnabled`, `Style` (a UI Button Style, [below](#ui-presets-uitransition-uitween-uibuttonstyle): when it loads, its brushes are drawn), `Brushes`: a brush (below) for each of `Normal`, `Hovered`, `Pressed`, `Focused`, `Disabled`, then `FadeDuration` (seconds the tint takes to reach a new state's; 0 jumps) and `FadeEase` |
 | `UIStack` | `Axis` (`Vertical`, `Horizontal`), `Spacing`, `Padding`, `ChildAlign` (`Start`, `Center`, `End`, `Stretch`), `bFitContent`: lays its children out in a row or a column |
@@ -286,6 +286,12 @@ and the state's clip starts again from its first step:
     "Pressed": { "Tint": { "x": 0.8, "y": 0.8, "z": 0.8, "w": 1.0 } },
     "FadeDuration": 0.1 } }
 ```
+
+`StateSource` says whose interaction state a widget shows: `Self` (the default), or `Button`, the
+nearest button above it, whatever lies between. An icon or a label inside a button set to `Button`
+reacts to the button's hover, press and disabled: its transitions and state tweens play on them, an
+image with a `Style` swaps its art, and its own pointer state does not count. A button inside a button
+keeps its own followers.
 
 A button written before it had brushes (version 1, with `Normal`... colours and `Frame`,
 `HoveredFrame`... frames) is read into them: each state takes its colour and frame (-1 is `Frame`),
@@ -418,7 +424,8 @@ still names an old file loads the converted one, with a warning to update it.
 
 Three asset classes hold what widgets share, made with New Asset > UI. A **UI Button Style**
 (`UIButtonStyle`) is what a `UIButton` names as its `Style`: `Brushes`, the same fields as a button's
-own (a brush per state, `FadeDuration`, `FadeEase`). A button naming one draws it and not its own
+own (a brush per state, `FadeDuration`, `FadeEase`; a state's `Tint` defaults to a new button's grey, so
+art meant to show as drawn gives it white). A button naming one draws it and not its own
 `Brushes`, which show again when the style does not load (said once in the log). Saving a style reaches
 every button showing it, in the editor's canvas and in a running game.
 

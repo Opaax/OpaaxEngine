@@ -9,6 +9,7 @@
 #include "Renderer/Textures/SpriteSheet.h"   // complete: a widget class visits its sheet reference
 #include "Renderer/Textures/Texture2D.h"     // and its texture reference
 #include "Resources/Asset/AssetRef.h"
+#include "UI/Styles/UIButtonStyle.h"   // complete: a widget class visits its style reference
 #include "UI/UIBrush.h"
 #include "UI/UIMargin.h"
 #include "UI/UIWidget.h"
@@ -41,6 +42,8 @@ namespace Opaax
     //   texture). One quad, or nine with a border (9-slice): the brush's Border, else the sheet
     //   frame's. FillAmount crops from the min edge (health bar) and works with 9-slice too. A clip
     //   plays from its first step while the image is shown on a ticked canvas (a running game, Play).
+    //   With a Style it draws its state's brush from it instead: an icon following its button swaps
+    //   its art with the button's hover and press.
     // =============================================================================
     class UIImage final : public UIWidget
     {
@@ -52,6 +55,8 @@ namespace Opaax
     public:
         /** What it draws: the tint, the texture or sheet frame, the 9-slice border. */
         UIBrush     Brush;
+        /** A UI Button Style: when it loads, its brush for my state is drawn instead of Brush. */
+        TAssetRef<UIButtonStyle> Style;
         EUIFill     Fill       = EUIFill::None;
         float       FillAmount = 1.f;
         /** "Source.Property" to read FillAmount from (0..1); empty = the authored value. */
@@ -59,6 +64,8 @@ namespace Opaax
 
         OPAAX_PROPERTIES(UIImage,
                          OPAAX_PROP(Brush),
+                         OPAAX_PROP(Style).SetTooltip("A UI Button Style: when set, the brush of my state is drawn\n"
+                                                      "instead of Brush (StateSource Button follows the button's)."),
                          OPAAX_PROP(Fill),
                          OPAAX_PROP(FillAmount).SetRange(0.f, 1.f),
                          OPAAX_PROP(FillBinding).SetTooltip("Source.Property, pulled each frame into FillAmount."))
@@ -73,6 +80,12 @@ namespace Opaax
 
         /** Brush.Animation, played again from its first step. */
         void SetAnimation(const OpaaxString& InClipPath);
+
+        /** Style.Path; drawn again. */
+        void SetStyle(const OpaaxString& InStylePath);
+
+        /** What I draw for my state now: the Style's brush when it loads, else Brush. */
+        UIBrush GetDrawnBrush() const;
 
         void SetFill(EUIFill InFill, float InAmount);
         void SetFillAmount(float InAmount);
@@ -96,6 +109,7 @@ namespace Opaax
         void Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads) override;
         bool Tick(float InSeconds) override;
         void OnReset() override;
+        void OnInteractionStateChanged(EUIInteractionState InFrom, EUIInteractionState InTo) override;
 
         // =============================================================================
         // Members
@@ -105,6 +119,7 @@ namespace Opaax
         bool        m_bFillBound = false;   // whether a read ever succeeded (log once)
         bool        m_bWarnedTiles = false; // too many tiles, said once
         bool        m_bWarnedClip  = false; // a clip problem, said once
+        mutable OpaaxString m_WarnedStyle;  // the style path last said not to load
 
         float       m_ClipSeconds = 0.f;    // since the clip started
         UIBrushClip m_DrawnClip;            // where the clip was when last drawn; its Clip only tested for null later

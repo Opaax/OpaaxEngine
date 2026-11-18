@@ -2,6 +2,8 @@
 
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Resources/Asset/Asset.h"
+#include "Resources/Asset/AssetRef.h"
+#include "UI/UIAssetProvider.h"
 #include "UI/UIStateBrushes.h"
 
 namespace Opaax
@@ -27,4 +29,10 @@ namespace Opaax
         void PostEditChange() override;
         //~End Object interface
     };
+
+    /**
+     * The style InStyle names, read through InAssets each time (a saved style reloads in place), or null:
+     * none named, no provider yet, or it does not load as a UI Button Style.
+     */
+    const UIButtonStyle* ResolveButtonStyle(IUIAssetProvider* InAssets, const TAssetRef<UIButtonStyle>& InStyle);
 }

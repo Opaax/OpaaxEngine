@@ -54,25 +54,26 @@ TEST_CASE("UIWidget classes: each widget type is a class under UIWidget, named a
 
 TEST_CASE("UIWidget classes: a leaf lists the base's properties first, then its own, once each")
 {
-    // Name, Rect, bVisible, bHitTestable, Opacity: every widget has them, in this order.
+    // Name, Rect, bVisible, bHitTestable, Opacity, StateSource: every widget has them, in this order.
     const TDynArray<OpaaxString> lBase = PropertyNames(UIPanel::StaticClass());
-    REQUIRE(lBase.size() == 5u);
+    REQUIRE(lBase.size() == 6u);
     CHECK(lBase[0] == "Name");
     CHECK(lBase[4] == "Opacity");
+    CHECK(lBase[5] == "StateSource");
 
     // A panel adds nothing; each leaf adds its own after the base's, and never repeats them.
-    CHECK(PropertyNames(UIMask::StaticClass()).size()     == 5u + 2u);   // Texture, bShowMaskGraphic
-    CHECK(PropertyNames(UISafeArea::StaticClass()).size() == 5u + 1u);   // Insets
-    CHECK(PropertyNames(UIStack::StaticClass()).size()    == 5u + 5u);   // Axis, Spacing, Padding, ChildAlign, bFitContent
-    CHECK(PropertyNames(UIScrollBox::StaticClass()).size() == 5u + 6u);  // a stack's four, ScrollStep, bDragToScroll
-    CHECK(PropertyNames(UIImage::StaticClass()).size()    == 5u + 4u);   // Brush, Fill, FillAmount, FillBinding
-    CHECK(PropertyNames(UIButton::StaticClass()).size()   == 5u + 3u);   // bIsEnabled, Style, Brushes
-    CHECK(PropertyNames(UIText::StaticClass()).size()     == 5u + 10u);
+    CHECK(PropertyNames(UIMask::StaticClass()).size()     == 6u + 2u);   // Texture, bShowMaskGraphic
+    CHECK(PropertyNames(UISafeArea::StaticClass()).size() == 6u + 1u);   // Insets
+    CHECK(PropertyNames(UIStack::StaticClass()).size()    == 6u + 5u);   // Axis, Spacing, Padding, ChildAlign, bFitContent
+    CHECK(PropertyNames(UIScrollBox::StaticClass()).size() == 6u + 6u);  // a stack's four, ScrollStep, bDragToScroll
+    CHECK(PropertyNames(UIImage::StaticClass()).size()    == 6u + 5u);   // Brush, Style, Fill, FillAmount, FillBinding
+    CHECK(PropertyNames(UIButton::StaticClass()).size()   == 6u + 3u);   // bIsEnabled, Style, Brushes
+    CHECK(PropertyNames(UIText::StaticClass()).size()     == 6u + 10u);
 
     const TDynArray<OpaaxString> lMask = PropertyNames(UIMask::StaticClass());
     CHECK(lMask[0] == "Name");
-    CHECK(lMask[5] == "Texture");
-    CHECK(lMask[6] == "bShowMaskGraphic");
+    CHECK(lMask[6] == "Texture");
+    CHECK(lMask[7] == "bShowMaskGraphic");
 }
 
 TEST_CASE("UIWidget::Create makes a widget of a registered class, and refuses the rest")

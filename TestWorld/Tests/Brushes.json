@@ -154,5 +154,137 @@
         "params": {
             "path": "BrushesStyledHovered.png"
         }
+    },
+    {
+        "id": "icon-follows-normal",
+        "command": "ui.list",
+        "params": {
+            "name": "FollowIcon"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "interaction": "Normal",
+                    "brush": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset#0",
+                    "name": "FollowIcon"
+                }
+            ]
+        }
+    },
+    {
+        "id": "hover-follow",
+        "command": "ui.hover",
+        "params": {
+            "widget": "FollowButton"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "icon-follows-hover",
+        "command": "ui.list",
+        "params": {
+            "name": "FollowIcon"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "interaction": "Hovered",
+                    "brush": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset#1",
+                    "name": "FollowIcon"
+                }
+            ]
+        }
+    },
+    {
+        "id": "label-follows-hover",
+        "command": "ui.list",
+        "params": {
+            "name": "FollowLabel"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "interaction": "Hovered",
+                    "name": "FollowLabel"
+                }
+            ]
+        }
+    },
+    {
+        "id": "press-follow",
+        "command": "input.key",
+        "params": {
+            "key": "Mouse_Left",
+            "action": "press"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "icon-follows-press",
+        "command": "ui.list",
+        "params": {
+            "name": "FollowIcon"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "interaction": "Pressed",
+                    "brush": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxasset#2",
+                    "name": "FollowIcon"
+                }
+            ]
+        }
+    },
+    {
+        "id": "label-follows-press",
+        "command": "ui.list",
+        "params": {
+            "name": "FollowLabel"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "interaction": "Pressed",
+                    "name": "FollowLabel"
+                }
+            ]
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.3
+        }
+    },
+    {
+        "id": "screenshot-follow-pressed",
+        "command": "screenshot",
+        "params": {
+            "path": "BrushesFollowPressed.png"
+        }
+    },
+    {
+        "id": "release-follow",
+        "command": "input.key",
+        "params": {
+            "key": "Mouse_Left",
+            "action": "release"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
     }
 ]

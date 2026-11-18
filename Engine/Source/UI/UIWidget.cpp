@@ -175,6 +175,13 @@ namespace Opaax
         {
             return *m_PreviewState;
         }
+
+        const UIWidget& lSource = GetStateSourceWidget();
+        if (&lSource != this)
+        {
+            return lSource.GetInteractionState();
+        }
+
         if (!IsInteractable())
         {
             return EUIInteractionState::Disabled;
@@ -345,6 +352,45 @@ namespace Opaax
         return true;
     }
 
+    const UIWidget& UIWidget::GetStateSourceWidget() const
+    {
+        if (StateSource == EUIStateSource::Button)
+        {
+            for (const UIWidget* lNode = m_Parent; lNode != nullptr; lNode = lNode->m_Parent)
+            {
+                if (lNode->IsStateOwner()) { return *lNode; }
+            }
+        }
+        return *this;
+    }
+
+    void UIWidget::SetStateSource(const EUIStateSource InSource)
+    {
+        StateSource = InSource;
+        NotifyStateChanged();
+    }
+
+    void UIWidget::PostEditChange()
+    {
+        NotifyStateChanged();
+    }
+
+    void UIWidget::NotifyFollowers()
+    {
+        for (const TStrongObjectPtr<UIWidget>& lChild : m_Children)
+        {
+            if (lChild->IsStateOwner())
+            {
+                continue;   // a nested button: the widgets in it follow it, not me
+            }
+            if (lChild->StateSource == EUIStateSource::Button)
+            {
+                lChild->NotifyStateChanged();
+            }
+            lChild->NotifyFollowers();
+        }
+    }
+
     void UIWidget::SetPreviewState(const TOptional<EUIInteractionState>& InState)
     {
         m_PreviewState = InState;
@@ -366,6 +412,12 @@ namespace Opaax
         for (const TStrongObjectPtr<UIModifier>& lModifier : m_Modifiers)
         {
             lModifier->OnStateChanged(lWas, lNow);
+        }
+
+        // The widgets that follow me change with me (their own pointer state does not count).
+        if (IsStateOwner())
+        {
+            NotifyFollowers();
         }
     }
 

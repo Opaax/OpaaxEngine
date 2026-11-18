@@ -3,6 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/Bounds2D.h"
+#include "Core/Reflection/OpaaxEnum.h"
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
@@ -19,6 +20,18 @@
 
 namespace Opaax
 {
+    /** Whose interaction state a widget shows: its own, or that of the nearest button above it. */
+    enum class EUIStateSource : Uint8
+    {
+        Self,
+        Button   // an icon or a label inside a button reacts to the button's hover and press
+    };
+
+    inline const char* ToString(const EUIStateSource InSource) noexcept
+    {
+        return InSource == EUIStateSource::Button ? "Button" : "Self";
+    }
+
     class  ObjectClassRegistry;
     class  UICanvas;
     struct UICanvasStats;
@@ -63,13 +76,20 @@ namespace Opaax
          * is still hit (use bVisible to stop that).
          */
         float       Opacity      = 1.f;
+        /**
+         * Button: my state is that of the nearest button above me (an icon swaps, a label tints with
+         * its button's hover and press), whatever widgets lie between; my own pointer state does not count.
+         */
+        EUIStateSource StateSource = EUIStateSource::Self;
 
         OPAAX_PROPERTIES(UIWidget,
                          OPAAX_PROP(Name),
                          OPAAX_PROP(Rect),
                          OPAAX_PROP(bVisible),
                          OPAAX_PROP(bHitTestable),
-                         OPAAX_PROP(Opacity).SetRange(0.f, 1.f).SetDragStep(0.01f))
+                         OPAAX_PROP(Opacity).SetRange(0.f, 1.f).SetDragStep(0.01f),
+                         OPAAX_PROP(StateSource).SetTooltip("Button: show the state of the nearest button above\n"
+                                                            "(its hover, press, disabled), not my own."))
 
         void SetRect(const UIRect& InRect);
 
@@ -180,9 +200,24 @@ namespace Opaax
         /** False when I take no input now (a disabled button): my state is Disabled. */
         virtual bool IsInteractable() const { return true; }
 
+        /** True for a widget whose state the widgets in it can follow (a button: StateSource Button). */
+        virtual bool IsStateOwner() const { return false; }
+
+        /** The widget whose state I show: the nearest state owner above me when I follow one, else me. */
+        const UIWidget& GetStateSourceWidget() const;
+
+        /** StateSource; my state is worked out again. */
+        void SetStateSource(EUIStateSource InSource);
+
+        //~Begin Object interface
+        /** An edited StateSource (or anything my state reads) is worked out again. */
+        void PostEditChange() override;
+        //~End Object interface
+
         /**
-         * My state now, from my canvas's pointer and focus: Disabled, else Pressed (held on me or a
-         * widget in me, and the pointer still over it), else Hovered, else Focused, else Normal.
+         * My state now: my preview state when set; my button's when I follow one (StateSource); else
+         * from my canvas's pointer and focus: Disabled, else Pressed (held on me or a widget in me, and
+         * the pointer still over it), else Hovered, else Focused, else Normal.
          */
         EUIInteractionState GetInteractionState() const;
 
@@ -391,6 +426,9 @@ namespace Opaax
         /** No hide under way, my modifiers and I at rest and asleep, my state worked out again; then my children. */
         void ResetRuntimeRecursive();
 
+        /** NotifyStateChanged on the widgets under me that follow me, down to the next state owner. */
+        void NotifyFollowers();
+
         friend class UIModifier;
 
         // =============================================================================
@@ -423,3 +461,5 @@ namespace Opaax
         TOptional<EUIInteractionState> m_PreviewState;
     };
 }
+
+OPAAX_ENUM_VALUES(Opaax::EUIStateSource, Self, Button)

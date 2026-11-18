@@ -66,6 +66,9 @@ namespace Opaax
         /** False while disabled: its transitions show Disabled. */
         bool IsInteractable() const override { return bIsEnabled; }
 
+        /** The widgets in a button can follow its state (StateSource Button). */
+        bool IsStateOwner() const override { return true; }
+
     protected:
         void Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads) override;
         //~End UIWidget Interface
