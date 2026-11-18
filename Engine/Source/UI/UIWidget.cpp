@@ -241,6 +241,34 @@ namespace Opaax
         }
     }
 
+    // =============================================================================
+    // Clock
+    // =============================================================================
+
+    void UIWidget::WakeUp()
+    {
+        // Also when already awake: one waiting for Show joins the list again.
+        m_bAwake = true;
+        if (m_Canvas != nullptr)
+        {
+            m_Canvas->AddAwake(*this);
+        }
+    }
+
+    void UIWidget::Sleep()
+    {
+        if (!m_bAwake)
+        {
+            return;
+        }
+
+        m_bAwake = false;
+        if (m_Canvas != nullptr)
+        {
+            m_Canvas->RemoveAwake(*this);
+        }
+    }
+
     void UIWidget::OnHideStepDone()
     {
         if (!m_bHiding || m_bDestroying)
@@ -270,6 +298,9 @@ namespace Opaax
             lModifier->OnReset();
         }
 
+        m_bAwake = false;
+        OnReset();
+
         // Told nothing: the modifiers just put themselves at the state there is now.
         m_State = GetInteractionState();
 
@@ -281,6 +312,12 @@ namespace Opaax
 
     void UIWidget::ShowRecursive()
     {
+        // Awake but not ticked while hidden: shown again, ticked again.
+        if (m_bAwake && m_Canvas != nullptr)
+        {
+            m_Canvas->AddAwake(*this);
+        }
+
         for (const TStrongObjectPtr<UIModifier>& lModifier : m_Modifiers)
         {
             lModifier->OnShow();
@@ -362,6 +399,8 @@ namespace Opaax
         // shown, I am shown.
         if (m_Canvas != nullptr)
         {
+            if (m_bAwake) { m_Canvas->AddAwake(*this); }
+
             const bool bShown = m_Canvas->IsTicked() && IsShownInTree();
             for (const TStrongObjectPtr<UIModifier>& lModifier : m_Modifiers)
             {
