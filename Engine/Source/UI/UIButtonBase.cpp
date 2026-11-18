@@ -100,6 +100,7 @@ Opaax::EUIReply Opaax::UIButtonBase::OnPointerEvent(const UIPointerEvent& InEven
 
                 if (GetBounds().Contains(InEvent.Position))
                 {
+                    NotifyActivated();   // before OnClick: a click handler may close the canvas
                     OnClick.Broadcast();
                 }
             }

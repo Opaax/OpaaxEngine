@@ -11,6 +11,7 @@
 
 namespace Opaax
 {
+    class IUIAudio;
     class Renderer2D;
 
     /**
@@ -179,6 +180,10 @@ namespace Opaax
         /** The asset provider of the last Update (modifiers resolve their presets with it), or null. */
         IUIAssetProvider* GetAssets() const noexcept { return m_Assets; }
 
+        /** What plays the widgets' sounds, set by the host (not owned); null is silence. */
+        IUIAudio* GetAudio() const noexcept { return m_Audio; }
+        void      SetAudio(IUIAudio* InAudio) noexcept { m_Audio = InAudio; }
+
         // =============================================================================
         // Members
         // =============================================================================
@@ -236,6 +241,7 @@ namespace Opaax
         /** From the last Update's context: not owned. */
         IUIAssetProvider* m_Assets = nullptr;
         Uint64            m_AssetsRevision = 0;   // its GetRevision when last seen
+        IUIAudio*         m_Audio = nullptr;      // not owned
 
         /** The modifiers the next Tick runs. Weak: a destroyed one is skipped. */
         TDynArray<TWeakObjectPtr<UIModifier>> m_Awake;

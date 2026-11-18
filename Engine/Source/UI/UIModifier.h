@@ -125,6 +125,12 @@ namespace Opaax
         /** Changes the size my owner asks of a container that lays it out (a stack reads it). */
         virtual void ModifyDesiredSize(Vector2F& InOutSize) const { (void)InOutSize; }
 
+        /**
+         * My owner's action fired: a button's click (the Activate stage). Also told to a widget following
+         * the button that fired. Enabled modifiers only.
+         */
+        virtual void OnActivated() {}
+
         /** My owner's interaction state changed (UIWidget::GetInteractionState). */
         virtual void OnStateChanged(EUIInteractionState InFrom, EUIInteractionState InTo) { (void)InFrom; (void)InTo; }
 
