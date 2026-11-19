@@ -308,7 +308,7 @@ TEST_CASE("UIBrush: a button draws its state's brush, Normal then Hovered")
 
     lCanvas.RoutePointer(UIPointerEvent{ EUIPointerEventType::Move, { 0.f, 0.f }, EUIPointerButton::None });
     lCanvas.Update(lContext);
-    REQUIRE(lButton->GetState() == EUIButtonState::Hovered);
+    REQUIRE(lButton->GetInteractionState() == EUIInteractionState::Hovered);
 
     lExpected.clear();
     DrawBrush(lContext, lButton->GetBounds(), lButton->GetStateBrush(EUIInteractionState::Hovered), nullptr, 0.f, lExpected);

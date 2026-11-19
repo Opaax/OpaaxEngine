@@ -403,7 +403,7 @@ TEST_CASE("UICanvas::ResetRuntime: every pose at rest, no pointer state, nothing
     for (Int32 lFrame = 0; lFrame < 10; ++lFrame) { lCanvas.Tick(1.f / 60.f); lCanvas.Update(); }
     REQUIRE(lCanvas.GetAwakeCount() > 0u);
     REQUIRE(lPanel->IsHiding());
-    REQUIRE(lButton->GetState() == EUIButtonState::Pressed);
+    REQUIRE(lButton->GetInteractionState() == EUIInteractionState::Pressed);
 
     lCanvas.ResetRuntime();
     lCanvas.Update();
@@ -411,7 +411,6 @@ TEST_CASE("UICanvas::ResetRuntime: every pose at rest, no pointer state, nothing
     CHECK(lCanvas.GetAwakeCount() == 0u);
     CHECK(lCanvas.GetHovered() == nullptr);
     CHECK(lCanvas.GetPressed() == nullptr);
-    CHECK(lButton->GetState() == EUIButtonState::Normal);
     CHECK(lButton->GetInteractionState() == EUIInteractionState::Normal);
     CHECK(lFeel.GetState() == EUIInteractionState::Normal);
     CHECK_FALSE(lPulse.IsPlaying());

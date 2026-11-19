@@ -91,8 +91,8 @@ another name then renamed), wait for `001.response.json`, repeat; send `app.quit
 - Use `world.wait` (game time) rather than `frames.wait` in anything that checks timing.
 - Find names first: `entity.list` (filter with `name` or `component`), then `entity.get` for values.
   Component fields have their saved names (`Transform/Position/x`, `Light2D/Intensity`).
-- Menus and HUD: `ui.list` names the game UI's widgets (with how many quads each draws, a button's
-  `state`, and an image's or a button's `brush`: `clip#step`, `sheet#frame`, a texture, so a frame is
+- Menus and HUD: `ui.list` names the game UI's widgets (with how many quads each draws, its
+  `interaction` state, and an image's or a button's `brush`: `clip#step`, `sheet#frame`, a texture, so a frame is
   checked without a screenshot); `ui.click` clicks one by name (no pixel guessing); `ui.hover` points
   at one, then `input.key Mouse_Left press` holds it pressed for a screenshot.
 - UI animation (Docs/UIModifiers.md): `ui.list` also answers each widget's `modifiers` (`playing`),

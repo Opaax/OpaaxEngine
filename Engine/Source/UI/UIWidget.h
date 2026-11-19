@@ -203,6 +203,15 @@ namespace Opaax
         /** True for a widget whose state the widgets in it can follow (a button: StateSource Button). */
         virtual bool IsStateOwner() const { return false; }
 
+        /**
+         * Whether the press the canvas holds on me still counts: a button cancels its press when the
+         * pointer leaves, so coming back over it while held shows Hovered, not Pressed.
+         */
+        virtual bool HoldsPress() const { return true; }
+
+        /** True while the pointer is over me or a widget in me. */
+        bool IsUnderPointer() const;
+
         /** The widget whose state I show: the nearest state owner above me when I follow one, else me. */
         const UIWidget& GetStateSourceWidget() const;
 
