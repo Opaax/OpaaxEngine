@@ -144,6 +144,7 @@ function(opaax_add_game_feature_tests InName InDir)
         file(GLOB lKindScripts CONFIGURE_DEPENDS "${lDir}/Ship/*.json")
     endif()
     list(APPEND lScripts ${lKindScripts})
+    list(FILTER lScripts EXCLUDE REGEX "[.]out[.]json$")   # answers a run wrote beside its script
 
     set(lResults "${CMAKE_BINARY_DIR}/${InName}Results")
     file(MAKE_DIRECTORY "${lResults}")
