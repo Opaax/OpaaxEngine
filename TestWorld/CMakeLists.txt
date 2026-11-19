@@ -24,6 +24,6 @@ if(OPAAX_BUILD_TESTS AND TARGET TestWorldEditor)
                                          --exec-out "${TESTWORLD_RESULTS}/Editor${TESTWORLD_FEATURE}.out.json"
                  WORKING_DIRECTORY "${TESTWORLD_RESULTS}")
         set_tests_properties(TestWorldEditor.${TESTWORLD_FEATURE} PROPERTIES LABELS feature TIMEOUT 180
-                             FIXTURES_REQUIRED TestWorldScratch)
+                             FIXTURES_REQUIRED TestWorldScratch FAIL_REGULAR_EXPRESSION "Leak at flush")
     endforeach()
 endif()

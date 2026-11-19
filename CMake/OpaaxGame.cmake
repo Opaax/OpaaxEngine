@@ -154,7 +154,8 @@ function(opaax_add_game_feature_tests InName InDir)
                  COMMAND ${InName} --exec "${lScript}" --exec-out "${lResults}/${lFeature}.out.json"
                                    --user-dir "${lResults}/User" --online fake
                  WORKING_DIRECTORY "${lResults}")
-        set_tests_properties(${InName}.${lFeature} PROPERTIES LABELS feature TIMEOUT 120)
+        set_tests_properties(${InName}.${lFeature} PROPERTIES LABELS feature TIMEOUT 120
+                             FAIL_REGULAR_EXPRESSION "Leak at flush")
     endforeach()
 endfunction()
 

@@ -65,18 +65,24 @@ namespace Opaax
 
     void ResourceManager::FlushAll()
     {
-        // Pools are flushed in creation order; the leak warning reports anything still referenced.
+        // Pools are flushed in creation order; each reports what is still referenced.
         TLockGuard<RecursiveMutex> lLock(m_Mutex);
         // Drop pending completions first (each holds a claim), so async loads do not report leaks.
         m_PendingCallbacks.clear();
+        Uint32 lLeaked = 0;
         for (TUniquePtr<IResourcePool>& lPool : m_Pools)
         {
             if (lPool)
             {
-                lPool->UnloadAll();
+                lLeaked += lPool->UnloadAll();
             }
         }
         m_Deps.Clear();
+
+        if (lLeaked > 0)
+        {
+            OPAAX_LOG(LogResourcePool, Error, "Leak at flush: {} resource(s) still held, listed above", lLeaked);
+        }
     }
 
     void ResourceManager::AddDependencyEdge(Uint32 InParentId, Uint32 InChildId)

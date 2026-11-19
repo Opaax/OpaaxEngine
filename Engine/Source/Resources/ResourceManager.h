@@ -135,7 +135,8 @@ namespace Opaax
         ResourceRef<T> Pin(ResourceHandle<T> InHandle);
         
         /**
-         * Unloads every resource in every pool (warns about leaks). Call before the GPU context dies.
+         * Unloads every resource in every pool; each one still held is logged as an error ("Leak at flush"),
+         * which fails the tests. Call before the GPU context dies.
          */
         void FlushAll();
 
