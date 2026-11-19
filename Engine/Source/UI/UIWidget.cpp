@@ -169,6 +169,11 @@ namespace Opaax
         }
     }
 
+    bool UIWidget::IsUnderPointer() const
+    {
+        return m_Canvas != nullptr && IsSelfOrUnder(*this, m_Canvas->GetHovered());
+    }
+
     EUIInteractionState UIWidget::GetInteractionState() const
     {
         if (m_PreviewState.has_value())
@@ -191,9 +196,11 @@ namespace Opaax
             return EUIInteractionState::Normal;
         }
 
-        // A press shows only while the pointer is over it: leaving cancels a button's press.
-        const bool bHovered = IsSelfOrUnder(*this, m_Canvas->GetHovered());
-        if (bHovered && IsSelfOrUnder(*this, m_Canvas->GetPressed()))
+        // A press shows only while the pointer is over it and its widget still holds it: leaving
+        // cancels a button's press for good.
+        const bool      bHovered = IsSelfOrUnder(*this, m_Canvas->GetHovered());
+        const UIWidget* lPressed = m_Canvas->GetPressed();
+        if (bHovered && IsSelfOrUnder(*this, lPressed) && lPressed->HoldsPress())
         {
             return EUIInteractionState::Pressed;
         }

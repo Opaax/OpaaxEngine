@@ -298,10 +298,9 @@ A button written before it had brushes (version 1, with `Normal`... colours and 
 `HoveredFrame`... frames) is read into them: each state takes its colour and frame (-1 is `Frame`),
 `Focused` takes Normal's, and `FadeDuration` is 0, so it looks as it did.
 
-A game's own button derives from `UIButtonBase` (`UI/UIButtonBase.h`), which keeps the state
-(`GetState()`), fires the events and calls one of `RebuildNormalState`, `RebuildHoveredState`,
-`RebuildPressedState`, `RebuildDisabledState`; each can draw a `UIBrush` (a tint, a texture or a
-sheet frame, a border) with `DrawBrush` (`UI/UIBrush.h`), as images and buttons do.
+A game's own button derives from `UIButtonBase` (`UI/UIButtonBase.h`), which takes the presses and
+fires the events. Its `Rebuild` draws what `GetInteractionState()` says, for instance a `UIBrush` per
+state with `DrawBrush` (`UI/UIBrush.h`), as `UIButton` does: [UIStyles.md](UIStyles.md#a-games-widget-that-draws-a-brush).
 
 ## Input (`InputActionAsset`, `InputMappingContextAsset`)
 

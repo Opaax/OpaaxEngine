@@ -96,7 +96,7 @@
                 {
                     "name": "WideButton",
                     "type": "UIButton",
-                    "state": "Normal",
+                    "interaction": "Normal",
                     "quads": 9
                 }
             ]
@@ -112,7 +112,7 @@
             "widgets": [
                 {
                     "name": "BigButton",
-                    "state": "Normal",
+                    "interaction": "Normal",
                     "quads": 9
                 }
             ]
@@ -129,7 +129,7 @@
                 {
                     "name": "WideDisabled",
                     "type": "UIButton",
-                    "state": "Disabled",
+                    "interaction": "Disabled",
                     "quads": 5
                 }
             ]
@@ -145,7 +145,7 @@
             "widgets": [
                 {
                     "name": "BigDisabled",
-                    "state": "Disabled",
+                    "interaction": "Disabled",
                     "quads": 15
                 }
             ]
@@ -175,7 +175,7 @@
             "widgets": [
                 {
                     "name": "WideButton",
-                    "state": "Hovered",
+                    "interaction": "Hovered",
                     "brush": "UI/SlicedButtons.opaaxasset#1",
                     "quads": 9
                 }
@@ -213,7 +213,7 @@
             "widgets": [
                 {
                     "name": "WideButton",
-                    "state": "Pressed",
+                    "interaction": "Pressed",
                     "quads": 9
                 }
             ]
@@ -250,7 +250,7 @@
             "widgets": [
                 {
                     "name": "WideButton",
-                    "state": "Hovered"
+                    "interaction": "Hovered"
                 }
             ]
         }
@@ -272,7 +272,7 @@
             "widgets": [
                 {
                     "name": "BigButton",
-                    "state": "Hovered",
+                    "interaction": "Hovered",
                     "quads": 9
                 }
             ]
@@ -288,7 +288,7 @@
             "widgets": [
                 {
                     "name": "WideButton",
-                    "state": "Normal"
+                    "interaction": "Normal"
                 }
             ]
         }
@@ -317,7 +317,7 @@
             "widgets": [
                 {
                     "name": "BigButton",
-                    "state": "Pressed",
+                    "interaction": "Pressed",
                     "quads": 9
                 }
             ]

@@ -8,53 +8,20 @@ namespace Opaax
 {
     DECLARE_MULTICAST_DELEGATE(FButtonEventDelegate);
 
-    /** What a button shows: disabled wins, then pressed, then hovered. */
-    enum class EUIButtonState : Uint8
-    {
-        Normal,
-        Hovered,
-        Pressed,
-        Disabled
-    };
-
-    inline const char* ToString(const EUIButtonState InState) noexcept
-    {
-        switch (InState)
-        {
-            case EUIButtonState::Normal:   return "Normal";
-            case EUIButtonState::Hovered:  return "Hovered";
-            case EUIButtonState::Pressed:  return "Pressed";
-            case EUIButtonState::Disabled: return "Disabled";
-        }
-        return "Normal";
-    }
-
     // =============================================================================
-    // UIButtonBase — a clickable widget: keeps its state from the pointer, fires the events, and
-    //   rebuilds with the function of its state. A subclass draws each state.
+    // UIButtonBase — a clickable widget: takes the pointer's presses, fires the events and the Activate
+    //   stage. A subclass draws in Rebuild what GetInteractionState() says (UIButton: a brush per state).
     // =============================================================================
     class UIButtonBase : public UIWidget
     {
         OPAAX_OBJECT(UIButtonBase, UIWidget)
         
         // =============================================================================
-        // Functions
-        // =============================================================================
-        
-    protected:
-        virtual void RebuildHoveredState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)        {}
-        virtual void RebuildDisabledState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)     {}
-        virtual void RebuildPressedState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)      {}
-        virtual void RebuildNormalState(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)       {}
-        
-        // =============================================================================
         // Get - Set
+        // =============================================================================
     public:
         void SetEnabled(bool bInEnabled);
         bool IsEnabled() const noexcept { return bIsEnabled;  }
-
-        /** The state shown now: Disabled, else Pressed, else Hovered, else Normal. */
-        EUIButtonState GetState() const noexcept;
 
         // =============================================================================
         // Override
@@ -69,8 +36,8 @@ namespace Opaax
         /** The widgets in a button can follow its state (StateSource Button). */
         bool IsStateOwner() const override { return true; }
 
-    protected:
-        void Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads) override;
+        /** False once the pointer left during the press: the release no longer clicks. */
+        bool HoldsPress() const override { return bIsPressed; }
         //~End UIWidget Interface
         
         // =============================================================================
@@ -96,8 +63,7 @@ namespace Opaax
 
         bool bIsEnabled   = true;
 
-        bool bIsHovered   = false;
-
+        /** A press began inside and has not ended: its release inside clicks. */
         bool bIsPressed   = false;
 
         // =============================================================================

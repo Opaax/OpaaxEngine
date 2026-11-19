@@ -210,22 +210,21 @@ TEST_CASE("UIButton: the quad's colour follows Normal -> Hovered -> Pressed -> H
 // =============================================================================
 // Art: a frame per state, sliced like an image
 // =============================================================================
-TEST_CASE("UIButton: GetState follows Normal -> Hovered -> Pressed, and Disabled wins")
+TEST_CASE("UIButton: its interaction state follows Normal -> Hovered -> Pressed, and Disabled wins")
 {
     SheetFixture lF;
     lF.Quads();
-    CHECK(lF.Button->GetState() == EUIButtonState::Normal);
+    CHECK(lF.Button->GetInteractionState() == EUIInteractionState::Normal);
 
     lF.Route(EUIPointerEventType::Move, { 0.f, 0.f }, EUIPointerButton::None);
-    CHECK(lF.Button->GetState() == EUIButtonState::Hovered);
+    CHECK(lF.Button->GetInteractionState() == EUIInteractionState::Hovered);
 
     lF.Route(EUIPointerEventType::Down, { 0.f, 0.f });
-    CHECK(lF.Button->GetState() == EUIButtonState::Pressed);
+    CHECK(lF.Button->GetInteractionState() == EUIInteractionState::Pressed);
 
     lF.Button->SetEnabled(false);
-    CHECK(lF.Button->GetState() == EUIButtonState::Disabled);
+    CHECK(lF.Button->GetInteractionState() == EUIInteractionState::Disabled);
 
-    CHECK(OpaaxString(ToString(EUIButtonState::Pressed)) == OpaaxString("Pressed"));
 }
 
 TEST_CASE("UIButton: draws the same quads as an image showing the same frame")
@@ -381,17 +380,17 @@ TEST_CASE("UIButton: leaving while pressed cancels the press: it stops once, and
     lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Move, { 0.f, 0.f }, EUIPointerButton::None));   // Enter
     lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Down, { 0.f, 0.f }));
     CHECK(lEvents.PressedStart == 1);
-    CHECK(lF.Button->GetState() == EUIButtonState::Pressed);
+    CHECK(lF.Button->GetInteractionState() == EUIInteractionState::Pressed);
 
     lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Move, { 900.f, 500.f }, EUIPointerButton::Primary));   // Leave
     CHECK(lEvents.PressedStart == 1);   // not a second start
     CHECK(lEvents.PressedStop == 1);
     CHECK(lEvents.HoveredStop == 1);
-    CHECK_FALSE(lF.Button->GetState() == EUIButtonState::Pressed);
+    CHECK_FALSE(lF.Button->GetInteractionState() == EUIInteractionState::Pressed);
 
     // Back over it, still held, then released inside: the press was cancelled, so nothing.
     lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Move, { 0.f, 0.f }, EUIPointerButton::Primary));   // Enter
-    CHECK_FALSE(lF.Button->GetState() == EUIButtonState::Pressed);
+    CHECK(lF.Button->GetInteractionState() == EUIInteractionState::Hovered);   // shows no press it will not click
     CHECK(lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Up, { 0.f, 0.f })) == EUIReply::Handled);
     CHECK(lF.Clicks == 0);
     CHECK(lEvents.PressedStop == 1);
@@ -447,7 +446,7 @@ TEST_CASE("UIButton: SetEnabled fires OnDisabled and OnEnabled at once, once per
     CHECK(lEvents.Disabled == 1);
     CHECK(lEvents.Enabled == 0);
     CHECK(lEvents.PressedStop == 0);   // nothing was pressed
-    CHECK(lF.Button->GetState() == EUIButtonState::Disabled);
+    CHECK(lF.Button->GetInteractionState() == EUIInteractionState::Disabled);
     CHECK(lF.Button->GetInteractionState() == EUIInteractionState::Disabled);
 
     lF.Button->SetEnabled(false);
@@ -456,7 +455,7 @@ TEST_CASE("UIButton: SetEnabled fires OnDisabled and OnEnabled at once, once per
     lF.Button->SetEnabled(true);
     CHECK(lEvents.Enabled == 1);
     CHECK(lEvents.Disabled == 1);
-    CHECK(lF.Button->GetState() == EUIButtonState::Normal);
+    CHECK(lF.Button->GetInteractionState() == EUIInteractionState::Normal);
 
     // Pointer events over it afterwards fire neither again.
     lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Move, { 0.f, 0.f }, EUIPointerButton::None));
@@ -474,7 +473,7 @@ TEST_CASE("UIButton: a press held when the button is disabled ends there, and it
 
     lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Move, { 0.f, 0.f }, EUIPointerButton::None));   // Enter
     lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Down, { 0.f, 0.f }));
-    REQUIRE(lF.Button->GetState() == EUIButtonState::Pressed);
+    REQUIRE(lF.Button->GetInteractionState() == EUIInteractionState::Pressed);
     REQUIRE(lF.Canvas.GetPressed() == lF.Button);
 
     lF.Button->SetEnabled(false);
@@ -491,7 +490,7 @@ TEST_CASE("UIButton: a press held when the button is disabled ends there, and it
     // Held again, enabled back mid-hold, then released: the press began while disabled, so nothing.
     lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Down, { 0.f, 0.f }));
     lF.Button->SetEnabled(true);
-    CHECK(lF.Button->GetState() == EUIButtonState::Hovered);
+    CHECK(lF.Button->GetInteractionState() == EUIInteractionState::Hovered);
     CHECK(lF.Button->GetInteractionState() == EUIInteractionState::Hovered);
     lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Up, { 0.f, 0.f }));
     CHECK(lF.Clicks == 0);
@@ -513,7 +512,7 @@ TEST_CASE("UIButton: disabled then enabled back during a press, its release does
     lF.Button->SetEnabled(false);
     lF.Button->SetEnabled(true);
 
-    CHECK(lF.Button->GetState() == EUIButtonState::Hovered);
+    CHECK(lF.Button->GetInteractionState() == EUIInteractionState::Hovered);
     lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Up, { 0.f, 0.f }));
     CHECK(lF.Clicks == 0);
 }
