@@ -70,6 +70,9 @@ What working on this repository taught, kept short so the next session starts fr
   screenshot. For a check, copy it aside, give the run a small layout of its own, and put the user's
   file back afterwards.
 - A window restored from that layout draws on its second frame: `frames.wait` before a screenshot.
+- The UI Canvas panel can sit in its own OS window in the local layout (`ViewportPos` in imgui.ini):
+  `editor.panel` shows it, but a screenshot of the main window misses it. For a check, give the run a
+  `Pos`/`Size` inside the main window and put the user's file back afterwards.
 - Automation cannot click inside a window. A custom asset editor's selected view is checked with a
   local build that starts with a selection, then reverted.
 - An automation step checking a `PostEditChange` fix-up must end on values that differ from the
