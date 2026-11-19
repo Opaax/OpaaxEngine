@@ -1,0 +1,294 @@
+[
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 10
+        }
+    },
+    {
+        "id": "show-browser",
+        "command": "editor.panel",
+        "params": {
+            "panel": "Resource Browser"
+        }
+    },
+    {
+        "id": "show-camera-preview",
+        "command": "editor.panel",
+        "params": {
+            "panel": "Camera Preview"
+        }
+    },
+    {
+        "id": "open-level",
+        "command": "level.open",
+        "params": {
+            "path": "Levels/Audio.opaaxlevel"
+        },
+        "expect": {
+            "world": "Audio",
+            "mode": "Edit"
+        }
+    },
+    {
+        "id": "play-once",
+        "command": "editor.play",
+        "expect": {
+            "mode": "Play"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 30
+        }
+    },
+    {
+        "id": "stop",
+        "command": "editor.stop",
+        "expect": {
+            "mode": "Edit"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "open-map",
+        "command": "map.open",
+        "params": {
+            "path": "Maps/Animation.opaaxmap"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "open-sliced",
+        "command": "level.open",
+        "params": {
+            "path": "Levels/Sliced.opaaxlevel"
+        },
+        "expect": {
+            "world": "Sliced"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "open-prefab",
+        "command": "asset.open",
+        "params": {
+            "path": "Prefabs/Turret.opaaxprefab"
+        },
+        "expect": {
+            "class": "PrefabAsset"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "open-ui-canvas",
+        "command": "asset.open",
+        "params": {
+            "path": "UI/Sliced.opaaxui"
+        },
+        "expect": {
+            "class": "UICanvasAsset"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "open-clip",
+        "command": "asset.open",
+        "params": {
+            "path": "Anims/Cycle.opaaxasset"
+        },
+        "expect": {
+            "class": "AnimationClip"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "open-sheet",
+        "command": "asset.open",
+        "params": {
+            "path": "Textures/FilterSheet.opaaxasset"
+        },
+        "expect": {
+            "class": "SpriteSheet"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "open-sliced-sheet",
+        "command": "asset.open",
+        "params": {
+            "path": "UI/SlicedButtons.opaaxasset"
+        },
+        "expect": {
+            "class": "SpriteSheet"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "open-font-family",
+        "command": "asset.open",
+        "params": {
+            "path": "/Engine/Fonts/Roboto.opaaxasset"
+        },
+        "expect": {
+            "class": "FontFamily"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "open-sound-def",
+        "command": "asset.open",
+        "params": {
+            "path": "Audio/Steps.opaaxasset"
+        },
+        "expect": {
+            "class": "AudioClipDef"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "open-material",
+        "command": "asset.open",
+        "params": {
+            "path": "Materials/Glow.opaaxasset"
+        },
+        "expect": {
+            "class": "Material2D"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "open-texture",
+        "command": "asset.open",
+        "params": {
+            "path": "Textures/Circle.png"
+        },
+        "expect": {
+            "class": "Texture2D"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "open-sound",
+        "command": "asset.open",
+        "params": {
+            "path": "Audio/Beep.wav"
+        },
+        "expect": {
+            "class": "AudioClip"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "unsaved-edit",
+        "command": "asset.set",
+        "params": {
+            "path": "Anims/Cycle.opaaxasset",
+            "properties": {
+                "Fps": 12.0
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "back-to-audio",
+        "command": "level.open",
+        "params": {
+            "path": "Levels/Audio.opaaxlevel",
+            "discard": true
+        },
+        "expect": {
+            "world": "Audio"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "play-until-exit",
+        "command": "editor.play",
+        "expect": {
+            "mode": "Play"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 60
+        }
+    }
+]
