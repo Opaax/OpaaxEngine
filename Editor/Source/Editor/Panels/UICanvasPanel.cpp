@@ -416,7 +416,15 @@ namespace Opaax::Editor
             m_GestureBefore = UICanvasOps::Snapshot(m_Context);
             m_bGestureOpen  = true;
         }
-        else if (!lActive && m_bWasItemActive && m_bGestureOpen)
+
+        // What the drawer wrote reaches the widget as an edit (its state, its art) while a field is
+        // edited, and once more as the gesture ends: a checkbox (bIsEnabled) flips on its release.
+        if (lWidget != nullptr && m_bGestureOpen)
+        {
+            lWidget->PostEditChange();
+        }
+
+        if (!lActive && m_bWasItemActive && m_bGestureOpen)
         {
             UICanvasOps::CommitEdit(m_Context, m_GestureBefore, lWidget != nullptr ? "Edit Widget" : "Edit Canvas");
             m_bGestureOpen = false;
