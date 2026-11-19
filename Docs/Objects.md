@@ -255,7 +255,8 @@ holds and the UI panel draws: a new widget is a class with `OPAAX_OBJECT`, `OPAA
 `OPAAX_REGISTER_OBJECT` line, and the canvas file, the editor's Add menu and its inspector take it with no
 other code. `UIWidget::Create(name, classes)` makes one by class name. A parent owns its children through
 `TStrongObjectPtr`; code that keeps a widget it does not own can hold a `TWeakObjectPtr`, which reads
-null once the widget is gone.
+null once the widget is gone. A widget that draws art holds a `UIBrush` field (a struct, saved and drawn
+with its owner), and a button's shared art is a `UIButtonStyle` asset: [UIStyles.md](UIStyles.md).
 
 ## UI modifiers
 
@@ -263,8 +264,9 @@ A widget's modifiers (a transition, a tween, a shadow, an aspect ratio) are obje
 subclasses, owned by their widget in the order added. As for widgets, the class is the `Type` a node's
 `Modifiers` list saves and its properties are the fields the file holds and the UI panel draws: a new
 modifier is a class with `OPAAX_OBJECT`, `OPAAX_PROPERTIES` and one `OPAAX_REGISTER_OBJECT` line.
-`UIModifier::Create(name, classes)` makes one by class name. The presets they name, `UITransition` and
-`UITween`, are assets, as is the `UIButtonStyle` a button names. How they run and how to write one: [UIModifiers.md](UIModifiers.md).
+`UIModifier::Create(name, classes)` makes one by class name. The presets they name, `UITransition`,
+`UITween` and `UISoundSet`, are assets, as is the `UIButtonStyle` a button names. How they run and how
+to write one: [UIModifiers.md](UIModifiers.md).
 
 ## Behaviours
 

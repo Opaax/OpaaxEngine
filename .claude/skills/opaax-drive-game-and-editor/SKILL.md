@@ -91,14 +91,17 @@ another name then renamed), wait for `001.response.json`, repeat; send `app.quit
 - Use `world.wait` (game time) rather than `frames.wait` in anything that checks timing.
 - Find names first: `entity.list` (filter with `name` or `component`), then `entity.get` for values.
   Component fields have their saved names (`Transform/Position/x`, `Light2D/Intensity`).
-- Menus and HUD: `ui.list` names the game UI's widgets (with how many quads each draws, and a
-  button's `state`); `ui.click` clicks one by name (no pixel guessing); `ui.hover` points at one,
-  then `input.key Mouse_Left press` holds it pressed for a screenshot.
+- Menus and HUD: `ui.list` names the game UI's widgets (with how many quads each draws, a button's
+  `state`, and an image's or a button's `brush`: `clip#step`, `sheet#frame`, a texture, so a frame is
+  checked without a screenshot); `ui.click` clicks one by name (no pixel guessing); `ui.hover` points
+  at one, then `input.key Mouse_Left press` holds it pressed for a screenshot.
 - UI animation (Docs/UIModifiers.md): `ui.list` also answers each widget's `modifiers` (`playing`),
   its pose as drawn (`drawn`, `scale`, `rotation`, `alpha`), `interaction` and `hiding`; `ui.tween`,
   `ui.show`, `ui.hide` drive tweens. Pace the frames (`time.pace`) and check with bounds
-  (`$atLeast`/`$atMost`) mid-motion. In the editor, `ui.modifier.*` edits a selected widget's
-  modifiers and `ui.preview.play` / `ui.preview.hover` run the UI panel's preview.
+  (`$atLeast`/`$atMost`) mid-motion. A sound modifier answers `lastSound` and `sounds` (what a player
+  would hear; there is no audio device in CI). In the editor, `ui.widget.set` edits the selected
+  widget (a button's `Style`, an image's `Brush`), `ui.modifier.*` its modifiers, and
+  `ui.preview.play` / `ui.preview.hover` / `ui.preview.state` run the UI panel's preview (Docs/UIStyles.md).
 - Check with `expect.value` / `expect.count` / `expect.entity`: a script of checks is a test.
   `expect.quit` waits for the game to quit by itself (`QuitGame`). `"expectFailure": true` on a
   request checks a refusal: it passes when the command fails. `"expect": {...}` checks any answer

@@ -201,7 +201,8 @@ sheet, found by name, or its own texture. An image plays it from its first step 
 canvas that ticks (a running game; the UI panel's **Play**), and rebuilds only when the step changes;
 a `Once` clip stops on its last step. Without Play the editor shows the first step. A clip that does not
 load leaves the brush's `Sheet` or `Texture`, and a frame name its sheet lacks shows the sheet's
-default frame; each says so once in the log (`UIBrush`).
+default frame; each says so once in the log (`UIBrush`). What a widget does with its brush, and a
+game's widget drawing one: [UIStyles.md](UIStyles.md).
 
 ```json
 { "Type": "UIImage", "Name": "Icon",

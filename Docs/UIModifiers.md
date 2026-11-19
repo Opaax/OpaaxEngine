@@ -15,6 +15,10 @@ and a game's own modifier class is one `OPAAX_REGISTER_OBJECT` line away.
 | `UIOutlineModifier` | A rim: four copies, around |
 | `UIAspectRatioModifier` | Keeps the rect at a width / height ratio |
 | `UISizeLimitModifier` | Keeps the size between a minimum and a maximum |
+| `UISoundModifier` | Plays sounds on hover, press, click, show and hide |
+
+What a widget draws (its brush, a button's art per state, a shared button style) is not a modifier: it
+is in [UIStyles.md](UIStyles.md).
 
 ## On a widget
 
@@ -214,3 +218,8 @@ fields feed. Keep the logic in pure functions beside the class (`SampleTweenKeys
   a turned parent loses its shear.
 - Springs, blurred shadows, tooltips, dragging, and keyboard or gamepad focus moving between widgets.
 - Poses on game time (a world-space HUD slowing with the game).
+- A sound for pressing a disabled button: a disabled button takes no pointer events.
+- A picker for a sound modifier's paths: they are text fields (a sound file and a clip definition are
+  two asset classes), typed or pasted.
+- A clip definition's own bus: UI sounds always play on the `UI` bus, so they are not paused with the
+  world.

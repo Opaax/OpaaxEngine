@@ -54,8 +54,11 @@ X11/Wayland/GL development packages listed in `.github/workflows/build.yml`.
   menu, when they are read, their file.
 - [Docs/Online.md](Docs/Online.md): the player's store (Steam): leaderboards, names, the overlay,
   playing offline, testing on a fake store, adding a store.
+- [Docs/UIStyles.md](Docs/UIStyles.md): what UI widgets draw: brushes, animated images, a button's
+  art per state, shared button styles, widgets following their button.
 - [Docs/UIModifiers.md](Docs/UIModifiers.md): animating and decorating UI widgets: transitions,
-  tweens, show and hide, shadows, aspect ratio and size limits, and writing a modifier.
+  tweens (on show, hide or a state), sounds, shadows, aspect ratio and size limits, and writing a
+  modifier.
 - [Docs/Automation.md](Docs/Automation.md): driving a game or the editor from scripts.
 - [Docs/AssetFormats.md](Docs/AssetFormats.md): the asset files (levels, maps, prefabs, UI, input,
   sprites, data), to write them by hand or from a tool.
