@@ -1,0 +1,105 @@
+[
+    {
+        "id": "open",
+        "command": "asset.open",
+        "params": {
+            "path": "UI/Brushes.opaaxui"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "stopped-holds-none",
+        "command": "ui.preview.play",
+        "params": {
+            "on": false
+        },
+        "expect": {
+            "playing": false,
+            "sounds": 0
+        }
+    },
+    {
+        "id": "play",
+        "command": "ui.preview.play",
+        "params": {
+            "on": true
+        },
+        "expect": {
+            "playing": true
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "hover-plays-a-step",
+        "command": "ui.preview.hover",
+        "params": {
+            "widget": "FollowButton"
+        },
+        "expect": {
+            "hovered": "FollowButton"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "playing-holds-its-sounds",
+        "command": "ui.preview.play",
+        "params": {
+            "on": true
+        },
+        "expect": {
+            "playing": true
+        }
+    },
+    {
+        "id": "stop-lets-them-go",
+        "command": "ui.preview.play",
+        "params": {
+            "on": false
+        },
+        "expect": {
+            "playing": false,
+            "sounds": 0
+        }
+    },
+    {
+        "id": "play-again",
+        "command": "ui.preview.play",
+        "params": {
+            "on": true
+        },
+        "expect": {
+            "playing": true
+        }
+    },
+    {
+        "id": "hover-again",
+        "command": "ui.preview.hover",
+        "params": {
+            "widget": "FollowButton"
+        },
+        "expect": {
+            "hovered": "FollowButton"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    }
+]
