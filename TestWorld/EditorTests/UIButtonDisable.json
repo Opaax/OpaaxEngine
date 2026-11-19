@@ -1,0 +1,104 @@
+[
+    {
+        "id": "open",
+        "command": "asset.open",
+        "params": {
+            "path": "UI/Sliced.opaaxui"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "select",
+        "command": "ui.widget.select",
+        "params": {
+            "name": "BigButton"
+        }
+    },
+    {
+        "id": "disable",
+        "command": "ui.widget.set",
+        "params": {
+            "values": {
+                "bIsEnabled": false
+            }
+        },
+        "expect": {
+            "brush": "UI/SlicedButtons.opaaxasset#3"
+        }
+    },
+    {
+        "id": "disabled-at-once",
+        "command": "ui.preview.state",
+        "params": {
+            "widget": "BigButton",
+            "state": "Live"
+        },
+        "expect": {
+            "interaction": "Disabled",
+            "brush": "UI/SlicedButtons.opaaxasset#3"
+        }
+    },
+    {
+        "id": "hovered-still-shown",
+        "command": "ui.preview.state",
+        "params": {
+            "widget": "BigButton",
+            "state": "Hovered"
+        },
+        "expect": {
+            "interaction": "Hovered",
+            "brush": "UI/SlicedButtons.opaaxasset#1"
+        }
+    },
+    {
+        "id": "pressed-still-shown",
+        "command": "ui.preview.state",
+        "params": {
+            "widget": "BigButton",
+            "state": "Pressed"
+        },
+        "expect": {
+            "interaction": "Pressed",
+            "brush": "UI/SlicedButtons.opaaxasset#2"
+        }
+    },
+    {
+        "id": "back-to-disabled",
+        "command": "ui.preview.state",
+        "params": {
+            "widget": "BigButton",
+            "state": "Live"
+        },
+        "expect": {
+            "interaction": "Disabled"
+        }
+    },
+    {
+        "id": "enable",
+        "command": "ui.widget.set",
+        "params": {
+            "values": {
+                "bIsEnabled": true
+            }
+        },
+        "expect": {
+            "brush": "UI/SlicedButtons.opaaxasset#0"
+        }
+    },
+    {
+        "id": "enabled-at-once",
+        "command": "ui.preview.state",
+        "params": {
+            "widget": "BigButton",
+            "state": "Live"
+        },
+        "expect": {
+            "interaction": "Normal"
+        }
+    }
+]
