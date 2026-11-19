@@ -31,12 +31,23 @@ void Opaax::UIButtonBase::SetEnabled(bool bInEnabled)
         OnPressedStop.Broadcast();
     }
 
+    // A disabled button is never hovered: under the pointer, its hover ends with it and starts again
+    // when it is enabled, so the hover events stay paired.
+    const bool lUnderPointer = IsUnderPointer();
     if (bIsEnabled)
     {
         OnEnabled.Broadcast();
+        if (lUnderPointer)
+        {
+            OnHoveredStart.Broadcast();
+        }
     }
     else
     {
+        if (lUnderPointer)
+        {
+            OnHoveredStop.Broadcast();
+        }
         OnDisabled.Broadcast();
     }
 }
