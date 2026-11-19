@@ -447,7 +447,6 @@ TEST_CASE("UIButton: SetEnabled fires OnDisabled and OnEnabled at once, once per
     CHECK(lEvents.Enabled == 0);
     CHECK(lEvents.PressedStop == 0);   // nothing was pressed
     CHECK(lF.Button->GetInteractionState() == EUIInteractionState::Disabled);
-    CHECK(lF.Button->GetInteractionState() == EUIInteractionState::Disabled);
 
     lF.Button->SetEnabled(false);
     CHECK(lEvents.Disabled == 1);
@@ -464,6 +463,40 @@ TEST_CASE("UIButton: SetEnabled fires OnDisabled and OnEnabled at once, once per
     CHECK(lEvents.Enabled == 1);
     CHECK(lEvents.Disabled == 1);
     CHECK(lF.Clicks == 1);
+}
+
+TEST_CASE("UIButton: a disabled button is never hovered; its hover ends when disabled and starts again when enabled")
+{
+    Fixture     lF;
+    EventCounts lEvents(*lF.Button);
+
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Move, { 0.f, 0.f }, EUIPointerButton::None));   // Enter
+    REQUIRE(lEvents.HoveredStart == 1);
+
+    // Disabled under the pointer: its hover ends there, as if the pointer had left.
+    lF.Button->SetEnabled(false);
+    CHECK(lEvents.HoveredStop == 1);
+    CHECK(lF.Button->GetInteractionState() == EUIInteractionState::Disabled);
+
+    // Moving off and back while disabled: no hover at all.
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Move, { 900.f, 500.f }, EUIPointerButton::None));
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Move, { 0.f, 0.f }, EUIPointerButton::None));
+    CHECK(lEvents.HoveredStart == 1);
+    CHECK(lEvents.HoveredStop == 1);
+    CHECK(lF.Button->GetInteractionState() == EUIInteractionState::Disabled);
+
+    // Enabled with the pointer still over it: hovered at once, its hover started once.
+    lF.Button->SetEnabled(true);
+    CHECK(lEvents.HoveredStart == 2);
+    CHECK(lF.Button->GetInteractionState() == EUIInteractionState::Hovered);
+
+    // Enabled away from the pointer: Normal, no hover started.
+    lF.Button->SetEnabled(false);
+    lF.Canvas.RoutePointer(Ev(EUIPointerEventType::Move, { 900.f, 500.f }, EUIPointerButton::None));
+    lF.Button->SetEnabled(true);
+    CHECK(lEvents.HoveredStart == 2);
+    CHECK(lEvents.HoveredStop == 2);
+    CHECK(lF.Button->GetInteractionState() == EUIInteractionState::Normal);
 }
 
 TEST_CASE("UIButton: a press held when the button is disabled ends there, and its release never clicks")
