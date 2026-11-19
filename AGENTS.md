@@ -123,7 +123,13 @@ Match the code around you. In short:
   Config panel draws it from its properties. See [Docs/Customizing.md](Docs/Customizing.md).
 - **UI widget:** a `UIWidget` subclass with `OPAAX_OBJECT`, its saved fields in `OPAAX_PROPERTIES`, and
   one `OPAAX_REGISTER_OBJECT` line: canvases save it, the UI panel offers and draws it. Made with
-  `NewObject<T>()` in code; its parent owns it.
+  `NewObject<T>()` in code; its parent owns it. One that draws art holds a `UIBrush` and draws it with
+  `DrawBrush` in `Rebuild`, ticks only while its clip can change (`WakeUp`, `Tick` answering false) and
+  answers `DescribeBrush` for `ui.list`. See [Docs/UIStyles.md](Docs/UIStyles.md).
+- **UI canvas format:** `UI_FORMAT_VERSION` in `UICanvasFile` (2: images and buttons draw brushes). A
+  change to what a node holds bumps it and upgrades older nodes in `UpgradeCanvasNode` before their
+  properties are read (a missing key at the old default), with a `UICanvasFileTests` case per change;
+  a newer file is refused. The repo's canvases are re-saved in a commit of their own.
 - **UI modifier:** a `UIModifier` subclass (`UIPoseModifier` for a pose) with `OPAAX_OBJECT`, its fields
   in `OPAAX_PROPERTIES` (a default on each) and one `OPAAX_REGISTER_OBJECT` line: nodes save it, the UI
   panel offers it. Override only the hooks of its stages, and invalidate what its result feeds
