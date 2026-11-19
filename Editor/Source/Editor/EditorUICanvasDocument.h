@@ -62,8 +62,14 @@ namespace Opaax::Editor
     public:
         bool IsPreviewPlaying() const noexcept { return m_bPreviewPlaying; }
 
-        /** On: the canvas is ticked and shown. Off: UICanvas::ResetRuntime, then not ticked. */
+        /**
+         * On: the canvas is ticked, shown and heard. Off: UICanvas::ResetRuntime, then not ticked, and the
+         * sounds it loaded are let go (they would otherwise outlive the engine's resources at exit).
+         */
         void SetPreviewPlaying(bool bInPlaying);
+
+        /** The sound files the playing preview keeps loaded; 0 when it is stopped. */
+        Uint64 GetHeldSoundCount() const noexcept { return m_Audio ? m_Audio->GetHeldClipCount() : 0; }
 
         // =============================================================================
         // Get
@@ -115,7 +121,7 @@ namespace Opaax::Editor
     private:
         OpaaxString  m_AbsPath;
         UICanvas     m_Canvas;
-        /** The preview's sounds (UI bus), made when it first plays; silent without an audio device. */
+        /** The preview's sounds (UI bus), made while it plays; silent without an audio device. */
         TUniquePtr<UIAudioPlayer> m_Audio;
         UIWidgetPath m_Selected;
 

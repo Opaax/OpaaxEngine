@@ -1449,8 +1449,9 @@ namespace Opaax::Editor::EditorAutomation
 
             InCommands.Register("ui.preview.play",
                 "Plays the UI panel's preview ({on}: true, the default) as the game would: ticked, Show tweens "
-                "played, the pointer routed to it; false stops it, everything back at rest. Answers {playing} and "
-                "whether the document is {dirty} (a play never makes it so).",
+                "played, the pointer routed to it; false stops it, everything back at rest. Answers {playing}, "
+                "whether the document is {dirty} (a play never makes it so) and the {sounds} files it keeps loaded "
+                "(0 once stopped).",
                 [&InContext](const nlohmann::json& InParams)
                 {
                     EditorUICanvasDocument& lDocument = InContext.UICanvasDocument;
@@ -1461,7 +1462,8 @@ namespace Opaax::Editor::EditorAutomation
 
                     lDocument.SetPreviewPlaying(InParams.value("on", true));
                     return AutomationResult::Ok(nlohmann::json{ { "playing", lDocument.IsPreviewPlaying() },
-                                                                { "dirty", lDocument.IsDirty() } });
+                                                                { "dirty", lDocument.IsDirty() },
+                                                                { "sounds", lDocument.GetHeldSoundCount() } });
                 });
 
             InCommands.Register("ui.preview.hover",

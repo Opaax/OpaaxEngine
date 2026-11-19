@@ -28,6 +28,9 @@ namespace Opaax
         /** Lets go of the clips and definitions it kept. */
         void Clear();
 
+        /** The sound files it keeps loaded. */
+        Uint64 GetHeldClipCount() const noexcept { return m_Clips.size(); }
+
     private:
         const TAssetHandle<AudioClip>& ResolveClip(const OpaaxString& InPath);
 
