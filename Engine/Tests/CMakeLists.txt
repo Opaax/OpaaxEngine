@@ -285,6 +285,8 @@ target_include_directories(OpaaxTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../
 target_compile_definitions(OpaaxTests PRIVATE OPAAX_TEST_ENGINE_ASSETS="${CMAKE_CURRENT_SOURCE_DIR}/../Assets")
 
 add_test(NAME OpaaxTests COMMAND OpaaxTests)
+# A resource still held when its manager flushes fails the run, whatever the checks said.
+set_tests_properties(OpaaxTests PROPERTIES FAIL_REGULAR_EXPRESSION "Leak at flush")
 
 # std stays behind the core types: lists any use outside the files that wrap it (AGENTS.md).
 add_test(NAME StdUse COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/../../CMake/CheckStdUse.cmake)

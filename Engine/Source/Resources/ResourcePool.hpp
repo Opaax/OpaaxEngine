@@ -24,7 +24,8 @@ namespace Opaax
     {
     public:
         virtual ~IResourcePool()                        = default;
-        virtual void   UnloadAll() noexcept             = 0;
+        /** Unloads every resource; logs each one still held as a leak. @return How many were still held */
+        virtual Uint32 UnloadAll() noexcept             = 0;
         virtual void   CollectGarbage() noexcept        = 0; // destroy the slots released last Update
         virtual void   FinalizeSlot(Uint32 InSlot) noexcept = 0; // main-thread publish of a filled async slot
         virtual Uint32 GetLoadedCount() const noexcept  = 0;
@@ -290,15 +291,20 @@ namespace Opaax
         // =============================================================================
         //~Begin IResourcePool interface
     public:
-        void UnloadAll() noexcept override
+        Uint32 UnloadAll() noexcept override
         {
+            Uint32 lLeaked = 0;
             for (Uint32 lSlot = 0; lSlot < m_SlotCount; ++lSlot)
             {
                 SlotMeta& lMeta = MetaRef(lSlot);
                 if (lMeta.State != EResourceState::Loaded) { continue; }
                 if (lMeta.RefCount > 0)
                 {
-                    OPAAX_LOG(LogResourcePool, Warn, "Leak at flush: '{}' (refcount {})", lMeta.Source, lMeta.RefCount);
+                    // An error: tests fail on this line, so a holder outliving the engine is found at once.
+                    OPAAX_LOG(LogResourcePool, Error, "Leak at flush: '{}' (refcount {}) is still held when the "
+                              "resources are flushed: what holds it must let go before the engine shuts down",
+                              lMeta.Source, lMeta.RefCount);
+                    ++lLeaked;
                 }
                 PayloadRef(lSlot).reset(); // may release children on other pools
                 ++lMeta.Generation;
@@ -311,6 +317,7 @@ namespace Opaax
             m_LoadedCount  = 0;
             m_LoadingCount = 0;
             m_TotalBytes   = 0;
+            return lLeaked;
         }
 
         /**
