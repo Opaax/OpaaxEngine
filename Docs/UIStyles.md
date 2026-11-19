@@ -162,8 +162,8 @@ private:
 
 One `OPAAX_REGISTER_OBJECT(UIBadge)` line and it is offered by the UI panel. A widget that draws per
 state overrides `OnInteractionStateChanged` and draws `UIStateBrushes::For(GetInteractionState())`. A
-game's own button derives from `UIButtonBase` and does the same: it keeps the state and fires the
-events.
+game's own button derives from `UIButtonBase`, which takes the presses and fires the events, and does
+the same in its `Rebuild`.
 
 `DescribeBrush` is what `ui.list` and `ui.widget.list` answer as `brush` (`clip#step`, `sheet#frame`, a
 texture path, `runtime`, `none`), so a script checks a widget's art without a screenshot.

@@ -52,15 +52,10 @@ Opaax::EUIReply Opaax::UIButtonBase::OnPointerEvent(const UIPointerEvent& InEven
     switch (InEvent.Type)
     {
     case EUIPointerEventType::Enter:
-        bIsHovered = true;
-        InvalidateContent();
         OnHoveredStart.Broadcast();
         return EUIReply::Unhandled;   // hover is never consumed
 
     case EUIPointerEventType::Leave:
-        bIsHovered = false;
-        InvalidateContent();
-
         // Leaving cancels the press: it ends here, and the release, wherever it is, does not click.
         if (bIsPressed)
         {
@@ -79,7 +74,6 @@ Opaax::EUIReply Opaax::UIButtonBase::OnPointerEvent(const UIPointerEvent& InEven
         }
         
         bIsPressed = true;
-        InvalidateContent();
         
         OnPressedStart.Broadcast();
         
@@ -91,7 +85,6 @@ Opaax::EUIReply Opaax::UIButtonBase::OnPointerEvent(const UIPointerEvent& InEven
 
             const bool lWasPressed = bIsPressed;
             bIsPressed = false;
-            InvalidateContent();
 
             // A press ends at its release; it clicks only inside. The Up is consumed either way (we captured it).
             if (lWasPressed)
@@ -110,24 +103,5 @@ Opaax::EUIReply Opaax::UIButtonBase::OnPointerEvent(const UIPointerEvent& InEven
 
     default:
         return UIWidget::OnPointerEvent(InEvent);
-    }
-}
-
-Opaax::EUIButtonState Opaax::UIButtonBase::GetState() const noexcept
-{
-    if (!bIsEnabled) { return EUIButtonState::Disabled; }
-    if (bIsPressed)  { return EUIButtonState::Pressed; }
-    if (bIsHovered)  { return EUIButtonState::Hovered; }
-    return EUIButtonState::Normal;
-}
-
-void Opaax::UIButtonBase::Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
-{
-    switch (GetState())
-    {
-        case EUIButtonState::Disabled: RebuildDisabledState(InContext, OutQuads); break;
-        case EUIButtonState::Pressed:  RebuildPressedState(InContext, OutQuads);  break;
-        case EUIButtonState::Hovered:  RebuildHoveredState(InContext, OutQuads);  break;
-        case EUIButtonState::Normal:   RebuildNormalState(InContext, OutQuads);   break;
     }
 }

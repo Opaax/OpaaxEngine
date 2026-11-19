@@ -43,7 +43,6 @@
 #include "Renderer/Camera/CameraShakeSubsystem.h"
 #include "UI/Modifiers/UITweenModifier.h"
 #include "UI/Modifiers/UISoundModifier.h"
-#include "UI/UIButtonBase.h"
 #include "UI/UICanvas.h"
 #include "UI/UISubsystem.h"
 #include "UI/UIWidget.h"
@@ -153,12 +152,6 @@ namespace Opaax::EngineAutomation
                 if (const OpaaxString lBrush = InWidget.DescribeBrush(); !lBrush.IsEmpty())
                 {
                     lRow["brush"] = lBrush;
-                }
-
-                // Any button, the engine's or a game's, answers the state it shows.
-                if (InWidget.IsA<UIButtonBase>())
-                {
-                    lRow["state"] = ToString(static_cast<const UIButtonBase&>(InWidget).GetState());
                 }
 
                 if (!InWidget.GetModifiers().empty())

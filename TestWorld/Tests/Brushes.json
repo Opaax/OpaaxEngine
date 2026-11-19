@@ -107,7 +107,7 @@
             "widgets": [
                 {
                     "name": "StyledButton",
-                    "state": "Normal",
+                    "interaction": "Normal",
                     "brush": "UI/SlicedButtons.opaaxasset#0",
                     "quads": 9
                 }
@@ -137,7 +137,7 @@
             "widgets": [
                 {
                     "name": "StyledButton",
-                    "state": "Hovered"
+                    "interaction": "Hovered"
                 }
             ]
         }
