@@ -10,6 +10,7 @@ opaax_add_game_feature_tests(TestWorld Tests)
 # The editor driven by a script (EditorTests/*.json), when this build has the editor.
 if(OPAAX_BUILD_TESTS AND TARGET TestWorldEditor)
     file(GLOB TESTWORLD_EDITOR_SCRIPTS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/EditorTests/*.json")
+    list(FILTER TESTWORLD_EDITOR_SCRIPTS EXCLUDE REGEX "[.]out[.]json$")
     set(TESTWORLD_RESULTS "${CMAKE_BINARY_DIR}/TestWorldResults")
 
     # The files the editor tests write (Assets/Scratch) are removed first: each run makes them anew.
