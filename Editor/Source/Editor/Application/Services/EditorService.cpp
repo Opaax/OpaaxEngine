@@ -1336,6 +1336,13 @@ namespace Opaax::Editor
             m_AssetEditors->CloseAll();
         }
 
+        // The UI canvas document: a playing preview holds sounds, its widgets brushes; all go before
+        // the engine flushes its resources.
+        if (m_UICanvasDocument != nullptr)
+        {
+            m_UICanvasDocument->Close();
+        }
+
         // 1. The whole UI (panels, then backend): the Viewport frees its FBO while the GL context is
         //    current. Destroying the context also saves the dock layout. Before m_Context.reset().
         ClearGUI();

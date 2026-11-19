@@ -73,12 +73,9 @@ namespace Opaax::Editor
         if (bInPlaying)
         {
             // As when the game mounts it: ticked, with sounds, then shown (its Show tweens play).
-            if (!m_Audio)
-            {
-                IEngine& lEngine = OpaaxApplication::GetAppService<IEngine>();
-                m_Audio = MakeUnique<UIAudioPlayer>(lEngine.GetAudio(), lEngine.GetResources(),
-                                                    OpaaxApplication::GetAppService<IPaths>());
-            }
+            IEngine& lEngine = OpaaxApplication::GetAppService<IEngine>();
+            m_Audio = MakeUnique<UIAudioPlayer>(lEngine.GetAudio(), lEngine.GetResources(),
+                                                OpaaxApplication::GetAppService<IPaths>());
             m_Canvas.SetAudio(&*m_Audio);
             m_Canvas.SetTicked(true);
             m_Canvas.Root().Show();
@@ -88,6 +85,7 @@ namespace Opaax::Editor
             m_Canvas.ResetRuntime();
             m_Canvas.SetTicked(false);
             m_Canvas.SetAudio(nullptr);   // the document is silent while it is edited
+            m_Audio.reset();              // and holds no clip: the next play loads them again
         }
     }
 
