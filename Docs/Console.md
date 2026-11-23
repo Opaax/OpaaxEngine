@@ -124,6 +124,13 @@ engine's are listed in [Automation.md](Automation.md#commands).
 usual length, fewer of them) and its camera run on game time; the UI, the input and the console on
 real time. Kept in [0.05, 4], and back to 1 when the game ends. A cheat, and dev only.
 
+## Stepping a paused world
+
+`world.pause true`, then `world.step 1` runs one fixed step of the world and stops, drawn on it:
+press Up and Enter to run the next one. `world.step 10` runs ten, one a frame. The steps do not
+depend on the frame rate or the time scale, and each comes with its update. `world.step` alone runs
+one frame and the steps its time owes. `world.pause false` resumes and drops the steps not run.
+
 ## Ship builds
 
 A ship build (`build.bat release`, an export) has no console: the key does nothing, and `help`,
