@@ -18,6 +18,7 @@
 #include "Physics/PhysicsBackend.h"
 #include "Physics/PhysicsTypes.h"
 #include "RHI/RHIBackend.h"
+#include "UI/UILayerSettings.h"
 
 namespace Opaax
 {
@@ -226,6 +227,18 @@ namespace Opaax
                                                .SetTooltip("An audio bank held for the whole game: menus, the player, UI."))
     };
 
+    struct UISettings
+    {
+        /** The game canvas's layers: a higher order on top. Applied at once (the mounted trees move). */
+        TDynArray<UILayerSettings> Layers = DefaultUILayers();
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(UISettings, Layers)
+
+        OPAAX_PROPERTIES(UISettings,
+                         OPAAX_PROP(Layers).SetTooltip("The game UI's layers: a higher order on top. Code mounts a tree in\n"
+                                                       "one by its name; \"Menu.Pause\" orders inside Menu. Applies at once."))
+    };
+
     struct EngineConfigData
     {
         WindowSettings  Window;
@@ -235,8 +248,9 @@ namespace Opaax
         AudioSettings   Audio;
         StatsSettings   Stats;
         ConsoleSettings Console;
+        UISettings      UI;
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(EngineConfigData, Window, Time, Render, Physics, Audio, Stats, Console)
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(EngineConfigData, Window, Time, Render, Physics, Audio, Stats, Console, UI)
 
         // NeedRestart on groups read at startup. Render and Audio are mixed, so only some fields have it.
         OPAAX_PROPERTIES(EngineConfigData,
@@ -246,6 +260,7 @@ namespace Opaax
                          OPAAX_PROP(Physics).SetFlags(EPropertyFlags::NeedRestart),
                          OPAAX_PROP(Audio),
                          OPAAX_PROP(Stats).SetFlags(EPropertyFlags::NeedRestart),
-                         OPAAX_PROP(Console).SetTooltip("The dev console (dev builds only). Read when a game starts."))
+                         OPAAX_PROP(Console).SetTooltip("The dev console (dev builds only). Read when a game starts."),
+                         OPAAX_PROP(UI))
     };
 }
