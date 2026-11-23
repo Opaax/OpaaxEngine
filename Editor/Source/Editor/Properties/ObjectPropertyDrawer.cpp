@@ -49,6 +49,11 @@ namespace Opaax::Editor
                 if (Shows(InName)) { m_Target.VisitObjectRef(InName, InHandle, InClass, InMeta); }
             }
 
+            void VisitTag(const char* InName, OpaaxTag& InOutTag, const PropertyMeta& InMeta) override
+            {
+                if (Shows(InName)) { m_Target.VisitTag(InName, InOutTag, InMeta); }
+            }
+
             bool BeginGroup(const char* InName, const PropertyMeta& InMeta) override
             {
                 if (!Shows(InName) || !m_Target.BeginGroup(InName, InMeta))

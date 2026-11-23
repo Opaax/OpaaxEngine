@@ -10,6 +10,7 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
+#include "Core/Tag/OpaaxTag.h"
 #include "Core/Reflection/TypeInfo.h"
 #include "Object/ObjectHandle.h"
 
@@ -114,6 +115,16 @@ namespace Opaax
         {
             (void)InOutId;
             VisitUnsupported(InName, "EntityRef");
+        }
+
+        /**
+         * A tag (OpaaxTag): write InOutTag to change it. By default reported as unsupported, so a visitor
+         * that has nothing to do with tags needs no code.
+         */
+        virtual void VisitTag(const char* InName, OpaaxTag& InOutTag, const PropertyMeta& /*InMeta*/)
+        {
+            (void)InOutTag;
+            VisitUnsupported(InName, "OpaaxTag");
         }
 
         /**
@@ -276,6 +287,10 @@ namespace Opaax
         else if constexpr (CEntityRefField<TValue>)
         {
             InVisitor.VisitEntityRef(InName, InValue.Id, InMeta);
+        }
+        else if constexpr (TIsSame<TValue, OpaaxTag>)
+        {
+            InVisitor.VisitTag(InName, InValue, InMeta);
         }
         else if constexpr (k_IsList<TValue> && !TIsSame<TValue, TDynArray<bool>>)
         {

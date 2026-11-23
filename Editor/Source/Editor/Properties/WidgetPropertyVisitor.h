@@ -39,6 +39,8 @@ namespace Opaax::Editor
 
         void VisitEntityRef(const char* InName, Guid& InOutId, const PropertyMeta& InMeta) override;
 
+        void VisitTag(const char* InName, OpaaxTag& InOutTag, const PropertyMeta& InMeta) override;
+
         bool BeginGroup(const char* InName, const PropertyMeta& InMeta) override;
         void EndGroup() override;
 
