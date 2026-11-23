@@ -41,7 +41,9 @@ OPAAX_REGISTER_OBJECT(EnemyStats);
   name), vectors and colours, another asset (`TAssetRef<Material2D>`, `TAssetRef<Texture2D>` for an
   image, `TAssetRef<PrefabAsset>` for a prefab), an entity of the same world in a component or a
   behaviour (`EntityRef`, saved as `{"entityRef": "<guid>"}`, drawn as a slot a Hierarchy row is
-  dropped on, read with `Behaviour::Resolve`), and lists of structs that have
+  dropped on, read with `Behaviour::Resolve`), a tag (`OpaaxTag`, saved as `"Menu.Pause"`), a set of
+  tags (`OpaaxTagContainer`, saved as an array of strings, drawn as a list with a remove button per
+  tag and an Add field that takes a tag on Enter), and lists of structs that have
   `OPAAX_PROPERTIES` and `NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT`. Give every field a default: a
   file written before a field existed still loads.
 - `OPAAX_REGISTER_OBJECT(Class)` is the only registration. After renaming a class,
