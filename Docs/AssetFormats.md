@@ -218,8 +218,9 @@ beside its `Type`; one with none is read as version 1.
 
 A binding (`"Hud.Score"`) reads a property of a source the game registers on the canvas
 (`Bindings().Add(OPAAX_ID("Hud"), MakeBindingReader(*this))`); with a binding, `Text` is the format and `{}`
-the value. A game mounts a canvas with `GetContext().UI->MountAsset("UI/Hud.opaaxui")` and finds a
-widget with `FindByName`.
+the value. A game mounts a canvas with `GetContext().UI->MountAsset("UI/Hud.opaaxui")`, in a layer
+(`MountAsset("UI/Pause.opaaxui", nullptr, UILayerMenu())`: [UI.md](UI.md)), and finds a widget with
+`FindByName`.
 
 The pointer reaches widgets as events, asked of the widget under it first, then of its parents, until
 one handles it: a press (`Down`, which captures the pointer until its `Up`) and the wheel (`Scroll`,
@@ -543,4 +544,13 @@ and the global bank:
 "Audio": { "bEnabled": true, "Backend": "Miniaudio", "MasterVolume": 1.0, "MaxVoices": 64,
            "GlobalBank": "Audio/Global.opaaxasset",
            "Buses": [ { "Name": "Music" }, { "Name": "SFX" }, { "Name": "Footsteps", "Parent": "SFX", "Volume": 0.8 } ] }
+```
+
+The UI settings name the game canvas's layers, a higher order on top (a listed `Layers` replaces the
+default four; a dotted name is a sub-layer, ordered inside its parent: [UI.md](UI.md#layers)):
+
+```json
+"UI": { "Layers": [ { "Name": "Hud", "Order": 0 }, { "Name": "Menu", "Order": 100 },
+                    { "Name": "Menu.Pause", "Order": 10 }, { "Name": "Debug", "Order": 500 },
+                    { "Name": "Loading", "Order": 900 } ] }
 ```

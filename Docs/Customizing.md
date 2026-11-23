@@ -170,6 +170,13 @@ can be `const` members.
 - **Another audio library:** implement `IAudioDevice` and `IAudioDecoder` in `Audio/<Library>`, add its
   `EAudioBackend` value and its case in `AudioBackendFactory.cpp`; `Audio.Backend` picks it.
 
+### UI
+
+- **Layers:** `UI.Layers` in `Engine.config` orders the game canvas's trees (Hud, Menu, Debug,
+  Loading by default, and any of yours; `Menu.Pause` is a sub-layer inside Menu). A screen is mounted
+  in one: `GetContext().UI->MountAsset("UI/Pause.opaaxui", nullptr, UILayerMenu())`. A higher layer
+  draws on top and takes the pointer first, whatever the mount order ([UI.md](UI.md)).
+
 ### Online
 
 - **The game's boards and stores:** `Configs/Online.config` (`Config_Online`) lists the stores a game
