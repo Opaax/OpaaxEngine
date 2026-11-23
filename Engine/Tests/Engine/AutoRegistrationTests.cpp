@@ -215,3 +215,23 @@ TEST_CASE("AutoRegistration: game instance subsystems are created UI first, then
     CHECK(lBank < lUI);
     CHECK(lUI < lInput);
 }
+
+TEST_CASE("AutoRegistration: the engine's tags reach the tag registry, with their parents")
+{
+    // From the engine's own file (EngineTags.cpp), which this file does not include: linked whole.
+    EngineRegistries lRegistries;
+    ModuleRegistrar  lRegistrar;
+    lRegistrar.BindEngineRegistries(lRegistries);
+    RunAutoRegistrations(lRegistrar);
+
+    const TagRegistry& lTags = lRegistries.Tags();
+    CHECK(lTags.Find(OpaaxTag("UI.Layer.Menu"))->Source == ETagSource::Native);
+    CHECK_FALSE(lTags.Find(OpaaxTag("UI.Layer.Menu"))->Comment.IsEmpty());
+    CHECK(lTags.IsRegistered(OpaaxTag("Audio.Bus.Music")));
+    CHECK(lTags.Find(OpaaxTag("Audio.Bus"))->Source == ETagSource::Native);   // the master, declared itself
+    CHECK(lTags.Find(OpaaxTag("UI.Layer"))->Source == ETagSource::Implied);
+    CHECK(lTags.Under(OpaaxTag("UI.Layer")).size() >= 4u);
+
+    // Text that is not a tag is refused, not asserted on.
+    CHECK_FALSE(lRegistrar.Tags().Add("Not..A.Tag", "bad"));
+}
