@@ -1,0 +1,95 @@
+{
+    "entities": [
+        {
+            "components": {
+                "LayerProbe": {
+                    "DebugClicks": 0,
+                    "DrawOrder": "",
+                    "FreeClicks": 0,
+                    "HoveredName": "",
+                    "MenuClicks": 0,
+                    "MenuState": "",
+                    "bMounted": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "3a300f5e34e24eb3a1344a28cc7777db",
+            "name": "Hud",
+            "ownerMap": "Layers"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.35,
+                        "y": 0.4,
+                        "z": 0.45
+                    },
+                    "Frame": -1,
+                    "Layer": "Background",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 1100.0,
+                        "y": 620.0
+                    },
+                    "Texture": "/Engine/Textures/T_Checker_128.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "bbb058fa3a1642c58cf77120a343dcee",
+            "name": "Backdrop",
+            "ownerMap": "Layers"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "BlendCurve": "EaseInOut",
+                    "BlendIn": 0.0,
+                    "OrthoSize": 300.0,
+                    "Priority": 0,
+                    "bRotateView": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "eb3ba4da0236410894b75904d17a9587",
+            "name": "Camera",
+            "ownerMap": "Layers"
+        }
+    ],
+    "mapId": "Layers",
+    "version": 4
+}

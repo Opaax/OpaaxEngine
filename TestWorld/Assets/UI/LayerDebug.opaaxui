@@ -1,0 +1,210 @@
+{
+    "ReferenceHeight": 1080.0,
+    "Root": {
+        "Children": [
+            {
+                "Brushes": {
+                    "Disabled": {
+                        "Frame": -1,
+                        "Tint": {
+                            "w": 0.5,
+                            "x": 0.35,
+                            "y": 0.11,
+                            "z": 0.09
+                        }
+                    },
+                    "FadeDuration": 0.0,
+                    "Focused": {
+                        "Frame": -1,
+                        "Tint": {
+                            "w": 1.0,
+                            "x": 0.7,
+                            "y": 0.22,
+                            "z": 0.18
+                        }
+                    },
+                    "Hovered": {
+                        "Frame": -1,
+                        "Tint": {
+                            "w": 1.0,
+                            "x": 0.98,
+                            "y": 0.308,
+                            "z": 0.252
+                        }
+                    },
+                    "Normal": {
+                        "Frame": -1,
+                        "Tint": {
+                            "w": 1.0,
+                            "x": 0.7,
+                            "y": 0.22,
+                            "z": 0.18
+                        }
+                    },
+                    "Pressed": {
+                        "Frame": -1,
+                        "Tint": {
+                            "w": 1.0,
+                            "x": 0.42,
+                            "y": 0.132,
+                            "z": 0.108
+                        }
+                    }
+                },
+                "Children": [
+                    {
+                        "Color": {
+                            "w": 1.0,
+                            "x": 1.0,
+                            "y": 1.0,
+                            "z": 1.0
+                        },
+                        "Font": "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf",
+                        "HAlign": "Center",
+                        "Name": "DebugButtonLabel",
+                        "Rect": {
+                            "AnchorMax": {
+                                "x": 0.5,
+                                "y": 0.5
+                            },
+                            "AnchorMin": {
+                                "x": 0.5,
+                                "y": 0.5
+                            },
+                            "AnchoredPosition": {
+                                "x": 0.0,
+                                "y": 0.0
+                            },
+                            "Pivot": {
+                                "x": 0.5,
+                                "y": 0.5
+                            },
+                            "SizeDelta": {
+                                "x": 240.0,
+                                "y": 70.0
+                            }
+                        },
+                        "Size": 30.0,
+                        "Text": "Debug",
+                        "Type": "UIText",
+                        "VAlign": "Middle",
+                        "bHitTestable": false
+                    }
+                ],
+                "Name": "DebugButton",
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": 40.0,
+                        "y": 60.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 240.0,
+                        "y": 70.0
+                    }
+                },
+                "Type": "UIButton"
+            }
+        ],
+        "Modifiers": [
+            {
+                "Delay": 0.0,
+                "Keys": [
+                    {
+                        "Ease": "Linear",
+                        "Pose": {
+                            "Opacity": 1.0,
+                            "Rotation": 0.0,
+                            "Scale": {
+                                "x": 1.0,
+                                "y": 1.0
+                            },
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 1.0,
+                                "y": 1.0,
+                                "z": 1.0
+                            },
+                            "Translation": {
+                                "x": 0.0,
+                                "y": 0.0
+                            }
+                        },
+                        "Time": 0.0
+                    },
+                    {
+                        "Ease": "Linear",
+                        "Pose": {
+                            "Opacity": 0.25,
+                            "Rotation": 0.0,
+                            "Scale": {
+                                "x": 1.0,
+                                "y": 1.0
+                            },
+                            "Tint": {
+                                "w": 1.0,
+                                "x": 1.0,
+                                "y": 1.0,
+                                "z": 1.0
+                            },
+                            "Translation": {
+                                "x": 0.0,
+                                "y": 0.0
+                            }
+                        },
+                        "Time": 2.0
+                    }
+                ],
+                "Loop": "Once",
+                "Name": "FadeOut",
+                "Pivot": {
+                    "x": 0.5,
+                    "y": 0.5
+                },
+                "PlayOn": "Hide",
+                "Tween": "",
+                "Type": "UITweenModifier",
+                "bEnabled": true,
+                "bHoldEnd": false,
+                "bMovesHitArea": true
+            }
+        ],
+        "Name": "DebugRoot",
+        "Rect": {
+            "AnchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "AnchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "AnchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "Pivot": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "SizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            }
+        },
+        "Type": "UIPanel",
+        "bHitTestable": false
+    },
+    "Version": 2
+}
