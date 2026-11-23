@@ -1,0 +1,90 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/DebugShapes.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.5
+        }
+    },
+    {
+        "id": "pause",
+        "command": "world.pause",
+        "params": {
+            "paused": true
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 10
+        }
+    },
+    {
+        "id": "edge-paused",
+        "command": "frame.sample",
+        "params": {
+            "x": 540,
+            "y": 300,
+            "width": 2,
+            "height": 100
+        },
+        "expect": {
+            "colors": 1,
+            "mean": [
+                72,
+                210,
+                106,
+                255
+            ]
+        }
+    },
+    {
+        "id": "shot",
+        "command": "screenshot",
+        "params": {
+            "path": "ColliderOutlinesPaused.png"
+        }
+    },
+    {
+        "id": "step",
+        "command": "world.step"
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "edge-stepped",
+        "command": "frame.sample",
+        "params": {
+            "x": 540,
+            "y": 300,
+            "width": 2,
+            "height": 100
+        },
+        "expect": {
+            "colors": 1,
+            "mean": [
+                72,
+                210,
+                106,
+                255
+            ]
+        }
+    },
+    {
+        "id": "resume",
+        "command": "world.pause",
+        "params": {
+            "paused": false
+        }
+    }
+]

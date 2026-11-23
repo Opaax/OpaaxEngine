@@ -15,7 +15,8 @@ namespace Opaax
     struct TransformComponent;
 
     // =============================================================================
-    // ColliderDebugSubsystem — draws every collider's outline, every frame.
+    // ColliderDebugSubsystem — draws every collider's outline, every frame, paused or not (Present),
+    //   at the pose of the world's last step.
     //   Runs in Edit and Play worlds (colliders must be visible while editing) and reads the components.
     //   Dev builds only: a ship build's worlds never get one. Drawn on DebugChannels::Physics,
     //   which can be toggled.
@@ -33,7 +34,7 @@ namespace Opaax
         bool  ShouldCreate(const World& InWorld) const override;
 
         bool Startup() override;
-        void Update(double InDeltaTime) override;
+        void Present(double InRealDeltaTime) override;
         void Shutdown() override;
         //~End WorldSubsystem interface
 
@@ -44,7 +45,7 @@ namespace Opaax
         /** The creation rule, for any build: true in a dev build only. */
         static constexpr bool ShouldCreateIn(bool bInDevBuild) noexcept { return bInDevBuild; }
 
-        /** Number of colliders drawn on the last tick. */
+        /** Number of colliders drawn on the last Present. */
         Uint64 GetLastDrawnCount() const noexcept { return m_LastDrawn; }
 
         // =============================================================================

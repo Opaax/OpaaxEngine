@@ -56,9 +56,9 @@ namespace Opaax
     }
 
     // =========================================================================
-    // Tick
+    // Present
     // =========================================================================
-    void ColliderDebugSubsystem::Update(double)
+    void ColliderDebugSubsystem::Present(double)
     {
         OPAAX_STAT_SCOPE("ColliderDebug");
 
