@@ -1,0 +1,296 @@
+[
+    {
+        "repeat": [
+            {
+                "scale": 0.1,
+                "pace": "60",
+                "tag": "60-x0.1"
+            },
+            {
+                "scale": 0.1,
+                "pace": "240",
+                "tag": "240-x0.1"
+            },
+            {
+                "scale": 1.0,
+                "pace": "60",
+                "tag": "60-x1.0"
+            },
+            {
+                "scale": 1.0,
+                "pace": "240",
+                "tag": "240-x1.0"
+            },
+            {
+                "scale": 4.0,
+                "pace": "60",
+                "tag": "60-x4.0"
+            },
+            {
+                "scale": 4.0,
+                "pace": "240",
+                "tag": "240-x4.0"
+            }
+        ],
+        "requests": [
+            {
+                "id": "pace-{tag}",
+                "command": "time.pace",
+                "params": {
+                    "pacing": "{pace}"
+                }
+            },
+            {
+                "id": "play-{tag}",
+                "command": "level.play",
+                "params": {
+                    "path": "Levels/TimeScale.opaaxlevel"
+                }
+            },
+            {
+                "id": "scale-{tag}",
+                "command": "time.scale",
+                "params": {
+                    "scale": "{scale}"
+                }
+            },
+            {
+                "command": "frames.wait",
+                "params": {
+                    "count": 5
+                }
+            },
+            {
+                "id": "pause-{tag}",
+                "command": "world.pause",
+                "params": {
+                    "paused": true
+                },
+                "expect": {
+                    "paused": true
+                }
+            },
+            {
+                "command": "frames.wait",
+                "params": {
+                    "count": 2
+                }
+            },
+            {
+                "id": "reset-drift-{tag}",
+                "command": "component.set",
+                "params": {
+                    "entity": "Drifter",
+                    "type": "DriftProbe",
+                    "value": {
+                        "Distance": 0.0,
+                        "GameTime": 0.0
+                    }
+                }
+            },
+            {
+                "id": "reset-frames-{tag}",
+                "command": "component.set",
+                "params": {
+                    "entity": "Drifter",
+                    "type": "FrameProbe",
+                    "value": {
+                        "Frames": 0,
+                        "Steps": 0,
+                        "MinDelta": 1.0,
+                        "MaxDelta": 0.0
+                    }
+                }
+            },
+            {
+                "id": "two-steps-{tag}",
+                "command": "world.step",
+                "params": {
+                    "steps": 2
+                },
+                "expect": {
+                    "steps": 2
+                }
+            },
+            {
+                "command": "frames.wait",
+                "params": {
+                    "count": 10
+                }
+            },
+            {
+                "id": "ran-two-{tag}",
+                "command": "expect.value",
+                "params": {
+                    "entity": "Drifter",
+                    "path": "FrameProbe/Steps",
+                    "near": 2,
+                    "tolerance": 0.01
+                }
+            },
+            {
+                "id": "updated-twice-{tag}",
+                "command": "expect.value",
+                "params": {
+                    "entity": "Drifter",
+                    "path": "FrameProbe/Frames",
+                    "near": 2,
+                    "tolerance": 0.01
+                }
+            },
+            {
+                "id": "update-is-a-step-{tag}",
+                "command": "expect.value",
+                "params": {
+                    "entity": "Drifter",
+                    "path": "FrameProbe/MaxDelta",
+                    "near": 0.016666666666666666,
+                    "tolerance": 0.0001
+                }
+            },
+            {
+                "id": "game-time-{tag}",
+                "command": "expect.value",
+                "params": {
+                    "entity": "Drifter",
+                    "path": "DriftProbe/GameTime",
+                    "near": 0.03333333333333333,
+                    "tolerance": 0.0001
+                }
+            },
+            {
+                "id": "distance-{tag}",
+                "command": "expect.value",
+                "params": {
+                    "entity": "Drifter",
+                    "path": "DriftProbe/Distance",
+                    "near": 3.3333333333333335,
+                    "tolerance": 0.001
+                }
+            },
+            {
+                "id": "queue-empty-{tag}",
+                "command": "world.info",
+                "expect": {
+                    "paused": true,
+                    "stepsQueued": 0
+                }
+            },
+            {
+                "id": "drawn-on-step-{tag}",
+                "command": "camera.info",
+                "expect": {
+                    "frame": {
+                        "alpha": 1.0,
+                        "steps": 0
+                    }
+                }
+            },
+            {
+                "id": "frame-step-{tag}",
+                "command": "world.step"
+            },
+            {
+                "command": "frames.wait",
+                "params": {
+                    "count": 2
+                }
+            },
+            {
+                "id": "frame-step-updates-once-{tag}",
+                "command": "expect.value",
+                "params": {
+                    "entity": "Drifter",
+                    "path": "FrameProbe/Frames",
+                    "near": 3,
+                    "tolerance": 0.01
+                }
+            },
+            {
+                "id": "frame-step-runs-on-time-{tag}",
+                "command": "expect.value",
+                "params": {
+                    "entity": "Drifter",
+                    "path": "FrameProbe/Steps",
+                    "greater": 2.5
+                }
+            },
+            {
+                "id": "resume-{tag}",
+                "command": "world.pause",
+                "params": {
+                    "paused": false
+                }
+            },
+            {
+                "id": "scale-back-{tag}",
+                "command": "time.scale",
+                "params": {
+                    "scale": 1.0
+                }
+            }
+        ]
+    },
+    {
+        "id": "refused-unpaused",
+        "command": "world.step",
+        "params": {
+            "steps": 1
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "pause-again",
+        "command": "world.pause",
+        "params": {
+            "paused": true
+        }
+    },
+    {
+        "id": "refused-zero",
+        "command": "world.step",
+        "params": {
+            "steps": 0
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "refused-not-a-number",
+        "command": "world.step",
+        "params": {
+            "steps": "two"
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "console-steps",
+        "command": "console.run",
+        "params": {
+            "line": "world.step 3"
+        },
+        "expect": {
+            "steps": 3
+        }
+    },
+    {
+        "id": "console-queue-empty",
+        "command": "world.info",
+        "expect": {
+            "stepsQueued": 0
+        }
+    },
+    {
+        "id": "resume",
+        "command": "world.pause",
+        "params": {
+            "paused": false
+        }
+    },
+    {
+        "id": "pace-off",
+        "command": "time.pace",
+        "params": {
+            "pacing": "off"
+        }
+    }
+]

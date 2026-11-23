@@ -126,9 +126,9 @@ whole params. The line is checked against the declared parameters, and an error 
 | `ui.show`, `ui.hide` | `widget` | `Show()` or `Hide()` a widget of the game's UI: a hide plays its Hide tweens, then the widget is hidden (at once without one; not hit meanwhile); a show plays its Show tweens and cancels a hide under way. Answers `visible`, `hiding` |
 | `ui.tween` | `widget`, `tween`, `stop` | Plays the tween modifier named `tween` on a widget of the game's UI from its start (`stop: true` stops it, the widget at rest). Answers `playing` |
 | `ui.hover` | `widget` | Moves the game's pointer to a widget's centre (its hit area's) by name and answers once the widget is hovered; with `input.key Mouse_Left press` a script then sees it pressed |
-| `world.info` | | The active world: name, mode, paused, timeScale, entities, camera (its view) |
+| `world.info` | | The active world: name, mode, paused, timeScale, stepCount (fixed steps run), stepsQueued (asked by `world.step` and not run yet), entities, camera (its view) |
 | `world.pause` | `paused` | Pauses the playing world (`true`) or resumes it (`false`) |
-| `world.step` | | Runs one frame of the paused world, with the fixed steps it owes |
+| `world.step` | `steps` | Runs one frame of the paused world, with the fixed steps it owes. With `steps`: that many fixed steps, one a frame, whatever the frames' time and the time scale, each with its update over the step's length, the world drawn on the last one; answers `{steps, stepCount}` once they ran |
 | `entity.list` | `name`, `component` | The entities (optionally filtered) with their components |
 | `entity.get` | `entity` | One entity with its components' values |
 | `component.set` | `entity`, `type`, `value` | Merges `value` into the component (adds it when missing). A field of the wrong type changes nothing |

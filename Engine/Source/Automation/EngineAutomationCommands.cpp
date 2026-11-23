@@ -816,7 +816,8 @@ namespace Opaax::EngineAutomation
         // =========================================================================
         void RegisterWorld(ICommandRegistry& InCommands, IEngine& InEngine)
         {
-            InCommands.Add("world.info", "The active world: {name, mode, paused, timeScale, entities, camera}.",
+            InCommands.Add("world.info", "The active world: {name, mode, paused, timeScale, stepCount (fixed steps "
+                "run), stepsQueued (asked of it by world.step and not run yet), entities, camera}.",
                 [&InEngine](const nlohmann::json&)
                 {
                     OpaaxString  lError;
@@ -832,6 +833,8 @@ namespace Opaax::EngineAutomation
                         { "mode",      ToString(lWorld->GetMode()) },
                         { "paused",    InEngine.GetWorldManager().IsPaused() },
                         { "timeScale", InEngine.GetWorldManager().GetTimeScale() },
+                        { "stepCount", lWorld->GetStepCount() },
+                        { "stepsQueued", InEngine.GetWorldManager().GetQueuedSteps() },
                         { "entities",  lWorld->GetEntityCount() },
                         { "camera",    ViewToJson(lView) } });
                 });
@@ -853,19 +856,64 @@ namespace Opaax::EngineAutomation
                 });
 
             InCommands.Add(CommandSpec("world.step",
-                "Runs one frame of the paused world: its update and the fixed steps that frame owes. The next request "
-                "runs after that frame.").Cheat(),
-                [&InEngine](const nlohmann::json&)
+                "Runs the paused world on. Alone: one frame, its update and the fixed steps that frame owes; the next "
+                "request runs after it. With {steps}: that many fixed steps, one a frame, whatever the frames' time "
+                "and the time scale, each with its update, the world drawn on the last one; answers {steps (run), "
+                "stepCount (the world's)} once they ran.")
+                    .Param("steps", ECommandParamType::Int, "fixed steps to run, 1 or more").Optional()
+                    .Cheat(),
+                [&InEngine](const nlohmann::json& InParams)
                 {
-                    if (!InEngine.GetWorldManager().IsPaused())
+                    WorldManager& lWorlds = InEngine.GetWorldManager();
+                    if (!lWorlds.IsPaused())
                     {
                         return AutomationResult::Fail("the world is not paused: pause it first (world.pause)");
                     }
 
-                    InEngine.GetWorldManager().RequestStep();
+                    const auto lSteps = InParams.find("steps");
+                    if (lSteps == InParams.end() || lSteps->is_null())
+                    {
+                        lWorlds.RequestStep();
 
+                        AutomationResult lResult;
+                        lResult.WaitFrames = 1;
+                        return lResult;
+                    }
+
+                    constexpr Int64 lMost = static_cast<Int64>(WorldManager::MAX_QUEUED_STEPS);
+                    if (!lSteps->is_number_integer() || lSteps->get<Int64>() < 1 || lSteps->get<Int64>() > lMost)
+                    {
+                        return AutomationResult::Fail("give {steps} as a whole number from 1 to "
+                                                      + ToJsonText(nlohmann::json(lMost))
+                                                      + ", or leave it out to run one frame");
+                    }
+
+                    OpaaxString  lError;
+                    World* const lWorld = ActiveWorld(InEngine, lError);
+                    if (lWorld == nullptr)
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    const Uint64 lBefore = lWorld->GetStepCount();
+                    lWorlds.RequestFixedSteps(static_cast<Uint32>(lSteps->get<Int64>()));
+
+                    // Over when they ran, or when they were dropped (resumed, another world).
                     AutomationResult lResult;
-                    lResult.WaitFrames = 1;
+                    lResult.WaitUntil = [&lWorlds, lWorld]()
+                    {
+                        return lWorlds.GetActiveWorld() != lWorld || lWorlds.GetQueuedSteps() == 0;
+                    };
+                    lResult.Answer = [&lWorlds, lWorld, lBefore]()
+                    {
+                        if (lWorlds.GetActiveWorld() != lWorld)
+                        {
+                            return AutomationResult::Fail("the active world changed before its steps ran");
+                        }
+                        return AutomationResult::Ok(nlohmann::json{
+                            { "steps",     lWorld->GetStepCount() - lBefore },
+                            { "stepCount", lWorld->GetStepCount() } });
+                    };
                     return lResult;
                 });
 

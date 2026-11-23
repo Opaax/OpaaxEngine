@@ -79,7 +79,9 @@ and the game export. A game is a module of its own types, linked into its runtim
 
 A paused world (in the editor) skips its part of 3 and 4; a step runs it for one frame. It is drawn
 as it was on its last frame (the same alpha), so it holds still, and once resumed it goes on from
-that picture: the time spent paused is not simulated. Its subsystems still present, so its debug
+that picture: the time spent paused is not simulated. Steps asked of it
+(`WorldManager::RequestFixedSteps`, `world.step` with `steps`) run one a frame, whatever the time:
+that frame updates it over one step's length, runs the step, and draws it on that step (alpha 1). Its subsystems still present, so its debug
 shapes (the collider outlines) and readouts stay on screen.
 
 Sound is mixed on its own thread, a few milliseconds ahead of the audio device: during the frame the
@@ -258,6 +260,21 @@ Unreal compiles its `DrawDebug*` calls out of shipping builds.
   geometry; the renderer has one path for every build.
 - **Against:** a ship build cannot show debug shapes at all, even to look into a player's bug: that
   needs a dev build.
+
+### A paused world runs the steps asked of it, one a frame
+
+A step of a frame runs the fixed steps that frame's time owes: none, one or several, more at a fast
+time scale. A move judged per fixed step (a jump's timing window) is studied one step at a time, so
+`RequestFixedSteps(N)` queues steps on a paused world and each frame runs one, with its update over
+the step's length, whatever the frame's time and the time scale. The world is drawn on the step it
+reached, not between it and the one before. Counting is the clock's (`FrameClock::StepsOwed`, pure).
+Gregory's single-stepping adds one ideal frame to a paused game clock per press; Celeste's TAS tools
+and Unreal's frame advance also run one update per press.
+
+- **For:** each step is drawn and gets its own update (input read before it, as in a real frame), no
+  frame runs more than one, and the result does not depend on the machine.
+- **Against:** N steps take N frames, and the first step after a pause moves the picture by up to two
+  steps' worth: a paused picture sits between two steps.
 
 ### A paused world still presents
 
