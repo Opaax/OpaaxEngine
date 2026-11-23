@@ -1,9 +1,11 @@
 #include "UI/UISubsystem.h"
 
 #include "Application/OpaaxApplication.h"
+#include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IEngine.h"
 #include "Application/Services/IPaths.h"
 #include "Application/Services/IProjectManager.h"
+#include "Engine/Config/Config_Engine.h"
 #include "Engine/EngineEvents.h"
 #include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceContext.h"
@@ -20,6 +22,25 @@
 
 namespace Opaax
 {
+    namespace
+    {
+        bool SameLayers(const TDynArray<UILayerSettings>& InA, const TDynArray<UILayerSettings>& InB)
+        {
+            if (InA.size() != InB.size())
+            {
+                return false;
+            }
+            for (Uint64 i = 0; i < InA.size(); ++i)
+            {
+                if (InA[i].Name != InB[i].Name || InA[i].Order != InB[i].Order)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
     UISubsystem::UISubsystem()  = default;
     UISubsystem::~UISubsystem() = default;
 
@@ -36,6 +57,11 @@ namespace Opaax
         m_Canvas.SetReferenceHeight(OpaaxApplication::GetAppService<IProjectManager>().UIReferenceHeight());
 
         BuildLoadingCover();
+
+        // The layers, now and whenever the engine config changes.
+        m_EngineConfig = &OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>();
+        ApplyLayers();
+        m_EngineConfig->OnChanged().AddMember(this, &UISubsystem::ApplyLayers);
 
         m_Audio = MakeUnique<UIAudioPlayer>(OpaaxApplication::GetAppService<IEngine>().GetAudio(),
                                             GetContext().Resources, GetContext().Paths);
@@ -71,7 +97,7 @@ namespace Opaax
         return lTree;
     }
 
-    UIWidget* UISubsystem::MountAsset(const OpaaxString& InAssetPath, UIWidget* InParent)
+    UIWidget* UISubsystem::MountAsset(const OpaaxString& InAssetPath, UIWidget* InParent, const OpaaxTag InLayer)
     {
         float lAuthoredHeight = 0.f;
         TStrongObjectPtr<UIWidget> lTree = LoadTree(InAssetPath, lAuthoredHeight);
@@ -87,11 +113,23 @@ namespace Opaax
                       InAssetPath.CStr(), lAuthoredHeight, m_Canvas.GetReferenceHeight(), m_Canvas.GetReferenceHeight());
         }
 
+        // A layer the config does not list draws in its nearest listed parent: said once a layer.
+        const UILayerTable& lLayers = m_Canvas.GetLayers();
+        if (InLayer.IsValid() && !lLayers.IsListed(InLayer) && m_WarnedLayers.insert(InLayer).second)
+        {
+            const OpaaxTag    lDrawnIn = lLayers.Resolve(InLayer);
+            const OpaaxString lWhere   = lDrawnIn.IsValid() ? OpaaxString::Format("in '{}'", lDrawnIn) : OpaaxString("at 0");
+            OPAAX_LOG(LogUISubsystem, Warn, "UI layer '{}' is not in Engine.config UI.Layers: '{}' draws {}", InLayer,
+                      InAssetPath.CStr(), lWhere.CStr());
+        }
+
+        lTree->SetLayer(InLayer);
+
         UIWidget& lParent  = InParent != nullptr ? *InParent : m_Canvas.Root();
         UIWidget* lMounted = lParent.AddChild(Move(lTree));
 
-        OPAAX_LOG(LogUISubsystem, Trace, "Mounted '{}' — {} widget(s) under '{}'",
-                  InAssetPath.CStr(), UICanvasFile::CountWidgets(*lMounted), lParent.Name.CStr());
+        OPAAX_LOG(LogUISubsystem, Trace, "Mounted '{}' — {} widget(s) under '{}', layer '{}'",
+                  InAssetPath.CStr(), UICanvasFile::CountWidgets(*lMounted), lParent.Name.CStr(), InLayer);
         return lMounted;
     }
 
@@ -151,6 +189,27 @@ namespace Opaax
         m_bLoadFinished = true;
     }
 
+    void UISubsystem::ApplyLayers()
+    {
+        // Any engine value may have changed: the trees move and the list is checked only when it did.
+        const TDynArray<UILayerSettings>& lSettings = m_EngineConfig->GetData().UI.Layers;
+        if (SameLayers(lSettings, m_AppliedLayers))
+        {
+            return;
+        }
+        m_AppliedLayers = lSettings;
+
+        TDynArray<OpaaxString> lProblems;
+        UILayerTable           lLayers = UILayerTable::Build(lSettings, lProblems);
+        for (const OpaaxString& lProblem : lProblems)
+        {
+            OPAAX_LOG(LogUISubsystem, Warn, "{} (Engine.config)", lProblem.CStr());
+        }
+
+        m_Canvas.SetLayers(Move(lLayers));
+        OPAAX_LOG(LogUISubsystem, Trace, "UI layers: {} listed", m_Canvas.GetLayers().GetLayers().size());
+    }
+
     void UISubsystem::SetInputMode(const EUIInputMode InMode) noexcept
     {
         m_InputMode = InMode;
@@ -196,6 +255,11 @@ namespace Opaax
     void UISubsystem::Shutdown()
     {
         GetContext().Events.GetEventBus().UnsubscribeAll(this);
+        if (m_EngineConfig != nullptr)
+        {
+            m_EngineConfig->OnChanged().RemoveAll(this);
+            m_EngineConfig = nullptr;
+        }
 
         m_Canvas.SetAudio(nullptr);
         m_LoadingCanvas.SetAudio(nullptr);
