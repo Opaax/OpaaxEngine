@@ -85,10 +85,12 @@ saved like a component, under its class name, with its `OPAAX_PROPERTIES` fields
 
 The engine's components: `Transform`, `Sprite`, `Quad`, `Text`, `Camera`, `Environment`, `Light2D`,
 `ShadowCaster2D`, `SpriteAnimator`, `Collider`, `Rigidbody`, `Mover`, `AudioSource`, `AudioListener`,
-`AudioBanks` (and `PrefabInstance`, written by the editor on placed prefabs). Their fields are the ones the
+`AudioBanks`, `TagsComponent` (and `PrefabInstance`, written by the editor on placed prefabs). Their fields are the ones the
 Inspector shows; `entity.get` (Docs/Automation.md) prints an entity with every field and its value.
 Enums are saved by name (`"Type": "Dynamic"`), colours as `{ "x", "y", "z", "w" }` (red, green, blue,
-alpha from 0 to 1).
+alpha from 0 to 1). Tags are dotted names saved as strings: `"TagsComponent": { "Tags": [ "Faction.Player" ] }`;
+an entry that is not a tag (a space, an empty segment) is dropped on load. In code, `Tags.HasTag(OpaaxTag("Faction"))`
+on an entity's `TagsComponent` (`World/Components/TagsComponent.h`) matches up the hierarchy: `Faction.Player` has `Faction`.
 
 What is in front: a `Sprite` or a `Text` is drawn by its `Layer` (`Background`, `Default`, `Foreground`,
 `Debug`, `UI`, back to front), then its `OrderInLayer` (lower is behind). A `Quad` has no order of its

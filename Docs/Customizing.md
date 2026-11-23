@@ -381,7 +381,7 @@ void MyGameEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& InR
     InRegistrar.Panels().Register<WaveEditorPanel>(Opaax::Editor::PanelDesc{ OPAAX_ID("Waves") });
 
     // An Inspector drawer replacing the one made from the component's OPAAX_PROPERTIES.
-    InRegistrar.Drawers().Register<TagsComponent, TagsComponentDrawer>();
+    InRegistrar.Drawers().Register<HealthComponent, HealthComponentDrawer>();
 
     // How an asset class shows: its New Asset category, its glyph, and an editor of its own (optional:
     // without one, its window lists its properties).
