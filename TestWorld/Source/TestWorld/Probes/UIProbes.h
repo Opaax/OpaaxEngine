@@ -5,6 +5,7 @@
 #include "Input/Mapping/InputMappingSubsystem.h"
 #include "UI/UIBinding.h"
 #include "UI/Modifiers/UITweenModifier.h"
+#include "UI/UILayerSettings.h"
 #include "UI/UISubsystem.h"
 #include "UI/Widgets/UIButton.h"
 #include "UI/Widgets/UIScrollBox.h"
@@ -290,5 +291,108 @@ namespace TestWorld
         }
 
         Opaax::UIWidget* m_Tree = nullptr;   // owned by the game's canvas
+    };
+
+    // =============================================================================
+    // LayerProbe — mounts three canvases in layers, the top one first: LayerDebug in Debug, LayerMenu
+    //   in Menu, LayerPause in Menu.Pause (TestWorld's Engine.config lists it under Menu's own trees).
+    //   Records the order of the canvas root's trees (DrawOrder, bottom to top), the widget hovered, the
+    //   menu button's state and the clicks on each button: where the debug button covers the menu button,
+    //   only the debug one hears the pointer.
+    // =============================================================================
+    class LayerProbe : public Opaax::Behaviour
+    {
+        OPAAX_OBJECT(LayerProbe, Opaax::Behaviour)
+
+    public:
+        bool               bMounted    = false;
+        Opaax::OpaaxString DrawOrder;
+        Opaax::OpaaxString HoveredName;
+        Opaax::OpaaxString MenuState;
+        Opaax::Int32       MenuClicks  = 0;
+        Opaax::Int32       FreeClicks  = 0;
+        Opaax::Int32       DebugClicks = 0;
+
+        OPAAX_PROPERTIES(LayerProbe, OPAAX_PROP(bMounted), OPAAX_PROP(DrawOrder), OPAAX_PROP(HoveredName),
+                         OPAAX_PROP(MenuState), OPAAX_PROP(MenuClicks), OPAAX_PROP(FreeClicks), OPAAX_PROP(DebugClicks))
+
+        void OnStart() override
+        {
+            Opaax::UISubsystem* const lUI = GetContext().UI;
+            if (lUI == nullptr)
+            {
+                return;
+            }
+
+            m_Debug  = lUI->MountAsset(Opaax::OpaaxString("UI/LayerDebug.opaaxui"), nullptr, Opaax::UILayerDebug());
+            m_Menu   = lUI->MountAsset(Opaax::OpaaxString("UI/LayerMenu.opaaxui"), nullptr, Opaax::UILayerMenu());
+            m_Pause  = lUI->MountAsset(Opaax::OpaaxString("UI/LayerPause.opaaxui"), nullptr, Opaax::OpaaxTag("Menu.Pause"));
+            bMounted = m_Debug != nullptr && m_Menu != nullptr && m_Pause != nullptr;
+            if (!bMounted)
+            {
+                return;
+            }
+
+            m_MenuButton = dynamic_cast<Opaax::UIButton*>(m_Menu->FindByName(Opaax::OpaaxString("MenuButton")));
+            if (m_MenuButton != nullptr)
+            {
+                m_MenuButton->OnClick.AddMember(this, &LayerProbe::OnMenu);
+            }
+            if (auto* lFree = dynamic_cast<Opaax::UIButton*>(m_Menu->FindByName(Opaax::OpaaxString("MenuFree"))))
+            {
+                lFree->OnClick.AddMember(this, &LayerProbe::OnFree);
+            }
+            if (auto* lDebug = dynamic_cast<Opaax::UIButton*>(m_Debug->FindByName(Opaax::OpaaxString("DebugButton"))))
+            {
+                lDebug->OnClick.AddMember(this, &LayerProbe::OnDebug);
+            }
+        }
+
+        void OnUpdate(float) override
+        {
+            Opaax::UISubsystem* const lUI = GetContext().UI;
+            if (lUI == nullptr || !bMounted)
+            {
+                return;
+            }
+
+            Opaax::OpaaxString lOrder;
+            for (const Opaax::TStrongObjectPtr<Opaax::UIWidget>& lTree : lUI->GetCanvas().Root().GetChildren())
+            {
+                lOrder += lOrder.IsEmpty() ? lTree->Name : "," + lTree->Name;
+            }
+            DrawOrder = lOrder;
+
+            const Opaax::UIWidget* const lHovered = lUI->GetCanvas().GetHovered();
+            HoveredName = lHovered != nullptr ? lHovered->Name : Opaax::OpaaxString();
+            MenuState   = m_MenuButton != nullptr ? Opaax::OpaaxString(Opaax::ToString(m_MenuButton->GetInteractionState()))
+                                                  : Opaax::OpaaxString();
+        }
+
+        void OnDestroy() override
+        {
+            Opaax::UISubsystem* const lUI = GetContext().UI;
+            for (Opaax::UIWidget* const lTree : { m_Debug, m_Menu, m_Pause })
+            {
+                if (lUI != nullptr && lTree != nullptr)
+                {
+                    lUI->GetCanvas().Root().RemoveChild(*lTree);
+                }
+            }
+            m_Debug      = nullptr;
+            m_Menu       = nullptr;
+            m_Pause      = nullptr;
+            m_MenuButton = nullptr;
+        }
+
+    private:
+        void OnMenu()  { ++MenuClicks; }
+        void OnFree()  { ++FreeClicks; }
+        void OnDebug() { ++DebugClicks; }
+
+        Opaax::UIWidget* m_Debug      = nullptr;   // owned by the game's canvas
+        Opaax::UIWidget* m_Menu       = nullptr;
+        Opaax::UIWidget* m_Pause      = nullptr;
+        Opaax::UIButton* m_MenuButton = nullptr;
     };
 }

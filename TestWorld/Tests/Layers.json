@@ -1,0 +1,394 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/Layers.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.3
+        }
+    },
+    {
+        "id": "mounted",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "LayerProbe/bMounted",
+            "equals": true
+        }
+    },
+    {
+        "id": "drawn-by-layer",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "LayerProbe/DrawOrder",
+            "equals": "PauseRoot,MenuRoot,DebugRoot"
+        }
+    },
+    {
+        "id": "layers",
+        "command": "ui.layers",
+        "expect": {
+            "layers": [
+                {
+                    "name": "Hud",
+                    "trees": []
+                },
+                {
+                    "name": "Menu.Pause",
+                    "key": "100/-10",
+                    "trees": [
+                        {
+                            "name": "PauseRoot",
+                            "layer": "Menu.Pause"
+                        }
+                    ]
+                },
+                {
+                    "name": "Menu",
+                    "trees": [
+                        {
+                            "name": "MenuRoot",
+                            "layer": "Menu"
+                        }
+                    ]
+                },
+                {
+                    "name": "Debug",
+                    "trees": [
+                        {
+                            "name": "DebugRoot",
+                            "layer": "Debug"
+                        }
+                    ]
+                },
+                {
+                    "name": "Loading",
+                    "trees": []
+                }
+            ],
+            "unlisted": []
+        }
+    },
+    {
+        "id": "listed",
+        "command": "ui.list",
+        "params": {
+            "name": "DebugButton"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "layer": "Debug"
+                }
+            ]
+        }
+    },
+    {
+        "id": "click-debug",
+        "command": "ui.click",
+        "params": {
+            "widget": "DebugButton"
+        },
+        "expect": {
+            "hit": "DebugButton"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.2
+        }
+    },
+    {
+        "id": "debug-clicked",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "LayerProbe/DebugClicks",
+            "equals": 1
+        }
+    },
+    {
+        "id": "click-free",
+        "command": "ui.click",
+        "params": {
+            "widget": "MenuFree"
+        },
+        "expect": {
+            "hit": "MenuFree"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.2
+        }
+    },
+    {
+        "id": "free-clicked",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "LayerProbe/FreeClicks",
+            "equals": 1
+        }
+    },
+    {
+        "id": "hover-covered",
+        "command": "ui.hover",
+        "params": {
+            "widget": "MenuButton"
+        },
+        "expect": {
+            "hit": "DebugButton"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "debug-hovered",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "LayerProbe/HoveredName",
+            "equals": "DebugButton"
+        }
+    },
+    {
+        "id": "menu-not-hovered",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "LayerProbe/MenuState",
+            "equals": "Normal"
+        }
+    },
+    {
+        "id": "screenshot-debug-on-top",
+        "command": "screenshot",
+        "params": {
+            "path": "Layers.png"
+        }
+    },
+    {
+        "id": "click-covered",
+        "command": "ui.click",
+        "params": {
+            "widget": "MenuButton"
+        },
+        "expect": {
+            "hit": "DebugButton"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.2
+        }
+    },
+    {
+        "id": "covered-click-is-debug",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "LayerProbe/DebugClicks",
+            "equals": 2
+        }
+    },
+    {
+        "id": "menu-not-clicked",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "LayerProbe/MenuClicks",
+            "equals": 0
+        }
+    },
+    {
+        "id": "hide-debug",
+        "command": "ui.hide",
+        "params": {
+            "widget": "DebugRoot"
+        },
+        "expect": {
+            "visible": true,
+            "hiding": true
+        }
+    },
+    {
+        "id": "click-through-hiding",
+        "command": "ui.click",
+        "params": {
+            "widget": "MenuButton"
+        },
+        "expect": {
+            "hit": "MenuButton"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.2
+        }
+    },
+    {
+        "id": "menu-clicked-through",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "LayerProbe/MenuClicks",
+            "equals": 1
+        }
+    },
+    {
+        "id": "debug-not-clicked",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "LayerProbe/DebugClicks",
+            "equals": 2
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 2.2
+        }
+    },
+    {
+        "id": "debug-hidden",
+        "command": "ui.list",
+        "params": {
+            "name": "DebugRoot"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "visible": false,
+                    "hiding": false
+                }
+            ]
+        }
+    },
+    {
+        "id": "show-debug",
+        "command": "ui.show",
+        "params": {
+            "widget": "DebugRoot"
+        },
+        "expect": {
+            "visible": true,
+            "hiding": false
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "menu-over-debug",
+        "command": "settings.set",
+        "params": {
+            "config": "Engine",
+            "values": {
+                "UI": {
+                    "Layers": {
+                        "Menu": {
+                            "Order": 600
+                        }
+                    }
+                }
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "moved-by-config",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "LayerProbe/DrawOrder",
+            "equals": "DebugRoot,PauseRoot,MenuRoot"
+        }
+    },
+    {
+        "id": "click-menu-on-top",
+        "command": "ui.click",
+        "params": {
+            "widget": "MenuButton"
+        },
+        "expect": {
+            "hit": "MenuButton"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.2
+        }
+    },
+    {
+        "id": "menu-clicked-on-top",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "LayerProbe/MenuClicks",
+            "equals": 2
+        }
+    },
+    {
+        "id": "debug-under",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "LayerProbe/DebugClicks",
+            "equals": 2
+        }
+    },
+    {
+        "id": "screenshot-menu-on-top",
+        "command": "screenshot",
+        "params": {
+            "path": "LayersMenuOnTop.png"
+        }
+    },
+    {
+        "id": "settings-back",
+        "command": "settings.reset",
+        "params": {
+            "config": "Engine"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "back-by-config",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "LayerProbe/DrawOrder",
+            "equals": "PauseRoot,MenuRoot,DebugRoot"
+        }
+    }
+]
