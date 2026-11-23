@@ -253,6 +253,7 @@ set(OPAAX_TEST_SOURCES
     Editor/AssetDocumentTests.cpp
     Editor/AssetFileClassTests.cpp
     Editor/AssetTypeRegistryTests.cpp
+    Editor/TagPickerTests.cpp
     Editor/AssetWindowPlacementTests.cpp
     Editor/CameraStatsHistoryTests.cpp
     Editor/ClipboardPayloadTests.cpp

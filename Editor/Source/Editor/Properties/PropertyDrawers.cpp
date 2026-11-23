@@ -2,7 +2,9 @@
 
 #include "Core/Memory/Memory.h"
 
+#include "Editor/Properties/TagPicker.h"
 #include "Editor/Properties/WidgetPropertyVisitor.h"
+#include "Engine/Tags/TagRegistry.h"
 #include "Object/ObjectClass.h"
 #include "Resources/Asset/AssetResource.h"
 
@@ -137,10 +139,88 @@ namespace Opaax::Editor
         }
     }
 
-    void TPropertyDrawer<OpaaxTag>::Draw(IEditorWidgets& InWidgets, const char* InLabel,
-                                         OpaaxTag& InValue, const PropertyMeta&)
+    namespace
     {
-        // Submit on Enter, as an id: a tag is interned and never freed.
+        /** The field's root tag, or none (every tag). */
+        OpaaxTag TagRootOf(const PropertyMeta& InMeta)
+        {
+            return (InMeta.TagRoot != nullptr && OpaaxTag::IsValidTagText(OpaaxStringView(InMeta.TagRoot)))
+                       ? OpaaxTag(InMeta.TagRoot) : OpaaxTag();
+        }
+
+        /**
+         * A combo of the registered tags under InRoot. @return The one picked this frame, or the invalid tag.
+         * InExclude: tags not offered (a set's own).
+         */
+        OpaaxTag DrawTagCombo(IEditorWidgets& InWidgets, const char* InLabel, const char* InPreview, const OpaaxTag InRoot,
+                              const OpaaxTag InSelected, bool& OutPickedNone, const OpaaxTagContainer* InExclude = nullptr)
+        {
+            OutPickedNone = false;
+            const TagRegistry* const lTags = GetEditorTagRegistry();
+            if (lTags == nullptr || !InWidgets.BeginCombo(InLabel, InPreview))
+            {
+                return OpaaxTag();
+            }
+
+            OpaaxTag lPicked;
+            if (InExclude == nullptr && InWidgets.Selectable("(none)", !InSelected.IsValid()))
+            {
+                OutPickedNone = true;
+            }
+            for (const TagPickerRow& lRow : TagPickerRows(*lTags, InRoot))
+            {
+                if (InExclude != nullptr && InExclude->HasTagExact(lRow.Tag))
+                {
+                    continue;
+                }
+
+                // Keyed by the interned id: two rows with the same last name never share a scope.
+                InWidgets.PushId(lRow.Tag.GetName().GetId());
+                const OpaaxString lText = lRow.Comment.IsEmpty() ? lRow.Label : lRow.Label + "   - " + lRow.Comment;
+                if (InWidgets.Selectable(lText.CStr(), lRow.Tag == InSelected))
+                {
+                    lPicked = lRow.Tag;
+                }
+                if (lRow.Tag == InSelected) { InWidgets.SetDefaultFocus(); }
+                InWidgets.PopId();
+            }
+            InWidgets.EndCombo();
+            return lPicked;
+        }
+
+        /** Under a tag that is not registered: a warning, and a button that lists it in Tags.config. */
+        void DrawUnregistered(IEditorWidgets& InWidgets, const OpaaxTag InTag)
+        {
+            const TagRegistry* const lTags = GetEditorTagRegistry();
+            if (lTags == nullptr || !IsTagUnregistered(*lTags, InTag))
+            {
+                return;
+            }
+
+            InWidgets.PushId(InTag.GetName().GetId());
+            InWidgets.TextDisabled(OpaaxString::Format("'{}' is not a registered tag", InTag).CStr());
+            InWidgets.SameLine();
+            if (InWidgets.SmallButton("Register in Tags.config"))
+            {
+                RegisterTagInConfig(InTag);
+            }
+            InWidgets.PopId();
+        }
+    }
+
+    void TPropertyDrawer<OpaaxTag>::Draw(IEditorWidgets& InWidgets, const char* InLabel,
+                                         OpaaxTag& InValue, const PropertyMeta& InMeta)
+    {
+        InWidgets.PushId(InLabel);
+
+        // The registered tags under the field's root.
+        const OpaaxString lPreview = InValue.IsValid() ? InValue.ToString() : OpaaxString("(none)");
+        bool             bNone     = false;
+        const OpaaxTag   lPicked   = DrawTagCombo(InWidgets, InLabel, lPreview.CStr(), TagRootOf(InMeta), InValue, bNone);
+        if (lPicked.IsValid()) { InValue = lPicked; }
+        if (bNone)             { InValue = OpaaxTag(); }
+
+        // Or typed, for a tag not registered yet.
         constexpr Uint32 k_BufferSize = 128;
 
         char lBuffer[k_BufferSize] = {};
@@ -150,7 +230,7 @@ namespace Opaax::Editor
         Memory::Copy(lBuffer, lText.Data(), lLen);
         lBuffer[lLen] = '\0';
 
-        const bool            bSubmitted = InWidgets.InputText(InLabel, lBuffer, k_BufferSize, /*bInSubmitOnEnter*/ true);
+        const bool            bSubmitted = InWidgets.InputText("Typed", lBuffer, k_BufferSize, /*bInSubmitOnEnter*/ true);
         const OpaaxStringView lTyped(lBuffer);
         const bool            bIsTag     = OpaaxTag::IsValidTagText(lTyped);
 
@@ -162,8 +242,11 @@ namespace Opaax::Editor
 
         if (!bIsTag && !lTyped.IsEmpty())
         {
-            InWidgets.TextDisabled("Not a tag: dotted names, e.g. Menu.Pause");
+            InWidgets.TextDisabled("Not a tag: dotted names, e.g. UI.Layer.Menu");
         }
+
+        DrawUnregistered(InWidgets, InValue);
+        InWidgets.PopId();
     }
 
     void TPropertyDrawer<OpaaxTagContainer>::Draw(IEditorWidgets& InWidgets, const char* InLabel,
@@ -189,6 +272,7 @@ namespace Opaax::Editor
                 if (InWidgets.SmallButton("x")) { lRemove = lTag; }
                 InWidgets.SameLine();
                 InWidgets.Text(lTag.GetName().CStr());
+                DrawUnregistered(InWidgets, lTag);
 
                 InWidgets.PopId();
             }
@@ -200,11 +284,17 @@ namespace Opaax::Editor
 
             if (lRemove.IsValid()) { InValue.RemoveTag(lRemove); }
 
-            // Submit on Enter: the field keeps its own text until then, so a stack buffer is enough.
+            // A registered tag under the field's root, not in the set yet.
+            bool           bNone   = false;
+            const OpaaxTag lPicked = DrawTagCombo(InWidgets, "Add registered", "(pick a tag)", TagRootOf(InMeta),
+                                                  OpaaxTag(), bNone, &InValue);
+            if (lPicked.IsValid()) { InValue.AddTag(lPicked); }
+
+            // Or typed. Submit on Enter: the field keeps its own text until then, so a stack buffer is enough.
             constexpr Uint32 k_BufferSize = 128;
             char lBuffer[k_BufferSize] = {};
 
-            if (InWidgets.InputText("Add", lBuffer, k_BufferSize, /*bInSubmitOnEnter*/ true))
+            if (InWidgets.InputText("Add typed", lBuffer, k_BufferSize, /*bInSubmitOnEnter*/ true))
             {
                 // Typed text is untrusted: a tag only when it is one (the tag constructor would assert).
                 const OpaaxStringView lTyped(lBuffer);
