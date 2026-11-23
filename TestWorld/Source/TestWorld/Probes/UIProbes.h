@@ -295,7 +295,8 @@ namespace TestWorld
 
     // =============================================================================
     // LayerProbe — mounts three canvases in layers, the top one first: LayerDebug in Debug, LayerMenu
-    //   in Menu, LayerPause in Menu.Pause (TestWorld's Engine.config lists it under Menu's own trees).
+    //   in Menu, LayerPause in UI.Layer.Menu.Pause (TestWorld's Engine.config lists it under Menu's own trees,
+    //   its Tags.config registers it).
     //   Records the order of the canvas root's trees (DrawOrder, bottom to top), the widget hovered, the
     //   menu button's state and the clicks on each button: where the debug button covers the menu button,
     //   only the debug one hears the pointer.
@@ -326,7 +327,7 @@ namespace TestWorld
 
             m_Debug  = lUI->MountAsset(Opaax::OpaaxString("UI/LayerDebug.opaaxui"), nullptr, Opaax::UILayerDebug());
             m_Menu   = lUI->MountAsset(Opaax::OpaaxString("UI/LayerMenu.opaaxui"), nullptr, Opaax::UILayerMenu());
-            m_Pause  = lUI->MountAsset(Opaax::OpaaxString("UI/LayerPause.opaaxui"), nullptr, Opaax::OpaaxTag("Menu.Pause"));
+            m_Pause  = lUI->MountAsset(Opaax::OpaaxString("UI/LayerPause.opaaxui"), nullptr, Opaax::OpaaxTag("UI.Layer.Menu.Pause"));
             bMounted = m_Debug != nullptr && m_Menu != nullptr && m_Pause != nullptr;
             if (!bMounted)
             {

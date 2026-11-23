@@ -43,7 +43,8 @@ namespace Opaax
 
     // =============================================================================
     // UILayerTable — the game canvas's layers, read from a list of named orders (UI.Layers). Pure: it
-    //   says where a layer draws; the canvas keeps its trees in that order.
+    //   says where a layer draws; the canvas keeps its trees in that order. Layers are UI.Layer tags: a key
+    //   counts the names under that root, and a short name ("Menu") is read as UI.Layer.Menu.
     // =============================================================================
     class UILayerTable
     {
@@ -57,7 +58,8 @@ namespace Opaax
 
         /**
          * The layers InSettings lists. What is wrong with the list goes to OutProblems, one line each, and is
-         * left out (no name, listed twice, deeper than MAX_DEPTH) or worked around (an unlisted parent counts as 0).
+         * left out (no name, the root itself, listed twice, deeper than MAX_DEPTH) or worked around (an unlisted
+         * parent counts as 0).
          */
         static UILayerTable Build(const TDynArray<UILayerSettings>& InSettings, TDynArray<OpaaxString>& OutProblems);
 
@@ -67,7 +69,7 @@ namespace Opaax
         /** Where InLayer draws: its listed key, its nearest listed parent's, else 0 (a tree with no layer). */
         UILayerKey KeyOf(OpaaxTag InLayer) const;
 
-        bool IsListed(OpaaxTag InLayer) const { return Find(InLayer) != nullptr; }
+        bool IsListed(OpaaxTag InLayer) const { return Find(WithRoot(UILayerRoot(), InLayer)) != nullptr; }
 
         /** The listed layers, bottom to top (list order between equal keys). */
         const TDynArray<Entry>& GetLayers() const noexcept { return m_Layers; }

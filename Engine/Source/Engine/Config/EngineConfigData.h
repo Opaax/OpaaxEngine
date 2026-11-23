@@ -235,8 +235,9 @@ namespace Opaax
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(UISettings, Layers)
 
         OPAAX_PROPERTIES(UISettings,
-                         OPAAX_PROP(Layers).SetTooltip("The game UI's layers: a higher order on top. Code mounts a tree in\n"
-                                                       "one by its name; \"Menu.Pause\" orders inside Menu. Applies at once."))
+                         OPAAX_PROP(Layers).SetTagRoot("UI.Layer")
+                                           .SetTooltip("The game UI's layers: a higher order on top. Code mounts a tree in\n"
+                                                       "one by its tag; \"UI.Layer.Menu.Pause\" orders inside Menu. Applies at once."))
     };
 
     struct EngineConfigData

@@ -6,14 +6,13 @@ namespace Opaax
 {
     namespace
     {
-        /** How many dotted names InTag has ("Menu.Pause": 2). */
-        Uint32 CountNames(const OpaaxTag InTag) noexcept
+        /** How many names InTag has under the layers' root ("UI.Layer.Menu.Pause": 2). */
+        Uint32 CountNames(const OpaaxTag InTag)
         {
-            const OpaaxStringView lText  = InTag.GetView();
-            Uint32                lCount = lText.IsEmpty() ? 0u : 1u;
-            for (Uint32 i = 0; i < lText.GetLength(); ++i)
+            Uint32 lCount = 0;
+            for (OpaaxTag lNode = InTag; lNode.IsValid() && lNode != UILayerRoot(); lNode = lNode.GetParent())
             {
-                if (lText[i] == TAG_SEPARATOR) { ++lCount; }
+                ++lCount;
             }
             return lCount;
         }
@@ -51,23 +50,29 @@ namespace Opaax
         // Every name first: a sub-layer's key reads its parents' orders, wherever they are in the list.
         for (const UILayerSettings& lLayer : InSettings)
         {
-            if (!lLayer.Name.IsValid())
+            const OpaaxTag lName = WithRoot(UILayerRoot(), lLayer.Name);
+            if (!lName.IsValid())
             {
                 OutProblems.push_back(OpaaxString("A layer has no name (UI.Layers): it is left out"));
                 continue;
             }
-            if (lTable.Find(lLayer.Name) != nullptr)
+            if (lName == UILayerRoot())
             {
-                OutProblems.push_back(OpaaxString::Format("Layer '{}' is listed twice (UI.Layers): the first is kept", lLayer.Name));
+                OutProblems.push_back(OpaaxString::Format("'{}' is the layers' root, not a layer (UI.Layers): it is left out", lName));
                 continue;
             }
-            if (CountNames(lLayer.Name) > UILayerKey::MAX_DEPTH)
+            if (lTable.Find(lName) != nullptr)
             {
-                OutProblems.push_back(OpaaxString::Format("Layer '{}' is more than {} names deep (UI.Layers): it is left out",
-                                                          lLayer.Name, UILayerKey::MAX_DEPTH));
+                OutProblems.push_back(OpaaxString::Format("Layer '{}' is listed twice (UI.Layers): the first is kept", lName));
                 continue;
             }
-            lTable.m_Layers.push_back(Entry{ lLayer.Name, lLayer.Order, {} });
+            if (CountNames(lName) > UILayerKey::MAX_DEPTH)
+            {
+                OutProblems.push_back(OpaaxString::Format("Layer '{}' is more than {} names under {} (UI.Layers): it is left out",
+                                                          lName, UILayerKey::MAX_DEPTH, UILayerRoot()));
+                continue;
+            }
+            lTable.m_Layers.push_back(Entry{ lName, lLayer.Order, {} });
         }
 
         // Each key: its parents' orders from the top, then its own. A parent not listed counts as 0.
@@ -75,7 +80,8 @@ namespace Opaax
         {
             TFixedArray<OpaaxTag, UILayerKey::MAX_DEPTH> lChain{};   // the layer first, the top-level name last
             Uint32 lDepth = 0;
-            for (OpaaxTag lNode = lEntry.Name; lNode.IsValid() && lDepth < UILayerKey::MAX_DEPTH; lNode = lNode.GetParent())
+            for (OpaaxTag lNode = lEntry.Name; lNode.IsValid() && lNode != UILayerRoot() && lDepth < UILayerKey::MAX_DEPTH;
+                 lNode = lNode.GetParent())
             {
                 lChain[lDepth++] = lNode;
             }
@@ -100,7 +106,7 @@ namespace Opaax
 
     OpaaxTag UILayerTable::Resolve(const OpaaxTag InLayer) const
     {
-        for (OpaaxTag lNode = InLayer; lNode.IsValid(); lNode = lNode.GetParent())
+        for (OpaaxTag lNode = WithRoot(UILayerRoot(), InLayer); lNode.IsValid() && lNode != UILayerRoot(); lNode = lNode.GetParent())
         {
             if (Find(lNode) != nullptr)
             {

@@ -6,6 +6,7 @@
 #include "Application/Services/IPaths.h"
 #include "Application/Services/IProjectManager.h"
 #include "Engine/Config/Config_Engine.h"
+#include "Engine/Tags/TagRegistry.h"
 #include "Engine/EngineEvents.h"
 #include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceContext.h"
@@ -113,23 +114,26 @@ namespace Opaax
                       InAssetPath.CStr(), lAuthoredHeight, m_Canvas.GetReferenceHeight(), m_Canvas.GetReferenceHeight());
         }
 
+        // A layer is a UI.Layer tag: a short name ("Menu") is read under that root.
+        const OpaaxTag lLayer = WithRoot(UILayerRoot(), InLayer);
+
         // A layer the config does not list draws in its nearest listed parent: said once a layer.
         const UILayerTable& lLayers = m_Canvas.GetLayers();
-        if (InLayer.IsValid() && !lLayers.IsListed(InLayer) && m_WarnedLayers.insert(InLayer).second)
+        if (lLayer.IsValid() && !lLayers.IsListed(lLayer) && m_WarnedLayers.insert(lLayer).second)
         {
-            const OpaaxTag    lDrawnIn = lLayers.Resolve(InLayer);
+            const OpaaxTag    lDrawnIn = lLayers.Resolve(lLayer);
             const OpaaxString lWhere   = lDrawnIn.IsValid() ? OpaaxString::Format("in '{}'", lDrawnIn) : OpaaxString("at 0");
-            OPAAX_LOG(LogUISubsystem, Warn, "UI layer '{}' is not in Engine.config UI.Layers: '{}' draws {}", InLayer,
+            OPAAX_LOG(LogUISubsystem, Warn, "UI layer '{}' is not in Engine.config UI.Layers: '{}' draws {}", lLayer,
                       InAssetPath.CStr(), lWhere.CStr());
         }
 
-        lTree->SetLayer(InLayer);
+        lTree->SetLayer(lLayer);
 
         UIWidget& lParent  = InParent != nullptr ? *InParent : m_Canvas.Root();
         UIWidget* lMounted = lParent.AddChild(Move(lTree));
 
         OPAAX_LOG(LogUISubsystem, Trace, "Mounted '{}' — {} widget(s) under '{}', layer '{}'",
-                  InAssetPath.CStr(), UICanvasFile::CountWidgets(*lMounted), lParent.Name.CStr(), InLayer);
+                  InAssetPath.CStr(), UICanvasFile::CountWidgets(*lMounted), lParent.Name.CStr(), lLayer);
         return lMounted;
     }
 
@@ -204,6 +208,17 @@ namespace Opaax
         for (const OpaaxString& lProblem : lProblems)
         {
             OPAAX_LOG(LogUISubsystem, Warn, "{} (Engine.config)", lProblem.CStr());
+        }
+
+        // Layers are named by registered tags (code's, or Tags.config): an unknown one is most likely a typo.
+        const TagRegistry& lTags = OpaaxApplication::GetAppService<IEngine>().GetRegistries().Tags();
+        for (const UILayerTable::Entry& lLayer : lLayers.GetLayers())
+        {
+            if (!lTags.IsRegistered(lLayer.Name))
+            {
+                OPAAX_LOG(LogUISubsystem, Warn, "UI layer '{}' (Engine.config UI.Layers) is not a registered tag: "
+                          "add it to Tags.config", lLayer.Name);
+            }
         }
 
         m_Canvas.SetLayers(Move(lLayers));

@@ -782,21 +782,21 @@ TEST_CASE("Automation UI: ui.layers puts each tree under its layer, ui.list says
         lCanvas.Root().AddChild(Move(lTree));
     };
     lMount("DebugPanel", UILayerDebug());
-    lMount("PauseMenu", OpaaxTag("Menu.Pause"));
-    lMount("Options", OpaaxTag("Menu.Options"));   // not listed: drawn in Menu
-    lMount("Stray", OpaaxTag("Stray"));             // not listed, nor any parent: at 0
+    lMount("PauseMenu", OpaaxTag("UI.Layer.Menu.Pause"));
+    lMount("Options", OpaaxTag("UI.Layer.Menu.Options"));   // not listed: drawn in Menu
+    lMount("Stray", OpaaxTag("UI.Layer.Stray"));            // not listed, nor any parent: at 0
     lCanvas.Update();
 
     const nlohmann::json lLayers = EngineAutomation::DescribeLayers(lCanvas);
     REQUIRE(lLayers.at("layers").size() == 5);
-    CHECK(lLayers["layers"][0].at("name") == "Hud");
+    CHECK(lLayers["layers"][0].at("name") == "UI.Layer.Hud");
     CHECK(lLayers["layers"][0].at("trees").empty());
-    CHECK(lLayers["layers"][1].at("name") == "Menu");
+    CHECK(lLayers["layers"][1].at("name") == "UI.Layer.Menu");
     CHECK(lLayers["layers"][1].at("order") == 100);
     REQUIRE(lLayers["layers"][1].at("trees").size() == 1);
     CHECK(lLayers["layers"][1]["trees"][0].at("name") == "Options");
-    CHECK(lLayers["layers"][1]["trees"][0].at("layer") == "Menu.Options");
-    CHECK(lLayers["layers"][2].at("name") == "Menu.Pause");
+    CHECK(lLayers["layers"][1]["trees"][0].at("layer") == "UI.Layer.Menu.Options");
+    CHECK(lLayers["layers"][2].at("name") == "UI.Layer.Menu.Pause");
     CHECK(lLayers["layers"][2].at("key") == "100/10");
     CHECK(lLayers["layers"][3]["trees"][0].at("name") == "DebugPanel");
     REQUIRE(lLayers.at("unlisted").size() == 1);
@@ -810,7 +810,7 @@ TEST_CASE("Automation UI: ui.layers puts each tree under its layer, ui.list says
     CHECK(lListed[2].at("name") == "Options");
     CHECK(lListed[3].at("name") == "PauseMenu");
     CHECK(lListed[4].at("name") == "DebugPanel");
-    CHECK(lListed[4].at("layer") == "Debug");
+    CHECK(lListed[4].at("layer") == "UI.Layer.Debug");
 
     // A click on the pause menu's centre lands on the debug panel over it.
     Vector2F    lPixel{ 0.f, 0.f };
