@@ -17,32 +17,67 @@ namespace Opaax
         m_LastTime = InNow;
         m_bStarted = true;
         m_Delta    = SnapToRefresh(lMeasured);
-        m_Owed    += GetScaledDelta();
+
+        // A held world owes nothing: it goes on from its picture when it ticks again (SetWorldTicks).
+        if (!m_bHolding)
+        {
+            m_Owed += GetScaledDelta();
+        }
 
         m_StepsThisFrame = 0;
+        m_RequestedSteps = 0;
 
         return m_Delta;
     }
 
+    Uint32 FrameClock::StepsOwed(const bool bInPaused, const Uint32 InRequested, const double InOwed,
+                                 const double InFixedDelta, const Uint32 InMaxSteps) noexcept
+    {
+        if (bInPaused)
+        {
+            return Maths::Min(InRequested, 1u);
+        }
+
+        if (InFixedDelta <= 0.0)
+        {
+            return 0;
+        }
+
+        const Int64 lWhole = Maths::FloorToInt64(InOwed / InFixedDelta + STEP_EPSILON);
+        return lWhole <= 0 ? 0u : static_cast<Uint32>(Maths::Min(lWhole, static_cast<Int64>(InMaxSteps)));
+    }
+
     bool FrameClock::TakeFixedStep() noexcept
     {
-        if (m_Owed < m_FixedDelta * (1.0 - STEP_EPSILON))
+        const Uint32 lLeft = m_StepsThisFrame < m_MaxSteps ? m_MaxSteps - m_StepsThisFrame : 0u;
+
+        if (StepsOwed(m_bHolding, m_RequestedSteps, m_Owed, m_FixedDelta, lLeft) > 0)
         {
-            return false;
+            ++m_StepsThisFrame;
+
+            // A step asked of a paused world takes none of the time owed.
+            if (m_bHolding)
+            {
+                --m_RequestedSteps;
+            }
+            else
+            {
+                m_Owed = Maths::Max(m_Owed - m_FixedDelta, 0.0);
+            }
+            return true;
         }
 
         // Past the frame's most: the whole steps left are dropped, the part of one kept.
-        if (m_StepsThisFrame >= m_MaxSteps)
+        if (!m_bHolding && m_StepsThisFrame >= m_MaxSteps)
         {
             const Int64 lDropped = Maths::FloorToInt64(m_Owed / m_FixedDelta + STEP_EPSILON);
-            m_DroppedSteps += static_cast<Uint64>(lDropped);
-            m_Owed          = Maths::Max(m_Owed - static_cast<double>(lDropped) * m_FixedDelta, 0.0);
-            return false;
+            if (lDropped > 0)
+            {
+                m_DroppedSteps += static_cast<Uint64>(lDropped);
+                m_Owed          = Maths::Max(m_Owed - static_cast<double>(lDropped) * m_FixedDelta, 0.0);
+            }
         }
-
-        ++m_StepsThisFrame;
-        m_Owed = Maths::Max(m_Owed - m_FixedDelta, 0.0);
-        return true;
+        return false;
     }
 
     void FrameClock::Restart(const double InNow) noexcept
@@ -135,7 +170,19 @@ namespace Opaax
         {
             m_Owed = m_HeldAlpha * m_FixedDelta + GetScaledDelta();
         }
-        m_bHolding = !bInTicks;
+        m_bHolding       = !bInTicks;
+        m_RequestedSteps = 0;
+    }
+
+    void FrameClock::SetWorldSteps(const Uint32 InSteps) noexcept
+    {
+        // Drawn on the last step, not between it and the one before; held there until it ticks again.
+        if (InSteps > 0)
+        {
+            m_HeldAlpha = 1.0;
+        }
+        m_bHolding       = true;
+        m_RequestedSteps = InSteps;
     }
 
     void FrameClock::SetTimeScale(const double InScale) noexcept

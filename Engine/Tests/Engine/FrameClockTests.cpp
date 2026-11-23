@@ -1,5 +1,6 @@
 // Suite: FrameClock — the delta of each frame, the cap on a long frame, the fixed steps owed,
-// Restart (the time spent opening a level is not simulated), a paused world held still, and deltas
+// Restart (the time spent opening a level is not simulated), a paused world held still (and stepped
+// one asked step a frame, drawn on it), and deltas
 // snapped to a screen's refresh: a noisy timer gives steady frames, a stated rate is measured, the
 // game's time does not drift, and a frame at a step's length takes exactly one step.
 // A time scale owes more or fewer steps of the same length.
@@ -141,14 +142,14 @@ TEST_CASE("FrameClock: a world that does not tick is drawn at its last alpha, an
     CHECK(TakeAll(lClock) == 0);
     CHECK(lClock.GetDisplayAlpha() == 0.25);
 
-    // Paused through frames that cross steps (the engine still takes them): drawn at 0.25 all along.
+    // Paused through frames that cross steps: no step taken, drawn at 0.25 all along.
     double lNow = FIXED * 0.25;
     for (int lFrame = 0; lFrame < 10; ++lFrame)
     {
         lNow += FIXED * 0.375;
         lClock.BeginFrame(lNow);
         lClock.SetWorldTicks(false);
-        TakeAll(lClock);
+        CHECK(TakeAll(lClock) == 0);
         CHECK(lClock.GetDisplayAlpha() == 0.25);
     }
 
@@ -190,6 +191,121 @@ TEST_CASE("FrameClock: a paused world stepped one frame moves by that frame, the
     lClock.SetWorldTicks(false);
     TakeAll(lClock);
     CHECK(lClock.GetDisplayAlpha() == 0.25);
+}
+
+// =============================================================================
+// Steps asked of a paused world
+// =============================================================================
+TEST_CASE("FrameClock: StepsOwed gives a running world its whole steps, at most the frame's most")
+{
+    CHECK(FrameClock::StepsOwed(false, 0, 0.0, FIXED, 8) == 0);
+    CHECK(FrameClock::StepsOwed(false, 0, FIXED * 0.5, FIXED, 8) == 0);
+    CHECK(FrameClock::StepsOwed(false, 0, FIXED * 3.2, FIXED, 8) == 3);
+    CHECK(FrameClock::StepsOwed(false, 0, FIXED * 12.0, FIXED, 8) == 8);
+    CHECK(FrameClock::StepsOwed(false, 0, FIXED * 3.0, FIXED, 0) == 0);
+
+    // A hair under a step, as sums of one delta land: taken.
+    CHECK(FrameClock::StepsOwed(false, 0, FIXED * (1.0 - 1.0e-9), FIXED, 8) == 1);
+
+    // Steps asked of it do not count while it runs.
+    CHECK(FrameClock::StepsOwed(false, 5, FIXED * 0.5, FIXED, 8) == 0);
+}
+
+TEST_CASE("FrameClock: StepsOwed gives a paused world one asked step a frame, whatever the time owed")
+{
+    for (const double lOwed : { 0.0, FIXED * 0.3, FIXED * 3.0, FIXED * 12.0 })
+    {
+        CAPTURE(lOwed);
+        CHECK(FrameClock::StepsOwed(true, 0, lOwed, FIXED, 8) == 0);
+        CHECK(FrameClock::StepsOwed(true, 1, lOwed, FIXED, 8) == 1);
+        CHECK(FrameClock::StepsOwed(true, 3, lOwed, FIXED, 8) == 1);
+    }
+}
+
+TEST_CASE("FrameClock: a paused world asked for a step takes exactly one, whatever the frame and the scale")
+{
+    for (const double lScale : { 0.1, 1.0, 4.0 })
+    {
+        for (const double lFrameLength : { FIXED * 0.3, FIXED * 3.2, FIXED * 12.0 })
+        {
+            CAPTURE(lScale);
+            CAPTURE(lFrameLength);
+
+            FrameClock lClock(FIXED);
+            lClock.SetTimeScale(lScale);
+            double lNow = 0.0;
+            lClock.BeginFrame(lNow);
+            lClock.SetWorldTicks(true);
+
+            lNow += lFrameLength;
+            lClock.BeginFrame(lNow);
+            lClock.SetWorldSteps(1);
+            CHECK(TakeAll(lClock) == 1);
+            CHECK(lClock.GetDroppedSteps() == 0);
+        }
+    }
+}
+
+TEST_CASE("FrameClock: a world stepped by request is drawn on its last step, held there, and goes on from it")
+{
+    FrameClock lClock(FIXED);
+    lClock.BeginFrame(0.0);
+    lClock.SetWorldTicks(true);
+
+    // Running, then paused at a quarter of a step.
+    double lNow = FIXED * 0.25;
+    lClock.BeginFrame(lNow);
+    lClock.SetWorldTicks(true);
+    TakeAll(lClock);
+
+    lNow += FIXED * 0.5;
+    lClock.BeginFrame(lNow);
+    lClock.SetWorldTicks(false);
+    CHECK(TakeAll(lClock) == 0);
+    CHECK(lClock.GetDisplayAlpha() == 0.25);
+
+    // The step asked: drawn on it, not between it and the one before.
+    lNow += FIXED * 0.5;
+    lClock.BeginFrame(lNow);
+    lClock.SetWorldSteps(1);
+    CHECK(TakeAll(lClock) == 1);
+    CHECK(lClock.GetDisplayAlpha() == 1.0);
+
+    // Paused frames after it hold that picture, and take nothing.
+    for (int lFrame = 0; lFrame < 5; ++lFrame)
+    {
+        lNow += FIXED * 0.75;
+        lClock.BeginFrame(lNow);
+        lClock.SetWorldTicks(false);
+        CHECK(TakeAll(lClock) == 0);
+        CHECK(lClock.GetDisplayAlpha() == 1.0);
+    }
+
+    // Ticking again: a quarter of a step on from the picture, which was a whole step on.
+    lNow += FIXED * 0.25;
+    lClock.BeginFrame(lNow);
+    lClock.SetWorldTicks(true);
+    CHECK(TakeAll(lClock) == 1);
+    CHECK(lClock.GetDisplayAlpha() == 0.25);
+}
+
+TEST_CASE("FrameClock: steps asked of a frame end with it")
+{
+    FrameClock lClock(FIXED);
+    lClock.BeginFrame(0.0);
+
+    lClock.BeginFrame(FIXED);
+    lClock.SetWorldSteps(1);
+    CHECK(TakeAll(lClock) == 1);
+
+    // The next paused frame was asked for nothing.
+    lClock.BeginFrame(FIXED * 2.0);
+    lClock.SetWorldTicks(false);
+    CHECK(TakeAll(lClock) == 0);
+
+    lClock.BeginFrame(FIXED * 3.0);
+    lClock.SetWorldSteps(0);
+    CHECK(TakeAll(lClock) == 0);
 }
 
 TEST_CASE("FrameClock: a steady screen read by a noisy timer gives whole refreshes, and the time adds up")

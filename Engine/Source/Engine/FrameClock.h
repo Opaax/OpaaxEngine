@@ -11,7 +11,8 @@ namespace Opaax
     //   level is not simulated either. A world that does not tick (paused) is drawn at the alpha it
     //   had, so it holds still. With a screen's refresh, deltas are whole refreshes: the timer's noise
     //   does not reach the frames. A time scale slows or speeds the game: the steps owed grow by the
-    //   delta times the scale, each step keeps its length. Pure: the caller gives the time.
+    //   delta times the scale, each step keeps its length. A paused world asked for steps takes them
+    //   one a frame, whatever the time. Pure: the caller gives the time.
     // =============================================================================
     class FrameClock
     {
@@ -44,10 +45,19 @@ namespace Opaax
         double BeginFrame(double InNow) noexcept;
 
         /**
-         * True while the frame owes a fixed step; each true takes one. Past the frame's most steps, the
-         * whole steps still owed are dropped (the part of one is kept, so the alpha holds) and it is false.
+         * True while the frame owes a fixed step (StepsOwed); each true takes one. Past the frame's most
+         * steps, the whole steps still owed are dropped (the part of one is kept, so the alpha holds) and
+         * it is false.
          */
         bool TakeFixedStep() noexcept;
+
+        /**
+         * The fixed steps a frame still owes. A running world: the whole steps in InOwed seconds, at
+         * most InMaxSteps. A paused world: one of the InRequested steps asked of it (one a frame), or
+         * none; the time owed does not count, nor the time scale.
+         */
+        static Uint32 StepsOwed(bool bInPaused, Uint32 InRequested, double InOwed, double InFixedDelta,
+                                Uint32 InMaxSteps) noexcept;
 
         /**
          * The most fixed steps one frame takes (at least 1). A frame owing more drops the rest: the game
@@ -96,6 +106,13 @@ namespace Opaax
         void SetWorldTicks(bool bInTicks) noexcept;
 
         /**
+         * The paused world runs InSteps fixed steps this frame (in place of SetWorldTicks), whatever
+         * the time owed and the time scale. It is drawn on the last one (alpha 1) and holds there; when
+         * it ticks again, it goes on from that picture.
+         */
+        void SetWorldSteps(Uint32 InSteps) noexcept;
+
+        /**
          * The game's time for each second of the frames' (1: as fast as the clock; 0.25: a quarter).
          * Fewer or more steps are owed, each of its usual length; GetDelta stays the frame's own time.
          * A scale that is not above zero is ignored.
@@ -127,6 +144,9 @@ namespace Opaax
         // The alpha the world was last drawn with while it ticked, and whether it holds there.
         double m_HeldAlpha = 0.0;
         bool   m_bHolding  = false;
+
+        // Steps asked of the paused world this frame and not taken yet (SetWorldSteps).
+        Uint32 m_RequestedSteps = 0;
 
         // The screen's refresh; the time measured and not given yet; the measured refresh so far.
         double m_RefreshInterval   = 0.0;
