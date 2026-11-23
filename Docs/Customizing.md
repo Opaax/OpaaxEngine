@@ -73,6 +73,9 @@ public:
 
     bool Startup() override { return true; }   // GetContext() is valid from here to Shutdown
     void Update(double InDeltaTime) override { /* the world's frame */ }
+
+    // Optional: every frame, paused or not. Drawing and readouts only.
+    void Present(double InRealDeltaTime) override { /* debug shapes, a debug HUD */ }
 };
 
 OPAAX_REGISTER_OBJECT(ScoreSubsystem);
@@ -85,6 +88,14 @@ physics, Physics, PostPhysics, Default, Presentation for camera, animation and H
 orders by class name. The constructor makes nothing: the default object is built with it, outside any
 world. `GetContext()` gives the world's services (its events, input actions, audio, resources, the
 running game), and a behaviour finds the subsystem with `GetSubsystem<ScoreSubsystem>()`.
+
+`Update` and `FixedUpdate` stop while the world is paused (the editor's Pause, a game's pause
+screen); `Present` does not. It runs every frame, after the frame's fixed steps and before the frame
+is drawn, with the frame's real delta (a time scale does not slow it). Use it for **drawing and
+readouts only**: debug shapes (`GetContext().Debug`, cleared after every frame, so queued every
+frame), a debug HUD's numbers and which page shows. Never change game state there: it would move a
+paused world, and a step would no longer be one frame of the game. A behaviour's shapes drawn in
+`OnUpdate` are gone while paused; to keep them, draw them from a subsystem's `Present`.
 
 A game instance subsystem derives from `Opaax::GameInstanceSubsystem` and registers the same way.
 Every game makes one of each class, in `GetTickOrder()` order, and it lives from the start of the game

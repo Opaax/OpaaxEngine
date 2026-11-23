@@ -45,6 +45,14 @@ namespace Opaax
 
         Int32 GetTickOrder() const override { return WorldSubsystemOrder::Default; }
 
+        /**
+         * Every frame, paused or not, after the frame's Update and fixed steps, in tick order. For
+         * drawing and readouts only (debug shapes, a debug HUD), never game state: a paused world
+         * must stay as it is.
+         * @param InRealDeltaTime The frame's real time, in seconds (no time scale)
+         */
+        virtual void Present(double /*InRealDeltaTime*/) {}
+
         /** The world's services. Valid from Startup to Shutdown. */
         WorldContext& GetContext() const;
 
@@ -66,6 +74,15 @@ namespace Opaax
     public:
         /** The context every subsystem gets. Set by the World with its own. */
         void SetContext(WorldContext* InContext) noexcept { m_Context = InContext; }
+
+        /** Presents every subsystem, in tick order. */
+        void PresentAll(const double InRealDeltaTime)
+        {
+            for (const TStrongObjectPtr<WorldSubsystem>& lSystem : GetSystems())
+            {
+                lSystem->Present(InRealDeltaTime);
+            }
+        }
 
     protected:
         void OnCreated(WorldSubsystem& InSubsystem) override { InSubsystem.m_Context = m_Context; }

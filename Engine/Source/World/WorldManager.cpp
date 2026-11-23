@@ -80,6 +80,9 @@ namespace Opaax
     // =========================================================================
     void WorldManager::Update(double InDeltaTime)
     {
+        // Kept whether the world ticks or not: Render presents it every frame.
+        m_FrameDeltaTime = InDeltaTime;
+
         // Decided in Update (once per frame); FixedUpdate uses the same answer.
         m_bTickThisFrame = !m_bPaused || m_bStepRequested;
         m_bStepRequested = false;
@@ -112,6 +115,19 @@ namespace Opaax
         CameraInterpolation::EndFixedStep(*m_ActiveWorld);
 
         m_ActiveWorld->AddStep(InFixedDeltaTime);
+    }
+
+    void WorldManager::Render(double)
+    {
+        // Not gated: a paused world still shows its debug shapes and readouts.
+        if (m_ActiveWorld == nullptr)
+        {
+            return;
+        }
+
+        OPAAX_STAT_SCOPE("WorldPresent");
+
+        m_ActiveWorld->GetSubsystems().PresentAll(m_FrameDeltaTime);
     }
 
     void WorldManager::TearDown()

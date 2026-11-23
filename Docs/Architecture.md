@@ -45,7 +45,7 @@ and the game export. A game is a module of its own types, linked into its runtim
 3. **Update:** the engine's own subsystems update (the resource manager collects what is no longer
    used), and the active world's subsystems run once, in their order: input (100), gameplay (200,
    the behaviours' `OnUpdate`), physics (300), after physics (400, the movers), the default (500),
-   presentation (600: animation, audio), then debug drawing (700).
+   presentation (600: animation, audio), then debug (700; debug shapes are queued in step 5).
 4. **Fixed steps:** as many steps as the time owed (`Time.FixedRate` in `Engine.config`, 60 a second by
    default; a test plays at a screen rate of its choice with `--frame-pacing`), at most
    `Time.MaxStepsPerFrame` (8): a frame owing more drops the rest and the game slows for it, instead
@@ -59,7 +59,9 @@ and the game export. A game is a module of its own types, linked into its runtim
    move on, each entity drawn between steps notes whether the last step moved it and whether it
    moved since; a camera whose view one entity moves both ways, step after step, is reported as
    mixed (its `rhythm`) with a warning: it would jitter on screens faster than the steps.
-5. **Render:** the active camera frames the world, then each view is drawn. Moving bodies and the
+5. **Render:** the active world's subsystems `Present` (every frame, paused or not, with the
+   frame's real delta): they queue their debug shapes and refresh their readouts. Then the active
+   camera frames the world, then each view is drawn. Moving bodies and the
    camera (its pose and its zoom) are placed between their last two steps, so motion is smooth at
    any frame rate and a camera following a body keeps it still on screen. A view that shows another
    camera (the editor's Camera Preview) names it, and the renderer frames it as it draws, at the
@@ -77,7 +79,8 @@ and the game export. A game is a module of its own types, linked into its runtim
 
 A paused world (in the editor) skips its part of 3 and 4; a step runs it for one frame. It is drawn
 as it was on its last frame (the same alpha), so it holds still, and once resumed it goes on from
-that picture: the time spent paused is not simulated.
+that picture: the time spent paused is not simulated. Its subsystems still present, so its debug
+shapes (the collider outlines) and readouts stay on screen.
 
 Sound is mixed on its own thread, a few milliseconds ahead of the audio device: during the frame the
 game only sends it commands (play, stop, move, fade), and the audio update frees the sounds that
@@ -255,6 +258,22 @@ Unreal compiles its `DrawDebug*` calls out of shipping builds.
   geometry; the renderer has one path for every build.
 - **Against:** a ship build cannot show debug shapes at all, even to look into a player's bug: that
   needs a dev build.
+
+### A paused world still presents
+
+Debug shapes live one frame: the renderer clears the queue after drawing it. A paused world does
+not update, so its world subsystems get one more hook, `Present(double InRealDeltaTime)`, run every
+frame whether the world ticks or not, after its fixed steps and before the frame is drawn, with the
+frame's real delta. The collider outlines draw there, and so does a game's debug HUD. A frame frozen
+and studied with its hitboxes is what a pause is for in a debug tool. Unreal ticks what returns
+`IsTickableWhenPaused`, Unity calls `OnDrawGizmos` and `OnGUI` at a time scale of 0, and Godot has
+`PROCESS_MODE_ALWAYS`.
+
+- **For:** shapes and readouts stay current while paused (a HUD page turned on shows at once, frame
+  stats keep counting), and the debug queue stays per-frame: no shape needs a lifetime.
+- **Against:** one more hook, and nothing stops a `Present` from changing game state: that would
+  move a paused world. The rule (drawing and readouts only) is the docs'. The other way, keeping the
+  last ticked frame's shapes while paused, would have left a HUD frozen.
 
 ### Saves in the player's folder, written whole
 

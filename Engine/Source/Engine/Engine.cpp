@@ -100,7 +100,8 @@ namespace Opaax
         m_Subsystems.Add<AudioManager>();
 
         // Before WorldManager: updates run in the order added (session before worlds)
-        // and teardown in reverse (worlds destroyed before the session).
+        // and teardown in reverse (worlds destroyed before the session). WorldManager renders before
+        // RendererManager: what its worlds present is queued before the frame is drawn.
         m_Subsystems.Add<GameInstanceManager>(&m_Registries);
         m_Subsystems.Add<WorldManager>(&m_Registries);
 
