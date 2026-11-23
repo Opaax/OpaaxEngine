@@ -435,34 +435,37 @@ namespace Opaax
         // =====================================================================
 
         /**
-         * The bus tree from InBuses, under the master: a parent is placed before its children. A bus
-         * without a name, listed twice, or under a parent that is not a bus (or under itself) is
-         * logged; the last two go under the master.
+         * The bus tree from InBuses, under the master: a bus is under the bus its tag names
+         * (Audio.Bus.SFX.Footsteps under Audio.Bus.SFX), a parent placed before its children. A bus
+         * without a name, listed twice, or under a parent that is not listed is logged; the last goes
+         * under the master.
          */
         void BuildBuses(const TDynArray<AudioBusSettings>& InBuses)
         {
             Buses.clear();
             BusIndices.clear();
-            Buses.push_back(BusView{ AudioMasterBus(), -1 });
-            BusIndices.emplace(AudioMasterBus(), MASTER_BUS);
+            Buses.push_back(BusView{ AudioMasterBus().GetName(), -1 });
+            BusIndices.emplace(AudioMasterBus().GetName(), MASTER_BUS);
 
-            TDynArray<const AudioBusSettings*> lPending;
-            TUnorderedSet<OpaaxStringID>       lNames;
-            for (const AudioBusSettings& lBus : InBuses)
+            TDynArray<AudioBusSettings>  lPending;
+            TUnorderedSet<OpaaxStringID> lNames;
+            for (const AudioBusSettings& lListed : InBuses)
             {
+                AudioBusSettings lBus = lListed;
+                lBus.Name             = ToBusTag(lListed.Name);
                 if (!lBus.Name.IsValid())
                 {
                     OPAAX_LOG(LogAudio, Warn, "An audio bus has no name (Audio.Buses): it is left out");
                     continue;
                 }
 
-                if (lBus.Name == AudioMasterBus() || !lNames.insert(lBus.Name).second)
+                if (lBus.Name == AudioMasterBus() || !lNames.insert(lBus.Name.GetName()).second)
                 {
                     OPAAX_LOG(LogAudio, Warn, "Audio bus '{}' is listed twice (Audio.Buses; the master is always there): "
                               "the first one is kept", lBus.Name);
                     continue;
                 }
-                lPending.push_back(&lBus);
+                lPending.push_back(lBus);
             }
 
             // Place every bus whose parent is placed, until none moves.
@@ -472,60 +475,67 @@ namespace Opaax
                 bPlaced = false;
                 for (auto lIt = lPending.begin(); lIt != lPending.end();)
                 {
-                    const OpaaxStringID lParent = (*lIt)->Parent.IsValid() ? (*lIt)->Parent : AudioMasterBus();
-                    const auto          lFound  = BusIndices.find(lParent);
+                    const auto lFound = BusIndices.find(lIt->Name.GetParent().GetName());
                     if (lFound == BusIndices.end())
                     {
                         ++lIt;
                         continue;
                     }
 
-                    AddBus(**lIt, lFound->second);
+                    AddBus(*lIt, lFound->second);
                     lIt     = lPending.erase(lIt);
                     bPlaced = true;
                 }
             }
 
-            for (const AudioBusSettings* lBus : lPending)
+            for (const AudioBusSettings& lBus : lPending)
             {
-                OPAAX_LOG(LogAudio, Warn, "Audio bus '{}' is under '{}', which is not a bus above it (Audio.Buses): it is "
-                          "put under the master", lBus->Name, lBus->Parent);
-                AddBus(*lBus, MASTER_BUS);
+                OPAAX_LOG(LogAudio, Warn, "Audio bus '{}' is under '{}', which is not listed (Audio.Buses): it is "
+                          "put under the master", lBus.Name, lBus.Name.GetParent());
+                AddBus(lBus, MASTER_BUS);
             }
         }
 
         void AddBus(const AudioBusSettings& InBus, const Uint16 InParent)
         {
-            BusIndices.emplace(InBus.Name, static_cast<Uint16>(Buses.size()));
-            Buses.push_back(BusView{ InBus.Name, InParent, Maths::Max(InBus.Volume, 0.f) });
+            BusIndices.emplace(InBus.Name.GetName(), static_cast<Uint16>(Buses.size()));
+            Buses.push_back(BusView{ InBus.Name.GetName(), InParent, Maths::Max(InBus.Volume, 0.f) });
         }
 
-        /** A bus by name, or -1. Unknown names are logged once. */
-        Int32 FindBus(const OpaaxStringID InBus)
+        /** A bus by its tag (a name written before tags read under Audio.Bus), or -1. Unknown ones are logged once. */
+        Int32 FindBus(const OpaaxTag InBus)
         {
-            const auto lFound = BusIndices.find(InBus);
+            const OpaaxTag lTag   = ToBusTag(InBus);
+            const auto     lFound = BusIndices.find(lTag.GetName());
             if (lFound != BusIndices.end())
             {
                 return lFound->second;
             }
 
-            if (bStarted && WarnedBuses.insert(InBus).second)
+            if (bStarted && WarnedBuses.insert(lTag.GetName()).second)
             {
-                OPAAX_LOG(LogAudio, Warn, "No audio bus is named '{}' (Engine.config, Audio.Buses)", InBus);
+                OPAAX_LOG(LogAudio, Warn, "No audio bus is named '{}' (Engine.config, Audio.Buses)", lTag);
             }
             return -1;
         }
 
         /** The bus a sound plays in: its own, the default one when it names none, else the master. */
-        Uint16 ResolveBus(const OpaaxStringID InBus)
+        Uint16 ResolveBus(const OpaaxTag InBus)
         {
             // Maps saved before the bus tree name the effects bus "Effects".
-            static const OpaaxStringID s_OldEffects = OPAAX_ID("Effects");
+            static const OpaaxTag s_OldEffects("Effects");
 
-            OpaaxStringID lName = InBus.IsValid() ? InBus : AudioDefaultBus();
-            if (lName == s_OldEffects && !BusIndices.contains(lName))
+            OpaaxTag lName = InBus.IsValid() ? InBus : AudioDefaultBus();
+            if (lName == s_OldEffects && !BusIndices.contains(ToBusTag(lName).GetName()))
             {
                 lName = AudioDefaultBus();
+            }
+
+            // A name written before tags still plays: said once, so the asset gets resaved.
+            if (!lName.MatchesTag(AudioMasterBus()) && WarnedBuses.insert(lName.GetName()).second)
+            {
+                OPAAX_LOG(LogAudio, Warn, "Audio bus '{}' is a name from before bus tags: read as '{}' (resave what names it)",
+                          lName, ToBusTag(lName));
             }
 
             const Int32 lBus = FindBus(lName);
@@ -1082,12 +1092,12 @@ namespace Opaax
     // =========================================================================
     // Mix
     // =========================================================================
-    bool AudioManager::HasBus(const OpaaxStringID InBus) const
+    bool AudioManager::HasBus(const OpaaxTag InBus) const
     {
-        return m_Impl->BusIndices.contains(InBus);
+        return m_Impl->BusIndices.contains(ToBusTag(InBus).GetName());
     }
 
-    void AudioManager::SetBusVolume(const OpaaxStringID InBus, const float InVolume)
+    void AudioManager::SetBusVolume(const OpaaxTag InBus, const float InVolume)
     {
         const Int32 lBus = m_Impl->FindBus(InBus);
         if (lBus >= 0)
@@ -1097,13 +1107,13 @@ namespace Opaax
         }
     }
 
-    float AudioManager::GetBusVolume(const OpaaxStringID InBus) const
+    float AudioManager::GetBusVolume(const OpaaxTag InBus) const
     {
-        const auto lFound = m_Impl->BusIndices.find(InBus);
+        const auto lFound = m_Impl->BusIndices.find(ToBusTag(InBus).GetName());
         return lFound != m_Impl->BusIndices.end() ? m_Impl->Buses[lFound->second].Volume : 0.f;
     }
 
-    void AudioManager::FadeBus(const OpaaxStringID InBus, const float InVolume, const float InSeconds)
+    void AudioManager::FadeBus(const OpaaxTag InBus, const float InVolume, const float InSeconds)
     {
         const Int32 lBus = m_Impl->FindBus(InBus);
         if (lBus >= 0)
@@ -1114,7 +1124,7 @@ namespace Opaax
         }
     }
 
-    void AudioManager::SetBusMuted(const OpaaxStringID InBus, const bool bInMuted)
+    void AudioManager::SetBusMuted(const OpaaxTag InBus, const bool bInMuted)
     {
         const Int32 lBus = m_Impl->FindBus(InBus);
         if (lBus >= 0)
@@ -1124,7 +1134,7 @@ namespace Opaax
         }
     }
 
-    void AudioManager::SetBusSolo(const OpaaxStringID InBus, const bool bInSolo)
+    void AudioManager::SetBusSolo(const OpaaxTag InBus, const bool bInSolo)
     {
         const Int32 lBus = m_Impl->FindBus(InBus);
         if (lBus >= 0)

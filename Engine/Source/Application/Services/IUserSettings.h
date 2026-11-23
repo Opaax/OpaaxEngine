@@ -9,6 +9,7 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/String/OpaaxStringView.hpp"
+#include "Core/Tag/OpaaxTag.h"
 #include "Platform/Window/DisplayMode.h"
 #include "Save/SaveResult.h"
 
@@ -172,7 +173,7 @@ namespace Opaax
         bool SetMasterVolume(float InVolume);
 
         /** A bus's volume, 0 to 1 ("Music", "SFX"...; "Master" is SetMasterVolume). False for a bus not listed. */
-        bool SetBusVolume(OpaaxStringID InBus, float InVolume);
+        bool SetBusVolume(OpaaxTag InBus, float InVolume);
 
         // =============================================================================
         // The renderer's settings — what the renderer reads is in the Renderer config; the texture filter

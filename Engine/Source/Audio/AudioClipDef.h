@@ -84,7 +84,7 @@ namespace Opaax
         EAudioSelection           Selection = EAudioSelection::Random;
 
         /** The bus it plays in ("Music", "SFX"...). */
-        OpaaxStringID Bus = AudioDefaultBus();
+        OpaaxTag Bus = AudioDefaultBus();
 
         float Volume = 1.f;
         float Pitch  = 1.f;
@@ -107,7 +107,7 @@ namespace Opaax
         OPAAX_PROPERTIES(AudioClipDef,
                          OPAAX_PROP(Clips).SetTooltip("The variations: one is chosen each time it plays."),
                          OPAAX_PROP(Selection).SetTooltip("How the clip is chosen each time."),
-                         OPAAX_PROP(Bus).SetTooltip("The bus it plays in: Audio.Buses in Engine.config."),
+                         OPAAX_PROP(Bus).SetTagRoot("Audio.Bus").SetTooltip("The bus it plays in: Audio.Buses in Engine.config."),
                          OPAAX_PROP(Volume).SetRange(0.f, 2.f),
                          OPAAX_PROP(Pitch).SetRange(0.1f, 4.f).SetTooltip("2 is an octave up, and twice as fast."),
                          OPAAX_PROP(VolumeSpread).SetRange(0.f, 1.f).SetTooltip("Random change of volume per play, up or down."),

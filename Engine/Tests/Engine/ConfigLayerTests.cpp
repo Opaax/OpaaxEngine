@@ -67,7 +67,7 @@ namespace
     {
         for (const AudioBusSettings& lBus : InData.Audio.Buses)
         {
-            if (lBus.Name == OPAAX_ID(InName)) { return &lBus; }
+            if (lBus.Name == ToBusTag(OpaaxTag(InName))) { return &lBus; }   // by its last name, as a player's file names it
         }
         return nullptr;
     }
@@ -280,7 +280,7 @@ TEST_CASE("TConfig: a project change that takes away what a player's value is fo
 
     CHECK_FALSE(lConfig.HasPlayerValues());
     REQUIRE(lConfig.GetData().Audio.Buses.size() == 1u);
-    CHECK(lConfig.GetData().Audio.Buses[0].Name == OPAAX_ID("SFX"));
+    CHECK(lConfig.GetData().Audio.Buses[0].Name == OpaaxTag("Audio.Bus.SFX"));
 }
 
 TEST_CASE("TConfig: a new load of the project's file keeps the player's values over it")

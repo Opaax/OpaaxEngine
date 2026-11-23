@@ -13,7 +13,7 @@ namespace Opaax
 
     namespace
     {
-        const OpaaxStringID UI_BUS("UI");
+        const OpaaxTag UI_BUS("Audio.Bus.UI");
 
         bool IsClipDefPath(const OpaaxString& InPath)
         {

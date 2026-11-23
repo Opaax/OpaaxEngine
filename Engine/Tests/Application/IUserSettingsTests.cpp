@@ -55,7 +55,7 @@ namespace
     {
         for (const AudioBusSettings& lBus : InData.Audio.Buses)
         {
-            if (lBus.Name == OPAAX_ID(InName)) { return &lBus; }
+            if (lBus.Name == ToBusTag(OpaaxTag(InName))) { return &lBus; }   // by its last name, as a player's file names it
         }
         return nullptr;
     }
@@ -130,7 +130,7 @@ TEST_CASE("UserSettings: a value saved is read again at the next launch")
     Fixture lFix;
     lFix.Settings->Activate();
     REQUIRE(lFix.Settings->SetWindowMode(EWindowMode::Borderless));
-    REQUIRE(lFix.Settings->SetBusVolume(OPAAX_ID("Music"), 0.5f));
+    REQUIRE(lFix.Settings->SetBusVolume(OpaaxTag("Audio.Bus.Music"), 0.5f));
     REQUIRE(lFix.Settings->Save() == ESaveResult::Ok);
     CHECK_FALSE(lFix.Settings->HasUnsavedChanges());
 
@@ -215,7 +215,7 @@ TEST_CASE("UserSettings: a value the config does not take refuses the change who
     CHECK(lWhy[0] == "no config 'Engin'");
 
     CHECK_FALSE(lFix.Settings->SetConfigValues("Engine", OpaaxString("[1]")));
-    CHECK_FALSE(lFix.Settings->SetBusVolume(OPAAX_ID("Voice"), 0.5f));
+    CHECK_FALSE(lFix.Settings->SetBusVolume(OpaaxTag("Audio.Bus.Voice"), 0.5f));
     CHECK_FALSE(lFix.Settings->SetResolution(0, 720));
 
     CHECK((Json(lFix.Settings->GetConfigValues("Engine").CStr()) == Json(R"({"Window": {"bVSync": false}})")));
@@ -356,8 +356,8 @@ TEST_CASE("UserSettings: the file is laid out as a save, which a person can read
 {
     Fixture lFix;
     lFix.Settings->Activate();
-    REQUIRE(lFix.Settings->SetBusVolume(OPAAX_ID("Music"), 0.5f));
-    REQUIRE(lFix.Settings->SetBusVolume(OPAAX_ID("Master"), 2.f));   // kept between 0 and 1
+    REQUIRE(lFix.Settings->SetBusVolume(OpaaxTag("Audio.Bus.Music"), 0.5f));
+    REQUIRE(lFix.Settings->SetBusVolume(OpaaxTag("Audio.Bus"), 2.f));   // kept between 0 and 1
     REQUIRE(lFix.Settings->SetSection("Keys", Json(R"([{"Action": "Jump", "Key": "Space"}])")));
     REQUIRE(lFix.Settings->Save() == ESaveResult::Ok);
 
@@ -365,7 +365,7 @@ TEST_CASE("UserSettings: the file is laid out as a save, which a person can read
     CHECK(lText.Contains("\n    "));   // indented
 
     CHECK((Json(lText.CStr()) == Json(R"({ "Class": "UserSettings", "ClassVersion": 1, "Version": 1, "Properties": {
-              "Configs": { "Engine": { "Audio": { "MasterVolume": 1.0, "Buses": { "Music": { "Volume": 0.5 } } } } },
+              "Configs": { "Engine": { "Audio": { "MasterVolume": 1.0, "Buses": { "Audio.Bus.Music": { "Volume": 0.5 } } } } },
               "Keys": [ { "Action": "Jump", "Key": "Space" } ] } })")));
     CHECK(lFix.Settings->GetFilePath() == lFix.Storage.GetSlotPath(IUserSettings::SLOT));
 }

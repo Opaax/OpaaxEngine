@@ -257,7 +257,7 @@ TEST_CASE("AudioManager: what is heard follows the sound, bus and master volumes
 
     PlaySoundParams lParams;
     lParams.bLoop = true;
-    lParams.Bus   = OPAAX_ID("SFX");
+    lParams.Bus   = OpaaxTag("Audio.Bus.SFX");
     const SoundHandle lSound = lAudio.Play(*MakeClip(0.5f), lParams);
 
     const float lFull = RenderPeaks(lAudio).Max();
@@ -266,13 +266,13 @@ TEST_CASE("AudioManager: what is heard follows the sound, bus and master volumes
     // Each change ramps over one block, so nothing clicks: let it finish, then measure.
     SUBCASE("the bus")
     {
-        lAudio.SetBusVolume(OPAAX_ID("SFX"), 0.f);
+        lAudio.SetBusVolume(OpaaxTag("Audio.Bus.SFX"), 0.f);
         Settle(lAudio);
         CHECK(RenderPeaks(lAudio).Max() < 1e-4f);
 
         // Another bus is not affected.
-        lAudio.SetBusVolume(OPAAX_ID("SFX"), 1.f);
-        lAudio.SetBusVolume(OPAAX_ID("Music"), 0.f);
+        lAudio.SetBusVolume(OpaaxTag("Audio.Bus.SFX"), 1.f);
+        lAudio.SetBusVolume(OpaaxTag("Audio.Bus.Music"), 0.f);
         Settle(lAudio);
         CHECK(RenderPeaks(lAudio).Max() == doctest::Approx(lFull).epsilon(0.05));
     }
@@ -297,10 +297,10 @@ TEST_CASE("AudioManager: what is heard follows the sound, bus and master volumes
         lSettings.MasterVolume = 1.f;
         for (AudioBusSettings& lBus : lSettings.Buses)
         {
-            if (lBus.Name == OPAAX_ID("SFX")) { lBus.Volume = 0.5f; }
+            if (lBus.Name == OpaaxTag("Audio.Bus.SFX")) { lBus.Volume = 0.5f; }
         }
         lAudio.ApplySettings(lSettings);
-        CHECK(lAudio.GetBusVolume(OPAAX_ID("SFX")) == 0.5f);
+        CHECK(lAudio.GetBusVolume(OpaaxTag("Audio.Bus.SFX")) == 0.5f);
         Settle(lAudio);
         CHECK(RenderPeaks(lAudio).Max() == doctest::Approx(lFull * 0.5f).epsilon(0.05));
     }
@@ -310,23 +310,23 @@ TEST_CASE("AudioManager: the bus tree comes from the settings; a fade, mute and 
 {
     AudioManager::Desc lDesc = Headless();
     lDesc.Buses = {
-        AudioBusSettings{ OPAAX_ID("Footsteps"), OPAAX_ID("SFX"), 1.f },   // listed before its parent
-        AudioBusSettings{ OPAAX_ID("SFX"), OpaaxStringID(), 0.5f },
-        AudioBusSettings{ OPAAX_ID("Music"), OpaaxStringID(), 1.f },
-        AudioBusSettings{ OPAAX_ID("SFX"), OpaaxStringID(), 1.f },        // twice: the first is kept
-        AudioBusSettings{ OPAAX_ID("Lost"), OPAAX_ID("Nowhere"), 1.f },   // under the master
+        AudioBusSettings{ OpaaxTag("Audio.Bus.SFX.Footsteps"), 1.f },   // listed before its parent
+        AudioBusSettings{ OpaaxTag("Audio.Bus.SFX"), 0.5f },
+        AudioBusSettings{ OpaaxTag("Audio.Bus.Music"), 1.f },
+        AudioBusSettings{ OpaaxTag("Audio.Bus.SFX"), 1.f },            // twice: the first is kept
+        AudioBusSettings{ OpaaxTag("Audio.Bus.Nowhere.Lost"), 1.f },   // its parent not listed: under the master
     };
 
     AudioManager lAudio(lDesc);
     REQUIRE(lAudio.Startup());
-    CHECK(lAudio.HasBus(OPAAX_ID("Master")));
-    CHECK(lAudio.HasBus(OPAAX_ID("Footsteps")));
-    CHECK(lAudio.HasBus(OPAAX_ID("Lost")));
-    CHECK(lAudio.GetBusVolume(OPAAX_ID("SFX")) == 0.5f);
+    CHECK(lAudio.HasBus(OpaaxTag("Audio.Bus")));
+    CHECK(lAudio.HasBus(OpaaxTag("Audio.Bus.SFX.Footsteps")));
+    CHECK(lAudio.HasBus(OpaaxTag("Audio.Bus.Nowhere.Lost")));
+    CHECK(lAudio.GetBusVolume(OpaaxTag("Audio.Bus.SFX")) == 0.5f);
 
     PlaySoundParams lParams;
     lParams.bLoop = true;
-    lParams.Bus   = OPAAX_ID("Footsteps");
+    lParams.Bus   = OpaaxTag("Audio.Bus.SFX.Footsteps");
     lAudio.Play(*MakeClip(0.5f), lParams);
 
     // Under SFX at 0.5: half of what the clip holds.
@@ -334,38 +334,38 @@ TEST_CASE("AudioManager: the bus tree comes from the settings; a fade, mute and 
 
     SUBCASE("a fade on the parent reaches the child, in its time")
     {
-        lAudio.FadeBus(OPAAX_ID("SFX"), 0.f, 0.2f);
+        lAudio.FadeBus(OpaaxTag("Audio.Bus.SFX"), 0.f, 0.2f);
         CHECK(RenderPeaks(lAudio, 0.1f).Max() > 0.05f);
         RenderPeaks(lAudio, 0.11f);
         CHECK(RenderPeaks(lAudio).Max() == 0.f);
-        CHECK(lAudio.GetBusVolume(OPAAX_ID("SFX")) == 0.5f);   // the volume is not the fade
+        CHECK(lAudio.GetBusVolume(OpaaxTag("Audio.Bus.SFX")) == 0.5f);   // the volume is not the fade
     }
 
     SUBCASE("mute")
     {
-        lAudio.SetBusMuted(OPAAX_ID("SFX"), true);
+        lAudio.SetBusMuted(OpaaxTag("Audio.Bus.SFX"), true);
         Settle(lAudio);
         CHECK(RenderPeaks(lAudio).Max() == 0.f);
     }
 
     SUBCASE("solo")
     {
-        lAudio.SetBusSolo(OPAAX_ID("Music"), true);
+        lAudio.SetBusSolo(OpaaxTag("Audio.Bus.Music"), true);
         Settle(lAudio);
         CHECK(RenderPeaks(lAudio).Max() == 0.f);
 
-        lAudio.SetBusSolo(OPAAX_ID("SFX"), true);   // a soloed parent: its children are heard
+        lAudio.SetBusSolo(OpaaxTag("Audio.Bus.SFX"), true);   // a soloed parent: its children are heard
         Settle(lAudio);
         CHECK(RenderPeaks(lAudio).Max() > 0.2f);
     }
 
     SUBCASE("an unknown bus does nothing; a sound naming one plays in the master")
     {
-        lAudio.SetBusVolume(OPAAX_ID("Nope"), 0.f);
-        CHECK_FALSE(lAudio.HasBus(OPAAX_ID("Nope")));
+        lAudio.SetBusVolume(OpaaxTag("Audio.Bus.Nope"), 0.f);
+        CHECK_FALSE(lAudio.HasBus(OpaaxTag("Audio.Bus.Nope")));
 
         PlaySoundParams lLost;
-        lLost.Bus = OPAAX_ID("Nope");
+        lLost.Bus = OpaaxTag("Audio.Bus.Nope");
         CHECK(lAudio.Play(*MakeClip(0.5f), lLost).IsValid());
     }
 }
@@ -374,12 +374,12 @@ TEST_CASE("AudioManager: a sound naming no bus plays in SFX; the old bus name \"
 {
     AudioManager lAudio(Headless());
     REQUIRE(lAudio.Startup());
-    lAudio.SetBusVolume(OPAAX_ID("SFX"), 0.f);
+    lAudio.SetBusVolume(OpaaxTag("Audio.Bus.SFX"), 0.f);
 
     PlaySoundParams lParams;
     lParams.bLoop = true;
     lAudio.Play(*MakeClip(0.5f), lParams);
-    lParams.Bus = OPAAX_ID("Effects");
+    lParams.Bus = OpaaxTag("Effects");
     lAudio.Play(*MakeClip(0.5f), lParams);
 
     CHECK(RenderPeaks(lAudio).Max() == 0.f);
@@ -839,4 +839,28 @@ TEST_CASE("AudioSubsystem: a behaviour's sound, and every sound of the world, en
     lFix.Worlds.DestroyWorld(lFix.TheWorld);
     lFix.TheWorld = nullptr;
     CHECK(lFix.Audio.GetVoiceCount() == 0);
+}
+
+TEST_CASE("AudioBusSettings: a bus written before tags reads as its tag, its parent folded into the name")
+{
+    const auto lRead = [](const char* InJson)
+    {
+        return nlohmann::json::parse(InJson).get<AudioBusSettings>();
+    };
+
+    CHECK(lRead(R"({"Name": "Music", "Volume": 0.5})").Name == OpaaxTag("Audio.Bus.Music"));
+    CHECK(lRead(R"({"Name": "Music", "Volume": 0.5})").Volume == 0.5f);
+    CHECK(lRead(R"({"Name": "Footsteps", "Parent": "SFX"})").Name == OpaaxTag("Audio.Bus.SFX.Footsteps"));
+    CHECK(lRead(R"({"Name": "Footsteps", "Parent": ""})").Name == OpaaxTag("Audio.Bus.Footsteps"));
+    CHECK(lRead(R"({"Name": "Footsteps", "Parent": "Master"})").Name == OpaaxTag("Audio.Bus.Footsteps"));
+    CHECK(lRead(R"({"Name": "Audio.Bus.SFX.Footsteps", "Parent": "SFX"})").Name == OpaaxTag("Audio.Bus.SFX.Footsteps"));
+    CHECK_FALSE(lRead(R"({"Volume": 1.0})").Name.IsValid());
+
+    // Written as its tag, with no Parent.
+    const nlohmann::json lWritten = AudioBusSettings{ OpaaxTag("Audio.Bus.SFX.Footsteps"), 0.25f };
+    CHECK(lWritten.at("Name") == "Audio.Bus.SFX.Footsteps");
+    CHECK_FALSE(lWritten.contains("Parent"));
+
+    CHECK(ToBusTag(OpaaxTag("Master")) == AudioMasterBus());
+    CHECK(ToBusTag(OpaaxTag("UI")) == OpaaxTag("Audio.Bus.UI"));
 }
