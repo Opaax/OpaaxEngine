@@ -2,6 +2,7 @@
 
 #include "Core/EngineAPI.h"
 
+#include "Engine/Tags/TagRegistry.h"
 #include "Object/ObjectClassRegistry.h"
 #include "Resources/ResourceFormatRegistry.h"
 #include "World/Components/ComponentRegistry.h"
@@ -48,6 +49,10 @@ namespace Opaax
         ObjectClassRegistry&       ObjectClasses()       noexcept { return m_ObjectClasses; }
         const ObjectClassRegistry& ObjectClasses() const noexcept { return m_ObjectClasses; }
 
+        /** The gameplay tags: code's (sealed with the rest) and the project's Tags.config (they change). */
+        TagRegistry&       Tags()       noexcept { return m_Tags; }
+        const TagRegistry& Tags() const noexcept { return m_Tags; }
+
         // =========================================================================
         // Functions
         // =========================================================================
@@ -60,6 +65,7 @@ namespace Opaax
             m_Components.Seal();
             m_ResourceFormats.Seal();
             m_ObjectClasses.Seal();
+            m_Tags.Seal();
         }
 
         // =========================================================================
@@ -69,5 +75,6 @@ namespace Opaax
         ComponentRegistry             m_Components;
         ResourceFormatRegistry        m_ResourceFormats;
         ObjectClassRegistry           m_ObjectClasses;
+        TagRegistry                   m_Tags;
     };
 }

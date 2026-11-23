@@ -202,10 +202,48 @@ namespace Opaax
     };
 
     // =============================================================================
+    // TagRoute — the gameplay tags code declares (OPAAX_REGISTER_TAG), into the TagRegistry.
+    // =============================================================================
+    class TagRoute
+    {
+    public:
+        /** Declares InTag (dotted text) and what it is for. Text that is not a tag is refused with an error. */
+        bool Add(const char* InTag, const char* InComment)
+        {
+            ++m_Count;
+
+            if (m_Registry == nullptr)
+            {
+                OPAAX_LOG(LogModuleRegistrar, Error, "Tags().Add — route is not bound to a TagRegistry; '{}' dropped.", InTag);
+                return false;
+            }
+            if (!OpaaxTag::IsValidTagText(OpaaxStringView(InTag)))
+            {
+                OPAAX_LOG(LogModuleRegistrar, Error, "Tags().Add — '{}' is not a tag (dotted names, e.g. UI.Layer.Menu).", InTag);
+                return false;
+            }
+
+            m_Registry->AddNative(OpaaxTag(InTag), OpaaxString(InComment));
+            return true;
+        }
+
+        /** Connects this route to the registry. Called once, before any module registers. */
+        void Bind(TagRegistry* InRegistry) noexcept { m_Registry = InRegistry; }
+
+        /** Number of declarations, including refused ones. */
+        Uint64 Count() const noexcept { return m_Count; }
+
+    private:
+        TagRegistry* m_Registry = nullptr; // owned by the engine
+        Uint64       m_Count    = 0;
+    };
+
+    // =============================================================================
     // ModuleRegistrar — what engine and game code register into, before any world exists.
     //     Components()             -> ComponentRegistry
     //     Behaviours()             -> ComponentRegistry (stored like components)
     //     ObjectClasses()          -> ObjectClassRegistry (assets, subsystems, any Object class)
+    //     Tags()                   -> TagRegistry (the gameplay tags code declares)
     //   Most types register themselves with the OPAAX_REGISTER_* macros (AutoRegistration.h).
     // =============================================================================
     class ModuleRegistrar
@@ -214,6 +252,7 @@ namespace Opaax
         ComponentRoute&             Components()             noexcept { return m_Components; }
         BehaviourRoute&             Behaviours()             noexcept { return m_Behaviours; }
         ObjectClassRoute&           ObjectClasses()          noexcept { return m_ObjectClasses; }
+        TagRoute&                   Tags()                   noexcept { return m_Tags; }
 
         const ComponentRoute&             Components()             const noexcept { return m_Components; }
         const BehaviourRoute&             Behaviours()             const noexcept { return m_Behaviours; }
@@ -227,11 +266,13 @@ namespace Opaax
             m_Components.Bind(&InRegistries.Components());
             m_Behaviours.Bind(&InRegistries.Components());
             m_ObjectClasses.Bind(&InRegistries.ObjectClasses());
+            m_Tags.Bind(&InRegistries.Tags());
         }
 
     private:
         ComponentRoute             m_Components;
         BehaviourRoute             m_Behaviours;
         ObjectClassRoute           m_ObjectClasses;
+        TagRoute                   m_Tags;
     };
 }

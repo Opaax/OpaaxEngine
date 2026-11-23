@@ -37,7 +37,8 @@ namespace Opaax
         ObjectClassAlias,
         Component,
         ComponentAlias,
-        Behaviour
+        Behaviour,
+        Tag
     };
 
     // =============================================================================
@@ -125,6 +126,14 @@ namespace Opaax
 #define OPAAX_REGISTER_OBJECT(Type)                                                                  \
     OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::ObjectClass,                    \
         ::Opaax::TypeIdOf<Type>(), 0, #Type, InRegistrar.ObjectClasses().Register<Type>())
+
+/**
+ * Declares a gameplay tag (TagRegistry) and what it is for: OPAAX_REGISTER_TAG("UI.Layer.Popup", "Pop-ups").
+ * Its parents exist with it. The editor's pickers offer it; Tags.config lists a project's own.
+ */
+#define OPAAX_REGISTER_TAG(Name, Comment)                                                            \
+    OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::Tag,                            \
+        ::Opaax::OpaaxHash::Hash64(Name), 0, Name, InRegistrar.Tags().Add(Name, Comment))
 
 /** Lets files that name OldName load as the class now registered as Name (after a rename). */
 #define OPAAX_REGISTER_OBJECT_ALIAS(OldName, Name)                                                   \
