@@ -79,6 +79,16 @@ namespace Opaax
         nlohmann::json DescribeWidgets(const UICanvas& InCanvas, const OpaaxString& InName);
 
         /**
+         * InCanvas's layers, bottom to top: {"layers": [{"name", "order", "key", "trees"}], "unlisted"}.
+         * "trees" are the root's trees drawn in that layer ({"name", "layer"}, their own layer, which may be
+         * an unlisted sub-layer), in draw order; "unlisted" the trees whose layer no listed one reaches (at 0).
+         */
+        nlohmann::json DescribeLayers(const UICanvas& InCanvas);
+
+        /** The name of the topmost widget at InPixel (in the canvas's target pixels), or empty for none. */
+        OpaaxString HitWidgetName(UICanvas& InCanvas, const Vector2F& InPixel);
+
+        /**
          * The pixel at the centre of InCanvas's widget named InName, where a click lands on it. False,
          * with OutError, when there is no such widget or it is hidden.
          */

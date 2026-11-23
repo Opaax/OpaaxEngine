@@ -760,6 +760,66 @@ TEST_CASE("Automation UI: widgets are listed in screen pixels, and a click lands
     CHECK(lError.Contains("no widget named 'Missing'"));
 }
 
+TEST_CASE("Automation UI: ui.layers puts each tree under its layer, ui.list says it, a hit names the top widget")
+{
+    UICanvas lCanvas(1080.f);
+    lCanvas.SetTargetSize(1920, 1080);
+
+    TDynArray<UILayerSettings> lSettings = DefaultUILayers();
+    lSettings.push_back(UILayerSettings{ OpaaxTag("Menu.Pause"), 10 });
+    TDynArray<OpaaxString> lProblems;
+    lCanvas.SetLayers(UILayerTable::Build(lSettings, lProblems));
+
+    // Four 300x80 buttons at the centre, mounted top layer first.
+    const auto lMount = [&lCanvas](const char* InName, const OpaaxTag InLayer)
+    {
+        TStrongObjectPtr<UIWidget> lTree = NewObject<UIButton>();
+        lTree->Name = OpaaxString(InName);
+        UIRect lRect;
+        lRect.SizeDelta = { 300.f, 80.f };
+        lTree->SetRect(lRect);
+        lTree->SetLayer(InLayer);
+        lCanvas.Root().AddChild(Move(lTree));
+    };
+    lMount("DebugPanel", UILayerDebug());
+    lMount("PauseMenu", OpaaxTag("Menu.Pause"));
+    lMount("Options", OpaaxTag("Menu.Options"));   // not listed: drawn in Menu
+    lMount("Stray", OpaaxTag("Stray"));             // not listed, nor any parent: at 0
+    lCanvas.Update();
+
+    const nlohmann::json lLayers = EngineAutomation::DescribeLayers(lCanvas);
+    REQUIRE(lLayers.at("layers").size() == 5);
+    CHECK(lLayers["layers"][0].at("name") == "Hud");
+    CHECK(lLayers["layers"][0].at("trees").empty());
+    CHECK(lLayers["layers"][1].at("name") == "Menu");
+    CHECK(lLayers["layers"][1].at("order") == 100);
+    REQUIRE(lLayers["layers"][1].at("trees").size() == 1);
+    CHECK(lLayers["layers"][1]["trees"][0].at("name") == "Options");
+    CHECK(lLayers["layers"][1]["trees"][0].at("layer") == "Menu.Options");
+    CHECK(lLayers["layers"][2].at("name") == "Menu.Pause");
+    CHECK(lLayers["layers"][2].at("key") == "100/10");
+    CHECK(lLayers["layers"][3]["trees"][0].at("name") == "DebugPanel");
+    REQUIRE(lLayers.at("unlisted").size() == 1);
+    CHECK(lLayers["unlisted"][0].at("name") == "Stray");
+
+    // ui.list: in draw order, the top layer last, each row with its tree's layer.
+    const nlohmann::json lListed = EngineAutomation::DescribeWidgets(lCanvas, "");
+    REQUIRE(lListed.size() == 5);   // the root and the four trees
+    CHECK(lListed[0].at("layer") == "");
+    CHECK(lListed[1].at("name") == "Stray");
+    CHECK(lListed[2].at("name") == "Options");
+    CHECK(lListed[3].at("name") == "PauseMenu");
+    CHECK(lListed[4].at("name") == "DebugPanel");
+    CHECK(lListed[4].at("layer") == "Debug");
+
+    // A click on the pause menu's centre lands on the debug panel over it.
+    Vector2F    lPixel{ 0.f, 0.f };
+    OpaaxString lError;
+    REQUIRE(EngineAutomation::FindWidgetCentre(lCanvas, "PauseMenu", lPixel, lError));
+    CHECK(EngineAutomation::HitWidgetName(lCanvas, lPixel) == "DebugPanel");
+    CHECK(EngineAutomation::HitWidgetName(lCanvas, { 5.f, 5.f }).IsEmpty());
+}
+
 TEST_CASE("Automation script: answers are written as they come, then marked done")
 {
     TestTempDir lDir("AutomationScript");
