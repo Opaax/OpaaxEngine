@@ -160,3 +160,15 @@ TEST_CASE("OpaaxTag: it keys a map and formats in a log line")
     CHECK(fmt::format("{}", OpaaxTag("Damage.Fire")) == "Damage.Fire");
     CHECK(fmt::format("{}", OpaaxTag()) == "None");
 }
+
+TEST_CASE("OpaaxTag: WithRoot puts a root before a short name, and leaves a rooted one")
+{
+    const OpaaxTag lRoot("UI.Layer");
+    CHECK(WithRoot(lRoot, OpaaxTag("Menu")) == OpaaxTag("UI.Layer.Menu"));
+    CHECK(WithRoot(lRoot, OpaaxTag("Menu.Pause")) == OpaaxTag("UI.Layer.Menu.Pause"));
+    CHECK(WithRoot(lRoot, OpaaxTag("UI.Layer.Menu")) == OpaaxTag("UI.Layer.Menu"));
+    CHECK(WithRoot(lRoot, lRoot) == lRoot);
+    CHECK_FALSE(WithRoot(lRoot, OpaaxTag()).IsValid());
+    CHECK(WithRoot(OpaaxTag(), OpaaxTag("Menu")) == OpaaxTag("Menu"));
+    CHECK(WithRoot(lRoot, OpaaxTag("UI.LayerX")) == OpaaxTag("UI.Layer.UI.LayerX"));   // not under: a name like any
+}

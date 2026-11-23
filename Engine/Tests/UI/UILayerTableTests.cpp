@@ -24,12 +24,18 @@ namespace
         return BuildTable(lSettings);
     }
 
+    /** The listed layers bottom to top, each under UI.Layer, written without that root. */
     OpaaxString Names(const UILayerTable& InTable)
     {
+        const OpaaxString lRoot = UILayerRoot().ToString() + ".";
+
         OpaaxString lNames;
         for (const UILayerTable::Entry& lEntry : InTable.GetLayers())
         {
-            lNames += lNames.IsEmpty() ? lEntry.Name.ToString() : "," + lEntry.Name.ToString();
+            const OpaaxString lName = lEntry.Name.ToString();
+            CHECK(lName.StartsWith(lRoot));
+            const OpaaxString lShort = lName.SubString(lRoot.GetLength());
+            lNames += lNames.IsEmpty() ? lShort : "," + lShort;
         }
         return lNames;
     }
@@ -96,7 +102,8 @@ TEST_CASE("UILayerTable: an unlisted name draws in its nearest listed parent; no
 {
     const UILayerTable lTable = WithPause(10);
 
-    CHECK(lTable.Resolve(OpaaxTag("Menu.Pause.Extra")) == OpaaxTag("Menu.Pause"));
+    CHECK(lTable.Resolve(OpaaxTag("Menu.Pause.Extra")) == OpaaxTag("UI.Layer.Menu.Pause"));   // a short name, read under the root
+    CHECK(lTable.Resolve(OpaaxTag("UI.Layer.Menu.Pause.Extra")) == OpaaxTag("UI.Layer.Menu.Pause"));
     CHECK(lTable.KeyOf(OpaaxTag("Menu.Pause.Extra")) == lTable.KeyOf(OpaaxTag("Menu.Pause")));
     CHECK(lTable.Resolve(OpaaxTag("Menu.Options")) == UILayerMenu());
 
@@ -125,9 +132,9 @@ TEST_CASE("UILayerTable: what is wrong with a list is reported, one line each, a
 
     REQUIRE(lProblems.size() == 4);
     CHECK(lProblems[0].Contains("no name"));
-    CHECK(lProblems[1].Contains("'Menu' is listed twice"));
-    CHECK(lProblems[2].Contains("'A.B.C.D.E' is more than 4 names deep"));
-    CHECK(lProblems[3].Contains("'Popup.Toast' is under 'Popup', which is not listed"));
+    CHECK(lProblems[1].Contains("'UI.Layer.Menu' is listed twice"));
+    CHECK(lProblems[2].Contains("'UI.Layer.A.B.C.D.E' is more than 4 names under UI.Layer"));
+    CHECK(lProblems[3].Contains("'UI.Layer.Popup.Toast' is under 'UI.Layer.Popup', which is not listed"));
 
     CHECK(Names(lTable) == "Popup.Toast,Menu");                    // {0, 5} under {100}
     CHECK(lTable.KeyOf(UILayerMenu()).ToString() == "100");         // the first Menu kept

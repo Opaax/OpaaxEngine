@@ -508,7 +508,7 @@ TEST_CASE("EngineConfigData: UI.Layers is Hud, Menu, Debug, Loading unless the f
     // A listed list replaces the defaults, as Buses does; a name that is not a tag reads as none.
     const EngineConfigData lListed = Parse(R"({"UI":{"Layers":[{"Name":"Menu.Pause","Order":10},{"Name":"Bad..Name"}]}})");
     REQUIRE(lListed.UI.Layers.size() == 2u);
-    CHECK(lListed.UI.Layers[0].Name == OpaaxTag("Menu.Pause"));
+    CHECK(lListed.UI.Layers[0].Name == OpaaxTag("UI.Layer.Menu.Pause"));   // a short name, read under the root
     CHECK(lListed.UI.Layers[0].Order == 10);
     CHECK_FALSE(lListed.UI.Layers[1].Name.IsValid());
     CHECK(lListed.UI.Layers[1].Order == 0);
@@ -517,14 +517,14 @@ TEST_CASE("EngineConfigData: UI.Layers is Hud, Menu, Debug, Loading unless the f
 TEST_CASE("EngineConfigData: UI.Layers round-trips, names as dotted text")
 {
     EngineConfigData lIn;
-    lIn.UI.Layers.push_back(UILayerSettings{ OpaaxTag("Menu.Pause"), -10 });
+    lIn.UI.Layers.push_back(UILayerSettings{ OpaaxTag("UI.Layer.Menu.Pause"), -10 });
 
     const nlohmann::json lJson = nlohmann::json::parse(Codec::ToText(lIn).CStr());
-    CHECK(lJson["UI"]["Layers"][4]["Name"] == "Menu.Pause");
+    CHECK(lJson["UI"]["Layers"][4]["Name"] == "UI.Layer.Menu.Pause");
 
     const EngineConfigData lOut = Codec::FromText(Codec::ToText(lIn));
     REQUIRE(lOut.UI.Layers.size() == 5u);
-    CHECK(lOut.UI.Layers[4].Name == OpaaxTag("Menu.Pause"));
+    CHECK(lOut.UI.Layers[4].Name == OpaaxTag("UI.Layer.Menu.Pause"));
     CHECK(lOut.UI.Layers[4].Order == -10);
 }
 
@@ -533,7 +533,7 @@ TEST_CASE("TConfig: a player's value sets a UI layer by its name, as it does a b
     ProbeConfig lProbe;
 
     TDynArray<OpaaxString> lRejected;
-    REQUIRE(lProbe.SetPlayerText(OpaaxString(R"({"UI":{"Layers":{"Menu":{"Order":600}}}})"), &lRejected));
+    REQUIRE(lProbe.SetPlayerText(OpaaxString(R"({"UI":{"Layers":{"UI.Layer.Menu":{"Order":600}}}})"), &lRejected));
     CHECK(lRejected.empty());
 
     const TDynArray<UILayerSettings>& lLayers = lProbe.GetData().UI.Layers;

@@ -36,39 +36,39 @@
         "expect": {
             "layers": [
                 {
-                    "name": "Hud",
+                    "name": "UI.Layer.Hud",
                     "trees": []
                 },
                 {
-                    "name": "Menu.Pause",
+                    "name": "UI.Layer.Menu.Pause",
                     "key": "100/-10",
                     "trees": [
                         {
                             "name": "PauseRoot",
-                            "layer": "Menu.Pause"
+                            "layer": "UI.Layer.Menu.Pause"
                         }
                     ]
                 },
                 {
-                    "name": "Menu",
+                    "name": "UI.Layer.Menu",
                     "trees": [
                         {
                             "name": "MenuRoot",
-                            "layer": "Menu"
+                            "layer": "UI.Layer.Menu"
                         }
                     ]
                 },
                 {
-                    "name": "Debug",
+                    "name": "UI.Layer.Debug",
                     "trees": [
                         {
                             "name": "DebugRoot",
-                            "layer": "Debug"
+                            "layer": "UI.Layer.Debug"
                         }
                     ]
                 },
                 {
-                    "name": "Loading",
+                    "name": "UI.Layer.Loading",
                     "trees": []
                 }
             ],
@@ -84,7 +84,7 @@
         "expect": {
             "widgets": [
                 {
-                    "layer": "Debug"
+                    "layer": "UI.Layer.Debug"
                 }
             ]
         }
@@ -305,7 +305,7 @@
             "values": {
                 "UI": {
                     "Layers": {
-                        "Menu": {
+                        "UI.Layer.Menu": {
                             "Order": 600
                         }
                     }

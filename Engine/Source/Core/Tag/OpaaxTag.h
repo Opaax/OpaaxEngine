@@ -156,6 +156,19 @@ namespace Opaax
         OpaaxStringID m_Name;
     };
 
+    /**
+     * InTag under InRoot: as it is when it is InRoot or under it, else with InRoot put before it ("Menu" under
+     * "UI.Layer" is "UI.Layer.Menu"). How a short name written before roots is read. None stays none.
+     */
+    inline OpaaxTag WithRoot(const OpaaxTag InRoot, const OpaaxTag InTag)
+    {
+        if (!InTag.IsValid() || !InRoot.IsValid() || InTag.MatchesTag(InRoot))
+        {
+            return InTag;
+        }
+        return OpaaxTag(InRoot.ToString() + "." + InTag.ToString());
+    }
+
     // THash<OpaaxTag>: the interned id is already a good hash.
     template <>
     struct THash<OpaaxTag>
