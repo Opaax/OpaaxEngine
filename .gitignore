@@ -64,6 +64,7 @@ EditorTemp/
 # (The plan-mode mirror was lost because this whole tree was ignored — never again.)
 /.claude/*
 !/.claude/CLAUDE.md
+!/.claude/AGENTS.md
 !/.claude/lessons.md
 !/.claude/ARCHITECTURE.md
 !/.claude/plans/
