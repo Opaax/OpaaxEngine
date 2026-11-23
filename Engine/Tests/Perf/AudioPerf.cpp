@@ -33,7 +33,7 @@ TEST_SUITE("perf" * doctest::skip())
         REQUIRE(lMusic.LoadFromMemory(AudioTest::MakeWav(44100, 180.f, 220.f), "Music", AudioClip::EResidency::Streamed));
 
         PlaySoundParams lMusicParams;
-        lMusicParams.Bus   = OPAAX_ID("Music");
+        lMusicParams.Bus   = OpaaxTag("Audio.Bus.Music");
         lMusicParams.bLoop = true;
         REQUIRE(lAudio.Play(lMusic, lMusicParams).IsValid());
 

@@ -143,16 +143,17 @@ namespace Opaax
         return SetEngineValues(*this, lValues);
     }
 
-    bool IUserSettings::SetBusVolume(const OpaaxStringID InBus, const float InVolume)
+    bool IUserSettings::SetBusVolume(const OpaaxTag InBus, const float InVolume)
     {
         // The master is not in the list of buses: it has a value of its own.
-        if (InBus == AudioMasterBus())
+        const OpaaxTag lBus = ToBusTag(InBus);
+        if (lBus == AudioMasterBus())
         {
             return SetMasterVolume(InVolume);
         }
 
         nlohmann::json lValues;
-        lValues["Audio"]["Buses"][InBus.CStr()]["Volume"] = Maths::Clamp(InVolume, 0.f, 1.f);
+        lValues["Audio"]["Buses"][lBus.GetName().CStr()]["Volume"] = Maths::Clamp(InVolume, 0.f, 1.f);
         return SetEngineValues(*this, lValues);
     }
 

@@ -220,7 +220,7 @@ namespace Opaax
                                              .SetTooltip("Off: no audio device; sounds play silently."),
                          OPAAX_PROP(Backend).SetFlags(EPropertyFlags::NeedRestart),
                          OPAAX_PROP(MasterVolume).SetRange(0.f, 1.f),
-                         OPAAX_PROP(Buses).SetTooltip("The buses under the master. A volume applies at once; "
+                         OPAAX_PROP(Buses).SetTagRoot("Audio.Bus").SetTooltip("The buses under the master. A volume applies at once; "
                                                       "a bus added, removed or moved at the next start."),
                          OPAAX_PROP(MaxVoices).SetRange(1.f, 512.f).SetFlags(EPropertyFlags::NeedRestart),
                          OPAAX_PROP(GlobalBank).SetFlags(EPropertyFlags::NeedRestart)

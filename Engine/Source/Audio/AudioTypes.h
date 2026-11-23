@@ -5,6 +5,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxEnum.h"
 #include "Core/String/OpaaxStringID.hpp"
+#include "Core/Tag/OpaaxTag.h"
 
 namespace Opaax
 {
@@ -62,8 +63,8 @@ namespace Opaax
     // =============================================================================
     struct PlaySoundParams
     {
-        /** The bus it plays in, by name ("Music"). None: "SFX". */
-        OpaaxStringID Bus;
+        /** The bus it plays in, by its tag ("Audio.Bus.Music"). None: Audio.Bus.SFX. */
+        OpaaxTag Bus;
 
         float Volume = 1.f;   // linear, 1 = as recorded
         float Pitch  = 1.f;   // 2 = an octave up, and twice as fast

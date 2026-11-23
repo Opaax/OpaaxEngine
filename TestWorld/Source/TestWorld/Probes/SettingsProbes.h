@@ -80,7 +80,7 @@ namespace TestWorld
             if (const Opaax::AudioManager* const lAudio = GetContext().Audio)
             {
                 MixerVolume = lAudio->GetMasterVolume();
-                MusicVolume = lAudio->GetBusVolume(OPAAX_ID("Music"));
+                MusicVolume = lAudio->GetBusVolume(Opaax::OpaaxTag("Audio.Bus.Music"));
             }
         }
     };

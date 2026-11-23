@@ -29,7 +29,7 @@ namespace Opaax
 
         TAssetRef<AudioClip> Clip;
 
-        OpaaxStringID Bus          = AudioDefaultBus();
+        OpaaxTag      Bus          = AudioDefaultBus();
         float         Volume       = 1.f;   // times the definition's, with a Sound
         float         Pitch        = 1.f;   // times the definition's, with a Sound
         bool          bLoop        = false;
@@ -52,7 +52,8 @@ namespace Opaax
                          OPAAX_PROP(Sound).SetTooltip("A clip definition: its clips, bus, volume, spread, "
                                                       "loop and space.\nWhen set, the fields below Clip are not used."),
                          OPAAX_PROP(Clip).SetTooltip("A sound file (.wav, .mp3, .flac), played with the settings below."),
-                         OPAAX_PROP(Bus).SetTooltip("The bus it plays in (\"Music\", \"SFX\"...): Audio.Buses in Engine.config."),
+                         OPAAX_PROP(Bus).SetTagRoot("Audio.Bus")
+                                         .SetTooltip("The bus it plays in (\"Audio.Bus.Music\"...): Audio.Buses in Engine.config."),
                          OPAAX_PROP(Volume).SetRange(0.f, 2.f),
                          OPAAX_PROP(Pitch).SetRange(0.1f, 4.f).SetTooltip("2 is an octave up, and twice as fast."),
                          OPAAX_PROP(bLoop),

@@ -168,7 +168,7 @@ TEST_CASE("AudioClipDef: each play takes the definition's settings, the clip's s
 {
     const TStrongObjectPtr<AudioClipDef> lOwner = MakeDef(EAudioSelection::Single, 1);
     AudioClipDef&                        lDef   = *lOwner;
-    lDef.Bus                  = OPAAX_ID("Dialogue");
+    lDef.Bus                  = OpaaxTag("Audio.Bus.Dialogue");
     lDef.Volume               = 0.8f;
     lDef.Pitch                = 1.f;
     lDef.VolumeSpread         = 0.1f;
@@ -196,7 +196,7 @@ TEST_CASE("AudioClipDef: each play takes the definition's settings, the clip's s
     CHECK(lHighest - lLowest > 0.05f);   // it does spread
 
     const PlaySoundParams lParams = MakePlaySoundParams(lDef, 0, lRandom);
-    CHECK(lParams.Bus == OPAAX_ID("Dialogue"));
+    CHECK(lParams.Bus == OpaaxTag("Audio.Bus.Dialogue"));
     CHECK(lParams.bLoop);
     CHECK(lParams.bSpatial);
     CHECK(lParams.MaxDistance == 900.f);
@@ -209,7 +209,7 @@ TEST_CASE("AudioClipDef: the asset round-trips; a file missing fields keeps thei
     const TStrongObjectPtr<AudioClipDef> lDef = MakeDef(EAudioSelection::Shuffle, 2);
     lDef->Clips[1].Weight = 2.5f;
     lDef->PitchSpread     = 0.05f;
-    lDef->Bus             = OPAAX_ID("Music");
+    lDef->Bus             = OpaaxTag("Audio.Bus.Music");
 
     const ObjectClass&   lClass = AudioClipDef::StaticClass();
     const nlohmann::json lJson  = lClass.WriteProperties(*lDef);
@@ -221,13 +221,13 @@ TEST_CASE("AudioClipDef: the asset round-trips; a file missing fields keeps thei
     REQUIRE(lClass.ReadProperties(lRead, lJson));
     CHECK(lRead.Clips.size() == 2);
     CHECK(lRead.Clips[1].Weight == 2.5f);
-    CHECK(lRead.Bus == OPAAX_ID("Music"));
+    CHECK(lRead.Bus == OpaaxTag("Audio.Bus.Music"));
 
     AudioClipDef lOld;
     REQUIRE(lClass.ReadProperties(lOld, nlohmann::json{ { "Volume", 0.5f } }));
     CHECK(lOld.Volume == 0.5f);
     CHECK(lOld.Selection == EAudioSelection::Random);
-    CHECK(lOld.Bus == OPAAX_ID("SFX"));
+    CHECK(lOld.Bus == OpaaxTag("Audio.Bus.SFX"));
     CHECK(lOld.Clips.empty());
 
     CHECK(lClass.GetName() == OPAAX_ID("AudioClipDef"));
@@ -257,6 +257,16 @@ namespace
 
         void VisitAssetRef(const char*, OpaaxString&, const ObjectClass&, const PropertyMeta&) override {}
         void VisitObjectRef(const char*, ObjectHandle&, const ObjectClass&, const PropertyMeta&) override {}
+
+        /** A bus is a tag: its picker must offer the buses, so its root is checked too. */
+        void VisitTag(const char* InName, OpaaxTag&, const PropertyMeta& InMeta) override
+        {
+            if (InMeta.TagRoot == nullptr || OpaaxString(InMeta.TagRoot) != "Audio.Bus")
+            {
+                Unsupported.push_back(OpaaxString(InName) + " (no Audio.Bus root)");
+            }
+        }
+
         bool BeginGroup(const char*, const PropertyMeta&) override { return true; }
         void EndGroup() override {}
 

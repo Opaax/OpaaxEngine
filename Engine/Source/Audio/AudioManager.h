@@ -129,26 +129,27 @@ namespace Opaax
         void SetPaused(SoundHandle InSound, bool bInPaused);
 
         // =============================================================================
-        // Buses — named as in the engine config ("Master", "Music", "SFX"...). A name that is not
-        //   a bus is logged once and does nothing.
+        // Buses — named by their Audio.Bus tags, as in the engine config ("Audio.Bus" the master,
+        //   "Audio.Bus.Music"...). A name written before tags ("Music") reads under that root. A name that
+        //   is not a bus is logged once and does nothing.
         // =============================================================================
     public:
-        bool HasBus(OpaaxStringID InBus) const;
+        bool HasBus(OpaaxTag InBus) const;
 
         /** The bus's own volume (the settings' one). */
-        void  SetBusVolume(OpaaxStringID InBus, float InVolume);
-        float GetBusVolume(OpaaxStringID InBus) const;
+        void  SetBusVolume(OpaaxTag InBus, float InVolume);
+        float GetBusVolume(OpaaxTag InBus) const;
 
         /**
          * Moves the bus's fade to InVolume over InSeconds, on top of its volume: a cutscene fades the
          * music out without touching the volume the player chose.
          */
-        void FadeBus(OpaaxStringID InBus, float InVolume, float InSeconds);
+        void FadeBus(OpaaxTag InBus, float InVolume, float InSeconds);
 
-        void SetBusMuted(OpaaxStringID InBus, bool bInMuted);
+        void SetBusMuted(OpaaxTag InBus, bool bInMuted);
 
         /** While a bus is soloed, only it and the buses under it are heard. */
-        void SetBusSolo(OpaaxStringID InBus, bool bInSolo);
+        void SetBusSolo(OpaaxTag InBus, bool bInSolo);
 
         void  SetMasterVolume(float InVolume);
         float GetMasterVolume() const;
