@@ -4,6 +4,9 @@ What working on this repository taught, kept short so the next session starts fr
 
 ## Tools and shell
 
+- Every change reaches main through its branch and a PR the user merges. Never push or
+  fast-forward main, even when a request says "pushed to main": push the branch, open the PR.
+
 - The file-writing tools turn a `\uXXXX` sequence (four hex digits) into its character. A file that
   must keep such an escape (a C++ `u8` literal in the UTF-8 tests) is edited around it: match or
   cut by a nearby line, never by the escaped text.
