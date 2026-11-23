@@ -1,6 +1,7 @@
 // Suite: TagRegistry — the tags a project uses: declared in code, listed in Tags.config, and their parents.
 #include <doctest.h>
 
+#include "Engine/Tags/Config_Tags.h"
 #include "Engine/Tags/TagRegistry.h"
 
 using namespace Opaax;
@@ -67,4 +68,26 @@ TEST_CASE("TagRegistry: the config's tags are replaced as a whole; code's stay, 
     // Sealed: code can declare no more.
     lRegistry.AddNative(OpaaxTag("Late.Tag"), OpaaxString());
     CHECK_FALSE(lRegistry.IsRegistered(OpaaxTag("Late.Tag")));
+}
+
+TEST_CASE("TagRegistry: Tags.config's data round-trips and fills the registry's config tags")
+{
+    TagsConfigData lData;
+    lData.Tags.push_back(TagDefinition{ OpaaxTag("UI.Layer.Popup"), OpaaxString("Pop-ups") });
+
+    const OpaaxString    lText = TConfigCodec<TagsConfigData>::ToText(lData);
+    const nlohmann::json lJson = nlohmann::json::parse(lText.CStr());
+    CHECK(lJson["Tags"][0]["Tag"] == "UI.Layer.Popup");
+    CHECK(lJson["Tags"][0]["Comment"] == "Pop-ups");
+
+    const TagsConfigData lRead = TConfigCodec<TagsConfigData>::FromText(OpaaxString(R"({"Tags":[{"Tag":"Game.Team.Red"},{"Tag":"Bad..Tag"}]})"));
+    REQUIRE(lRead.Tags.size() == 2u);
+    CHECK(lRead.Tags[0].Tag == OpaaxTag("Game.Team.Red"));
+    CHECK_FALSE(lRead.Tags[1].Tag.IsValid());   // not a tag: read as none, left out of the registry
+
+    TagRegistry lRegistry;
+    lRegistry.SetConfigTags(lRead.Tags);
+    CHECK(lRegistry.IsRegistered(OpaaxTag("Game.Team.Red")));
+    CHECK(lRegistry.IsRegistered(OpaaxTag("Game.Team")));
+    CHECK(lRegistry.GetAll().size() == 3u);   // Game, Game.Team, Game.Team.Red
 }
