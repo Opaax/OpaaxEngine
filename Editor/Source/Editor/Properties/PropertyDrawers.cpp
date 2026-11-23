@@ -137,6 +137,35 @@ namespace Opaax::Editor
         }
     }
 
+    void TPropertyDrawer<OpaaxTag>::Draw(IEditorWidgets& InWidgets, const char* InLabel,
+                                         OpaaxTag& InValue, const PropertyMeta&)
+    {
+        // Submit on Enter, as an id: a tag is interned and never freed.
+        constexpr Uint32 k_BufferSize = 128;
+
+        char lBuffer[k_BufferSize] = {};
+
+        const OpaaxStringView lText = InValue.GetView();
+        const Uint32          lLen  = lText.GetLength() < k_BufferSize - 1 ? lText.GetLength() : k_BufferSize - 1;
+        Memory::Copy(lBuffer, lText.Data(), lLen);
+        lBuffer[lLen] = '\0';
+
+        const bool            bSubmitted = InWidgets.InputText(InLabel, lBuffer, k_BufferSize, /*bInSubmitOnEnter*/ true);
+        const OpaaxStringView lTyped(lBuffer);
+        const bool            bIsTag     = OpaaxTag::IsValidTagText(lTyped);
+
+        // An empty field clears the tag; text that is not a tag is refused (the tag constructor would assert).
+        if (bSubmitted && (bIsTag || lTyped.IsEmpty()))
+        {
+            InValue = bIsTag ? OpaaxTag(lTyped) : OpaaxTag();
+        }
+
+        if (!bIsTag && !lTyped.IsEmpty())
+        {
+            InWidgets.TextDisabled("Not a tag: dotted names, e.g. Menu.Pause");
+        }
+    }
+
     namespace
     {
         /** A path field as a drop target, for files of the resource type and of the kind InKind. */

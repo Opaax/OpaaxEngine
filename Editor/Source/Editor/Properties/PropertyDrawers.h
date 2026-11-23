@@ -5,6 +5,7 @@
 #include "Core/Reflection/OpaaxEnum.h"   // CEnumWithValues
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
+#include "Core/Tag/OpaaxTag.h"
 #include "Engine/Reflection/PropertyVisitor.h"            // EnumLabels
 #include "Resources/Asset/AssetRef.h"           // TAssetRef
 #include "Resources/ResourceTypeID.hpp" // ResourceTypeID
@@ -36,6 +37,7 @@ namespace Opaax::Editor
     OPAAX_DECLARE_PROPERTY_DRAWER(LinearColor);
     OPAAX_DECLARE_PROPERTY_DRAWER(OpaaxString);
     OPAAX_DECLARE_PROPERTY_DRAWER(OpaaxStringID);
+    OPAAX_DECLARE_PROPERTY_DRAWER(OpaaxTag);
 
 #undef OPAAX_DECLARE_PROPERTY_DRAWER
 

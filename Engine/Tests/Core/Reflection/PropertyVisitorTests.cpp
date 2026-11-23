@@ -237,3 +237,70 @@ TEST_CASE("PropertyVisitor: a group the visitor declines is skipped, with no End
         CHECK(lLine != "end");
     }
 }
+
+namespace
+{
+    struct VisitorTagSubject
+    {
+        OpaaxTag            Layer = OpaaxTag("Menu");
+        TDynArray<OpaaxTag> Extra = { OpaaxTag("Debug") };
+
+        OPAAX_PROPERTIES(VisitorTagSubject, OPAAX_PROP(Layer), OPAAX_PROP(Extra))
+    };
+
+    /** Reads every tag and renames it, as the editor's tag field does on Enter. */
+    class TagVisitor final : public IPropertyVisitor
+    {
+    public:
+        TDynArray<OpaaxString> Seen;
+
+        void Visit(const char*, bool&, const PropertyMeta&) override          {}
+        void Visit(const char*, Int16&, const PropertyMeta&) override         {}
+        void Visit(const char*, Int32&, const PropertyMeta&) override         {}
+        void Visit(const char*, Uint32&, const PropertyMeta&) override        {}
+        void Visit(const char*, float&, const PropertyMeta&) override         {}
+        void Visit(const char*, Vector2F&, const PropertyMeta&) override      {}
+        void Visit(const char*, Vector3F&, const PropertyMeta&) override      {}
+        void Visit(const char*, Vector4F&, const PropertyMeta&) override      {}
+        void Visit(const char*, LinearColor&, const PropertyMeta&) override   {}
+        void Visit(const char*, OpaaxString&, const PropertyMeta&) override   {}
+        void Visit(const char*, OpaaxStringID&, const PropertyMeta&) override {}
+        void VisitEnum(const char*, const char* const*, Uint32, Uint32&, const PropertyMeta&) override {}
+        void VisitAssetRef(const char*, OpaaxString&, const ObjectClass&, const PropertyMeta&) override {}
+        void VisitObjectRef(const char*, ObjectHandle&, const ObjectClass&, const PropertyMeta&) override {}
+        bool BeginGroup(const char*, const PropertyMeta&) override { return true; }
+        void EndGroup() override {}
+        void VisitUnsupported(const char* InName, OpaaxStringView) override { Seen.push_back(OpaaxString::Format("unsupported {}", InName)); }
+
+        void VisitTag(const char* InName, OpaaxTag& InOutTag, const PropertyMeta&) override
+        {
+            Seen.push_back(OpaaxString::Format("{} {}", InName, InOutTag.ToString().CStr()));
+            InOutTag = OpaaxTag(InOutTag.ToString() + ".Pause");
+        }
+    };
+}
+
+TEST_CASE("PropertyVisitor: a tag reaches VisitTag, in a list too, and a write lands in the object")
+{
+    VisitorTagSubject lSubject;
+    TagVisitor        lVisitor;
+
+    VisitProperties(lSubject, lVisitor);
+
+    const TDynArray<OpaaxString> lExpected = { "Layer Menu", "[0] Debug" };
+    CHECK(lVisitor.Seen == lExpected);
+    CHECK(lSubject.Layer == OpaaxTag("Menu.Pause"));
+    CHECK(lSubject.Extra[0] == OpaaxTag("Debug.Pause"));
+}
+
+TEST_CASE("PropertyVisitor: a visitor that does not handle tags reports them unsupported and leaves them")
+{
+    VisitorTagSubject lSubject;
+    RecordingVisitor  lVisitor;
+
+    VisitProperties(lSubject, lVisitor);
+
+    const TDynArray<OpaaxString> lExpected = { "unsupported Layer", "list Extra 1", "unsupported [0]" };
+    CHECK(lVisitor.Lines == lExpected);
+    CHECK(lSubject.Layer == OpaaxTag("Menu"));
+}

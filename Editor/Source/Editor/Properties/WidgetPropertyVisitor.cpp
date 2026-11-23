@@ -63,6 +63,11 @@ namespace Opaax::Editor
         DrawPropertyNote(m_Widgets, InMeta);
     }
 
+    void WidgetPropertyVisitor::VisitTag(const char* InName, OpaaxTag& InOutTag, const PropertyMeta& InMeta)
+    {
+        DrawWithNote(m_Widgets, InName, InOutTag, InMeta);
+    }
+
     bool WidgetPropertyVisitor::BeginGroup(const char* InName, const PropertyMeta& InMeta)
     {
         if (!m_Widgets.BeginTreeNode(InName))
