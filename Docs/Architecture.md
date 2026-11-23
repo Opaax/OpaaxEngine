@@ -244,6 +244,18 @@ leaves it out, and the console with it). Game code registers for a lifetime and 
   the handler), and the engine's older test cheats stay in ship builds so the release feature tests
   can run: a shipped game must check `HaveCheatsRun` before posting a run.
 
+### Debug shapes only in dev builds
+
+`DebugDraw` queues nothing in a ship build: every draw call returns at once, on any channel. The
+collider outlines' world subsystem is not even created there. The editor is always a dev build, so
+editing keeps its outlines. The gate sits in the queue, not in the renderer's overlay pass, as
+Unreal compiles its `DrawDebug*` calls out of shipping builds.
+
+- **For:** a game's debug code that forgot its own build check draws nothing and builds no outline
+  geometry; the renderer has one path for every build.
+- **Against:** a ship build cannot show debug shapes at all, even to look into a player's bug: that
+  needs a dev build.
+
 ### Saves in the player's folder, written whole
 
 A save is an object of a `SaveGame` class, written as text by its properties, one file per slot.

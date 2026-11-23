@@ -16,20 +16,55 @@ namespace
 }
 
 // =============================================================================
-// Queue
+// Queue (a dev-build queue: a ship build's queues nothing, tested on its own)
 // =============================================================================
 
 TEST_CASE("DebugDraw: a fresh queue is empty")
 {
-    const DebugDraw lDebug{};
+    const DebugDraw lDebug(true);
 
     CHECK(lDebug.IsEmpty());
     CHECK(lDebug.GetLines().empty());
 }
 
+TEST_CASE("DebugDraw: a ship build queues nothing, on any channel")
+{
+    DebugDraw lDebug(false);
+    const DebugChannel lCustom = OPAAX_ID("GameDebug");
+
+    for (const DebugChannel lChannel : { DebugChannels::Default, DebugChannels::Physics, lCustom })
+    {
+        lDebug.DrawLine({ 0.f, 0.f }, { 1.f, 1.f }, { 1.f, 1.f, 1.f, 1.f }, 1.f, ERenderLayer::Debug, lChannel);
+        lDebug.DrawBox({ 0.f, 0.f }, { 2.f, 2.f }, { 1.f, 1.f, 1.f, 1.f }, 1.f, ERenderLayer::Debug, lChannel);
+        lDebug.DrawBounds(Bounds2D::FromCenterSize({ 0.f, 0.f }, { 2.f, 2.f }), { 1.f, 1.f, 1.f, 1.f },
+                          1.f, ERenderLayer::Debug, lChannel);
+        lDebug.DrawCircle({ 0.f, 0.f }, 1.f, { 1.f, 1.f, 1.f, 1.f }, 1.f, ERenderLayer::Debug, lChannel);
+        lDebug.DrawCapsule({ 0.f, 0.f }, { 0.f, 2.f }, 1.f, { 1.f, 1.f, 1.f, 1.f }, 1.f,
+                           ERenderLayer::Debug, lChannel);
+    }
+
+    CHECK_FALSE(lDebug.IsActive());
+    CHECK(lDebug.GetLines().empty());
+    CHECK(lDebug.GetBoxes().empty());
+    CHECK(lDebug.IsEmpty());
+}
+
+TEST_CASE("DebugDraw: a dev build queues, and the default follows the build")
+{
+    DebugDraw lDebug(true);
+    lDebug.DrawLine({ 0.f, 0.f }, { 1.f, 1.f }, { 1.f, 1.f, 1.f, 1.f });
+    lDebug.DrawBox({ 0.f, 0.f }, { 2.f, 2.f }, { 1.f, 1.f, 1.f, 1.f });
+
+    CHECK(lDebug.GetLines().size() == 1u);
+    CHECK(lDebug.GetBoxes().size() == 1u);
+
+    const DebugDraw lDefault;
+    CHECK(lDefault.IsActive() == Build::IsDevBuild());
+}
+
 TEST_CASE("DebugDraw: DrawLine appends one entry carrying exactly what was submitted")
 {
-    DebugDraw lDebug;
+    DebugDraw lDebug(true);
     lDebug.DrawLine({ 1.f, 2.f }, { 3.f, 4.f }, { 0.2f, 0.4f, 0.6f, 0.8f }, 2.5f);
 
     REQUIRE(lDebug.GetLines().size() == 1u);
@@ -46,7 +81,7 @@ TEST_CASE("DebugDraw: DrawLine appends one entry carrying exactly what was submi
 
 TEST_CASE("DebugDraw: submission order is preserved (the renderer draws them in order)")
 {
-    DebugDraw lDebug;
+    DebugDraw lDebug(true);
     lDebug.DrawLine({ 0.f, 0.f }, { 1.f, 0.f }, { 1.f, 0.f, 0.f, 1.f });
     lDebug.DrawLine({ 0.f, 0.f }, { 2.f, 0.f }, { 0.f, 1.f, 0.f, 1.f });
 
@@ -60,7 +95,7 @@ TEST_CASE("DebugDraw: DrawBox covers the rectangle it was given, corner to corne
     // This used to assert FOUR segments forming a closed loop. A box is one hollow quad now, so the
     // loop is gone — but the thing that loop actually proved, that the outline lands on the right
     // rectangle, still has to hold.
-    DebugDraw lDebug;
+    DebugDraw lDebug(true);
     lDebug.DrawBox({ 10.f, 20.f }, { 4.f, 6.f }, { 1.f, 1.f, 1.f, 1.f }, 1.f);
 
     REQUIRE(lDebug.GetBoxes().size() == 1u);
@@ -79,7 +114,7 @@ TEST_CASE("DebugDraw: a primitive names its world, and null means the active one
     // one, so a non-null address that is not a World is all the test needs.
     const World* const lSomeWorld = reinterpret_cast<const World*>(0x1);
 
-    DebugDraw lDebug;
+    DebugDraw lDebug(true);
     lDebug.DrawLine({ 0.f, 0.f }, { 1.f, 0.f }, { 1.f, 1.f, 1.f, 1.f });
     lDebug.DrawLine({ 0.f, 0.f }, { 1.f, 0.f }, { 1.f, 1.f, 1.f, 1.f }, 1.f, ERenderLayer::Debug,
                     DebugChannels::Default, lSomeWorld);
@@ -106,7 +141,7 @@ TEST_CASE("DebugDraw: a primitive names its world, and null means the active one
 
 TEST_CASE("DebugDraw: Clear drops the queue (per-frame contract — nothing survives a frame)")
 {
-    DebugDraw lDebug;
+    DebugDraw lDebug(true);
     lDebug.DrawBox({ 0.f, 0.f }, { 1.f, 1.f }, { 1.f, 1.f, 1.f, 1.f });
     REQUIRE(lDebug.GetBoxes().size() == 1u);
 
@@ -186,7 +221,7 @@ TEST_CASE("DebugDraw: a segment defaults to the Debug band, above world geometry
 {
     // Every caller relies on this default. If it ever changed, selection
     // outlines and entity icons would slide behind the sprites they annotate.
-    DebugDraw lDraw;
+    DebugDraw lDraw(true);
     lDraw.DrawLine({ 0.f, 0.f }, { 1.f, 0.f }, { 1.f, 1.f, 1.f, 1.f });
 
     REQUIRE(lDraw.GetLines().size() == 1u);
@@ -197,7 +232,7 @@ TEST_CASE("DebugDraw: a segment can name a band BELOW world geometry")
 {
     // What the snap grid needs: Background sorts under Default, so the grid is drawn on rather than
     // over. A grid above every sprite is not a grid, it is a cage.
-    DebugDraw lDraw;
+    DebugDraw lDraw(true);
     lDraw.DrawLine({ 0.f, 0.f }, { 1.f, 0.f }, { 1.f, 1.f, 1.f, 1.f }, 1.f, ERenderLayer::Background);
 
     REQUIRE(lDraw.GetLines().size() == 1u);
@@ -209,7 +244,7 @@ TEST_CASE("DebugDraw: a box carries the band it was given")
 {
     // The grid needs Background; everything else defaults to Debug and draws above the world. A
     // box that ignored its band would sit on the wrong side of the sprites.
-    DebugDraw lDraw;
+    DebugDraw lDraw(true);
     lDraw.DrawBox({ 0.f, 0.f }, { 10.f, 10.f }, { 1.f, 1.f, 1.f, 1.f }, 1.f, ERenderLayer::Background);
 
     REQUIRE(lDraw.GetBoxes().size() == 1u);
@@ -226,7 +261,7 @@ TEST_CASE("DebugDraw: a box carries the band it was given")
 TEST_CASE("DebugDraw: DrawBox queues ONE box and no lines")
 {
     // The whole point of the change: a selection of N entities costs N quads, not 4N.
-    DebugDraw lDebug;
+    DebugDraw lDebug(true);
     lDebug.DrawBox({ 0.f, 0.f }, { 10.f, 20.f }, { 1.f, 0.f, 0.f, 1.f }, 2.f);
 
     CHECK(lDebug.GetLines().empty());
@@ -242,7 +277,7 @@ TEST_CASE("DebugDraw: DrawBox queues ONE box and no lines")
 
 TEST_CASE("DebugDraw: DrawBounds is DrawBox taking the shape callers already hold")
 {
-    DebugDraw lDebug;
+    DebugDraw lDebug(true);
     lDebug.DrawBounds(Bounds2D::FromCenterSize({ 5.f, 6.f }, { 8.f, 4.f }), { 0.f, 1.f, 0.f, 1.f }, 3.f);
 
     REQUIRE(lDebug.GetBoxes().size() == 1u);
@@ -258,7 +293,7 @@ TEST_CASE("DebugDraw: DrawBounds is DrawBox taking the shape callers already hol
 
 TEST_CASE("DebugDraw: Clear empties BOTH queues, and IsEmpty accounts for boxes")
 {
-    DebugDraw lDebug;
+    DebugDraw lDebug(true);
     lDebug.DrawBox({ 0.f, 0.f }, { 1.f, 1.f }, { 1.f, 1.f, 1.f, 1.f });
 
     CHECK_FALSE(lDebug.IsEmpty());   // a box alone is not an empty queue
@@ -325,7 +360,7 @@ TEST_CASE("MakeOutlineInnerHalf: a MIRRORED size is the same hole, not a solid q
 
 TEST_CASE("DebugDraw: an unknown channel is ENABLED, so a new producer is visible by default")
 {
-    const DebugDraw lDebug{};
+    const DebugDraw lDebug(true);
 
     CHECK(lDebug.IsChannelEnabled(DebugChannels::Default));
     CHECK(lDebug.IsChannelEnabled(DebugChannels::Physics));
@@ -334,7 +369,7 @@ TEST_CASE("DebugDraw: an unknown channel is ENABLED, so a new producer is visibl
 
 TEST_CASE("DebugDraw: a disabled channel drops the submission, it does not queue it")
 {
-    DebugDraw lDebug;
+    DebugDraw lDebug(true);
     lDebug.SetChannelEnabled(DebugChannels::Physics, false);
 
     lDebug.DrawLine({ 0.f, 0.f }, { 1.f, 1.f }, { 1.f, 1.f, 1.f, 1.f }, 1.f,
@@ -350,7 +385,7 @@ TEST_CASE("DebugDraw: a disabled channel drops the submission, it does not queue
 
 TEST_CASE("DebugDraw: disabling one channel leaves the others alone")
 {
-    DebugDraw lDebug;
+    DebugDraw lDebug(true);
     lDebug.SetChannelEnabled(DebugChannels::Physics, false);
 
     lDebug.DrawLine({ 0.f, 0.f }, { 1.f, 1.f }, { 1.f, 1.f, 1.f, 1.f });   // Default channel
@@ -369,7 +404,7 @@ TEST_CASE("DebugDraw: disabling one channel leaves the others alone")
 
 TEST_CASE("DebugDraw: Clear drops the queues and KEEPS the channel settings")
 {
-    DebugDraw lDebug;
+    DebugDraw lDebug(true);
     lDebug.SetChannelEnabled(DebugChannels::Physics, false);
 
     lDebug.DrawLine({ 0.f, 0.f }, { 1.f, 1.f }, { 1.f, 1.f, 1.f, 1.f });
@@ -500,7 +535,7 @@ TEST_CASE("BuildCapsuleOutline: coincident caps ARE a circle, not a zero-length 
 
 TEST_CASE("DrawCircle queues one line PER SEGMENT, closing the loop")
 {
-    DebugDraw lDebug;
+    DebugDraw lDebug(true);
     lDebug.DrawCircle({ 0.f, 0.f }, 10.f, { 1.f, 1.f, 1.f, 1.f }, 1.f,
                       ERenderLayer::Debug, DebugChannels::Default, 8);
 
@@ -516,7 +551,7 @@ TEST_CASE("DrawCircle queues one line PER SEGMENT, closing the loop")
 
 TEST_CASE("DrawBox carries its ROTATION through to the queue")
 {
-    DebugDraw lDebug;
+    DebugDraw lDebug(true);
     lDebug.DrawBox({ 0.f, 0.f }, { 10.f, 10.f }, { 1.f, 1.f, 1.f, 1.f }, 1.f,
                    ERenderLayer::Debug, DebugChannels::Default, 1.25f);
 

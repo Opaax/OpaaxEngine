@@ -17,7 +17,8 @@ namespace Opaax
     // =============================================================================
     // ColliderDebugSubsystem — draws every collider's outline, every frame.
     //   Runs in Edit and Play worlds (colliders must be visible while editing) and reads the components.
-    //   Drawn on DebugChannels::Physics, which can be toggled.
+    //   Dev builds only: a ship build's worlds never get one. Drawn on DebugChannels::Physics,
+    //   which can be toggled.
     // =============================================================================
     class ColliderDebugSubsystem final : public WorldSubsystem
     {
@@ -29,6 +30,7 @@ namespace Opaax
     public:
         //~Begin WorldSubsystem interface
         Int32 GetTickOrder() const override { return WorldSubsystemOrder::Debug; }
+        bool  ShouldCreate(const World& InWorld) const override;
 
         bool Startup() override;
         void Update(double InDeltaTime) override;
@@ -39,6 +41,9 @@ namespace Opaax
         // Get
         // =============================================================================
     public:
+        /** The creation rule, for any build: true in a dev build only. */
+        static constexpr bool ShouldCreateIn(bool bInDevBuild) noexcept { return bInDevBuild; }
+
         /** Number of colliders drawn on the last tick. */
         Uint64 GetLastDrawnCount() const noexcept { return m_LastDrawn; }
 

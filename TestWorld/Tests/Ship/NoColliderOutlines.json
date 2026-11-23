@@ -1,0 +1,67 @@
+[
+    {
+        "id": "build",
+        "command": "app.info",
+        "expect": {
+            "devBuild": false
+        }
+    },
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/DebugShapes.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.5
+        }
+    },
+    {
+        "id": "inside",
+        "command": "frame.sample",
+        "params": {
+            "x": 600,
+            "y": 300,
+            "width": 40,
+            "height": 100
+        },
+        "expect": {
+            "colors": 1,
+            "mean": [
+                51,
+                102,
+                204,
+                255
+            ]
+        }
+    },
+    {
+        "id": "edge",
+        "command": "frame.sample",
+        "params": {
+            "x": 540,
+            "y": 300,
+            "width": 2,
+            "height": 100
+        },
+        "expect": {
+            "colors": 1,
+            "mean": [
+                51,
+                102,
+                204,
+                255
+            ]
+        }
+    },
+    {
+        "id": "shot",
+        "command": "screenshot",
+        "params": {
+            "path": "NoColliderOutlines.png"
+        }
+    }
+]

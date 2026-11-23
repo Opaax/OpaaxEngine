@@ -96,8 +96,8 @@
         "command": "expect.value",
         "params": {
             "entity": "Scripter",
-            "path": "ScriptProbe/LinesQueued",
-            "greater": 0
+            "path": "ScriptProbe/bDebugDrawOk",
+            "equals": true
         },
         "id": "debug-draw"
     },

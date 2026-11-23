@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/DebugShapes.opaaxmap"
+    ],
+    "name": "DebugShapes",
+    "persistentMap": "Maps/DebugShapes.opaaxmap",
+    "version": 1
+}

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/Build/BuildInfo.h"
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/Bounds2D.h"
@@ -103,14 +104,28 @@ namespace Opaax
 
     /**
      * Per-frame debug shape queue (lines, boxes, circles, capsules). Cleared every frame by the
-     * renderer: submit every frame to keep a shape visible. Works in the editor and in dev game
-     * builds. Owned by RendererManager; reached through IEngine::GetDebugDraw().
+     * renderer: submit every frame to keep a shape visible. Owned by RendererManager; reached
+     * through IEngine::GetDebugDraw().
+     *
+     * Dev builds only (the editor is one): in a ship build every draw call returns at once and the
+     * queues stay empty, whatever the channel. A game's debug code needs no build check of its own.
      *
      * Every shape has a channel (disabled channels are dropped on submit) and a world
      * (null = the active world; a pass only draws its own world's shapes).
      */
     class DebugDraw
     {
+        // =============================================================================
+        // CTORs
+        // =============================================================================
+    public:
+        DebugDraw() = default;
+
+        /**
+         * @param bInDevBuild False queues nothing, as in a ship build (tests pass it)
+         */
+        explicit DebugDraw(bool bInDevBuild) noexcept : m_bDevBuild(bInDevBuild) {}
+
         // =============================================================================
         // Draw calls
         // =============================================================================
@@ -176,6 +191,9 @@ namespace Opaax
         /** True unless disabled. Unknown channels are drawn. */
         bool IsChannelEnabled(DebugChannel InChannel) const noexcept;
 
+        /** False in a ship build: nothing is queued. */
+        bool IsActive() const noexcept { return m_bDevBuild; }
+
         // =============================================================================
         // Renderer side
         // =============================================================================
@@ -195,6 +213,9 @@ namespace Opaax
         // Internal
         // =============================================================================
     private:
+        /** Active and the channel is enabled. */
+        bool ShouldQueue(DebugChannel InChannel) const noexcept;
+
         /** Queues m_OutlineScratch as a closed loop of lines. */
         void EmitClosedPolygon(const Vector4F& InColor, float InThickness, ERenderLayer InLayer,
                                const World* InSource);
@@ -213,5 +234,7 @@ namespace Opaax
 
         /** Reused by the outline builders. */
         TDynArray<Vector2F> m_OutlineScratch;
+
+        bool m_bDevBuild = Build::IsDevBuild();
     };
 }

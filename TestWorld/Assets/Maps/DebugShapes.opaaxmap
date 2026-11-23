@@ -1,0 +1,82 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldStatic",
+                    "Density": 1.0,
+                    "Friction": 0.6,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 20.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 200.0,
+                        "y": 200.0
+                    }
+                },
+                "Quad": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.2,
+                        "y": 0.4,
+                        "z": 0.8
+                    },
+                    "Size": {
+                        "x": 200.0,
+                        "y": 200.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Static",
+                    "bFixedRotation": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "996030264c324b0e9e259e8b05900061",
+            "name": "Block",
+            "ownerMap": "DebugShapes"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 360.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "41e02254c2664f03876e798c06919a55",
+            "name": "Camera",
+            "ownerMap": "DebugShapes"
+        }
+    ],
+    "mapId": "DebugShapes",
+    "version": 4
+}

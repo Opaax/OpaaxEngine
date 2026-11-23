@@ -59,12 +59,13 @@ namespace TestWorld
         bool               bDeltaSeen   = false;
         float              Rotation     = 0.f;
         Opaax::Int32       LinesQueued  = 0;
+        bool               bDebugDrawOk = false;   // lines queued in a dev build, none in a ship build
 
         OPAAX_PROPERTIES(ScriptProbe, OPAAX_PROP(RemoveQuadAfter), OPAAX_PROP(Name), OPAAX_PROP(bHadQuad),
                          OPAAX_PROP(bAddedQuad), OPAAX_PROP(QuadWidth), OPAAX_PROP(bRemovedQuad),
                          OPAAX_PROP(bSawHelper), OPAAX_PROP(HelpersSeen), OPAAX_PROP(LambdaCalls),
                          OPAAX_PROP(bPhysics), OPAAX_PROP(Time), OPAAX_PROP(bDeltaSeen), OPAAX_PROP(Rotation),
-                         OPAAX_PROP(LinesQueued))
+                         OPAAX_PROP(LinesQueued), OPAAX_PROP(bDebugDrawOk))
 
         void OnStart() override
         {
@@ -107,7 +108,8 @@ namespace TestWorld
             Rotation = GetRotation();
 
             GetDebugDraw().DrawCircle(GetWorldPosition(), 60.f, { 1.f, 1.f, 0.f, 1.f }, 2.f);
-            LinesQueued = static_cast<Opaax::Int32>(GetDebugDraw().GetLines().size());
+            LinesQueued  = static_cast<Opaax::Int32>(GetDebugDraw().GetLines().size());
+            bDebugDrawOk = GetDebugDraw().IsActive() == (LinesQueued > 0);
         }
     };
 

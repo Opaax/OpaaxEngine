@@ -180,6 +180,7 @@ set(OPAAX_TEST_SOURCES
     Movement/MoverModeTests.cpp
 
     # Physics (no GL context needed)
+    Physics/ColliderDebugSubsystemTests.cpp
     Physics/PhysicsEventTests.cpp
     Physics/PhysicsMotionTests.cpp
     Physics/PhysicsQueryTests.cpp

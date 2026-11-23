@@ -1,5 +1,6 @@
 #include "Physics/ColliderDebugSubsystem.h"
 
+#include "Core/Build/BuildInfo.h"
 #include "Core/Maths/Maths.h"   // DegreesToRadians
 #include "Core/Profiling/Profiler.h"
 #include "Renderer/DebugDraw.h"
@@ -38,6 +39,12 @@ namespace Opaax
     // =========================================================================
     // Lifecycle
     // =========================================================================
+    bool ColliderDebugSubsystem::ShouldCreate(const World&) const
+    {
+        // The editor is always a dev build, so editing keeps its outlines.
+        return ShouldCreateIn(Build::IsDevBuild());
+    }
+
     bool ColliderDebugSubsystem::Startup()
     {
         // Also runs in Edit worlds; entities may not exist yet.

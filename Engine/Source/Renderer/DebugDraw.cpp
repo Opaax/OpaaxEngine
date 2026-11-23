@@ -102,7 +102,7 @@ namespace Opaax
                              float InThickness, ERenderLayer InLayer, DebugChannel InChannel,
                              const World* InSource)
     {
-        if (!IsChannelEnabled(InChannel))
+        if (!ShouldQueue(InChannel))
         {
             return;
         }
@@ -117,7 +117,7 @@ namespace Opaax
                             float InThickness, ERenderLayer InLayer, DebugChannel InChannel,
                             float InRotationRad, const World* InSource)
     {
-        if (!IsChannelEnabled(InChannel))
+        if (!ShouldQueue(InChannel))
         {
             return;
         }
@@ -138,7 +138,7 @@ namespace Opaax
                                const DebugChannel InChannel, const Uint32 InSegments,
                                const World* InSource)
     {
-        if (!IsChannelEnabled(InChannel))
+        if (!ShouldQueue(InChannel))
         {
             return;
         }
@@ -152,7 +152,7 @@ namespace Opaax
                                 const DebugChannel InChannel, const Uint32 InSegmentsPerCap,
                                 const World* InSource)
     {
-        if (!IsChannelEnabled(InChannel))
+        if (!ShouldQueue(InChannel))
         {
             return;
         }
@@ -170,7 +170,7 @@ namespace Opaax
             return;
         }
 
-        // The caller already checked the channel.
+        // The caller already checked the build and the channel.
         for (size_t i = 0; i < lCount; ++i)
         {
             const Vector2F& lFrom = m_OutlineScratch[i];
@@ -198,6 +198,11 @@ namespace Opaax
     bool DebugDraw::IsChannelEnabled(const DebugChannel InChannel) const noexcept
     {
         return m_DisabledChannels.find(InChannel.GetId()) == m_DisabledChannels.end();
+    }
+
+    bool DebugDraw::ShouldQueue(const DebugChannel InChannel) const noexcept
+    {
+        return m_bDevBuild && IsChannelEnabled(InChannel);
     }
 
     void DebugDraw::Clear() noexcept

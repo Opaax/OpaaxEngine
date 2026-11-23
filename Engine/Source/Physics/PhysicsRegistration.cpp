@@ -14,6 +14,6 @@ namespace Opaax
     // Play worlds only: it moves transforms.
     OPAAX_REGISTER_OBJECT(PhysicsSubsystem);
 
-    // No ShouldCreate: colliders must be visible while editing. The debug channel toggles it.
+    // Edit and Play worlds, dev builds only. The debug channel toggles it.
     OPAAX_REGISTER_OBJECT(ColliderDebugSubsystem);
 }
