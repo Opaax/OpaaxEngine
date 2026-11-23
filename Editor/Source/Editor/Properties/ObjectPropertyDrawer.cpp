@@ -54,6 +54,11 @@ namespace Opaax::Editor
                 if (Shows(InName)) { m_Target.VisitTag(InName, InOutTag, InMeta); }
             }
 
+            void VisitTagContainer(const char* InName, OpaaxTagContainer& InOutTags, const PropertyMeta& InMeta) override
+            {
+                if (Shows(InName)) { m_Target.VisitTagContainer(InName, InOutTags, InMeta); }
+            }
+
             bool BeginGroup(const char* InName, const PropertyMeta& InMeta) override
             {
                 if (!Shows(InName) || !m_Target.BeginGroup(InName, InMeta))

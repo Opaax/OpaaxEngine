@@ -166,6 +166,58 @@ namespace Opaax::Editor
         }
     }
 
+    void TPropertyDrawer<OpaaxTagContainer>::Draw(IEditorWidgets& InWidgets, const char* InLabel,
+                                                  OpaaxTagContainer& InValue, const PropertyMeta& InMeta)
+    {
+        InWidgets.PushId(InLabel);
+
+        const bool bOpen = InWidgets.BeginTreeNode(InLabel);
+        InWidgets.SameLine();
+        InWidgets.TextDisabled(OpaaxString::Format("({})", InValue.Num()).CStr());
+        DrawPropertyNote(InWidgets, InMeta);
+
+        if (bOpen)
+        {
+            // Removed after the loop: the tags are drawn from the set being changed.
+            OpaaxTag lRemove;
+
+            for (const OpaaxTag lTag : InValue)
+            {
+                // Keyed by the interned id: two tags of one set never share a scope.
+                InWidgets.PushId(lTag.GetName().GetId());
+
+                if (InWidgets.SmallButton("x")) { lRemove = lTag; }
+                InWidgets.SameLine();
+                InWidgets.Text(lTag.GetName().CStr());
+
+                InWidgets.PopId();
+            }
+
+            if (InValue.IsEmpty())
+            {
+                InWidgets.TextDisabled("No tags");
+            }
+
+            if (lRemove.IsValid()) { InValue.RemoveTag(lRemove); }
+
+            // Submit on Enter: the field keeps its own text until then, so a stack buffer is enough.
+            constexpr Uint32 k_BufferSize = 128;
+            char lBuffer[k_BufferSize] = {};
+
+            if (InWidgets.InputText("Add", lBuffer, k_BufferSize, /*bInSubmitOnEnter*/ true))
+            {
+                // Typed text is untrusted: a tag only when it is one (the tag constructor would assert).
+                const OpaaxStringView lTyped(lBuffer);
+                if (OpaaxTag::IsValidTagText(lTyped)) { InValue.AddTag(OpaaxTag(lTyped)); }
+            }
+            InWidgets.TextDisabled("Enter adds a tag: dotted names, e.g. Faction.Player");
+
+            InWidgets.EndTreeNode();
+        }
+
+        InWidgets.PopId();
+    }
+
     namespace
     {
         /** A path field as a drop target, for files of the resource type and of the kind InKind. */
