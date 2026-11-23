@@ -239,3 +239,41 @@ TEST_CASE("PropertyJson: not an object reads nothing")
     CHECK(PropertiesFromJson(nlohmann::json{ { "Count", "x" } }, lRead));
     CHECK(lRead.Count == 3);
 }
+
+namespace
+{
+    struct JsonTagsSubject
+    {
+        OpaaxTagContainer Tags;
+
+        OPAAX_PROPERTIES(JsonTagsSubject, OPAAX_PROP(Tags))
+    };
+}
+
+TEST_CASE("PropertyJson: a tag container is an array of strings, read back tag by tag")
+{
+    JsonTagsSubject lSubject;
+    lSubject.Tags = OpaaxTagContainer{ OpaaxTag("Faction.Player"), OpaaxTag("Sandbox.Quad.White") };
+
+    const nlohmann::json lJson = PropertiesToJson(lSubject);
+    CHECK(lJson.at("Tags") == nlohmann::json::array({ "Faction.Player", "Sandbox.Quad.White" }));
+
+    JsonTagsSubject        lRead;
+    TDynArray<OpaaxString> lBad;
+    CHECK(PropertiesFromJson(lJson, lRead, &lBad));
+    CHECK(lBad.empty());
+    CHECK(lRead.Tags == lSubject.Tags);
+}
+
+TEST_CASE("PropertyJson: a tag container drops malformed and repeated tags, and a missing key keeps it")
+{
+    JsonTagsSubject lRead;
+    lRead.Tags = OpaaxTagContainer{ OpaaxTag("Kept") };
+
+    CHECK(PropertiesFromJson(nlohmann::json::object(), lRead));
+    CHECK(lRead.Tags == OpaaxTagContainer{ OpaaxTag("Kept") });
+
+    const nlohmann::json lJson = { { "Tags", { "Faction.Player", "not a tag", "Faction.Player", "" } } };
+    CHECK(PropertiesFromJson(lJson, lRead));
+    CHECK(lRead.Tags == OpaaxTagContainer{ OpaaxTag("Faction.Player") });
+}
