@@ -47,6 +47,8 @@ namespace Opaax
         float          DragStep = 0.f;
         EPropertyFlags Flags    = EPropertyFlags::None;
         const char*    Tooltip  = nullptr;
+        /** A tag field's root ("UI.Layer"): its picker offers the registered tags under it. */
+        const char*    TagRoot  = nullptr;
     };
 
     // =============================================================================
@@ -103,6 +105,18 @@ namespace Opaax
 
             return lCopy;
         }
+
+        /**
+         * The root of the tags a tag field takes ("UI.Layer"), like Unreal's Categories: its picker offers
+         * the registered tags under it. Set on a group or a list, it reaches the fields inside. Pass a literal.
+         */
+        constexpr TProperty SetTagRoot(const char* InRoot) const noexcept
+        {
+            TProperty lCopy = *this;
+            lCopy.Meta.TagRoot = InRoot;
+
+            return lCopy;
+        }
     };
 
     template<typename TClass, typename TValue>
@@ -127,6 +141,10 @@ namespace Opaax
         if (lMeta.DragStep == 0.f)
         {
             lMeta.DragStep = InInherited.DragStep;
+        }
+        if (lMeta.TagRoot == nullptr)
+        {
+            lMeta.TagRoot = InInherited.TagRoot;
         }
 
         return lMeta;
