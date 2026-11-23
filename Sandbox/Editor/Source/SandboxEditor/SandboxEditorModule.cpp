@@ -4,7 +4,6 @@
 #include "Editor/EditorContext.h"   // the Panels factory receives EditorContext&
 #include "Commands/SandboxEditorCommandTags.h"
 #include "Commands/ValidateSandboxCommand.h"
-#include "Drawers/TagsComponentDrawer.h"
 #include "Data/EnemyWave.h"
 
 using namespace Opaax;
@@ -21,8 +20,6 @@ void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& In
 
     // Components with OPAAX_PROPERTIES (Health, Gun) need no line here: the editor draws them from
     // their fields. Register a drawer only to replace that UI.
-    // Hand-written: tags are added/removed from a validated vocabulary, not typed as a field.
-    InRegistrar.Drawers().Register<Sandbox::TagsComponent, TagsComponentDrawer>();
 
     // The game's own file format: an asset class read from .wave files. The runtime module registers
     // the class (and its extension); the editor only adds its look. A double-click opens its window.

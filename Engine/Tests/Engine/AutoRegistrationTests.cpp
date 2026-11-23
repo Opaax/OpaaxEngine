@@ -157,6 +157,19 @@ TEST_CASE("AutoRegistration: running it fills fresh registries, the essential co
     CHECK(lRegistries.Components().FindByName(OpaaxStringID("Dummy")) == lQuad);
 }
 
+TEST_CASE("AutoRegistration: the engine's TagsComponent is saved under the name the games' maps use")
+{
+    EngineRegistries lRegistries;
+    ModuleRegistrar  lRegistrar;
+    lRegistrar.BindEngineRegistries(lRegistries);
+    RunAutoRegistrations(lRegistrar);
+
+    // By name only: this file does not include its header, so the engine's own registration is found.
+    const IComponentEntry* lTags = lRegistries.Components().FindByName(OpaaxStringID("TagsComponent"));
+    REQUIRE(lTags != nullptr);
+    CHECK_FALSE(lTags->IsEssential());
+}
+
 TEST_CASE("AutoRegistration: world subsystems tick in order, whatever the registration order")
 {
     EngineRegistries lRegistries;
