@@ -41,6 +41,8 @@ namespace Opaax::Editor
 
         void VisitTag(const char* InName, OpaaxTag& InOutTag, const PropertyMeta& InMeta) override;
 
+        void VisitTagContainer(const char* InName, OpaaxTagContainer& InOutTags, const PropertyMeta& InMeta) override;
+
         bool BeginGroup(const char* InName, const PropertyMeta& InMeta) override;
         void EndGroup() override;
 
