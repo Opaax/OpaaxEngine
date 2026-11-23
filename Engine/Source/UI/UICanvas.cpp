@@ -4,6 +4,7 @@
 
 #include "Core/Log/Logger.h"
 #include "Renderer/Renderer2D.h"
+#include "UI/UILayer.h"
 #include "UI/Widgets/UIPanel.h"
 
 namespace Opaax
@@ -183,6 +184,24 @@ namespace Opaax
     float UICanvas::UnitsPerPixel() const noexcept
     {
         return WorldPerPixel(MakeView(), static_cast<float>(m_TargetHeight));
+    }
+
+    // =============================================================================
+    // Layers
+    // =============================================================================
+
+    void UICanvas::SetLayers(UILayerTable InLayers)
+    {
+        m_Layers = Move(InLayers);
+
+        // Put back one by one in their order, so equal layers keep it. Nothing is detached.
+        TDynArray<TStrongObjectPtr<UIWidget>> lTrees = Move(m_Root->m_Children);
+        m_Root->m_Children.clear();
+        for (TStrongObjectPtr<UIWidget>& lTree : lTrees)
+        {
+            UILayer::InsertByLayer(m_Root->m_Children, Move(lTree),
+                                   [this](const TStrongObjectPtr<UIWidget>& InTree) { return KeyOf(*InTree); });
+        }
     }
 
     // =============================================================================

@@ -5,6 +5,7 @@
 #include "Core/Maths/Maths.h"
 #include "Object/ObjectClassRegistry.h"
 #include "UI/UICanvas.h"
+#include "UI/UILayer.h"
 
 namespace Opaax
 {
@@ -60,11 +61,11 @@ namespace Opaax
             return nullptr;
         }
 
-        UIWidget* lChild = InChild.Get();
+        UIWidget*    lChild = InChild.Get();
+        const Uint64 lIndex = ChildIndexFor(*lChild, InIndex);
         lChild->m_Parent = this;
         lChild->SetCanvasRecursive(m_Canvas);
-        m_Children.emplace(m_Children.begin() + static_cast<PtrDiff>(Maths::Min(InIndex, static_cast<Uint64>(m_Children.size()))),
-                           Move(InChild));
+        m_Children.emplace(m_Children.begin() + static_cast<PtrDiff>(lIndex), Move(InChild));
 
         // The new child only needs to be reached by the walk, unless I lay out my children
         // (then every slot may have moved).
@@ -101,6 +102,66 @@ namespace Opaax
         if (m_bArrangesChildren) { InvalidateLayout(); }   // the following siblings move
 
         return lRemoved;
+    }
+
+    void UIWidget::SetLayer(const OpaaxTag InLayer)
+    {
+        if (InLayer == m_Layer)
+        {
+            return;
+        }
+
+        m_Layer = InLayer;
+        if (m_Parent != nullptr && m_Parent->IsCanvasRoot())
+        {
+            m_Parent->MoveChildToFront(*this);
+        }
+    }
+
+    void UIWidget::BringToFront()
+    {
+        if (m_Parent != nullptr)
+        {
+            m_Parent->MoveChildToFront(*this);
+        }
+    }
+
+    bool UIWidget::IsCanvasRoot() const noexcept
+    {
+        return m_Canvas != nullptr && m_Parent == nullptr && &m_Canvas->Root() == this;
+    }
+
+    Uint64 UIWidget::ChildIndexFor(const UIWidget& InChild, const Uint64 InIndex) const
+    {
+        const Uint64 lIndex = Maths::Min(InIndex, static_cast<Uint64>(m_Children.size()));
+        if (!IsCanvasRoot())
+        {
+            return lIndex;
+        }
+
+        // The canvas root's trees stay in layer order.
+        const UICanvas& lCanvas = *m_Canvas;
+        return UILayer::ClampToLayer(m_Children, lCanvas.KeyOf(InChild), lIndex,
+                                     [&lCanvas](const TStrongObjectPtr<UIWidget>& InTree) { return lCanvas.KeyOf(*InTree); });
+    }
+
+    void UIWidget::MoveChildToFront(UIWidget& InChild)
+    {
+        const auto lIt = Algo::FindIf(m_Children,
+                                      [&InChild](const TStrongObjectPtr<UIWidget>& InOwned) { return InOwned.Get() == &InChild; });
+        if (lIt == m_Children.end())
+        {
+            return;
+        }
+
+        // Taken out and put back without a detach: the pointer state and the awake lists stay.
+        TStrongObjectPtr<UIWidget> lMoved = Move(*lIt);
+        m_Children.erase(lIt);
+
+        const Uint64 lIndex = ChildIndexFor(InChild, m_Children.size());
+        m_Children.emplace(m_Children.begin() + static_cast<PtrDiff>(lIndex), Move(lMoved));
+
+        if (m_bArrangesChildren) { InvalidateLayout(); }   // the slots follow the order
     }
 
     UIWidget* UIWidget::FindByName(const OpaaxString& InName)

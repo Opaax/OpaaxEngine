@@ -7,6 +7,7 @@
 #include "Renderer/CameraView.h"
 #include "UI/UIBinding.h"
 #include "UI/UIEvents.h"
+#include "UI/UILayerTable.h"
 #include "UI/UIWidget.h"
 
 namespace Opaax
@@ -47,6 +48,8 @@ namespace Opaax
     //   and as wide as the target's aspect. Same-aspect resizes change nothing in canvas space.
     //   The host calls SetTargetSize and Update once per frame, Submit inside its pass, and HitTest
     //   with a point from ScreenToCanvas.
+    //   The root's trees are kept in layer order (SetLayers, UIWidget::SetLayer): drawn and hit as one
+    //   tree, a higher layer on top, with one hovered, pressed and focused widget for all of them.
     // =============================================================================
     class UICanvas
     {
@@ -90,6 +93,20 @@ namespace Opaax
     public:
         UIWidget&       Root()       noexcept { return *m_Root; }
         const UIWidget& Root() const noexcept { return *m_Root; }
+
+        // =============================================================================
+        // Layers — where the root's trees draw (UIWidget::SetLayer)
+        // =============================================================================
+    public:
+        /**
+         * The layers the root's trees draw in. The trees move at once, equal layers keeping their order;
+         * nothing is detached. An empty table (the default) puts every layer level.
+         */
+        void SetLayers(UILayerTable InLayers);
+        const UILayerTable& GetLayers() const noexcept { return m_Layers; }
+
+        /** Where InTree, a tree under the root, draws: its layer's key here. */
+        UILayerKey KeyOf(const UIWidget& InTree) const { return m_Layers.KeyOf(InTree.GetLayer()); }
 
         // =============================================================================
         // Bindings — the named sources this canvas's widgets read
@@ -229,6 +246,7 @@ namespace Opaax
 
         TStrongObjectPtr<UIWidget> m_Root;
         UIBindingTable       m_Bindings;
+        UILayerTable         m_Layers;
         mutable bool         m_bWarnedOrderOverflow = false;
 
         UIWidget*        m_Hovered      = nullptr;   // not owned
