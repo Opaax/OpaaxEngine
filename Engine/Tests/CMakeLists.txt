@@ -223,6 +223,7 @@ set(OPAAX_TEST_SOURCES
     UI/UIButtonTests.cpp
     UI/UICanvasFileTests.cpp
     UI/UILayerTests.cpp
+    UI/UILayerTableTests.cpp
     UI/UICanvasTests.cpp
     UI/UIEventTests.cpp
     UI/UIImageSourceTests.cpp
