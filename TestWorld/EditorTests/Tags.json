@@ -1,0 +1,24 @@
+[
+    { "command": "frames.wait", "params": { "count": 10 } },
+    { "id": "open", "command": "level.open", "params": { "path": "Levels/Hierarchy.opaaxlevel" },
+      "expect": { "world": "Hierarchy", "mode": "Edit" } },
+    { "id": "create", "command": "entity.create", "params": { "name": "TagProbe", "components": {
+        "Quad": { "Size": { "x": 40.0, "y": 40.0 } },
+        "TagsComponent": { "Tags": [ "Faction.Player", "Sandbox.Quad.White" ] } } } },
+    { "id": "created", "command": "expect.value",
+      "params": { "entity": "TagProbe", "path": "TagsComponent/Tags", "equals": [ "Faction.Player", "Sandbox.Quad.White" ] } },
+    { "id": "set", "command": "component.set", "params": { "entity": "TagProbe", "type": "TagsComponent",
+        "value": { "Tags": [ "Faction.Enemy", "not a tag", "Faction.Enemy" ] } } },
+    { "id": "set-cleaned", "command": "expect.value",
+      "params": { "entity": "TagProbe", "path": "TagsComponent/Tags", "equals": [ "Faction.Enemy" ] } },
+    { "id": "undo-set", "command": "editor.undo" },
+    { "id": "set-undone", "command": "expect.value",
+      "params": { "entity": "TagProbe", "path": "TagsComponent/Tags", "equals": [ "Faction.Player", "Sandbox.Quad.White" ] } },
+    { "id": "redo-set", "command": "editor.redo" },
+    { "id": "set-redone", "command": "expect.value",
+      "params": { "entity": "TagProbe", "path": "TagsComponent/Tags", "equals": [ "Faction.Enemy" ] } },
+    { "id": "undo-again", "command": "editor.undo" },
+    { "id": "select", "command": "entity.select", "params": { "entities": [ "TagProbe" ] } },
+    { "command": "frames.wait", "params": { "count": 5 } },
+    { "id": "shot", "command": "screenshot", "params": { "path": "EditorTags.png" } }
+]
