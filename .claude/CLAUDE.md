@@ -2,7 +2,7 @@
 
 The rules, commands and conventions for working on this repository are in AGENTS.md:
 
-@AGENTS.md
+@.claude/AGENTS.md
 
 # Guide Lines
 
