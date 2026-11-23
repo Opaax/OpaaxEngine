@@ -100,6 +100,23 @@ namespace Opaax::EngineAutomation
             return &lUI->GetCanvas();
         }
 
+        /** A tag's text, empty for none (a tag's ToString says "None"). */
+        OpaaxString TagText(const OpaaxTag InTag)
+        {
+            return InTag.IsValid() ? InTag.ToString() : OpaaxString();
+        }
+
+        /** The layer of the tree InWidget is in: that of its ancestor right under the canvas root. None for the root. */
+        OpaaxTag TreeLayer(const UIWidget& InWidget)
+        {
+            const UIWidget* lNode = &InWidget;
+            while (lNode->GetParent() != nullptr && lNode->GetParent()->GetParent() != nullptr)
+            {
+                lNode = lNode->GetParent();
+            }
+            return lNode->GetParent() != nullptr ? lNode->GetLayer() : OpaaxTag();
+        }
+
         /** Visible with every parent visible. */
         bool IsShown(const UIWidget& InWidget)
         {
@@ -125,6 +142,7 @@ namespace Opaax::EngineAutomation
                 nlohmann::json lRow{
                     { "name",    InWidget.Name },
                     { "type",    InWidget.GetClass().GetName().CStr() },
+                    { "layer",   TagText(TreeLayer(InWidget)) },
                     { "visible", IsShown(InWidget) },
                     { "x",       lCentre.x },
                     { "y",       lCentre.y },
@@ -678,9 +696,10 @@ namespace Opaax::EngineAutomation
         void RegisterUI(ICommandRegistry& InCommands, IEngine& InEngine)
         {
             InCommands.Add(CommandSpec("ui.list",
-                "The game UI's widgets, depth-first: [{name, type, visible, x, y, width, height, quads}], x and y "
-                "their centre in game-view pixels, quads how many it draws; a button also answers its state "
-                "(Normal, Hovered, Pressed, Disabled). Filter: {name}.")
+                "The game UI's widgets, depth-first in draw order (the top layer last): [{name, type, layer, visible, "
+                "x, y, width, height, quads}], layer that of the tree it is in, x and y its centre in game-view pixels, "
+                "quads how many it draws; a button also answers its state (Normal, Hovered, Pressed, Disabled). "
+                "Filter: {name}.")
                     .Param("name", ECommandParamType::String, "only the widgets of this name").Optional(),
                 [&InEngine](const nlohmann::json& InParams)
                 {
@@ -692,6 +711,21 @@ namespace Opaax::EngineAutomation
                     }
                     return AutomationResult::Ok(nlohmann::json{
                         { "widgets", DescribeWidgets(*lCanvas, InParams.value("name", OpaaxString())) } });
+                });
+
+            InCommands.Add(CommandSpec("ui.layers",
+                "The game UI's layers (Engine.config UI.Layers), bottom to top: {layers: [{name, order, key, trees}], "
+                "unlisted}, trees the mounted trees drawn in each ({name, layer}, in draw order), unlisted those whose "
+                "layer no listed one reaches (drawn at 0)."),
+                [&InEngine](const nlohmann::json&)
+                {
+                    OpaaxString     lError;
+                    UICanvas* const lCanvas = GameCanvas(InEngine, lError);
+                    if (lCanvas == nullptr)
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+                    return AutomationResult::Ok(DescribeLayers(*lCanvas));
                 });
 
             InCommands.Add(CommandSpec("ui.tween",
@@ -763,7 +797,8 @@ namespace Opaax::EngineAutomation
 
             InCommands.Add(CommandSpec("ui.click",
                 "Clicks the game UI's widget named {widget}: the pointer moves to its centre and the left button "
-                "is tapped (down for {frames}, default 2).")
+                "is tapped (down for {frames}, default 2). Answers {x, y, hit}, hit the widget on top there: another "
+                "one when a higher layer covers it.")
                     .Param("widget", ECommandParamType::String, "the widget's name")
                     .Param("frames", ECommandParamType::Int, "frames the button is held (2)").Optional(),
                 [&InEngine](const nlohmann::json& InParams)
@@ -782,15 +817,17 @@ namespace Opaax::EngineAutomation
                     lInput.OnMouseMoved(lPixel.x, lPixel.y);
                     Press(lInput, EKeyCode::Mouse_Left);
 
-                    AutomationResult lResult = AutomationResult::Ok(nlohmann::json{ { "x", lPixel.x }, { "y", lPixel.y } });
+                    AutomationResult lResult = AutomationResult::Ok(nlohmann::json{
+                        { "x", lPixel.x }, { "y", lPixel.y }, { "hit", HitWidgetName(*lCanvas, lPixel) } });
                     lResult.WaitFrames = Maths::Max(InParams.value("frames", DEFAULT_TAP_FRAMES), 1u);
                     lResult.AfterWait  = [&lInput] { Release(lInput, EKeyCode::Mouse_Left); };
                     return lResult;
                 });
 
             InCommands.Add(CommandSpec("ui.hover",
-                "Moves the game's pointer to the centre of the UI widget named {widget}, and answers {x, y} after "
-                "the frame that routes the move (the widget is then hovered).")
+                "Moves the game's pointer to the centre of the UI widget named {widget}, and answers {x, y, hit} after "
+                "the frame that routes the move: hit is the widget on top there, then hovered (another one when a "
+                "higher layer covers it).")
                     .Param("widget", ECommandParamType::String, "the widget's name"),
                 [&InEngine](const nlohmann::json& InParams)
                 {
@@ -805,7 +842,8 @@ namespace Opaax::EngineAutomation
 
                     InEngine.GetInput().OnMouseMoved(lPixel.x, lPixel.y);
 
-                    AutomationResult lResult = AutomationResult::Ok(nlohmann::json{ { "x", lPixel.x }, { "y", lPixel.y } });
+                    AutomationResult lResult = AutomationResult::Ok(nlohmann::json{
+                        { "x", lPixel.x }, { "y", lPixel.y }, { "hit", HitWidgetName(*lCanvas, lPixel) } });
                     lResult.WaitFrames = 2;   // the move is routed, then the widget rebuilds
                     return lResult;
                 });
@@ -1883,6 +1921,47 @@ namespace Opaax::EngineAutomation
         nlohmann::json lList = nlohmann::json::array();
         DescribeTree(InCanvas, InCanvas.Root(), InName, lList);
         return lList;
+    }
+
+    nlohmann::json DescribeLayers(const UICanvas& InCanvas)
+    {
+        const UILayerTable& lTable = InCanvas.GetLayers();
+
+        nlohmann::json lLayers = nlohmann::json::array();
+        for (const UILayerTable::Entry& lEntry : lTable.GetLayers())
+        {
+            lLayers.push_back(nlohmann::json{ { "name",  TagText(lEntry.Name) },
+                                              { "order", lEntry.Order },
+                                              { "key",   lEntry.Key.ToString() },
+                                              { "trees", nlohmann::json::array() } });
+        }
+
+        // Each tree under the layer it draws in, in draw order.
+        nlohmann::json lUnlisted = nlohmann::json::array();
+        for (const TStrongObjectPtr<UIWidget>& lTree : InCanvas.Root().GetChildren())
+        {
+            const nlohmann::json lRow{ { "name", lTree->Name }, { "layer", TagText(lTree->GetLayer()) } };
+            const OpaaxTag       lDrawnIn = lTable.Resolve(lTree->GetLayer());
+
+            nlohmann::json* lTarget = &lUnlisted;
+            for (Uint64 i = 0; i < lTable.GetLayers().size() && lDrawnIn.IsValid(); ++i)
+            {
+                if (lTable.GetLayers()[i].Name == lDrawnIn)
+                {
+                    lTarget = &lLayers[i].at("trees");
+                    break;
+                }
+            }
+            lTarget->push_back(lRow);
+        }
+
+        return nlohmann::json{ { "layers", Move(lLayers) }, { "unlisted", Move(lUnlisted) } };
+    }
+
+    OpaaxString HitWidgetName(UICanvas& InCanvas, const Vector2F& InPixel)
+    {
+        const UIWidget* const lHit = InCanvas.HitTest(InCanvas.ScreenToCanvas(InPixel));
+        return lHit != nullptr ? lHit->Name : OpaaxString();
     }
 
     bool FindWidgetCentre(UICanvas& InCanvas, const OpaaxString& InName, Vector2F& OutPixel, OpaaxString& OutError)
