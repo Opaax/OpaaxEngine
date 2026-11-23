@@ -18,6 +18,7 @@ namespace Opaax
     class IOnlineServices;
     class CameraManager;
     class Config_Engine;
+    class Config_Tags;
     class ResourceManager;
     class AudioManager;
     class EngineEventBus;
@@ -103,6 +104,9 @@ namespace Opaax
 
         /** Engine.config changed: applies Time.FixedRate to the clock from the next step, and the refresh. */
         void HandleEngineConfigChanged();
+
+        /** Tags.config into the tag registry. */
+        void HandleTagsConfigChanged();
 
         /**
          * The refresh the frame clock snaps deltas to: a pacing's rate, else the window's screen with
@@ -215,6 +219,7 @@ namespace Opaax
 
         /** Read at Startup, followed on change. Not owned. */
         Config_Engine* m_EngineConfig = nullptr;
+        Config_Tags*   m_TagsConfig   = nullptr;
 
         /** The refresh interval given to the clock (ApplyRefresh); 0 for none. */
         double m_SnappedInterval = 0.0;

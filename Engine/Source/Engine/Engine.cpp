@@ -19,6 +19,7 @@
 #include "Core/Maths/Maths.h"
 #include "Core/Maths/MathsStatics.h"
 #include "Engine/Config/Config_Engine.h"
+#include "Engine/Tags/Config_Tags.h"
 #include "Engine/EngineEvents.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
 #include "Engine/Registries/AutoRegistration.h"
@@ -357,6 +358,11 @@ namespace Opaax
         m_EngineConfig = &OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>();
         m_EngineConfig->OnChanged().AddMember(this, &Engine::HandleEngineConfigChanged);
         HandleEngineConfigChanged();
+
+        // The project's tags now and whenever Tags.config changes.
+        m_TagsConfig = &OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Tags>();
+        m_TagsConfig->OnChanged().AddMember(this, &Engine::HandleTagsConfigChanged);
+        HandleTagsConfigChanged();
         
         BindToWorldMgrEvents();
 
@@ -650,6 +656,14 @@ namespace Opaax
         m_Subsystems.TearDownAll();
     }
 
+    void Engine::HandleTagsConfigChanged()
+    {
+        if (m_TagsConfig != nullptr)
+        {
+            m_Registries.Tags().SetConfigTags(m_TagsConfig->GetData().Tags);
+        }
+    }
+
     void Engine::Shutdown()
     {
         if (!m_bStarted)
@@ -664,6 +678,11 @@ namespace Opaax
         {
             m_EngineConfig->OnChanged().RemoveAll(this);
             m_EngineConfig = nullptr;
+        }
+        if (m_TagsConfig != nullptr)
+        {
+            m_TagsConfig->OnChanged().RemoveAll(this);
+            m_TagsConfig = nullptr;
         }
 
         m_Subsystems.ShutdownAll();
