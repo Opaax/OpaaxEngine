@@ -41,12 +41,27 @@ namespace Opaax::ConfigLayer
             }
         }
 
-        /** The item of InList whose "Name" is InName, or null. */
+        /**
+         * The item of InList whose "Name" is InName, else the first one whose name ends with InName's names
+         * (a bus named by tag, "Audio.Bus.Music", is set by "Music" too: what a player's file saved before
+         * tags holds), or null.
+         */
         nlohmann::json* FindNamed(nlohmann::json& InList, const nlohmann::json::object_t::key_type& InName)
         {
             for (nlohmann::json& lItem : InList)
             {
                 if (lItem["Name"] == InName)
+                {
+                    return &lItem;
+                }
+            }
+
+            const OpaaxString lEnding = "." + FromJsonString(InName);
+            for (nlohmann::json& lItem : InList)
+            {
+                const OpaaxString lItemName = lItem["Name"].get<OpaaxString>();
+                if (lItemName.GetLength() > lEnding.GetLength()
+                    && lItemName.SubString(lItemName.GetLength() - lEnding.GetLength()) == lEnding)
                 {
                     return &lItem;
                 }
