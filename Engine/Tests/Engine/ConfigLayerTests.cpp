@@ -298,3 +298,25 @@ TEST_CASE("TConfig: a new load of the project's file keeps the player's values o
     CHECK(lConfig.GetData().Window.Width == 1000u);
     CHECK_FALSE(lConfig.GetData().Window.bVSync);
 }
+
+TEST_CASE("ConfigLayer: a list item named by a tag is set by its full name or by its last names")
+{
+    nlohmann::json lValues = Json(R"({"Buses": [{"Name": "Audio.Bus.Music", "Volume": 1.0},
+                                                {"Name": "Audio.Bus.SFX.Footsteps", "Volume": 1.0},
+                                                {"Name": "Music", "Volume": 1.0}]})");
+
+    // The exact name first: the item named "Music" itself.
+    REQUIRE(ConfigLayer::Apply(lValues, Json(R"({"Buses": {"Music": {"Volume": 0.5}}})")));
+    CHECK((lValues["Buses"][2]["Volume"] == 0.5));
+    CHECK((lValues["Buses"][0]["Volume"] == 1.0));
+
+    // Last names: what a player's file saved before tags holds.
+    REQUIRE(ConfigLayer::Apply(lValues, Json(R"({"Buses": {"SFX.Footsteps": {"Volume": 0.25}}})")));
+    CHECK((lValues["Buses"][1]["Volume"] == 0.25));
+    REQUIRE(ConfigLayer::Apply(lValues, Json(R"({"Buses": {"Audio.Bus.Music": {"Volume": 0.75}}})")));
+    CHECK((lValues["Buses"][0]["Volume"] == 0.75));
+
+    // Only whole names: "Steps" is not the end of "Footsteps".
+    nlohmann::json lCopy = lValues;
+    CHECK_FALSE(ConfigLayer::Apply(lCopy, Json(R"({"Buses": {"steps": {"Volume": 0.5}}})")));
+}
