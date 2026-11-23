@@ -2,25 +2,24 @@
 
 #include <nlohmann/json.hpp>
 
+#include "Core/Reflection/OpaaxProperty.h"
 #include "Core/Tag/OpaaxTagContainer.h"
 #include "Core/Tag/OpaaxTagJson.h"
-#include "Engine/Registries/AutoRegistration.h"
 
-namespace Sandbox
+namespace Opaax
 {
     // =============================================================================
-    // TagsComponent — which tags an entity carries. OpaaxTag is the engine's vocabulary; which entity
-    //   has which tag is game content, so the component lives here. Serializable through
-    //   OpaaxTagJson.h.
+    // TagsComponent — which tags an entity carries ("Faction.Player", "Sandbox.Quad.White"). A query
+    //   matches up the hierarchy: an entity tagged "Faction.Player" has "Faction". Saved as an array of
+    //   strings, readable in the map; edited in the Inspector as a tag set.
     // =============================================================================
     struct TagsComponent
     {
-        Opaax::OpaaxTagContainer Tags;
+        OpaaxTagContainer Tags;
 
         // _WITH_DEFAULT: a missing key keeps an empty container instead of throwing.
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(TagsComponent, Tags)
-    };
 
-    // Tags are saved as an array of strings, readable in the .opaaxmap.
-    OPAAX_REGISTER_COMPONENT(TagsComponent);
+        OPAAX_PROPERTIES(TagsComponent, OPAAX_PROP(Tags))
+    };
 }

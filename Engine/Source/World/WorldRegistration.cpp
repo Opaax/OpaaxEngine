@@ -4,6 +4,7 @@
 #include "World/Level.h"
 #include "World/World.h"
 #include "World/Components/PrefabInstanceComponent.h"
+#include "World/Components/TagsComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Prefab/PrefabAsset.h"
 #include "World/Serialization/LevelAsset.h"
@@ -16,6 +17,9 @@ namespace Opaax
 
     // Which prefab an entity comes from. Saved in the map like any component.
     OPAAX_REGISTER_NAMED_COMPONENT(PrefabInstanceComponent, "PrefabInstance");
+
+    // Which tags an entity carries. Saved under its type name, as the games' maps already have it.
+    OPAAX_REGISTER_NAMED_COMPONENT(TagsComponent, "TagsComponent");
 
     OPAAX_REGISTER_OBJECT(LevelAsset);
     OPAAX_REGISTER_OBJECT(MapAsset);

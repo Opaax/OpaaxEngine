@@ -4,10 +4,10 @@
 #include "Editor/EditorContext.h"
 #include "World/WorldManager.h"
 #include "World/World.h"
+#include "World/Components/TagsComponent.h"
 #include "World/Entity/EntityMeta.h"
 
 #include "Components/HealthComponent.h"
-#include "Components/TagsComponent.h"
 
 using namespace Opaax;
 
@@ -42,8 +42,7 @@ namespace SandboxEditor
                     ++lMissing;
                 }
 
-                const Sandbox::TagsComponent* lTags =
-                    lWorld->GetRegistry().try_get<Sandbox::TagsComponent>(InEntity);
+                const TagsComponent* lTags = lWorld->GetRegistry().try_get<TagsComponent>(InEntity);
 
                 if (lTags != nullptr && lTags->Tags.HasTag(lSandboxTag))
                 {
