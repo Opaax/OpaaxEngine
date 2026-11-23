@@ -9,6 +9,7 @@
 #include "Core/Maths/Maths.h"
 #include "Core/Profiling/Profiler.h"   // OPAAX_STAT_SCOPE
 #include "Engine/Config/Config_Engine.h"
+#include "Engine/FrameClock.h"
 #include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
 #include "Engine/Subsystems/EngineEventBus.h"
@@ -63,6 +64,12 @@ namespace Opaax
 
         m_bPaused = InPaused;
 
+        // Steps not run yet are dropped: a later pause does not replay them.
+        if (!InPaused)
+        {
+            m_QueuedSteps = 0;
+        }
+
         // Told to whatever runs on its own (audio), since a paused world's subsystems do not tick.
         if (m_Events != nullptr)
         {
@@ -75,6 +82,25 @@ namespace Opaax
         m_TimeScale = Maths::Clamp(InScale, MIN_TIME_SCALE, MAX_TIME_SCALE);
     }
 
+    bool WorldManager::RequestFixedSteps(const Uint32 InCount) noexcept
+    {
+        if (!m_bPaused || InCount == 0)
+        {
+            return false;
+        }
+
+        m_QueuedSteps = InCount > MAX_QUEUED_STEPS - m_QueuedSteps ? MAX_QUEUED_STEPS : m_QueuedSteps + InCount;
+        return true;
+    }
+
+    void WorldManager::SetFixedDelta(const double InFixedDelta) noexcept
+    {
+        if (InFixedDelta > 0.0)
+        {
+            m_FixedDelta = InFixedDelta;
+        }
+    }
+
     // =========================================================================
     // Tick — only the active world runs.
     // =========================================================================
@@ -83,9 +109,21 @@ namespace Opaax
         // Kept whether the world ticks or not: Render presents it every frame.
         m_FrameDeltaTime = InDeltaTime;
 
-        // Decided in Update (once per frame); FixedUpdate uses the same answer.
-        m_bTickThisFrame = !m_bPaused || m_bStepRequested;
+        // Decided in Update (once per frame); FixedUpdate uses the same answer. A frame step runs on
+        // time; else a paused world runs the steps asked of it, one a frame.
+        const bool bFrameStep = m_bPaused && m_bStepRequested;
         m_bStepRequested = false;
+
+        if (!m_bPaused)
+        {
+            m_QueuedSteps = 0;
+        }
+
+        m_StepsThisFrame = (m_bPaused && !bFrameStep)
+                               ? FrameClock::StepsOwed(true, m_QueuedSteps, 0.0, m_FixedDelta, 1)
+                               : 0u;
+        m_QueuedSteps   -= m_StepsThisFrame;
+        m_bTickThisFrame = !m_bPaused || bFrameStep || m_StepsThisFrame > 0;
 
         if (!m_bTickThisFrame || m_ActiveWorld == nullptr)
         {
@@ -95,8 +133,11 @@ namespace Opaax
         // Scope for everything the world's subsystems do.
         OPAAX_STAT_SCOPE("World");
 
-        // The world's time: real time scaled (its fixed steps are owed by the same, FrameClock).
-        m_ActiveWorld->GetSubsystems().UpdateAll(InDeltaTime * static_cast<double>(m_TimeScale));
+        // The world's time: real time scaled (its fixed steps are owed by the same, FrameClock); for
+        // steps asked of it, their own length, whatever the frame and the scale.
+        const double lWorldDelta = m_StepsThisFrame > 0 ? m_FixedDelta * static_cast<double>(m_StepsThisFrame)
+                                                        : InDeltaTime * static_cast<double>(m_TimeScale);
+        m_ActiveWorld->GetSubsystems().UpdateAll(lWorldDelta);
     }
 
     void WorldManager::FixedUpdate(double InFixedDeltaTime)
@@ -370,6 +411,7 @@ namespace Opaax
         }
 
         m_ActiveWorld = InWorld;
+        m_QueuedSteps = 0;   // asked of the world that was active
         m_ActiveWorld->OnActive();
 
         OnActiveWorldChanged.Broadcast(lOldWorld, m_ActiveWorld);

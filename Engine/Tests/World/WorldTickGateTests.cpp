@@ -1,12 +1,14 @@
 // Suite: WorldManager's tick gate — pause and step. Engine::Loop calls Update once and
 // FixedUpdate 0..N times, so the decision is taken once in Update and FixedUpdate reads it
-// (a step must advance both). Driven through Update / FixedUpdate like Engine::Loop.
+// (a step must advance both). Driven through Update / FixedUpdate like Engine::Loop, and on a real
+// FrameClock for the fixed steps asked of a paused world (RequestFixedSteps).
 #include <doctest.h>
 
 #include "Application/Services/IPaths.h"   // IPaths::Null() — the context's paths reference
 #include "Core/Profiling/FrameProfiler.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Engine/Config/EngineConfigData.h"   // the context's config reference
+#include "Engine/FrameClock.h"
 #include "Engine/Subsystems/EngineEventBus.h"
 #include "Input/InputManager.h"
 #include "Resources/ResourceManager.h"
@@ -94,6 +96,49 @@ namespace
                 Worlds.FixedUpdate(1.0 / 60.0);
             }
             Worlds.Render(1.0);
+
+            LinesDrawn = static_cast<Uint64>(Debug.GetLines().size());
+            Debug.Clear();
+        }
+
+        // Frames on a real clock (60 steps a second), driven the way Engine::Loop drives it.
+        FrameClock Clock{ 1.0 / 60.0 };
+        double     Now       = 0.0;
+        double     LastAlpha = 0.0;
+        bool       bStarted  = false;
+
+        /** One frame InSeconds long: the clock owes its steps, the manager decides, then Render. */
+        void TickClockedFrame(double InSeconds)
+        {
+            if (!bStarted)
+            {
+                Clock.BeginFrame(Now);
+                bStarted = true;
+            }
+
+            Now += InSeconds;
+            Clock.SetTimeScale(Worlds.GetTimeScale());
+            const double lDelta = Clock.BeginFrame(Now);
+            Worlds.SetFixedDelta(Clock.GetFixedDelta());
+
+            Worlds.Update(lDelta);
+
+            if (Worlds.GetStepsThisFrame() > 0)
+            {
+                Clock.SetWorldSteps(Worlds.GetStepsThisFrame());
+            }
+            else
+            {
+                Clock.SetWorldTicks(Worlds.IsTickingThisFrame());
+            }
+
+            while (Clock.TakeFixedStep())
+            {
+                Worlds.FixedUpdate(Clock.GetFixedDelta());
+            }
+
+            LastAlpha = Clock.GetDisplayAlpha();
+            Worlds.Render(LastAlpha);
 
             LinesDrawn = static_cast<Uint64>(Debug.GetLines().size());
             Debug.Clear();
@@ -295,4 +340,154 @@ TEST_CASE("world tick gate: a stepped frame presents once, after its fixed steps
     CHECK(lFixture.Counter->FixedUpdates == 3u);
     CHECK(lFixture.Counter->FixedUpdatesAtPresent == 3u);   // the step's state, not the one before
     CHECK(lFixture.LinesDrawn == 1u);
+}
+
+// =============================================================================
+// Fixed steps asked of a paused world
+// =============================================================================
+TEST_CASE("world tick gate: a paused world asked for one step runs it once over two frames of 50 ms")
+{
+    GatedWorld lFixture;
+
+    lFixture.TickClockedFrame(0.05);
+    REQUIRE(lFixture.Counter->FixedUpdates == 3u);
+
+    lFixture.Worlds.SetPaused(true);
+    lFixture.TickClockedFrame(0.05);
+    REQUIRE(lFixture.Counter->FixedUpdates == 3u);
+
+    CHECK(lFixture.Worlds.RequestFixedSteps(1));
+    CHECK(lFixture.Worlds.GetQueuedSteps() == 1u);
+
+    lFixture.TickClockedFrame(0.05);
+    lFixture.TickClockedFrame(0.05);
+
+    CHECK(lFixture.Counter->FixedUpdates == 4u);
+    CHECK(lFixture.Counter->Updates == 2u);
+    CHECK(lFixture.Counter->LastUpdateDelta == doctest::Approx(1.0 / 60.0));
+    CHECK(lFixture.Worlds.GetQueuedSteps() == 0u);
+    CHECK(lFixture.Worlds.IsPaused());
+
+    // Drawn on the step, not between it and the one before, and held there.
+    CHECK(lFixture.LastAlpha == 1.0);
+}
+
+TEST_CASE("world tick gate: three steps asked run three times, one a frame, at any time scale")
+{
+    for (const float lScale : { 0.1f, 1.f, 4.f })
+    {
+        CAPTURE(lScale);
+
+        GatedWorld lFixture;
+        lFixture.Worlds.SetTimeScale(lScale);
+        lFixture.Worlds.SetPaused(true);
+        lFixture.TickClockedFrame(0.05);
+        REQUIRE(lFixture.Counter->FixedUpdates == 0u);
+
+        CHECK(lFixture.Worlds.RequestFixedSteps(3));
+
+        for (Uint64 lFrame = 1; lFrame <= 5; ++lFrame)
+        {
+            lFixture.TickClockedFrame(0.05);
+
+            // One step a frame, with the Update of that frame over the step's length.
+            const Uint64 lExpected = lFrame < 3u ? lFrame : 3u;
+            CHECK(lFixture.Counter->FixedUpdates == lExpected);
+            CHECK(lFixture.Counter->Updates == lExpected);
+            CHECK(lFixture.Counter->FixedUpdatesAtPresent == lExpected);
+            CHECK(lFixture.Counter->LastUpdateDelta == doctest::Approx(1.0 / 60.0));
+            CHECK(lFixture.LastAlpha == 1.0);
+        }
+
+        CHECK(lFixture.Worlds.GetQueuedSteps() == 0u);
+        CHECK(lFixture.Counter->Presents == 6u);
+    }
+}
+
+TEST_CASE("world tick gate: an unpaused world refuses asked steps and runs on its time, as before")
+{
+    GatedWorld lFixture;
+
+    CHECK_FALSE(lFixture.Worlds.RequestFixedSteps(2));
+    CHECK(lFixture.Worlds.GetQueuedSteps() == 0u);
+
+    lFixture.TickClockedFrame(0.05);
+    lFixture.TickClockedFrame(0.05);
+    CHECK(lFixture.Counter->FixedUpdates == 6u);
+    CHECK(lFixture.Counter->Updates == 2u);
+    CHECK(lFixture.Counter->LastUpdateDelta == doctest::Approx(0.05));
+
+    // Nothing was banked: pausing now really pauses.
+    lFixture.Worlds.SetPaused(true);
+    lFixture.TickClockedFrame(0.05);
+    CHECK(lFixture.Counter->FixedUpdates == 6u);
+    CHECK(lFixture.Counter->Updates == 2u);
+}
+
+TEST_CASE("world tick gate: resuming drops the asked steps not run yet")
+{
+    GatedWorld lFixture;
+
+    lFixture.Worlds.SetPaused(true);
+    CHECK(lFixture.Worlds.RequestFixedSteps(3));
+    lFixture.TickClockedFrame(0.05);
+    REQUIRE(lFixture.Counter->FixedUpdates == 1u);
+
+    lFixture.Worlds.SetPaused(false);
+    CHECK(lFixture.Worlds.GetQueuedSteps() == 0u);
+    lFixture.Worlds.SetPaused(true);
+
+    lFixture.TickClockedFrame(0.05);
+    lFixture.TickClockedFrame(0.05);
+    CHECK(lFixture.Counter->FixedUpdates == 1u);
+}
+
+TEST_CASE("world tick gate: a world resumed after an asked step goes on from the step drawn")
+{
+    GatedWorld lFixture;
+
+    lFixture.Worlds.SetPaused(true);
+    lFixture.Worlds.RequestFixedSteps(1);
+    lFixture.TickClockedFrame(0.05);
+    REQUIRE(lFixture.LastAlpha == 1.0);
+
+    // A quarter of a step of time: the picture was a whole step on, so one step is owed at once.
+    lFixture.Worlds.SetPaused(false);
+    lFixture.TickClockedFrame(0.25 / 60.0);
+    CHECK(lFixture.Counter->FixedUpdates == 2u);
+    CHECK(lFixture.LastAlpha == doctest::Approx(0.25));
+}
+
+TEST_CASE("world tick gate: a frame step still runs on its time, and asked steps wait behind it")
+{
+    GatedWorld lFixture;
+
+    lFixture.Worlds.SetPaused(true);
+    lFixture.TickClockedFrame(0.05);
+
+    lFixture.Worlds.RequestStep();
+    lFixture.Worlds.RequestFixedSteps(1);
+    lFixture.TickClockedFrame(0.05);
+
+    // The frame step: the frame's 3 steps, its Update on the frame's time.
+    CHECK(lFixture.Counter->FixedUpdates == 3u);
+    CHECK(lFixture.Counter->LastUpdateDelta == doctest::Approx(0.05));
+    CHECK(lFixture.Worlds.GetQueuedSteps() == 1u);
+
+    lFixture.TickClockedFrame(0.05);
+    CHECK(lFixture.Counter->FixedUpdates == 4u);
+}
+
+TEST_CASE("world tick gate: the steps asked add up, to at most MAX_QUEUED_STEPS")
+{
+    GatedWorld lFixture;
+
+    lFixture.Worlds.SetPaused(true);
+    CHECK_FALSE(lFixture.Worlds.RequestFixedSteps(0));
+    CHECK(lFixture.Worlds.RequestFixedSteps(2));
+    CHECK(lFixture.Worlds.RequestFixedSteps(3));
+    CHECK(lFixture.Worlds.GetQueuedSteps() == 5u);
+
+    CHECK(lFixture.Worlds.RequestFixedSteps(WorldManager::MAX_QUEUED_STEPS));
+    CHECK(lFixture.Worlds.GetQueuedSteps() == WorldManager::MAX_QUEUED_STEPS);
 }

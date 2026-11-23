@@ -120,6 +120,27 @@ namespace Opaax
          */
         void RequestStep() noexcept { m_bStepRequested = true; }
 
+        /** The most fixed steps waiting to run on a paused world. */
+        static constexpr Uint32 MAX_QUEUED_STEPS = 1u << 20;
+
+        /**
+         * Runs InCount more fixed steps of the paused world, one a frame, whatever the frames' time and
+         * the time scale; each frame that runs one also runs its Update, over the step's length. The
+         * world is drawn on the last step. Resuming, or another active world, drops the steps not run.
+         * @return False, and nothing asked, when the world is not paused or InCount is 0
+         */
+        bool RequestFixedSteps(Uint32 InCount) noexcept;
+
+        /** The fixed steps asked of the paused world and not run yet. */
+        Uint32 GetQueuedSteps() const noexcept { return m_QueuedSteps; }
+
+        /** The asked steps this frame runs (decided in Update): 0 or 1. */
+        Uint32 GetStepsThisFrame() const noexcept { return m_StepsThisFrame; }
+
+        /** The length of a fixed step, seconds: an asked step's Update gets it. Given by the engine. */
+        void   SetFixedDelta(double InFixedDelta) noexcept;
+        double GetFixedDelta() const noexcept { return m_FixedDelta; }
+
         /** Whether the world ticks this frame (decided in Update). */
         bool IsTickingThisFrame() const noexcept { return m_bTickThisFrame; }
 
@@ -197,6 +218,11 @@ namespace Opaax
         float m_TimeScale     = 1.f;
         bool m_bStepRequested = false;
         bool m_bTickThisFrame = true;
+
+        // Fixed steps asked of the paused world: waiting, and run this frame.
+        Uint32 m_QueuedSteps    = 0;
+        Uint32 m_StepsThisFrame = 0;
+        double m_FixedDelta     = 1.0 / 60.0;
 
         // The frame's real delta (Update's), for the present pass.
         double m_FrameDeltaTime = 0.0;
