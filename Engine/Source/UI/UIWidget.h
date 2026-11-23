@@ -8,6 +8,7 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/String/OpaaxStringJson.h"
+#include "Core/Tag/OpaaxTag.h"
 #include "Core/Templates/TypeTraits.h"
 #include "Object/ObjectMacros.h"
 #include "Object/ObjectPtr.h"
@@ -110,10 +111,13 @@ namespace Opaax
         UIWidget*                                     GetParent()   const noexcept { return m_Parent; }
         const TDynArray<TStrongObjectPtr<UIWidget>>&  GetChildren() const noexcept { return m_Children; }
 
-        /** Takes the child (its only owner should be the one given); drawn after (on top of) its siblings. */
+        /**
+         * Takes the child (its only owner should be the one given); drawn after (on top of) its siblings.
+         * On the canvas root: after the trees of its layer or a lower one, under those of a higher one.
+         */
         UIWidget* AddChild(TStrongObjectPtr<UIWidget> InChild);
 
-        /** Takes the child, at InIndex among my children (clamped). */
+        /** Takes the child, at InIndex among my children (clamped; on the canvas root, inside its layer). */
         UIWidget* AddChild(TStrongObjectPtr<UIWidget> InChild, Uint64 InIndex);
 
         /** Gives the child back (for undo). Empty if InChild is not mine. */
@@ -121,6 +125,21 @@ namespace Opaax
 
         /** The canvas this node is in, or null when detached. */
         UICanvas* GetCanvas() const noexcept { return m_Canvas; }
+
+        /**
+         * The layer I draw in when I am a tree under the canvas root (the engine config's UI.Layers): a
+         * higher layer on top, equal layers in the order they came. Runtime only, not saved; none is 0.
+         */
+        OpaaxTag GetLayer() const noexcept { return m_Layer; }
+
+        /** Under the canvas root, a new layer moves me last in it, at once. Nothing is detached. */
+        void SetLayer(OpaaxTag InLayer);
+
+        /**
+         * Drawn over my siblings: on the canvas root, over the trees of my layer only, never over a
+         * higher one. Nothing is detached: hover, press and focus stay.
+         */
+        void BringToFront();
 
         /**
          * Whether I lay out my children (a container). Then a child's anchors and position are ignored:
@@ -424,6 +443,15 @@ namespace Opaax
         /** OnPullBindings on me, then every descendant. */
         void PullBindings(UIBindingTable& InBindings);
 
+        /** Whether I am my canvas's root, whose trees are kept in layer order. */
+        bool IsCanvasRoot() const noexcept;
+
+        /** Where InChild goes among my children when InIndex is asked: InIndex clamped, inside its layer on the root. */
+        Uint64 ChildIndexFor(const UIWidget& InChild, Uint64 InIndex) const;
+
+        /** InChild, one of mine, last among the siblings it may pass: taken out and put back, not detached. */
+        void MoveChildToFront(UIWidget& InChild);
+
         void MarkSubtreeUp();
         void SetCanvasRecursive(UICanvas* InCanvas);
 
@@ -459,6 +487,8 @@ namespace Opaax
         Bounds2D           m_Bounds;
         TDynArray<UIQuad>  m_Quads;
         UIComposedPose     m_Pose;
+        /** Where I draw among the canvas root's trees (SetLayer). */
+        OpaaxTag           m_Layer;
 
         bool m_bLayoutDirty  = true;
         bool m_bContentDirty = true;
