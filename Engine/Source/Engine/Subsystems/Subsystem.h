@@ -22,6 +22,7 @@
 //
 //       bool Startup() override;                 // GetContext() is valid from here
 //       void Update(double InDeltaTime) override;
+//       void Present(double InRealDeltaTime) override;   // optional: drawing only, paused too
 //   };
 //   OPAAX_REGISTER_OBJECT(WaveSpawner);
 //

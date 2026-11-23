@@ -139,7 +139,11 @@ namespace Opaax
         void Update(double InDeltaTime) override;
         void FixedUpdate(double InFixedDeltaTime) override;
 
-        // No Render override: world subsystems draw by submitting to DebugDraw.
+        /**
+         * Presents the active world's subsystems (WorldSubsystem::Present): every frame, paused or
+         * not, with the frame's real delta. Before the renderer's pass, which draws what they queue.
+         */
+        void Render(double InAlpha) override;
 
         /**
          * Destroys every world through DestroyWorld, while the event bus and its subscribers are alive.
@@ -193,7 +197,10 @@ namespace Opaax
         float m_TimeScale     = 1.f;
         bool m_bStepRequested = false;
         bool m_bTickThisFrame = true;
-        
+
+        // The frame's real delta (Update's), for the present pass.
+        double m_FrameDeltaTime = 0.0;
+
         // =========================================================================
         // Events
         // =========================================================================
