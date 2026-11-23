@@ -304,3 +304,69 @@ TEST_CASE("PropertyVisitor: a visitor that does not handle tags reports them uns
     CHECK(lVisitor.Lines == lExpected);
     CHECK(lSubject.Layer == OpaaxTag("Menu"));
 }
+
+namespace
+{
+    struct VisitorTagContainerSubject
+    {
+        OpaaxTagContainer Tags = { OpaaxTag("Faction.Player") };
+
+        OPAAX_PROPERTIES(VisitorTagContainerSubject, OPAAX_PROP(Tags))
+    };
+
+    /** Reads the set and adds a tag, as the editor's add field does on Enter. */
+    class TagContainerVisitor final : public IPropertyVisitor
+    {
+    public:
+        TDynArray<OpaaxString> Seen;
+
+        void Visit(const char*, bool&, const PropertyMeta&) override          {}
+        void Visit(const char*, Int16&, const PropertyMeta&) override         {}
+        void Visit(const char*, Int32&, const PropertyMeta&) override         {}
+        void Visit(const char*, Uint32&, const PropertyMeta&) override        {}
+        void Visit(const char*, float&, const PropertyMeta&) override         {}
+        void Visit(const char*, Vector2F&, const PropertyMeta&) override      {}
+        void Visit(const char*, Vector3F&, const PropertyMeta&) override      {}
+        void Visit(const char*, Vector4F&, const PropertyMeta&) override      {}
+        void Visit(const char*, LinearColor&, const PropertyMeta&) override   {}
+        void Visit(const char*, OpaaxString&, const PropertyMeta&) override   {}
+        void Visit(const char*, OpaaxStringID&, const PropertyMeta&) override {}
+        void VisitEnum(const char*, const char* const*, Uint32, Uint32&, const PropertyMeta&) override {}
+        void VisitAssetRef(const char*, OpaaxString&, const ObjectClass&, const PropertyMeta&) override {}
+        void VisitObjectRef(const char*, ObjectHandle&, const ObjectClass&, const PropertyMeta&) override {}
+        bool BeginGroup(const char*, const PropertyMeta&) override { return true; }
+        void EndGroup() override {}
+        void VisitUnsupported(const char* InName, OpaaxStringView) override { Seen.push_back(OpaaxString::Format("unsupported {}", InName)); }
+
+        void VisitTagContainer(const char* InName, OpaaxTagContainer& InOutTags, const PropertyMeta&) override
+        {
+            Seen.push_back(OpaaxString::Format("{} {}", InName, InOutTags.ToString().CStr()));
+            InOutTags.AddTag(OpaaxTag("Faction.Enemy"));
+        }
+    };
+}
+
+TEST_CASE("PropertyVisitor: a tag container reaches VisitTagContainer, not VisitList, and an added tag lands")
+{
+    VisitorTagContainerSubject lSubject;
+    TagContainerVisitor        lVisitor;
+
+    VisitProperties(lSubject, lVisitor);
+
+    const TDynArray<OpaaxString> lExpected = { "Tags Faction.Player" };
+    CHECK(lVisitor.Seen == lExpected);
+    CHECK(lSubject.Tags.Num() == 2u);
+    CHECK(lSubject.Tags.HasTagExact(OpaaxTag("Faction.Enemy")));
+}
+
+TEST_CASE("PropertyVisitor: a visitor that does not handle tag containers reports them unsupported and leaves them")
+{
+    VisitorTagContainerSubject lSubject;
+    RecordingVisitor           lVisitor;
+
+    VisitProperties(lSubject, lVisitor);
+
+    const TDynArray<OpaaxString> lExpected = { "unsupported Tags" };
+    CHECK(lVisitor.Lines == lExpected);
+    CHECK(lSubject.Tags == OpaaxTagContainer{ OpaaxTag("Faction.Player") });
+}

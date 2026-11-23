@@ -11,6 +11,7 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/Tag/OpaaxTag.h"
+#include "Core/Tag/OpaaxTagContainer.h"
 #include "Core/Reflection/TypeInfo.h"
 #include "Object/ObjectHandle.h"
 
@@ -125,6 +126,16 @@ namespace Opaax
         {
             (void)InOutTag;
             VisitUnsupported(InName, "OpaaxTag");
+        }
+
+        /**
+         * A set of tags (OpaaxTagContainer): add or remove tags to change it. By default reported as
+         * unsupported, like VisitTag.
+         */
+        virtual void VisitTagContainer(const char* InName, OpaaxTagContainer& InOutTags, const PropertyMeta& /*InMeta*/)
+        {
+            (void)InOutTags;
+            VisitUnsupported(InName, "OpaaxTagContainer");
         }
 
         /**
@@ -291,6 +302,10 @@ namespace Opaax
         else if constexpr (TIsSame<TValue, OpaaxTag>)
         {
             InVisitor.VisitTag(InName, InValue, InMeta);
+        }
+        else if constexpr (TIsSame<TValue, OpaaxTagContainer>)
+        {
+            InVisitor.VisitTagContainer(InName, InValue, InMeta);
         }
         else if constexpr (k_IsList<TValue> && !TIsSame<TValue, TDynArray<bool>>)
         {
