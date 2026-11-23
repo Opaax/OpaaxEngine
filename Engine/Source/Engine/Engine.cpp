@@ -485,13 +485,28 @@ namespace Opaax
         m_Clock.SetTimeScale(m_WorldManager != nullptr ? m_WorldManager->GetTimeScale() : 1.0);
         const double lDeltaTime = m_Clock.BeginFrame(ClockTime());
 
+        // A step asked of a paused world updates it by the step's own length.
+        if (m_WorldManager != nullptr)
+        {
+            m_WorldManager->SetFixedDelta(m_Clock.GetFixedDelta());
+        }
+
         {
             OPAAX_STAT_SCOPE("Update");
             Update(lDeltaTime);
         }
 
-        // A paused world holds still: it is drawn as it was, and goes on from there.
-        m_Clock.SetWorldTicks(m_WorldManager == nullptr || m_WorldManager->IsTickingThisFrame());
+        // A paused world holds still: it is drawn as it was, and goes on from there. Asked for steps
+        // (RequestFixedSteps), it runs them whatever the time, and is drawn on the last one.
+        const Uint32 lAskedSteps = m_WorldManager != nullptr ? m_WorldManager->GetStepsThisFrame() : 0;
+        if (lAskedSteps > 0)
+        {
+            m_Clock.SetWorldSteps(lAskedSteps);
+        }
+        else
+        {
+            m_Clock.SetWorldTicks(m_WorldManager == nullptr || m_WorldManager->IsTickingThisFrame());
+        }
 
         const Uint64 lDroppedBefore = m_Clock.GetDroppedSteps();
         while (m_Clock.TakeFixedStep())
