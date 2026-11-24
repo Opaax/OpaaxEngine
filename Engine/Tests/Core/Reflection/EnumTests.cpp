@@ -105,8 +105,10 @@ TEST_CASE("Enum json: an unknown label THROWS rather than picking something")
     CHECK_THROWS_AS(nlohmann::json("Maximized").get_to(lMode), nlohmann::json::exception);
     CHECK_THROWS_AS(nlohmann::json("").get_to(lMode), nlohmann::json::exception);
 
-    // Wrong TYPE is refused too — a number is not a label, even though the enum has ordinals.
-    CHECK_THROWS_AS(nlohmann::json(1).get_to(lMode), nlohmann::json::exception);
+    // A number that is no enumerator's value, and a value that is neither text nor a whole number.
+    CHECK_THROWS_AS(nlohmann::json(3).get_to(lMode), nlohmann::json::exception);
+    CHECK_THROWS_AS(nlohmann::json(1.5).get_to(lMode), nlohmann::json::exception);
+    CHECK_THROWS_AS(nlohmann::json(true).get_to(lMode), nlohmann::json::exception);
 
     // Nothing was half-applied.
     CHECK(lMode == EWindowMode::Fullscreen);
@@ -141,6 +143,33 @@ TEST_CASE("Enum json: an unknown label of an enum outside Opaax throws")
     ERunZone lZone = ERunZone::Checkpoint;
     CHECK_THROWS_AS(nlohmann::json("Lobby").get_to(lZone), nlohmann::json::exception);
     CHECK(lZone == ERunZone::Checkpoint);
+}
+
+TEST_CASE("Enum json: a number from a file written before labels loads by its value")
+{
+    // What nlohmann wrote for a game enum before: the enumerator's value.
+    const nlohmann::json lOld = { { "Zone", 2 }, { "Laps", 1 } };
+    const RunRecord lRecord = lOld.get<RunRecord>();
+    CHECK(lRecord.Zone == ERunZone::Finish);
+    CHECK(lRecord.Laps == 1);
+
+    // The next save writes the label.
+    CHECK(nlohmann::json(lRecord).at("Zone").get<OpaaxString>() == "Finish");
+
+    // Engine enums read a number the same way.
+    EWindowMode lMode = EWindowMode::Windowed;
+    nlohmann::json(1).get_to(lMode);
+    CHECK(lMode == EWindowMode::Borderless);
+
+    // A number that is no value of the enum throws, and the field keeps its value.
+    ERunZone lZone = ERunZone::Checkpoint;
+    CHECK_THROWS_AS(nlohmann::json(99).get_to(lZone), nlohmann::json::exception);
+    CHECK_THROWS_AS(nlohmann::json(-1).get_to(lZone), nlohmann::json::exception);
+    CHECK_THROWS_AS(nlohmann::json(1.5).get_to(lZone), nlohmann::json::exception);
+    CHECK(lZone == ERunZone::Checkpoint);
+
+    const nlohmann::json lBad = { { "Zone", 99 }, { "Laps", 1 } };
+    CHECK_THROWS_AS(lBad.get<RunRecord>(), nlohmann::json::exception);
 }
 
 TEST_CASE("Enum json: Opaax::to_json and from_json called by name match what nlohmann writes")
