@@ -4,6 +4,7 @@
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"
+#include "Core/Time/DateSource.h"
 #include "Application/Services/IPaths.h"
 #include "Core/String/OpaaxPathString.h"
 #include "UI/UICanvasFile.h"
@@ -43,6 +44,8 @@ namespace Opaax::Editor
             m_Canvas.Root().RemoveChild(*m_Canvas.Root().GetChildren().front());
         }
 
+        // The engine's dates: a date a test pinned shows in the preview too.
+        m_Canvas.SetDates(&OpaaxApplication::GetAppService<IEngine>().GetDates());
         m_Canvas.SetReferenceHeight(lDoc.ReferenceHeight);
         AdoptChildren(m_Canvas.Root(), *lDoc.Root);
 

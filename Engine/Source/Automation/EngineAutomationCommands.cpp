@@ -17,6 +17,7 @@
 #include "Core/Maths/Maths.h"
 #include "Core/String/OpaaxStringJson.h"
 #include "Core/Time/Clock.h"
+#include "Core/Time/DateSource.h"
 #include "Engine/Config/Config.h"
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/FrameClock.h"
@@ -1164,6 +1165,55 @@ namespace Opaax::EngineAutomation
                     WorldManager& lWorlds = InEngine.GetWorldManager();
                     lWorlds.SetTimeScale(lScale->get<float>());
                     return AutomationResult::Ok(nlohmann::json{ { "scale", lWorlds.GetTimeScale() } });
+                });
+
+            InCommands.Add(CommandSpec("time.date",
+                "Pins the date the UI reads (a date modifier) to {year, month, day} and {hour, minute, second} "
+                "(0 when left out): it stands still until {off}: true gives the wall clock back. With no "
+                "parameter, only answers. Answers {date} (\"2026-11-24 09:05:07\") and whether it is {pinned}.")
+                    .Param("year", ECommandParamType::Int, "the year: 2026").Optional()
+                    .Param("month", ECommandParamType::Int, "1 - 12").Optional()
+                    .Param("day", ECommandParamType::Int, "1 - 31, within the month").Optional()
+                    .Param("hour", ECommandParamType::Int, "0 - 23 (0)").Optional()
+                    .Param("minute", ECommandParamType::Int, "0 - 59 (0)").Optional()
+                    .Param("second", ECommandParamType::Int, "0 - 59 (0)").Optional()
+                    .Param("off", ECommandParamType::Bool, "true: the wall clock again").Optional()
+                    .DevOnly(),
+                [&InEngine](const nlohmann::json& InParams)
+                {
+                    DateSource& lDates = InEngine.GetDates();
+
+                    if (InParams.value("off", false))
+                    {
+                        lDates.Unpin();
+                    }
+                    else if (InParams.contains("year") || InParams.contains("month") || InParams.contains("day"))
+                    {
+                        if (!InParams.contains("year") || !InParams.contains("month") || !InParams.contains("day"))
+                        {
+                            return AutomationResult::Fail("give the whole date: {year, month, day}");
+                        }
+
+                        DateTime lDate;
+                        lDate.Year   = InParams.value("year", 1970);
+                        lDate.Month  = InParams.value("month", 1);
+                        lDate.Day    = InParams.value("day", 1);
+                        lDate.Hour   = InParams.value("hour", 0);
+                        lDate.Minute = InParams.value("minute", 0);
+                        lDate.Second = InParams.value("second", 0);
+                        if (!lDate.IsValid() || lDate.Second > 59)
+                        {
+                            return AutomationResult::Fail(OpaaxString::Format(
+                                "no such date: {} - {} - {} {}:{}:{} (month 1 - 12, the day within its month, "
+                                "hour 0 - 23, minute and second 0 - 59)",
+                                lDate.Year, lDate.Month, lDate.Day, lDate.Hour, lDate.Minute, lDate.Second));
+                        }
+                        lDates.Pin(lDate);
+                    }
+
+                    return AutomationResult::Ok(nlohmann::json{
+                        { "date",   lDates.Now().Format("{year}-{MM}-{dd} {hh}:{mm}:{ss}") },
+                        { "pinned", lDates.IsPinned() } });
                 });
         }
 

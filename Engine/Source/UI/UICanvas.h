@@ -13,6 +13,7 @@
 namespace Opaax
 {
     class IUIAudio;
+    class DateSource;
     class Renderer2D;
 
     /**
@@ -201,6 +202,10 @@ namespace Opaax
         IUIAudio* GetAudio() const noexcept { return m_Audio; }
         void      SetAudio(IUIAudio* InAudio) noexcept { m_Audio = InAudio; }
 
+        /** Where the widgets read the date (a date modifier), set by the host (not owned); null is the wall clock. */
+        const DateSource* GetDates() const noexcept { return m_Dates; }
+        void              SetDates(const DateSource* InDates) noexcept { m_Dates = InDates; }
+
         // =============================================================================
         // Members
         // =============================================================================
@@ -260,6 +265,7 @@ namespace Opaax
         IUIAssetProvider* m_Assets = nullptr;
         Uint64            m_AssetsRevision = 0;   // its GetRevision when last seen
         IUIAudio*         m_Audio = nullptr;      // not owned
+        const DateSource* m_Dates = nullptr;      // not owned
 
         /** The modifiers the next Tick runs. Weak: a destroyed one is skipped. */
         TDynArray<TWeakObjectPtr<UIModifier>> m_Awake;

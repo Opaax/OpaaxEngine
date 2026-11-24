@@ -1,5 +1,6 @@
 #include "Application/Services/IEngine.h"
 
+#include "Core/Time/DateSource.h"
 #include "Audio/AudioManager.h"
 
 #include "Engine/FrameClock.h"
@@ -45,6 +46,12 @@ namespace Opaax
             {
                 static const FramePacing s_Off;
                 return s_Off;
+            }
+
+            DateSource& GetDates() override
+            {
+                static DateSource s_Dates;
+                return s_Dates;
             }
 
             CameraManager* GetCameras() override { return nullptr; }
