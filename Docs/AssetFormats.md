@@ -6,7 +6,8 @@ is enough. Open a level written by hand in the editor and use **File > Resave Le
 `level.save` with `all`) to put it in the engine's own form, so later saves change only what changed.
 
 Paths inside assets are relative to the project's `Assets` folder (`Textures/Hero.png`), or name
-engine content with `/Engine/` (`/Engine/Textures/T_Square_256_White.png`).
+engine content with `/Engine/` (`/Engine/Textures/T_Square_256_White.png`), or a texture the game
+makes in code with `/Runtime/` (`/Runtime/Fog`, see [Textures made in code](#textures-made-in-code)).
 
 | Extension | What | In the editor |
 |---|---|---|
@@ -23,6 +24,44 @@ Images are `.png` (or `.jpg`, `.tga`, `.bmp`), sounds `.wav`, `.mp3` or `.flac`,
 `AudioClip`, each read from the file itself, with nothing beside it; double-click opens it (a font
 shows its baked glyphs and metrics, a sound plays). A sound up to 10 s is decoded when it loads; a longer one (music) keeps
 its file and is decoded while it plays.
+
+### Textures made in code
+
+A game can make a texture from its own pixels and change them while it runs: a fog of war with one
+texel per grid cell, a minimap, a mask. It is a `Texture2D` like an image file, put in the resource
+manager under a path that starts with `/Runtime/`; a `Sprite`'s `Texture` (or a `UIImage`) names that
+path like a file, so the component stays plain data. There is no file behind it: the path only finds
+the texture while the game holds it.
+
+```cpp
+#include "Renderer/Textures/RuntimeTexture.h"
+
+// Make: 32 x 18 cells, one byte each (1 channel), all hidden. Rows bottom first.
+TDynArray<Uint8> lCells(32 * 18, 255);
+m_Fog = RuntimeTexture::Create(GetContext().Resources, OpaaxString("/Runtime/Fog"),
+                               RuntimeTextureDesc{ 32, 18, 1 }, lCells.data());
+
+// Change: a rectangle of texels in place (X, Y from the bottom-left texel), or the whole texture.
+const Uint8 lClear[4] = { 0, 0, 0, 0 };
+m_Fog.UpdateRegion(TextureRegion{ 5, 3, 2, 2 }, lClear);
+m_Fog.Update(lCells.data());
+
+// Release: let go of every RuntimeTexture copy (or let them go with their owner). It is freed at
+// the next resource update; a sprite still naming it draws nothing, with one warning.
+m_Fog.Reset();
+```
+
+- **Channels:** 4 (RGBA8) or 1 (R8). One channel is read as white with that value as its alpha,
+  `(1, 1, 1, value)`, and is always blended: tint it with the sprite's `Color` (black for a fog).
+- **Filter:** a 4-channel texture follows the project's `TextureFilter` (nearest at `Pixel`) unless
+  made with `bSmooth = true`, which reads it blended at any filter. Over a level, a 32 x 18 fog
+  drawn blended gives soft cell edges.
+- **Where:** the `Sprite` holding the path sits where the fog belongs among the others (`Layer`,
+  `OrderInLayer`), since it is a world sprite, not UI.
+- **Lifetime:** the `RuntimeTexture` handles are what keep it; copies share it. A path in use cannot
+  be made again until the texture is released. Main thread only.
+- **Seen from outside:** `renderer.info` answers `textures.runtime`, how many are alive on the GPU.
+  `TestWorld/Tests/RuntimeTexture.json` makes, fills and releases some from a script.
 
 ## Project (`.opaaxproj`)
 
