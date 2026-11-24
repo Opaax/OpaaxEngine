@@ -32,7 +32,13 @@ What working on this repository taught, kept short so the next session starts fr
 - No Clang compiler is installed, but Visual Studio's `clang-tidy` is Clang's front end: with a Ninja
   compile db (`Scratch/clangcheck/configure.bat`), `Scratch/clangcheck/run_tidy.py` compiles every own
   file as Clang does in about two minutes, and reproduced the macOS CI errors exactly. Run it before
-  pushing; ImGui's `static_assert` errors there are clang-cl noise.
+  pushing; ImGui's `static_assert` errors there are clang-cl noise. When `Scratch/clangcheck` is gone,
+  one file still compiles with `clang-tidy --checks=-*,misc-unused-alias-decls
+  --extra-arg-before=--driver-mode=cl --extra-arg=-I<repo>/<dir>... --extra-arg=/std:c++20 <file> --`
+  (includes as `--extra-arg=-I` with forward slashes: `/I` after `--` is not read). No output is a pass.
+  From Git Bash write every flag with a dash (`-std:c++20`, `-EHsc`, `-DOPAAX_DEV_BUILD=1`): Bash
+  turns `/flags` into paths, and the errors ("exceptions disabled", `OPAAX_DEV_BUILD`) look like code
+  bugs. The defines and includes are in the target's `.vcxproj` (editor: `Editor/Vendors/imgui`).
 - A failed CI job's log needs admin rights through the API, but its annotations (the compiler errors)
   are public: `api.github.com/repos/Opaax/OpaaxEngine/check-runs/<job id>/annotations`.
 - Bash calls sent together share one shell: the `cd` of one moved the other, whose `cmake -S . -B build`
@@ -40,6 +46,10 @@ What working on this repository taught, kept short so the next session starts fr
   paths, and never count on a `cd` when calls run side by side.
 
 ## Code
+
+- nlohmann 3.12's `NLOHMANN_DEFINE_TYPE_*` macros write templated friends: they compile where the
+  type is saved, not where it is defined. A break check that moves a declaration below such a struct
+  proves nothing; disable the code under test instead.
 
 - A header shared by the tests stays minimal: what it includes reaches every suite under
   `using namespace Opaax` (TestTempDir.h pulled `Clock` in and clashed with a test's `Clock`). Put
