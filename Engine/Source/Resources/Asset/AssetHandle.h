@@ -115,6 +115,13 @@ namespace Opaax
             return {};
         }
 
+        // A runtime asset has no file: it is there once the game made it, or not at all.
+        if (IsRuntimePath(OpaaxStringView(InAssetPath)))
+        {
+            ResourceRef<AssetResource> lRef = InResources.Find<AssetResource>(InAssetPath.CStr());
+            return lRef.IsValid() ? TAssetHandle<T>(Move(lRef), InAssetPath) : TAssetHandle<T>();
+        }
+
         const OpaaxString lPath     = AssetHandleDetail::CurrentPath(InAssetPath);
         const OpaaxString lAbsolute = InPaths.AssetToAbsolute(lPath);
         return TAssetHandle<T>(InResources.Load<AssetResource>(lAbsolute.CStr()), lPath);
@@ -131,6 +138,11 @@ namespace Opaax
         if (InAssetPath.IsEmpty())
         {
             return {};
+        }
+
+        if (IsRuntimePath(OpaaxStringView(InAssetPath)))
+        {
+            return LoadAsset<T>(InResources, InPaths, InAssetPath);
         }
 
         const OpaaxString lPath     = AssetHandleDetail::CurrentPath(InAssetPath);

@@ -127,6 +127,7 @@ set(OPAAX_TEST_SOURCES
     # Resources
     Resources/AssetMigrationTests.cpp
     Resources/AssetSourceTests.cpp
+    Resources/RuntimeAssetTests.cpp
     Resources/AssetTests.cpp
     Resources/ResourceFormatRegistryTests.cpp
     Resources/ResourceSystemTests.cpp

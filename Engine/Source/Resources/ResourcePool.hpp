@@ -141,6 +141,34 @@ namespace Opaax
             return HandleType{ lIt->second, lMeta.Generation };
         }
 
+        /**
+         * Puts a value made in memory under InPath, Loaded at once with one ref (the caller's), and
+         * initializes it. Main thread only.
+         * @return An invalid handle when InPath already has a slot (loaded or loading)
+         */
+        HandleType AddLoadedSlot(const char* InPath, T&& InValue)
+        {
+            const OpaaxStringID lId(InPath);
+            if (m_PathToSlot.find(lId.GetId()) != m_PathToSlot.end())
+            {
+                return HandleType{};
+            }
+
+            const Uint32 lSlot = AllocSlot();
+            MaybeInitialize(InValue);
+            PayloadRef(lSlot).emplace(Move(InValue));
+
+            SlotMeta& lMeta = MetaRef(lSlot);
+            lMeta.State    = EResourceState::Loaded;
+            lMeta.RefCount = 1;
+            lMeta.Source   = lId;
+            lMeta.Bytes    = ComputeBytes(PayloadRef(lSlot).value());
+            m_PathToSlot[lId.GetId()] = lSlot;
+            ++m_LoadedCount;
+            m_TotalBytes += lMeta.Bytes;
+            return HandleType{ lSlot, lMeta.Generation };
+        }
+
         // Runs T::Load. Called outside the lock (dependency loads go through the manager).
         bool FillSlot(HandleType InHandle, const char* InPath, LoadContext& InCtx)
         {
