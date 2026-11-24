@@ -7,7 +7,41 @@
 #include "Platform/Window/Window.h"
 #include "RHI/RHIBackend.h"
 
+// An enum declared the way a game declares one: in its own namespace, never in Opaax.
+namespace EnumTestsGame
+{
+    enum class ERunZone { Start, Checkpoint, Finish };
+
+    inline const char* ToString(const ERunZone InZone) noexcept
+    {
+        switch (InZone)
+        {
+        case ERunZone::Start:      return "Start";
+        case ERunZone::Checkpoint: return "Checkpoint";
+        case ERunZone::Finish:     return "Finish";
+        }
+
+        return "Start";
+    }
+}
+
+OPAAX_ENUM_VALUES(EnumTestsGame::ERunZone, Start, Checkpoint, Finish)
+
+namespace EnumTestsGame
+{
+    // Saved by nlohmann's macro alone, as a game's component is.
+    struct RunRecord
+    {
+        ERunZone     Zone = ERunZone::Start;
+        Opaax::Int32 Laps = 0;
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(RunRecord, Zone, Laps)
+    };
+}
+
 using namespace Opaax;
+using EnumTestsGame::ERunZone;
+using EnumTestsGame::RunRecord;
 
 namespace
 {
@@ -76,6 +110,56 @@ TEST_CASE("Enum json: an unknown label THROWS rather than picking something")
 
     // Nothing was half-applied.
     CHECK(lMode == EWindowMode::Fullscreen);
+}
+
+TEST_CASE("Enum json: an enum outside Opaax is saved as its label by nlohmann's struct macro")
+{
+    // nlohmann alone would find no to_json in EnumTestsGame and write the number 2.
+    const nlohmann::json lJson = RunRecord{ ERunZone::Finish, 3 };
+
+    REQUIRE(lJson.at("Zone").is_string());
+    CHECK(lJson.at("Zone").get<OpaaxString>() == "Finish");
+
+    const RunRecord lBack = lJson.get<RunRecord>();
+    CHECK(lBack.Zone == ERunZone::Finish);
+    CHECK(lBack.Laps == 3);
+
+    // Every value, bare.
+    for (const ERunZone lZone : TEnumValues<ERunZone>::Values)
+    {
+        ERunZone lRead = ERunZone::Start;
+        nlohmann::json(lZone).get_to(lRead);
+        CHECK(lRead == lZone);
+    }
+}
+
+TEST_CASE("Enum json: an unknown label of an enum outside Opaax throws")
+{
+    const nlohmann::json lJson = { { "Zone", "Lobby" }, { "Laps", 1 } };
+    CHECK_THROWS_AS(lJson.get<RunRecord>(), nlohmann::json::exception);
+
+    ERunZone lZone = ERunZone::Checkpoint;
+    CHECK_THROWS_AS(nlohmann::json("Lobby").get_to(lZone), nlohmann::json::exception);
+    CHECK(lZone == ERunZone::Checkpoint);
+}
+
+TEST_CASE("Enum json: Opaax::to_json and from_json called by name match what nlohmann writes")
+{
+    nlohmann::json lEngine;
+    ::Opaax::to_json(lEngine, EWindowMode::Borderless);
+    CHECK(lEngine == nlohmann::json(EWindowMode::Borderless));
+
+    nlohmann::json lGame;
+    ::Opaax::to_json(lGame, ERunZone::Checkpoint);
+    CHECK(lGame == nlohmann::json(ERunZone::Checkpoint));
+
+    EWindowMode lMode = EWindowMode::Windowed;
+    ::Opaax::from_json(lEngine, lMode);
+    CHECK(lMode == EWindowMode::Borderless);
+
+    ERunZone lZone = ERunZone::Start;
+    ::Opaax::from_json(lGame, lZone);
+    CHECK(lZone == ERunZone::Checkpoint);
 }
 
 TEST_CASE("ResolveSupportedBackend: Vulkan is coerced, OpenGL passes through")
