@@ -11,6 +11,7 @@ description: Add a component, behaviour, world or game instance subsystem, asset
 |---|---|---|
 | Data on entities, saved in maps | component | `OPAAX_REGISTER_COMPONENT(T)` |
 | Logic on an entity (update, events, timers) | behaviour (`Opaax::Behaviour` subclass, `OPAAX_OBJECT(T, Opaax::Behaviour)` first in its body) | `OPAAX_REGISTER_BEHAVIOUR(T)` |
+| A component or behaviour only tests use (a probe in test maps) | as above, left out of the editor's Add Component menu; still saved, loaded and added by name | `OPAAX_REGISTER_UNLISTED_BEHAVIOUR(T)`, `OPAAX_REGISTER_UNLISTED_COMPONENT(T)` |
 | Logic for a whole world | world subsystem (`Opaax::WorldSubsystem` + `OPAAX_OBJECT`) | `OPAAX_REGISTER_OBJECT(T)` |
 | Logic across levels | game instance subsystem (`Opaax::GameInstanceSubsystem` + `OPAAX_OBJECT`) | `OPAAX_REGISTER_OBJECT(T)` |
 | Code when the game starts or ends | the game's own class (`Opaax::GameInstance` + `OPAAX_OBJECT`, `OnStart`/`OnEnd`), named by `gameInstanceClass` in the `.opaaxproj` | `OPAAX_REGISTER_OBJECT(T)` |
@@ -82,7 +83,9 @@ Engine types go in their module (`Engine/Source/<Module>/`) and register in the 
    without an engine; behaviour runtime tests use the fixture in `World/BehaviourRuntimeTests.cpp`).
    Include a JSON round trip and an old-file case (missing fields keep their defaults).
 2. When a game can see it: a TestWorld probe or entities in a TestWorld map, and checks in the
-   feature's script (`TestWorld/Tests`). Run `ctest -L feature`.
+   feature's script (`TestWorld/Tests`). Run `ctest -L feature`. A probe registers with
+   `OPAAX_REGISTER_UNLISTED_BEHAVIOUR` (`TestWorldRegistration.cpp`), so it stays out of the Add
+   Component menu.
 3. In the editor: create one through automation (`entity.create` with `components`), check
    `entity.get`, undo it; or open the Inspector by hand.
 4. An asset class: a round trip through `AssetFile::Save` and `AssetFile::LoadAsset` with a local
