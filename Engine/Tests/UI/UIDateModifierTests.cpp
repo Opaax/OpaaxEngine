@@ -174,3 +174,17 @@ TEST_CASE("UIDateModifier: without a DateSource on the canvas, the wall clock")
 
     CHECK(lText.GetDisplayText() == DateTime::Now().Format("{year}"));
 }
+
+TEST_CASE("UIDateModifier: a text built outside the canvas shows the canvas's date once it joins it")
+{
+    // What a loaded file or the editor's undo does: the modifier is attached before the canvas is known.
+    DateFixture lF;
+    lF.Dates.Pin(MakeDate(1999, 12, 31));
+
+    auto lOwned = NewObject<UIText>();
+    lOwned->AddModifier<UIDateModifier>();
+    UIText& lText = static_cast<UIText&>(*lF.Canvas.Root().AddChild(Move(lOwned)));
+    lF.Canvas.Update();   // not ticked: the editor's document
+
+    CHECK(lText.GetDisplayText() == "31 December 1999");
+}
