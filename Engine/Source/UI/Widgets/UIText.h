@@ -84,8 +84,14 @@ namespace Opaax
     public:
         void OnPullBindings(UIBindingTable& InBindings) override;
 
-        /** What is drawn: the formatted bound value when available, else Text. */
-        const OpaaxString& GetDisplayText() const noexcept { return m_bBound ? m_BoundText : Text; }
+        /**
+         * What is drawn: Text, with the bound value in when there is one, then changed by my text modifiers
+         * (a date). Before my first build, Text with the bound value only.
+         */
+        const OpaaxString& GetDisplayText() const noexcept
+        {
+            return m_bDisplayBuilt ? m_DisplayText : (m_bBound ? m_BoundText : Text);
+        }
 
     protected:
         void Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads) override;
@@ -96,6 +102,8 @@ namespace Opaax
     private:
         OpaaxString m_BoundText;        // last formatted value
         bool        m_bBound = false;   // whether a read ever succeeded
+        OpaaxString m_DisplayText;          // what the last build laid out
+        bool        m_bDisplayBuilt = false;
     };
 }
 

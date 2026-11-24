@@ -76,7 +76,12 @@ namespace Opaax
 
     void UIText::Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
     {
-        const OpaaxString& lText = GetDisplayText();
+        // The text first, whether or not it can be laid out yet: a script reads it before the font loads.
+        m_DisplayText = m_bBound ? m_BoundText : Text;
+        ApplyTextModifiers(m_DisplayText);
+        m_bDisplayBuilt = true;
+
+        const OpaaxString& lText = m_DisplayText;
 
         if (lText.IsEmpty() || Font.IsEmpty() || InContext.Assets == nullptr)
         {

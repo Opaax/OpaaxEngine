@@ -418,6 +418,9 @@ namespace Opaax
          */
         virtual void ArrangeChildren(TDynArray<Bounds2D>& OutSlots) const { (void)OutSlots; }
 
+        /** ModifyText of my enabled modifiers, in order: what a text widget calls on the text it shows. */
+        void ApplyTextModifiers(OpaaxString& InOutText) const;
+
         bool m_bArrangesChildren = false;
 
         /** Set by a widget whose children show only inside its rect (ClipsChildren). */

@@ -45,6 +45,7 @@
 #include "Resources/Asset/AssetFile.h"
 #include "Resources/ResourceFormat.h"   // NormalizeExtension
 #include "UI/UICanvasFile.h"
+#include "UI/Widgets/UIText.h"
 #include "World/Entity/Entity.h"
 #include "World/Level.h"
 #include "World/Prefab/PrefabFile.h"
@@ -1287,7 +1288,8 @@ namespace Opaax::Editor::EditorAutomation
 
             InCommands.Register("ui.widget.list",
                 "The widgets of the UI panel's canvas, in tree order: {widgets: [{name, type, parent, interaction, "
-                "brush}]} (brush: what an image or a button draws now), and the {selected} one's name.",
+                "brush, text}]} (brush: what an image or a button draws now; text: what a text shows now), and the "
+                "{selected} one's name.",
                 [&InContext](const nlohmann::json&)
                 {
                     EditorUICanvasDocument& lDocument = InContext.UICanvasDocument;
@@ -1308,6 +1310,10 @@ namespace Opaax::Editor::EditorAutomation
                             if (const OpaaxString lBrush = lChild->DescribeBrush(); !lBrush.IsEmpty())
                             {
                                 lRow["brush"] = lBrush;
+                            }
+                            if (const UIText* lText = Cast<UIText>(lChild.Get()))
+                            {
+                                lRow["text"] = lText->GetDisplayText();
                             }
                             lWidgets.push_back(Move(lRow));
                             lWalk(*lChild);
