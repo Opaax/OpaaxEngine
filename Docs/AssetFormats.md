@@ -464,7 +464,7 @@ Both are assets. A clip definition says how a sound plays; one of its `Clips` is
 ```json
 { "Class": "AudioClipDef", "Properties": {
     "Clips": [ { "Clip": "Audio/Step0.wav" }, { "Clip": "Audio/Step1.wav", "Weight": 2.0, "VolumeScale": 0.8 } ],
-    "Selection": "RandomNoRepeat", "Bus": "SFX", "Volume": 0.6, "Pitch": 1.0,
+    "Selection": "RandomNoRepeat", "Bus": "Audio.Bus.SFX", "Volume": 0.6, "Pitch": 1.0,
     "VolumeSpread": 0.1, "PitchSpread": 0.05, "bLoop": false,
     "bSpatial": true, "MinDistance": 100.0, "MaxDistance": 1500.0, "Attenuation": "Linear", "Priority": 128 } }
 ```
@@ -472,7 +472,9 @@ Both are assets. A clip definition says how a sound plays; one of its `Clips` is
 `Selection`: `Single` (the first), `Random` (by `Weight`), `RandomNoRepeat` (never the last one again),
 `Sequential`, `Shuffle` (each once per round). The spreads move each play's volume and pitch by up to
 that much, up or down. `Attenuation`: `Linear` or `InverseSquare`, full within `MinDistance`, silent
-from `MaxDistance`. When every voice plays, the lowest `Priority` is replaced first.
+from `MaxDistance`. When every voice plays, the lowest `Priority` is replaced first. `Bus` is a bus's
+tag ([Tags.md](Tags.md)); a short name from before tags (`"SFX"`) plays in `Audio.Bus.SFX`, with a
+warning to resave the file.
 
 A bank lists what to load before it plays: `{ "Class": "AudioBank", "Properties": { "ClipDefs":
 ["Audio/Steps.opaaxasset"], "Clips": ["Audio/Jump.wav"] } }`. A level holds its banks with an
@@ -539,20 +541,29 @@ backend, physics (gravity, world bounds) and audio settings; `Renderer.config` t
 `EditorImgui.config` the editor's look. They are edited in the editor's Config panel; a missing key
 keeps its default. Automation reads them with `config.get` and changes one for a run with `config.set`.
 
-The audio settings name the mix tree under the master (a listed `Buses` replaces the default five)
-and the global bank:
+The audio settings name the mix tree under the master, `Audio.Bus` (a listed `Buses` replaces the
+default five; a bus's tree comes from its tag, `Audio.Bus.SFX.Footsteps` under `Audio.Bus.SFX`) and the
+global bank:
 
 ```json
 "Audio": { "bEnabled": true, "Backend": "Miniaudio", "MasterVolume": 1.0, "MaxVoices": 64,
            "GlobalBank": "Audio/Global.opaaxasset",
-           "Buses": [ { "Name": "Music" }, { "Name": "SFX" }, { "Name": "Footsteps", "Parent": "SFX", "Volume": 0.8 } ] }
+           "Buses": [ { "Name": "Audio.Bus.Music" }, { "Name": "Audio.Bus.SFX" },
+                      { "Name": "Audio.Bus.SFX.Footsteps", "Volume": 0.8 } ] }
 ```
 
-The UI settings name the game canvas's layers, a higher order on top (a listed `Layers` replaces the
-default four; a dotted name is a sub-layer, ordered inside its parent: [UI.md](UI.md#layers)):
+A file from before bus tags still reads: `{ "Name": "Footsteps", "Parent": "SFX" }` is
+`Audio.Bus.SFX.Footsteps`, and `"Master"` the master.
+
+The UI settings name the game canvas's layers by their `UI.Layer` tags, a higher order on top (a listed
+`Layers` replaces the default four; a tag one deeper is a sub-layer, ordered inside its parent:
+[UI.md](UI.md#layers)):
 
 ```json
-"UI": { "Layers": [ { "Name": "Hud", "Order": 0 }, { "Name": "Menu", "Order": 100 },
-                    { "Name": "Menu.Pause", "Order": 10 }, { "Name": "Debug", "Order": 500 },
-                    { "Name": "Loading", "Order": 900 } ] }
+"UI": { "Layers": [ { "Name": "UI.Layer.Hud", "Order": 0 }, { "Name": "UI.Layer.Menu", "Order": 100 },
+                    { "Name": "UI.Layer.Menu.Pause", "Order": 10 }, { "Name": "UI.Layer.Debug", "Order": 500 },
+                    { "Name": "UI.Layer.Loading", "Order": 900 } ] }
 ```
+
+`Tags.config` lists the project's own gameplay tags, each with what it is for
+([Tags.md](Tags.md#registering-a-tag)): `{ "Tags": [ { "Tag": "UI.Layer.Menu.Pause", "Comment": "The pause menu" } ] }`.

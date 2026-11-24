@@ -10,7 +10,7 @@ launches in the player's own folder, beside the saves.
 Opaax::IUserSettings& lSettings = GetUserSettings();    // a behaviour's; GetContext().Settings in a game subsystem
 
 lSettings.SetMasterVolume(0.5f);                        // heard at once
-lSettings.SetBusVolume(OPAAX_ID("Music"), 0.25f);
+lSettings.SetBusVolume(Opaax::OpaaxTag("Audio.Bus.Music"), 0.25f);
 lSettings.SetVSync(false);
 lSettings.SetWindowMode(Opaax::EWindowMode::Fullscreen);
 lSettings.SetResolution(1920, 1080);                    // the window follows at once
@@ -174,7 +174,7 @@ save, holding only what the player changed, shaped like each config's file:
     "Properties": {
         "Configs": {
             "Engine": {
-                "Audio": { "Buses": { "Music": { "Volume": 0.25 } }, "MasterVolume": 0.5 },
+                "Audio": { "Buses": { "Audio.Bus.Music": { "Volume": 0.25 } }, "MasterVolume": 0.5 },
                 "Window": { "Mode": "Fullscreen" }
             },
             "Renderer": { "Multisampling": "X4", "RenderScale": 0.75 }
@@ -188,7 +188,9 @@ save, holding only what the player changed, shaped like each config's file:
 ```
 
 - A bus is set by its name, so the list of buses stays the project's: a bus the project adds later is
-  there for this player too.
+  there for this player too. An item of a named list (a bus, a UI layer) is found by its exact name,
+  else by its last whole names: a file saved before bus tags that sets `"Music"` sets
+  `Audio.Bus.Music`, `"SFX.Footsteps"` sets `Audio.Bus.SFX.Footsteps`.
 - `Keys` holds each rebound mapping: context, action, the asset's key, then the player's. A key kept
   for a mapping its asset no longer has, or for a locked context, is dropped with a warning once the
   asset is read; one for a context not read yet waits for it.
