@@ -66,7 +66,7 @@ while the game is paused or slowed down.
 
 A modifier plays a sound through its canvas: `GetOwner()->GetCanvas()->GetAudio()` (an `IUIAudio`,
 `UI/UIAudio.h`; null is silence), `PlaySound(path, volume)` with a sound file or a clip definition. The
-game's UI subsystem and the UI panel's Play give theirs (`UIAudioPlayer`), which plays on the `UI` bus:
+game's UI subsystem and the UI panel's Play give theirs (`UIAudioPlayer`), which plays on the `Audio.Bus.UI` bus:
 a pause menu is heard while the world is paused. The editor's document is silent while it is edited.
 
 ## Poses
@@ -221,5 +221,5 @@ fields feed. Keep the logic in pure functions beside the class (`SampleTweenKeys
 - A sound for pressing a disabled button: a disabled button takes no pointer events.
 - A picker for a sound modifier's paths: they are text fields (a sound file and a clip definition are
   two asset classes), typed or pasted.
-- A clip definition's own bus: UI sounds always play on the `UI` bus, so they are not paused with the
+- A clip definition's own bus: UI sounds always play on the `Audio.Bus.UI` bus, so they are not paused with the
   world.

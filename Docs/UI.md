@@ -14,7 +14,7 @@ UISubsystem& lUI = *GetContext().UI;
 
 UIWidget* lHud   = lUI.MountAsset("UI/Hud.opaaxui");                             // Hud: the default
 UIWidget* lPause = lUI.MountAsset("UI/Pause.opaaxui", nullptr, UILayerMenu());
-UIWidget* lStats = lUI.MountAsset("UI/Stats.opaaxui", nullptr, OpaaxTag("Debug"));
+UIWidget* lStats = lUI.MountAsset("UI/Stats.opaaxui", nullptr, OpaaxTag("UI.Layer.Debug"));
 
 UIButton* lResume = static_cast<UIButton*>(lPause->FindByName("Resume"));
 
@@ -33,42 +33,47 @@ on top. `BringToFront()` puts a tree over the others of its layer, never over a 
 `SetLayer(tag)` moves it to another layer, last in it. Neither takes the tree out: what is hovered,
 pressed or focused stays.
 
-The layers are a list in the project's `Engine.config`, `UI.Layers`, edited in the editor's Config
-panel (Engine, UI, Layers) like the audio buses. A new project has:
+A layer is a gameplay tag under `UI.Layer` ([Tags.md](Tags.md)). The layers are a list in the project's
+`Engine.config`, `UI.Layers`, edited in the editor's Config panel (Engine, UI, Layers) like the audio
+buses, each name picked from the registered `UI.Layer` tags. A new project has:
 
 | Layer | Order | For |
 |---|---|---|
-| `Hud` | 0 | What is on screen while playing |
-| `Menu` | 100 | Menus: pause, options |
-| `Debug` | 500 | Debug panels, over the menus |
-| `Loading` | 900 | A game's own loading or fade screens, over everything of its own |
+| `UI.Layer.Hud` | 0 | What is on screen while playing |
+| `UI.Layer.Menu` | 100 | Menus: pause, options |
+| `UI.Layer.Debug` | 500 | Debug panels, over the menus |
+| `UI.Layer.Loading` | 900 | A game's own loading or fade screens, over everything of its own |
 
 ```json
-"UI": { "Layers": [ { "Name": "Hud", "Order": 0 }, { "Name": "Menu", "Order": 100 },
-                    { "Name": "Menu.Pause", "Order": 10 }, { "Name": "Popup", "Order": 300 },
-                    { "Name": "Debug", "Order": 500 }, { "Name": "Loading", "Order": 900 } ] }
+"UI": { "Layers": [ { "Name": "UI.Layer.Hud", "Order": 0 }, { "Name": "UI.Layer.Menu", "Order": 100 },
+                    { "Name": "UI.Layer.Menu.Pause", "Order": 10 }, { "Name": "UI.Layer.Popup", "Order": 300 },
+                    { "Name": "UI.Layer.Debug", "Order": 500 }, { "Name": "UI.Layer.Loading", "Order": 900 } ] }
 ```
 
 A higher order draws on top; equal orders are level, so their trees draw in mount order. A listed list
-replaces the default one: a game adds its own layers (`Popup` above), renames or moves them. An edit
-applies at once, while the game runs: the trees move. A player's settings can set one by its name
-(`{"UI": {"Layers": {"Menu": {"Order": 600}}}}`), as for a bus.
+replaces the default one: a game adds its own layers (`UI.Layer.Popup` above), renames or moves them,
+and registers the ones it adds in its `Tags.config` (a listed layer that is not registered is drawn, with
+a warning). An edit applies at once, while the game runs: the trees move. A player's settings can set
+one by its name (`{"UI": {"Layers": {"UI.Layer.Menu": {"Order": 600}}}}`), as for a bus.
+
+A short name written before layers were tags (`"Menu"`, in a config or a `MountAsset` call) still reads
+as `UI.Layer.Menu`.
 
 Code names a layer by its tag: `UILayerHud()`, `UILayerMenu()`, `UILayerDebug()` and
-`UILayerLoading()` for the default ones, `OpaaxTag("Popup")` for a game's own. A tag interns its text:
+`UILayerLoading()` for the default ones, `OpaaxTag("UI.Layer.Popup")` for a game's own. A tag interns its text:
 keep one used every frame in a member or a static.
 
 ### Sub-layers
 
-A dotted name is a sub-layer: `Menu.Pause` draws in Menu's place, ordered among Menu's own trees, which
+A name one deeper is a sub-layer: `UI.Layer.Menu.Pause` draws in Menu's place, ordered among Menu's own trees, which
 are at 0. At 10 it is over them, at -10 under them. Whatever its order, a sub-layer never leaves its
-parent's place: `Menu.Pause` at 9999 still draws under Debug, and moves with Menu when Menu's order
-changes. A layer is at most four names deep.
+parent's place: `UI.Layer.Menu.Pause` at 9999 still draws under Debug, and moves with Menu when Menu's order
+changes. A layer is at most four names deep under `UI.Layer`.
 
 ### Names not listed
 
-A tree mounted in a layer the list does not name draws in its nearest listed parent (`Menu.Options` in
-Menu), and the log says so once. A tree with no layer (added with `Root().AddChild`) is at 0, where Hud
+A tree mounted in a layer the list does not name draws in its nearest listed parent
+(`UI.Layer.Menu.Options` in Menu), and the log says so once. A tree with no layer (added with `Root().AddChild`) is at 0, where Hud
 is by default. What is wrong with the list (a layer without a name, a name listed twice, a sub-layer
 whose parent is not listed) is logged when the list is read.
 
@@ -87,7 +92,7 @@ The canvas finds what is under the pointer as one tree, the topmost first:
 ## Over the game's canvas
 
 The engine's own canvases draw over all of the game's layers: the loading screen, while a level loads,
-and the dev console. A game's `Loading` layer is for its own screens, inside its canvas.
+and the dev console. A game's `UI.Layer.Loading` layer is for its own screens, inside its canvas.
 
 ## Checking it from a script
 

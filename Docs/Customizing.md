@@ -24,6 +24,7 @@ the class it derives from ([Objects.md](Objects.md)).
 | `OPAAX_REGISTER_OBJECT(EnemyWave)` | A file format of the game: an asset class read from its own files (`OPAAX_ASSET_SOURCE(".wave")`), loaded and cached like any asset | `Sandbox/Source/Sandbox/Data/EnemyWave.h` |
 | `OPAAX_REGISTER_OBJECT(Config_Gameplay)` | A config: settings saved in `Configs/`, edited in the Config panel | below |
 | `OPAAX_REGISTER_OBJECT(HealthBar)` | A UI widget for `.opaaxui` canvases: a `UIWidget` subclass, its fields as properties | `UI/Widgets` |
+| `OPAAX_REGISTER_TAG("UI.Layer.Popup", "Pop-ups")` | A gameplay tag, offered by the editor's tag pickers; a project lists more in `Configs/Tags.config` | [Tags.md](Tags.md) |
 | `OPAAX_REGISTER_OBJECT(SwimMoveMode)` | A movement mode of the Mover: a `MoveMode` subclass, its tuning as properties and its step as `Tick` | `Movement/Modes` |
 
 A component or behaviour is saved under its type name: rename the C++ type and maps no longer find
@@ -156,11 +157,12 @@ can be `const` members.
   A handle stays harmless once its sound ended. An `AudioSource` component plays with its entity
   (`Sound` for a definition, or `Clip` with its own settings) and an `AudioListener` hears for the
   level (else the camera).
-- **Buses:** `Audio.Buses` in `Engine.config` is the mix tree under the master (Music, SFX, Dialogue,
-  Ambience, UI by default, and any of yours). From code:
-  `GetSubsystem<AudioSubsystem>()->GetAudio()` gives the `AudioManager`, with `SetBusVolume`,
-  `FadeBus(OPAAX_ID("Music"), 0.f, 2.f)` (a fade apart from the player's volume), `SetBusMuted`,
-  `SetBusSolo`.
+- **Buses:** `Audio.Buses` in `Engine.config` is the mix tree under the master, `Audio.Bus`. A bus is
+  a gameplay tag under it ([Tags.md](Tags.md)): `Audio.Bus.Music`, `.SFX`, `.Dialogue`, `.Ambience`,
+  `.UI` by default, and any of yours (`Audio.Bus.SFX.Footsteps` is under SFX), registered in the
+  project's `Tags.config`. From code: `GetSubsystem<AudioSubsystem>()->GetAudio()` gives the
+  `AudioManager`, with `SetBusVolume`, `FadeBus(OpaaxTag("Audio.Bus.Music"), 0.f, 2.f)` (a fade apart
+  from the player's volume), `SetBusMuted`, `SetBusSolo`.
 - **Banks:** an `AudioBank` asset lists clip definitions and sound files to load before they
   play. A level lists its banks in an `AudioBanks` component on any entity of its map; `Audio.GlobalBank`
   in `Engine.config` is held for the whole game (menus, the player). A sound in no bank is logged,
@@ -172,8 +174,9 @@ can be `const` members.
 
 ### UI
 
-- **Layers:** `UI.Layers` in `Engine.config` orders the game canvas's trees (Hud, Menu, Debug,
-  Loading by default, and any of yours; `Menu.Pause` is a sub-layer inside Menu). A screen is mounted
+- **Layers:** `UI.Layers` in `Engine.config` orders the game canvas's trees. A layer is a gameplay
+  tag under `UI.Layer` (Hud, Menu, Debug, Loading by default, and any of yours, registered in the
+  project's `Tags.config`; `UI.Layer.Menu.Pause` is a sub-layer inside Menu). A screen is mounted
   in one: `GetContext().UI->MountAsset("UI/Pause.opaaxui", nullptr, UILayerMenu())`. A higher layer
   draws on top and takes the pointer first, whatever the mount order ([UI.md](UI.md)).
 
