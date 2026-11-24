@@ -78,6 +78,12 @@ namespace Opaax
          */
         virtual bool IsEssential() const = 0;
 
+        /**
+         * False for a type registered unlisted (a test probe): the "Add Component" menu leaves it out.
+         * Nothing else changes: it is still saved, loaded, drawn, removed and added by name.
+         */
+        virtual bool IsOffered() const = 0;
+
         /** @return InEntity's component as JSON, or null JSON when absent */
         virtual nlohmann::json Save(const EntityRegistry& InRegistry, EntityID InEntity) const = 0;
 
@@ -131,8 +137,8 @@ namespace Opaax
                       "A behaviour declares its class: OPAAX_OBJECT(Type, Opaax::Behaviour) first in its body.");
 
     public:
-        TComponentEntry(OpaaxStringID InName, bool bInEssential)
-            : m_Name(InName), m_bEssential(bInEssential)
+        TComponentEntry(OpaaxStringID InName, bool bInEssential, bool bInOffered)
+            : m_Name(InName), m_bEssential(bInEssential), m_bOffered(bInOffered)
         {
             CollectHardRefFields();
         }
@@ -140,6 +146,7 @@ namespace Opaax
         OpaaxStringID GetName()     const override { return m_Name; }
         TypeId        GetTypeId()   const override { return TypeIdOf<T>(); }
         bool          IsEssential() const override { return m_bEssential; }
+        bool          IsOffered()   const override { return m_bOffered; }
 
         bool Has(const EntityRegistry& InRegistry, EntityID InEntity) const override
         {
@@ -285,6 +292,7 @@ namespace Opaax
 
         OpaaxStringID m_Name;
         bool          m_bEssential = false;
+        bool          m_bOffered   = true;
 
         /** See GetHardRefFields. Computed once, at registration. */
         TDynArray<HardRefField> m_HardRefFields;
@@ -293,8 +301,8 @@ namespace Opaax
     // =============================================================================
     // ComponentRegistry — every component type (engine first, then game modules), in
     //   registration order. Owned by EngineRegistries. Used by map save/load and the
-    //   Inspector's "Add Component" menu. Sealed at the first CreateWorld: later
-    //   registrations are refused.
+    //   Inspector's "Add Component" menu (which leaves out unlisted types). Sealed at the
+    //   first CreateWorld: later registrations are refused.
     // =============================================================================
     class ComponentRegistry
     {
@@ -324,13 +332,14 @@ namespace Opaax
          * @tparam T Any type satisfying CComponent
          * @param InName Name saved in map files
          * @param bInEssential True only for a type every entity has (added by World::CreateEntity)
+         * @param bInOffered False to leave the type out of the "Add Component" menu (a test probe)
          * @return True if registered
          */
         template<CComponent T>
-        bool Register(OpaaxStringID InName, bool bInEssential = false)
+        bool Register(OpaaxStringID InName, bool bInEssential = false, bool bInOffered = true)
         {
             // Built here (T is known), stored by an out-of-line function.
-            return AddEntry(MakeUnique<TComponentEntry<T>>(InName, bInEssential),
+            return AddEntry(MakeUnique<TComponentEntry<T>>(InName, bInEssential, bInOffered),
                             TypeIdOf<T>());
         }
 

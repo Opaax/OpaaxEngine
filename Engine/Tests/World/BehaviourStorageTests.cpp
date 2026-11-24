@@ -53,6 +53,16 @@ namespace GameSide
         OPAAX_OBJECT(RegisteredProbe, Behaviour)
     };
     OPAAX_REGISTER_BEHAVIOUR(RegisteredProbe);
+
+    // Only test maps carry it: registered unlisted.
+    struct HiddenProbe final : Behaviour
+    {
+        OPAAX_OBJECT(HiddenProbe, Behaviour)
+
+        Int32 Hits = 0;
+
+        OPAAX_PROPERTIES(HiddenProbe, OPAAX_PROP(Hits))
+    };
 }
 
 static_assert(CComponent<GameSide::Mover>,   "a behaviour must satisfy the component concept");
@@ -153,6 +163,36 @@ TEST_CASE("Behaviour: a map round trip keeps its listed fields, and only those")
     CHECK(lRead->Direction == Vector2F{ 0.f, -1.f });
     CHECK(lRead->RuntimeHits == 0);         // runtime state starts fresh
     CHECK(lClone.Has<GameSide::Spinner>());
+}
+
+TEST_CASE("Behaviour: an unlisted one is not offered, and a map round trip keeps it")
+{
+    ComponentRegistry lRegistry;
+    FillRegistry(lRegistry);
+
+    BehaviourRoute lRoute;
+    lRoute.Bind(&lRegistry);
+    REQUIRE(lRoute.RegisterUnlisted<GameSide::HiddenProbe>());
+
+    const IComponentEntry* lEntry = lRegistry.FindByName(OpaaxStringID("HiddenProbe"));
+    REQUIRE(lEntry != nullptr);
+    CHECK_FALSE(lEntry->IsOffered());
+    CHECK(lRegistry.Find<GameSide::Mover>()->IsOffered());
+
+    World  lSource("Source");
+    Entity lProbe = lSource.CreateEntity("Probe", k_Map);
+    lProbe.Add<GameSide::HiddenProbe>().Hits = 5;
+
+    const MapData lCaptured = MapSerializer::CaptureWorld(lSource, lRegistry);
+    REQUIRE(lCaptured.EntityCount() == 1u);
+    REQUIRE(FindComponent(lCaptured.Entities[0], "HiddenProbe") != nullptr);
+
+    World lTarget("Target");
+    REQUIRE(MapFactory::Instantiate(lCaptured, lTarget, lRegistry) == 1u);
+
+    GameSide::HiddenProbe* lRead = lTarget.FindByGuid(lProbe.GetGuid()).TryGet<GameSide::HiddenProbe>();
+    REQUIRE(lRead != nullptr);
+    CHECK(lRead->Hits == 5);
 }
 
 TEST_CASE("Behaviour: a bad value in the file keeps that field's default; the rest still loads")

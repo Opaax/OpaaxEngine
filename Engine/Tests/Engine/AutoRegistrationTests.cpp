@@ -12,8 +12,11 @@
 #include "Engine/GameInstance/GameInstanceSubsystem.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Renderer/Components/QuadComponent.h"
+#include "World/Behaviour/Behaviour.h"
 #include "World/Components/TransformComponent.h"
+#include "World/Entity/Entity.h"
 #include "World/Systems/WorldSubsystem.h"
+#include "World/World.h"
 
 using namespace Opaax;
 
@@ -53,6 +56,29 @@ namespace AutoRegistrationTestTypes
     // Registered in the "wrong" order on purpose: the tick order decides, not the source order.
     OPAAX_REGISTER_OBJECT(ProbeLateSubsystem);
     OPAAX_REGISTER_OBJECT(ProbeEarlySubsystem);
+
+    // Types only tests use: left out of the editor's Add Component menu.
+    struct ProbeHidden
+    {
+        Int32 Mark = 1;
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(ProbeHidden, Mark)
+        OPAAX_PROPERTIES(ProbeHidden, OPAAX_PROP(Mark))
+    };
+
+    OPAAX_REGISTER_UNLISTED_COMPONENT(ProbeHidden);
+
+    class ProbeHiddenBehaviour final : public Behaviour
+    {
+        OPAAX_OBJECT(ProbeHiddenBehaviour, Behaviour)
+
+    public:
+        Int32 Count = 2;
+
+        OPAAX_PROPERTIES(ProbeHiddenBehaviour, OPAAX_PROP(Count))
+    };
+
+    OPAAX_REGISTER_UNLISTED_BEHAVIOUR(ProbeHiddenBehaviour);
 }
 
 using namespace AutoRegistrationTestTypes;
@@ -155,6 +181,52 @@ TEST_CASE("AutoRegistration: running it fills fresh registries, the essential co
     const IComponentEntry* lQuad = lRegistries.Components().Find<QuadComponent>();
     REQUIRE(lQuad != nullptr);
     CHECK(lRegistries.Components().FindByName(OpaaxStringID("Dummy")) == lQuad);
+}
+
+TEST_CASE("AutoRegistration: an unlisted type is registered, found by name and saved, but not offered")
+{
+    EngineRegistries lRegistries;
+    ModuleRegistrar  lRegistrar;
+    lRegistrar.BindEngineRegistries(lRegistries);
+    RunAutoRegistrations(lRegistrar);
+
+    const ComponentRegistry& lTypes = lRegistries.Components();
+
+    // A type registered the usual way is offered.
+    const IComponentEntry* lHealth = lTypes.Find<ProbeHealth>();
+    REQUIRE(lHealth != nullptr);
+    CHECK(lHealth->IsOffered());
+
+    const IComponentEntry* lComponent = lTypes.Find<ProbeHidden>();
+    REQUIRE(lComponent != nullptr);
+    CHECK(lTypes.FindByName(OpaaxStringID("ProbeHidden")) == lComponent);
+    CHECK_FALSE(lComponent->IsOffered());
+    CHECK_FALSE(lComponent->IsEssential());
+
+    const IComponentEntry* lBehaviour = lTypes.Find<ProbeHiddenBehaviour>();
+    REQUIRE(lBehaviour != nullptr);
+    CHECK(lTypes.FindByName(OpaaxStringID("ProbeHiddenBehaviour")) == lBehaviour);
+    CHECK(lBehaviour->IsBehaviour());
+    CHECK_FALSE(lBehaviour->IsOffered());
+    CHECK_FALSE(lBehaviour->IsEssential());
+
+    // Its class is registered too, as for a listed behaviour.
+    CHECK(lRegistries.ObjectClasses().FindByName(OpaaxStringID("ProbeHiddenBehaviour")) != nullptr);
+
+    // Added through its entry, as a script adds one by name, then saved.
+    World  lWorld("Test");
+    Entity lHolder = lWorld.CreateEntity("Holder");
+    EntityRegistry& lEntities = lWorld.GetRegistry();
+
+    lComponent->Add(lEntities, lHolder.GetHandle());
+    lBehaviour->Add(lEntities, lHolder.GetHandle());
+    lHolder.Get<ProbeHidden>().Mark            = 7;
+    lHolder.Get<ProbeHiddenBehaviour>().Count = 9;
+
+    const nlohmann::json lSavedComponent = lComponent->Save(lEntities, lHolder.GetHandle());
+    const nlohmann::json lSavedBehaviour = lBehaviour->Save(lEntities, lHolder.GetHandle());
+    CHECK(lSavedComponent.value("Mark", 0) == 7);
+    CHECK(lSavedBehaviour.value("Count", 0) == 9);
 }
 
 TEST_CASE("AutoRegistration: the engine's TagsComponent is saved under the name the games' maps use")

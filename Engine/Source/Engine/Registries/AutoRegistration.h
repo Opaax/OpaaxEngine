@@ -21,6 +21,14 @@
 // found. A type registered from several translation units is registered once.
 // The saved name of a component is its type name without namespace ("Health"): renaming the C++
 // type renames it in map files. Use the NAMED variant to keep a stable name.
+//
+// A type only tests use (a probe its test maps carry) registers UNLISTED: the editor's
+// "Add Component" menu leaves it out, and it is saved, loaded and added by name like any other.
+//
+//   OPAAX_REGISTER_UNLISTED_BEHAVIOUR(LifecycleProbe);
+//   OPAAX_REGISTER_UNLISTED_COMPONENT(ProbeMarker);
+//
+// Register a type with one macro only: registrations of the same type collapse into one.
 // =============================================================================
 // ================================ END USAGE ==================================
 // =============================================================================
@@ -105,6 +113,11 @@ namespace Opaax
         ::Opaax::TypeIdOf<Type>(), -1000, Name,                                                    \
         InRegistrar.Components().RegisterEssential<Type>(::Opaax::OpaaxStringID(Name)))
 
+/** Registers a component the editor's "Add Component" menu leaves out (a test probe). */
+#define OPAAX_REGISTER_UNLISTED_COMPONENT(Type)                                                      \
+    OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::Component,                      \
+        ::Opaax::TypeIdOf<Type>(), 0, #Type, InRegistrar.Components().RegisterUnlisted<Type>())
+
 /** Lets maps saved with OldName load as the component now registered as Name. */
 #define OPAAX_REGISTER_COMPONENT_ALIAS(OldName, Name)                                                \
     OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::ComponentAlias,                 \
@@ -116,11 +129,19 @@ namespace Opaax
  * class name).
  */
 #define OPAAX_REGISTER_BEHAVIOUR(Type)                                                               \
+    OPAAX_INTERNAL_REGISTER_BEHAVIOUR(Type, Register)
+
+/** Registers a behaviour the editor's "Add Component" menu leaves out (a test probe). */
+#define OPAAX_REGISTER_UNLISTED_BEHAVIOUR(Type)                                                      \
+    OPAAX_INTERNAL_REGISTER_BEHAVIOUR(Type, RegisterUnlisted)
+
+/** Both behaviour macros: InCall is the BehaviourRoute function that stores it. */
+#define OPAAX_INTERNAL_REGISTER_BEHAVIOUR(Type, InCall)                                              \
     static_assert(::Opaax::CObject<Type>,                                                            \
                   "A behaviour declares its class: OPAAX_OBJECT(" #Type ", Opaax::Behaviour) first in its body."); \
     OPAAX_REGISTER_OBJECT(Type);                                                                     \
     OPAAX_INTERNAL_AUTO_REGISTRATION(::Opaax::EAutoRegistrationKind::Behaviour,                      \
-        ::Opaax::TypeIdOf<Type>(), 0, #Type, InRegistrar.Behaviours().Register<Type>())
+        ::Opaax::TypeIdOf<Type>(), 0, #Type, InRegistrar.Behaviours().InCall<Type>())
 
 /** Registers an Object class under its C++ name (no namespace), the name its files use. */
 #define OPAAX_REGISTER_OBJECT(Type)                                                                  \
