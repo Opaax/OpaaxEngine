@@ -1,0 +1,93 @@
+[
+    {
+        "id": "pin-tuesday",
+        "command": "time.date",
+        "params": { "year": 2026, "month": 11, "day": 24, "hour": 9, "minute": 5, "second": 7 },
+        "expect": { "pinned": true }
+    },
+    {
+        "id": "new-canvas",
+        "command": "ui.new",
+        "params": { "path": "Scratch/UIDateModifier.opaaxui" }
+    },
+    {
+        "id": "add-text",
+        "command": "ui.widget.add",
+        "params": { "type": "UIText" },
+        "expect": { "name": "UIText" }
+    },
+    {
+        "command": "ui.widget.select",
+        "params": { "name": "UIText" }
+    },
+    {
+        "id": "text-format",
+        "command": "ui.widget.set",
+        "params": {
+            "values": {
+                "Text": "Today: {}",
+                "Font": "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf",
+                "Size": 48.0,
+                "Rect": { "SizeDelta": { "x": 900.0, "y": 80.0 } }
+            }
+        }
+    },
+    {
+        "id": "add-date",
+        "command": "ui.modifier.add",
+        "params": { "type": "UIDateModifier" },
+        "expect": { "index": 0 }
+    },
+    {
+        "command": "frames.wait",
+        "params": { "count": 3 }
+    },
+    {
+        "id": "shows-default-format",
+        "command": "ui.widget.list",
+        "expect": { "widgets": [ { "name": "UIText", "text": "Today: 24 November 2026" } ] }
+    },
+    {
+        "id": "set-format",
+        "command": "ui.modifier.set",
+        "params": { "index": 0, "values": { "Format": "{year} {date} {month}" } },
+        "expect": {
+            "modifiers": [
+                { "class": "UIDateModifier", "properties": { "Format": "{year} {date} {month}" } }
+            ]
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": { "count": 3 }
+    },
+    {
+        "id": "preview-follows-format",
+        "command": "ui.widget.list",
+        "expect": { "widgets": [ { "name": "UIText", "text": "Today: 2026 24 November" } ] }
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": { "path": "EditorUIDateModifier.png" }
+    },
+    {
+        "id": "undo-format",
+        "command": "editor.undo"
+    },
+    {
+        "command": "frames.wait",
+        "params": { "count": 3 }
+    },
+    {
+        "id": "undo-restores-format",
+        "command": "ui.widget.list",
+        "expect": { "widgets": [ { "name": "UIText", "text": "Today: 24 November 2026" } ] }
+    },
+    {
+        "id": "unpin",
+        "command": "time.date",
+        "params": { "off": true },
+        "expect": { "pinned": false }
+    }
+]

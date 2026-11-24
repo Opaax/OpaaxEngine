@@ -1,0 +1,239 @@
+[
+    {
+        "id": "pin-tuesday",
+        "command": "time.date",
+        "params": {
+            "year": 2026,
+            "month": 11,
+            "day": 24,
+            "hour": 9,
+            "minute": 5,
+            "second": 7
+        },
+        "expect": {
+            "date": "2026-11-24 09:05:07",
+            "pinned": true
+        }
+    },
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/DateText.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.2
+        }
+    },
+    {
+        "id": "mounted",
+        "command": "expect.value",
+        "params": {
+            "entity": "Hud",
+            "path": "ModifierProbe/bMounted",
+            "equals": true
+        }
+    },
+    {
+        "id": "date-default-format",
+        "command": "ui.list",
+        "params": {
+            "name": "Date"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "Date",
+                    "text": "24 November 2026"
+                }
+            ]
+        }
+    },
+    {
+        "id": "date-in-braces",
+        "command": "ui.list",
+        "params": {
+            "name": "Stamp"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "Stamp",
+                    "text": "Today: Tuesday, 24/11/26"
+                }
+            ]
+        }
+    },
+    {
+        "id": "clock",
+        "command": "ui.list",
+        "params": {
+            "name": "Clock"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "Clock",
+                    "text": "09:05:07"
+                }
+            ]
+        }
+    },
+    {
+        "id": "pin-new-years-eve",
+        "command": "time.date",
+        "params": {
+            "year": 2026,
+            "month": 12,
+            "day": 31,
+            "hour": 23,
+            "minute": 59,
+            "second": 59
+        },
+        "expect": {
+            "date": "2026-12-31 23:59:59",
+            "pinned": true
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "date-follows-pin",
+        "command": "ui.list",
+        "params": {
+            "name": "Date"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "Date",
+                    "text": "31 December 2026"
+                }
+            ]
+        }
+    },
+    {
+        "id": "stamp-follows-pin",
+        "command": "ui.list",
+        "params": {
+            "name": "Stamp"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "Stamp",
+                    "text": "Today: Thursday, 31/12/26"
+                }
+            ]
+        }
+    },
+    {
+        "id": "clock-follows-pin",
+        "command": "ui.list",
+        "params": {
+            "name": "Clock"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "Clock",
+                    "text": "23:59:59"
+                }
+            ]
+        }
+    },
+    {
+        "id": "pin-next-year",
+        "command": "time.date",
+        "params": {
+            "year": 2027,
+            "month": 1,
+            "day": 1,
+            "hour": 0,
+            "minute": 0,
+            "second": 0
+        },
+        "expect": {
+            "date": "2027-01-01 00:00:00",
+            "pinned": true
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "date-next-year",
+        "command": "ui.list",
+        "params": {
+            "name": "Date"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "Date",
+                    "text": "1 January 2027"
+                }
+            ]
+        }
+    },
+    {
+        "id": "stamp-next-year",
+        "command": "ui.list",
+        "params": {
+            "name": "Stamp"
+        },
+        "expect": {
+            "widgets": [
+                {
+                    "name": "Stamp",
+                    "text": "Today: Friday, 1/01/27"
+                }
+            ]
+        }
+    },
+    {
+        "id": "no-such-date-refused",
+        "command": "time.date",
+        "params": {
+            "year": 2026,
+            "month": 2,
+            "day": 29
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "half-a-date-refused",
+        "command": "time.date",
+        "params": {
+            "year": 2026
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "DateText.png"
+        }
+    },
+    {
+        "id": "unpin",
+        "command": "time.date",
+        "params": {
+            "off": true
+        },
+        "expect": {
+            "pinned": false
+        }
+    }
+]
