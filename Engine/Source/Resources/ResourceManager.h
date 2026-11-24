@@ -114,6 +114,14 @@ namespace Opaax
         ResourceRef<T> Find(const char* InPath);
 
         /**
+         * Puts a resource made in memory under InPath, as if it had loaded from there: found by its path,
+         * shared and released like a loaded one. Initialize runs now. Main thread only.
+         * @return An empty ref, with an error, when InPath is already in use
+         */
+        template<CResource T>
+        ResourceRef<T> Add(const char* InPath, T&& InValue);
+
+        /**
          * Reloads a resource that is already loaded, in place. Existing refs see the new data.
          * Main thread only (runs Initialize).
          * @return False if not loaded, still loading, or the reload failed (the old data is kept)
@@ -394,6 +402,22 @@ namespace Opaax
         }
 
         return ResourceRef<T>{ this, lHandle }; // takes the +1 from FindLoadedSlot
+    }
+
+    template<CResource T>
+    ResourceRef<T> ResourceManager::Add(const char* InPath, T&& InValue)
+    {
+        TLockGuard<RecursiveMutex> lLock(m_Mutex);
+
+        const ResourceHandle<T> lHandle = GetOrCreatePool<T>().AddLoadedSlot(InPath, Move(InValue));
+        if (!lHandle.IsValid())
+        {
+            OPAAX_LOG(LogResourceManager, Error, "Cannot add '{}': the path is in use; release it first or pick another",
+                      InPath);
+            return ResourceRef<T>{};
+        }
+
+        return ResourceRef<T>{ this, lHandle }; // takes the +1 from AddLoadedSlot
     }
 
     template<CResource T>
