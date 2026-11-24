@@ -20,6 +20,7 @@
 #include "Probes/MovementProbes.h"
 #include "Probes/OnlineProbes.h"
 #include "Probes/PhysicsProbes.h"
+#include "Probes/RuntimeTextureProbes.h"
 #include "Probes/SaveProbes.h"
 #include "Probes/ScriptingProbes.h"
 #include "Probes/SettingsProbes.h"
@@ -90,6 +91,7 @@ namespace TestWorld
     OPAAX_REGISTER_OBJECT(ProbeTuning);
     OPAAX_REGISTER_OBJECT(ProbeCounterSubsystem);
     OPAAX_REGISTER_OBJECT(CommandProbeSubsystem);
+    OPAAX_REGISTER_OBJECT(RuntimeTextureProbeSubsystem);
     OPAAX_REGISTER_OBJECT(ProbeGame);
 
     // The game's save, which the Saves level keeps.

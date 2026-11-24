@@ -1,0 +1,175 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 360.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "a927c6edc52c43e88334db5f82bda5d4",
+            "name": "Camera",
+            "ownerMap": "RuntimeTexture"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.25,
+                        "y": 0.27,
+                        "z": 0.32
+                    },
+                    "Frame": -1,
+                    "Layer": "Background",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 1400.0,
+                        "y": 1400.0
+                    },
+                    "Texture": "/Engine/Textures/T_Square_256_White.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "3629d38a4c1444f7ae8fd3396ed1f5f5",
+            "name": "Background",
+            "ownerMap": "RuntimeTexture"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 256.0,
+                        "y": 256.0
+                    },
+                    "Texture": "/Runtime/Fog",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -300.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "72750920b940402796b9c98902d6d69e",
+            "name": "Fog",
+            "ownerMap": "RuntimeTexture"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 256.0,
+                        "y": 128.0
+                    },
+                    "Texture": "/Runtime/Mask",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 300.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "13dd7b55f8f7416b8019d9808ad6654f",
+            "name": "Mask",
+            "ownerMap": "RuntimeTexture"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 256.0,
+                        "y": 64.0
+                    },
+                    "Texture": "/Runtime/Soft",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 300.0,
+                        "y": -200.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "370e7f8c1b9a4fe09654fe8d3d916cb8",
+            "name": "Soft",
+            "ownerMap": "RuntimeTexture"
+        }    ],
+    "mapId": "RuntimeTexture",
+    "version": 4
+}

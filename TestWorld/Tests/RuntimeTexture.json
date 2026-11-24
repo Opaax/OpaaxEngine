@@ -1,0 +1,319 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/RuntimeTexture.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.5
+        }
+    },
+    {
+        "id": "none-made",
+        "command": "renderer.info",
+        "expect": {
+            "textureFilter": "Pixel",
+            "textures": {
+                "runtime": 0
+            }
+        }
+    },
+    {
+        "id": "not-made-draws-nothing",
+        "command": "frame.sample",
+        "params": {
+            "x": 220,
+            "y": 240,
+            "width": 240,
+            "height": 240
+        },
+        "expect": {
+            "colors": 1,
+            "min": [64, 69, 82, 255],
+            "max": [64, 69, 82, 255]
+        }
+    },
+    {
+        "id": "make-fog",
+        "command": "probe.texture.make",
+        "params": {
+            "path": "/Runtime/Fog",
+            "width": 4,
+            "height": 4,
+            "channels": 4,
+            "texel": [0, 0, 0, 255]
+        },
+        "expect": {
+            "width": 4,
+            "height": 4,
+            "channels": 4
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "fog-counted",
+        "command": "renderer.info",
+        "expect": {
+            "textures": {
+                "runtime": 1
+            }
+        }
+    },
+    {
+        "id": "fog-black",
+        "command": "frame.sample",
+        "params": {
+            "x": 212,
+            "y": 232,
+            "width": 256,
+            "height": 256
+        },
+        "expect": {
+            "colors": 1,
+            "max": [0, 0, 0, 255]
+        }
+    },
+    {
+        "id": "reveal-cell",
+        "command": "probe.texture.fill",
+        "params": {
+            "path": "/Runtime/Fog",
+            "x": 1,
+            "y": 2,
+            "width": 1,
+            "height": 1,
+            "texel": [255, 255, 255, 255]
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "cell-white",
+        "command": "frame.sample",
+        "params": {
+            "x": 280,
+            "y": 300,
+            "width": 56,
+            "height": 56
+        },
+        "expect": {
+            "colors": 1,
+            "min": [255, 255, 255, 255]
+        }
+    },
+    {
+        "id": "right-neighbour-black",
+        "command": "frame.sample",
+        "params": {
+            "x": 344,
+            "y": 300,
+            "width": 56,
+            "height": 56
+        },
+        "expect": {
+            "colors": 1,
+            "max": [0, 0, 0, 255]
+        }
+    },
+    {
+        "id": "neighbour-below-black",
+        "command": "frame.sample",
+        "params": {
+            "x": 280,
+            "y": 364,
+            "width": 56,
+            "height": 56
+        },
+        "expect": {
+            "colors": 1,
+            "max": [0, 0, 0, 255]
+        }
+    },
+    {
+        "id": "pixel-filter-edge-hard",
+        "command": "frame.sample",
+        "params": {
+            "x": 320,
+            "y": 320,
+            "width": 40,
+            "height": 8
+        },
+        "expect": {
+            "colors": 2
+        }
+    },
+    {
+        "id": "make-mask",
+        "command": "probe.texture.make",
+        "params": {
+            "path": "/Runtime/Mask",
+            "width": 2,
+            "height": 1,
+            "channels": 1,
+            "texel": [0]
+        }
+    },
+    {
+        "command": "probe.texture.fill",
+        "params": {
+            "path": "/Runtime/Mask",
+            "x": 1,
+            "y": 0,
+            "width": 1,
+            "height": 1,
+            "texel": [255]
+        }
+    },
+    {
+        "id": "make-soft",
+        "command": "probe.texture.make",
+        "params": {
+            "path": "/Runtime/Soft",
+            "width": 2,
+            "height": 1,
+            "channels": 4,
+            "texel": [0, 0, 0, 255],
+            "smooth": true
+        }
+    },
+    {
+        "command": "probe.texture.fill",
+        "params": {
+            "path": "/Runtime/Soft",
+            "x": 1,
+            "y": 0,
+            "width": 1,
+            "height": 1,
+            "texel": [255, 255, 255, 255]
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "three-counted",
+        "command": "renderer.info",
+        "expect": {
+            "textures": {
+                "runtime": 3
+            }
+        }
+    },
+    {
+        "id": "mask-edge-blended",
+        "command": "frame.sample",
+        "params": {
+            "x": 900,
+            "y": 356,
+            "width": 80,
+            "height": 8
+        },
+        "expect": {
+            "colors": {
+                "$atLeast": 8
+            }
+        }
+    },
+    {
+        "id": "soft-edge-blended",
+        "command": "frame.sample",
+        "params": {
+            "x": 900,
+            "y": 556,
+            "width": 80,
+            "height": 8
+        },
+        "expect": {
+            "colors": {
+                "$atLeast": 8
+            }
+        }
+    },
+    {
+        "id": "a-cell-outside-refused",
+        "command": "probe.texture.fill",
+        "params": {
+            "path": "/Runtime/Fog",
+            "x": 3,
+            "y": 3,
+            "width": 2,
+            "height": 1,
+            "texel": [255, 255, 255, 255]
+        },
+        "expectFailure": true
+    },
+    {
+        "command": "screenshot",
+        "params": {
+            "path": "RuntimeTexture.png"
+        }
+    },
+    {
+        "id": "release-all",
+        "command": "probe.texture.release",
+        "params": {
+            "path": "/Runtime/Fog"
+        },
+        "expect": {
+            "held": true
+        }
+    },
+    {
+        "command": "probe.texture.release",
+        "params": {
+            "path": "/Runtime/Mask"
+        }
+    },
+    {
+        "command": "probe.texture.release",
+        "params": {
+            "path": "/Runtime/Soft"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "released",
+        "command": "renderer.info",
+        "expect": {
+            "textures": {
+                "runtime": 0
+            }
+        }
+    },
+    {
+        "id": "released-draws-nothing",
+        "command": "frame.sample",
+        "params": {
+            "x": 220,
+            "y": 240,
+            "width": 240,
+            "height": 240
+        },
+        "expect": {
+            "colors": 1,
+            "min": [64, 69, 82, 255],
+            "max": [64, 69, 82, 255]
+        }
+    }
+]
