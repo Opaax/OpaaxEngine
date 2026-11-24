@@ -20,6 +20,25 @@ namespace Opaax
     template<CEnumWithValues T>
     void from_json(const nlohmann::json& InJson, T& InValue)
     {
+        // A file written before the enum was saved by label holds its number: read it by value.
+        if (InJson.is_number_integer())
+        {
+            const Int64 lNumber = InJson.get<Int64>();
+
+            for (const T lCandidate : TEnumValues<T>::Values)
+            {
+                if (static_cast<Int64>(lCandidate) == lNumber)
+                {
+                    InValue = lCandidate;
+                    return;
+                }
+            }
+
+            throw nlohmann::json::type_error::create(
+                302, ToJsonString("no enumerator with value " + OpaaxString::FromInt(lNumber) + " in this enum"),
+                &InJson);
+        }
+
         const OpaaxString lText = InJson.get<OpaaxString>();
 
         for (const T lCandidate : TEnumValues<T>::Values)
