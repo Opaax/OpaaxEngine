@@ -237,13 +237,14 @@ namespace Opaax::Editor
 
             lTypes.ForEach([&](const IComponentEntry& InEntry)
             {
-                if (InEntry.Has(lEntities, lHandle)) { return; }
+                // Unlisted types (test probes) are added by name only, never from this menu.
+                if (!InEntry.IsOffered() || InEntry.Has(lEntities, lHandle)) { return; }
 
                 ++lOffered;
                 if (ImGui::MenuItem(InEntry.GetName().CStr())) { lChosen = &InEntry; }
             });
 
-            // Different from "no match": every type is already on this entity.
+            // Different from "no match": every offered type is already on this entity.
             if (lOffered == 0) { ImGui::TextDisabled("Nothing left to add."); }
 
             ImGui::EndPopup();
