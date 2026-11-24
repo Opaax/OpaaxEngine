@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/RuntimeTexture.opaaxmap"
+    ],
+    "name": "RuntimeTexture",
+    "persistentMap": "Maps/RuntimeTexture.opaaxmap",
+    "version": 1
+}
