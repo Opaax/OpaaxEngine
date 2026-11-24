@@ -1,7 +1,7 @@
 {
     "Class": "AudioClipDef",
     "Properties": {
-        "Bus": "SFX",
+        "Bus": "Audio.Bus.SFX",
         "Clips": [
             {
                 "Clip": "Audio/Step0.wav"

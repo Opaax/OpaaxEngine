@@ -4,7 +4,7 @@
             "components": {
                 "AudioSource": {
                     "Attenuation": "Linear",
-                    "Bus": "SFX",
+                    "Bus": "Audio.Bus.SFX",
                     "Clip": "Audio/Beep.wav",
                     "MaxDistance": 1500.0,
                     "MinDistance": 100.0,
@@ -36,7 +36,7 @@
             "components": {
                 "AudioSource": {
                     "Attenuation": "Linear",
-                    "Bus": "SFX",
+                    "Bus": "Audio.Bus.SFX",
                     "Clip": "",
                     "MaxDistance": 1500.0,
                     "MinDistance": 100.0,
@@ -172,7 +172,7 @@
                 },
                 "AudioSource": {
                     "Attenuation": "Linear",
-                    "Bus": "SFX",
+                    "Bus": "Audio.Bus.SFX",
                     "Clip": "Audio/Beep.wav",
                     "MaxDistance": 1500.0,
                     "MinDistance": 100.0,
