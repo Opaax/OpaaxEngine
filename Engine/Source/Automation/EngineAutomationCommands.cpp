@@ -1215,7 +1215,8 @@ namespace Opaax::EngineAutomation
                 "frame), allocatedTotal (since the start), kept (the lit path's, for every view size in use)}, sceneSettings {samples, "
                 "fxaa, renderScale} (what world views are asked for), views (each world view of the last frame: "
                 "{sceneTarget (false: drawn straight into its target), lit, width, height, format, samples, fxaaTarget}), "
-                "textureFilter (how colour textures are read: Renderer.config's), gpuFrameMs (negative before the first measure)}.",
+                "textureFilter (how colour textures are read: Renderer.config's), textures {runtime (textures made from "
+                "pixels in code alive now)}, gpuFrameMs (negative before the first measure)}.",
                 [&InEngine](const nlohmann::json&)
                 {
                     const RendererInfo lInfo = InEngine.GetRendererInfo();
@@ -1257,6 +1258,7 @@ namespace Opaax::EngineAutomation
                                                              { "renderScale", lInfo.SceneSettings.RenderScale } } },
                         { "views",           Move(lViews) },
                         { "textureFilter",   ToString(lInfo.TextureFilter) },
+                        { "textures",        nlohmann::json{ { "runtime", lInfo.RuntimeTextures } } },
                         { "gpuFrameMs",      lInfo.GpuFrameMs } });
                 });
 

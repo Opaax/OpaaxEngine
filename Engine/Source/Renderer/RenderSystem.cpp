@@ -186,8 +186,9 @@ namespace Opaax
         lInfo.Device     = m_Device->GetCapabilities();
         lInfo.GpuFrameMs = m_Device->GetLastGpuFrameTimeMs();
 
-        lInfo.TextureFilter = m_Device->GetTextureFilter();
-        lInfo.SceneSettings = m_SceneTargetSettings;
+        lInfo.TextureFilter   = m_Device->GetTextureFilter();
+        lInfo.RuntimeTextures = m_Device->GetWritableTextureCount();
+        lInfo.SceneSettings   = m_SceneTargetSettings;
         lInfo.WorldViews    = m_LastFrameWorldViews;
 
         lInfo.TargetsRecreated      = m_TargetsRecreated;
