@@ -1,0 +1,93 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "BlendCurve": "EaseInOut",
+                    "BlendIn": 0.0,
+                    "OrthoSize": 300.0,
+                    "Priority": 0,
+                    "bRotateView": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "a7c64e403d8f40cfb7b9fe8b6a89e4eb",
+            "name": "Camera",
+            "ownerMap": "DateText"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3499999940395355,
+                        "y": 0.4000000059604645,
+                        "z": 0.44999998807907104
+                    },
+                    "Frame": -1,
+                    "Layer": "Background",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 1100.0,
+                        "y": 620.0
+                    },
+                    "Texture": "/Engine/Textures/T_Checker_128.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "b748a1e216d5437288193f8b392cd297",
+            "name": "Backdrop",
+            "ownerMap": "DateText"
+        },
+        {
+            "components": {
+                "ModifierProbe": {
+                    "Asset": "UI/DateText.opaaxui",
+                    "HitOffClicks": 0,
+                    "HitOnClicks": 0,
+                    "TweensFinished": 0,
+                    "bMounted": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "76e68fb77eee483aaf9d15b729415fb3",
+            "name": "Hud",
+            "ownerMap": "DateText"
+        }
+    ],
+    "mapId": "DateText",
+    "version": 4
+}
