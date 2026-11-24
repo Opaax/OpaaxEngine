@@ -52,6 +52,25 @@ OPAAX_REGISTER_OBJECT(EnemyStats);
 `Sandbox/Source/Sandbox/Data/EnemyStats.h` is this class; the engine's are next to the code that uses
 them (`Renderer/Materials/Material2D.h`, `Renderer/Textures/SpriteSheet.h`, `Movement/Assets`...).
 
+An enum declared with `OPAAX_ENUM_VALUES` is saved as its label (`"Finish"`, not `2`) wherever it is
+saved: a property, a component's or a struct's `NLOHMANN_DEFINE_TYPE_*` macro, a config, a save. That
+holds in any namespace, a game's included, with nothing else to declare:
+
+```cpp
+namespace Bhop
+{
+    enum class ERunZone { Start, Checkpoint, Finish };
+    const char* ToString(ERunZone InZone);   // the label, next to the enum
+}
+
+OPAAX_ENUM_VALUES(Bhop::ERunZone, Start, Checkpoint, Finish)   // right under it
+```
+
+Put the macro before the code that saves the enum: a `to_json` written above it writes the number.
+An unknown label fails the read. A number, from a file written before the enum was saved by label,
+loads as the value with that number, and the next save writes the label: save such files once
+before reordering the enum.
+
 ## The file
 
 One format for every class, `.opaaxasset`: the class's name, its properties by field name, and the
