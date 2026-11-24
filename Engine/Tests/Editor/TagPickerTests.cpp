@@ -66,7 +66,9 @@ TEST_CASE("TagPicker: Register adds the tag at the end of Tags.config's list, on
 
 TEST_CASE("TagPicker: a field's tag root is in its meta, and a group's reaches the fields inside")
 {
-    const auto& lProperty = TupleGet<0>(TagRootSubject::GetProperties());
+    // GetProperties() returns its tuple by value: keep it, or the field is read from a destroyed temporary.
+    const auto  lProperties = TagRootSubject::GetProperties();
+    const auto& lProperty   = TupleGet<0>(lProperties);
     REQUIRE(lProperty.Meta.TagRoot != nullptr);
     CHECK(OpaaxString(lProperty.Meta.TagRoot) == "UI.Layer");
 
