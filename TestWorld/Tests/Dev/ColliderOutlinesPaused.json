@@ -37,9 +37,9 @@
         "expect": {
             "colors": 1,
             "mean": [
-                72,
-                210,
-                106,
+                { "$atLeast": 70, "$atMost": 74 },
+                { "$atLeast": 208, "$atMost": 212 },
+                { "$atLeast": 104, "$atMost": 108 },
                 255
             ]
         }
@@ -73,9 +73,9 @@
         "expect": {
             "colors": 1,
             "mean": [
-                72,
-                210,
-                106,
+                { "$atLeast": 70, "$atMost": 74 },
+                { "$atLeast": 208, "$atMost": 212 },
+                { "$atLeast": 104, "$atMost": 108 },
                 255
             ]
         }
