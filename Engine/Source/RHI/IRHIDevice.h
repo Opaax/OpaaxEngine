@@ -55,13 +55,16 @@ namespace Opaax
         /**
          * Creates a texture from decoded pixels.
          * A colour texture (3 or 4 channels) is read with the project's filter (SetTextureFilter),
-         * clamped at its edges, and gets its mipmaps. A coverage texture (1 channel: a font atlas)
-         * keeps its own sampling: blended, clamped, no mipmaps.
-         * @param InPixels Tightly packed, InWidth * InHeight * InChannels bytes. Copied.
-         * @param InChannels 4 = RGBA8, 3 = RGB8, 1 = R8 (swizzled into alpha)
+         * clamped at its edges, and gets its mipmaps, unless asked smooth. A coverage texture
+         * (1 channel: a font atlas) and a smooth one keep their own sampling: blended, clamped, no
+         * mipmaps. A writable one can have its pixels replaced (ITexture2D::Update).
+         * @param InPixels Tightly packed, Width * Height * Channels bytes, bottom row first. Copied.
          */
-        virtual TUniquePtr<ITexture2D>     CreateTexture(const void* InPixels, Uint32 InWidth,
-                                                         Uint32 InHeight, Int32 InChannels)             = 0;
+        virtual TUniquePtr<ITexture2D>     CreateTexture(const TextureDesc& InDesc, const void* InPixels) = 0;
+
+        /** Writable textures of this device alive now. */
+        virtual Uint32                     GetWritableTextureCount() const                               = 0;
+
         virtual TUniquePtr<IShader>        CreateShader(const ShaderDesc& InDesc)                        = 0;
         virtual TUniquePtr<IPipeline>      CreatePipeline(const PipelineDesc& InDesc)                    = 0;
         virtual TUniquePtr<IBindGroup>     CreateBindGroup(const BindGroupLayout& InLayout)              = 0;

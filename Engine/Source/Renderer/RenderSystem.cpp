@@ -77,7 +77,7 @@ namespace Opaax
         return m_Device->CreateFramebuffer(InSpec);
     }
 
-    TUniquePtr<ITexture2D> RenderSystem::CreateTexture(const void* InPixels, Uint32 InWidth, Uint32 InHeight, Int32 InChannels)
+    TUniquePtr<ITexture2D> RenderSystem::CreateTexture(const TextureDesc& InDesc, const void* InPixels)
     {
         if (!IsValidDevice())
         {
@@ -85,7 +85,12 @@ namespace Opaax
             return nullptr;
         }
 
-        return m_Device->CreateTexture(InPixels, InWidth, InHeight, InChannels);
+        return m_Device->CreateTexture(InDesc, InPixels);
+    }
+
+    Uint32 RenderSystem::GetWritableTextureCount() const
+    {
+        return IsValidDevice() ? m_Device->GetWritableTextureCount() : 0u;
     }
 
     Uint32 RenderSystem::GetMaxSamples() const

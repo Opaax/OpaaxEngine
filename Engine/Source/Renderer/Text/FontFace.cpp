@@ -45,8 +45,8 @@ namespace Opaax
             return;
         }
 
-        m_Gpu = OpaaxApplication::GetAppService<IEngine>().CreateTexture(m_Pixels.data(), m_Data.AtlasWidth,
-                                                                        m_Data.AtlasHeight, ATLAS_CHANNELS);
+        m_Gpu = OpaaxApplication::GetAppService<IEngine>().CreateTexture(
+            TextureDesc{ m_Data.AtlasWidth, m_Data.AtlasHeight, ATLAS_CHANNELS }, m_Pixels.data());
 
         // Free the CPU copy: the GPU has the atlas, or nothing can upload it.
         m_Pixels.clear();

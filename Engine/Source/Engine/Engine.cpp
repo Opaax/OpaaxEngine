@@ -878,7 +878,7 @@ namespace Opaax
         return m_RendererManager->CreateFramebuffer(InSpec);
     }
 
-    TUniquePtr<ITexture2D> Engine::CreateTexture(const void* InPixels, Uint32 InWidth, Uint32 InHeight, Int32 InChannels)
+    TUniquePtr<ITexture2D> Engine::CreateTexture(const TextureDesc& InDesc, const void* InPixels)
     {
         if (m_RendererManager == nullptr)
         {
@@ -886,7 +886,7 @@ namespace Opaax
             return nullptr;
         }
 
-        return m_RendererManager->CreateTexture(InPixels, InWidth, InHeight, InChannels);
+        return m_RendererManager->CreateTexture(InDesc, InPixels);
     }
     
     // =========================================================================

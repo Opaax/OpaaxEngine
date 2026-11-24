@@ -19,6 +19,7 @@ namespace Opaax
     class IFramebuffer;
     class IRenderTarget;
     class ITexture2D;
+    struct TextureDesc;
     class DebugDraw;
     class EngineRegistries;
     struct FramebufferSpec;
@@ -188,13 +189,11 @@ namespace Opaax
         virtual TUniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec& InSpec) = 0;
 
         /**
-         * Creates a GPU texture from decoded pixels.
-         * @param InPixels Tightly packed, InWidth * InHeight * InChannels bytes. Copied.
-         * @param InChannels 4 = RGBA8, 3 = RGB8, 1 = R8
+         * Creates a GPU texture from decoded pixels, read and written as InDesc says (TextureDesc).
+         * @param InPixels Tightly packed, Width * Height * Channels bytes, bottom row first. Copied.
          * @return Release it while the engine is still alive. Null before Startup or without a device.
          */
-        virtual TUniquePtr<ITexture2D> CreateTexture(const void* InPixels, Uint32 InWidth,
-                                                     Uint32 InHeight, Int32 InChannels) = 0;
+        virtual TUniquePtr<ITexture2D> CreateTexture(const TextureDesc& InDesc, const void* InPixels) = 0;
 
         /**
          * Called once per frame, before physics and render.

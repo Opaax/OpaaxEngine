@@ -126,10 +126,10 @@ namespace Opaax
     TUniquePtr<IUniformBuffer> OpenGLRHIDevice::CreateUniformBuffer(Uint32 InSizeBytes, Uint32 InBinding)  { return MakeUnique<OpenGLUniformBuffer>(InSizeBytes, InBinding); }
     TUniquePtr<ITexture2D>     OpenGLRHIDevice::CreateTexture(Uint32 InWidth, Uint32 InHeight) { return MakeUnique<OpenGLTexture2D>(InWidth, InHeight); }
 
-    TUniquePtr<ITexture2D>     OpenGLRHIDevice::CreateTexture(const void* InPixels, Uint32 InWidth, Uint32 InHeight, Int32 InChannels)
+    TUniquePtr<ITexture2D>     OpenGLRHIDevice::CreateTexture(const TextureDesc& InDesc, const void* InPixels)
     {
-        return MakeUnique<OpenGLTexture2D>(static_cast<const unsigned char*>(InPixels), InWidth, InHeight, InChannels,
-                                           m_ProjectSampler);
+        return MakeUnique<OpenGLTexture2D>(InDesc, static_cast<const unsigned char*>(InPixels), m_ProjectSampler,
+                                           InDesc.bWritable ? &m_WritableTextures : nullptr);
     }
 
     TUniquePtr<IShader>        OpenGLRHIDevice::CreateShader(const ShaderDesc& InDesc)      { return MakeUnique<OpenGLShader>(InDesc); }
