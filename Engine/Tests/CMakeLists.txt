@@ -80,6 +80,7 @@ set(OPAAX_TEST_SOURCES
     Core/TagContainerTests.cpp
     Core/TagRegistryTests.cpp
     Core/TagTests.cpp
+    Core/DateTimeFormatTests.cpp
     Core/TimeTests.cpp
     Core/TypesTests.cpp
     Core/TypeTraitsTests.cpp
