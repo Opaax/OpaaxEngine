@@ -31,6 +31,16 @@ A component or behaviour is saved under its type name: rename the C++ type and m
 it. `OPAAX_REGISTER_NAMED_COMPONENT(Type, "Name")` keeps a stable name, and
 `OPAAX_REGISTER_COMPONENT_ALIAS("Old", "New")` lets old maps load after a rename.
 
+A type only tests use, such as a probe that only test maps carry, registers with
+`OPAAX_REGISTER_UNLISTED_BEHAVIOUR(LifecycleProbe)` or `OPAAX_REGISTER_UNLISTED_COMPONENT(Type)`
+(as Unity's `[AddComponentMenu("")]`). The editor's **Add Component** menu leaves it out
+(`IComponentEntry::IsOffered()` is false); nothing else changes: it is saved and loaded with its map,
+drawn by the Inspector, removed and copied there, and scripts still add it by name (`component.add`,
+`component.set`, `entity.create`). Keep it in the editor build: a map loaded without its type drops
+it, and the next save loses it. Register a type with one macro only, since registrations of the same
+type collapse into one. TestWorld's probes (`TestWorld/Source/TestWorld/TestWorldRegistration.cpp`)
+register this way.
+
 Fields listed in `OPAAX_PROPERTIES` are saved and drawn by the Inspector with no other code;
 `SetRange`, `SetDragStep` and `SetTooltip` shape the editing.
 

@@ -297,6 +297,9 @@ registers its class as well as its place on entities. It lives in its entity's s
 component and never moves there, so another object can keep a `TWeakObjectPtr<Coin>` to it: it reads
 null once the behaviour or its entity is gone. A behaviour is saved with its entity, its properties
 under its class name; it is not copied, the Play copy of a world being made from the saved fields.
+A behaviour only tests use registers with `OPAAX_REGISTER_UNLISTED_BEHAVIOUR(Probe)`: the editor's
+Add Component menu leaves it out, and it is saved, loaded and added by name like any other
+([Customizing.md](Customizing.md#a-games-types)).
 
 ## The game, worlds and levels
 
