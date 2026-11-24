@@ -16,6 +16,7 @@ and a game's own modifier class is one `OPAAX_REGISTER_OBJECT` line away.
 | `UIAspectRatioModifier` | Keeps the rect at a width / height ratio |
 | `UISizeLimitModifier` | Keeps the size between a minimum and a maximum |
 | `UISoundModifier` | Plays sounds on hover, press, click, show and hide |
+| `UIDateModifier` | Today's date in a text: `{date} {month} {year}` |
 
 What a widget draws (its brush, a button's art per state, a shared button style) is not a modifier: it
 is in [UIStyles.md](UIStyles.md).
@@ -57,6 +58,7 @@ no work: no modifier is visited on a frame where nothing changed.
 | Activate | the widget's action fires (a button's click), before its `OnClick`; widgets following the button hear it too | `OnActivated` |
 | Tick | each frame, while it is awake | `Tick` (false sleeps; `WakeUp` wakes) |
 | Layout | the widget's rect resolves | `ModifyBounds`, `ModifyDesiredSize` |
+| Text | a text builds what it shows: after its binding's value is in, before it is laid out | `ModifyText` |
 | Rebuild | the widget's quads are rebuilt | `ModifyQuads` |
 | Pose | the poses are composed again | `GetPose` (pose modifiers) |
 | Reset | the editor's preview stops | `OnReset` |
@@ -167,6 +169,43 @@ and cut: a text's shadow has its letters, a half-filled bar's shadow is half too
 effect's times the quad's. The outline's four copies leave the diagonal corners bare, as Unity's does;
 there is no blur.
 
+## Text
+
+A text builds what it shows from its `Text`, then its `Binding`'s value (in the first `{}`, or instead
+of the text when it has none), then its enabled text modifiers in list order, each on what the one
+before left (`ModifyText`). `Text` itself never changes: it is what the file saves. A rebuild of the
+widget's content runs them again. `ui.list` and the UI panel's `ui.widget.list` answer the result as
+`text`.
+
+## Date
+
+`UIDateModifier` writes a date along its `Format` into its text: in the first `{}` left (so `Today: {}`
+shows `Today: 24 November 2026`), or instead of the text when there is none. A text with a binding and a
+date needs two `{}`: the binding fills the first, the date the next.
+
+| Token | Gives | Example |
+|---|---|---|
+| `{date}` or `{day}` | day of the month | 4 |
+| `{dd}` | day, 2 digits | 04 |
+| `{month}` | month name | November |
+| `{mon}` | short month name | Nov |
+| `{MM}` | month, 2 digits | 11 |
+| `{year}` | year | 2026 |
+| `{yy}` | year, 2 digits | 26 |
+| `{weekday}` / `{wd}` | day name / short | Tuesday / Tue |
+| `{hh}` `{mm}` `{ss}` | time of day (24-hour clock), 2 digits | 09 05 07 |
+
+Names ignore case (`{Month}` is `{month}`), except the two-letter numbers: `{MM}` is the month and `{mm}`
+the minute, `{DD}` is no token. `{{` and `}}` write a brace. An unknown token shows as written (`{dat}`),
+so a typo is seen on screen, and the log warns once for that `Format`. In code, `DateTime::Format` does
+the same (`Core/Time/DateTime.h`), and `DateNames` holds the English names in one place.
+
+The date is read from the canvas's `DateSource` (`UICanvas::GetDates`): the engine's one in a game and in
+the UI panel, the wall clock unless `time.date` pinned it ([Automation.md](Automation.md#commands)). The
+modifier stays awake but rebuilds its text only when what it shows changes: once a day, or once a second
+when `Format` shows the time. An idle menu rebuilds nothing. In the UI panel, an edited `Format` shows at
+once; the preview is not ticked, so a clock in it moves only while **Play** runs.
+
 ## Layout
 
 `UIAspectRatioModifier` keeps the rect at `Ratio` (width / height) after it resolves, with Unity's
@@ -203,6 +242,7 @@ say when its result changes:
 
 - a pose: answer `GetPose`, call `InvalidatePose()` when it changes, `WakeUp()` to be ticked;
 - quads: `ModifyQuads`, and `InvalidateOwnerContent()` when a field changes;
+- a text: `ModifyText`, and `InvalidateOwnerContent()` when what it adds changes;
 - the rect: `ModifyBounds` and `ModifyDesiredSize`, and `InvalidateOwnerLayout()`;
 - a hide that takes time: return true from `OnHide`, call `FinishHide()` when done.
 
@@ -212,6 +252,8 @@ fields feed. Keep the logic in pure functions beside the class (`SampleTweenKeys
 
 ## Not here yet
 
+- Dates in other languages (the names are English), in another time zone than the machine's, in a 12-hour
+  clock, or relative ("2 days ago").
 - A timeline animating several widgets together.
 - Animating a widget's own fields (a colour, a fill, a size) rather than a pose.
 - A turned mask clipping to its turned shape: it clips by the box around it. A non-uniform scale under
