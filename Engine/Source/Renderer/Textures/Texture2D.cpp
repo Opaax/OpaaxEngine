@@ -4,6 +4,7 @@
 #include "Application/Services/IEngine.h"
 #include "Core/Image/AlphaBleed.h"
 #include "Core/IO/FileIO.h"
+#include "Core/Memory/Memory.h"
 
 // stb_image implementation (the only one in the build).
 #define STB_IMAGE_IMPLEMENTATION
@@ -59,7 +60,13 @@ namespace Opaax
             return;
         }
 
-        m_Gpu = OpaaxApplication::GetAppService<IEngine>().CreateTexture(m_Pixels.data(), m_Width, m_Height, m_Channels);
+        TextureDesc lDesc;
+        lDesc.Width     = m_Width;
+        lDesc.Height    = m_Height;
+        lDesc.Channels  = m_Channels;
+        lDesc.bSmooth   = m_bSmooth;
+        lDesc.bWritable = m_bWritable;
+        m_Gpu = OpaaxApplication::GetAppService<IEngine>().CreateTexture(lDesc, m_Pixels.data());
 
         // Free the CPU copy: the GPU has the texture, or nothing can upload it.
         m_Pixels.clear();
@@ -70,6 +77,75 @@ namespace Opaax
             OPAAX_LOG(LogTexture2D, Warn, "no device — '{}' ({}x{}) decoded but not uploaded",
                       GetName().CStr(), m_Width, m_Height);
         }
+    }
+
+    bool Texture2D::InitFromPixels(const Uint32 InWidth, const Uint32 InHeight, const Int32 InChannels,
+                                   const Uint8* InPixels, const bool bInSmooth)
+    {
+        if (m_Gpu != nullptr || !m_Pixels.empty())
+        {
+            OPAAX_LOG(LogTexture2D, Error, "'{}' already has pixels: make a new texture instead", GetName().CStr());
+            return false;
+        }
+
+        if (InChannels != 1 && InChannels != 4)
+        {
+            OPAAX_LOG(LogTexture2D, Error, "a texture made from pixels has 1 or 4 channels, not {}", InChannels);
+            return false;
+        }
+
+        if (InWidth == 0 || InHeight == 0 || InPixels == nullptr)
+        {
+            OPAAX_LOG(LogTexture2D, Error, "a texture made from pixels needs a size ({}x{}) and its pixels",
+                      InWidth, InHeight);
+            return false;
+        }
+
+        m_Width     = InWidth;
+        m_Height    = InHeight;
+        m_Channels  = InChannels;
+        m_bSmooth   = bInSmooth;
+        m_bWritable = true;
+
+        const Uint64 lBytes = RegionByteCount(TextureRegion::Whole(InWidth, InHeight), InChannels);
+        m_Pixels.assign(InPixels, InPixels + lBytes);
+        return true;
+    }
+
+    bool Texture2D::UpdatePixels(const TextureRegion& InRegion, const Uint8* InPixels)
+    {
+        if (!m_bWritable)
+        {
+            OPAAX_LOG(LogTexture2D, Warn, "'{}' was read from a file: only a texture made from pixels can change",
+                      GetName().CStr());
+            return false;
+        }
+
+        if (!IsRegionInside(InRegion, m_Width, m_Height) || InPixels == nullptr)
+        {
+            OPAAX_LOG(LogTexture2D, Warn, "'{}': the region {},{} {}x{} is not inside its {}x{} texels", GetName().CStr(),
+                      InRegion.X, InRegion.Y, InRegion.Width, InRegion.Height, m_Width, m_Height);
+            return false;
+        }
+
+        // Before the upload (or without a device), the pixels waiting for it take the change.
+        if (m_Gpu == nullptr)
+        {
+            if (m_Pixels.empty())
+            {
+                return false;
+            }
+
+            const Uint64 lRow = static_cast<Uint64>(InRegion.Width) * m_Channels;
+            for (Uint32 lY = 0; lY < InRegion.Height; ++lY)
+            {
+                const Uint64 lTo = (static_cast<Uint64>(InRegion.Y + lY) * m_Width + InRegion.X) * m_Channels;
+                Memory::Copy(m_Pixels.data() + lTo, InPixels + lY * lRow, lRow);
+            }
+            return true;
+        }
+
+        return m_Gpu->Update(InRegion, InPixels);
     }
 
     Uint64 Texture2D::GetResourceSize() const

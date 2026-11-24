@@ -11,7 +11,8 @@ namespace Opaax
     inline constexpr LogCategory LogTexture2D{"Texture2D"};
 
     // =============================================================================
-    // Texture2D — an image file as an asset (.png, .jpg, .tga, .bmp), read from the file itself.
+    // Texture2D — an image file as an asset (.png, .jpg, .tga, .bmp), read from the file itself, or
+    //   pixels made in code (InitFromPixels, through RuntimeTexture), which can then change.
     //   Decoded when it loads (any thread), handed to the GPU on the main thread, which then keeps the
     //   only copy. A field names one with TAssetRef<Texture2D>; the renderer draws a magenta square for
     //   one that did not load.
@@ -44,6 +45,33 @@ namespace Opaax
         //~End Asset interface
 
         // =========================================================================
+        // Made from pixels
+        // =========================================================================
+    public:
+        /**
+         * Gives a texture made in code its pixels (see RuntimeTexture, which also names it): uploaded by
+         * InitializeOnMainThread, writable after. Only once, on a texture that has none.
+         * @param InChannels 4 = RGBA8, or 1 = R8 (read as (1,1,1,value), always blended)
+         * @param InPixels Width * Height * Channels bytes, bottom row first. Copied.
+         * @param bInSmooth Read blended whatever the project's filter
+         * @return False, with an error, for other channels, an empty size or no pixels
+         */
+        bool InitFromPixels(Uint32 InWidth, Uint32 InHeight, Int32 InChannels, const Uint8* InPixels, bool bInSmooth);
+
+        /**
+         * Replaces the pixels of InRegion in place. Before the upload, the pixels waiting for it change.
+         * @param InPixels InRegion.Width * InRegion.Height * Channels bytes, bottom row first. Copied.
+         * @return False, with a warning, for a texture read from a file or a region not inside it
+         */
+        bool UpdatePixels(const TextureRegion& InRegion, const Uint8* InPixels);
+
+        /** True for a texture made from pixels: its pixels can be replaced. */
+        bool IsWritable() const noexcept { return m_bWritable; }
+
+        /** Read blended whatever the project's filter. */
+        bool IsSmooth() const noexcept { return m_bSmooth; }
+
+        // =========================================================================
         // Get
         // =========================================================================
     public:
@@ -67,6 +95,8 @@ namespace Opaax
         Uint32                 m_Width    = 0;
         Uint32                 m_Height   = 0;
         Int32                  m_Channels = 0;
+        bool                   m_bSmooth   = false;
+        bool                   m_bWritable = false;
         TUniquePtr<ITexture2D> m_Gpu;
     };
 }
