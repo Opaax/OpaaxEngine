@@ -5,6 +5,7 @@
 #include "UI/Styles/UIButtonStyle.h"
 #include "UI/Animation/UITween.h"
 #include "UI/Modifiers/UIAspectRatioModifier.h"
+#include "UI/Modifiers/UIDateModifier.h"
 #include "UI/Modifiers/UIOutlineModifier.h"
 #include "UI/Modifiers/UIShadowModifier.h"
 #include "UI/Modifiers/UISizeLimitModifier.h"
@@ -62,6 +63,9 @@ namespace Opaax
     // Layout: a rect kept at an aspect ratio, a size kept between limits (stacks reserve the limited size).
     OPAAX_REGISTER_OBJECT(UIAspectRatioModifier);
     OPAAX_REGISTER_OBJECT(UISizeLimitModifier);
+
+    // Text: today's date in a text widget.
+    OPAAX_REGISTER_OBJECT(UIDateModifier);
 
     // Masks its children: white shows, black hides.
     OPAAX_REGISTER_OBJECT(UIMask);
