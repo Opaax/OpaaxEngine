@@ -204,6 +204,12 @@ namespace Opaax
             return PathString::Join(EngineAssetsDir(), lEngineRel);
         }
 
+        // No file behind it: the path itself is the key.
+        if (IsRuntimePath(lRef))
+        {
+            return InAssetRel;
+        }
+
         return PathString::Join(m_Layout.AssetsDir, InAssetRel);
     }
 
@@ -212,6 +218,11 @@ namespace Opaax
         if (InAbsPath.IsEmpty())
         {
             return OpaaxString();
+        }
+
+        if (IsRuntimePath(OpaaxStringView(InAbsPath)))
+        {
+            return InAbsPath;
         }
 
         // Project first: its paths have no prefix.

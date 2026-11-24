@@ -63,9 +63,18 @@ namespace Opaax
 
     // =============================================================================
     // Mounts — an asset path without prefix is relative to the project's Assets dir.
-    //   "/Engine/..." is relative to the engine's Assets dir.
+    //   "/Engine/..." is relative to the engine's Assets dir. "/Runtime/..." names an asset a game made
+    //   in code (a texture made from pixels): no file is behind it, it is only found, never loaded.
     // =============================================================================
-    inline constexpr const char* ENGINE_MOUNT = "/Engine/";
+    inline constexpr const char* ENGINE_MOUNT  = "/Engine/";
+    inline constexpr const char* RUNTIME_MOUNT = "/Runtime/";
+
+    /** True for a path under RUNTIME_MOUNT, with a name after it. */
+    inline bool IsRuntimePath(const OpaaxStringView InAssetPath)
+    {
+        return InAssetPath.StartsWith(RUNTIME_MOUNT)
+            && InAssetPath.GetLength() > OpaaxStringView(RUNTIME_MOUNT).GetLength();
+    }
 
     // =============================================================================
     // IPaths — engine and project directories.

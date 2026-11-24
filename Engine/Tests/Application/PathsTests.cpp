@@ -384,6 +384,22 @@ TEST_CASE("Paths: AbsoluteToAsset names engine content by its mount")
     }
 }
 
+TEST_CASE("Paths: a runtime path has no file and is its own key")
+{
+    CHECK(IsRuntimePath(OpaaxStringView("/Runtime/Fog")));
+    CHECK_FALSE(IsRuntimePath(OpaaxStringView("/Runtime/")));          // no name
+    CHECK_FALSE(IsRuntimePath(OpaaxStringView("Runtime/Fog")));        // project content
+    CHECK_FALSE(IsRuntimePath(OpaaxStringView("/Engine/Runtime/Fog")));
+
+    StubPlatform      lPlatform(Abs("deploy/bin/Game.exe"));
+    const CommandLine lCommandLine({ "Game.exe", "--project", Abs("proj/MyGame/MyGame.opaaxproj") });
+    const Paths       lPaths(lPlatform, lCommandLine);
+
+    CHECK(lPaths.AssetToAbsolute(OpaaxString("/Runtime/Fog")) == OpaaxString("/Runtime/Fog"));
+    CHECK(lPaths.AbsoluteToAsset(OpaaxString("/Runtime/Fog")) == OpaaxString("/Runtime/Fog"));
+    CHECK(lPaths.AssetToAbsolute(OpaaxString("Runtime/Fog")) == Abs("proj/MyGame/Assets/Runtime/Fog"));
+}
+
 TEST_CASE("Paths: in a workspace that does not hold the engine, the mount points at the engine's folder")
 {
     // Two unrelated real folders, as a game repository and an engine checkout beside it:
