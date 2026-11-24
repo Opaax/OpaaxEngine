@@ -29,9 +29,6 @@ namespace Opaax
 
         UIDateModifier& SetFormat(const OpaaxString& InFormat);
 
-        /** The text I give now (the date along Format), as last read. */
-        const OpaaxString& GetShown() const noexcept { return m_Shown; }
-
         //~Begin Object interface
         /** An edited Format shows at once, the editor's preview too. */
         void PostEditChange() override;
@@ -52,11 +49,12 @@ namespace Opaax
 
         /**
          * Reads the date; when it moved at Format's resolution (or bInForce), writes it again, and rebuilds
-         * my owner only if the text changed. Warns once per Format holding an unknown token.
+         * my owner only if the text changed (ModifyText then writes it). Warns once per Format holding an
+         * unknown token.
          */
         void Refresh(bool bInForce);
 
-        OpaaxString m_Shown;          // the text the last Refresh gave
+        OpaaxString m_Shown;          // the text the last Refresh gave: what a change is told by
         DateTime    m_Seen;           // the date it was written from
         OpaaxString m_UsedFormat;     // the Format it was written with
         OpaaxString m_WarnedFormat;   // the last Format warned about

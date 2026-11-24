@@ -75,7 +75,9 @@ namespace Opaax
 
     void UIDateModifier::ModifyText(OpaaxString& InOutText) const
     {
-        InOutText = FormatBoundText(InOutText, m_Shown);
+        // Read again here: a tree rebuilt outside its canvas (the editor's undo) shows the canvas's date
+        // once it is in.
+        InOutText = FormatBoundText(InOutText, ReadNow().Format(Format));
     }
 
     DateTime UIDateModifier::ReadNow() const
