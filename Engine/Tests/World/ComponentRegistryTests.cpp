@@ -4,6 +4,7 @@
 
 #include <entt/entt.hpp>
 
+#include "Core/Reflection/OpaaxEnum.h"
 #include "World/Components/ComponentRegistry.h"
 #include "Renderer/Components/QuadComponent.h"
 #include "World/Entity/Entity.h"
@@ -11,6 +12,36 @@
 #include "World/WorldManager.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Engine/Engine.h"
+
+// A game's enum and a component that saves it, in their own namespace as in a game module.
+namespace ComponentRegistryTestsGame
+{
+    enum class ELane { Left, Middle, Right };
+
+    inline const char* ToString(const ELane InLane) noexcept
+    {
+        switch (InLane)
+        {
+        case ELane::Left:   return "Left";
+        case ELane::Middle: return "Middle";
+        case ELane::Right:  return "Right";
+        }
+
+        return "Left";
+    }
+}
+
+OPAAX_ENUM_VALUES(ComponentRegistryTestsGame::ELane, Left, Middle, Right)
+
+namespace ComponentRegistryTestsGame
+{
+    struct LaneComponent
+    {
+        ELane Lane = ELane::Left;
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(LaneComponent, Lane)
+    };
+}
 
 using namespace Opaax;
 
@@ -234,6 +265,33 @@ TEST_CASE("ComponentEntry: Save/Load round-trips a component's values through js
 
     REQUIRE(lTarget.Has<ProbeComponent>());
     CHECK(lTarget.Get<ProbeComponent>() == lOriginal);
+}
+
+TEST_CASE("ComponentEntry: a game enum field is saved as its label, and read back")
+{
+    using ComponentRegistryTestsGame::ELane;
+    using ComponentRegistryTestsGame::LaneComponent;
+
+    ComponentRegistry lRegistry;
+    REQUIRE(lRegistry.Register<LaneComponent>("Lane"));
+
+    const IComponentEntry* lEntry = lRegistry.FindByName(OpaaxStringID("Lane"));
+    REQUIRE(lEntry != nullptr);
+
+    World  lWorld("EntryEnumTest");
+    Entity lSource = lWorld.CreateEntity("Source");
+    Entity lTarget = lWorld.CreateEntity("Target");
+    lSource.Add<LaneComponent>(LaneComponent{ ELane::Right });
+
+    EntityRegistry& lReg = lWorld.GetRegistry();
+
+    const nlohmann::json lJson = lEntry->Save(lReg, lSource.GetHandle());
+    REQUIRE(lJson.at("Lane").is_string());
+    CHECK(lJson.at("Lane").get<OpaaxString>() == "Right");
+
+    lEntry->Load(lReg, lTarget.GetHandle(), lJson);
+    REQUIRE(lTarget.Has<LaneComponent>());
+    CHECK(lTarget.Get<LaneComponent>().Lane == ELane::Right);
 }
 
 TEST_CASE("ComponentEntry: Load ADDS the component when the target doesn't have it yet")

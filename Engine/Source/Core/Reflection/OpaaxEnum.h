@@ -30,13 +30,14 @@ namespace Opaax
 }
 
 // =============================================================================
-// Put it right under the enum, at global scope (it opens namespace Opaax), so a new value is not
-// forgotten. Name the enum with its namespace:
+// Put it right under the enum and its ToString, at global scope (it opens namespace Opaax), so a
+// new value is not forgotten. Name the enum with its namespace:
 //
 //   namespace Game { enum class EWindowMode { Windowed, Borderless, Fullscreen }; }
 //   OPAAX_ENUM_VALUES(Game::EWindowMode, Windowed, Borderless, Fullscreen)
 //
-// Values are unqualified (the macro uses `using enum`).
+// Values are unqualified (the macro uses `using enum`). It must come before the code that saves the
+// enum: a to_json written above it would write the number.
 // =============================================================================
 #define OPAAX_ENUM_VALUES(EnumType, ...)                                        \
     namespace Opaax                                                             \
@@ -47,3 +48,6 @@ namespace Opaax
             static constexpr EnumType Values[] = { __VA_ARGS__ };               \
         };                                                                      \
     }
+
+// Last, after the traits it uses: any header that declares such an enum also saves it by label.
+#include "Core/Reflection/OpaaxEnumJson.h"
