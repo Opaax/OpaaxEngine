@@ -13,6 +13,7 @@ namespace Opaax
     class ComponentRegistry;
     class Entity;
     class IEngine;
+    class TagRegistry;
     class UICanvas;
     class World;
 
@@ -84,6 +85,9 @@ namespace Opaax
          * an unlisted sub-layer), in draw order; "unlisted" the trees whose layer no listed one reaches (at 0).
          */
         nlohmann::json DescribeLayers(const UICanvas& InCanvas);
+
+        /** The registered tags under InRoot (every one when empty), sorted: {tags: [{tag, source, comment}]} (tags.list). */
+        nlohmann::json DescribeTags(const TagRegistry& InTags, const OpaaxString& InRoot);
 
         /** The name of the topmost widget at InPixel (in the canvas's target pixels), or empty for none. */
         OpaaxString HitWidgetName(UICanvas& InCanvas, const Vector2F& InPixel);
