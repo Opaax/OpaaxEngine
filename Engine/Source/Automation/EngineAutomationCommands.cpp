@@ -25,6 +25,7 @@
 #include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
 #include "Engine/Registries/EngineRegistries.h"
+#include "Engine/Tags/TagRegistry.h"
 #include "Input/InputKeyNames.h"
 #include "Input/InputManager.h"
 #include "Platform/Window/Window.h"
@@ -1674,6 +1675,32 @@ namespace Opaax::EngineAutomation
         // =========================================================================
         // Configs: read, and changed for this run
         // =========================================================================
+        // =========================================================================
+        // Gameplay tags
+        // =========================================================================
+        void RegisterTags(ICommandRegistry& InCommands, IEngine& InEngine)
+        {
+            InCommands.Add(CommandSpec("tags.list",
+                "The registered gameplay tags, sorted by name: {tags: [{tag, source, comment}]}, source Native "
+                "(declared in code), Config (Tags.config) or Implied (the parent of one). {root} keeps the tags "
+                "under it; {tag} answers {registered} for that one tag instead.")
+                    .Param("root", ECommandParamType::String, "only the tags under this one").Optional()
+                    .Param("tag", ECommandParamType::String, "whether this tag is registered").Optional(),
+                [&InEngine](const nlohmann::json& InParams)
+                {
+                    const TagRegistry& lTags = InEngine.GetRegistries().Tags();
+
+                    const OpaaxString lTagName = InParams.value("tag", OpaaxString());
+                    if (!lTagName.IsEmpty())
+                    {
+                        return AutomationResult::Ok(nlohmann::json{ { "tag", lTagName },
+                                                                    { "registered", lTags.IsRegistered(OpaaxTag(lTagName)) } });
+                    }
+
+                    return AutomationResult::Ok(DescribeTags(lTags, InParams.value("root", OpaaxString())));
+                });
+        }
+
         void RegisterConfig(ICommandRegistry& InCommands)
         {
             InCommands.Add(CommandSpec("config.get",
@@ -1909,6 +1936,7 @@ namespace Opaax::EngineAutomation
         RegisterWindow(InCommands, InEngine);
         RegisterRenderer(InCommands, InEngine, InHost);
         RegisterConfig(InCommands);
+        RegisterTags(InCommands, InEngine);
         RegisterCamera(InCommands, InEngine);
         RegisterExpectations(InCommands, InEngine);
         SaveAutomation::Register(InCommands, InEngine);
@@ -1921,6 +1949,20 @@ namespace Opaax::EngineAutomation
         nlohmann::json lList = nlohmann::json::array();
         DescribeTree(InCanvas, InCanvas.Root(), InName, lList);
         return lList;
+    }
+
+    nlohmann::json DescribeTags(const TagRegistry& InTags, const OpaaxString& InRoot)
+    {
+        const TDynArray<TagRegistry::Entry> lEntries = InRoot.IsEmpty() ? InTags.GetAll() : InTags.Under(OpaaxTag(InRoot));
+
+        nlohmann::json lList = nlohmann::json::array();
+        for (const TagRegistry::Entry& lEntry : lEntries)
+        {
+            lList.push_back(nlohmann::json{ { "tag", lEntry.Tag.ToString() },
+                                            { "source", ToString(lEntry.Source) },
+                                            { "comment", lEntry.Comment } });
+        }
+        return nlohmann::json{ { "tags", lList } };
     }
 
     nlohmann::json DescribeLayers(const UICanvas& InCanvas)

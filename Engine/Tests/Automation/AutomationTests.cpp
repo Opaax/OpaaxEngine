@@ -14,6 +14,7 @@
 #include "Core/IO/FileSystem.h"
 #include "Core/String/OpaaxPathString.h"
 #include "Core/String/OpaaxStringJson.h"
+#include "Engine/Tags/TagRegistry.h"
 #include "Renderer/Components/QuadComponent.h"
 #include "UI/UICanvas.h"
 #include "UI/UIRect.h"
@@ -818,6 +819,28 @@ TEST_CASE("Automation UI: ui.layers puts each tree under its layer, ui.list says
     REQUIRE(EngineAutomation::FindWidgetCentre(lCanvas, "PauseMenu", lPixel, lError));
     CHECK(EngineAutomation::HitWidgetName(lCanvas, lPixel) == "DebugPanel");
     CHECK(EngineAutomation::HitWidgetName(lCanvas, { 5.f, 5.f }).IsEmpty());
+}
+
+TEST_CASE("Automation tags: tags.list lists the registered tags, sorted, with their source, or those under a root")
+{
+    TagRegistry lRegistry;
+    lRegistry.AddNative(OpaaxTag("UI.Layer.Menu"), OpaaxString("Menus"));
+    lRegistry.Seal();
+    lRegistry.SetConfigTags({ TagDefinition{ OpaaxTag("Audio.Bus.Music"), OpaaxString("Music") } });
+
+    const nlohmann::json lAll = EngineAutomation::DescribeTags(lRegistry, OpaaxString());
+    REQUIRE(lAll.at("tags").size() == 6);
+    CHECK(lAll["tags"][0].at("tag") == "Audio");
+    CHECK(lAll["tags"][0].at("source") == "Implied");
+    CHECK(lAll["tags"][2].at("tag") == "Audio.Bus.Music");
+    CHECK(lAll["tags"][2].at("source") == "Config");
+    CHECK(lAll["tags"][2].at("comment") == "Music");
+    CHECK(lAll["tags"][5].at("tag") == "UI.Layer.Menu");
+    CHECK(lAll["tags"][5].at("source") == "Native");
+
+    const nlohmann::json lUnder = EngineAutomation::DescribeTags(lRegistry, OpaaxString("UI.Layer"));
+    REQUIRE(lUnder.at("tags").size() == 1);
+    CHECK(lUnder["tags"][0].at("tag") == "UI.Layer.Menu");
 }
 
 TEST_CASE("Automation script: answers are written as they come, then marked done")
