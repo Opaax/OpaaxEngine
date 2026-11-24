@@ -47,6 +47,7 @@
 #include "UI/UICanvas.h"
 #include "UI/UISubsystem.h"
 #include "UI/UIWidget.h"
+#include "UI/Widgets/UIText.h"
 #include "World/Behaviour/BehaviourSubsystem.h"
 #include "World/Components/ComponentRegistry.h"
 #include "World/Components/TransformComponent.h"
@@ -171,6 +172,12 @@ namespace Opaax::EngineAutomation
                 if (const OpaaxString lBrush = InWidget.DescribeBrush(); !lBrush.IsEmpty())
                 {
                     lRow["brush"] = lBrush;
+                }
+
+                // What a text shows now, its binding and text modifiers applied.
+                if (const UIText* lText = Cast<UIText>(&InWidget))
+                {
+                    lRow["text"] = lText->GetDisplayText();
                 }
 
                 if (!InWidget.GetModifiers().empty())
@@ -699,7 +706,8 @@ namespace Opaax::EngineAutomation
             InCommands.Add(CommandSpec("ui.list",
                 "The game UI's widgets, depth-first in draw order (the top layer last): [{name, type, layer, visible, "
                 "x, y, width, height, quads}], layer that of the tree it is in, x and y its centre in game-view pixels, "
-                "quads how many it draws; a button also answers its state (Normal, Hovered, Pressed, Disabled). "
+                "quads how many it draws; a button also answers its state (Normal, Hovered, Pressed, Disabled), a text "
+                "the text it shows. "
                 "Filter: {name}.")
                     .Param("name", ECommandParamType::String, "only the widgets of this name").Optional(),
                 [&InEngine](const nlohmann::json& InParams)

@@ -718,6 +718,14 @@ namespace Opaax
         }
     }
 
+    void UIWidget::ApplyTextModifiers(OpaaxString& InOutText) const
+    {
+        for (const TStrongObjectPtr<UIModifier>& lModifier : m_Modifiers)
+        {
+            if (lModifier->bEnabled) { lModifier->ModifyText(InOutText); }
+        }
+    }
+
     // =============================================================================
     // Internal — the canvas's walk
     // =============================================================================

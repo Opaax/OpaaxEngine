@@ -3,6 +3,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxEnum.h"
 #include "Core/Reflection/OpaaxProperty.h"
+#include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/String/OpaaxStringIDJson.h"
 #include "Object/ObjectMacros.h"
@@ -116,6 +117,13 @@ namespace Opaax
         virtual void ModifyQuads(TDynArray<UIQuad>& InOutQuads) const { (void)InOutQuads; }
 
         /**
+         * Changes the text my owner shows, in modifier order, when it builds it: a UIText's Text with its
+         * Binding's value already in, before the text is laid out. Runs only when the owner's content is
+         * rebuilt: call InvalidateOwnerContent when what I add changes.
+         */
+        virtual void ModifyText(OpaaxString& InOutText) const { (void)InOutText; }
+
+        /**
          * Changes my owner's rect right after it resolved (from its anchors, or its container's slot),
          * in modifier order: an aspect ratio, a size limit. Runs only when its layout is resolved again:
          * call InvalidateOwnerLayout when my fields change.
@@ -150,7 +158,7 @@ namespace Opaax
         /** What OnHide waited for is done: once every such modifier says so, the owner hides. */
         void FinishHide();
 
-        /** My owner's quads are rebuilt before it is next drawn (ModifyQuads runs again). */
+        /** My owner's quads are rebuilt before it is next drawn (ModifyText and ModifyQuads run again). */
         void InvalidateOwnerContent();
 
         /** My owner's rect is resolved again, its container's too (ModifyBounds, ModifyDesiredSize). */
