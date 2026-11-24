@@ -43,8 +43,8 @@ namespace Opaax
         TUniquePtr<IIndexBuffer>   CreateIndexBuffer(const Uint32* InIndices, Uint32 InCount)    override;
         TUniquePtr<IUniformBuffer> CreateUniformBuffer(Uint32 InSizeBytes, Uint32 InBinding)     override;
         TUniquePtr<ITexture2D>     CreateTexture(Uint32 InWidth, Uint32 InHeight)                override;
-        TUniquePtr<ITexture2D>     CreateTexture(const void* InPixels, Uint32 InWidth,
-                                                 Uint32 InHeight, Int32 InChannels)             override;
+        TUniquePtr<ITexture2D>     CreateTexture(const TextureDesc& InDesc, const void* InPixels) override;
+        Uint32                     GetWritableTextureCount() const                               override { return m_WritableTextures; }
         TUniquePtr<IShader>        CreateShader(const ShaderDesc& InDesc)                        override;
         TUniquePtr<IPipeline>      CreatePipeline(const PipelineDesc& InDesc)                    override;
         TUniquePtr<IBindGroup>     CreateBindGroup(const BindGroupLayout& InLayout)              override;
@@ -96,5 +96,8 @@ namespace Opaax
 
         // Raised by each framebuffer this device made, when it gets new storage.
         Uint64 m_FramebufferAllocations = 0;
+
+        // Raised and lowered by each writable texture this device made.
+        Uint32 m_WritableTextures = 0;
     };
 }

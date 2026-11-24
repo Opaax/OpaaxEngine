@@ -10,7 +10,8 @@ namespace Opaax
      * OpenGL ITexture2D. Uploads decoded pixels (R8, RGB or RGBA). R8 is swizzled into alpha,
      * so the RGBA sprite shader reads (1,1,1,coverage). Does not read files (see Texture2D).
      * A colour texture gets its mipmaps and is read through the device's sampler object (the
-     * project's filter); R8 and the white texture are read with their own parameters.
+     * project's filter); R8, a smooth texture and the white texture are read with their own
+     * parameters. A writable one can have its pixels replaced (Update).
      */
     class OpenGLTexture2D final : public ITexture2D
     {
@@ -24,33 +25,31 @@ namespace Opaax
         OpenGLTexture2D(Uint32 InWidth, Uint32 InHeight);
 
         /**
-         * Uploads raw pixels. Channels: 4 = RGBA8, 3 = RGB8, 1 = R8 (swizzled into alpha).
-         * InData is copied.
+         * Uploads raw pixels as InDesc says. Channels: 4 = RGBA8, 3 = RGB8, 1 = R8 (swizzled into
+         * alpha). InData is copied.
          * @param InProjectSampler The sampler object colour textures are read through; it outlives the texture
+         * @param InWritableCount Raised while a writable texture lives (the device's count); it outlives the texture
          */
-        OpenGLTexture2D(const unsigned char* InData, Uint32 InWidth, Uint32 InHeight, Int32 InChannels,
-                        Uint32 InProjectSampler);
+        OpenGLTexture2D(const TextureDesc& InDesc, const unsigned char* InData, Uint32 InProjectSampler,
+                        Uint32* InWritableCount);
 
         ~OpenGLTexture2D();
 
         // =============================================================================
-        // Copy - delete
+        // Copy - Move delete
         // =============================================================================
+        // Owns a GL name and a place in the device's count: never two owners.
         OpenGLTexture2D(const OpenGLTexture2D&)            = delete;
         OpenGLTexture2D& operator=(const OpenGLTexture2D&) = delete;
-
-        // =============================================================================
-        // Move
-        // =============================================================================
-        OpenGLTexture2D(OpenGLTexture2D&&)                 = default;
-        OpenGLTexture2D& operator=(OpenGLTexture2D&&)      = default;
+        OpenGLTexture2D(OpenGLTexture2D&&)                 = delete;
+        OpenGLTexture2D& operator=(OpenGLTexture2D&&)      = delete;
 
         // =============================================================================
         // Function
         // =============================================================================
     private:
-        void Upload(const unsigned char* InData, Uint32 InWidth, Uint32 InHeight, Int32 InChannels);
-        
+        void Upload(const unsigned char* InData, Uint32 InWidth, Uint32 InHeight, Int32 InChannels, bool bInSmooth);
+
         // =============================================================================
         // Override
         // =============================================================================
@@ -58,6 +57,7 @@ namespace Opaax
     public:
         void Bind(Uint32 InSlot = 0) const override;
         void Unbind()                const override;
+        bool Update(const TextureRegion& InRegion, const void* InPixels) override;
 
         //------------------------------------------------------------------------------
         //Get
@@ -85,7 +85,10 @@ namespace Opaax
         Uint32 m_SamplerID  = 0;   // 0: read with the texture's own parameters
         Uint32 m_Width      = 0;
         Uint32 m_Height     = 0;
+        Int32  m_Channels   = 4;
         bool   m_bLoaded    = false;
+
+        Uint32* m_WritableCount = nullptr;   // the device's; null: not writable
     };
  
 } // namespace Opaax

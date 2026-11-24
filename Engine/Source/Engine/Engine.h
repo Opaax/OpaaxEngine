@@ -189,8 +189,7 @@ namespace Opaax
         bool                        ReadFrame(TDynArray<Uint8>& OutRGBA, Uint32& OutWidth, Uint32& OutHeight) override;
         RendererInfo                GetRendererInfo() const override;
         TUniquePtr<IFramebuffer>    CreateFramebuffer(const FramebufferSpec& InSpec) override;
-        TUniquePtr<ITexture2D>      CreateTexture(const void* InPixels, Uint32 InWidth,
-                                                  Uint32 InHeight, Int32 InChannels) override;
+        TUniquePtr<ITexture2D>      CreateTexture(const TextureDesc& InDesc, const void* InPixels) override;
 
         //Getters
         EngineRegistries&   GetRegistries()     override { return m_Registries; }

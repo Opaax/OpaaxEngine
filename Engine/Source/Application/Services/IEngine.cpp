@@ -75,7 +75,7 @@ namespace Opaax
             TUniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec&) override { return nullptr; }
 
             // Lets headless tests load textures as CPU images.
-            TUniquePtr<ITexture2D> CreateTexture(const void*, Uint32, Uint32, Int32) override { return nullptr; }
+            TUniquePtr<ITexture2D> CreateTexture(const TextureDesc&, const void*) override { return nullptr; }
 
             void Update(double)           override {}
             void FixedUpdate(double)      override {}

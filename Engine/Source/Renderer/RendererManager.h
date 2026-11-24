@@ -33,6 +33,7 @@ namespace Opaax
     class IGraphicsContext;
     class IRenderTarget;
     class ITexture2D;
+    struct TextureDesc;
     struct FramebufferSpec;
     class Texture2D;
     class SpriteSheet;
@@ -317,7 +318,7 @@ namespace Opaax
          * Release it before the render core shuts down.
          * @return Null before Startup
          */
-        TUniquePtr<ITexture2D> CreateTexture(const void* InPixels, Uint32 InWidth, Uint32 InHeight, Int32 InChannels);
+        TUniquePtr<ITexture2D> CreateTexture(const TextureDesc& InDesc, const void* InPixels);
 
         /**
          * @return The debug shape queue, cleared every frame by Render()

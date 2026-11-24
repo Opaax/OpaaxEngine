@@ -187,7 +187,7 @@ namespace Opaax
 
         // 2x2 opaque magenta: a texture that decoded to transparent black would look like nothing drawn.
         constexpr Uint8 k_Magenta[] = { 255, 0, 255, 255,  255, 0, 255, 255,  255, 0, 255, 255,  255, 0, 255, 255 };
-        m_MissingTexture = CreateTexture(k_Magenta, 2, 2, 4);
+        m_MissingTexture = CreateTexture(TextureDesc{ 2u, 2u, 4 }, k_Magenta);
 
         return true;
     }
@@ -1261,7 +1261,7 @@ namespace Opaax
         return m_RenderSystem->CreateFramebuffer(InSpec);
     }
 
-    TUniquePtr<ITexture2D> RendererManager::CreateTexture(const void* InPixels, Uint32 InWidth, Uint32 InHeight, Int32 InChannels)
+    TUniquePtr<ITexture2D> RendererManager::CreateTexture(const TextureDesc& InDesc, const void* InPixels)
     {
         if (!m_RenderSystem)
         {
@@ -1269,7 +1269,7 @@ namespace Opaax
             return nullptr;
         }
 
-        return m_RenderSystem->CreateTexture(InPixels, InWidth, InHeight, InChannels);
+        return m_RenderSystem->CreateTexture(InDesc, InPixels);
     }
 
     void RendererManager::Present()

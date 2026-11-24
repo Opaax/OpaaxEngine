@@ -31,26 +31,48 @@ namespace Opaax
         m_bLoaded = true;
     }
 
-    OpenGLTexture2D::OpenGLTexture2D(const unsigned char* InData, Uint32 InWidth, Uint32 InHeight, Int32 InChannels,
-                                     const Uint32 InProjectSampler)
+    namespace
     {
-        // A coverage atlas keeps its own sampling, whatever the project's filter.
-        m_SamplerID = (InChannels == 1) ? 0 : InProjectSampler;
+        GLenum DataFormatOf(const Int32 InChannels)
+        {
+            return (InChannels == 4) ? GL_RGBA : (InChannels == 1) ? GL_RED : GL_RGB;
+        }
+    }
+
+    OpenGLTexture2D::OpenGLTexture2D(const TextureDesc& InDesc, const unsigned char* InData,
+                                     const Uint32 InProjectSampler, Uint32* InWritableCount)
+    {
+        // A coverage atlas, or a texture asked smooth, keeps its own sampling, whatever the project's filter.
+        const bool lOwnSampling = (InDesc.Channels == 1) || InDesc.bSmooth;
+        m_SamplerID = lOwnSampling ? 0 : InProjectSampler;
+        m_Channels  = InDesc.Channels;
 
         if (!InData)
         {
             OPAAX_ENGINE_LOG(Error, "OpenGLTexture2D: raw upload received null data");
             return;
         }
-        Upload(InData, InWidth, InHeight, InChannels);
+        Upload(InData, InDesc.Width, InDesc.Height, InDesc.Channels, InDesc.bSmooth);
+
+        if (InWritableCount != nullptr)
+        {
+            m_WritableCount = InWritableCount;
+            ++*m_WritableCount;
+        }
     }
 
     OpenGLTexture2D::~OpenGLTexture2D()
     {
         glDeleteTextures(1, &m_RendererID);
+
+        if (m_WritableCount != nullptr)
+        {
+            --*m_WritableCount;
+        }
     }
 
-    void OpenGLTexture2D::Upload(const unsigned char* InData, Uint32 InWidth, Uint32 InHeight, Int32 InChannels)
+    void OpenGLTexture2D::Upload(const unsigned char* InData, Uint32 InWidth, Uint32 InHeight, Int32 InChannels,
+                                 const bool bInSmooth)
     {
         m_Width  = InWidth;
         m_Height = InHeight;
@@ -58,9 +80,7 @@ namespace Opaax
         const GLenum lInternalFormat = (InChannels == 4) ? GL_RGBA8
                                      : (InChannels == 1) ? GL_R8
                                      : GL_RGB8;
-        const GLenum lDataFormat     = (InChannels == 4) ? GL_RGBA
-                                     : (InChannels == 1) ? GL_RED
-                                     : GL_RGB;
+        const GLenum lDataFormat     = DataFormatOf(InChannels);
 
         glGenTextures(1, &m_RendererID);
         glBindTexture(GL_TEXTURE_2D, m_RendererID);
@@ -79,6 +99,11 @@ namespace Opaax
             // Blended when enlarged too: glyphs are drawn at any size.
             const GLint lSwizzle[4] = { GL_ONE, GL_ONE, GL_ONE, GL_RED };
             glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, lSwizzle);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        }
+        else if (bInSmooth)
+        {
+            // Read with these parameters, not the project's sampler: blended at any size.
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         }
 
@@ -109,7 +134,42 @@ namespace Opaax
 
         m_bLoaded = true;
     }
-    
+
+    bool OpenGLTexture2D::Update(const TextureRegion& InRegion, const void* InPixels)
+    {
+        if (m_WritableCount == nullptr || !m_bLoaded || InPixels == nullptr || !IsRegionInside(InRegion, m_Width, m_Height))
+        {
+            return false;
+        }
+
+        const bool bTightRows = (m_Channels != 4);
+        if (bTightRows)
+        {
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        }
+
+        glBindTexture(GL_TEXTURE_2D, m_RendererID);
+        glTexSubImage2D(GL_TEXTURE_2D, 0,
+                        static_cast<GLint>(InRegion.X), static_cast<GLint>(InRegion.Y),
+                        static_cast<GLsizei>(InRegion.Width), static_cast<GLsizei>(InRegion.Height),
+                        DataFormatOf(m_Channels), GL_UNSIGNED_BYTE, InPixels);
+
+        // The smaller levels show the old pixels until made again.
+        if (m_SamplerID != 0)
+        {
+            glGenerateMipmap(GL_TEXTURE_2D);
+        }
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        if (bTightRows)
+        {
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+        }
+
+        return true;
+    }
+
     void OpenGLTexture2D::Bind(Uint32 InSlot) const
     {
         glActiveTexture(GL_TEXTURE0 + InSlot);

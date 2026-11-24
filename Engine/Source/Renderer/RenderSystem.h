@@ -16,6 +16,7 @@ namespace Opaax
     class IFramebuffer;
     class IRenderTarget;
     class ITexture2D;
+    struct TextureDesc;
     class Renderer2D;
     class ScenePipeline2D;
     struct FramebufferSpec;
@@ -107,12 +108,14 @@ namespace Opaax
         TUniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec& InSpec);
 
         /**
-         * Creates a texture from decoded pixels. Release it before the device is destroyed.
-         * @param InPixels Tightly packed, InWidth * InHeight * InChannels bytes. Copied.
-         * @param InChannels 4 = RGBA8, 3 = RGB8, 1 = R8
+         * Creates a texture from decoded pixels (see IRHIDevice::CreateTexture). Release it before the
+         * device is destroyed.
          * @return Null if there is no device
          */
-        TUniquePtr<ITexture2D> CreateTexture(const void* InPixels, Uint32 InWidth, Uint32 InHeight, Int32 InChannels);
+        TUniquePtr<ITexture2D> CreateTexture(const TextureDesc& InDesc, const void* InPixels);
+
+        /** Writable textures alive now; 0 without a device. */
+        Uint32 GetWritableTextureCount() const;
 
         /** How every colour texture is read from the next draw on (Renderer.config's TextureFilter). */
         void SetTextureFilter(ETextureFilter InFilter);
