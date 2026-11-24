@@ -4,6 +4,7 @@
 #include <Engine/Subsystems/EngineSubsystem.h>
 #include "Application/Services/IJobSystem.h"
 #include "Core/Maths/MathsStatics.h"
+#include "Core/Time/DateSource.h"
 #include "Renderer/RendererManager.h"
 #include "Engine/FrameClock.h"
 #include "Engine/FrameLimiter.h"
@@ -163,6 +164,7 @@ namespace Opaax
         //Time
         void               SetFramePacing(const FramePacing& InPacing) override;
         const FramePacing& GetFramePacing() const override { return m_Pacer.GetPacing(); }
+        DateSource&        GetDates() override { return m_Dates; }
         const FrameClock&   GetFrameClock() const override { return m_Clock; }
         const FrameLimiter& GetFrameLimiter() const override { return m_FrameLimiter; }
 
@@ -229,6 +231,9 @@ namespace Opaax
         // A paced run's frames (SetFramePacing), and the time they add up to.
         FramePacer m_Pacer;
         double     m_PacedTime = 0.0;
+
+        // The UI's dates: the wall clock, or a date pinned by time.date.
+        DateSource m_Dates;
 
         // Window.MaxFrameRate (0: none), and how it holds the frames; whether its fallback was logged.
         Uint32       m_MaxFrameRate = 0;

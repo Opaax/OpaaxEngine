@@ -1,5 +1,6 @@
-// Suite: Clock (steady time), DateTime (the wall clock's local date and time), Random (system
-// seeded bits) and Process::RunCommandLine (a shell command's exit code, its UTF-8 text).
+// Suite: Clock (steady time), DateTime (the wall clock's local date and time), DateSource (a date a
+// test pins), Random (system seeded bits) and Process::RunCommandLine (a shell command's exit code,
+// its UTF-8 text).
 #include <doctest.h>
 
 #include "Core/IO/FileSystem.h"
@@ -7,6 +8,7 @@
 #include "Core/Maths/Random.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Time/Clock.h"
+#include "Core/Time/DateSource.h"
 #include "Core/Time/DateTime.h"
 #include "Platform/Process.h"
 
@@ -90,4 +92,28 @@ TEST_CASE("Process::RunCommandLine: a path with characters no code page holds re
 
     CHECK(Process::RunCommandLine(lLine) == 0);
     CHECK(FileSystem::IsDirectory(lTemp.Sub(lName)));
+}
+
+TEST_CASE("DateSource: the wall clock, a pinned date that stands still, the wall clock again")
+{
+    DateSource lDates;
+    CHECK_FALSE(lDates.IsPinned());
+    CHECK(lDates.Now().IsValid());
+
+    DateTime lPinned;
+    lPinned.Year   = 2026;
+    lPinned.Month  = 11;
+    lPinned.Day    = 24;
+    lPinned.Hour   = 9;
+    lPinned.Minute = 5;
+    lDates.Pin(lPinned);
+    CHECK(lDates.IsPinned());
+    CHECK(lDates.Now() == lPinned);
+
+    ThisThread::SleepFor(Milliseconds(2));
+    CHECK(lDates.Now() == lPinned);   // it does not tick
+
+    lDates.Unpin();
+    CHECK_FALSE(lDates.IsPinned());
+    CHECK(lDates.Now().Year >= 2024);
 }

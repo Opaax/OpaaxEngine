@@ -24,6 +24,7 @@ namespace Opaax
     class EngineRegistries;
     struct FramebufferSpec;
     struct FramePacing;
+    class DateSource;
     class FrameClock;
     class FrameLimiter;
     struct CameraView;
@@ -99,6 +100,9 @@ namespace Opaax
 
         /** The pacing in use; inactive when the frames follow the platform's clock. */
         virtual const FramePacing& GetFramePacing() const = 0;
+
+        /** Where the date and time of day are read (the UI's dates): the wall clock, or a date a test pinned. */
+        virtual DateSource& GetDates() = 0;
 
         /** The frame clock: the fixed step, the refresh it snaps to, the steps dropped. */
         virtual const FrameClock& GetFrameClock() const = 0;

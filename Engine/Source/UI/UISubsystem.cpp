@@ -3,6 +3,7 @@
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IEngine.h"
+#include "Core/Time/DateSource.h"
 #include "Application/Services/IPaths.h"
 #include "Application/Services/IProjectManager.h"
 #include "Engine/Config/Config_Engine.h"
@@ -68,6 +69,10 @@ namespace Opaax
                                             GetContext().Resources, GetContext().Paths);
         m_Canvas.SetAudio(&*m_Audio);
         m_LoadingCanvas.SetAudio(&*m_Audio);
+
+        DateSource& lDates = OpaaxApplication::GetAppService<IEngine>().GetDates();
+        m_Canvas.SetDates(&lDates);
+        m_LoadingCanvas.SetDates(&lDates);
 
         GetContext().Events.GetEventBus().Subscribe<LevelLoadRequested>(this, &UISubsystem::OnLevelLoadRequested);
         GetContext().Events.GetEventBus().Subscribe<LevelLoadFinished>(this, &UISubsystem::OnLevelLoadFinished);
@@ -279,5 +284,7 @@ namespace Opaax
         m_Canvas.SetAudio(nullptr);
         m_LoadingCanvas.SetAudio(nullptr);
         m_Audio.reset();
+        m_Canvas.SetDates(nullptr);
+        m_LoadingCanvas.SetDates(nullptr);
     }
 }
