@@ -34,18 +34,20 @@ namespace Opaax
         bool Register(OpaaxStringID InName = {})
         {
             static_assert(!CDerivedFrom<T, Behaviour>, "A behaviour is registered with Behaviours().Register<T>().");
+            return RegisterEntry<T>(InName, /*bInOffered*/true, "Register");
+        }
 
-            ++m_Count;
-
-            if (m_Registry == nullptr)
-            {
-                // Not bound: BindEngineRegistries was never called.
-                OPAAX_LOG(LogModuleRegistrar, Error,
-                          "Components().Register — route is not bound to a ComponentRegistry; registration dropped.");
-                return false;
-            }
-
-            return m_Registry->Register<T>(InName.IsValid() ? InName : DeriveTypeLeafName<T>());
+        /**
+         * Registers T as a component the "Add Component" menu leaves out (a test probe). It is saved,
+         * loaded and added by name like any other.
+         * @param InName Optional. Defaults to the type name.
+         * @return True if registered
+         */
+        template<CComponent T>
+        bool RegisterUnlisted(OpaaxStringID InName = {})
+        {
+            static_assert(!CDerivedFrom<T, Behaviour>, "A behaviour is registered with Behaviours().RegisterUnlisted<T>().");
+            return RegisterEntry<T>(InName, /*bInOffered*/false, "RegisterUnlisted");
         }
 
         /**
@@ -94,6 +96,28 @@ namespace Opaax
         Uint64 Count() const noexcept { return m_Count; }
 
         // =========================================================================
+        // Functions
+        // =========================================================================
+    private:
+        /** Register and RegisterUnlisted. InCall names the caller in the log. */
+        template<CComponent T>
+        bool RegisterEntry(OpaaxStringID InName, bool bInOffered, const char* InCall)
+        {
+            ++m_Count;
+
+            if (m_Registry == nullptr)
+            {
+                // Not bound: BindEngineRegistries was never called.
+                OPAAX_LOG(LogModuleRegistrar, Error,
+                          "Components().{} — route is not bound to a ComponentRegistry; registration dropped.", InCall);
+                return false;
+            }
+
+            return m_Registry->Register<T>(InName.IsValid() ? InName : DeriveTypeLeafName<T>(),
+                                           /*bInEssential*/false, bInOffered);
+        }
+
+        // =========================================================================
         // Members
         // =========================================================================
     private:
@@ -118,17 +142,18 @@ namespace Opaax
         template<CBehaviour T>
         bool Register()
         {
-            ++m_Count;
+            return RegisterEntry<T>(/*bInOffered*/true, "Register");
+        }
 
-            if (m_Components == nullptr)
-            {
-                // Not bound: BindEngineRegistries was never called.
-                OPAAX_LOG(LogModuleRegistrar, Error,
-                          "Behaviours().Register — route is not bound to a ComponentRegistry; registration dropped.");
-                return false;
-            }
-
-            return m_Components->Register<T>(DeriveTypeLeafName<T>());
+        /**
+         * Registers T as a behaviour the "Add Component" menu leaves out (a test probe). It is saved,
+         * loaded and added by name like any other.
+         * @return True if registered
+         */
+        template<CBehaviour T>
+        bool RegisterUnlisted()
+        {
+            return RegisterEntry<T>(/*bInOffered*/false, "RegisterUnlisted");
         }
 
         /** Connects this route to the registries. Called once, before any module registers. */
@@ -138,6 +163,27 @@ namespace Opaax
          * Number of registration requests, including refused ones.
          */
         Uint64 Count() const noexcept { return m_Count; }
+
+        // =========================================================================
+        // Functions
+        // =========================================================================
+    private:
+        /** Register and RegisterUnlisted. InCall names the caller in the log. */
+        template<CBehaviour T>
+        bool RegisterEntry(bool bInOffered, const char* InCall)
+        {
+            ++m_Count;
+
+            if (m_Components == nullptr)
+            {
+                // Not bound: BindEngineRegistries was never called.
+                OPAAX_LOG(LogModuleRegistrar, Error,
+                          "Behaviours().{} — route is not bound to a ComponentRegistry; registration dropped.", InCall);
+                return false;
+            }
+
+            return m_Components->Register<T>(DeriveTypeLeafName<T>(), /*bInEssential*/false, bInOffered);
+        }
 
         // =========================================================================
         // Members
