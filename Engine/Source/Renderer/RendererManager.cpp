@@ -972,6 +972,11 @@ namespace Opaax
 
         const OpaaxStringID lKey(InRef.Path);
 
+        if (IsRuntimePath(OpaaxStringView(InRef.Path)))
+        {
+            return ResolveRuntimeTexture(InRef.Path, lKey.GetId());
+        }
+
         auto lIt = m_TextureCache.find(lKey.GetId());
         if (lIt == m_TextureCache.end())
         {
@@ -996,6 +1001,30 @@ namespace Opaax
         // Null without a device: not drawable. No log.
         const Texture2D* lTexture = lIt->second.Get();
         return (lTexture != nullptr) ? lTexture->GetTexture() : m_MissingTexture.get();
+    }
+
+    ITexture2D* RendererManager::ResolveRuntimeTexture(const OpaaxString& InPath, const Uint32 InKey)
+    {
+        // Looked up each time, never kept: the game's handle alone decides when it is released.
+        // The pointer stays valid for this frame (released resources go at the next update).
+        const TAssetHandle<Texture2D> lHandle =
+            FindAsset<Texture2D>(OpaaxApplication::GetAppService<IEngine>().GetResources(),
+                                 OpaaxApplication::GetAppService<IPaths>(), InPath);
+
+        if (const Texture2D* lTexture = lHandle.Get())
+        {
+            m_WarnedRuntimeTextures.erase(InKey);
+            return lTexture->GetTexture();
+        }
+
+        // Not made yet, or released: nothing drawn rather than magenta (a missing fog must not paint the level).
+        if (m_WarnedRuntimeTextures.emplace(InKey).second)
+        {
+            OPAAX_LOG(LogRendererManager, Warn, "Runtime texture '{}' does not exist (not made yet, or released) — "
+                      "drawing nothing", InPath.CStr());
+        }
+
+        return nullptr;
     }
 
     FontFaceView RendererManager::ResolveFace(const TAssetRef<FontFace>& InRef)

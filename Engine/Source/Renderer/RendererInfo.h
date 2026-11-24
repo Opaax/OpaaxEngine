@@ -43,6 +43,9 @@ namespace Opaax
         /** How colour textures are read (Renderer.config's TextureFilter). */
         ETextureFilter TextureFilter = ETextureFilter::Pixel;
 
+        /** Textures made from pixels in code (RuntimeTexture) alive on the GPU now. */
+        Uint32 RuntimeTextures = 0;
+
         /** GPU time of a recent frame, in milliseconds. Negative before the first result. */
         double GpuFrameMs = -1.0;
     };

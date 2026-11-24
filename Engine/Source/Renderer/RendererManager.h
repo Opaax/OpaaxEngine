@@ -196,6 +196,12 @@ namespace Opaax
         ITexture2D* ResolveTexture(const TAssetRef<Texture2D>& InRef);
 
         /**
+         * A texture made in code (RuntimeTexture), found by its runtime path and not kept: released
+         * once the game lets go. Null, with one warning per path, while it does not exist.
+         */
+        ITexture2D* ResolveRuntimeTexture(const OpaaxString& InPath, Uint32 InKey);
+
+        /**
          * The sprite sheet InRef names. Loaded once and cached. Null for an empty reference.
          */
         const SpriteSheet* ResolveSheet(const TAssetRef<SpriteSheet>& InRef);
@@ -473,6 +479,9 @@ namespace Opaax
 
         /** Sheets already warned about for a missing frame. */
         TUnorderedSet<Uint32> m_WarnedFrameRange;
+
+        /** Runtime texture paths warned about while missing; forgotten once found, to warn again if released. */
+        TUnorderedSet<Uint32> m_WarnedRuntimeTextures;
 
         /** Same caches for fonts: .ttf faces and font families. */
         TUnorderedMap<Uint32, TAssetHandle<FontFace>>   m_FaceCache;
