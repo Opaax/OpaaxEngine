@@ -11,11 +11,16 @@ namespace Opaax
     // =============================================================================
     // Pipeline state enums
     // =============================================================================
+    /** How a draw is blended into its target. The factors of each: RHI/BlendState.h. */
     enum class EBlendMode
     {
         None,
         Alpha,     // src-alpha / one-minus-src-alpha (standard 2D transparency)
-        Additive   // one / one (light, bloom)
+        Additive,  // one / one (light, bloom)
+
+        /** A straight-alpha source over a premultiplied target (a paintable texture): colour as Alpha,
+         *  alpha one / one-minus-src-alpha, so the target keeps a correct alpha and premultiplied colour. */
+        Paint
     };
 
     enum class EPrimitiveTopology
