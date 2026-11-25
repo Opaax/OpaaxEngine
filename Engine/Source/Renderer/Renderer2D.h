@@ -7,8 +7,11 @@
 #include "Core/Log/Logger.h"
 
 #include "Core/Maths/Bounds2D.h"
+#include "Renderer/Materials/MaterialBlock.h"
 #include "Renderer/RenderLayer.h"
 #include "Renderer/UVBounds.h"
+#include "RHI/Pipeline.h"   // EBlendMode
+#include "RHI/Shader.h"
 #include "RHI/TextureSampling.h"
 
 namespace Opaax
@@ -56,6 +59,22 @@ namespace Opaax
 
         /** Off for a shadow caster that must not be darkened by its own silhouette (shadows, occlusion). */
         bool        bReceiveShadows = true;
+    };
+
+    /**
+     * Draws a quad with a game's shader (a Material2D's) instead of the engine's sprite shader. The
+     * default draws with the engine's. Quads with the same material share batches; a batch holds one.
+     */
+    struct QuadMaterial
+    {
+        IShader*      Shader   = nullptr;   // borrowed for the pass; null or invalid: the engine's shader
+        MaterialBlock Block;                // MaterialUBO for its batches
+        ITexture2D*   Texture0 = nullptr;   // borrowed for the pass, at MATERIAL_TEXTURE_SLOT_0; null: white
+        ITexture2D*   Texture1 = nullptr;   // at MATERIAL_TEXTURE_SLOT_1; null: white
+        EBlendMode    Blend    = EBlendMode::Alpha;
+
+        /** True when the quad is drawn with Shader. */
+        bool IsActive() const noexcept { return Shader != nullptr && Shader->IsValid(); }
     };
 
     /**
@@ -171,6 +190,7 @@ namespace Opaax
          * @param InUVMin / @param InUVMax Region to sample (default: whole texture)
          * @param InUVFrame The sheet frame the region is part of (MakeUVBounds): blended reads stay
          *   inside it. The whole texture by default: reads are free (text, a texture drawn whole).
+         * @param InMaterial A game's shader and its values; the engine's sprite shader by default
          */
         void DrawSprite(const Vector2F& InPosition,
                         const Vector2F& InSize,
@@ -183,7 +203,8 @@ namespace Opaax
                         const Vector2F& InUVMax        = { 1.f, 1.f },
                         const QuadMask& InMask         = {},
                         const QuadLighting& InLighting = {},
-                        const Vector4F& InUVFrame      = WHOLE_TEXTURE_UV);
+                        const Vector4F& InUVFrame      = WHOLE_TEXTURE_UV,
+                        const QuadMaterial& InMaterial = {});
 
         /**
          * Draws a hollow quad: a border of InThickness, empty inside. Untextured.
@@ -219,6 +240,16 @@ namespace Opaax
         void SetLightingMaps(ITexture2D* InShadowMap, ITexture2D* InAmbientOcclusion) noexcept;
 
         // =============================================================================
+        // Materials
+        // =============================================================================
+    public:
+        /** Drops the pipelines made for InShader: call it before InShader is destroyed. */
+        void ForgetShader(const IShader& InShader);
+
+        /** How many pipelines were made for materials' shaders and are kept. */
+        Uint32 GetMaterialPipelineCount() const noexcept;
+
+        // =============================================================================
         // Internal
         // =============================================================================
     private:
@@ -228,8 +259,14 @@ namespace Opaax
         /** Plans the recorded quads, then draws them one batch at a time. */
         void   EmitPass();
 
-        /** Uploads a batch, binds its samplers, issues one DrawIndexed. */
-        void   Flush(Uint32 InQuadCount, Uint32 InSlotCount);
+        /** Uploads a batch, binds its pipeline and samplers, issues one DrawIndexed. InMaterialId 0: the engine's shader. */
+        void   Flush(Uint32 InQuadCount, Uint32 InSlotCount, Uint32 InMaterialId);
+
+        /** InMaterial's id for this pass (existing or new, from 1). */
+        Uint32 GetMaterialId(const QuadMaterial& InMaterial);
+
+        /** The pipeline drawing with InShader and InBlend, made the first time it is asked for. */
+        IPipeline& GetMaterialPipeline(IShader& InShader, EBlendMode InBlend);
 
         /**
          * Writes a quad's four vertices and sort key. Used by every draw call.
@@ -246,7 +283,8 @@ namespace Opaax
                           const Vector2F& InInnerHalf = { 0.f, 0.f },
                           const QuadMask& InMask      = {},
                           const QuadLighting& InLighting = {},
-                          const Vector4F& InUVFrame   = WHOLE_TEXTURE_UV);
+                          const Vector4F& InUVFrame   = WHOLE_TEXTURE_UV,
+                          const QuadMaterial& InMaterial = {});
 
         /**
          * InTexture's id for this pass (existing or new).
