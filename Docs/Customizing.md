@@ -218,7 +218,7 @@ drawn as they are and lights do nothing (the log says so once).
 | Environment | Ambient light, ambient occlusion (`bAmbientOcclusion`, radius, strength), bloom (threshold, softness, intensity), exposure, tonemapper (ACES, Reinhard, None) |
 | Light2D | Point, Spot (along the entity's rotation) or Global; colour, intensity, radius, falloff, height (how low lights graze normal maps); shadows (`bCastShadows`, softness, strength) |
 | ShadowCaster2D | The entity's sprite (by its alpha) or quad blocks lights that cast shadows, and darkens the ambient light around it |
-| Material2D (an asset) | On a Sprite: lit or not, a normal map (tangent space, Y up, the sprite's layout), an emissive colour and strength |
+| Material2D (an asset) | On a Sprite: lit or not, a normal map (tangent space, Y up, the sprite's layout), an emissive colour and strength; a game's own shader with its parameters ([Shaders](#a-games-sprite-shader)) |
 
 ### Smooth edges: which setting
 
@@ -354,6 +354,7 @@ ported to GLSL 4.10 at load time (`RHI/OpenGL/GLSLPort`), since macOS stops at O
 | 5 | `AmbientOcclusionUBO` | AmbientOcclusion2D |
 | 6 | `BloomUBO` | Bloom2D |
 | 7 | `FXAAUBO`: one texel, the sub-pixel blend | FXAA |
+| 8 | `MaterialUBO`: the times, a material's parameters and colours; its textures in `u_Textures[12]` and `[13]` | A game's sprite shader (SpriteMaterial) |
 
 A pass reads its blocks and its textures through its bind group (`IBindGroup`): the group lists the
 binding points of its blocks, and binding it before the draw is what puts each buffer and each
@@ -371,6 +372,50 @@ writes `Lighting.png`, or `Sandbox --capture shot.png --capture-frame 30`. A scr
 by itself with `frame.sample`, which counts the colours of a part of the frame, and `renderer.info`
 says what the renderer is using: the GPU, the driver and its limits
 ([Automation.md](Automation.md#commands)).
+
+### A game's sprite shader
+
+A sprite can be drawn with a shader of the game's own: a fog cut with a soft edge, a chalk grain, a
+wobble, anything a fragment shader can do. The shader is named by the sprite's material (a
+`Material2D`), as Unity's material, Godot's ShaderMaterial or Paper2D's sprite material do, so the
+sprites sharing a material share its shader and its values.
+
+1. Copy `Engine/Assets/Shaders/SpriteMaterial.glsl` under the game's `Assets` (`Assets/Shaders/Fog.glsl`).
+   As it is, it draws exactly like the engine's sprite shader; change the end of `main()`, where
+   `FragColor` holds the sprite as the engine draws it (lit in a lit level). Keep the vertex stage
+   and the bindings: the engine feeds them.
+2. In a `Material2D`, drop the file on `Shader` and set the values it reads.
+3. Name the material in the sprite's `Material`.
+
+What the shader reads, besides the sprite's texture (`u_Textures[int(v_TexIndex)]`, read through
+`SampleSlot` as `main()` does) and its tint (`v_Color`):
+
+| Input | What |
+|---|---|
+| `u_Time.x` | The world's time in seconds, where the world is drawn: smooth at any frame rate, follows the time scale, stands still while the world is paused. For what belongs to the game |
+| `u_Time.y` | The app's time in seconds: always runs, in the editor too and while the world is paused. For what moves in a pause menu or in a map opened from one |
+| `u_Params[0]`, `u_Params[1]` | The material's `Param0..3` (`x, y, z, w`) and `Param4..7` |
+| `u_Colors[0]`, `u_Colors[1]` | `Color0` and `Color1` as picked, in screen colour: decode them with `pow(c, vec3(2.2))` in a lit level, where `u_PassParams.x` is 1 and colours are linear |
+| `u_Textures[MATERIAL_SLOT_0]`, `[MATERIAL_SLOT_1]` | `Texture0` and `Texture1` (slots 12 and 13; white when empty). A one-channel texture (an R8 runtime texture) reads as `(1, 1, 1, value)`: its value is in `.a` |
+| `v_WorldPosition` | Each pixel's place in the world. A pattern read from it is fixed to the world: it has no seam between two tiles and stays put while the camera pans and zooms |
+| `v_TexCoord` | The sprite's own texture coordinates (0..1 over a whole texture); `fwidth(v_TexCoord)` is how much they change across one pixel, for an edge a pixel wide at every zoom |
+
+The values are read every frame: change a parameter in the material's window and save (Ctrl+S), and
+the sprites change on the next frame, in the editor and in a game it plays. A `.glsl` file itself is
+compiled once: restart to see an edit of it.
+
+Sprites with a shader of their own are drawn in batches of their own (one per material), and the
+order by layer and order in layer holds across shaders: a material sprite between two others is drawn
+between them. Such a batch keeps 12 samplers for its sprites' textures (the engine's keeps 16).
+
+A shader that does not load, has no `#type` sections or does not compile is logged once (the
+compiler's own error, then which file falls back) and its sprites are drawn with the engine's sprite
+shader, lit by the material as before. `renderer.info` lists the material shaders and whether each
+compiled (`materialShaders`).
+
+Not covered: UI images (they have no material), a shadow caster's silhouette (it is the sprite's
+alpha, drawn by the engine's shader), reloading a `.glsl` file while the game runs.
+`TestWorld/Tests/MaterialShader.json` plays a level of material shaders and checks each of the above.
 
 In a dev build, a wrong graphics call is an Error line in the log, in the `OpenGL` category, with
 the driver's own text; doubtful use the driver rates medium or high is a Warn line. Each message is

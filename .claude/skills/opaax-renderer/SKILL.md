@@ -19,7 +19,7 @@ description: Change the Opaax 2D renderer - sprites, batching, lights, shadows, 
   view goes through a scene target, its size, format, samples), `Post/RenderTargetCache` (targets kept
   per size, none recreated in a steady frame).
 - `Engine/Assets/Shaders/`: `Sprite`, `Shadow2D`, `AmbientOcclusion2D`, `Bloom2D`, `Tonemap` (also the
-  copy of an unlit scene target), `FXAA`.
+  copy of an unlit scene target), `FXAA`, and `SpriteMaterial` (the template of a game's sprite shader).
 - TestWorld: `Levels/Lighting`, `Levels/Filtering`, `Levels/AntiAliasing`, `Levels/AntiAliasingLit`
   with their scripts in `TestWorld/Tests/`.
 
@@ -34,7 +34,13 @@ description: Change the Opaax 2D renderer - sprites, batching, lights, shadows, 
   one sample: never put them under FXAA or the render scale.
 - Shaders: GLSL 4.50 with explicit bindings (bindings table in Docs/Customizing.md). Sprite samplers
   are `u_Textures[16]`, indexed by constants only; slots 14 and 15 hold the ambient occlusion and
-  shadow maps in lit passes.
+  shadow maps in lit passes, 12 and 13 a material's own textures in a batch drawn with a game's shader.
+- A game's sprite shader (`Material2D::Shader`, a `SpriteShader` from a `.glsl`) starts from
+  `SpriteMaterial.glsl`: Sprite.glsl plus `MaterialUBO` (binding 8, `Materials/MaterialBlock.h`). A
+  change to Sprite.glsl's vertex stage or bindings goes into SpriteMaterial.glsl too
+  (`EngineShaderTests` checks they match): games copied it. Pipelines for those shaders are kept per
+  shader and blend mode (`Renderer2D::GetMaterialPipeline`); one batch holds one material, the sort key
+  is `[layer][order][material][texture]`. TestWorld: `Levels/MaterialShader`.
 - Uniform blocks: std140 with `Vector4F` members; the C++ struct has a `static_assert` on its size.
   A block is bound by the pass's bind group, never when the buffer is created: list it in the group
   of every pass that reads it. A constant repeated in a shader (counts, slots, sizes) is checked by
