@@ -473,5 +473,310 @@
         "params": {
             "path": "PaintTexture.png"
         }
+    },
+    {
+        "id": "edge-enlarged-blended",
+        "command": "frame.sample",
+        "params": {
+            "x": 432,
+            "y": 294,
+            "width": 40,
+            "height": 4
+        },
+        "expect": {
+            "colors": {
+                "$atLeast": 8
+            }
+        }
+    },
+    {
+        "id": "clear-red",
+        "command": "probe.paint.clear",
+        "params": {
+            "path": "/Runtime/Paint",
+            "x": 4,
+            "y": 36,
+            "width": 24,
+            "height": 24
+        },
+        "expect": {
+            "cleared": true
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "cleared-inside",
+        "command": "frame.sample",
+        "params": {
+            "x": 272,
+            "y": 292,
+            "width": 8,
+            "height": 8
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                64,
+                69,
+                82,
+                255
+            ],
+            "max": [
+                64,
+                69,
+                82,
+                255
+            ]
+        }
+    },
+    {
+        "id": "kept-outside",
+        "command": "frame.sample",
+        "params": {
+            "x": 400,
+            "y": 292,
+            "width": 8,
+            "height": 8
+        },
+        "expect": {
+            "mean": [
+                {
+                    "$atLeast": 0,
+                    "$atMost": 3
+                },
+                {
+                    "$atLeast": 0,
+                    "$atMost": 3
+                },
+                {
+                    "$atLeast": 252,
+                    "$atMost": 255
+                },
+                255
+            ]
+        }
+    },
+    {
+        "id": "clear-counted",
+        "command": "renderer.info",
+        "expect": {
+            "textures": {
+                "paintedStamps": 5,
+                "paintPasses": 5
+            }
+        }
+    },
+    {
+        "id": "shot-cleared",
+        "command": "screenshot",
+        "params": {
+            "path": "PaintTextureCleared.png"
+        }
+    },
+    {
+        "id": "clear-outside-refused",
+        "command": "probe.paint.clear",
+        "params": {
+            "path": "/Runtime/Paint",
+            "x": 64,
+            "y": 0,
+            "width": 4,
+            "height": 4
+        },
+        "expectFailure": true
+    },
+    {
+        "id": "make-checker",
+        "command": "probe.paint.make",
+        "params": {
+            "path": "/Runtime/Checker",
+            "width": 64,
+            "height": 64,
+            "checker": true
+        },
+        "expect": {
+            "paintable": true
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "checker-small-grey",
+        "command": "frame.sample",
+        "params": {
+            "x": 936,
+            "y": 356,
+            "width": 8,
+            "height": 8
+        },
+        "expect": {
+            "mean": [
+                {
+                    "$atLeast": 115,
+                    "$atMost": 139
+                },
+                {
+                    "$atLeast": 115,
+                    "$atMost": 139
+                },
+                {
+                    "$atLeast": 115,
+                    "$atMost": 139
+                },
+                255
+            ]
+        }
+    },
+    {
+        "id": "paint-checker-red",
+        "command": "probe.paint.stamps",
+        "params": {
+            "path": "/Runtime/Checker",
+            "stamps": [
+                {
+                    "color": [
+                        1,
+                        0,
+                        0,
+                        1
+                    ],
+                    "center": [
+                        32,
+                        32
+                    ],
+                    "size": [
+                        64,
+                        64
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "mipmaps-remade",
+        "command": "frame.sample",
+        "params": {
+            "x": 936,
+            "y": 356,
+            "width": 8,
+            "height": 8
+        },
+        "expect": {
+            "mean": [
+                {
+                    "$atLeast": 252,
+                    "$atMost": 255
+                },
+                {
+                    "$atLeast": 0,
+                    "$atMost": 3
+                },
+                {
+                    "$atLeast": 0,
+                    "$atMost": 3
+                },
+                255
+            ]
+        }
+    },
+    {
+        "id": "clear-all",
+        "command": "probe.paint.clear",
+        "params": {
+            "path": "/Runtime/Paint"
+        },
+        "expect": {
+            "cleared": true
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "all-cleared",
+        "command": "frame.sample",
+        "params": {
+            "x": 212,
+            "y": 232,
+            "width": 256,
+            "height": 256
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                64,
+                69,
+                82,
+                255
+            ],
+            "max": [
+                64,
+                69,
+                82,
+                255
+            ]
+        }
+    },
+    {
+        "id": "two-made",
+        "command": "renderer.info",
+        "expect": {
+            "textures": {
+                "runtime": 2
+            }
+        }
+    },
+    {
+        "id": "release-paint",
+        "command": "probe.paint.release",
+        "params": {
+            "path": "/Runtime/Paint"
+        },
+        "expect": {
+            "held": true
+        }
+    },
+    {
+        "id": "release-checker",
+        "command": "probe.paint.release",
+        "params": {
+            "path": "/Runtime/Checker"
+        },
+        "expect": {
+            "held": true
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "none-left",
+        "command": "renderer.info",
+        "expect": {
+            "textures": {
+                "runtime": 0
+            }
+        }
     }
 ]
