@@ -90,7 +90,6 @@ namespace Opaax
         if (lVertexShader == 0 || lFragmentShader == 0)
         {
             if (lVertexShader != 0) { glDeleteShader(lVertexShader); }
-            OPAAX_CORE_ASSERT(false)
             return;
         }
 
@@ -116,7 +115,6 @@ namespace Opaax
             OPAAX_ENGINE_LOG(Error, "OpenGLShader '{}': the program does not link:\n{}", lName, lLog.data());
             glDeleteProgram(m_RendererID);
             m_RendererID = 0;
-            OPAAX_CORE_ASSERT(false)
             return;
         }
 

@@ -228,7 +228,7 @@ namespace Opaax
         m_Data->UploadBuffer.resize(lMaxVertices);
         m_Data->SlotTextures.assign(SHADER_TEXTURE_SLOTS, m_Data->WhiteTexture.get());
 
-        m_Data->QuadShader   = InDevice.CreateShader(InShader);
+        m_Data->QuadShader   = CreateEngineShader(InDevice, InShader);
         m_Data->CameraUBO    = InDevice.CreateUniformBuffer(static_cast<Uint32>(sizeof(CameraBlock)), CAMERA_UBO_BINDING);
 
         // No light yet: lit quads see a white ambient, i.e. they are drawn as is.
