@@ -1,6 +1,10 @@
 // ParamColor.glsl - a colour from the material's parameters (MaterialShader.json).
 // A copy of Engine/Assets/Shaders/SpriteMaterial.glsl; only the end of main() changed.
 
+// @param Param0 RedStrength "How much of the base colour's red" range(0, 1) default(1)
+// @param Param5 Green "The green, on its own" range(0, 1)
+// @param Color0 Base "Red and blue come from it"
+
 #type vertex
 #version 450 core
 
@@ -387,6 +391,5 @@ void main()
         FragColor.rgb = lColor + lAlbedo * v_Emissive.rgb;
     }
 
-    // Red from Color0 times Param0, green from Param5, blue from Color0.
-    FragColor = vec4(u_Colors[0].r * u_Params[0].x, u_Params[1].y, u_Colors[0].b, 1.0);
+    FragColor = vec4(Base.r * RedStrength, Green, Base.b, 1.0);
 }

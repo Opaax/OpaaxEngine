@@ -28,6 +28,12 @@ namespace Opaax
         {
             OPAAX_LOG(LogSpriteShader, Error, "'{}' @param {}", InAbsPath, lError.CStr());
         }
+
+        // The fragment stage can say EdgeCut for u_Params[0].x.
+        if (HasStages())
+        {
+            m_Desc.FragmentSrc = ShaderParams::InsertDefines(m_Desc.FragmentSrc, m_Params);
+        }
         return true;
     }
 

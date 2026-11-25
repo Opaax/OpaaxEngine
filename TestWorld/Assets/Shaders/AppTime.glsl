@@ -1,6 +1,8 @@
 // AppTime.glsl - green cycles with the app's time (MaterialShader.json).
 // A copy of Engine/Assets/Shaders/SpriteMaterial.glsl; only the end of main() changed.
 
+// @param Param0 Speed "Green cycles per second of the app's time" range(0, 2) default(0.25)
+
 #type vertex
 #version 450 core
 
@@ -387,5 +389,5 @@ void main()
         FragColor.rgb = lColor + lAlbedo * v_Emissive.rgb;
     }
 
-    FragColor = vec4(0.0, fract(u_Time.y * u_Params[0].x), 0.0, 1.0);
+    FragColor = vec4(0.0, fract(u_Time.y * Speed), 0.0, 1.0);
 }

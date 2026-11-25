@@ -107,4 +107,25 @@ TEST_SUITE("SpriteShader")
 
         lResources.Shutdown();
     }
+
+    TEST_CASE("a shader's @param lines are kept, and their names defined in its fragment stage")
+    {
+        const TestTempDir lTemp("spriteshader_params");
+        const OpaaxString lPath = lTemp.Sub("Fog.glsl");
+        REQUIRE(FileIO::WriteAllText(lPath, OpaaxString(
+            "// @param Param0 EdgeCut \"Where the fog is cut\" range(0, 1)\n"
+            "// @param Param9 Broken\n"
+            "#type vertex\n#version 450 core\nvoid main() {}\n"
+            "#type fragment\n#version 450 core\nvoid main() { float a = EdgeCut; }\n")));
+
+        SpriteShader lShader;
+        REQUIRE(lShader.LoadSource(lPath.CStr()));
+        REQUIRE(lShader.GetParams().Params.size() == 1u);
+        CHECK(lShader.GetParams().Params[0].Name == "EdgeCut");
+        CHECK(lShader.GetParams().Errors.size() == 1u);
+
+        CHECK(lShader.GetDesc().FragmentSrc.StartsWith("#version 450 core\n// The names"));
+        CHECK(lShader.GetDesc().FragmentSrc.Contains("#define EdgeCut u_Params[0].x\n"));
+        CHECK_FALSE(lShader.GetDesc().VertexSrc.Contains("#define"));
+    }
 }

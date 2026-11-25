@@ -68,5 +68,12 @@ namespace Opaax
 
         /** Where the shader reads the slot: "u_Params[0].x", "u_Colors[1]", "u_Textures[MATERIAL_SLOT_0]". */
         OpaaxString Expression(EShaderParamSlot InSlot);
+
+        /**
+         * InStage with a `#define Name expression` per declared param, right after its `#version` line
+         * (at the top when it has none), so the code can say EdgeCut for u_Params[0].x.
+         * @return InStage unchanged when nothing is declared
+         */
+        OpaaxString InsertDefines(const OpaaxString& InStage, const ShaderParamList& InParams);
     }
 }

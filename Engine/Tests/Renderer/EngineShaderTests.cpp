@@ -9,6 +9,7 @@
 #include "Core/String/CString.h"
 #include "Renderer/Lighting/Lighting2D.h"
 #include "Renderer/Materials/MaterialBlock.h"
+#include "Renderer/Materials/ShaderParams.h"
 #include "Renderer/Renderer2DBatchPlan.h"
 #include "Renderer/ShaderSource.h"
 #include "RHI/OpenGL/GLSLPort.h"
@@ -290,6 +291,12 @@ TEST_CASE("Engine shaders: the sprite material template ports with the sprite's 
     // A game's copy is fed exactly as the engine's sprite shader: the same vertex stage.
     CHECK(lDesc.VertexSrc == lSprite.VertexSrc);
     CHECK(lDesc.FragmentSrc.Contains("v_WorldPosition"));
+
+    // Its example declarations are prose: a copy declares nothing until the game writes its own.
+    CHECK(lSource.Contains("// @param Param0   EdgeCut"));
+    const ShaderParamList lParams = ShaderParams::Parse(OpaaxStringView(lSource));
+    CHECK(lParams.Params.empty());
+    CHECK(lParams.Errors.empty());
 
     PortStage(lDesc.VertexSrc);
     const TDynArray<GLSLPort::ResourceBinding> lBindings = PortStage(lDesc.FragmentSrc);

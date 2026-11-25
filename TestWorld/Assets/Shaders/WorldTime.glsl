@@ -1,6 +1,8 @@
 // WorldTime.glsl - red grows with the world's time (MaterialShader.json).
 // A copy of Engine/Assets/Shaders/SpriteMaterial.glsl; only the end of main() changed.
 
+// @param Param0 Speed "Red gained per second of the world's time" range(0, 1) default(0.25)
+
 #type vertex
 #version 450 core
 
@@ -387,5 +389,5 @@ void main()
         FragColor.rgb = lColor + lAlbedo * v_Emissive.rgb;
     }
 
-    FragColor = vec4(clamp(u_Time.x * u_Params[0].x, 0.0, 1.0), 0.0, 0.0, 1.0);
+    FragColor = vec4(clamp(u_Time.x * Speed, 0.0, 1.0), 0.0, 0.0, 1.0);
 }
