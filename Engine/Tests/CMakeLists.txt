@@ -274,6 +274,7 @@ set(OPAAX_TEST_SOURCES
     Editor/GameExportPlanTests.cpp
     Editor/GuardedEditorDialogsTests.cpp
     Editor/LogFilterTests.cpp
+    Editor/MaterialEditingTests.cpp
     Editor/NewLevelPlanTests.cpp
     Editor/ResourceDragPayloadTests.cpp
     Editor/SpriteSheetEditingTests.cpp

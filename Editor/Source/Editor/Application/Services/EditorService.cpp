@@ -22,6 +22,7 @@
 #include "Editor/Assets/Editors/FontFamilyEditor.h"
 #include "Editor/Assets/Editors/InputMappingContextEditor.h"
 #include "Editor/Assets/Editors/SpriteSheetEditor.h"
+#include "Editor/Assets/Editors/MaterialEditor.h"
 #include "Editor/Assets/Editors/TextureEditor.h"
 
 #include "Editor/Operation/EditorGizmo.hpp"
@@ -591,7 +592,8 @@ namespace Opaax::Editor
         // top level, named and drawn from its class name; a game module registers its own the same way.
         AssetTypeRegistry& lTypes = m_Extensions.AssetTypes();
 
-        lTypes.Register<Material2D>().SetCategory(OpaaxString("Rendering"));
+        // How a sprite is drawn: its window names the shader's values as the shader does.
+        lTypes.Register<Material2D>().SetCategory(OpaaxString("Rendering")).SetEditor<MaterialEditor>();
         lTypes.Register<CameraShake>()
             .SetLabel(OpaaxString("Camera Shake"))
             .SetCategory(OpaaxString("Rendering"))
