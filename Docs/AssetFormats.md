@@ -20,8 +20,9 @@ makes in code with `/Runtime/` (`/Runtime/Fog`, see [Textures made in code](#tex
 | `Configs/*.config` | Engine, renderer and editor settings | Config panel |
 
 Images are `.png` (or `.jpg`, `.tga`, `.bmp`), sounds `.wav`, `.mp3` or `.flac`, fonts `.ttf` (or
-`.otf`): put them under `Assets`. An image is a `Texture2D` asset, a font a `FontFace` and a sound an
-`AudioClip`, each read from the file itself, with nothing beside it; double-click opens it (a font
+`.otf`): put them under `Assets`. An image is a `Texture2D` asset, a font a `FontFace`, a sound an
+`AudioClip` and a `.glsl` file a `SpriteShader` (a game's sprite shader, named by a material), each
+read from the file itself, with nothing beside it; double-click opens it (a font
 shows its baked glyphs and metrics, a sound plays). A sound up to 10 s is decoded when it loads; a longer one (music) keeps
 its file and is decoded while it plays.
 
@@ -455,7 +456,24 @@ its properties by field name, and the format's version:
 
 A missing property keeps its default, so `{ "Class": "Material2D" }` is a whole asset. A value of the
 wrong type makes the file fail to load (the log names the field). A sprite uses a material through its
-`Material` field. Files written by an older engine (`.opaaxdata`, `.opaaxmover`, `.opaaxmovemode`,
+`Material` field.
+
+A material drawn with a game's own shader names its `.glsl` file and the values the shader reads:
+
+```json
+{ "Class": "Material2D",
+  "Properties": { "Shader": "Shaders/Fog.glsl",
+                  "Param0": 0.5, "Param1": 1.5, "Param7": 0.02,
+                  "Color0": { "x": 0.9, "y": 0.9, "z": 1.0, "w": 1.0 },
+                  "Texture0": "Textures/ChalkNoise.png", "Texture1": "/Runtime/HelpMap/Fog" },
+  "Version": 1 }
+```
+
+`Shader` is a `.glsl` file under the game's `Assets` (a `SpriteShader` asset, read from the file
+itself, in the `#type vertex` / `#type fragment` form of the engine's shaders). `Param0` to `Param7`
+are numbers (0 by default), `Color0` and `Color1` colours (white by default), `Texture0` and
+`Texture1` textures (none by default: the shader reads white), a runtime texture included. What the
+shader reads of them: [Customizing.md](Customizing.md#a-games-sprite-shader). Files written by an older engine (`.opaaxdata`, `.opaaxmover`, `.opaaxmovemode`,
 `.opaaxaction`, `.opaaxinputmap`, `.opaaxclip`, `.opaaxanim`, `.opaaxfont`, `.opaaxsheet`) are
 converted once by starting the editor with `--upgrade-assets`: each becomes an `.opaaxasset` of the
 same name (its class appended when that name is taken), and the paths that named it in levels, maps,
