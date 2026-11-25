@@ -1,0 +1,361 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 360.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "b6175715e9d45c229f1cfccfa253d56c",
+            "name": "Camera",
+            "ownerMap": "MaterialShader"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.25,
+                        "y": 0.27,
+                        "z": 0.32
+                    },
+                    "Frame": -1,
+                    "Layer": "Background",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 1400.0,
+                        "y": 1400.0
+                    },
+                    "Texture": "/Engine/Textures/T_Square_256_White.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "85176284d19a5b4ca97854a1f7516a62",
+            "name": "Background",
+            "ownerMap": "MaterialShader"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "Materials/ShaderParam.opaaxasset",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 160.0,
+                        "y": 160.0
+                    },
+                    "Texture": "/Engine/Textures/T_Square_256_White.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -450.0,
+                        "y": 150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "7230f750a6485f3b94c2c35b4ef11002",
+            "name": "ParamColor",
+            "ownerMap": "MaterialShader"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "Materials/ShaderWorldTime.opaaxasset",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 160.0,
+                        "y": 160.0
+                    },
+                    "Texture": "/Engine/Textures/T_Square_256_White.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -200.0,
+                        "y": 150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "fa56beaf1f765be2ad419b71956de375",
+            "name": "WorldTime",
+            "ownerMap": "MaterialShader"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "Materials/ShaderAppTime.opaaxasset",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 160.0,
+                        "y": 160.0
+                    },
+                    "Texture": "/Engine/Textures/T_Square_256_White.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 50.0,
+                        "y": 150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "beeb934ae0f9523b893313129718cdca",
+            "name": "AppTime",
+            "ownerMap": "MaterialShader"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.5,
+                        "y": 0.5,
+                        "z": 0.5
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "Materials/ShaderBroken.opaaxasset",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 160.0,
+                        "y": 160.0
+                    },
+                    "Texture": "/Engine/Textures/T_Square_256_White.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -450.0,
+                        "y": -150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "aba6446858de59098eccb4279a099f7a",
+            "name": "Broken",
+            "ownerMap": "MaterialShader"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.5,
+                        "y": 0.5,
+                        "z": 0.5
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 160.0,
+                        "y": 160.0
+                    },
+                    "Texture": "/Engine/Textures/T_Square_256_White.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -200.0,
+                        "y": -150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "0dec3f66f5be54f5b9abd93a090ec27d",
+            "name": "BrokenTwin",
+            "ownerMap": "MaterialShader"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 0.0,
+                        "z": 0.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 200.0,
+                        "y": 200.0
+                    },
+                    "Texture": "/Engine/Textures/T_Square_256_White.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 250.0,
+                        "y": -150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "ab4e62d7ae0c5527bf452da9795aff15",
+            "name": "OrderBack",
+            "ownerMap": "MaterialShader"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "Materials/ShaderParam.opaaxasset",
+                    "OrderInLayer": 1,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 200.0,
+                        "y": 200.0
+                    },
+                    "Texture": "/Engine/Textures/T_Square_256_White.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 325.0,
+                        "y": -150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "917e2ecb08b45cf59e013ed37c9a35fb",
+            "name": "OrderMaterial",
+            "ownerMap": "MaterialShader"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.0,
+                        "y": 0.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 2,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 200.0,
+                        "y": 200.0
+                    },
+                    "Texture": "/Engine/Textures/T_Square_256_White.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 400.0,
+                        "y": -150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "652a01c8c84c5c46acb4677751a8ceae",
+            "name": "OrderFront",
+            "ownerMap": "MaterialShader"
+        }
+    ],
+    "mapId": "MaterialShader",
+    "version": 4
+}

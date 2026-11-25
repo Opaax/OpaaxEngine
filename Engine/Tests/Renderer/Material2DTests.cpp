@@ -10,6 +10,7 @@
 #include "Renderer/Materials/MaterialBlock.h"
 #include "Resources/Asset/AssetFile.h"
 #include "Resources/Asset/AssetHandle.h"
+#include "Resources/Asset/AssetResource.h"
 #include "Resources/ResourceManager.h"
 
 using namespace Opaax;
@@ -122,5 +123,44 @@ TEST_SUITE("Material2D")
         CHECK(lBlock.Colors[0].y == doctest::Approx(0.2f));
         CHECK(lBlock.Colors[1].w == doctest::Approx(0.8f));
         CHECK(sizeof(MaterialBlock) == 80u);
+    }
+
+    TEST_CASE("a saved edit reaches the handle the renderer reads the material through")
+    {
+        // What the editor does on Ctrl+S (ResourceOps::SavedToDisk): write the file, reload it in place.
+        const TestTempDir lTemp("material2d_saved_edit");
+        const OpaaxString lFile = lTemp.Sub("Materials/Fog.opaaxasset");
+
+        Material2D lMaterial;
+        lMaterial.Param0 = 0.5f;
+        REQUIRE(AssetFile::Save(lFile, lMaterial));
+
+        ObjectClassRegistry lClasses;
+        REQUIRE(lClasses.Register<Texture2D>());
+        REQUIRE(lClasses.Register<SpriteShader>());
+        REQUIRE(lClasses.Register<Material2D>());
+
+        ResourceManager lResources;
+        lResources.SetObjectClasses(&lClasses);
+        REQUIRE(lResources.Startup());
+
+        const TestFolderPaths lPaths(lTemp.Path());
+        {
+            const TAssetHandle<Material2D> lHandle =
+                LoadAsset<Material2D>(lResources, lPaths, OpaaxString("Materials/Fog.opaaxasset"));
+            REQUIRE(lHandle.Get() != nullptr);
+            CHECK(lHandle.Get()->Param0 == doctest::Approx(0.5f));
+
+            lMaterial.Param0 = 0.9f;
+            lMaterial.Param6 = 3.f;
+            REQUIRE(AssetFile::Save(lFile, lMaterial));
+            REQUIRE(lResources.Reload<AssetResource>(lFile.CStr()));
+
+            REQUIRE(lHandle.Get() != nullptr);
+            CHECK(lHandle.Get()->Param0 == doctest::Approx(0.9f));
+            CHECK(lHandle.Get()->Param6 == doctest::Approx(3.f));
+        }
+
+        lResources.Shutdown();
     }
 }

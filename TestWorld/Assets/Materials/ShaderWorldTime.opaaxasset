@@ -1,0 +1,8 @@
+{
+    "Class": "Material2D",
+    "Properties": {
+        "Param0": 0.25,
+        "Shader": "Shaders/WorldTime.glsl"
+    },
+    "Version": 1
+}

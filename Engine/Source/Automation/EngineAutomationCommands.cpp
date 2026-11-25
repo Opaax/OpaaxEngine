@@ -1274,8 +1274,8 @@ namespace Opaax::EngineAutomation
                 "fxaa, renderScale} (what world views are asked for), views (each world view of the last frame: "
                 "{sceneTarget (false: drawn straight into its target), lit, width, height, format, samples, fxaaTarget}), "
                 "textureFilter (how colour textures are read: Renderer.config's), textures {runtime (textures made from "
-                "pixels in code alive now)}, materialShaders (each shader file a material named, in the order first "
-                "drawn: {path, compiled}; one not compiled is drawn with the engine's sprite shader), "
+                "pixels in code alive now)}, materialShaders (each shader file a material named, by path: "
+                "{path, compiled}; one not compiled is drawn with the engine's sprite shader), "
                 "materialPipelines (kept for them, one per shader and blend mode), gpuFrameMs (negative before the "
                 "first measure)}.",
                 [&InEngine](const nlohmann::json&)

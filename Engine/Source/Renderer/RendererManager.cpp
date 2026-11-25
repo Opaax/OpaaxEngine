@@ -1,5 +1,7 @@
 #include "Renderer/RendererManager.h"
 
+#include "Core/Algo/Algo.h"
+
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IWindowManager.h"
 #include "Application/Services/IConfigSystem.h"
@@ -1390,6 +1392,10 @@ namespace Opaax
             {
                 lInfo.MaterialShaders.emplace_back(RendererInfo::MaterialShader{ lEntry.Path, lEntry.bValid });
             }
+
+            // By path: the order they are first drawn in follows the entities, which a script cannot rely on.
+            Algo::Sort(lInfo.MaterialShaders, [](const RendererInfo::MaterialShader& InA, const RendererInfo::MaterialShader& InB)
+                       { return InA.Path < InB.Path; });
         }
         lInfo.MaterialPipelines = m_RenderSystem->GetRenderer2D().GetMaterialPipelineCount();
         return lInfo;
