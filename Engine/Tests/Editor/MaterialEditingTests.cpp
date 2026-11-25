@@ -2,7 +2,12 @@
 // hides the slots it does not read, and gives a newly picked shader its defaults.
 #include <doctest.h>
 
+#include "../TestFolderPaths.h"
+#include "../TestTempDir.h"
 #include "Editor/Assets/Editors/MaterialEditing.h"
+#include "Object/ObjectClassRegistry.h"
+#include "Resources/Asset/AssetFile.h"
+#include "Resources/Asset/AssetHandle.h"
 
 using namespace Opaax;
 using namespace Opaax::Editor;
@@ -92,5 +97,63 @@ TEST_SUITE("MaterialEditing")
 
         CHECK(MaterialEditing::ApplyDefaults(lMaterial, k_Fog) == 0u);
         CHECK(&MaterialEditing::NumberOf(lMaterial, EShaderParamSlot::Param6) == &lMaterial.Param6);
+    }
+
+    TEST_CASE("edited values reach the copy the renderer draws; closing unsaved puts the file's back")
+    {
+        const TestTempDir lTemp("material_live_edit");
+        const OpaaxString lFile = lTemp.Sub("Materials/Fog.opaaxasset");
+
+        Material2D lSaved;
+        lSaved.Param0 = 0.5f;
+        REQUIRE(AssetFile::Save(lFile, lSaved));
+
+        ObjectClassRegistry lClasses;
+        REQUIRE(lClasses.Register<Texture2D>());
+        REQUIRE(lClasses.Register<SpriteShader>());
+        REQUIRE(lClasses.Register<Material2D>());
+
+        ResourceManager lResources;
+        lResources.SetObjectClasses(&lClasses);
+        REQUIRE(lResources.Startup());
+
+        const TestFolderPaths lPaths(lTemp.Path());
+        {
+            // The renderer's handle on the material, as RendererManager holds it.
+            const TAssetHandle<Material2D> lDrawn =
+                LoadAsset<Material2D>(lResources, lPaths, OpaaxString("Materials/Fog.opaaxasset"));
+            REQUIRE(lDrawn.Get() != nullptr);
+
+            // The window's own copy, being edited.
+            Material2D lEdited;
+            lEdited.Param0 = 0.5f;
+
+            MaterialEditing::MaterialLiveEdit lLive;
+            lLive.Bind(lResources, lFile);
+            REQUIRE(lLive.GetLoaded() == lDrawn.Get());
+            CHECK_FALSE(lLive.Push(lEdited));   // the same values: nothing to copy
+
+            lEdited.Param0      = 0.9f;
+            lEdited.Shader.Path = OpaaxString("Shaders/Fog.glsl");
+            CHECK(lLive.Push(lEdited));
+            CHECK(lDrawn.Get()->Param0 == doctest::Approx(0.9f));
+            CHECK(lDrawn.Get()->Shader.Path == "Shaders/Fog.glsl");
+            CHECK_FALSE(lLive.Push(lEdited));
+
+            // Closed without saving: the file's values are back where they are drawn.
+            lLive.Release(true);
+            REQUIRE(lDrawn.Get() != nullptr);
+            CHECK(lDrawn.Get()->Param0 == doctest::Approx(0.5f));
+            CHECK(lDrawn.Get()->Shader.IsEmpty());
+
+            // Saved, then closed: the values stay.
+            lLive.Bind(lResources, lFile);
+            CHECK(lLive.Push(lEdited));
+            REQUIRE(AssetFile::Save(lFile, lEdited));
+            lLive.Release(false);
+            CHECK(lDrawn.Get()->Param0 == doctest::Approx(0.9f));
+        }
+
+        lResources.Shutdown();
     }
 }

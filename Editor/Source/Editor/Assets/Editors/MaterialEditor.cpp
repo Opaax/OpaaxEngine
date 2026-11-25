@@ -46,6 +46,15 @@ namespace Opaax::Editor
             return MaterialEditing::Present(OpaaxStringView(InName), lParams, InOutView);
         };
         DrawObjectProperties(m_Context.Widgets, *lMaterial, lPresentation);
+
+        // What is drawn (the viewport, a game played here, the preview) shows the values as edited.
+        if (!m_bBound)
+        {
+            m_LiveEdit.Bind(m_Context.Resources, InDocument.GetAbsPath());
+            m_bBound = true;
+        }
+        m_LiveEdit.Push(*lMaterial);
+        m_bUnsaved = InDocument.IsDirty();
     }
 
     const SpriteShader* MaterialEditor::ResolveShader(const Material2D& InMaterial)
