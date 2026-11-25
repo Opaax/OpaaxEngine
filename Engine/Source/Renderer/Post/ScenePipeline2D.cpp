@@ -115,14 +115,14 @@ namespace Opaax
 
         m_Device = &InDevice;
 
-        m_TonemapShader   = InDevice.CreateShader(InShaders.Tonemap);
+        m_TonemapShader   = CreateEngineShader(InDevice, InShaders.Tonemap);
         m_TonemapPipeline = MakeFullscreenPipeline(InDevice, *m_TonemapShader, "ScenePipeline2D::Tonemap");
         m_PostUBO         = InDevice.CreateUniformBuffer(static_cast<Uint32>(sizeof(Vector4F)), POST_UBO_BINDING);
         m_TonemapGroup    = MakePassGroup(InDevice, *m_PostUBO, POST_UBO_BINDING, TONEMAP_TEXTURES);
 
         if (HasStages(InShaders.Shadow))
         {
-            m_ShadowShader   = InDevice.CreateShader(InShaders.Shadow);
+            m_ShadowShader   = CreateEngineShader(InDevice, InShaders.Shadow);
             m_ShadowPipeline = MakeFullscreenPipeline(InDevice, *m_ShadowShader, "ScenePipeline2D::Shadow");
             m_ShadowUBO      = InDevice.CreateUniformBuffer(static_cast<Uint32>(sizeof(ShadowBlock2D)), SHADOW_UBO_BINDING);
             m_ShadowGroup    = MakePassGroup(InDevice, *m_ShadowUBO, SHADOW_UBO_BINDING, 1);
@@ -134,7 +134,7 @@ namespace Opaax
 
         if (HasStages(InShaders.AmbientOcclusion))
         {
-            m_AmbientOcclusionShader   = InDevice.CreateShader(InShaders.AmbientOcclusion);
+            m_AmbientOcclusionShader   = CreateEngineShader(InDevice, InShaders.AmbientOcclusion);
             m_AmbientOcclusionPipeline = MakeFullscreenPipeline(InDevice, *m_AmbientOcclusionShader,
                                                                 "ScenePipeline2D::AmbientOcclusion");
             m_AmbientOcclusionUBO      = InDevice.CreateUniformBuffer(static_cast<Uint32>(sizeof(Vector4F)),
@@ -148,7 +148,7 @@ namespace Opaax
 
         if (HasStages(InShaders.Bloom))
         {
-            m_BloomShader      = InDevice.CreateShader(InShaders.Bloom);
+            m_BloomShader      = CreateEngineShader(InDevice, InShaders.Bloom);
             m_BloomPipeline    = MakeFullscreenPipeline(InDevice, *m_BloomShader, "ScenePipeline2D::Bloom");
             m_BloomAddPipeline = MakeFullscreenPipeline(InDevice, *m_BloomShader, "ScenePipeline2D::BloomAdd",
                                                         EBlendMode::Additive);
@@ -162,7 +162,7 @@ namespace Opaax
 
         if (HasStages(InShaders.FXAA))
         {
-            m_FXAAShader   = InDevice.CreateShader(InShaders.FXAA);
+            m_FXAAShader   = CreateEngineShader(InDevice, InShaders.FXAA);
             m_FXAAPipeline = MakeFullscreenPipeline(InDevice, *m_FXAAShader, "ScenePipeline2D::FXAA");
             m_FXAAUBO      = InDevice.CreateUniformBuffer(static_cast<Uint32>(sizeof(Vector4F)), FXAA_UBO_BINDING);
             m_FXAAGroup    = MakePassGroup(InDevice, *m_FXAAUBO, FXAA_UBO_BINDING, 1);

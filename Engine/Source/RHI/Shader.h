@@ -21,7 +21,8 @@ namespace Opaax
     };
 
     /**
-     * Shader program. Created by IRHIDevice::CreateShader.
+     * Shader program. Created by IRHIDevice::CreateShader. One that fails to compile or link logs
+     * why and is invalid: binding it draws nothing.
      */
     class IShader
     {
@@ -38,6 +39,9 @@ namespace Opaax
     public:
         virtual void Bind()   const = 0;
         virtual void Unbind() const = 0;
+
+        /** False when the program did not compile or link (logged when created). */
+        virtual bool IsValid() const = 0;
 
         //------------------------------------------------------------------------------
         // Uniform setters

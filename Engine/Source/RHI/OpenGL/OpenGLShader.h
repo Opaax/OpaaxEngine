@@ -48,6 +48,7 @@ namespace Opaax
     public:
         void Bind()   const override;
         void Unbind() const override;
+        bool IsValid() const override { return m_RendererID != 0; }
 
         //------------------------------------------------------------------------------
         //  Uniform setters

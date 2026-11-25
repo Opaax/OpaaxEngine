@@ -114,4 +114,15 @@ namespace Opaax
          */
         virtual bool            ReadBackbufferPixels(Uint32 InWidth, Uint32 InHeight, TDynArray<Uint8>& OutRGBA) = 0;
     };
+
+    /**
+     * Creates one of the engine's own shaders: one that does not compile is an engine bug, so a debug
+     * build stops there. A game's shader goes through CreateShader and is checked with IsValid.
+     */
+    inline TUniquePtr<IShader> CreateEngineShader(IRHIDevice& InDevice, const ShaderDesc& InDesc)
+    {
+        TUniquePtr<IShader> lShader = InDevice.CreateShader(InDesc);
+        OPAAX_CORE_ASSERT(lShader != nullptr && lShader->IsValid())
+        return lShader;
+    }
 }
