@@ -458,6 +458,15 @@ A missing property keeps its default, so `{ "Class": "Material2D" }` is a whole 
 wrong type makes the file fail to load (the log names the field). A sprite uses a material through its
 `Material` field.
 
+Files written by an older engine (`.opaaxdata`, `.opaaxmover`, `.opaaxmovemode`,
+`.opaaxaction`, `.opaaxinputmap`, `.opaaxclip`, `.opaaxanim`, `.opaaxfont`, `.opaaxsheet`) are
+converted once by starting the editor with `--upgrade-assets`: each becomes an `.opaaxasset` of the
+same name (its class appended when that name is taken), and the paths that named it in levels, maps,
+prefabs, canvases, assets and configs are rewritten. Paths written in game code are not: one that
+still names an old file loads the converted one, with a warning to update it.
+
+### A material with a game's shader
+
 A material drawn with a game's own shader names its `.glsl` file and the values the shader reads:
 
 ```json
@@ -472,13 +481,11 @@ A material drawn with a game's own shader names its `.glsl` file and the values 
 `Shader` is a `.glsl` file under the game's `Assets` (a `SpriteShader` asset, read from the file
 itself, in the `#type vertex` / `#type fragment` form of the engine's shaders). `Param0` to `Param7`
 are numbers (0 by default), `Color0` and `Color1` colours (white by default), `Texture0` and
-`Texture1` textures (none by default: the shader reads white), a runtime texture included. What the
-shader reads of them: [Customizing.md](Customizing.md#a-games-sprite-shader). Files written by an older engine (`.opaaxdata`, `.opaaxmover`, `.opaaxmovemode`,
-`.opaaxaction`, `.opaaxinputmap`, `.opaaxclip`, `.opaaxanim`, `.opaaxfont`, `.opaaxsheet`) are
-converted once by starting the editor with `--upgrade-assets`: each becomes an `.opaaxasset` of the
-same name (its class appended when that name is taken), and the paths that named it in levels, maps,
-prefabs, canvases, assets and configs are rewritten. Paths written in game code are not: one that
-still names an old file loads the converted one, with a warning to update it.
+`Texture1` textures (none by default: the shader reads white), a runtime texture included. The file
+always keeps these slot names; the shader gives them names of its own with `// @param` lines
+(`// @param Param0 EdgeCut "Where the fog is cut" range(0, 1) default(0.5)`), which the material's
+window shows instead, hiding the slots the shader does not declare. What the shader reads and how to
+declare it: [Customizing.md](Customizing.md#a-games-sprite-shader).
 
 ## UI presets (`UITransition`, `UITween`, `UIButtonStyle`, `UISoundSet`)
 
