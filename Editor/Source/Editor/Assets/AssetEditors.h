@@ -123,6 +123,9 @@ namespace Opaax::Editor
         /** Every open asset's window. Part of the UI pass, after the panels. */
         void Draw(IEditorGui& InGui);
 
+        /** Before the frame is drawn: each window visible last frame submits its preview (IAssetEditor::OnPreRender). */
+        void OnPreRender();
+
         // =============================================================================
         // Members
         // =============================================================================
@@ -143,6 +146,7 @@ namespace Opaax::Editor
             bool                      bPlaced    = false;
             bool                      bFocusNext = true;
             bool                      bWantClose = false;
+            bool                      bVisible   = false;   // drawn, not collapsed, last frame
         };
 
         OpenAsset* FindOpen(const OpaaxString& InAbsPath) const;

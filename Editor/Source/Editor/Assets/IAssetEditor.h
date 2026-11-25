@@ -22,6 +22,12 @@ namespace Opaax::Editor
         /** Every frame the window is open and not collapsed. InDocument's asset is never null here. */
         virtual void DrawContents(AssetDocument& InDocument) = 0;
 
+        /**
+         * Before the frame is drawn, while the window was visible last frame: submit what it shows of
+         * the scene (a preview drawn into a framebuffer), as a panel's OnPreRender does.
+         */
+        virtual void OnPreRender() {}
+
         /** The window's size the first time it opens. Wide enough for a list of structs' labels. */
         virtual Vector2F GetDefaultSize() const { return { 480.f, 540.f }; }
     };

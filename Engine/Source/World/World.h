@@ -195,6 +195,14 @@ namespace Opaax
         /** The last step's length, seconds; 0 before the first. */
         double GetLastStepDelta() const noexcept { return m_LastStepDelta; }
 
+        /** Back to no step taken: the world's time starts over at 0 (a material preview's clock). */
+        void ResetSteps() noexcept
+        {
+            m_StepCount     = 0;
+            m_SteppedTime   = 0.0;
+            m_LastStepDelta = 0.0;
+        }
+
         // End Steps
         // =========================================================================
 

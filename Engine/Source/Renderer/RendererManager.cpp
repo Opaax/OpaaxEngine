@@ -632,9 +632,10 @@ namespace Opaax
     double RendererManager::WorldTimeFor(const World& InWorld) const
     {
         // A drawn world sits between its last two steps (PoseFor): its time does too. Paused, the
-        // alpha holds, so the time stands still.
+        // alpha holds, so the time stands still. An Edit world takes no fixed steps: its time (a
+        // material preview's clock) is drawn as it is.
         const double lStepped = InWorld.GetSteppedTime();
-        if (!m_bInterpolate || InWorld.GetStepCount() == 0)
+        if (!m_bInterpolate || InWorld.GetStepCount() == 0 || InWorld.GetMode() != EWorldMode::Play)
         {
             return lStepped;
         }
