@@ -20,8 +20,8 @@ description: Change the Opaax 2D renderer - sprites, batching, lights, shadows, 
   per size, none recreated in a steady frame).
 - `Engine/Assets/Shaders/`: `Sprite`, `Shadow2D`, `AmbientOcclusion2D`, `Bloom2D`, `Tonemap` (also the
   copy of an unlit scene target), `FXAA`, and `SpriteMaterial` (the template of a game's sprite shader).
-- TestWorld: `Levels/Lighting`, `Levels/Filtering`, `Levels/AntiAliasing`, `Levels/AntiAliasingLit`
-  with their scripts in `TestWorld/Tests/`.
+- TestWorld: `Levels/Lighting`, `Levels/Filtering`, `Levels/AntiAliasing`, `Levels/AntiAliasingLit`,
+  `Levels/PaintTexture` with their scripts in `TestWorld/Tests/`.
 
 ## Rules
 
@@ -44,6 +44,16 @@ description: Change the Opaax 2D renderer - sprites, batching, lights, shadows, 
   lines (`Renderer/Materials/ShaderParams`) name the slots it reads: `#define`s in its fragment stage,
   and the labels of the material's window (`Editor/Assets/Editors/MaterialEditor`, which also previews
   the material in a world of its own; `asset.preview` reads that preview).
+- Blending: each `EBlendMode` is a factor table in `RHI/BlendState.h` (pure, tested in
+  `BlendStateTests`); `OpenGLPipeline` only maps it to `glBlendFuncSeparate`. A pass's engine-shader
+  quads blend as `RenderView::Blend` (Alpha everywhere but paint passes); `Renderer2D` keeps one engine
+  pipeline per blend asked for.
+- Paintable runtime textures (`RuntimeTextureDesc::bPaintable`, `Renderer/Textures/TexturePaint`):
+  RGBA8, premultiplied, own sampling with mipmaps, drawn into through `IRHIDevice::CreateTextureTarget`.
+  `RendererManager::PaintTextures` draws the queued stamps and clears right after `BeginFrame`, before
+  the views (blend `Paint`/`Erase`, brushes read `Smooth`), then remakes each texture's mipmaps once.
+  A batch's slots holding premultiplied colour are bits of `u_PassParams.w`; both sprite shaders
+  divide them back in `SampleSlot` (`Straight`). TestWorld: `Levels/PaintTexture`.
 - Uniform blocks: std140 with `Vector4F` members; the C++ struct has a `static_assert` on its size.
   A block is bound by the pass's bind group, never when the buffer is created: list it in the group
   of every pass that reads it. A constant repeated in a shader (counts, slots, sizes) is checked by
