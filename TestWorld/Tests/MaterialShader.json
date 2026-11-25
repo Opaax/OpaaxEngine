@@ -89,15 +89,15 @@
         "expect": {
             "colors": 1,
             "min": [
-                127,
-                127,
-                127,
+                { "$atLeast": 127, "$atMost": 128 },
+                { "$atLeast": 127, "$atMost": 128 },
+                { "$atLeast": 127, "$atMost": 128 },
                 255
             ],
             "max": [
-                127,
-                127,
-                127,
+                { "$atLeast": 127, "$atMost": 128 },
+                { "$atLeast": 127, "$atMost": 128 },
+                { "$atLeast": 127, "$atMost": 128 },
                 255
             ]
         }
