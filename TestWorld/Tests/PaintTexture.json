@@ -695,6 +695,184 @@
         }
     },
     {
+        "id": "erase-blue-middle",
+        "command": "probe.paint.stamps",
+        "params": {
+            "path": "/Runtime/Paint",
+            "mode": "Erase",
+            "stamps": [
+                {
+                    "texture": "Textures/Circle.png",
+                    "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                    ],
+                    "center": [
+                        48,
+                        48
+                    ],
+                    "size": [
+                        12,
+                        12
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "id": "erase-half-green",
+        "command": "probe.paint.stamps",
+        "params": {
+            "path": "/Runtime/Paint",
+            "mode": "Erase",
+            "stamps": [
+                {
+                    "color": [
+                        0,
+                        0,
+                        0,
+                        0.5
+                    ],
+                    "center": [
+                        16,
+                        16
+                    ],
+                    "size": [
+                        16,
+                        16
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "erased-texel",
+        "command": "probe.paint.texel",
+        "params": {
+            "path": "/Runtime/Paint",
+            "x": 48,
+            "y": 48
+        },
+        "expect": {
+            "texel": [
+                {
+                    "$atLeast": 0,
+                    "$atMost": 1
+                },
+                {
+                    "$atLeast": 0,
+                    "$atMost": 1
+                },
+                {
+                    "$atLeast": 0,
+                    "$atMost": 1
+                },
+                {
+                    "$atLeast": 0,
+                    "$atMost": 1
+                }
+            ]
+        }
+    },
+    {
+        "id": "erased-shows-background",
+        "command": "frame.sample",
+        "params": {
+            "x": 400,
+            "y": 292,
+            "width": 8,
+            "height": 8
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                64,
+                69,
+                82,
+                255
+            ],
+            "max": [
+                64,
+                69,
+                82,
+                255
+            ]
+        }
+    },
+    {
+        "id": "erase-leaves-ring",
+        "command": "frame.sample",
+        "params": {
+            "x": 366,
+            "y": 294,
+            "width": 4,
+            "height": 4
+        },
+        "expect": {
+            "mean": [
+                {
+                    "$atLeast": 0,
+                    "$atMost": 3
+                },
+                {
+                    "$atLeast": 0,
+                    "$atMost": 3
+                },
+                {
+                    "$atLeast": 252,
+                    "$atMost": 255
+                },
+                255
+            ]
+        }
+    },
+    {
+        "id": "half-erased-texel",
+        "command": "probe.paint.texel",
+        "params": {
+            "path": "/Runtime/Paint",
+            "x": 16,
+            "y": 16
+        },
+        "expect": {
+            "texel": [
+                {
+                    "$atLeast": 0,
+                    "$atMost": 1
+                },
+                {
+                    "$atLeast": 62,
+                    "$atMost": 66
+                },
+                {
+                    "$atLeast": 0,
+                    "$atMost": 1
+                },
+                {
+                    "$atLeast": 62,
+                    "$atMost": 66
+                }
+            ]
+        }
+    },
+    {
+        "id": "erase-counted",
+        "command": "renderer.info",
+        "expect": {
+            "textures": {
+                "paintedStamps": 8
+            }
+        }
+    },
+    {
         "id": "clear-all",
         "command": "probe.paint.clear",
         "params": {

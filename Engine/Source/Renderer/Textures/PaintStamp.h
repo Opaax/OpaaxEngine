@@ -14,7 +14,10 @@ namespace Opaax
     enum class EPaintMode : Uint8
     {
         /** Drawn over it (source-over). */
-        Over
+        Over,
+
+        /** Takes it away, as much as the stamp's alpha (destination-out): the stamp's colour is not used. */
+        Erase
     };
 
     /** The blend a paint pass of InMode draws with. */
@@ -22,7 +25,8 @@ namespace Opaax
     {
         switch (InMode)
         {
-        case EPaintMode::Over: return EBlendMode::Paint;
+        case EPaintMode::Over:  return EBlendMode::Paint;
+        case EPaintMode::Erase: return EBlendMode::Erase;
         }
         return EBlendMode::Paint;
     }

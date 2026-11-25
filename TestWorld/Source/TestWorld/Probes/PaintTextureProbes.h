@@ -58,6 +58,8 @@ namespace TestWorld
                 Opaax::CommandSpec("probe.paint.stamps", "TestWorld: paints stamps into a made texture, drawn before "
                                                          "the next frame's views: {queued}.")
                     .Param("path", Opaax::ECommandParamType::String, "the texture's runtime path")
+                    .Param("mode", Opaax::ECommandParamType::String, "Over (painted over) or Erase (Over)")
+                    .Choices({ "Over", "Erase" }).Optional()
                     .Param("stamps", Opaax::ECommandParamType::Any,
                            "[{texture, sheet, frame, color [r, g, b, a] 0..1, center [x, y], size [w, h], rotation}], "
                            "in texels from the bottom-left corner, rotation in radians"),
@@ -190,7 +192,10 @@ namespace TestWorld
                 lStamps.push_back(lStamp);
             }
 
-            if (!lTexture->Paint(lStamps))
+            const Opaax::EPaintMode lMode = InParams.value("mode", Opaax::OpaaxString("Over")) == Opaax::OpaaxString("Erase")
+                                          ? Opaax::EPaintMode::Erase
+                                          : Opaax::EPaintMode::Over;
+            if (!lTexture->Paint(lStamps, lMode))
             {
                 return Opaax::CommandResult::Fail("not painted: the log says why");
             }

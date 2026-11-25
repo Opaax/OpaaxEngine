@@ -20,7 +20,10 @@ namespace Opaax
 
         /** A straight-alpha source over a premultiplied target (a paintable texture): colour as Alpha,
          *  alpha one / one-minus-src-alpha, so the target keeps a correct alpha and premultiplied colour. */
-        Paint
+        Paint,
+
+        /** Takes the target away as much as the source's alpha (destination-out): zero / one-minus-src-alpha. */
+        Erase
     };
 
     enum class EPrimitiveTopology

@@ -49,6 +49,9 @@ namespace Opaax
         case EBlendMode::Paint:
             return BlendFactors{ true, EBlendFactor::SrcAlpha, EBlendFactor::OneMinusSrcAlpha,
                                  EBlendFactor::One, EBlendFactor::OneMinusSrcAlpha };
+        case EBlendMode::Erase:
+            return BlendFactors{ true, EBlendFactor::Zero, EBlendFactor::OneMinusSrcAlpha,
+                                 EBlendFactor::Zero, EBlendFactor::OneMinusSrcAlpha };
         }
         return BlendFactors{};
     }
