@@ -119,6 +119,30 @@ TEST_SUITE("TexturePaint")
         CHECK(lOps[2].StampCount == 2u);
     }
 
+    TEST_CASE("an Erase call between two paint calls splits them; two Erase calls join")
+    {
+        Fixture        lFixture;
+        RuntimeTexture lTile = lFixture.MakePaintable("/Runtime/Tile");
+
+        PaintQueue lQueue;
+        lQueue.AddStamps(lTile, { Stamp(1.f, 1.f) }, EPaintMode::Over);
+        lQueue.AddStamps(lTile, { Stamp(2.f, 2.f) }, EPaintMode::Erase);
+        lQueue.AddStamps(lTile, { Stamp(3.f, 3.f) }, EPaintMode::Erase);
+        lQueue.AddStamps(lTile, { Stamp(4.f, 4.f) }, EPaintMode::Over);
+
+        REQUIRE(lQueue.GetWork().size() == 1u);
+        const TDynArray<PaintOp>& lOps = lQueue.GetWork()[0].Ops;
+        REQUIRE(lOps.size() == 3u);
+        CHECK(lOps[0].Mode == EPaintMode::Over);
+        CHECK(lOps[1].Mode == EPaintMode::Erase);
+        CHECK(lOps[1].StampCount == 2u);
+        CHECK(lOps[2].Mode == EPaintMode::Over);
+        CHECK(lOps[2].FirstStamp == 3u);
+
+        CHECK(BlendModeOf(EPaintMode::Over) == EBlendMode::Paint);
+        CHECK(BlendModeOf(EPaintMode::Erase) == EBlendMode::Erase);
+    }
+
     TEST_CASE("textures keep the order they were first painted in")
     {
         Fixture        lFixture;

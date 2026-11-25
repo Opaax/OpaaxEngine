@@ -126,4 +126,18 @@ TEST_SUITE("BlendState")
         // 8-bit rounding can leave a colour above its alpha.
         CHECK(Unpremultiply(Vector4F{ 0.3f, 0.f, 0.f, 0.2f }).r == doctest::Approx(1.f));
     }
+
+    TEST_CASE("Erase takes the target away as much as the source's alpha, whatever its colour")
+    {
+        const BlendFactors lErase = MakeBlendFactors(EBlendMode::Erase);
+        const Vector4F     lPainted = Premultiply(Vector4F{ 1.f, 0.f, 0.f, 0.5f });
+
+        CHECK(Near(ApplyBlend(lErase, Vector4F{ 0.3f, 0.9f, 0.1f, 0.5f }, lPainted), Vector4F{ 0.25f, 0.f, 0.f, 0.25f }));
+        CHECK(Near(ApplyBlend(lErase, Vector4F{ 1.f, 1.f, 1.f, 1.f }, lPainted), TRANSPARENT_BLACK));
+        CHECK(Near(ApplyBlend(lErase, Vector4F{ 1.f, 1.f, 1.f, 0.f }, lPainted), lPainted));
+
+        // What is left stays premultiplied: shown, it keeps the colour that was painted.
+        CHECK(NearColor(Unpremultiply(ApplyBlend(lErase, Vector4F{ 0.f, 0.f, 0.f, 0.5f }, lPainted)),
+                        Vector4F{ 1.f, 0.f, 0.f, 0.f }));
+    }
 }
