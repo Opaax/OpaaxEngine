@@ -1,0 +1,381 @@
+[
+    {
+        "command": "time.pace",
+        "params": {
+            "pacing": "60"
+        }
+    },
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/MaterialShader.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 1.0
+        }
+    },
+    {
+        "id": "shaders",
+        "command": "renderer.info",
+        "expect": {
+            "materialShaders": [
+                {
+                    "path": "Shaders/AppTime.glsl",
+                    "compiled": true
+                },
+                {
+                    "path": "Shaders/Broken.glsl",
+                    "compiled": false
+                },
+                {
+                    "path": "Shaders/ParamColor.glsl",
+                    "compiled": true
+                },
+                {
+                    "path": "Shaders/WorldTime.glsl",
+                    "compiled": true
+                }
+            ],
+            "materialPipelines": 3
+        }
+    },
+    {
+        "id": "param-colour",
+        "command": "frame.sample",
+        "params": {
+            "x": 170,
+            "y": 190,
+            "width": 40,
+            "height": 40
+        },
+        "expect": {
+            "colors": 1,
+            "mean": [
+                {
+                    "$atLeast": 203,
+                    "$atMost": 205
+                },
+                {
+                    "$atLeast": 101,
+                    "$atMost": 103
+                },
+                {
+                    "$atLeast": 50,
+                    "$atMost": 52
+                },
+                {
+                    "$atLeast": 254,
+                    "$atMost": 256
+                }
+            ]
+        }
+    },
+    {
+        "id": "broken-twin",
+        "command": "frame.sample",
+        "params": {
+            "x": 420,
+            "y": 490,
+            "width": 40,
+            "height": 40
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                127,
+                127,
+                127,
+                255
+            ],
+            "max": [
+                127,
+                127,
+                127,
+                255
+            ]
+        }
+    },
+    {
+        "id": "broken-as-engine",
+        "command": "frame.sample",
+        "params": {
+            "x": 170,
+            "y": 490,
+            "width": 40,
+            "height": 40
+        },
+        "expect": {
+            "mean": {
+                "$sameAs": "broken-twin"
+            },
+            "colors": 1
+        }
+    },
+    {
+        "id": "over-the-back",
+        "command": "frame.sample",
+        "params": {
+            "x": 895,
+            "y": 500,
+            "width": 20,
+            "height": 20
+        },
+        "expect": {
+            "colors": 1,
+            "mean": [
+                {
+                    "$atLeast": 203,
+                    "$atMost": 205
+                },
+                {
+                    "$atLeast": 101,
+                    "$atMost": 103
+                },
+                {
+                    "$atLeast": 50,
+                    "$atMost": 52
+                },
+                {
+                    "$atLeast": 254,
+                    "$atMost": 256
+                }
+            ]
+        }
+    },
+    {
+        "id": "under-the-front",
+        "command": "frame.sample",
+        "params": {
+            "x": 955,
+            "y": 500,
+            "width": 20,
+            "height": 20
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                0,
+                0,
+                255,
+                255
+            ],
+            "max": [
+                0,
+                0,
+                255,
+                255
+            ]
+        }
+    },
+    {
+        "id": "back-alone",
+        "command": "frame.sample",
+        "params": {
+            "x": 805,
+            "y": 500,
+            "width": 20,
+            "height": 20
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                255,
+                0,
+                0,
+                255
+            ],
+            "max": [
+                255,
+                0,
+                0,
+                255
+            ]
+        }
+    },
+    {
+        "id": "world-time-1s",
+        "command": "frame.sample",
+        "params": {
+            "x": 420,
+            "y": 190,
+            "width": 40,
+            "height": 40
+        },
+        "expect": {
+            "colors": 1,
+            "mean": [
+                {
+                    "$atLeast": 55,
+                    "$atMost": 95
+                },
+                0,
+                0,
+                255
+            ]
+        }
+    },
+    {
+        "id": "app-time-a",
+        "command": "frame.sample",
+        "params": {
+            "x": 670,
+            "y": 190,
+            "width": 40,
+            "height": 40
+        },
+        "expect": {
+            "colors": 1
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 1.0
+        }
+    },
+    {
+        "id": "world-time-2s",
+        "command": "frame.sample",
+        "params": {
+            "x": 420,
+            "y": 190,
+            "width": 40,
+            "height": 40
+        },
+        "expect": {
+            "colors": 1,
+            "mean": [
+                {
+                    "$atLeast": 120,
+                    "$atMost": 160
+                },
+                0,
+                0,
+                255
+            ]
+        }
+    },
+    {
+        "id": "app-time-b",
+        "command": "frame.sample",
+        "params": {
+            "x": 670,
+            "y": 190,
+            "width": 40,
+            "height": 40
+        },
+        "expect": {
+            "mean": {
+                "$differsFrom": "app-time-a"
+            }
+        }
+    },
+    {
+        "id": "pause",
+        "command": "world.pause",
+        "params": {
+            "paused": true
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "paused-world-a",
+        "command": "frame.sample",
+        "params": {
+            "x": 420,
+            "y": 190,
+            "width": 40,
+            "height": 40
+        }
+    },
+    {
+        "id": "paused-app-a",
+        "command": "frame.sample",
+        "params": {
+            "x": 670,
+            "y": 190,
+            "width": 40,
+            "height": 40
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 30
+        }
+    },
+    {
+        "id": "paused-world-b",
+        "command": "frame.sample",
+        "params": {
+            "x": 420,
+            "y": 190,
+            "width": 40,
+            "height": 40
+        },
+        "expect": {
+            "mean": {
+                "$sameAs": "paused-world-a"
+            }
+        }
+    },
+    {
+        "id": "paused-app-b",
+        "command": "frame.sample",
+        "params": {
+            "x": 670,
+            "y": 190,
+            "width": 40,
+            "height": 40
+        },
+        "expect": {
+            "mean": {
+                "$differsFrom": "paused-app-a"
+            }
+        }
+    },
+    {
+        "id": "screenshot",
+        "command": "screenshot",
+        "params": {
+            "path": "MaterialShader.png"
+        }
+    },
+    {
+        "id": "resume",
+        "command": "world.pause",
+        "params": {
+            "paused": false
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 10
+        }
+    },
+    {
+        "id": "resumed-world",
+        "command": "frame.sample",
+        "params": {
+            "x": 420,
+            "y": 190,
+            "width": 40,
+            "height": 40
+        },
+        "expect": {
+            "mean": {
+                "$differsFrom": "paused-world-b"
+            }
+        }
+    }
+]

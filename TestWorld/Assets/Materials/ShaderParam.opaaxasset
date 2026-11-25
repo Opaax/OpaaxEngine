@@ -1,0 +1,15 @@
+{
+    "Class": "Material2D",
+    "Properties": {
+        "Color0": {
+            "w": 1.0,
+            "x": 1.0,
+            "y": 0.0,
+            "z": 0.2
+        },
+        "Param0": 0.8,
+        "Param5": 0.4,
+        "Shader": "Shaders/ParamColor.glsl"
+    },
+    "Version": 1
+}

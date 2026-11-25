@@ -1,0 +1,8 @@
+{
+    "Class": "Material2D",
+    "Properties": {
+        "Param0": 1.0,
+        "Shader": "Shaders/Broken.glsl"
+    },
+    "Version": 1
+}

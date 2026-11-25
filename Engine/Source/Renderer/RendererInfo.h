@@ -47,7 +47,7 @@ namespace Opaax
         /** Textures made from pixels in code (RuntimeTexture) alive on the GPU now. */
         Uint32 RuntimeTextures = 0;
 
-        /** The shader files materials named, in the order first drawn, and whether each compiled. */
+        /** The shader files materials named, by path, and whether each compiled. */
         struct MaterialShader
         {
             OpaaxString Path;
