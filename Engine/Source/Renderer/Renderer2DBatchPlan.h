@@ -14,6 +14,9 @@ namespace Opaax
     {
         Uint32 MaxQuads        = 1000;
         Uint32 MaxTextureSlots = 16;
+
+        /** The slots of a batch drawn with a material's shader: its own textures take the ones above. */
+        Uint32 MaxMaterialTextureSlots = 12;
     };
 
     /** Where one recorded quad goes: which batch, which sampler slot(s). */
@@ -51,6 +54,22 @@ namespace Opaax
                          const TDynArray<Uint32>&  InTextureIds,
                          const TDynArray<Uint32>&  InMaskIds,
                          const TDynArray<Uint32>&  InNormalIds,
+                         const QuadBatchLimits&    InLimits,
+                         TDynArray<QuadPlacement>& OutPlan);
+
+    /**
+     * The same, with a material per quad (sprites drawn with a game's shader).
+     * @param InMaterialIds Same size as InKeys, 0 = the engine's sprite shader. May be empty.
+     *                      A batch holds one material: it is cut where the material changes, and a
+     *                      material's batch uses at most InLimits.MaxMaterialTextureSlots slots.
+     *                      Give each material its MakeSortKey material too, so its quads of one
+     *                      order sit together.
+     */
+    void PlanQuadBatches(const TDynArray<Uint64>&  InKeys,
+                         const TDynArray<Uint32>&  InTextureIds,
+                         const TDynArray<Uint32>&  InMaskIds,
+                         const TDynArray<Uint32>&  InNormalIds,
+                         const TDynArray<Uint32>&  InMaterialIds,
                          const QuadBatchLimits&    InLimits,
                          TDynArray<QuadPlacement>& OutPlan);
 }

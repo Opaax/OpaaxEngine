@@ -36,6 +36,17 @@ namespace Opaax
                          const QuadBatchLimits&    InLimits,
                          TDynArray<QuadPlacement>& OutPlan)
     {
+        PlanQuadBatches(InKeys, InTextureIds, InMaskIds, InNormalIds, {}, InLimits, OutPlan);
+    }
+
+    void PlanQuadBatches(const TDynArray<Uint64>&  InKeys,
+                         const TDynArray<Uint32>&  InTextureIds,
+                         const TDynArray<Uint32>&  InMaskIds,
+                         const TDynArray<Uint32>&  InNormalIds,
+                         const TDynArray<Uint32>&  InMaterialIds,
+                         const QuadBatchLimits&    InLimits,
+                         TDynArray<QuadPlacement>& OutPlan)
+    {
         OutPlan.clear();
 
         const Uint32 lCount = static_cast<Uint32>(Maths::Min(InKeys.size(), InTextureIds.size()));
@@ -43,6 +54,9 @@ namespace Opaax
 
         const Uint32 lMaxQuads = Maths::Max(InLimits.MaxQuads, 1u);
         const Uint32 lMaxSlots = Maths::Max(InLimits.MaxTextureSlots, 2u);
+
+        // A material's batch leaves the slots above its limit to the material's own textures.
+        const Uint32 lMaxMaterialSlots = Maths::Clamp(InLimits.MaxMaterialTextureSlots, 2u, lMaxSlots);
 
         OutPlan.reserve(lCount);
         for (Uint32 i = 0; i < lCount; ++i) { OutPlan.emplace_back(i, 0u, 0u, 0u, 0u); }
@@ -54,11 +68,13 @@ namespace Opaax
         TDynArray<Uint32> lSlotTexIds;   // index i = slot i + 1; slot 0 is white
         lSlotTexIds.reserve(lMaxSlots);
 
-        Uint32 lBatch        = 0;
-        Uint32 lQuadsInBatch = 0;
+        Uint32 lBatch         = 0;
+        Uint32 lQuadsInBatch  = 0;
+        Uint32 lBatchMaterial = 0;
 
-        const bool lHasMasks   = !InMaskIds.empty();
-        const bool lHasNormals = !InNormalIds.empty();
+        const bool lHasMasks     = !InMaskIds.empty();
+        const bool lHasNormals   = !InNormalIds.empty();
+        const bool lHasMaterials = !InMaterialIds.empty();
 
         for (QuadPlacement& lPlacement : OutPlan)
         {
@@ -67,8 +83,11 @@ namespace Opaax
                                          ? InMaskIds[lPlacement.QuadIndex] : 0u;
             const Uint32 lNormalId = (lHasNormals && lPlacement.QuadIndex < InNormalIds.size())
                                          ? InNormalIds[lPlacement.QuadIndex] : 0u;
+            const Uint32 lMaterialId = (lHasMaterials && lPlacement.QuadIndex < InMaterialIds.size())
+                                           ? InMaterialIds[lPlacement.QuadIndex] : 0u;
+            const Uint32 lSlotLimit  = (lMaterialId != 0) ? lMaxMaterialSlots : lMaxSlots;
 
-            Uint32 lSlot     = FindSlot(lSlotTexIds, lTexId);
+            Uint32 lSlot    = FindSlot(lSlotTexIds, lTexId);
             Uint32 lMaskSlot = (lMaskId != 0) ? FindSlot(lSlotTexIds, lMaskId) : 0u;
 
             // New slots this quad needs. A texture used twice by the quad shares its slot.
@@ -79,9 +98,10 @@ namespace Opaax
                 ++lNeeded;
             }
 
-            // Quads first, then samplers: a full batch closes.
-            if (lQuadsInBatch >= lMaxQuads
-                || (lNeeded > 0 && static_cast<Uint32>(lSlotTexIds.size()) + lNeeded >= lMaxSlots))
+            // A batch draws with one shader; then quads, then samplers: a full batch closes.
+            if ((lQuadsInBatch > 0 && lMaterialId != lBatchMaterial)
+                || lQuadsInBatch >= lMaxQuads
+                || (lNeeded > 0 && static_cast<Uint32>(lSlotTexIds.size()) + lNeeded >= lSlotLimit))
             {
                 ++lBatch;
                 lQuadsInBatch = 0;
@@ -121,6 +141,7 @@ namespace Opaax
                 }
             }
 
+            lBatchMaterial        = lMaterialId;
             lPlacement.Batch      = lBatch;
             lPlacement.Slot       = lSlot;
             lPlacement.MaskSlot   = lMaskSlot;

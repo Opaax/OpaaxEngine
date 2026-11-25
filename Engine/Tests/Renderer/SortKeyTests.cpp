@@ -2,7 +2,7 @@
 //
 // MakeSortKey is header-inline + constexpr, so this suite compiles the function
 // itself — no engine symbol needed. It pins the bit layout the batch sort relies on:
-//   [Layer : bits 32..39][biased OrderInLayer : bits 8..23][texSlot : bits 0..7]
+//   [Layer : bits 40..47][biased OrderInLayer : bits 24..39][material : bits 8..23][texSlot : bits 0..7]
 #include <doctest.h>
 
 #include "Renderer/Renderer2DSortKey.h"
@@ -16,18 +16,18 @@ TEST_CASE("MakeSortKey: texture slot occupies the low 8 bits")
     CHECK((MakeSortKey(ERenderLayer::Default, 0, 0x1FFu) & 0xFFu) == 0xFFu);
 }
 
-TEST_CASE("MakeSortKey: OrderInLayer is biased by 32768 into bits 8..23")
+TEST_CASE("MakeSortKey: OrderInLayer is biased by 32768 into bits 24..39")
 {
-    auto OrderField = [](Uint64 InKey) { return (InKey >> 8) & 0xFFFFu; };
+    auto OrderField = [](Uint64 InKey) { return (InKey >> 24) & 0xFFFFu; };
 
     CHECK(OrderField(MakeSortKey(ERenderLayer::Default, -32768, 0u)) == 0u);
     CHECK(OrderField(MakeSortKey(ERenderLayer::Default, 0, 0u))      == 32768u);
     CHECK(OrderField(MakeSortKey(ERenderLayer::Default, 32767, 0u))  == 65535u);
 }
 
-TEST_CASE("MakeSortKey: layer occupies bits 32..39")
+TEST_CASE("MakeSortKey: layer occupies bits 40..47")
 {
-    auto LayerField = [](Uint64 InKey) { return (InKey >> 32) & 0xFFu; };
+    auto LayerField = [](Uint64 InKey) { return (InKey >> 40) & 0xFFu; };
 
     // Assert the FIELD against the band's own value, never against a hardcoded ordinal: adding a
     // layer to RenderLayerList.h must not break a test about bit POSITIONS. (It did once — inserting
@@ -35,7 +35,7 @@ TEST_CASE("MakeSortKey: layer occupies bits 32..39")
     CHECK(LayerField(MakeSortKey(ERenderLayer::Background, 0, 0u)) == static_cast<Uint64>(ERenderLayer::Background));
     CHECK(LayerField(MakeSortKey(ERenderLayer::UI,         0, 0u)) == static_cast<Uint64>(ERenderLayer::UI));
 
-    // The topmost band still fits the 8-bit field — nothing bleeds past bit 39 as the list grows.
+    // The topmost band still fits the 8-bit field — nothing bleeds past bit 47 as the list grows.
     constexpr Uint8 lTopBand = static_cast<Uint8>(ERenderLayer::Count) - 1;
     CHECK(LayerField(MakeSortKey(static_cast<ERenderLayer>(lTopBand), 0, 0u)) == lTopBand);
 }
@@ -66,14 +66,33 @@ TEST_CASE("MakeSortKey: matches the documented bit layout exactly")
     // that is the test's value. The band comes from the enum (see above) so growing the layer
     // list cannot invalidate a packing assertion.
     const Uint64 lKey      = MakeSortKey(ERenderLayer::Foreground, 7, 3u);
-    const Uint64 lExpected = (static_cast<Uint64>(ERenderLayer::Foreground) << 32)
-                           | (static_cast<Uint64>(7 + 32768) << 8)
+    const Uint64 lExpected = (static_cast<Uint64>(ERenderLayer::Foreground) << 40)
+                           | (static_cast<Uint64>(7 + 32768) << 24)
                            |  static_cast<Uint64>(3);
     CHECK(lKey == lExpected);
+
+    const Uint64 lWithMaterial = MakeSortKey(ERenderLayer::Foreground, 7, 3u, 0x1234u);
+    CHECK(lWithMaterial == (lExpected | (static_cast<Uint64>(0x1234u) << 8)));
+}
+
+TEST_CASE("MakeSortKey: the material groups quads of one order, never changes what is on top")
+{
+    auto MaterialField = [](Uint64 InKey) { return (InKey >> 8) & 0xFFFFu; };
+    CHECK(MaterialField(MakeSortKey(ERenderLayer::Default, 0, 0xFFu, 0u)) == 0u);
+    CHECK(MaterialField(MakeSortKey(ERenderLayer::Default, 0, 0xFFu, 0xFFFFu)) == 0xFFFFu);
+
+    // A material sprite under an engine sprite stays under it, whatever the ids.
+    CHECK(MakeSortKey(ERenderLayer::Default, 4, 0xFFu, 0xFFFFu) < MakeSortKey(ERenderLayer::Default, 5, 0u, 0u));
+    CHECK(MakeSortKey(ERenderLayer::Background, 32767, 0xFFu, 0xFFFFu)
+          < MakeSortKey(ERenderLayer::Default, -32768, 0u, 0u));
+
+    // In one order, the engine's shader (0) comes first, then each material: one batch each.
+    CHECK(MakeSortKey(ERenderLayer::Default, 0, 0xFFu, 0u) < MakeSortKey(ERenderLayer::Default, 0, 0u, 1u));
+    CHECK(MakeSortKey(ERenderLayer::Default, 0, 0xFFu, 1u) < MakeSortKey(ERenderLayer::Default, 0, 0u, 2u));
 }
 
 // The key must be usable in a constant expression (compile-time sortability is part
 // of the contract the constexpr hoist buys us).
 static_assert(MakeSortKey(ERenderLayer::Default, 0, 0u)
-                  == ((static_cast<Uint64>(ERenderLayer::Default) << 32) | (static_cast<Uint64>(32768) << 8)),
+                  == ((static_cast<Uint64>(ERenderLayer::Default) << 40) | (static_cast<Uint64>(32768) << 24)),
               "MakeSortKey must be a constant expression");
