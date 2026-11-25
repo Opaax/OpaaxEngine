@@ -19,7 +19,8 @@ layout(location = 10) in vec4 a_UVFrame;      // the sheet frame the quad is dra
 layout(std140, binding = 1) uniform CameraUBO
 {
     mat4 u_ViewProjection;
-    vec4 u_PassParams;   // x: 1 when the pass draws linear colour (an HDR target), z: 1 when textures are read through mipmaps
+    vec4 u_PassParams;   // x: 1 when the pass draws linear colour (an HDR target), z: 1 when textures are read through mipmaps,
+                         // w: one bit per sampler slot holding premultiplied colour (a paintable texture)
 };
 
 layout(location = 0) out vec4  v_Color;
@@ -126,7 +127,7 @@ vec4 SampleInside(sampler2D InTexture, vec2 InUV, vec2 InDx, vec2 InDy, vec4 InB
 // (some drivers show it), and the sprites of one batch use different textures.
 // InDx and InDy are taken outside any branch: inside one, the mipmap level picked by texture()
 // is undefined where two sprites meet.
-vec4 SampleSlot(int InSlot, vec2 InUV, vec2 InDx, vec2 InDy, vec4 InBounds)
+vec4 SampleSlotAsStored(int InSlot, vec2 InUV, vec2 InDx, vec2 InDy, vec4 InBounds)
 {
     switch (InSlot)
     {
@@ -148,6 +149,24 @@ vec4 SampleSlot(int InSlot, vec2 InUV, vec2 InDx, vec2 InDy, vec4 InBounds)
         case 15: return SampleInside(u_Textures[15], InUV, InDx, InDy, InBounds);
     }
     return vec4(1.0, 0.0, 1.0, 1.0);
+}
+
+// A paintable texture holds its colour multiplied by its alpha (bit InSlot of u_PassParams.w is set
+// for its slot). Its colour is divided back, so what follows reads straight colour as from any other.
+// Kept at most 1: 8-bit rounding can leave a colour above its alpha.
+vec4 Straight(vec4 InSample, int InSlot)
+{
+    if (((int(u_PassParams.w + 0.5) >> InSlot) & 1) == 0)
+    {
+        return InSample;
+    }
+    return vec4(min(InSample.rgb / max(InSample.a, 1.0 / 255.0), vec3(1.0)), InSample.a);
+}
+
+// A slot's texture read inside InBounds, its colour straight.
+vec4 SampleSlot(int InSlot, vec2 InUV, vec2 InDx, vec2 InDy, vec4 InBounds)
+{
+    return Straight(SampleSlotAsStored(InSlot, InUV, InDx, InDy, InBounds), InSlot);
 }
 
 // How far a shadowed light gets in direction InU (0..1 around it), on row InV.

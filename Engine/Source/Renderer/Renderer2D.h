@@ -78,6 +78,12 @@ namespace Opaax
     };
 
     /**
+     * The sampler slots of a batch that hold premultiplied colour (a paintable texture), one bit per
+     * slot: the sprite shader divides their colour back (u_PassParams.w).
+     */
+    Uint32 MakePremultipliedSlotMask(const TDynArray<ITexture2D*>& InSlotTextures) noexcept;
+
+    /**
      * One frame's batching counters (all passes). DrawCalls above 1 means the frame was split:
      * Quads past the limit = buffer full; PeakTextureSlots at the limit = samplers full.
      */
@@ -137,6 +143,7 @@ namespace Opaax
     public:
         /**
          * Opens a pass: sets the viewport, uploads the view-projection, starts recording into InCmd.
+         * Quads drawn with the engine's shader blend as InView.Blend says.
          */
         void BeginPass(const RenderView& InView, ICommandBuffer& InCmd);
 
@@ -267,6 +274,9 @@ namespace Opaax
 
         /** The pipeline drawing with InShader and InBlend, made the first time it is asked for. */
         IPipeline& GetMaterialPipeline(IShader& InShader, EBlendMode InBlend);
+
+        /** The engine shader's pipeline drawing with InBlend (Alpha: the one made at Init; others the first time). */
+        IPipeline& GetEnginePipeline(EBlendMode InBlend);
 
         /**
          * Writes a quad's four vertices and sort key. Used by every draw call.
