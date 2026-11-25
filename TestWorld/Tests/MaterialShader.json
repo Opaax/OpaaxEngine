@@ -25,7 +25,8 @@
             "materialShaders": [
                 {
                     "path": "Shaders/AppTime.glsl",
-                    "compiled": true
+                    "compiled": true,
+                    "error": ""
                 },
                 {
                     "path": "Shaders/Broken.glsl",
@@ -33,11 +34,13 @@
                 },
                 {
                     "path": "Shaders/ParamColor.glsl",
-                    "compiled": true
+                    "compiled": true,
+                    "error": ""
                 },
                 {
                     "path": "Shaders/WorldTime.glsl",
-                    "compiled": true
+                    "compiled": true,
+                    "error": ""
                 }
             ],
             "materialPipelines": 3

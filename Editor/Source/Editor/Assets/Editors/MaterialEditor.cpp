@@ -19,6 +19,7 @@
 #include "Renderer/Components/EnvironmentComponent.h"
 #include "Renderer/Components/SpriteComponent.h"
 #include "Renderer/Materials/Material2D.h"
+#include "Renderer/RendererInfo.h"
 #include "Renderer/RenderTarget.hpp"        // OffscreenRenderTarget
 #include "Renderer/Textures/Texture2D.h"
 #include "RHI/Framebuffer.h"
@@ -261,6 +262,15 @@ namespace Opaax::Editor
             : OpaaxString::Format("{} reads {} value(s), shown under its names.", lFile.CStr(),
                                   static_cast<Uint32>(lParams.Params.size()));
         m_Context.Widgets.TextDisabled(lSummary.CStr());
+
+        // Compiled once drawn: the renderer says whether it did, and the compiler why not.
+        for (const RendererInfo::MaterialShader& lCompiled : m_Context.Engine.GetRendererInfo().MaterialShaders)
+        {
+            if (lCompiled.Path == InMaterial.Shader.Path && !lCompiled.bValid)
+            {
+                ImGui::TextColored(k_ErrorColor, "Drawn with the engine's sprite shader: %s", lCompiled.Error.CStr());
+            }
+        }
 
         for (const OpaaxString& lError : lParams.Errors)
         {

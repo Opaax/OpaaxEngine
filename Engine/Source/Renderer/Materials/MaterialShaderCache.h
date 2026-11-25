@@ -28,6 +28,7 @@ namespace Opaax
         {
             OpaaxString Path;            // the asset path the material names
             bool        bValid = false;  // compiled and linked
+            OpaaxString Error;           // why not: not loaded, no sections, or the compiler's text
         };
 
         explicit MaterialShaderCache(CreateFunction InCreate) : m_Create(Move(InCreate)) {}
@@ -50,6 +51,7 @@ namespace Opaax
         {
             OpaaxString         Path;
             TUniquePtr<IShader> Shader;   // null when it cannot be drawn with
+            OpaaxString         Error;    // why it cannot
         };
 
         CreateFunction  m_Create;

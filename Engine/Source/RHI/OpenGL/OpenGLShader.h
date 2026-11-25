@@ -49,6 +49,7 @@ namespace Opaax
         void Bind()   const override;
         void Unbind() const override;
         bool IsValid() const override { return m_RendererID != 0; }
+        const OpaaxString& GetLog() const override { return m_Log; }
 
         //------------------------------------------------------------------------------
         //  Uniform setters
@@ -70,6 +71,9 @@ namespace Opaax
 
         /** For the logs. */
         OpaaxString m_DebugName;
+
+        /** The compiler's or the linker's text when it failed. */
+        OpaaxString m_Log;
 
         // Uniform lookup by name (per draw call, not per vertex).
         TUnorderedMap<OpaaxString, Int32, OpaaxHash> m_UniformLocationCache;

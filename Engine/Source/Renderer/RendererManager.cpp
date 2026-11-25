@@ -1391,7 +1391,7 @@ namespace Opaax
         {
             for (const MaterialShaderCache::Entry& lEntry : m_MaterialShaders->GetEntries())
             {
-                lInfo.MaterialShaders.emplace_back(RendererInfo::MaterialShader{ lEntry.Path, lEntry.bValid });
+                lInfo.MaterialShaders.emplace_back(RendererInfo::MaterialShader{ lEntry.Path, lEntry.bValid, lEntry.Error });
             }
 
             // By path: the order they are first drawn in follows the entities, which a script cannot rely on.

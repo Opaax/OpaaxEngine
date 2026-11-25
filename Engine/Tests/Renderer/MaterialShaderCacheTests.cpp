@@ -15,11 +15,14 @@ namespace
     class StubShader final : public IShader
     {
     public:
-        explicit StubShader(const bool bInValid) : m_bValid(bInValid) {}
+        explicit StubShader(const bool bInValid)
+            : m_Log(bInValid ? "" : "the fragment stage does not compile: 0(3) : error: 'broken' undeclared"),
+              m_bValid(bInValid) {}
 
         void Bind() const override {}
         void Unbind() const override {}
         bool IsValid() const override { return m_bValid; }
+        const OpaaxString& GetLog() const override { return m_Log; }
         void SetInt(const char*, Int32) override {}
         void SetIntArray(const char*, const Int32*, Uint32) override {}
         void SetFloat(const char*, float) override {}
@@ -29,7 +32,8 @@ namespace
         void SetMat4(const char*, const Matrix44F&) override {}
 
     private:
-        bool m_bValid = false;
+        OpaaxString m_Log;
+        bool        m_bValid = false;
     };
 
     /** Compiles every shader whose fragment stage does not hold "broken"; counts the compiles. */
@@ -79,6 +83,7 @@ TEST_SUITE("MaterialShaderCache")
         REQUIRE(lEntries.size() == 1u);
         CHECK(lEntries[0].Path == "Shaders/Fog.glsl");
         CHECK(lEntries[0].bValid);
+        CHECK(lEntries[0].Error.IsEmpty());
     }
 
     TEST_CASE("a broken shader falls back, logged and tried once")
@@ -108,6 +113,11 @@ TEST_SUITE("MaterialShaderCache")
         CHECK_FALSE(lEntries[0].bValid);
         CHECK_FALSE(lEntries[1].bValid);
         CHECK_FALSE(lEntries[2].bValid);
+
+        // Why each fell back: the compiler's own text, or what was missing.
+        CHECK(lEntries[0].Error == "the fragment stage does not compile: 0(3) : error: 'broken' undeclared");
+        CHECK(lEntries[1].Error == "the file has no '#type vertex' and '#type fragment' sections");
+        CHECK(lEntries[2].Error == "the file did not load (see the log)");
     }
 
     TEST_CASE("clearing hands each compiled shader over before it goes, then compiles again")
