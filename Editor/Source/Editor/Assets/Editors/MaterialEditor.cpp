@@ -91,9 +91,15 @@ namespace Opaax::Editor
 
         DrawShaderSummary(*lMaterial, lShader);
 
-        const PropertyPresentation lPresentation = [lParams](const char* InName, PropertyPresentationView& InOutView)
+        m_Shown.clear();
+        const PropertyPresentation lPresentation = [this, lParams](const char* InName, PropertyPresentationView& InOutView)
         {
-            return MaterialEditing::Present(OpaaxStringView(InName), lParams, InOutView);
+            const bool bShown = MaterialEditing::Present(OpaaxStringView(InName), lParams, InOutView);
+            if (bShown)
+            {
+                m_Shown.emplace_back(OpaaxString(InName), InOutView.Label);
+            }
+            return bShown;
         };
         DrawObjectProperties(m_Context.Widgets, *lMaterial, lPresentation);
 
@@ -105,6 +111,43 @@ namespace Opaax::Editor
         }
         m_LiveEdit.Push(*lMaterial);
         m_bUnsaved = InDocument.IsDirty();
+    }
+
+    nlohmann::json MaterialEditor::DescribeView() const
+    {
+        nlohmann::json lFields = nlohmann::json::array();
+        for (const TPair<OpaaxString, OpaaxString>& lShown : m_Shown)
+        {
+            lFields.push_back({ { "field", lShown.first.CStr() }, { "label", lShown.second.CStr() } });
+        }
+
+        nlohmann::json lView{
+            { "shader",         m_ShaderPath.CStr() },
+            { "fields",         Move(lFields) },
+            { "previewTexture", m_PreviewTexture.CStr() },
+            { "worldTimeRuns",  m_bWorldTimeRuns },
+            { "lit",            m_bLit } };
+
+        // Once the renderer has tried it: whether it compiled, and why not.
+        for (const RendererInfo::MaterialShader& lCompiled : m_Context.Engine.GetRendererInfo().MaterialShaders)
+        {
+            if (lCompiled.Path == m_ShaderPath)
+            {
+                lView["compiled"] = lCompiled.bValid;
+                lView["error"]    = lCompiled.Error.CStr();
+            }
+        }
+
+        nlohmann::json lParamErrors = nlohmann::json::array();
+        if (const SpriteShader* lShader = m_Shader.Get())
+        {
+            for (const OpaaxString& lError : lShader->GetParams().Errors)
+            {
+                lParamErrors.push_back(lError.CStr());
+            }
+        }
+        lView["paramErrors"] = Move(lParamErrors);
+        return lView;
     }
 
     // =============================================================================

@@ -105,6 +105,9 @@ namespace Opaax::Editor
         /** The open asset at InAbsPath, or null. */
         AssetDocument* Find(const OpaaxString& InAbsPath) const;
 
+        /** The editor drawing InAbsPath's window, or null when it is not open. */
+        IAssetEditor* FindEditor(const OpaaxString& InAbsPath) const;
+
         /** InAbsPath's history, or null when it is not open. */
         const EditorUndo* FindHistory(const OpaaxString& InAbsPath) const;
 

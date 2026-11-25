@@ -3,6 +3,7 @@
 #include <glad/glad.h>
 
 #include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
 
 namespace Opaax
 {
@@ -166,6 +167,44 @@ namespace Opaax
 
         m_bBound = false;
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    bool OpenGLFramebuffer::ReadPixels(TDynArray<Uint8>& OutRGBA) const
+    {
+        if (m_FBO == 0 || m_Format != ETextureFormat::RGBA8 || m_Width == 0 || m_Height == 0)
+        {
+            return false;
+        }
+
+        // Errors from earlier calls must not be taken for this one's.
+        while (glGetError() != GL_NO_ERROR) {}
+
+        // m_FBO holds the picture: drawn into directly, or the resolve of a multisampled one.
+        const size_t     lRowBytes = static_cast<size_t>(m_Width) * 4;
+        TDynArray<Uint8> lBottomUp(lRowBytes * m_Height);
+
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, m_FBO);
+        glReadBuffer(GL_COLOR_ATTACHMENT0);
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
+        glReadPixels(0, 0, static_cast<GLsizei>(m_Width), static_cast<GLsizei>(m_Height), GL_RGBA, GL_UNSIGNED_BYTE,
+                     lBottomUp.data());
+        glPixelStorei(GL_PACK_ALIGNMENT, 4);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+
+        if (glGetError() != GL_NO_ERROR)
+        {
+            OPAAX_LOG(LogOpenGLFramebuffer, Error, "A framebuffer could not be read ({}x{})", m_Width, m_Height);
+            return false;
+        }
+
+        // GL reads from the bottom row up.
+        OutRGBA.resize(lBottomUp.size());
+        for (Uint32 lRow = 0; lRow < m_Height; ++lRow)
+        {
+            Memory::Copy(OutRGBA.data() + lRow * lRowBytes, lBottomUp.data() + (m_Height - 1 - lRow) * lRowBytes,
+                         lRowBytes);
+        }
+        return true;
     }
 
     void OpenGLFramebuffer::BindColorTexture(const Uint32 InSlot) const

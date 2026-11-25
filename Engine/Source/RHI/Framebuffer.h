@@ -95,6 +95,14 @@ namespace Opaax
 
         /** Samples per pixel while drawn, as the device gave them. */
         virtual Uint32 GetSamples()           const noexcept { return 1; }
+
+        /**
+         * Reads what was last drawn into it (for a check or a capture, not every frame: it waits for the
+         * GPU). An RGBA8 framebuffer only.
+         * @param OutRGBA Receives Width * Height RGBA pixels, rows from top to bottom
+         * @return False when it cannot be read (another format, nothing allocated)
+         */
+        virtual bool ReadPixels(TDynArray<Uint8>& OutRGBA) const = 0;
     };
 
     // =============================================================================

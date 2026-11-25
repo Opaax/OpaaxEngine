@@ -313,6 +313,12 @@ namespace Opaax::Editor
         return lOpen != nullptr ? lOpen->Document.get() : nullptr;
     }
 
+    IAssetEditor* AssetEditors::FindEditor(const OpaaxString& InAbsPath) const
+    {
+        const OpenAsset* lOpen = FindOpen(InAbsPath);
+        return lOpen != nullptr ? lOpen->Editor.get() : nullptr;
+    }
+
     const EditorUndo* AssetEditors::FindHistory(const OpaaxString& InAbsPath) const
     {
         const OpenAsset* lOpen = FindOpen(InAbsPath);

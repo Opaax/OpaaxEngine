@@ -38,6 +38,8 @@ namespace Opaax::Editor
         //~Begin IAssetEditor interface
         void DrawContents(AssetDocument& InDocument) override;
         void OnPreRender() override;
+        IFramebuffer* GetPreview() const override { return m_Framebuffer.get(); }
+        nlohmann::json DescribeView() const override;
         Vector2F GetDefaultSize() const override { return { 480.f, 600.f }; }
         //~End IAssetEditor interface
 
@@ -50,9 +52,6 @@ namespace Opaax::Editor
 
         /** The texture the preview square shows, until another is dropped on it. */
         static constexpr const char* DEFAULT_PREVIEW_TEXTURE = "/Engine/Textures/T_Square_256_White.png";
-
-        /** The framebuffer the preview is drawn into; null before the first preview. For automation. */
-        IFramebuffer* GetPreviewFramebuffer() const noexcept { return m_Framebuffer.get(); }
 
     private:
         /** The material's shader, loaded when its path changes; null when it names none or did not load. */
@@ -79,6 +78,9 @@ namespace Opaax::Editor
         OpaaxString                       m_ShaderPath;       // the path m_Shader was loaded from
         OpaaxString                       m_LastShaderPath;   // the Shader field last frame
         bool                              m_bSeenShaderField = false;
+
+        /** The fields drawn last frame: {field, label}, in order (DescribeView). */
+        TDynArray<TPair<OpaaxString, OpaaxString>> m_Shown;
 
         OpaaxString                       m_AssetPath;        // the material, as a sprite names it
         World*                            m_PreviewWorld = nullptr;

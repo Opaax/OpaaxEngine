@@ -1,6 +1,13 @@
 #pragma once
 
+#include <nlohmann/json.hpp>
+
 #include "Core/Maths/MathTypes.h"   // Vector2F
+
+namespace Opaax
+{
+    class IFramebuffer;
+}
 
 namespace Opaax::Editor
 {
@@ -27,6 +34,12 @@ namespace Opaax::Editor
          * the scene (a preview drawn into a framebuffer), as a panel's OnPreRender does.
          */
         virtual void OnPreRender() {}
+
+        /** The framebuffer the window shows a preview in, or null when it has none (yet). For automation. */
+        virtual IFramebuffer* GetPreview() const { return nullptr; }
+
+        /** What the window shows besides the values (a material: its shader, the fields under their names). */
+        virtual nlohmann::json DescribeView() const { return nlohmann::json::object(); }
 
         /** The window's size the first time it opens. Wide enough for a list of structs' labels. */
         virtual Vector2F GetDefaultSize() const { return { 480.f, 540.f }; }
