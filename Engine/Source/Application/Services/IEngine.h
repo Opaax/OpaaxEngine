@@ -2,6 +2,7 @@
 
 #include "Application/Services/IAppService.h"
 #include "Core/OpaaxTypes.h"
+#include "Core/Maths/MathTypes.h"
 #include "World/Entity/EntityTypes.h"
 #include "World/WorldSpec.h"
 
@@ -29,6 +30,10 @@ namespace Opaax
     class FrameLimiter;
     struct CameraView;
     struct RendererInfo;
+    class RuntimeTexture;
+    struct PaintStamp;
+    struct TextureRegion;
+    enum class EPaintMode : Uint8;
 
     // =============================================================================
     // IEngine — the engine as an application service. Owns the engine subsystems
@@ -205,6 +210,18 @@ namespace Opaax
          *   without a device or for a texture that is not paintable.
          */
         virtual TUniquePtr<IFramebuffer> CreateTextureTarget(ITexture2D& InTexture) = 0;
+
+        /**
+         * Queues InStamps to be painted into InTarget, a paintable texture, before the next frame's views
+         * (see RuntimeTexture::Paint, which checks it is paintable).
+         * @return How many stamps were dropped because they draw nothing
+         */
+        virtual Uint32 PaintTexture(const RuntimeTexture& InTarget, const TDynArray<PaintStamp>& InStamps,
+                                    EPaintMode InMode) = 0;
+
+        /** Queues a clear of InRegion (inside InTarget) to InPremultipliedColor, in order with its paint. */
+        virtual void ClearTexture(const RuntimeTexture& InTarget, const TextureRegion& InRegion,
+                                  const Vector4F& InPremultipliedColor) = 0;
 
         /**
          * Called once per frame, before physics and render.

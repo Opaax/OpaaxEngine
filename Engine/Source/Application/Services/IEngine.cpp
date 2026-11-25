@@ -84,6 +84,8 @@ namespace Opaax
             // Lets headless tests load textures as CPU images.
             TUniquePtr<ITexture2D> CreateTexture(const TextureDesc&, const void*) override { return nullptr; }
             TUniquePtr<IFramebuffer> CreateTextureTarget(ITexture2D&) override { return nullptr; }
+            Uint32 PaintTexture(const RuntimeTexture&, const TDynArray<PaintStamp>&, EPaintMode) override { return 0; }
+            void ClearTexture(const RuntimeTexture&, const TextureRegion&, const Vector4F&) override {}
 
             void Update(double)           override {}
             void FixedUpdate(double)      override {}

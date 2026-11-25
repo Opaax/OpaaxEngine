@@ -2,7 +2,9 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
+#include "Core/Maths/MathTypes.h"
 #include "Core/String/OpaaxString.hpp"
+#include "Renderer/Textures/PaintStamp.h"
 #include "Resources/Asset/AssetResource.h"
 #include "Resources/ResourceManager.h"
 #include "RHI/TextureRegion.h"
@@ -37,7 +39,9 @@ namespace Opaax
     //   minimap). It lives in the resource manager under a runtime path ("/Runtime/Fog"), which a
     //   SpriteComponent's Texture or a UIImage names like an image file. The game keeps this handle:
     //   copies share the texture, and it is released once no handle holds it (the sprites naming it
-    //   then draw nothing). Main thread only.
+    //   then draw nothing). Main thread only. A paintable one (bPaintable) is painted on the GPU
+    //   instead: Paint and Clear are drawn into it before the frame's views, so the sprites naming it
+    //   show them the same frame.
     // =============================================================================
     class RuntimeTexture
     {
@@ -67,6 +71,23 @@ namespace Opaax
          * @return False, with a warning, for a region not inside the texture, a paintable texture or an empty handle
          */
         bool UpdateRegion(const TextureRegion& InRegion, const Uint8* InPixels);
+
+        /**
+         * Paints InStamps into a paintable texture over what it holds, in order, before this frame's
+         * views. Stamps that draw nothing (a size not above 0, a value not a number) are dropped with a warning.
+         * @return False, with a warning, for an empty handle or a texture not made paintable
+         */
+        bool Paint(const TDynArray<PaintStamp>& InStamps, EPaintMode InMode = EPaintMode::Over);
+
+        /** Sets every texel of a paintable texture to InColor (straight alpha), before this frame's views. */
+        bool Clear(const Vector4F& InColor = Vector4F{ 0.f, 0.f, 0.f, 0.f });
+
+        /**
+         * Sets the texels of InRegion (X, Y from the bottom-left texel) to InColor, the part outside the
+         * texture left out.
+         * @return False, with a warning, for a region wholly outside, an empty handle or a texture not paintable
+         */
+        bool ClearRegion(const TextureRegion& InRegion, const Vector4F& InColor = Vector4F{ 0.f, 0.f, 0.f, 0.f });
 
         /** Lets go of the texture: released at the next resource update once no handle holds it. */
         void Reset();

@@ -12,6 +12,7 @@
 #include "Renderer/Materials/Material2D.h"
 #include "Renderer/Materials/MaterialShaderCache.h"
 #include "Renderer/Renderer2D.h"           // QuadLighting
+#include "Renderer/Textures/TexturePaint.h"
 #include "Resources/Asset/AssetHandle.h"
 #include "UI/UIAssetProvider.h"
 #include "World/Entity/EntityTypes.h"   // EntityID
@@ -348,6 +349,15 @@ namespace Opaax
         TUniquePtr<IFramebuffer> CreateTextureTarget(ITexture2D& InTexture);
 
         /**
+         * Queues InStamps for a paintable InTarget, drawn when the next frame starts (see IEngine::PaintTexture).
+         * @return How many were dropped because they draw nothing
+         */
+        Uint32 QueuePaint(const RuntimeTexture& InTarget, const TDynArray<PaintStamp>& InStamps, EPaintMode InMode);
+
+        /** Queues a clear of InRegion of a paintable InTarget, in order with its paint. */
+        void QueueClear(const RuntimeTexture& InTarget, const TextureRegion& InRegion, const Vector4F& InPremultipliedColor);
+
+        /**
          * @return The debug shape queue, cleared every frame by Render()
          */
         DebugDraw& GetDebugDraw() noexcept { return m_DebugDraw; }
@@ -452,6 +462,9 @@ namespace Opaax
          * Progress through the fixed step, for display only. Zero when interpolation is off.
          */
         float m_FrameAlpha = 0.f;
+
+        /** The paint asked for since the last frame, drawn when the frame starts. Emptied every Render. */
+        PaintQueue m_PaintQueue;
 
         /** Run before each frame is drawn, in the order they were added. */
         TDynArray<BeforeDrawHook> m_BeforeDraw;
