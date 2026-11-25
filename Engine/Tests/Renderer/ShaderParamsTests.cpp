@@ -105,4 +105,24 @@ TEST_SUITE("ShaderParams")
         CHECK(ShaderParams::Expression(EShaderParamSlot::Color1) == "u_Colors[1]");
         CHECK(ShaderParams::Expression(EShaderParamSlot::Texture0) == "u_Textures[MATERIAL_SLOT_0]");
     }
+
+    TEST_CASE("the declared names are defined right after the #version line")
+    {
+        const ShaderParamList lParams = ShaderParams::Parse(
+            "// @param Param0 EdgeCut\n// @param Color1 Ink\n// @param Texture0 Noise\n");
+
+        const OpaaxString lStage("// a comment first\n#version 450 core\nvoid main() { float a = EdgeCut; }\n");
+        const OpaaxString lOut = ShaderParams::InsertDefines(lStage, lParams);
+
+        CHECK(lOut.StartsWith("// a comment first\n#version 450 core\n// The names of the shader's @param lines.\n"));
+        CHECK(lOut.Contains("#define EdgeCut u_Params[0].x\n"));
+        CHECK(lOut.Contains("#define Ink u_Colors[1]\n"));
+        CHECK(lOut.Contains("#define Noise u_Textures[MATERIAL_SLOT_0]\n"));
+        CHECK(lOut.Find("#define Noise") < lOut.Find("void main()"));
+        CHECK(lOut.Contains("void main() { float a = EdgeCut; }\n"));
+
+        // No #version line: on top. Nothing declared: unchanged.
+        CHECK(ShaderParams::InsertDefines(OpaaxString("void main() {}\n"), lParams).StartsWith("// The names"));
+        CHECK(ShaderParams::InsertDefines(lStage, ShaderParamList{}) == lStage);
+    }
 }

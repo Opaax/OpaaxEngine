@@ -257,4 +257,40 @@ namespace Opaax
         }
         return OpaaxString();
     }
+
+    OpaaxString ShaderParams::InsertDefines(const OpaaxString& InStage, const ShaderParamList& InParams)
+    {
+        if (InParams.Params.empty())
+        {
+            return InStage;
+        }
+
+        OpaaxString lDefines("// The names of the shader's @param lines.\n");
+        for (const ShaderParam& lParam : InParams.Params)
+        {
+            lDefines += OpaaxString::Format("#define {} {}\n", lParam.Name.CStr(), Expression(lParam.Slot).CStr());
+        }
+
+        // After the #version line: nothing but comments may come before it.
+        const OpaaxStringView lStage(InStage);
+        for (Uint32 lLineStart = 0; lLineStart < lStage.GetLength();)
+        {
+            const Int32  lBreak   = lStage.Find('\n', lLineStart);
+            const Uint32 lLineEnd = (lBreak < 0) ? lStage.GetLength() : static_cast<Uint32>(lBreak);
+            if (lStage.SubString(lLineStart, lLineEnd - lLineStart).TrimStart().StartsWith("#version"))
+            {
+                OpaaxString lOut(lStage.SubString(0, lLineEnd));
+                lOut += '\n';
+                lOut += lDefines;
+                if (lLineEnd + 1 < lStage.GetLength())
+                {
+                    lOut += lStage.SubString(lLineEnd + 1);
+                }
+                return lOut;
+            }
+            lLineStart = lLineEnd + 1;
+        }
+
+        return lDefines + InStage;
+    }
 }

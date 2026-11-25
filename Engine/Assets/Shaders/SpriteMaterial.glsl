@@ -19,6 +19,16 @@
 //   v_TexCoord     the sprite's own texture coordinates; v_Color its tint.
 //   u_PassParams.x 1 in an HDR pass (lit worlds): colours are linear there.
 //
+// Declare what the shader reads of its material, one line per slot, the line starting with
+// "// @param" (anywhere in the file). The material's window then shows only those slots, under these
+// names, and the code can use the names (EdgeCut stands for u_Params[0].x):
+//
+//   // @param Param0   EdgeCut "Where the fog is cut" range(0, 1) default(0.5)
+//   // @param Color0   Ink     "The colour of the strokes"
+//   // @param Texture0 Noise   "Chalk grain"
+//
+// range() and default() are for Param0..7. A shader that declares nothing shows every slot.
+//
 // Keep the vertex stage's inputs and the bindings as they are: the engine feeds them. A shader that
 // does not compile is logged once and its sprites are drawn with the engine's sprite shader.
 
