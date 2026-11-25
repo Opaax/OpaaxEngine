@@ -54,6 +54,15 @@ namespace Opaax
         TAssetRef<Texture2D> Texture0;
         TAssetRef<Texture2D> Texture1;
 
+        //~Begin Object interface
+        /** Without a Shader, the values only a shader reads are hidden: nothing would read them. */
+        bool IsPropertyVisible(OpaaxStringView InName) const override
+        {
+            EShaderParamSlot lSlot = EShaderParamSlot::Count;
+            return !Shader.IsEmpty() || !ShaderParams::SlotFromName(InName, lSlot);
+        }
+        //~End Object interface
+
         OPAAX_PROPERTIES(Material2D,
                          OPAAX_PROP(bLit).SetTooltip("Lit by the scene's lights. Off: always full brightness."),
                          OPAAX_PROP(NormalMap).SetTooltip("Bumps for the lights (tangent space, Y up).\n"
