@@ -40,7 +40,10 @@ description: Change the Opaax 2D renderer - sprites, batching, lights, shadows, 
   change to Sprite.glsl's vertex stage or bindings goes into SpriteMaterial.glsl too
   (`EngineShaderTests` checks they match): games copied it. Pipelines for those shaders are kept per
   shader and blend mode (`Renderer2D::GetMaterialPipeline`); one batch holds one material, the sort key
-  is `[layer][order][material][texture]`. TestWorld: `Levels/MaterialShader`.
+  is `[layer][order][material][texture]`. TestWorld: `Levels/MaterialShader`. A shader's `// @param`
+  lines (`Renderer/Materials/ShaderParams`) name the slots it reads: `#define`s in its fragment stage,
+  and the labels of the material's window (`Editor/Assets/Editors/MaterialEditor`, which also previews
+  the material in a world of its own; `asset.preview` reads that preview).
 - Uniform blocks: std140 with `Vector4F` members; the C++ struct has a `static_assert` on its size.
   A block is bound by the pass's bind group, never when the buffer is created: list it in the group
   of every pass that reads it. A constant repeated in a shader (counts, slots, sizes) is checked by

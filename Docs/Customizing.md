@@ -400,9 +400,39 @@ What the shader reads, besides the sprite's texture (`u_Textures[int(v_TexIndex)
 | `v_WorldPosition` | Each pixel's place in the world. A pattern read from it is fixed to the world: it has no seam between two tiles and stays put while the camera pans and zooms |
 | `v_TexCoord` | The sprite's own texture coordinates (0..1 over a whole texture); `fwidth(v_TexCoord)` is how much they change across one pixel, for an edge a pixel wide at every zoom |
 
-The values are read every frame: change a parameter in the material's window and save (Ctrl+S), and
-the sprites change on the next frame, in the editor and in a game it plays. A `.glsl` file itself is
-compiled once: restart to see an edit of it.
+**Naming the values.** A shader says which of the material's values it reads, one comment line per
+value, anywhere in its file (Unity's Properties block, Godot's uniform hints):
+
+```glsl
+// @param Param0   EdgeCut   "Where the fog is cut"   range(0, 1) default(0.5)
+// @param Param1   EdgeWidth "Edge width in pixels"   range(0, 8) default(1.5)
+// @param Color0   Ink       "The colour of the strokes"
+// @param Texture0 Noise     "Chalk grain"
+```
+
+The slot first (`Param0..7`, `Color0..1`, `Texture0..1`), then the name, an optional tooltip in
+quotes, and for a number an optional `range(min, max)` and `default(value)`. Then:
+
+- the code can use the names: `EdgeCut` stands for `u_Params[0].x`, `Ink` for `u_Colors[0]`, `Noise`
+  for `u_Textures[MATERIAL_SLOT_0]` (each is a `#define` the engine puts after the `#version` line);
+- the material's window shows only the declared values, under these names, with the tooltip and the
+  range; the file keeps the slot names (`"Param0": 0.5`), so renaming a value in the shader loses
+  nothing. A shader that declares nothing shows all twelve; a material with no shader shows none;
+- picking a shader in a material's window gives its values their `default()`.
+
+A line the engine cannot read (an unknown slot, a name used twice or starting with `u_`, `v_` or
+`gl_`, a range on a colour) is logged once and shown in red in the material's window; the shader
+still loads, without that name.
+
+**The material's window** shows the material on a square at the top, drawn as the game draws it, and
+under it what it is drawn with: no shader, the shader and how many values it declares, or, in red, why
+it fell back. The preview's own settings (not saved): the texture the square shows (white; drop a
+stand-in for a runtime texture), **World time runs** (its own clock moves `u_Time.x`; **Restart time**
+puts it at 0; `u_Time.y` always moves) and **Lit** (as in a level with an Environment).
+
+The values reach what is drawn while they are edited, saved or not: the preview, the viewport and a
+game played in the editor change while a value is dragged. Closing the window without saving puts
+the file's values back. A `.glsl` file itself is compiled once: restart to see an edit of it.
 
 Sprites with a shader of their own are drawn in batches of their own (one per material), and the
 order by layer and order in layer holds across shaders: a material sprite between two others is drawn
@@ -410,12 +440,14 @@ between them. Such a batch keeps 12 samplers for its sprites' textures (the engi
 
 A shader that does not load, has no `#type` sections or does not compile is logged once (the
 compiler's own error, then which file falls back) and its sprites are drawn with the engine's sprite
-shader, lit by the material as before. `renderer.info` lists the material shaders and whether each
-compiled (`materialShaders`).
+shader, lit by the material as before. `renderer.info` lists the material shaders, whether each
+compiled and why not (`materialShaders`, with the compiler's text); the material's window shows the
+same. The compiler's line numbers count from the stage's `#version` line.
 
 Not covered: UI images (they have no material), a shadow caster's silhouette (it is the sprite's
 alpha, drawn by the engine's shader), reloading a `.glsl` file while the game runs.
-`TestWorld/Tests/MaterialShader.json` plays a level of material shaders and checks each of the above.
+`TestWorld/Tests/MaterialShader.json` plays a level of material shaders and checks each of the above;
+`TestWorld/EditorTests/MaterialPreview.json` checks the material's window (`asset.preview`).
 
 In a dev build, a wrong graphics call is an Error line in the log, in the `OpenGL` category, with
 the driver's own text; doubtful use the driver rates medium or high is a Warn line. Each message is

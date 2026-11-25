@@ -95,3 +95,9 @@ What working on this repository taught, kept short so the next session starts fr
 - A copied map keeps the original's `mapId`: its entities (`ownerMap` renamed) are then dropped on
   load. Give it its own id. And resave a map only with an editor built after a new field: an older
   one drops what it does not know.
+- Asset windows never showed in a screenshot of the editor, whatever their size (multi-viewport
+  ImGui). A window that draws a picture (a material's preview) is checked by reading its framebuffer
+  back (`asset.preview`, `png` to look at it), not by a screenshot.
+- Writing C++ or JSON through a bash heredoc or a Python string still turns `\n` into a real line
+  break: three times on sprite-shaders. Edit or Write the text, or keep the snippet in a file read
+  as is.
