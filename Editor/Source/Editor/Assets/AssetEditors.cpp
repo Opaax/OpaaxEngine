@@ -435,6 +435,17 @@ namespace Opaax::Editor
         }
     }
 
+    void AssetEditors::OnPreRender()
+    {
+        for (const TUniquePtr<OpenAsset>& lOpen : m_Open)
+        {
+            if (lOpen->bVisible && lOpen->Editor != nullptr)
+            {
+                lOpen->Editor->OnPreRender();
+            }
+        }
+    }
+
     void AssetEditors::PlaceNewWindow(const OpenAsset& InNew, const Vector2F InSize) const
     {
         // m_Open is in opening order, and the windows before InNew were drawn this frame.
@@ -491,6 +502,7 @@ namespace Opaax::Editor
 
         bool       bWantOpen = true;
         const bool bVisible  = InGui.BeginPanelWindow(lLabel.CStr(), lStyle, bWantOpen);
+        InOpen.bVisible      = bVisible;
 
         if (InGui.IsPanelWindowFocused())
         {

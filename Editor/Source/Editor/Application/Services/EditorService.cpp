@@ -1082,6 +1082,9 @@ namespace Opaax::Editor
 
         // Apply a pending viewport resize before Engine().Loop() renders, so this frame uses the new size.
         m_Gui->Panels().OnPreRender();
+
+        // The asset windows' previews, drawn by the same frame.
+        if (m_AssetEditors != nullptr) { m_AssetEditors->OnPreRender(); }
     }
 
     void EditorService::EndFrame()
