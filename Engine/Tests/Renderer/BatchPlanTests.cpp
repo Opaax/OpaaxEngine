@@ -2,6 +2,7 @@
 // so a later batch never draws over an earlier layer. Tests the emit order, no GL needed.
 #include <doctest.h>
 
+#include "Core/Maths/Maths.h"
 #include "Renderer/Renderer2DBatchPlan.h"
 #include "Renderer/Renderer2DSortKey.h"
 
@@ -292,4 +293,96 @@ TEST_CASE("PlanQuadBatches: texture, mask and normal map together cut the batch 
     CHECK(lPlan[0].MaskSlot != 0u);
     CHECK(lPlan[0].NormalSlot != 0u);
     CHECK(lPlan[0].NormalSlot != lPlan[0].MaskSlot);
+}
+
+// =============================================================================
+// A material with its own shader: one batch per material, the draw order kept across shaders.
+// =============================================================================
+
+TEST_CASE("PlanQuadBatches: no material list plans exactly like the call without one")
+{
+    const TDynArray<Uint64> lKeys = Keys({ ERenderLayer::Default, ERenderLayer::Background, ERenderLayer::Foreground });
+    const TDynArray<Uint32> lTex { 1u, 2u, 3u };
+
+    TDynArray<QuadPlacement> lWithout;
+    TDynArray<QuadPlacement> lZeroes;
+    Opaax::PlanQuadBatches(lKeys, lTex, {}, {}, QuadBatchLimits{}, lWithout);
+    Opaax::PlanQuadBatches(lKeys, lTex, {}, {}, TDynArray<Uint32>{ 0u, 0u, 0u }, QuadBatchLimits{}, lZeroes);
+
+    REQUIRE(lWithout.size() == lZeroes.size());
+    for (size_t i = 0; i < lWithout.size(); ++i)
+    {
+        CHECK(lWithout[i].QuadIndex == lZeroes[i].QuadIndex);
+        CHECK(lWithout[i].Batch == lZeroes[i].Batch);
+        CHECK(lWithout[i].Slot == lZeroes[i].Slot);
+    }
+}
+
+TEST_CASE("PlanQuadBatches: materials interleaved by order keep the order, one batch per change")
+{
+    // Orders 0..4 submitted out of order; the material alternates with the order.
+    TDynArray<Uint64> lKeys;
+    TDynArray<Uint32> lMaterials;
+    for (const Int16 lOrder : { Int16(3), Int16(0), Int16(4), Int16(1), Int16(2) })
+    {
+        const Uint32 lMaterial = (lOrder % 2 == 1) ? 1u : 0u;
+        lKeys.emplace_back(MakeSortKey(ERenderLayer::Default, lOrder, 0u, lMaterial));
+        lMaterials.emplace_back(lMaterial);
+    }
+    const TDynArray<Uint32> lTex(5u, 0u);
+
+    TDynArray<QuadPlacement> lPlan;
+    Opaax::PlanQuadBatches(lKeys, lTex, {}, {}, lMaterials, QuadBatchLimits{}, lPlan);
+
+    // Drawn by order: 0, 1, 2, 3, 4 (submitted as indices 1, 3, 4, 0, 2).
+    CHECK(EmittedIndices(lPlan) == TDynArray<Uint32>{ 1u, 3u, 4u, 0u, 2u });
+
+    // Each change of shader starts a batch: five batches, in order.
+    for (Uint32 i = 0; i < 5u; ++i) { CHECK(lPlan[i].Batch == i); }
+}
+
+TEST_CASE("PlanQuadBatches: sprites of one material in one order share a batch, apart from the engine's")
+{
+    // Submitted engine, material, engine, material: the sort key puts each shader's quads together.
+    const TDynArray<Uint32> lMaterials { 0u, 7u, 0u, 7u };
+    TDynArray<Uint64> lKeys;
+    for (const Uint32 lMaterial : lMaterials) { lKeys.emplace_back(MakeSortKey(ERenderLayer::Default, 0, 0u, lMaterial)); }
+    const TDynArray<Uint32> lTex(4u, 0u);
+
+    TDynArray<QuadPlacement> lPlan;
+    Opaax::PlanQuadBatches(lKeys, lTex, {}, {}, lMaterials, QuadBatchLimits{}, lPlan);
+
+    CHECK(EmittedIndices(lPlan) == TDynArray<Uint32>{ 0u, 2u, 1u, 3u });
+    CHECK(lPlan[0].Batch == 0u);
+    CHECK(lPlan[1].Batch == 0u);
+    CHECK(lPlan[2].Batch == 1u);
+    CHECK(lPlan[3].Batch == 1u);
+}
+
+TEST_CASE("PlanQuadBatches: a material's batch leaves the slots above its limit free")
+{
+    // Twenty distinct textures in one material: no slot at or above 12, white + 11 per batch.
+    TDynArray<Uint64> lKeys;
+    TDynArray<Uint32> lTex;
+    for (Uint32 i = 1; i <= 20u; ++i)
+    {
+        lKeys.emplace_back(MakeSortKey(ERenderLayer::Default, 0, i, 3u));
+        lTex.emplace_back(i);
+    }
+    const TDynArray<Uint32> lMaterials(20u, 3u);
+
+    TDynArray<QuadPlacement> lPlan;
+    Opaax::PlanQuadBatches(lKeys, lTex, {}, {}, lMaterials, QuadBatchLimits{}, lPlan);
+
+    Uint32 lMaxSlot = 0;
+    for (const QuadPlacement& lPlacement : lPlan) { lMaxSlot = Maths::Max(lMaxSlot, lPlacement.Slot); }
+    CHECK(lMaxSlot == 11u);
+    CHECK(lPlan[10].Batch == 0u);
+    CHECK(lPlan[11].Batch == 1u);
+
+    // The same textures with the engine's shader fill 15 slots.
+    TDynArray<QuadPlacement> lEngine;
+    Opaax::PlanQuadBatches(lKeys, lTex, {}, {}, TDynArray<Uint32>(20u, 0u), QuadBatchLimits{}, lEngine);
+    CHECK(lEngine[14].Batch == 0u);
+    CHECK(lEngine[15].Batch == 1u);
 }
