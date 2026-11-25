@@ -1,8 +1,13 @@
 #include "Renderer/Textures/RuntimeTexture.h"
 
+#include "Application/OpaaxApplication.h"
+#include "Application/Services/IEngine.h"
 #include "Application/Services/IPaths.h"
+#include "Core/Maths/Maths.h"
 #include "Object/ObjectPtr.h"
 #include "Renderer/Textures/Texture2D.h"
+#include "Renderer/Textures/TexturePaint.h"
+#include "RHI/BlendState.h"
 
 namespace Opaax
 {
@@ -58,6 +63,53 @@ namespace Opaax
     {
         Texture2D* lTexture = GetTexture();
         return lTexture != nullptr && lTexture->UpdatePixels(InRegion, InPixels);
+    }
+
+    bool RuntimeTexture::Paint(const TDynArray<PaintStamp>& InStamps, const EPaintMode InMode)
+    {
+        if (!IsPaintable())
+        {
+            OPAAX_LOG(LogTexture2D, Warn, "'{}' cannot be painted: an empty handle, or a texture not made with bPaintable",
+                      m_Path.CStr());
+            return false;
+        }
+
+        const Uint32 lDropped = OpaaxApplication::GetAppService<IEngine>().PaintTexture(*this, InStamps, InMode);
+        if (lDropped > 0)
+        {
+            OPAAX_LOG(LogTexture2D, Warn, "'{}': {} of {} stamps draw nothing (a size not above 0, or not a number) "
+                      "and were dropped", m_Path.CStr(), lDropped, InStamps.size());
+        }
+        return true;
+    }
+
+    bool RuntimeTexture::Clear(const Vector4F& InColor)
+    {
+        return ClearRegion(TextureRegion::Whole(GetWidth(), GetHeight()), InColor);
+    }
+
+    bool RuntimeTexture::ClearRegion(const TextureRegion& InRegion, const Vector4F& InColor)
+    {
+        if (!IsPaintable())
+        {
+            OPAAX_LOG(LogTexture2D, Warn, "'{}' cannot be cleared: an empty handle, or a texture not made with bPaintable",
+                      m_Path.CStr());
+            return false;
+        }
+
+        const TOptional<TextureRegion> lInside = ClipRegion(InRegion, GetWidth(), GetHeight());
+        if (!lInside.has_value())
+        {
+            OPAAX_LOG(LogTexture2D, Warn, "'{}': the region {},{} {}x{} is outside its {}x{} texels — nothing cleared",
+                      m_Path.CStr(), InRegion.X, InRegion.Y, InRegion.Width, InRegion.Height, GetWidth(), GetHeight());
+            return false;
+        }
+
+        // The texture holds premultiplied colour.
+        const Vector4F lColor{ Maths::Clamp(InColor.r, 0.f, 1.f), Maths::Clamp(InColor.g, 0.f, 1.f),
+                               Maths::Clamp(InColor.b, 0.f, 1.f), Maths::Clamp(InColor.a, 0.f, 1.f) };
+        OpaaxApplication::GetAppService<IEngine>().ClearTexture(*this, *lInside, Premultiply(lColor));
+        return true;
     }
 
     void RuntimeTexture::Reset()

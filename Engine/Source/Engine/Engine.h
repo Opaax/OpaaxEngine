@@ -193,6 +193,10 @@ namespace Opaax
         TUniquePtr<IFramebuffer>    CreateFramebuffer(const FramebufferSpec& InSpec) override;
         TUniquePtr<ITexture2D>      CreateTexture(const TextureDesc& InDesc, const void* InPixels) override;
         TUniquePtr<IFramebuffer>    CreateTextureTarget(ITexture2D& InTexture) override;
+        Uint32                      PaintTexture(const RuntimeTexture& InTarget, const TDynArray<PaintStamp>& InStamps,
+                                                 EPaintMode InMode) override;
+        void                        ClearTexture(const RuntimeTexture& InTarget, const TextureRegion& InRegion,
+                                                 const Vector4F& InPremultipliedColor) override;
 
         //Getters
         EngineRegistries&   GetRegistries()     override { return m_Registries; }

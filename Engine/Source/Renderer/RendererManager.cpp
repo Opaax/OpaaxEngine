@@ -224,6 +224,7 @@ namespace Opaax
         m_MaterialCache.clear();
         m_UIAssetCache.clear();
         m_MissingTexture.reset();
+        m_PaintQueue.Reset();   // holds the textures it was to paint
 
         // The materials' shaders, after their pipelines.
         if (m_MaterialShaders != nullptr && m_RenderSystem != nullptr)
@@ -278,6 +279,7 @@ namespace Opaax
         m_DebugDraw.Clear();
         m_SubmittedViews.clear();
         m_SubmittedCanvases.clear();
+        m_PaintQueue.Reset();
     }
 
     DisplayPose RendererManager::PoseFor(World& InWorld, const EntityID InEntity,
@@ -1375,6 +1377,18 @@ namespace Opaax
         }
 
         return m_RenderSystem->CreateTextureTarget(InTexture);
+    }
+
+    Uint32 RendererManager::QueuePaint(const RuntimeTexture& InTarget, const TDynArray<PaintStamp>& InStamps,
+                                       const EPaintMode InMode)
+    {
+        return m_PaintQueue.AddStamps(InTarget, InStamps, InMode);
+    }
+
+    void RendererManager::QueueClear(const RuntimeTexture& InTarget, const TextureRegion& InRegion,
+                                     const Vector4F& InPremultipliedColor)
+    {
+        m_PaintQueue.AddClear(InTarget, InRegion, InPremultipliedColor);
     }
 
     void RendererManager::Present()

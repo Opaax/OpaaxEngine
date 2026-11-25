@@ -899,6 +899,20 @@ namespace Opaax
 
         return m_RendererManager->CreateTextureTarget(InTexture);
     }
+
+    Uint32 Engine::PaintTexture(const RuntimeTexture& InTarget, const TDynArray<PaintStamp>& InStamps, const EPaintMode InMode)
+    {
+        return m_RendererManager != nullptr ? m_RendererManager->QueuePaint(InTarget, InStamps, InMode) : 0u;
+    }
+
+    void Engine::ClearTexture(const RuntimeTexture& InTarget, const TextureRegion& InRegion,
+                              const Vector4F& InPremultipliedColor)
+    {
+        if (m_RendererManager != nullptr)
+        {
+            m_RendererManager->QueueClear(InTarget, InRegion, InPremultipliedColor);
+        }
+    }
     
     // =========================================================================
     // Getters

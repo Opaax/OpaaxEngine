@@ -3,6 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/MathTypes.h"
+#include "RHI/Pipeline.h"   // EBlendMode
 
 namespace Opaax
 {
@@ -31,5 +32,8 @@ namespace Opaax
 
         /** Draws coverage only (white times alpha): the shadow casters' occlusion map. */
         bool            bOcclusion = false;
+
+        /** How the pass's quads drawn with the engine's shader blend into the target (Paint into a paintable texture). */
+        EBlendMode      Blend = EBlendMode::Alpha;
     };
 }
