@@ -10,6 +10,7 @@
 #include "Renderer/DebugDraw.h"
 #include "Renderer/Lighting/Lighting2D.h"
 #include "Renderer/Materials/Material2D.h"
+#include "Renderer/Materials/MaterialShaderCache.h"
 #include "Renderer/Renderer2D.h"           // QuadLighting
 #include "Resources/Asset/AssetHandle.h"
 #include "UI/UIAssetProvider.h"
@@ -137,8 +138,21 @@ namespace Opaax
         /** InWorld's lights, where they are drawn this frame. */
         TDynArray<Light2DInstance> CollectLights(World& InWorld);
 
-        /** How a sprite with InMaterial takes light (cached per material path). */
-        QuadLighting ResolveLighting(const TAssetRef<Material2D>& InMaterial);
+        /** How a sprite with a material is drawn: how it takes light, and its own shader if it names one. */
+        struct ResolvedMaterial
+        {
+            QuadLighting Lighting;
+            QuadMaterial Shading;   // inactive: the engine's sprite shader
+        };
+
+        /** How a sprite with InMaterial is drawn in InWorld (materials and shaders cached per path). */
+        ResolvedMaterial ResolveMaterial(const TAssetRef<Material2D>& InMaterial, World& InWorld);
+
+        /** The compiled shader of a material's Shader, or null: the engine's sprite shader. */
+        IShader* ResolveMaterialShader(const TAssetRef<SpriteShader>& InShader);
+
+        /** InWorld's time where it is drawn this frame: between its last two steps, by the frame's alpha. */
+        double WorldTimeFor(const World& InWorld) const;
 
         /** The maps a lit pass reads, drawn from the shadow casters. Null: none this frame. */
         struct LightingMaps
@@ -476,6 +490,13 @@ namespace Opaax
 
         /** Materials by path, kept for the session (a saved material reloads in place). */
         TUnorderedMap<Uint32, TAssetHandle<Material2D>> m_MaterialCache;
+
+        /** The shader files materials name, by path, and what they compiled to (released before the device). */
+        TUnorderedMap<Uint32, TAssetHandle<SpriteShader>> m_ShaderAssetCache;
+        TUniquePtr<MaterialShaderCache>                   m_MaterialShaders;
+
+        /** The app's time a material's shader reads: the frames' lengths added up, so paced runs repeat. */
+        double m_AppTime = 0.0;
 
         /** Sheets already warned about for a missing frame. */
         TUnorderedSet<Uint32> m_WarnedFrameRange;

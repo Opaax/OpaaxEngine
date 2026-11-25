@@ -1274,7 +1274,10 @@ namespace Opaax::EngineAutomation
                 "fxaa, renderScale} (what world views are asked for), views (each world view of the last frame: "
                 "{sceneTarget (false: drawn straight into its target), lit, width, height, format, samples, fxaaTarget}), "
                 "textureFilter (how colour textures are read: Renderer.config's), textures {runtime (textures made from "
-                "pixels in code alive now)}, gpuFrameMs (negative before the first measure)}.",
+                "pixels in code alive now)}, materialShaders (each shader file a material named, in the order first "
+                "drawn: {path, compiled}; one not compiled is drawn with the engine's sprite shader), "
+                "materialPipelines (kept for them, one per shader and blend mode), gpuFrameMs (negative before the "
+                "first measure)}.",
                 [&InEngine](const nlohmann::json&)
                 {
                     const RendererInfo lInfo = InEngine.GetRendererInfo();
@@ -1294,6 +1297,13 @@ namespace Opaax::EngineAutomation
                             { "format",      ToString(lPlan.Format) },
                             { "samples",     lPlan.Samples },
                             { "fxaaTarget",  lPlan.bFXAATarget } });
+                    }
+
+                    nlohmann::json lShaders = nlohmann::json::array();
+                    for (const RendererInfo::MaterialShader& lShader : lInfo.MaterialShaders)
+                    {
+                        lShaders.push_back(nlohmann::json{ { "path",     ToJsonString(lShader.Path) },
+                                                           { "compiled", lShader.bValid } });
                     }
 
                     return AutomationResult::Ok(nlohmann::json{
@@ -1317,6 +1327,8 @@ namespace Opaax::EngineAutomation
                         { "views",           Move(lViews) },
                         { "textureFilter",   ToString(lInfo.TextureFilter) },
                         { "textures",        nlohmann::json{ { "runtime", lInfo.RuntimeTextures } } },
+                        { "materialShaders", Move(lShaders) },
+                        { "materialPipelines", lInfo.MaterialPipelines },
                         { "gpuFrameMs",      lInfo.GpuFrameMs } });
                 });
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/OpaaxTypes.h"
+#include "Core/String/OpaaxString.hpp"
 #include "Renderer/Post/SceneTargetPlan.h"
 #include "RHI/RHICapabilities.h"
 #include "RHI/TextureSampling.h"
@@ -45,6 +46,17 @@ namespace Opaax
 
         /** Textures made from pixels in code (RuntimeTexture) alive on the GPU now. */
         Uint32 RuntimeTextures = 0;
+
+        /** The shader files materials named, in the order first drawn, and whether each compiled. */
+        struct MaterialShader
+        {
+            OpaaxString Path;
+            bool        bValid = false;
+        };
+        TDynArray<MaterialShader> MaterialShaders;
+
+        /** Pipelines kept for the materials' shaders (one per shader and blend mode). */
+        Uint32 MaterialPipelines = 0;
 
         /** GPU time of a recent frame, in milliseconds. Negative before the first result. */
         double GpuFrameMs = -1.0;
