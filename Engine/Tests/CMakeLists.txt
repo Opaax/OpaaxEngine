@@ -218,6 +218,7 @@ set(OPAAX_TEST_SOURCES
     Renderer/RenderTargetCacheTests.cpp
     Renderer/RenderTargetTests.cpp
     Renderer/SceneTargetPlanTests.cpp
+    Renderer/ShaderParamsTests.cpp
     Renderer/SortKeyTests.cpp
     Renderer/SpriteSheetTests.cpp
     Renderer/SpriteShaderTests.cpp

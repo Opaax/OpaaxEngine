@@ -21,6 +21,13 @@ namespace Opaax
         const OpaaxString lText(reinterpret_cast<const char*>(lBytes.data()), static_cast<Uint32>(lBytes.size()));
         m_Desc           = ShaderSource::FromSource(lText, lPath);
         m_Desc.DebugName = lPath;
+
+        // A refused declaration only loses its name in the editor: said once, the shader still loads.
+        m_Params = ShaderParams::Parse(OpaaxStringView(lText));
+        for (const OpaaxString& lError : m_Params.Errors)
+        {
+            OPAAX_LOG(LogSpriteShader, Error, "'{}' @param {}", InAbsPath, lError.CStr());
+        }
         return true;
     }
 
