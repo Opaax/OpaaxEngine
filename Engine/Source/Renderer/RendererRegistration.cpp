@@ -16,6 +16,7 @@
 #include "Renderer/Components/Light2DComponent.h"
 #include "Renderer/Components/ShadowCaster2DComponent.h"
 #include "Renderer/Materials/Material2D.h"
+#include "Renderer/Materials/SpriteShader.h"
 #include "Renderer/Components/QuadComponent.h"
 #include "Renderer/Components/SpriteComponent.h"
 #include "Renderer/Components/TextComponent.h"
@@ -61,6 +62,9 @@ namespace Opaax
 
     // How a sprite takes light, shared by the sprites that point at it.
     OPAAX_REGISTER_OBJECT(Material2D);
+
+    // A game's sprite shader, read from its .glsl file, which a material names.
+    OPAAX_REGISTER_OBJECT(SpriteShader);
 
     // A typeface's faces by style, which text asks for instead of a .ttf.
     OPAAX_REGISTER_OBJECT(FontFamily);
