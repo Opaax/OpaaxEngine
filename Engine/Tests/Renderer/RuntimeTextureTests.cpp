@@ -1,7 +1,8 @@
 // Suite: textures made from pixels in code (RuntimeTexture) — size and channels kept, wrong input
 // refused, found by their runtime path, released once no handle holds them, a rectangle of texels
-// replaced. No device here: the GPU side (glTexSubImage2D, the drawn sprite) is checked by
-// TestWorld/Tests/RuntimeTexture.json.
+// replaced; paintable ones made premultiplied and never changed by pixels. No device here: the GPU
+// side (glTexSubImage2D, painting, the drawn sprite) is checked by TestWorld/Tests/RuntimeTexture.json
+// and TestWorld/Tests/PaintTexture.json.
 #include <doctest.h>
 
 #include "Core/OpaaxTypes.h"
@@ -164,5 +165,70 @@ TEST_SUITE("RuntimeTexture")
         const TDynArray<Uint8> lPixels = Texels(1, 1, 4, 0);
         CHECK_FALSE(lTexture.IsWritable());
         CHECK_FALSE(lTexture.UpdatePixels(TextureRegion::Whole(1, 1), lPixels.data()));
+    }
+
+    TEST_CASE("paintable: made with or without pixels, 4 channels only")
+    {
+        Fixture lFixture;
+
+        RuntimeTextureDesc lDesc{ 2, 2 };
+        lDesc.bPaintable = true;
+
+        const RuntimeTexture lEmpty = RuntimeTexture::Create(lFixture.Resources, OpaaxString("/Runtime/Empty"), lDesc, nullptr);
+        REQUIRE(lEmpty.IsValid());
+        CHECK(lEmpty.IsPaintable());
+        CHECK(lEmpty.GetChannels() == 4);
+
+        const TDynArray<Uint8> lPixels = Texels(2, 2, 4, 255);
+        const RuntimeTexture lFilled = RuntimeTexture::Create(lFixture.Resources, OpaaxString("/Runtime/Filled"), lDesc,
+                                                              lPixels.data());
+        CHECK(lFilled.IsPaintable());
+
+        RuntimeTextureDesc lMask{ 2, 2, 1 };
+        lMask.bPaintable = true;
+        CHECK_FALSE(RuntimeTexture::Create(lFixture.Resources, OpaaxString("/Runtime/Mask"), lMask, nullptr).IsValid());
+
+        RuntimeTextureDesc lFlat{ 0, 2 };
+        lFlat.bPaintable = true;
+        CHECK_FALSE(RuntimeTexture::Create(lFixture.Resources, OpaaxString("/Runtime/Flat"), lFlat, nullptr).IsValid());
+
+        CHECK_FALSE(RuntimeTexture::Create(lFixture.Resources, OpaaxString("/Runtime/Plain"), RuntimeTextureDesc{ 2, 2 },
+                                           lPixels.data()).IsPaintable());
+    }
+
+    TEST_CASE("paintable: its pixels wait premultiplied, transparent when none were given")
+    {
+        // Straight red at half alpha, then opaque white: rows bottom first.
+        const TDynArray<Uint8> lStraight = { 255, 0, 0, 128,   255, 255, 255, 255 };
+
+        Texture2D lGiven;
+        REQUIRE(lGiven.InitPaintable(2, 1, lStraight.data()));
+        CHECK(lGiven.IsPaintable());
+        const TDynArray<Uint8> lPremultiplied = { 128, 0, 0, 128,   255, 255, 255, 255 };
+        CHECK(lGiven.GetPixels() == lPremultiplied);
+
+        Texture2D lNone;
+        REQUIRE(lNone.InitPaintable(2, 1, nullptr));
+        CHECK(lNone.GetPixels() == Texels(2, 1, 4, 0));
+
+        CHECK_FALSE(lNone.InitPaintable(2, 1, nullptr));   // only once
+    }
+
+    TEST_CASE("paintable: its pixels are never replaced")
+    {
+        Fixture lFixture;
+
+        Texture2D lTexture;
+        REQUIRE(lTexture.InitPaintable(2, 2, nullptr));
+        const TDynArray<Uint8> lWhite = Texels(1, 1, 4, 255);
+        CHECK_FALSE(lTexture.UpdatePixels(TextureRegion{ 0, 0, 1, 1 }, lWhite.data()));
+        CHECK(lTexture.GetPixels() == Texels(2, 2, 4, 0));
+
+        RuntimeTextureDesc lDesc{ 2, 2 };
+        lDesc.bPaintable = true;
+        RuntimeTexture lPaint = RuntimeTexture::Create(lFixture.Resources, OpaaxString("/Runtime/Paint"), lDesc, nullptr);
+        REQUIRE(lPaint.IsValid());
+        CHECK_FALSE(lPaint.UpdateRegion(TextureRegion{ 0, 0, 1, 1 }, lWhite.data()));
+        CHECK(lPaint.GetTexture()->GetPaintTarget() == nullptr);   // IEngine::Null(): no device
     }
 }

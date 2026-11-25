@@ -116,6 +116,13 @@ namespace Opaax
         TUniquePtr<ITexture2D> CreateTexture(const TextureDesc& InDesc, const void* InPixels);
 
         /**
+         * A framebuffer drawing into InTexture, a paintable texture (see IRHIDevice::CreateTextureTarget).
+         * Release it before InTexture and before the device is destroyed.
+         * @return Null if there is no device or the texture is not paintable
+         */
+        TUniquePtr<IFramebuffer> CreateTextureTarget(ITexture2D& InTexture);
+
+        /**
          * Compiles a game's shader (see IRHIDevice::CreateShader): one that fails is logged and invalid.
          * Release it before the device is destroyed.
          * @return Null if there is no device

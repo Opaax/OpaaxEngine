@@ -42,8 +42,10 @@ namespace Opaax
     OpenGLTexture2D::OpenGLTexture2D(const TextureDesc& InDesc, const unsigned char* InData,
                                      const Uint32 InProjectSampler, Uint32* InWritableCount)
     {
-        // A coverage atlas, or a texture asked smooth, keeps its own sampling, whatever the project's filter.
-        const bool lOwnSampling = (InDesc.Channels == 1) || InDesc.bSmooth;
+        // A coverage atlas, a texture asked smooth and a paintable one keep their own sampling, whatever
+        // the project's filter.
+        m_bPaintable = InDesc.bPaintable && InDesc.Channels == 4;
+        const bool lOwnSampling = (InDesc.Channels == 1) || InDesc.bSmooth || m_bPaintable;
         m_SamplerID = lOwnSampling ? 0 : InProjectSampler;
         m_Channels  = InDesc.Channels;
 
@@ -101,6 +103,12 @@ namespace Opaax
             glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, lSwizzle);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         }
+        else if (m_bPaintable)
+        {
+            // Drawn into, and read blended at any size through its mipmaps (GenerateMipmaps after drawing).
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        }
         else if (bInSmooth)
         {
             // Read with these parameters, not the project's sampler: blended at any size.
@@ -119,8 +127,8 @@ namespace Opaax
                      lDataFormat, GL_UNSIGNED_BYTE, InData);
 
         // Made for every colour texture, whatever the filter now: the filter can change while
-        // the game runs, and only the Smooth one reads them.
-        if (m_SamplerID != 0)
+        // the game runs, and only the Smooth one reads them. A paintable one always reads them.
+        if (m_SamplerID != 0 || m_bPaintable)
         {
             glGenerateMipmap(GL_TEXTURE_2D);
         }
@@ -137,7 +145,9 @@ namespace Opaax
 
     bool OpenGLTexture2D::Update(const TextureRegion& InRegion, const void* InPixels)
     {
-        if (m_WritableCount == nullptr || !m_bLoaded || InPixels == nullptr || !IsRegionInside(InRegion, m_Width, m_Height))
+        // A paintable texture holds premultiplied colour, changed by drawing only.
+        if (m_WritableCount == nullptr || m_bPaintable || !m_bLoaded || InPixels == nullptr
+            || !IsRegionInside(InRegion, m_Width, m_Height))
         {
             return false;
         }
@@ -168,6 +178,18 @@ namespace Opaax
         }
 
         return true;
+    }
+
+    void OpenGLTexture2D::GenerateMipmaps()
+    {
+        if (!m_bLoaded || (m_SamplerID == 0 && !m_bPaintable))
+        {
+            return;
+        }
+
+        glBindTexture(GL_TEXTURE_2D, m_RendererID);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, 0);
     }
 
     void OpenGLTexture2D::Bind(Uint32 InSlot) const

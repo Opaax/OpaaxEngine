@@ -5,6 +5,7 @@
 #include "Core/Image/AlphaBleed.h"
 #include "Core/IO/FileIO.h"
 #include "Core/Memory/Memory.h"
+#include "RHI/BlendState.h"
 
 // stb_image implementation (the only one in the build).
 #define STB_IMAGE_IMPLEMENTATION
@@ -61,12 +62,20 @@ namespace Opaax
         }
 
         TextureDesc lDesc;
-        lDesc.Width     = m_Width;
-        lDesc.Height    = m_Height;
-        lDesc.Channels  = m_Channels;
-        lDesc.bSmooth   = m_bSmooth;
-        lDesc.bWritable = m_bWritable;
-        m_Gpu = OpaaxApplication::GetAppService<IEngine>().CreateTexture(lDesc, m_Pixels.data());
+        lDesc.Width      = m_Width;
+        lDesc.Height     = m_Height;
+        lDesc.Channels   = m_Channels;
+        lDesc.bSmooth    = m_bSmooth;
+        lDesc.bWritable  = m_bWritable;
+        lDesc.bPaintable = m_bPaintable;
+
+        IEngine& lEngine = OpaaxApplication::GetAppService<IEngine>();
+        m_Gpu = lEngine.CreateTexture(lDesc, m_Pixels.data());
+
+        if (m_bPaintable && m_Gpu != nullptr)
+        {
+            m_PaintTarget = lEngine.CreateTextureTarget(*m_Gpu);
+        }
 
         // Free the CPU copy: the GPU has the texture, or nothing can upload it.
         m_Pixels.clear();
@@ -112,8 +121,49 @@ namespace Opaax
         return true;
     }
 
+    bool Texture2D::InitPaintable(const Uint32 InWidth, const Uint32 InHeight, const Uint8* InPixels)
+    {
+        if (m_Gpu != nullptr || !m_Pixels.empty())
+        {
+            OPAAX_LOG(LogTexture2D, Error, "'{}' already has pixels: make a new texture instead", GetName().CStr());
+            return false;
+        }
+
+        if (InWidth == 0 || InHeight == 0)
+        {
+            OPAAX_LOG(LogTexture2D, Error, "a paintable texture needs a size ({}x{})", InWidth, InHeight);
+            return false;
+        }
+
+        m_Width      = InWidth;
+        m_Height     = InHeight;
+        m_Channels   = 4;
+        m_bSmooth    = true;
+        m_bPaintable = true;
+
+        // Always pixels to upload: transparent when none are given.
+        const Uint64 lTexels = static_cast<Uint64>(InWidth) * InHeight;
+        if (InPixels != nullptr)
+        {
+            m_Pixels.assign(InPixels, InPixels + lTexels * 4u);
+            PremultiplyRGBA8(m_Pixels.data(), lTexels);
+        }
+        else
+        {
+            m_Pixels.assign(static_cast<size_t>(lTexels * 4u), 0u);
+        }
+        return true;
+    }
+
     bool Texture2D::UpdatePixels(const TextureRegion& InRegion, const Uint8* InPixels)
     {
+        if (m_bPaintable)
+        {
+            OPAAX_LOG(LogTexture2D, Warn, "'{}' is paintable: it changes through Paint and Clear, not its pixels",
+                      GetName().CStr());
+            return false;
+        }
+
         if (!m_bWritable)
         {
             OPAAX_LOG(LogTexture2D, Warn, "'{}' was read from a file: only a texture made from pixels can change",
@@ -150,8 +200,8 @@ namespace Opaax
 
     Uint64 Texture2D::GetResourceSize() const
     {
-        // From the dimensions: the upload frees the pixels.
-        return sizeof(Texture2D)
-             + static_cast<Uint64>(m_Width) * static_cast<Uint64>(m_Height) * static_cast<Uint64>(m_Channels);
+        // From the dimensions: the upload frees the pixels. A paintable texture's mipmaps add a third.
+        const Uint64 lBytes = static_cast<Uint64>(m_Width) * static_cast<Uint64>(m_Height) * static_cast<Uint64>(m_Channels);
+        return sizeof(Texture2D) + (m_bPaintable ? lBytes + lBytes / 3u : lBytes);
     }
 }

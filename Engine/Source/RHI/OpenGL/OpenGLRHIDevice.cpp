@@ -16,6 +16,7 @@
 #include "RHI/OpenGL/OpenGLPipeline.h"
 #include "RHI/OpenGL/OpenGLBindGroup.h"
 #include "RHI/OpenGL/OpenGLFramebuffer.h"
+#include "RHI/OpenGL/OpenGLTextureTarget.h"
 #include "RHI/OpenGL/OpenGLDebug.h"
 
 #include <glad/glad.h>
@@ -129,7 +130,18 @@ namespace Opaax
     TUniquePtr<ITexture2D>     OpenGLRHIDevice::CreateTexture(const TextureDesc& InDesc, const void* InPixels)
     {
         return MakeUnique<OpenGLTexture2D>(InDesc, static_cast<const unsigned char*>(InPixels), m_ProjectSampler,
-                                           InDesc.bWritable ? &m_WritableTextures : nullptr);
+                                           (InDesc.bWritable || InDesc.bPaintable) ? &m_WritableTextures : nullptr);
+    }
+
+    TUniquePtr<IFramebuffer> OpenGLRHIDevice::CreateTextureTarget(ITexture2D& InTexture)
+    {
+        if (!InTexture.IsPaintable() || !InTexture.IsLoaded())
+        {
+            OPAAX_LOG(LogOpenGLFramebuffer, Error, "Only a paintable texture can be drawn into: none made");
+            return nullptr;
+        }
+
+        return MakeUnique<OpenGLTextureTarget>(InTexture);
     }
 
     TUniquePtr<IShader>        OpenGLRHIDevice::CreateShader(const ShaderDesc& InDesc)      { return MakeUnique<OpenGLShader>(InDesc); }

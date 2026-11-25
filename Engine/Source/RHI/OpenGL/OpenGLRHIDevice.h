@@ -49,6 +49,7 @@ namespace Opaax
         TUniquePtr<IPipeline>      CreatePipeline(const PipelineDesc& InDesc)                    override;
         TUniquePtr<IBindGroup>     CreateBindGroup(const BindGroupLayout& InLayout)              override;
         TUniquePtr<IFramebuffer>   CreateFramebuffer(const FramebufferSpec& InSpec)              override;
+        TUniquePtr<IFramebuffer>   CreateTextureTarget(ITexture2D& InTexture)                    override;
 
         void            Init(IGraphicsContext& InSurface)                               override;
         const RHICapabilities& GetCapabilities() const                                  override { return m_Capabilities; }

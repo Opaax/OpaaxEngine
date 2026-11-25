@@ -3,6 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/MathTypes.h"
+#include "RHI/TextureRegion.h"
 
 namespace Opaax
 {
@@ -45,6 +46,12 @@ namespace Opaax
         // Selects the target, clears or keeps its colour, and sets the viewport to its size.
         virtual void BeginRenderPass(IRenderTarget& InTarget, ELoadOp InLoadOp, const Vector4F& InClearColor) = 0;
         virtual void EndRenderPass() = 0;
+
+        /**
+         * Sets the pixels of InRegion (from the target's bottom-left pixel) to InColor, nothing else,
+         * inside an open render pass. A whole target is cleared by BeginRenderPass instead.
+         */
+        virtual void ClearRect(const TextureRegion& InRegion, const Vector4F& InColor) = 0;
 
         // =============================================================================
         // State + draw

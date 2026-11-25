@@ -1366,6 +1366,17 @@ namespace Opaax
         return m_RenderSystem->CreateTexture(InDesc, InPixels);
     }
 
+    TUniquePtr<IFramebuffer> RendererManager::CreateTextureTarget(ITexture2D& InTexture)
+    {
+        if (!m_RenderSystem)
+        {
+            OPAAX_LOG(LogRendererManager, Error, "CreateTextureTarget before the render core started — none created.");
+            return nullptr;
+        }
+
+        return m_RenderSystem->CreateTextureTarget(InTexture);
+    }
+
     void RendererManager::Present()
     {
         if (m_RenderSystem)

@@ -24,6 +24,12 @@ namespace Opaax
 
         /** A 4-channel texture read blended whatever the project's filter (Pixel gives nearest otherwise). */
         bool   bSmooth  = false;
+
+        /**
+         * Painted on the GPU (Paint, Clear) instead of changed by pixels: 4 channels, read blended
+         * through its mipmaps whatever the filter, the pixels optional (transparent without them).
+         */
+        bool   bPaintable = false;
     };
 
     // =============================================================================
@@ -41,7 +47,8 @@ namespace Opaax
         /**
          * Makes the texture and puts it under InPath; uploaded at once when there is a device.
          * @param InPath Starts with RUNTIME_MOUNT ("/Runtime/Fog"), not in use
-         * @param InPixels Width * Height * Channels bytes, bottom row first. Copied.
+         * @param InPixels Width * Height * Channels bytes, bottom row first. Copied. Optional for a
+         *   paintable texture (straight alpha; transparent when null).
          * @return An empty handle, with an error, when the path, the description or the pixels are wrong
          */
         static RuntimeTexture Create(ResourceManager& InResources, const OpaaxString& InPath,
@@ -51,13 +58,13 @@ namespace Opaax
         // Functions
         // =============================================================================
     public:
-        /** Replaces every texel. @param InPixels Width * Height * Channels bytes, bottom row first */
+        /** Replaces every texel (not of a paintable texture). @param InPixels Width * Height * Channels bytes, bottom row first */
         bool Update(const Uint8* InPixels);
 
         /**
          * Replaces the texels of InRegion (X, Y from the bottom-left texel).
          * @param InPixels InRegion.Width * InRegion.Height * Channels bytes, bottom row first
-         * @return False, with a warning, for a region not inside the texture or an empty handle
+         * @return False, with a warning, for a region not inside the texture, a paintable texture or an empty handle
          */
         bool UpdateRegion(const TextureRegion& InRegion, const Uint8* InPixels);
 
@@ -76,6 +83,9 @@ namespace Opaax
         Uint32 GetWidth()    const;
         Uint32 GetHeight()   const;
         Int32  GetChannels() const;
+
+        /** True for a texture made with bPaintable. */
+        bool   IsPaintable() const;
 
         /** The texture, or null for an empty handle. */
         Texture2D* GetTexture() const;

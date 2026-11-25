@@ -4,6 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/Log/Logger.h"
 #include "Resources/Asset/Asset.h"
+#include "RHI/Framebuffer.h"
 #include "RHI/Texture.h"
 
 namespace Opaax
@@ -12,7 +13,8 @@ namespace Opaax
 
     // =============================================================================
     // Texture2D — an image file as an asset (.png, .jpg, .tga, .bmp), read from the file itself, or
-    //   pixels made in code (InitFromPixels, through RuntimeTexture), which can then change.
+    //   pixels made in code (InitFromPixels, through RuntimeTexture), which can then change, or a
+    //   texture made to be painted on the GPU (InitPaintable), drawn into through its target.
     //   Decoded when it loads (any thread), handed to the GPU on the main thread, which then keeps the
     //   only copy. A field names one with TAssetRef<Texture2D>; the renderer draws a magenta square for
     //   one that did not load.
@@ -59,9 +61,18 @@ namespace Opaax
         bool InitFromPixels(Uint32 InWidth, Uint32 InHeight, Int32 InChannels, const Uint8* InPixels, bool bInSmooth);
 
         /**
+         * Makes it a texture painted on the GPU (see RuntimeTexture, which also names it): RGBA8 holding
+         * premultiplied colour, read blended through its mipmaps whatever the project's filter, drawn
+         * into through GetPaintTarget once uploaded. Only once, on a texture that has no pixels.
+         * @param InPixels Width * Height RGBA bytes, straight alpha, bottom row first, or null for transparent. Copied.
+         * @return False, with an error, for an empty size
+         */
+        bool InitPaintable(Uint32 InWidth, Uint32 InHeight, const Uint8* InPixels);
+
+        /**
          * Replaces the pixels of InRegion in place. Before the upload, the pixels waiting for it change.
          * @param InPixels InRegion.Width * InRegion.Height * Channels bytes, bottom row first. Copied.
-         * @return False, with a warning, for a texture read from a file or a region not inside it
+         * @return False, with a warning, for a texture read from a file, a paintable one, or a region not inside it
          */
         bool UpdatePixels(const TextureRegion& InRegion, const Uint8* InPixels);
 
@@ -70,6 +81,12 @@ namespace Opaax
 
         /** Read blended whatever the project's filter. */
         bool IsSmooth() const noexcept { return m_bSmooth; }
+
+        /** True for a texture painted on the GPU (InitPaintable). */
+        bool IsPaintable() const noexcept { return m_bPaintable; }
+
+        /** What draws into a paintable texture once uploaded; null otherwise (or without a device). */
+        IFramebuffer* GetPaintTarget() const noexcept { return m_PaintTarget.get(); }
 
         // =========================================================================
         // Get
@@ -97,6 +114,10 @@ namespace Opaax
         Int32                  m_Channels = 0;
         bool                   m_bSmooth   = false;
         bool                   m_bWritable = false;
+        bool                   m_bPaintable = false;
         TUniquePtr<ITexture2D> m_Gpu;
+
+        // After m_Gpu: draws into it, so it goes first.
+        TUniquePtr<IFramebuffer> m_PaintTarget;
     };
 }

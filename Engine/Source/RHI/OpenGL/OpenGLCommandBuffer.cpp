@@ -34,6 +34,17 @@ namespace Opaax
         }
     }
 
+    void OpenGLCommandBuffer::ClearRect(const TextureRegion& InRegion, const Vector4F& InColor)
+    {
+        // The scissor limits the clear; nothing else uses it, so it goes off again.
+        glEnable(GL_SCISSOR_TEST);
+        glScissor(static_cast<GLint>(InRegion.X), static_cast<GLint>(InRegion.Y),
+                  static_cast<GLsizei>(InRegion.Width), static_cast<GLsizei>(InRegion.Height));
+        glClearColor(InColor.r, InColor.g, InColor.b, InColor.a);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glDisable(GL_SCISSOR_TEST);
+    }
+
     void OpenGLCommandBuffer::SetViewport(Uint32 X, Uint32 Y, Uint32 Width, Uint32 Height)
     {
         glViewport(static_cast<GLint>(X), static_cast<GLint>(Y),
