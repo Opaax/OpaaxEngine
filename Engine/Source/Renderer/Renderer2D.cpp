@@ -85,9 +85,21 @@ namespace Opaax
         TUniquePtr<ITexture2D>     WhiteTexture;
         TUniquePtr<IUniformBuffer> CameraUBO;  // binding 1: CameraBlock (std140)
         TUniquePtr<IUniformBuffer> LightsUBO;  // binding 3: LightsBlock2D (std140)
+        TUniquePtr<IUniformBuffer> MaterialUBO;  // binding 8: MaterialBlock (std140), per material batch
         TUniquePtr<IPipeline>      QuadPipeline;     // shader + layout + alpha blend
-        TUniquePtr<IBindGroup>     QuadBindGroup;    // camera and lights UBOs + 16 samplers
+        TUniquePtr<IBindGroup>     QuadBindGroup;    // camera, lights and material UBOs + 16 samplers
         ICommandBuffer*           Cmd          = nullptr;  // set in Begin, not owned
+        IRHIDevice*               Device       = nullptr;  // set in Init, makes the materials' pipelines
+
+        // A pipeline per material shader and blend mode, made the first time a batch needs it.
+        struct MaterialPipeline
+        {
+            const IShader*        Shader = nullptr;
+            EBlendMode            Blend  = EBlendMode::Alpha;
+            TUniquePtr<IPipeline> Pipeline;
+        };
+        TDynArray<MaterialPipeline> MaterialPipelines;
+        IPipeline*                  BoundPipeline = nullptr;   // the pipeline the pass has bound
 
         QuadBatchLimits Limits;   // from RenderLimits, at Init
 
@@ -98,6 +110,8 @@ namespace Opaax
         TDynArray<Uint32>      PassTexIds;
         TDynArray<Uint32>      PassMaskIds;   // 0 = no mask
         TDynArray<Uint32>      PassNormalIds; // 0 = no normal map
+        TDynArray<Uint32>      PassMaterialIds; // 0 = the engine's sprite shader
+        TDynArray<QuadMaterial> PassMaterials;  // material id -> material; 0 = none
         TDynArray<ITexture2D*> PassTextures;   // texture id -> texture; 0 = white
 
         // Reused every pass.
@@ -204,6 +218,7 @@ namespace Opaax
     // =============================================================================
     void Renderer2D::Init(IRHIDevice& InDevice, const RenderLimits& InLimits, const ShaderDesc& InShader)
     {
+        m_Data->Device = &InDevice;
         m_Data->Limits = ResolveLimits(InLimits);
 
         OPAAX_LOG(LogRenderer2D, Trace, "Renderer2D::Init(device) — {} quads and {} texture slots per batch",
@@ -234,13 +249,15 @@ namespace Opaax
         // No light yet: lit quads see a white ambient, i.e. they are drawn as is.
         m_Data->LightsUBO = InDevice.CreateUniformBuffer(static_cast<Uint32>(sizeof(LightsBlock2D)), LIGHTS_UBO_BINDING);
         SetLighting(LightsBlock2D{});
+        m_Data->MaterialUBO  = InDevice.CreateUniformBuffer(static_cast<Uint32>(sizeof(MaterialBlock)), MATERIAL_UBO_BINDING);
         m_Data->QuadPipeline = InDevice.CreatePipeline(MakeSpritePipelineDesc(m_Data->QuadShader.get()));
 
         // Bind all 16 samplers; unused ones get the white texture.
         m_Data->QuadBindGroup = InDevice.CreateBindGroup(
-            BindGroupLayout{ { CAMERA_UBO_BINDING, LIGHTS_UBO_BINDING }, SHADER_TEXTURE_SLOTS });
+            BindGroupLayout{ { CAMERA_UBO_BINDING, LIGHTS_UBO_BINDING, MATERIAL_UBO_BINDING }, SHADER_TEXTURE_SLOTS });
         m_Data->QuadBindGroup->SetUniformBuffer(*m_Data->CameraUBO);
         m_Data->QuadBindGroup->SetUniformBuffer(*m_Data->LightsUBO);
+        m_Data->QuadBindGroup->SetUniformBuffer(*m_Data->MaterialUBO);
     }
 
     void Renderer2D::Shutdown()
@@ -248,12 +265,16 @@ namespace Opaax
         if (!m_Data) { return; }
 
         m_Data->QuadBindGroup.reset();
+        m_Data->MaterialPipelines.clear();
+        m_Data->BoundPipeline = nullptr;
         m_Data->QuadPipeline.reset();   // before its shader
         m_Data->QuadVAO.reset();
         m_Data->QuadShader.reset();
         m_Data->WhiteTexture.reset();
         m_Data->CameraUBO.reset();
         m_Data->LightsUBO.reset();
+        m_Data->MaterialUBO.reset();
+        m_Data->Device = nullptr;
     }
 
     void Renderer2D::SetLighting(const LightsBlock2D& InLights)
@@ -282,6 +303,7 @@ namespace Opaax
 
         // Bind the sprite pipeline; upload the camera block.
         m_Data->Cmd->BindPipeline(*m_Data->QuadPipeline);
+        m_Data->BoundPipeline = m_Data->QuadPipeline.get();
 
         CameraBlock lCamera;
         lCamera.ViewProjection = m_Data->ViewProjection;
@@ -310,6 +332,11 @@ namespace Opaax
         m_Data->PassTexIds.clear();
         m_Data->PassMaskIds.clear();
         m_Data->PassNormalIds.clear();
+        m_Data->PassMaterialIds.clear();
+
+        // Id 0 is the engine's sprite shader.
+        m_Data->PassMaterials.clear();
+        m_Data->PassMaterials.emplace_back();
 
         // Id 0 is the white texture (untextured quads use it, no slot needed).
         m_Data->PassTextures.clear();
@@ -341,8 +368,11 @@ namespace Opaax
             lLimits.MaxTextureSlots = Maths::Min(lLimits.MaxTextureSlots, AO_MAP_SLOT);
         }
 
+        // A material's own textures take the slots above its batch's.
+        lLimits.MaxMaterialTextureSlots = MATERIAL_TEXTURE_SLOT_0;
+
         PlanQuadBatches(m_Data->PassKeys, m_Data->PassTexIds, m_Data->PassMaskIds, m_Data->PassNormalIds,
-                        lLimits, m_Data->Plan);
+                        m_Data->PassMaterialIds, lLimits, m_Data->Plan);
 
         // Every batch starts from white (a slot from the previous pass may be stale).
         m_Data->SlotTextures.assign(SHADER_TEXTURE_SLOTS, m_Data->WhiteTexture.get());
@@ -351,13 +381,17 @@ namespace Opaax
         Uint32 lQuadCount = 0;
         Uint32 lSlotCount = 1;   // slot 0 = white
 
+        // A batch holds one material: the one of its first quad.
+        Uint32 lMaterialId = m_Data->PassMaterialIds[m_Data->Plan.front().QuadIndex];
+
         for (const QuadPlacement& lPlacement : m_Data->Plan)
         {
             if (lPlacement.Batch != lBatch)
             {
-                Flush(lQuadCount, lSlotCount);
+                Flush(lQuadCount, lSlotCount, lMaterialId);
 
-                lBatch     = lPlacement.Batch;
+                lBatch      = lPlacement.Batch;
+                lMaterialId = m_Data->PassMaterialIds[lPlacement.QuadIndex];
                 lQuadCount = 0;
                 lSlotCount = 1;
                 m_Data->SlotTextures.assign(SHADER_TEXTURE_SLOTS, m_Data->WhiteTexture.get());
@@ -398,7 +432,7 @@ namespace Opaax
             ++lQuadCount;
         }
 
-        Flush(lQuadCount, lSlotCount);
+        Flush(lQuadCount, lSlotCount, lMaterialId);
 
         // Log once, the first time a pass needs more than one draw call.
         if (!m_Data->bLoggedSplit && lBatch > 0)
@@ -410,9 +444,29 @@ namespace Opaax
         }
     }
 
-    void Renderer2D::Flush(const Uint32 InQuadCount, const Uint32 InSlotCount)
+    void Renderer2D::Flush(const Uint32 InQuadCount, const Uint32 InSlotCount, const Uint32 InMaterialId)
     {
         if (InQuadCount == 0) { return; }
+
+        // A material's batch: its shader, its block, its two textures.
+        IPipeline* lPipeline = m_Data->QuadPipeline.get();
+        if (InMaterialId != 0)
+        {
+            const QuadMaterial& lMaterial = m_Data->PassMaterials[InMaterialId];
+            lPipeline = &GetMaterialPipeline(*lMaterial.Shader, lMaterial.Blend);
+
+            m_Data->MaterialUBO->SetData(&lMaterial.Block, static_cast<Uint32>(sizeof(MaterialBlock)));
+            m_Data->SlotTextures[MATERIAL_TEXTURE_SLOT_0] =
+                lMaterial.Texture0 != nullptr ? lMaterial.Texture0 : m_Data->WhiteTexture.get();
+            m_Data->SlotTextures[MATERIAL_TEXTURE_SLOT_1] =
+                lMaterial.Texture1 != nullptr ? lMaterial.Texture1 : m_Data->WhiteTexture.get();
+        }
+
+        if (lPipeline != m_Data->BoundPipeline)
+        {
+            m_Data->Cmd->BindPipeline(*lPipeline);
+            m_Data->BoundPipeline = lPipeline;
+        }
 
         // Counted here: the only place a DrawIndexed is issued.
         ++m_Data->Stats.DrawCalls;
@@ -485,10 +539,80 @@ namespace Opaax
                                 const Vector2F& InUVMax,
                                 const QuadMask& InMask,
                                 const QuadLighting& InLighting,
-                                const Vector4F& InUVFrame)
+                                const Vector4F& InUVFrame,
+                                const QuadMaterial& InMaterial)
     {
         SubmitQuad(InPosition, InSize, InTint, InRotationRad, InLayer, InOrderInLayer,
-                   GetTextureId(InTexture), InUVMin, InUVMax, { 0.f, 0.f }, InMask, InLighting, InUVFrame);
+                   GetTextureId(InTexture), InUVMin, InUVMax, { 0.f, 0.f }, InMask, InLighting, InUVFrame,
+                   InMaterial);
+    }
+
+    namespace
+    {
+        bool SameBlock(const MaterialBlock& InA, const MaterialBlock& InB) noexcept
+        {
+            return InA.Time == InB.Time && InA.Params[0] == InB.Params[0] && InA.Params[1] == InB.Params[1]
+                && InA.Colors[0] == InB.Colors[0] && InA.Colors[1] == InB.Colors[1];
+        }
+    }
+
+    Uint32 Renderer2D::GetMaterialId(const QuadMaterial& InMaterial)
+    {
+        // Id 0 is the engine's shader, so the search starts at 1.
+        for (Uint32 i = 1; i < static_cast<Uint32>(m_Data->PassMaterials.size()); ++i)
+        {
+            const QuadMaterial& lKnown = m_Data->PassMaterials[i];
+            if (lKnown.Shader == InMaterial.Shader && lKnown.Blend == InMaterial.Blend
+                && lKnown.Texture0 == InMaterial.Texture0 && lKnown.Texture1 == InMaterial.Texture1
+                && SameBlock(lKnown.Block, InMaterial.Block))
+            {
+                return i;
+            }
+        }
+
+        m_Data->PassMaterials.emplace_back(InMaterial);
+        return static_cast<Uint32>(m_Data->PassMaterials.size()) - 1u;
+    }
+
+    IPipeline& Renderer2D::GetMaterialPipeline(IShader& InShader, const EBlendMode InBlend)
+    {
+        for (const Renderer2DData::MaterialPipeline& lKnown : m_Data->MaterialPipelines)
+        {
+            if (lKnown.Shader == &InShader && lKnown.Blend == InBlend)
+            {
+                return *lKnown.Pipeline;
+            }
+        }
+
+        PipelineDesc lDesc = MakeSpritePipelineDesc(&InShader);
+        lDesc.Blend        = InBlend;
+        lDesc.DebugName    = "Renderer2D::Material";
+
+        Renderer2DData::MaterialPipeline& lNew = m_Data->MaterialPipelines.emplace_back();
+        lNew.Shader   = &InShader;
+        lNew.Blend    = InBlend;
+        lNew.Pipeline = m_Data->Device->CreatePipeline(lDesc);
+        return *lNew.Pipeline;
+    }
+
+    void Renderer2D::ForgetShader(const IShader& InShader)
+    {
+        TDynArray<Renderer2DData::MaterialPipeline>& lPipelines = m_Data->MaterialPipelines;
+        for (size_t i = lPipelines.size(); i-- > 0;)
+        {
+            if (lPipelines[i].Shader != &InShader) { continue; }
+
+            if (m_Data->BoundPipeline == lPipelines[i].Pipeline.get())
+            {
+                m_Data->BoundPipeline = nullptr;
+            }
+            lPipelines.erase(lPipelines.begin() + static_cast<Int64>(i));
+        }
+    }
+
+    Uint32 Renderer2D::GetMaterialPipelineCount() const noexcept
+    {
+        return static_cast<Uint32>(m_Data->MaterialPipelines.size());
     }
 
     Uint32 Renderer2D::GetTextureId(ITexture2D& InTexture)
@@ -553,7 +677,8 @@ namespace Opaax
                                 const Vector2F& InInnerHalf,
                                 const QuadMask& InMask,
                                 const QuadLighting& InLighting,
-                                const Vector4F& InUVFrame)
+                                const Vector4F& InUVFrame,
+                                const QuadMaterial& InMaterial)
     {
         const float lHalfW = InSize.x * 0.5f;
         const float lHalfH = InSize.y * 0.5f;
@@ -605,8 +730,11 @@ namespace Opaax
         lPush(lTR, { InUVMax.x, InUVMax.y });
         lPush(lTL, { InUVMin.x, InUVMax.y });
 
-        // The texture is part of the sort key, so equal-order quads group by texture (fewer draw calls).
-        m_Data->PassKeys.emplace_back(MakeSortKey(InLayer, InOrderInLayer, InTexId));
+        // The material and the texture are part of the sort key, so equal-order quads group by them
+        // (fewer draw calls). A shader that did not compile draws with the engine's.
+        const Uint32 lMaterialId = InMaterial.IsActive() ? GetMaterialId(InMaterial) : 0u;
+        m_Data->PassKeys.emplace_back(MakeSortKey(InLayer, InOrderInLayer, InTexId, lMaterialId));
+        m_Data->PassMaterialIds.emplace_back(lMaterialId);
         m_Data->PassTexIds.emplace_back(InTexId);
 
         // Id 0 means no mask, so a rect-only mask uses another id that resolves to the white texture
