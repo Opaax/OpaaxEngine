@@ -7,6 +7,7 @@
 #include "Core/IO/FileIO.h"
 #include "Object/ObjectClassRegistry.h"
 #include "Renderer/Materials/Material2D.h"
+#include "Renderer/Materials/MaterialBlock.h"
 #include "Resources/Asset/AssetFile.h"
 #include "Resources/Asset/AssetHandle.h"
 #include "Resources/ResourceManager.h"
@@ -99,5 +100,27 @@ TEST_SUITE("Material2D")
         }
 
         lResources.Shutdown();
+    }
+
+    TEST_CASE("the material block lays out the times, the eight parameters and the two colours")
+    {
+        Material2D lMaterial;
+        lMaterial.Param0 = 1.f;
+        lMaterial.Param3 = 4.f;
+        lMaterial.Param4 = 5.f;
+        lMaterial.Param7 = 8.f;
+        lMaterial.Color0 = LinearColor{ 0.1f, 0.2f, 0.3f, 0.4f };
+        lMaterial.Color1 = LinearColor{ 0.5f, 0.6f, 0.7f, 0.8f };
+
+        const MaterialBlock lBlock = MakeMaterialBlock(lMaterial, 12.5, 100.25);
+        CHECK(lBlock.Time.x == doctest::Approx(12.5f));
+        CHECK(lBlock.Time.y == doctest::Approx(100.25f));
+        CHECK(lBlock.Params[0].x == doctest::Approx(1.f));
+        CHECK(lBlock.Params[0].w == doctest::Approx(4.f));
+        CHECK(lBlock.Params[1].x == doctest::Approx(5.f));
+        CHECK(lBlock.Params[1].w == doctest::Approx(8.f));
+        CHECK(lBlock.Colors[0].y == doctest::Approx(0.2f));
+        CHECK(lBlock.Colors[1].w == doctest::Approx(0.8f));
+        CHECK(sizeof(MaterialBlock) == 80u);
     }
 }

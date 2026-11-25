@@ -8,6 +8,8 @@
 #include "Core/String/Char.h"
 #include "Core/String/CString.h"
 #include "Renderer/Lighting/Lighting2D.h"
+#include "Renderer/Materials/MaterialBlock.h"
+#include "Renderer/Renderer2DBatchPlan.h"
 #include "Renderer/ShaderSource.h"
 #include "RHI/OpenGL/GLSLPort.h"
 
@@ -273,4 +275,54 @@ TEST_CASE("Engine shaders: the FXAA shader ports with its source and block")
 
     // The pixel keeps its own alpha: an unlit world's transparent pixels stay transparent.
     CHECK(lDesc.FragmentSrc.Find("lCentre.a);") >= 0);
+}
+
+TEST_CASE("Engine shaders: the sprite material template ports with the sprite's bindings and the material block")
+{
+    const OpaaxString lSource = ReadShader("SpriteMaterial.glsl");
+    REQUIRE_FALSE(lSource.IsEmpty());
+
+    const ShaderDesc lDesc   = ShaderSource::FromSource(lSource, OpaaxString("SpriteMaterial.glsl"));
+    const ShaderDesc lSprite = ShaderSource::FromSource(ReadShader("Sprite.glsl"), OpaaxString("Sprite.glsl"));
+    REQUIRE_FALSE(lDesc.VertexSrc.IsEmpty());
+    REQUIRE_FALSE(lDesc.FragmentSrc.IsEmpty());
+
+    // A game's copy is fed exactly as the engine's sprite shader: the same vertex stage.
+    CHECK(lDesc.VertexSrc == lSprite.VertexSrc);
+    CHECK(lDesc.FragmentSrc.Contains("v_WorldPosition"));
+
+    PortStage(lDesc.VertexSrc);
+    const TDynArray<GLSLPort::ResourceBinding> lBindings = PortStage(lDesc.FragmentSrc);
+
+    const GLSLPort::ResourceBinding* lTextures = Find(lBindings, "u_Textures");
+    REQUIRE(lTextures != nullptr);
+    CHECK(lTextures->Binding == 0);
+    CHECK(lTextures->ArraySize == 16);
+
+    const GLSLPort::ResourceBinding* lCamera = Find(lBindings, "CameraUBO");
+    REQUIRE(lCamera != nullptr);
+    CHECK(lCamera->Binding == 1);
+
+    const GLSLPort::ResourceBinding* lLights = Find(lBindings, "LightsUBO");
+    REQUIRE(lLights != nullptr);
+    CHECK(lLights->Binding == 3);
+
+    const GLSLPort::ResourceBinding* lMaterial = Find(lBindings, "MaterialUBO");
+    REQUIRE(lMaterial != nullptr);
+    CHECK(lMaterial->Binding == static_cast<Int32>(MATERIAL_UBO_BINDING));
+}
+
+TEST_CASE("Engine shaders: the sprite material template's constants match C++")
+{
+    const OpaaxString lSource = ReadShader("SpriteMaterial.glsl");
+
+    CHECK(ConstantIn(lSource, "MATERIAL_SLOT_0") == doctest::Approx(MATERIAL_TEXTURE_SLOT_0));
+    CHECK(ConstantIn(lSource, "MATERIAL_SLOT_1") == doctest::Approx(MATERIAL_TEXTURE_SLOT_1));
+    CHECK(ConstantIn(lSource, "MAX_LIGHTS") == doctest::Approx(MAX_LIGHTS_2D));
+    CHECK(ConstantIn(lSource, "AO_SLOT") == doctest::Approx(14));
+    CHECK(ConstantIn(lSource, "SHADOW_SLOT") == doctest::Approx(15));
+
+    // A material's batch keeps its sprites below the material's own textures.
+    CHECK(QuadBatchLimits{}.MaxMaterialTextureSlots == MATERIAL_TEXTURE_SLOT_0);
+    CHECK(MATERIAL_TEXTURE_SLOT_1 < 14u);
 }
