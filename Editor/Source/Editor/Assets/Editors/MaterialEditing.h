@@ -5,12 +5,15 @@
 #include "Editor/Properties/ObjectPropertyDrawer.h"   // PropertyPresentationView
 #include "Renderer/Materials/Material2D.h"
 #include "Renderer/Materials/ShaderParams.h"
+#include "Resources/Asset/AssetResource.h"
+#include "Resources/ResourceManager.h"
 
 namespace Opaax::Editor
 {
     // =============================================================================
     // MaterialEditing — what a material's window does, without a window: which of the twelve shader
-    //   slots it shows and under what names, and the values a newly picked shader asks for.
+    //   slots it shows and under what names, the values a newly picked shader asks for, and the
+    //   edited values reaching what is drawn before they are saved.
     //   Header-only, so the tests drive it without the editor.
     // =============================================================================
     namespace MaterialEditing
@@ -90,5 +93,74 @@ namespace Opaax::Editor
             }
             return lChanged;
         }
+
+        // =============================================================================
+        // MaterialLiveEdit — keeps the loaded copy of a material (the one the renderer, the viewport
+        //   and a game played in the editor draw) showing the window's values while they are edited,
+        //   saved or not. When the window closes with unsaved values, the copy takes the file's back.
+        // =============================================================================
+        class MaterialLiveEdit
+        {
+        public:
+            /** Holds the loaded copy of the material at InAbsPath (loaded now if nothing has). */
+            void Bind(ResourceManager& InResources, const OpaaxString& InAbsPath)
+            {
+                m_Resources = &InResources;
+                m_AbsPath   = InAbsPath;
+                m_Loaded    = InResources.Load<AssetResource>(InAbsPath.CStr());
+                m_bPushed   = false;
+            }
+
+            /** The loaded copy, or null when the file did not load. */
+            Material2D* GetLoaded() const
+            {
+                AssetResource* lResource = m_Loaded.IsValid() ? m_Loaded.Get() : nullptr;
+                return lResource != nullptr ? Cast<Material2D>(lResource->Instance.Get()) : nullptr;
+            }
+
+            /**
+             * Copies InEdited's values into the loaded copy when they differ.
+             * @return True when the loaded copy changed
+             */
+            bool Push(const Material2D& InEdited)
+            {
+                Material2D* lLoaded = GetLoaded();
+                if (lLoaded == nullptr || lLoaded == &InEdited)
+                {
+                    return false;
+                }
+
+                const ObjectClass&   lClass  = Material2D::StaticClass();
+                const nlohmann::json lValues = lClass.WriteProperties(InEdited);
+                if (lValues == lClass.WriteProperties(*lLoaded) || !lClass.ReadProperties(*lLoaded, lValues))
+                {
+                    return false;
+                }
+
+                m_bPushed = true;
+                return true;
+            }
+
+            /**
+             * Lets the loaded copy go. With bInUnsaved and values pushed, the file is read back into it
+             * first: what was not saved does not stay on screen.
+             */
+            void Release(const bool bInUnsaved)
+            {
+                if (bInUnsaved && m_bPushed && m_Resources != nullptr)
+                {
+                    m_Resources->Reload<AssetResource>(m_AbsPath.CStr());
+                }
+
+                m_Loaded  = ResourceRef<AssetResource>();
+                m_bPushed = false;
+            }
+
+        private:
+            ResourceManager*           m_Resources = nullptr;
+            OpaaxString                m_AbsPath;
+            ResourceRef<AssetResource> m_Loaded;
+            bool                       m_bPushed = false;
+        };
     }
 }
