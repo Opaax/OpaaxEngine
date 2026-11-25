@@ -19,6 +19,7 @@ namespace Opaax
 
         if (InAsset == nullptr)
         {
+            lSlot.Error = OpaaxString("the file did not load (see the log)");
             OPAAX_LOG(LogMaterialShader, Error, "shader '{}' did not load: its sprites use the engine's sprite shader",
                       InPath.CStr());
             return nullptr;
@@ -26,6 +27,7 @@ namespace Opaax
 
         if (!InAsset->HasStages())
         {
+            lSlot.Error = OpaaxString("the file has no '#type vertex' and '#type fragment' sections");
             OPAAX_LOG(LogMaterialShader, Error,
                       "shader '{}' has no '#type vertex' and '#type fragment' sections: its sprites use the "
                       "engine's sprite shader", InPath.CStr());
@@ -35,6 +37,8 @@ namespace Opaax
         TUniquePtr<IShader> lShader = m_Create ? m_Create(InAsset->GetDesc()) : TUniquePtr<IShader>();
         if (lShader == nullptr || !lShader->IsValid())
         {
+            lSlot.Error = (lShader != nullptr && !lShader->GetLog().IsEmpty()) ? lShader->GetLog()
+                                                                              : OpaaxString("it does not compile");
             OPAAX_LOG(LogMaterialShader, Error, "shader '{}' does not compile: its sprites use the engine's sprite shader",
                       InPath.CStr());
             return nullptr;
@@ -50,7 +54,7 @@ namespace Opaax
         lEntries.reserve(m_Slots.size());
         for (const Slot& lSlot : m_Slots)
         {
-            lEntries.emplace_back(Entry{ lSlot.Path, lSlot.Shader != nullptr });
+            lEntries.emplace_back(Entry{ lSlot.Path, lSlot.Shader != nullptr, lSlot.Error });
         }
         return lEntries;
     }

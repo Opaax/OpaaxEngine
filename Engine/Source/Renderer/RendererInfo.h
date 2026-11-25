@@ -52,6 +52,7 @@ namespace Opaax
         {
             OpaaxString Path;
             bool        bValid = false;
+            OpaaxString Error;   // why it did not compile: empty when it did
         };
         TDynArray<MaterialShader> MaterialShaders;
 

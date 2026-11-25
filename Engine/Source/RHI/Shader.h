@@ -43,6 +43,9 @@ namespace Opaax
         /** False when the program did not compile or link (logged when created). */
         virtual bool IsValid() const = 0;
 
+        /** Why it did not compile or link: the compiler's own text. Empty for a valid shader. */
+        virtual const OpaaxString& GetLog() const = 0;
+
         //------------------------------------------------------------------------------
         // Uniform setters
 

@@ -1275,7 +1275,8 @@ namespace Opaax::EngineAutomation
                 "{sceneTarget (false: drawn straight into its target), lit, width, height, format, samples, fxaaTarget}), "
                 "textureFilter (how colour textures are read: Renderer.config's), textures {runtime (textures made from "
                 "pixels in code alive now)}, materialShaders (each shader file a material named, by path: "
-                "{path, compiled}; one not compiled is drawn with the engine's sprite shader), "
+                "{path, compiled, error (why not: the compiler's text)}; one not compiled is drawn with the "
+                "engine's sprite shader), "
                 "materialPipelines (kept for them, one per shader and blend mode), gpuFrameMs (negative before the "
                 "first measure)}.",
                 [&InEngine](const nlohmann::json&)
@@ -1303,7 +1304,8 @@ namespace Opaax::EngineAutomation
                     for (const RendererInfo::MaterialShader& lShader : lInfo.MaterialShaders)
                     {
                         lShaders.push_back(nlohmann::json{ { "path",     ToJsonString(lShader.Path) },
-                                                           { "compiled", lShader.bValid } });
+                                                           { "compiled", lShader.bValid },
+                                                           { "error",    ToJsonString(lShader.Error) } });
                     }
 
                     return AutomationResult::Ok(nlohmann::json{

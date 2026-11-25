@@ -18,8 +18,9 @@ namespace Opaax
             return InStage == GL_VERTEX_SHADER ? "vertex" : "fragment";
         }
 
-        /** The compiled stage, or 0 (logged). */
-        GLuint CompileStage(const GLenum InStage, const OpaaxString& InSource, const char* InShaderName)
+        /** The compiled stage, or 0 (logged, and the compiler's text in OutLog). */
+        GLuint CompileStage(const GLenum InStage, const OpaaxString& InSource, const char* InShaderName,
+                            OpaaxString& OutLog)
         {
             const GLuint lShader = glCreateShader(InStage);
             const char*  lSource = InSource.CStr();
@@ -37,6 +38,8 @@ namespace Opaax
 
                 OPAAX_ENGINE_LOG(Error, "OpenGLShader '{}': the {} stage does not compile:\n{}",
                                  InShaderName, StageName(InStage), lLog.data());
+                OutLog = OpaaxString::Format("the {} stage does not compile: {}", StageName(InStage),
+                                             OpaaxStringView(lLog.data()).TrimEnd());
                 glDeleteShader(lShader);
                 return 0;
             }
@@ -85,8 +88,9 @@ namespace Opaax
         const OpaaxString lFragmentSrc = GLSLPort::To410(InDesc.FragmentSrc, lFragmentBindings);
         lBindings.insert(lBindings.end(), lFragmentBindings.begin(), lFragmentBindings.end());
 
-        const GLuint lVertexShader   = CompileStage(GL_VERTEX_SHADER, lVertexSrc, lName);
-        const GLuint lFragmentShader = (lVertexShader != 0) ? CompileStage(GL_FRAGMENT_SHADER, lFragmentSrc, lName) : 0;
+        const GLuint lVertexShader   = CompileStage(GL_VERTEX_SHADER, lVertexSrc, lName, m_Log);
+        const GLuint lFragmentShader =
+            (lVertexShader != 0) ? CompileStage(GL_FRAGMENT_SHADER, lFragmentSrc, lName, m_Log) : 0;
         if (lVertexShader == 0 || lFragmentShader == 0)
         {
             if (lVertexShader != 0) { glDeleteShader(lVertexShader); }
@@ -113,6 +117,7 @@ namespace Opaax
             glGetProgramInfoLog(m_RendererID, Maths::Max(lLength, 1), nullptr, lLog.data());
 
             OPAAX_ENGINE_LOG(Error, "OpenGLShader '{}': the program does not link:\n{}", lName, lLog.data());
+            m_Log = OpaaxString::Format("the program does not link: {}", OpaaxStringView(lLog.data()).TrimEnd());
             glDeleteProgram(m_RendererID);
             m_RendererID = 0;
             return;
