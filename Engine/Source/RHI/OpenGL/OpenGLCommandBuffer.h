@@ -25,6 +25,7 @@ namespace Opaax
     public:
         void BeginRenderPass(IRenderTarget& InTarget, ELoadOp InLoadOp, const Vector4F& InClearColor) override;
         void EndRenderPass() override;
+        void ClearRect(const TextureRegion& InRegion, const Vector4F& InColor) override;
 
         void SetViewport(Uint32 X, Uint32 Y, Uint32 Width, Uint32 Height) override;
 

@@ -200,6 +200,13 @@ namespace Opaax
         virtual TUniquePtr<ITexture2D> CreateTexture(const TextureDesc& InDesc, const void* InPixels) = 0;
 
         /**
+         * Creates a framebuffer that draws into InTexture, a paintable texture (TextureDesc::bPaintable).
+         * @return Release it before InTexture, while the engine is still alive. Null before Startup,
+         *   without a device or for a texture that is not paintable.
+         */
+        virtual TUniquePtr<IFramebuffer> CreateTextureTarget(ITexture2D& InTexture) = 0;
+
+        /**
          * Called once per frame, before physics and render.
          */
         virtual void Update(double InDeltaTime)         = 0;

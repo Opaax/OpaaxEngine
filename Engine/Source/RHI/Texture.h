@@ -22,6 +22,13 @@ namespace Opaax
 
         /** Its pixels can be replaced (ITexture2D::Update); counted by the device while alive. */
         bool   bWritable = false;
+
+        /**
+         * Can be drawn into (IRHIDevice::CreateTextureTarget): 4 channels, premultiplied pixels, read
+         * blended through its mipmaps whatever the project's filter (GenerateMipmaps after drawing).
+         * Counted with the writable textures; Update refuses it.
+         */
+        bool   bPaintable = false;
     };
 
     /**
@@ -57,8 +64,17 @@ namespace Opaax
             return false;
         }
 
+        /** Remakes the smaller copies from the full-size texels, after drawing into it. Nothing without them. */
+        virtual void GenerateMipmaps() {}
+
         //------------------------------------------------------------------------------
         // Get
+
+        /** True for a texture that can be drawn into (TextureDesc::bPaintable). */
+        virtual bool IsPaintable() const noexcept { return false; }
+
+        /** True when its texels hold colour multiplied by alpha (a paintable texture): drawn, they are divided back. */
+        virtual bool IsPremultiplied() const noexcept { return IsPaintable(); }
 
         virtual Uint32 GetWidth()      const noexcept = 0;
         virtual Uint32 GetHeight()     const noexcept = 0;

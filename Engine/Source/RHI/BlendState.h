@@ -109,6 +109,20 @@ namespace Opaax
                          Maths::Min(InPremultiplied.b / lAlpha, 1.f), InPremultiplied.a };
     }
 
+    /** InCount RGBA8 texels made premultiplied in place: each colour byte times its alpha, rounded. */
+    inline void PremultiplyRGBA8(Uint8* InOutTexels, const Uint64 InCount) noexcept
+    {
+        for (Uint64 lTexel = 0; lTexel < InCount; ++lTexel)
+        {
+            Uint8* lRGBA = InOutTexels + lTexel * 4u;
+            const Uint32 lAlpha = lRGBA[3];
+            for (Uint32 lChannel = 0; lChannel < 3u; ++lChannel)
+            {
+                lRGBA[lChannel] = static_cast<Uint8>((lRGBA[lChannel] * lAlpha + 127u) / 255u);
+            }
+        }
+    }
+
     /** A premultiplied source over a premultiplied target: Src + Dst * (1 - Src.a), colour and alpha alike. */
     constexpr Vector4F PremultipliedOver(const Vector4F& InSrc, const Vector4F& InDst) noexcept
     {

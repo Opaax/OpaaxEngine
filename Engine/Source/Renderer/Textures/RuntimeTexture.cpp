@@ -16,8 +16,17 @@ namespace Opaax
             return RuntimeTexture{};
         }
 
+        if (InDesc.bPaintable && InDesc.Channels != 4)
+        {
+            OPAAX_LOG(LogTexture2D, Error, "'{}': a paintable texture has 4 channels, not {}", InPath.CStr(), InDesc.Channels);
+            return RuntimeTexture{};
+        }
+
         TStrongObjectPtr<Texture2D> lTexture = NewObject<Texture2D>(OpaaxStringID(InPath.CStr()));
-        if (!lTexture->InitFromPixels(InDesc.Width, InDesc.Height, InDesc.Channels, InPixels, InDesc.bSmooth))
+        const bool bMade = InDesc.bPaintable
+                         ? lTexture->InitPaintable(InDesc.Width, InDesc.Height, InPixels)
+                         : lTexture->InitFromPixels(InDesc.Width, InDesc.Height, InDesc.Channels, InPixels, InDesc.bSmooth);
+        if (!bMade)
         {
             return RuntimeTexture{};
         }
@@ -78,6 +87,12 @@ namespace Opaax
     {
         const Texture2D* lTexture = GetTexture();
         return lTexture != nullptr ? lTexture->GetChannels() : 0;
+    }
+
+    bool RuntimeTexture::IsPaintable() const
+    {
+        const Texture2D* lTexture = GetTexture();
+        return lTexture != nullptr && lTexture->IsPaintable();
     }
 
     Texture2D* RuntimeTexture::GetTexture() const

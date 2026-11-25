@@ -192,6 +192,7 @@ namespace Opaax
         RendererInfo                GetRendererInfo() const override;
         TUniquePtr<IFramebuffer>    CreateFramebuffer(const FramebufferSpec& InSpec) override;
         TUniquePtr<ITexture2D>      CreateTexture(const TextureDesc& InDesc, const void* InPixels) override;
+        TUniquePtr<IFramebuffer>    CreateTextureTarget(ITexture2D& InTexture) override;
 
         //Getters
         EngineRegistries&   GetRegistries()     override { return m_Registries; }

@@ -341,6 +341,13 @@ namespace Opaax
         TUniquePtr<ITexture2D> CreateTexture(const TextureDesc& InDesc, const void* InPixels);
 
         /**
+         * A framebuffer drawing into a paintable InTexture (used by Texture2D::InitializeOnMainThread).
+         * Release it before InTexture and before the render core shuts down.
+         * @return Null before Startup or for a texture that is not paintable
+         */
+        TUniquePtr<IFramebuffer> CreateTextureTarget(ITexture2D& InTexture);
+
+        /**
          * @return The debug shape queue, cleared every frame by Render()
          */
         DebugDraw& GetDebugDraw() noexcept { return m_DebugDraw; }

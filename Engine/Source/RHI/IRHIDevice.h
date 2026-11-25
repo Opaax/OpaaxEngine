@@ -74,6 +74,13 @@ namespace Opaax
          */
         virtual TUniquePtr<IFramebuffer>   CreateFramebuffer(const FramebufferSpec& InSpec)             = 0;
 
+        /**
+         * A framebuffer that draws into InTexture, a paintable one (TextureDesc::bPaintable): its size,
+         * no depth, no multisampling. InTexture must outlive it.
+         * @return Null, with an error, for a texture that is not paintable
+         */
+        virtual TUniquePtr<IFramebuffer>   CreateTextureTarget(ITexture2D& InTexture)                   = 0;
+
         // =============================================================================
         // Frame
         // =============================================================================

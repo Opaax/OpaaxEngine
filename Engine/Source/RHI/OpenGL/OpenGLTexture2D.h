@@ -11,7 +11,8 @@ namespace Opaax
      * so the RGBA sprite shader reads (1,1,1,coverage). Does not read files (see Texture2D).
      * A colour texture gets its mipmaps and is read through the device's sampler object (the
      * project's filter); R8, a smooth texture and the white texture are read with their own
-     * parameters. A writable one can have its pixels replaced (Update).
+     * parameters. A writable one can have its pixels replaced (Update). A paintable one is drawn
+     * into (OpenGLTextureTarget): its own blended sampling through mipmaps remade by GenerateMipmaps.
      */
     class OpenGLTexture2D final : public ITexture2D
     {
@@ -58,6 +59,7 @@ namespace Opaax
         void Bind(Uint32 InSlot = 0) const override;
         void Unbind()                const override;
         bool Update(const TextureRegion& InRegion, const void* InPixels) override;
+        void GenerateMipmaps() override;
 
         //------------------------------------------------------------------------------
         //Get
@@ -66,6 +68,7 @@ namespace Opaax
         FORCEINLINE Uint32 GetHeight()     const noexcept override { return m_Height;     }
         FORCEINLINE Uint32 GetRendererID() const noexcept override { return m_RendererID; }
         FORCEINLINE bool   IsLoaded()      const noexcept override { return m_bLoaded;    }
+        FORCEINLINE bool   IsPaintable()   const noexcept override { return m_bPaintable; }
         //~End ITexture2D interface
 
         // =============================================================================
@@ -87,6 +90,7 @@ namespace Opaax
         Uint32 m_Height     = 0;
         Int32  m_Channels   = 4;
         bool   m_bLoaded    = false;
+        bool   m_bPaintable = false;
 
         Uint32* m_WritableCount = nullptr;   // the device's; null: not writable
     };

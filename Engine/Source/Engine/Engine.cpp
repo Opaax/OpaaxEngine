@@ -888,6 +888,17 @@ namespace Opaax
 
         return m_RendererManager->CreateTexture(InDesc, InPixels);
     }
+
+    TUniquePtr<IFramebuffer> Engine::CreateTextureTarget(ITexture2D& InTexture)
+    {
+        if (m_RendererManager == nullptr)
+        {
+            OPAAX_ENGINE_LOG(Error, "Engine::CreateTextureTarget before Startup — no renderer; none created.");
+            return nullptr;
+        }
+
+        return m_RendererManager->CreateTextureTarget(InTexture);
+    }
     
     // =========================================================================
     // Getters

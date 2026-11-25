@@ -8,6 +8,12 @@
 namespace Opaax
 {
     OPAAX_LOG_CATEGORY(OpenGLFramebuffer);
+
+    /**
+     * Reads what was last drawn into the RGBA8 colour attachment of framebuffer object InFBO (waits for
+     * the GPU). @param OutRGBA Receives InWidth * InHeight RGBA pixels, rows from top to bottom
+     */
+    bool ReadFramebufferPixels(Uint32 InFBO, Uint32 InWidth, Uint32 InHeight, TDynArray<Uint8>& OutRGBA);
     
     /**
      * OpenGL IFramebuffer: one colour texture (RGBA8, RGBA16F, R8 or R16F) and an optional

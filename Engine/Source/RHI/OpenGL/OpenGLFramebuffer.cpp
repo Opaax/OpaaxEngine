@@ -169,9 +169,9 @@ namespace Opaax
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
-    bool OpenGLFramebuffer::ReadPixels(TDynArray<Uint8>& OutRGBA) const
+    bool ReadFramebufferPixels(const Uint32 InFBO, const Uint32 InWidth, const Uint32 InHeight, TDynArray<Uint8>& OutRGBA)
     {
-        if (m_FBO == 0 || m_Format != ETextureFormat::RGBA8 || m_Width == 0 || m_Height == 0)
+        if (InFBO == 0 || InWidth == 0 || InHeight == 0)
         {
             return false;
         }
@@ -179,32 +179,37 @@ namespace Opaax
         // Errors from earlier calls must not be taken for this one's.
         while (glGetError() != GL_NO_ERROR) {}
 
-        // m_FBO holds the picture: drawn into directly, or the resolve of a multisampled one.
-        const size_t     lRowBytes = static_cast<size_t>(m_Width) * 4;
-        TDynArray<Uint8> lBottomUp(lRowBytes * m_Height);
+        const size_t     lRowBytes = static_cast<size_t>(InWidth) * 4;
+        TDynArray<Uint8> lBottomUp(lRowBytes * InHeight);
 
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, m_FBO);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, InFBO);
         glReadBuffer(GL_COLOR_ATTACHMENT0);
         glPixelStorei(GL_PACK_ALIGNMENT, 1);
-        glReadPixels(0, 0, static_cast<GLsizei>(m_Width), static_cast<GLsizei>(m_Height), GL_RGBA, GL_UNSIGNED_BYTE,
+        glReadPixels(0, 0, static_cast<GLsizei>(InWidth), static_cast<GLsizei>(InHeight), GL_RGBA, GL_UNSIGNED_BYTE,
                      lBottomUp.data());
         glPixelStorei(GL_PACK_ALIGNMENT, 4);
         glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 
         if (glGetError() != GL_NO_ERROR)
         {
-            OPAAX_LOG(LogOpenGLFramebuffer, Error, "A framebuffer could not be read ({}x{})", m_Width, m_Height);
+            OPAAX_LOG(LogOpenGLFramebuffer, Error, "A framebuffer could not be read ({}x{})", InWidth, InHeight);
             return false;
         }
 
         // GL reads from the bottom row up.
         OutRGBA.resize(lBottomUp.size());
-        for (Uint32 lRow = 0; lRow < m_Height; ++lRow)
+        for (Uint32 lRow = 0; lRow < InHeight; ++lRow)
         {
-            Memory::Copy(OutRGBA.data() + lRow * lRowBytes, lBottomUp.data() + (m_Height - 1 - lRow) * lRowBytes,
+            Memory::Copy(OutRGBA.data() + lRow * lRowBytes, lBottomUp.data() + (InHeight - 1 - lRow) * lRowBytes,
                          lRowBytes);
         }
         return true;
+    }
+
+    bool OpenGLFramebuffer::ReadPixels(TDynArray<Uint8>& OutRGBA) const
+    {
+        // m_FBO holds the picture: drawn into directly, or the resolve of a multisampled one.
+        return m_Format == ETextureFormat::RGBA8 && ReadFramebufferPixels(m_FBO, m_Width, m_Height, OutRGBA);
     }
 
     void OpenGLFramebuffer::BindColorTexture(const Uint32 InSlot) const
