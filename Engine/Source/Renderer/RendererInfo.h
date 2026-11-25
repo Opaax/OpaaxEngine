@@ -44,8 +44,14 @@ namespace Opaax
         /** How colour textures are read (Renderer.config's TextureFilter). */
         ETextureFilter TextureFilter = ETextureFilter::Pixel;
 
-        /** Textures made from pixels in code (RuntimeTexture) alive on the GPU now. */
+        /** Textures made in code (RuntimeTexture, paintable ones too) alive on the GPU now. */
         Uint32 RuntimeTextures = 0;
+
+        /** Stamps painted into paintable textures since the renderer started. */
+        Uint64 PaintedStamps = 0;
+
+        /** Passes that painted or cleared a paintable texture since the renderer started. */
+        Uint64 PaintPasses = 0;
 
         /** The shader files materials named, by path, and whether each compiled. */
         struct MaterialShader

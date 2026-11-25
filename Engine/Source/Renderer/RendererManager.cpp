@@ -310,6 +310,11 @@ namespace Opaax
     void RendererManager::SubmitRenderCounters()
     {
         Profiler& lProfiler = Profiler::Get();
+
+        // Per frame, whether it is shown or not.
+        const Uint32 lPaintStamps = m_FramePaintStamps;
+        m_FramePaintStamps = 0;
+
         if (!lProfiler.IsEnabled()) { return; }
 
         lProfiler.SubmitGpuMs(
@@ -324,6 +329,7 @@ namespace Opaax
         lProfiler.AddCount("Draw Calls",    lStats.DrawCalls);
         lProfiler.AddCount("Quads",         lStats.Quads);
         lProfiler.AddCount("Texture Slots", lStats.PeakTextureSlots);
+        lProfiler.AddCount("Paint Stamps",  lPaintStamps);
 
         // UI cost (0 / 0 on an idle frame).
         lProfiler.AddCount("UI Layouts",  m_UILayouts);
@@ -373,11 +379,15 @@ namespace Opaax
             }
         }
 
-        if (lPasses == 0) { return; }
+        // Paint opens the device frame too: it is drawn even when no view is.
+        if (lPasses == 0 && m_PaintQueue.IsEmpty()) { return; }
 
         ReportPassCount(lPasses);
 
         m_RenderSystem->BeginFrame();
+
+        // Before the views: a sprite naming a painted texture shows the paint this frame.
+        PaintTextures();
 
         for (const RenderPassRequest& lRequest : m_SubmittedViews)
         {
@@ -959,14 +969,15 @@ namespace Opaax
             });
     }
 
-    bool RendererManager::ResolveSpriteDraw(const SpriteComponent& InSprite, ITexture2D*& OutTexture, SpriteUVRect& OutUV)
+    bool RendererManager::ResolveImage(const TAssetRef<Texture2D>& InTexture, const TAssetRef<SpriteSheet>& InSheet,
+                                       const Int32 InFrame, ITexture2D*& OutTexture, SpriteUVRect& OutUV)
     {
         // A sheet wins over a texture. No image at all draws nothing.
-        const SpriteSheet* lSheet = ResolveSheet(InSprite.Sheet);
+        const SpriteSheet* lSheet = ResolveSheet(InSheet);
 
         if (lSheet == nullptr)
         {
-            OutTexture = ResolveTexture(InSprite.Texture);
+            OutTexture = ResolveTexture(InTexture);
             OutUV      = SpriteUVRect{};
 
             return OutTexture != nullptr;
@@ -978,19 +989,19 @@ namespace Opaax
             return false;
         }
 
-        const SpriteFrame* lFrame = lSheet->FrameAt(InSprite.Frame);
+        const SpriteFrame* lFrame = lSheet->FrameAt(InFrame);
 
         if (lFrame == nullptr)
         {
             // A sheet with no frames is its whole texture. A missing frame index warns once.
-            if (InSprite.Frame >= 0 && lSheet->FrameCount() > 0)
+            if (InFrame >= 0 && lSheet->FrameCount() > 0)
             {
-                const Uint32 lKey = OpaaxStringID(InSprite.Sheet.Path).GetId();
+                const Uint32 lKey = OpaaxStringID(InSheet.Path).GetId();
 
                 if (m_WarnedFrameRange.emplace(lKey).second)
                 {
                     OPAAX_LOG(LogRendererManager, Warn, "Sheet '{}' has no frame {} ({} frame(s)) — drawing the whole texture",
-                              InSprite.Sheet.Path.CStr(), InSprite.Frame, lSheet->FrameCount());
+                              InSheet.Path.CStr(), InFrame, lSheet->FrameCount());
                 }
             }
 
@@ -1001,6 +1012,126 @@ namespace Opaax
         OutUV = MakeFrameUV(*lFrame, OutTexture->GetWidth(), OutTexture->GetHeight());
 
         return true;
+    }
+
+    bool RendererManager::ResolveSpriteDraw(const SpriteComponent& InSprite, ITexture2D*& OutTexture, SpriteUVRect& OutUV)
+    {
+        return ResolveImage(InSprite.Texture, InSprite.Sheet, InSprite.Frame, OutTexture, OutUV);
+    }
+
+    // =========================================================================
+    // Painting — the paint queued since the last frame, drawn before the frame's views so the sprites
+    //   naming the textures show it the same frame.
+    // =========================================================================
+    void RendererManager::PaintTextures()
+    {
+        ICommandBuffer* lCmd = m_RenderSystem != nullptr ? m_RenderSystem->GetCommandBuffer() : nullptr;
+        if (m_PaintQueue.IsEmpty() || lCmd == nullptr)
+        {
+            return;
+        }
+
+        Renderer2D& lRenderer = m_RenderSystem->GetRenderer2D();
+
+        // Brushes read through their mipmaps whatever the project's filter: painted once, a stamp read
+        // without them would keep its aliasing in the texture for good.
+        const ETextureFilter lProjectFilter = m_RenderSystem->GetTextureFilter();
+        if (lProjectFilter != ETextureFilter::Smooth)
+        {
+            m_RenderSystem->SetTextureFilter(ETextureFilter::Smooth);
+        }
+
+        for (const PaintWork& lWork : m_PaintQueue.GetWork())
+        {
+            Texture2D*    lTexture = lWork.Target.GetTexture();
+            IFramebuffer* lTarget  = lTexture != nullptr ? lTexture->GetPaintTarget() : nullptr;
+            ITexture2D*   lGpu     = lTexture != nullptr ? lTexture->GetTexture() : nullptr;
+            if (lTarget == nullptr || lGpu == nullptr)
+            {
+                continue;
+            }
+
+            OffscreenRenderTarget lRenderTarget(lTarget);
+            const Uint32 lWidth  = lGpu->GetWidth();
+            const Uint32 lHeight = lGpu->GetHeight();
+
+            for (const PaintOp& lOp : lWork.Ops)
+            {
+                if (lOp.Kind == EPaintOp::Clear)
+                {
+                    // No sprite pass: what a pass draws waits for its end, a clear does not.
+                    const bool bWhole = lOp.Region.X == 0 && lOp.Region.Y == 0 && lOp.Region.Width == lWidth
+                                     && lOp.Region.Height == lHeight;
+                    lCmd->BeginRenderPass(lRenderTarget, bWhole ? ELoadOp::Clear : ELoadOp::Load, lOp.Color);
+                    if (!bWhole)
+                    {
+                        lCmd->ClearRect(lOp.Region, lOp.Color);
+                    }
+                    lCmd->EndRenderPass();
+                    ++m_PaintPasses;
+                    continue;
+                }
+
+                const RenderView lView = MakePaintView(lWidth, lHeight, BlendModeOf(lOp.Mode));
+                for (Uint32 lFirst = 0; lFirst < lOp.StampCount; lFirst += MAX_STAMPS_PER_PASS)
+                {
+                    const Uint32 lCount = Maths::Min(MAX_STAMPS_PER_PASS, lOp.StampCount - lFirst);
+
+                    m_RenderSystem->BeginPass(lRenderTarget, lView, ELoadOp::Load);
+                    for (Uint32 lIndex = 0; lIndex < lCount; ++lIndex)
+                    {
+                        DrawPaintStamp(lRenderer, lWork.Stamps[lOp.FirstStamp + lFirst + lIndex], lIndex, *lGpu);
+                    }
+                    m_RenderSystem->EndPass();
+                    ++m_PaintPasses;
+                }
+
+                m_PaintedStamps    += lOp.StampCount;
+                m_FramePaintStamps += lOp.StampCount;
+            }
+
+            // Once per texture and frame, after all of its paint.
+            lGpu->GenerateMipmaps();
+        }
+
+        if (lProjectFilter != ETextureFilter::Smooth)
+        {
+            m_RenderSystem->SetTextureFilter(lProjectFilter);
+        }
+    }
+
+    void RendererManager::DrawPaintStamp(Renderer2D& InRenderer, const PaintStamp& InStamp, const Uint32 InIndex,
+                                         const ITexture2D& InTarget)
+    {
+        QuadLighting lUnlit;
+        lUnlit.bLit = false;
+
+        if (InStamp.Texture.IsEmpty() && InStamp.Sheet.IsEmpty())
+        {
+            InRenderer.DrawQuad(InStamp.Center, InStamp.Size, InStamp.Color, InStamp.Rotation, ERenderLayer::Default,
+                                PaintOrderInLayer(InIndex), QuadMask{}, lUnlit);
+            return;
+        }
+
+        ITexture2D*  lBrush = nullptr;
+        SpriteUVRect lUV;
+        const bool   bFound = ResolveImage(InStamp.Texture, InStamp.Sheet, InStamp.Frame, lBrush, lUV);
+
+        // A missing brush would paint the placeholder's magenta in for good; the target itself cannot be read.
+        if (!bFound || lBrush == m_MissingTexture.get() || lBrush == &InTarget)
+        {
+            const OpaaxString& lPath = InStamp.Sheet.IsEmpty() ? InStamp.Texture.Path : InStamp.Sheet.Path;
+            if (m_WarnedPaint.emplace(OpaaxStringID(lPath).GetId()).second)
+            {
+                OPAAX_LOG(LogRendererManager, Warn, "Paint: the brush '{}' {} — its stamps are skipped", lPath.CStr(),
+                          lBrush == &InTarget ? "is the texture painted" : "is not loaded");
+            }
+            return;
+        }
+
+        InRenderer.DrawSprite(InStamp.Center, InStamp.Size, *lBrush, InStamp.Color, InStamp.Rotation, ERenderLayer::Default,
+                              PaintOrderInLayer(InIndex), lUV.UVMin, lUV.UVMax, QuadMask{}, lUnlit,
+                              MakeUVBounds(lUV.UVMin, lUV.UVMax));
     }
 
     const SpriteSheet* RendererManager::ResolveSheet(const TAssetRef<SpriteSheet>& InRef)
@@ -1424,6 +1555,8 @@ namespace Opaax
                        { return InA.Path < InB.Path; });
         }
         lInfo.MaterialPipelines = m_RenderSystem->GetRenderer2D().GetMaterialPipelineCount();
+        lInfo.PaintedStamps     = m_PaintedStamps;
+        lInfo.PaintPasses       = m_PaintPasses;
         return lInfo;
     }
 

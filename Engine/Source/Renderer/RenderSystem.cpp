@@ -140,6 +140,11 @@ namespace Opaax
         }
     }
 
+    ETextureFilter RenderSystem::GetTextureFilter() const
+    {
+        return IsValidDevice() ? m_Device->GetTextureFilter() : ETextureFilter::Pixel;
+    }
+
     void RenderSystem::BeginFrame()
     {
         if (!IsValidDevice())

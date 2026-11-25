@@ -19,6 +19,7 @@
 #include "Probes/LifecycleProbes.h"
 #include "Probes/MovementProbes.h"
 #include "Probes/OnlineProbes.h"
+#include "Probes/PaintTextureProbes.h"
 #include "Probes/PhysicsProbes.h"
 #include "Probes/RuntimeTextureProbes.h"
 #include "Probes/SaveProbes.h"
@@ -91,6 +92,7 @@ namespace TestWorld
     OPAAX_REGISTER_OBJECT(ProbeTuning);
     OPAAX_REGISTER_OBJECT(ProbeCounterSubsystem);
     OPAAX_REGISTER_OBJECT(CommandProbeSubsystem);
+    OPAAX_REGISTER_OBJECT(PaintTextureProbeSubsystem);
     OPAAX_REGISTER_OBJECT(RuntimeTextureProbeSubsystem);
     OPAAX_REGISTER_OBJECT(ProbeGame);
 

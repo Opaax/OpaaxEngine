@@ -1328,7 +1328,9 @@ namespace Opaax::EngineAutomation
                                                              { "renderScale", lInfo.SceneSettings.RenderScale } } },
                         { "views",           Move(lViews) },
                         { "textureFilter",   ToString(lInfo.TextureFilter) },
-                        { "textures",        nlohmann::json{ { "runtime", lInfo.RuntimeTextures } } },
+                        { "textures",        nlohmann::json{ { "runtime",       lInfo.RuntimeTextures },
+                                                             { "paintedStamps", lInfo.PaintedStamps },
+                                                             { "paintPasses",   lInfo.PaintPasses } } },
                         { "materialShaders", Move(lShaders) },
                         { "materialPipelines", lInfo.MaterialPipelines },
                         { "gpuFrameMs",      lInfo.GpuFrameMs } });
