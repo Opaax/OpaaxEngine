@@ -1,0 +1,176 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 360.0,
+                    "Priority": 0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "0c5d39bb702246e68d761bddd1214e92",
+            "name": "Camera",
+            "ownerMap": "PaintTexture"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.25,
+                        "y": 0.27,
+                        "z": 0.32
+                    },
+                    "Frame": -1,
+                    "Layer": "Background",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 1400.0,
+                        "y": 1400.0
+                    },
+                    "Texture": "/Engine/Textures/T_Square_256_White.png",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "98da7e55bbe049759f18a3a5b610c29c",
+            "name": "Background",
+            "ownerMap": "PaintTexture"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 256.0,
+                        "y": 256.0
+                    },
+                    "Texture": "/Runtime/Paint",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -300.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "4a501bfc0fe94fa3ba2956f9a76bce48",
+            "name": "Canvas",
+            "ownerMap": "PaintTexture"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 32.0,
+                        "y": 32.0
+                    },
+                    "Texture": "/Runtime/Paint",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "dddb90cd471c46dd9d029251ac6b1101",
+            "name": "Small",
+            "ownerMap": "PaintTexture"
+        },
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Default",
+                    "Material": "",
+                    "OrderInLayer": 0,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 16.0,
+                        "y": 16.0
+                    },
+                    "Texture": "/Runtime/Checker",
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 300.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "c725686121254680a6e0abc54da0cbef",
+            "name": "Checker",
+            "ownerMap": "PaintTexture"
+        }
+    ],
+    "mapId": "PaintTexture",
+    "version": 4
+}

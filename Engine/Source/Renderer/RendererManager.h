@@ -222,6 +222,24 @@ namespace Opaax
         const SpriteSheet* ResolveSheet(const TAssetRef<SpriteSheet>& InRef);
 
         /**
+         * What an image names draws: its texture and the region to sample. A sheet wins over a texture.
+         * A missing sheet frame warns once and uses the whole texture.
+         * @return False when there is nothing to draw
+         */
+        bool ResolveImage(const TAssetRef<Texture2D>& InTexture, const TAssetRef<SpriteSheet>& InSheet, Int32 InFrame,
+                          ITexture2D*& OutTexture, SpriteUVRect& OutUV);
+
+        /**
+         * Draws the paint queued since the last frame into its textures, before the frame's views: each
+         * step a pass that keeps what the texture holds, then the texture's mipmaps remade once.
+         * Brushes are read through their mipmaps whatever the project's filter.
+         */
+        void PaintTextures();
+
+        /** Draws one stamp of a paint pass, InIndex-th of the pass, into InTarget. Skips (warning once) a brush that is missing or is the target. */
+        void DrawPaintStamp(Renderer2D& InRenderer, const PaintStamp& InStamp, Uint32 InIndex, const ITexture2D& InTarget);
+
+        /**
          * What a sprite draws: its texture and the region to sample. A sheet wins over a texture.
          * A missing sheet frame warns once and uses the whole texture.
          * @return False when there is nothing to draw
@@ -465,6 +483,14 @@ namespace Opaax
 
         /** The paint asked for since the last frame, drawn when the frame starts. Emptied every Render. */
         PaintQueue m_PaintQueue;
+
+        /** Painting counters: totals since startup (renderer.info), and this frame's stamps (the profiler). */
+        Uint64 m_PaintedStamps    = 0;
+        Uint64 m_PaintPasses      = 0;
+        Uint32 m_FramePaintStamps = 0;
+
+        /** Paint brushes (by path) and targets already warned about. */
+        TUnorderedSet<Uint32> m_WarnedPaint;
 
         /** Run before each frame is drawn, in the order they were added. */
         TDynArray<BeforeDrawHook> m_BeforeDraw;

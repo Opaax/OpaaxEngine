@@ -1,0 +1,477 @@
+[
+    {
+        "id": "play",
+        "command": "level.play",
+        "params": {
+            "path": "Levels/PaintTexture.opaaxlevel"
+        }
+    },
+    {
+        "command": "world.wait",
+        "params": {
+            "seconds": 0.5
+        }
+    },
+    {
+        "id": "none-made",
+        "command": "renderer.info",
+        "expect": {
+            "textureFilter": "Pixel",
+            "textures": {
+                "runtime": 0,
+                "paintedStamps": 0,
+                "paintPasses": 0
+            }
+        }
+    },
+    {
+        "id": "make-paint",
+        "command": "probe.paint.make",
+        "params": {
+            "path": "/Runtime/Paint",
+            "width": 64,
+            "height": 64
+        },
+        "expect": {
+            "width": 64,
+            "height": 64,
+            "paintable": true
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 3
+        }
+    },
+    {
+        "id": "paint-counted",
+        "command": "renderer.info",
+        "expect": {
+            "textures": {
+                "runtime": 1,
+                "paintedStamps": 0
+            }
+        }
+    },
+    {
+        "id": "made-transparent",
+        "command": "frame.sample",
+        "params": {
+            "x": 212,
+            "y": 232,
+            "width": 256,
+            "height": 256
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                64,
+                69,
+                82,
+                255
+            ],
+            "max": [
+                64,
+                69,
+                82,
+                255
+            ]
+        }
+    },
+    {
+        "id": "paint-red",
+        "command": "probe.paint.stamps",
+        "params": {
+            "path": "/Runtime/Paint",
+            "stamps": [
+                {
+                    "texture": "Textures/Circle.png",
+                    "color": [
+                        1,
+                        0,
+                        0,
+                        1
+                    ],
+                    "center": [
+                        16,
+                        48
+                    ],
+                    "size": [
+                        24,
+                        24
+                    ]
+                }
+            ]
+        },
+        "expect": {
+            "queued": 1
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "red-painted",
+        "command": "frame.sample",
+        "params": {
+            "x": 272,
+            "y": 292,
+            "width": 8,
+            "height": 8
+        },
+        "expect": {
+            "mean": [
+                {
+                    "$atLeast": 252,
+                    "$atMost": 255
+                },
+                {
+                    "$atLeast": 0,
+                    "$atMost": 3
+                },
+                {
+                    "$atLeast": 0,
+                    "$atMost": 3
+                },
+                255
+            ]
+        }
+    },
+    {
+        "id": "paint-blue",
+        "command": "probe.paint.stamps",
+        "params": {
+            "path": "/Runtime/Paint",
+            "stamps": [
+                {
+                    "texture": "Textures/Circle.png",
+                    "color": [
+                        0,
+                        0,
+                        1,
+                        1
+                    ],
+                    "center": [
+                        48,
+                        48
+                    ],
+                    "size": [
+                        24,
+                        24
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "blue-painted",
+        "command": "frame.sample",
+        "params": {
+            "x": 400,
+            "y": 292,
+            "width": 8,
+            "height": 8
+        },
+        "expect": {
+            "mean": [
+                {
+                    "$atLeast": 0,
+                    "$atMost": 3
+                },
+                {
+                    "$atLeast": 0,
+                    "$atMost": 3
+                },
+                {
+                    "$atLeast": 252,
+                    "$atMost": 255
+                },
+                255
+            ]
+        }
+    },
+    {
+        "id": "first-paint-kept",
+        "command": "frame.sample",
+        "params": {
+            "x": 272,
+            "y": 292,
+            "width": 8,
+            "height": 8
+        },
+        "expect": {
+            "mean": [
+                {
+                    "$atLeast": 252,
+                    "$atMost": 255
+                },
+                {
+                    "$atLeast": 0,
+                    "$atMost": 3
+                },
+                {
+                    "$atLeast": 0,
+                    "$atMost": 3
+                },
+                255
+            ]
+        }
+    },
+    {
+        "id": "two-stamps-counted",
+        "command": "renderer.info",
+        "expect": {
+            "textures": {
+                "runtime": 1,
+                "paintedStamps": 2,
+                "paintPasses": 2
+            }
+        }
+    },
+    {
+        "id": "paint-half-green",
+        "command": "probe.paint.stamps",
+        "params": {
+            "path": "/Runtime/Paint",
+            "stamps": [
+                {
+                    "color": [
+                        0,
+                        1,
+                        0,
+                        0.5
+                    ],
+                    "center": [
+                        16,
+                        16
+                    ],
+                    "size": [
+                        16,
+                        16
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "half-green-premultiplied",
+        "command": "probe.paint.texel",
+        "params": {
+            "path": "/Runtime/Paint",
+            "x": 16,
+            "y": 16
+        },
+        "expect": {
+            "texel": [
+                {
+                    "$atLeast": 0,
+                    "$atMost": 1
+                },
+                {
+                    "$atLeast": 127,
+                    "$atMost": 129
+                },
+                {
+                    "$atLeast": 0,
+                    "$atMost": 1
+                },
+                {
+                    "$atLeast": 127,
+                    "$atMost": 129
+                }
+            ]
+        }
+    },
+    {
+        "id": "half-green-shown",
+        "command": "frame.sample",
+        "params": {
+            "x": 274,
+            "y": 422,
+            "width": 4,
+            "height": 4
+        },
+        "expect": {
+            "mean": [
+                {
+                    "$atLeast": 29,
+                    "$atMost": 35
+                },
+                {
+                    "$atLeast": 159,
+                    "$atMost": 165
+                },
+                {
+                    "$atLeast": 38,
+                    "$atMost": 44
+                },
+                255
+            ]
+        }
+    },
+    {
+        "id": "paint-turned-bar",
+        "command": "probe.paint.stamps",
+        "params": {
+            "path": "/Runtime/Paint",
+            "stamps": [
+                {
+                    "color": [
+                        1,
+                        1,
+                        1,
+                        1
+                    ],
+                    "center": [
+                        48,
+                        16
+                    ],
+                    "size": [
+                        40,
+                        4
+                    ],
+                    "rotation": 0.7853982
+                }
+            ]
+        }
+    },
+    {
+        "id": "paint-sheet-frame",
+        "command": "probe.paint.stamps",
+        "params": {
+            "path": "/Runtime/Paint",
+            "stamps": [
+                {
+                    "sheet": "Textures/FilterSheet.opaaxasset",
+                    "frame": 1,
+                    "center": [
+                        40,
+                        30
+                    ],
+                    "size": [
+                        8,
+                        8
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 2
+        }
+    },
+    {
+        "id": "bar-turned",
+        "command": "frame.sample",
+        "params": {
+            "x": 442,
+            "y": 382,
+            "width": 4,
+            "height": 4
+        },
+        "expect": {
+            "mean": [
+                {
+                    "$atLeast": 252,
+                    "$atMost": 255
+                },
+                {
+                    "$atLeast": 252,
+                    "$atMost": 255
+                },
+                {
+                    "$atLeast": 252,
+                    "$atMost": 255
+                },
+                255
+            ]
+        }
+    },
+    {
+        "id": "bar-not-flat",
+        "command": "frame.sample",
+        "params": {
+            "x": 442,
+            "y": 422,
+            "width": 4,
+            "height": 4
+        },
+        "expect": {
+            "colors": 1,
+            "min": [
+                64,
+                69,
+                82,
+                255
+            ],
+            "max": [
+                64,
+                69,
+                82,
+                255
+            ]
+        }
+    },
+    {
+        "id": "sheet-frame-only",
+        "command": "frame.sample",
+        "params": {
+            "x": 370,
+            "y": 366,
+            "width": 4,
+            "height": 4
+        },
+        "expect": {
+            "mean": [
+                {
+                    "$atLeast": 0,
+                    "$atMost": 3
+                },
+                {
+                    "$atLeast": 252,
+                    "$atMost": 255
+                },
+                {
+                    "$atLeast": 252,
+                    "$atMost": 255
+                },
+                255
+            ]
+        }
+    },
+    {
+        "id": "one-texture-one-pass-a-call",
+        "command": "renderer.info",
+        "expect": {
+            "textures": {
+                "paintedStamps": 5,
+                "paintPasses": 4
+            }
+        }
+    },
+    {
+        "id": "shot",
+        "command": "screenshot",
+        "params": {
+            "path": "PaintTexture.png"
+        }
+    }
+]

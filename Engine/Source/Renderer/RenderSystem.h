@@ -135,6 +135,9 @@ namespace Opaax
         /** How every colour texture is read from the next draw on (Renderer.config's TextureFilter). */
         void SetTextureFilter(ETextureFilter InFilter);
 
+        /** How colour textures are read now; Pixel without a device. */
+        ETextureFilter GetTextureFilter() const;
+
         /** What world views are asked for (samples, FXAA, scale), from the next view on. */
         void SetSceneTargetSettings(const SceneTargetSettings& InSettings) noexcept { m_SceneTargetSettings = InSettings; }
         const SceneTargetSettings& GetSceneTargetSettings() const noexcept { return m_SceneTargetSettings; }
