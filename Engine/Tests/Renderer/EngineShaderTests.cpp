@@ -154,6 +154,18 @@ TEST_CASE("Engine shaders: the sprite shader's lighting constants match Lighting
     CHECK(ConstantIn(lSource, "SHADOW_SLOT") == doctest::Approx(15));
 }
 
+TEST_CASE("Engine shaders: both sprite shaders read a premultiplied slot's colour straight")
+{
+    // Renderer2D sets one bit of u_PassParams.w per slot holding a paintable texture
+    // (MakePremultipliedSlotMask); every slot read goes through Straight.
+    for (const char* lFile : { "Sprite.glsl", "SpriteMaterial.glsl" })
+    {
+        const ShaderDesc lDesc = ShaderSource::FromSource(ReadShader(lFile), OpaaxString(lFile));
+        CHECK(lDesc.FragmentSrc.Contains("int(u_PassParams.w + 0.5) >> InSlot"));
+        CHECK(lDesc.FragmentSrc.Contains("return Straight(SampleSlotAsStored(InSlot, InUV, InDx, InDy, InBounds), InSlot);"));
+    }
+}
+
 TEST_CASE("Engine shaders: the ambient occlusion shader ports with its source and block")
 {
     const OpaaxString lSource = ReadShader("AmbientOcclusion2D.glsl");

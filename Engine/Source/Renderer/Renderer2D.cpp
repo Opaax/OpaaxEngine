@@ -70,7 +70,8 @@ namespace Opaax
     struct CameraBlock
     {
         glm::mat4 ViewProjection = glm::mat4(1.f);
-        // x: 1 for a linear-colour (HDR) pass, y: 1 for occlusion, z: 1 when textures are read through their mipmaps
+        // x: 1 for a linear-colour (HDR) pass, y: 1 for occlusion, z: 1 when textures are read through their mipmaps,
+        // w: the batch's slots holding premultiplied colour, one bit each (MakePremultipliedSlotMask)
         glm::vec4 PassParams     = glm::vec4(0.f);
     };
 
@@ -100,6 +101,19 @@ namespace Opaax
         };
         TDynArray<MaterialPipeline> MaterialPipelines;
         IPipeline*                  BoundPipeline = nullptr;   // the pipeline the pass has bound
+
+        // The engine shader's pipeline for each blend a pass asks for (RenderView::Blend) besides
+        // Alpha, made the first time; and the one of the pass open now.
+        struct EnginePipeline
+        {
+            EBlendMode            Blend = EBlendMode::Alpha;
+            TUniquePtr<IPipeline> Pipeline;
+        };
+        TDynArray<EnginePipeline> EnginePipelines;
+        IPipeline*                PassPipeline = nullptr;
+
+        // The camera block of the pass open now, re-uploaded when a batch's premultiplied slots change.
+        CameraBlock PassCamera;
 
         QuadBatchLimits Limits;   // from RenderLimits, at Init
 
@@ -266,7 +280,9 @@ namespace Opaax
 
         m_Data->QuadBindGroup.reset();
         m_Data->MaterialPipelines.clear();
+        m_Data->EnginePipelines.clear();
         m_Data->BoundPipeline = nullptr;
+        m_Data->PassPipeline  = nullptr;
         m_Data->QuadPipeline.reset();   // before its shader
         m_Data->QuadVAO.reset();
         m_Data->QuadShader.reset();
@@ -301,15 +317,17 @@ namespace Opaax
         m_Data->Cmd            = &InCmd;
         m_Data->ViewProjection = InView.ViewProjection;
 
-        // Bind the sprite pipeline; upload the camera block.
-        m_Data->Cmd->BindPipeline(*m_Data->QuadPipeline);
-        m_Data->BoundPipeline = m_Data->QuadPipeline.get();
+        // Bind the sprite pipeline of the view's blend; upload the camera block.
+        m_Data->PassPipeline = &GetEnginePipeline(InView.Blend);
+        m_Data->Cmd->BindPipeline(*m_Data->PassPipeline);
+        m_Data->BoundPipeline = m_Data->PassPipeline;
 
-        CameraBlock lCamera;
+        CameraBlock& lCamera   = m_Data->PassCamera;
         lCamera.ViewProjection = m_Data->ViewProjection;
         lCamera.PassParams.x   = InView.bLinearColor ? 1.f : 0.f;
         lCamera.PassParams.y   = InView.bOcclusion ? 1.f : 0.f;
         lCamera.PassParams.z   = m_Data->bMipmaps ? 1.f : 0.f;
+        lCamera.PassParams.w   = 0.f;
         m_Data->CameraUBO->SetData(&lCamera, static_cast<Uint32>(sizeof(CameraBlock)));
         StartPass();
     }
@@ -449,7 +467,7 @@ namespace Opaax
         if (InQuadCount == 0) { return; }
 
         // A material's batch: its shader, its block, its two textures.
-        IPipeline* lPipeline = m_Data->QuadPipeline.get();
+        IPipeline* lPipeline = m_Data->PassPipeline != nullptr ? m_Data->PassPipeline : m_Data->QuadPipeline.get();
         if (InMaterialId != 0)
         {
             const QuadMaterial& lMaterial = m_Data->PassMaterials[InMaterialId];
@@ -488,6 +506,15 @@ namespace Opaax
         if (m_Data->AmbientOcclusionMap != nullptr)
         {
             m_Data->SlotTextures[AO_MAP_SLOT] = m_Data->AmbientOcclusionMap;
+        }
+
+        // The slots holding premultiplied colour, which the shader divides back: the camera block is
+        // uploaded again only when they change (most passes never have any).
+        const float lPremultiplied = static_cast<float>(MakePremultipliedSlotMask(m_Data->SlotTextures));
+        if (lPremultiplied != m_Data->PassCamera.PassParams.w)
+        {
+            m_Data->PassCamera.PassParams.w = lPremultiplied;
+            m_Data->CameraUBO->SetData(&m_Data->PassCamera, static_cast<Uint32>(sizeof(CameraBlock)));
         }
 
         // Unused units point at the white texture.
@@ -593,6 +620,43 @@ namespace Opaax
         lNew.Blend    = InBlend;
         lNew.Pipeline = m_Data->Device->CreatePipeline(lDesc);
         return *lNew.Pipeline;
+    }
+
+    IPipeline& Renderer2D::GetEnginePipeline(const EBlendMode InBlend)
+    {
+        if (InBlend == EBlendMode::Alpha)
+        {
+            return *m_Data->QuadPipeline;
+        }
+
+        for (const Renderer2DData::EnginePipeline& lKnown : m_Data->EnginePipelines)
+        {
+            if (lKnown.Blend == InBlend)
+            {
+                return *lKnown.Pipeline;
+            }
+        }
+
+        PipelineDesc lDesc = MakeSpritePipelineDesc(m_Data->QuadShader.get());
+        lDesc.Blend        = InBlend;
+
+        Renderer2DData::EnginePipeline& lNew = m_Data->EnginePipelines.emplace_back();
+        lNew.Blend    = InBlend;
+        lNew.Pipeline = m_Data->Device->CreatePipeline(lDesc);
+        return *lNew.Pipeline;
+    }
+
+    Uint32 MakePremultipliedSlotMask(const TDynArray<ITexture2D*>& InSlotTextures) noexcept
+    {
+        Uint32 lMask = 0;
+        for (Uint32 lSlot = 0; lSlot < static_cast<Uint32>(InSlotTextures.size()) && lSlot < 32u; ++lSlot)
+        {
+            if (InSlotTextures[lSlot] != nullptr && InSlotTextures[lSlot]->IsPremultiplied())
+            {
+                lMask |= 1u << lSlot;
+            }
+        }
+        return lMask;
     }
 
     void Renderer2D::ForgetShader(const IShader& InShader)

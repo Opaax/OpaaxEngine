@@ -7,10 +7,12 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/Templates/TypeTraits.h"
 #include "Object/ObjectClassRegistry.h"
+#include "Renderer/Renderer2D.h"
 #include "Renderer/Textures/RuntimeTexture.h"
 #include "Renderer/Textures/Texture2D.h"
 #include "Renderer/Textures/TexturePaint.h"
 #include "Resources/ResourceManager.h"
+#include "RHI/Texture.h"
 #include "RHI/TextureRegion.h"
 
 using namespace Opaax;
@@ -40,6 +42,24 @@ namespace
             REQUIRE(lTexture.IsValid());
             return lTexture;
         }
+    };
+
+    /** A texture that only says whether it is paintable. */
+    class FakeTexture final : public ITexture2D
+    {
+    public:
+        explicit FakeTexture(const bool bInPaintable) : m_bPaintable(bInPaintable) {}
+
+        void   Bind(Uint32) const override {}
+        void   Unbind() const override {}
+        Uint32 GetWidth()      const noexcept override { return 1; }
+        Uint32 GetHeight()     const noexcept override { return 1; }
+        Uint32 GetRendererID() const noexcept override { return 0; }
+        bool   IsLoaded()      const noexcept override { return true; }
+        bool   IsPaintable()   const noexcept override { return m_bPaintable; }
+
+    private:
+        bool m_bPaintable = false;
     };
 
     PaintStamp Stamp(const float InX, const float InY, const float InSize = 4.f)
@@ -205,5 +225,15 @@ TEST_SUITE("TexturePaint")
         CHECK_FALSE(lPlain.Paint({ Stamp(1.f, 1.f) }));
         CHECK_FALSE(lPlain.Clear());
         CHECK_FALSE(RuntimeTexture{}.Paint({ Stamp(1.f, 1.f) }));
+    }
+
+    TEST_CASE("a batch's premultiplied slots: one bit for each slot holding a paintable texture")
+    {
+        FakeTexture lPlain(false);
+        FakeTexture lPainted(true);
+
+        CHECK(MakePremultipliedSlotMask({ &lPlain, &lPainted, nullptr, &lPainted }) == 0b1010u);
+        CHECK(MakePremultipliedSlotMask({ &lPlain, &lPlain }) == 0u);
+        CHECK(MakePremultipliedSlotMask({}) == 0u);
     }
 }
