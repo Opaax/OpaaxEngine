@@ -22,6 +22,7 @@ namespace
         Uint32 GetColorAttachmentID() const noexcept override { return ColorID; }
         Uint32 GetWidth()             const noexcept override { return Width;   }
         Uint32 GetHeight()            const noexcept override { return Height;  }
+        bool   ReadPixels(TDynArray<Uint8>&) const override { return false; }
 
         Uint32 Width       = 320;
         Uint32 Height      = 240;

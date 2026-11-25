@@ -1,0 +1,224 @@
+[
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "open",
+        "command": "asset.open",
+        "params": {
+            "path": "Materials/ShaderParam.opaaxasset"
+        },
+        "expect": {
+            "class": "Material2D",
+            "unsaved": false
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "preview",
+        "command": "asset.preview",
+        "params": {
+            "path": "Materials/ShaderParam.opaaxasset",
+            "png": "EditorMaterialPreview.png"
+        },
+        "expect": {
+            "shader": "Shaders/ParamColor.glsl",
+            "compiled": true,
+            "error": "",
+            "paramErrors": [],
+            "fields": [
+                { "field": "bLit", "label": "bLit" },
+                { "field": "NormalMap", "label": "NormalMap" },
+                { "field": "EmissiveColor", "label": "EmissiveColor" },
+                { "field": "EmissiveStrength", "label": "EmissiveStrength" },
+                { "field": "Shader", "label": "Shader" },
+                { "field": "Param0", "label": "RedStrength" },
+                { "field": "Param5", "label": "Green" },
+                { "field": "Color0", "label": "Base" }
+            ],
+            "height": 200,
+            "sample": {
+                "colors": 1,
+                "mean": [
+                    { "$atLeast": 203, "$atMost": 205 },
+                    { "$atLeast": 101, "$atMost": 103 },
+                    { "$atLeast": 50, "$atMost": 52 },
+                    255
+                ]
+            }
+        }
+    },
+    {
+        "id": "edit-unsaved",
+        "command": "asset.set",
+        "params": {
+            "path": "Materials/ShaderParam.opaaxasset",
+            "properties": {
+                "Param0": 0.3
+            }
+        },
+        "expect": {
+            "unsaved": true
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "preview-follows-the-edit",
+        "command": "asset.preview",
+        "params": {
+            "path": "Materials/ShaderParam.opaaxasset"
+        },
+        "expect": {
+            "sample": {
+                "colors": 1,
+                "mean": [
+                    { "$atLeast": 75, "$atMost": 77 },
+                    { "$sameAs": "preview" },
+                    { "$sameAs": "preview" },
+                    255
+                ]
+            }
+        }
+    },
+    {
+        "id": "close-discarding",
+        "command": "asset.close",
+        "params": {
+            "path": "Materials/ShaderParam.opaaxasset",
+            "discard": true
+        }
+    },
+    {
+        "id": "reopen",
+        "command": "asset.open",
+        "params": {
+            "path": "Materials/ShaderParam.opaaxasset"
+        },
+        "expect": {
+            "unsaved": false,
+            "properties": {
+                "Param0": 0.8
+            }
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "preview-back-to-the-file",
+        "command": "asset.preview",
+        "params": {
+            "path": "Materials/ShaderParam.opaaxasset"
+        },
+        "expect": {
+            "sample": {
+                "mean": {
+                    "$sameAs": "preview"
+                }
+            }
+        }
+    },
+    {
+        "id": "open-broken",
+        "command": "asset.open",
+        "params": {
+            "path": "Materials/ShaderBroken.opaaxasset"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 5
+        }
+    },
+    {
+        "id": "broken-falls-back",
+        "command": "asset.preview",
+        "params": {
+            "path": "Materials/ShaderBroken.opaaxasset"
+        },
+        "expect": {
+            "shader": "Shaders/Broken.glsl",
+            "compiled": false,
+            "sample": {
+                "colors": 1,
+                "mean": [255, 255, 255, 255]
+            }
+        }
+    },
+    {
+        "id": "open-world-time",
+        "command": "asset.open",
+        "params": {
+            "path": "Materials/ShaderWorldTime.opaaxasset"
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 10
+        }
+    },
+    {
+        "id": "world-time-a",
+        "command": "asset.preview",
+        "params": {
+            "path": "Materials/ShaderWorldTime.opaaxasset"
+        },
+        "expect": {
+            "fields": [
+                { "field": "bLit", "label": "bLit" },
+                { "field": "NormalMap", "label": "NormalMap" },
+                { "field": "EmissiveColor", "label": "EmissiveColor" },
+                { "field": "EmissiveStrength", "label": "EmissiveStrength" },
+                { "field": "Shader", "label": "Shader" },
+                { "field": "Param0", "label": "Speed" }
+            ],
+            "worldTimeRuns": true
+        }
+    },
+    {
+        "command": "frames.wait",
+        "params": {
+            "count": 30
+        }
+    },
+    {
+        "id": "world-time-moves",
+        "command": "asset.preview",
+        "params": {
+            "path": "Materials/ShaderWorldTime.opaaxasset"
+        },
+        "expect": {
+            "sample": {
+                "mean": {
+                    "$differsFrom": "world-time-a"
+                }
+            }
+        }
+    },
+    {
+        "id": "no-preview-when-closed",
+        "command": "asset.preview",
+        "params": {
+            "path": "Materials/Glow.opaaxasset"
+        },
+        "expectFailure": true
+    }
+]

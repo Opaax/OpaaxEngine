@@ -56,6 +56,7 @@ namespace Opaax
         Uint32 GetWidth()             const noexcept override { return m_Width;        }
         Uint32 GetHeight()            const noexcept override { return m_Height;       }
         Uint32 GetSamples()           const noexcept override { return m_Samples;      }
+        bool   ReadPixels(TDynArray<Uint8>& OutRGBA) const override;
         //~End IFramebuffer interface
 
         // =============================================================================

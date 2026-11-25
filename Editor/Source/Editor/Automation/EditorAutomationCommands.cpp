@@ -5,11 +5,14 @@
 #include "Automation/AutomationRunner.h"
 #include "Automation/EngineAutomationCommands.h"
 #include "Core/IO/FileSystem.h"
+#include "Core/Image/ImageSample.h"
+#include "Core/Image/PngWriter.h"
 #include "Core/Maths/Maths.h"
 #include "Core/String/OpaaxPathString.h"
 #include "Core/String/OpaaxStringJson.h"
 #include "Core/Tag/OpaaxTag.h"
 #include "Editor/Assets/AssetEditors.h"
+#include "Editor/Assets/IAssetEditor.h"
 #include "Editor/Camera/CameraPreview.hpp"
 #include "Editor/Camera/EditorCamera.h"
 #include "Editor/Clipboard/EditorClipboard.h"
@@ -38,6 +41,7 @@
 #include "Editor/Undo/EditorUndo.h"
 #include "Editor/Undo/UndoWorld.h"
 #include "Editor/UI/GuardedEditorDialogs.hpp"
+#include "RHI/Framebuffer.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Platform/IFileSystem.h"
 #include "Renderer/Camera/CameraManager.h"
@@ -1766,6 +1770,76 @@ namespace Opaax::Editor::EditorAutomation
                         { "open",           false },
                         { "fromSourceFile", false },
                         { "properties",     lContents.Properties } });
+                });
+
+            InCommands.Register("asset.preview",
+                "What the window of the asset at {path} previews (a material): {width, height} of the preview, "
+                "sample {colors, mean, min, max, x, y, width, height} of a part of it (as frame.sample reads a frame: "
+                "{x, y, width, height} in pixels from its top-left, a 40 pixel square at its centre by default), "
+                "and what the window shows (a material: shader, compiled, error, paramErrors, fields [{field, "
+                "label}], previewTexture, worldTimeRuns, lit). {png} also writes the preview to that file. The "
+                "window must be open and drawn once (wait a frame after asset.open).",
+                [&InContext](const nlohmann::json& InParams)
+                {
+                    OpaaxString lPath;
+                    OpaaxString lError;
+                    if (!AssetPath(InContext, InParams, lPath, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    const IAssetEditor* lEditor = InContext.Assets.FindEditor(lPath);
+                    if (lEditor == nullptr)
+                    {
+                        return AutomationResult::Fail("'" + lPath + "' is not open: asset.open it first");
+                    }
+
+                    IFramebuffer* lPreview = lEditor->GetPreview();
+                    TDynArray<Uint8> lPixels;
+                    if (lPreview == nullptr || !lPreview->ReadPixels(lPixels))
+                    {
+                        return AutomationResult::Fail("the window of '" + lPath + "' has no preview yet (one that "
+                                                      "has one draws it the frame after it is shown: wait a frame)");
+                    }
+
+                    const Uint32 lWidth  = lPreview->GetWidth();
+                    const Uint32 lHeight = lPreview->GetHeight();
+
+                    ImageSample::Rect lArea;
+                    lArea.Width  = InParams.value("width", 40);
+                    lArea.Height = InParams.value("height", 40);
+                    lArea.X      = InParams.value("x", static_cast<Int32>(lWidth / 2) - lArea.Width / 2);
+                    lArea.Y      = InParams.value("y", static_cast<Int32>(lHeight / 2) - lArea.Height / 2);
+
+                    ImageSample::Result lSample;
+                    if (!ImageSample::Measure(lPixels.data(), lWidth, lHeight, lArea, lSample, lError))
+                    {
+                        return AutomationResult::Fail(lError);
+                    }
+
+                    if (InParams.contains("png"))
+                    {
+                        const OpaaxString lPng = InParams.value("png", OpaaxString());
+                        if (lPng.IsEmpty() || !PngWriter::Write(lPng, lWidth, lHeight, 4, lPixels.data()))
+                        {
+                            return AutomationResult::Fail("the preview could not be written to '" + lPng + "'");
+                        }
+                    }
+
+                    nlohmann::json lAnswer = lEditor->DescribeView();
+                    lAnswer["path"]   = InContext.Paths.AbsoluteToAsset(lPath).CStr();
+                    lAnswer["width"]  = lWidth;
+                    lAnswer["height"] = lHeight;
+                    lAnswer["sample"] = nlohmann::json{
+                        { "colors", lSample.Colors },
+                        { "mean",   { lSample.Mean[0], lSample.Mean[1], lSample.Mean[2], lSample.Mean[3] } },
+                        { "min",    { lSample.Min[0], lSample.Min[1], lSample.Min[2], lSample.Min[3] } },
+                        { "max",    { lSample.Max[0], lSample.Max[1], lSample.Max[2], lSample.Max[3] } },
+                        { "x",      lSample.Area.X },
+                        { "y",      lSample.Area.Y },
+                        { "width",  lSample.Area.Width },
+                        { "height", lSample.Area.Height } };
+                    return AutomationResult::Ok(Move(lAnswer));
                 });
 
             InCommands.Register("asset.set",
