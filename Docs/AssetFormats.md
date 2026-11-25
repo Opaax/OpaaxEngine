@@ -64,6 +64,71 @@ m_Fog.Reset();
 - **Seen from outside:** `renderer.info` answers `textures.runtime`, how many are alive on the GPU.
   `TestWorld/Tests/RuntimeTexture.json` makes, fills and releases some from a script.
 
+#### Painting
+
+A texture made *paintable* is drawn into on the GPU instead of changed by pixels: brush stamps (the
+textured, tinted, turned quads of a drawing) are painted over what it holds and stay there, as
+Unity's `RenderTexture`, Godot's `SubViewport` that never clears or Unreal's canvas render target do.
+A drawing kept as strokes is painted once per finished stroke into tiles (256 texels each, made where
+the ink lands), one sprite per tile, the way paint programs do: the sprites cost the same however
+much is drawn.
+
+```cpp
+#include "Renderer/Textures/RuntimeTexture.h"
+
+// Make: transparent (or give straight RGBA pixels to start from).
+RuntimeTextureDesc lDesc{ 256, 256 };
+lDesc.bPaintable = true;
+m_Tile = RuntimeTexture::Create(GetContext().Resources, OpaaxString("/Runtime/Draw/Tile_3_1"), lDesc, nullptr);
+
+// Paint: stamps in the tile's texels, (0, 0) its bottom-left corner. One call per stroke and tile.
+TDynArray<PaintStamp> lStamps;
+PaintStamp lStamp;
+lStamp.Texture.Path = OpaaxString("Textures/Brushes/Round.png");   // or Sheet + Frame; none: a solid quad
+lStamp.Color        = { 0.1f, 0.1f, 0.12f, 0.8f };                  // straight alpha, times the brush
+lStamp.Center       = { 40.f, 12.f };
+lStamp.Size         = { 9.f, 9.f };
+lStamp.Rotation     = 0.3f;                                         // radians, counter-clockwise
+lStamps.push_back(lStamp);
+m_Tile.Paint(lStamps);
+
+// Erase: the same stamps take paint away (their alpha is how much).
+m_Tile.Paint(lStamps, EPaintMode::Erase);
+
+// Clear: all of it, or a rectangle of texels (cut to the texture), to a colour (transparent by default).
+m_Tile.ClearRegion(TextureRegion{ 0, 0, 64, 64 });
+m_Tile.Clear();
+
+// Release, as any runtime texture.
+m_Tile.Reset();
+```
+
+- **When:** calls are queued on the main thread and drawn at the start of the next frame, before its
+  views: a sprite naming the texture shows them that same frame. A texture's paint is drawn in call
+  order, stamps of one call in their order (each is drawn over the ones before it).
+- **Blending:** the texture holds premultiplied colour (the colour already times its alpha). A stamp
+  is drawn over it with `EBlendMode::Paint`, which keeps the alpha right on a transparent texture
+  (plain alpha blending would square it and darken the edges); `Erase` takes away as much as the
+  stamp's alpha. A sprite or a UI image showing the texture divides the colour back, so it blends as
+  any other texture does.
+- **Reading it:** blended at any size, through its mipmaps when drawn smaller, whatever the
+  project's `TextureFilter`; the mipmaps are made again once a frame after the texture is painted.
+  The brushes are read the same way while painting (through their mipmaps, blended when enlarged),
+  so a stamp painted small keeps no aliasing.
+- **Costs:** on a frame that paints, one pass per run of stamps or clear and texture (a target
+  bound, then the stamps in batches like sprites, 16 brushes a draw call), and one mipmap rebuild per
+  texture; nothing on frames that do not paint. Memory: width × height × 4 bytes, and a third more
+  for the mipmaps (a 256 tile is about 350 KB).
+- **Limits:** its pixels are never read back (keep the strokes, not the picture) and never replaced
+  (`Update` refuses it). A brush that is missing, or the texture itself, is skipped with a warning; a
+  brush that is a texture painted later in the same frame is read as it was. Tiles side by side are
+  each filtered alone: enlarged, a soft stroke across a seam can show a hairline; paint a one-texel
+  overlap into both tiles to hide it. A game's own sprite shader copied from an older template reads
+  the texture's premultiplied colour ([Customizing.md](Customizing.md#a-games-sprite-shader)).
+- **Seen from outside:** it counts in `textures.runtime`; `textures.paintedStamps` and
+  `textures.paintPasses` count what was painted since the start, and the Stats panel shows a frame's
+  `Paint Stamps`. `TestWorld/Tests/PaintTexture.json` paints, erases and clears one from a script.
+
 ## Project (`.opaaxproj`)
 
 ```json

@@ -248,7 +248,10 @@ read when it is drawn at another size than its pixels. It applies at once, witho
 | `Smooth` | blended, through the texture's mipmaps | blended | Drawn or painted art: thin strokes stay when small, no blocks when large |
 
 Every colour texture gets its mipmaps when it is uploaded (a third more video memory), so the choice
-can change while the game runs. Text is not concerned: a font atlas is always blended.
+can change while the game runs. Text is not concerned: a font atlas is always blended. Neither is a
+paintable runtime texture ([AssetFormats.md](AssetFormats.md#painting)): it is always blended and read
+through its mipmaps, which are made again after it is painted, and the brushes painted into it are read
+the same way.
 
 Two things hold under every filter:
 
@@ -347,7 +350,7 @@ ported to GLSL 4.10 at load time (`RHI/OpenGL/GLSLPort`), since macOS stops at O
 | Binding | Block or sampler | Shader |
 |---|---|---|
 | 0..15 | `u_Textures[16]`: the batch's textures. In lit passes, 14 is the ambient occlusion map and 15 the shadow map | Sprite |
-| 1 | `CameraUBO`: view-projection, pass flags | Sprite |
+| 1 | `CameraUBO`: view-projection, pass flags (`u_PassParams.w`: one bit per slot holding premultiplied colour) | Sprite |
 | 2 | `PostUBO`: exposure, tonemapper, bloom | Tonemap |
 | 3 | `LightsUBO`: ambient, ambient occlusion, up to 32 lights | Sprite |
 | 4 | `ShadowUBO`: up to 16 shadowed lights | Shadow2D |
@@ -360,6 +363,24 @@ A pass reads its blocks and its textures through its bind group (`IBindGroup`): 
 binding points of its blocks, and binding it before the draw is what puts each buffer and each
 texture in place. Creating a uniform buffer binds nothing, so a block a shader reads must be in the
 group of every pass that uses that shader, or the shader reads whatever the pass before left there.
+
+**Blending.** A pipeline blends with an `EBlendMode`; the factors of each are a table in
+`RHI/BlendState.h` (the backend only maps them), with the same maths on the CPU for tests:
+
+| `EBlendMode` | Colour | Alpha | Used by |
+|---|---|---|---|
+| `None` | the source | the source | post passes |
+| `Alpha` | `src·a + dst·(1−a)` | the same | sprites, text, UI (straight alpha) |
+| `Additive` | `src + dst` | the same | bloom |
+| `Paint` | `src·a + dst·(1−a)` | `a + dst·(1−a)` | stamps painted into a paintable texture: its alpha stays right and its colour premultiplied |
+| `Erase` | `dst·(1−a)` | `dst·(1−a)` | erasing stamps |
+
+A pass's quads drawn with the engine's sprite shader blend as its `RenderView::Blend` says (`Alpha`
+for every view, `Paint` or `Erase` in the passes painting a texture); a material's batch as its
+`QuadMaterial::Blend`. A paintable texture holds
+premultiplied colour: `Renderer2D` sets the bit of each sampler slot holding one in `u_PassParams.w`,
+re-uploading the camera block only when a batch's bits change, and the sprite shader divides those
+slots' colour back (`Straight`), so everything after the read sees straight colour.
 
 C++ mirrors of these blocks are in `Renderer/Lighting/Lighting2D.h` and `Renderer/Post`; the constants
 a shader repeats from C++ (light counts, slots, sizes) are checked by `EngineShaderTests`, so change
@@ -388,7 +409,9 @@ sprites sharing a material share its shader and its values.
 3. Name the material in the sprite's `Material`.
 
 What the shader reads, besides the sprite's texture (`u_Textures[int(v_TexIndex)]`, read through
-`SampleSlot` as `main()` does) and its tint (`v_Color`):
+`SampleSlot` as `main()` does, which gives a paintable texture's colour straight) and its tint
+(`v_Color`). A copy without `Straight` (taken from an older template) reads a paintable texture's
+premultiplied colour, with darker soft edges: take the template's `Straight` and `SampleSlot` into it.
 
 | Input | What |
 |---|---|
@@ -396,7 +419,7 @@ What the shader reads, besides the sprite's texture (`u_Textures[int(v_TexIndex)
 | `u_Time.y` | The app's time in seconds: always runs, in the editor too and while the world is paused. For what moves in a pause menu or in a map opened from one |
 | `u_Params[0]`, `u_Params[1]` | The material's `Param0..3` (`x, y, z, w`) and `Param4..7` |
 | `u_Colors[0]`, `u_Colors[1]` | `Color0` and `Color1` as picked, in screen colour: decode them with `pow(c, vec3(2.2))` in a lit level, where `u_PassParams.x` is 1 and colours are linear |
-| `u_Textures[MATERIAL_SLOT_0]`, `[MATERIAL_SLOT_1]` | `Texture0` and `Texture1` (slots 12 and 13; white when empty). A one-channel texture (an R8 runtime texture) reads as `(1, 1, 1, value)`: its value is in `.a` |
+| `u_Textures[MATERIAL_SLOT_0]`, `[MATERIAL_SLOT_1]` | `Texture0` and `Texture1` (slots 12 and 13; white when empty). A one-channel texture (an R8 runtime texture) reads as `(1, 1, 1, value)`: its value is in `.a`. A paintable runtime texture holds premultiplied colour: pass what you read through `Straight(sample, MATERIAL_SLOT_0)` |
 | `v_WorldPosition` | Each pixel's place in the world. A pattern read from it is fixed to the world: it has no seam between two tiles and stays put while the camera pans and zooms |
 | `v_TexCoord` | The sprite's own texture coordinates (0..1 over a whole texture); `fwidth(v_TexCoord)` is how much they change across one pixel, for an edge a pixel wide at every zoom |
 
