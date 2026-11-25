@@ -379,6 +379,51 @@ TEST_CASE("Automation: a request with an expected answer fails when its answer d
     CHECK_FALSE(ParseAutomationScript(R"([{"command": "a", "expect": {}, "expectFailure": true}])", lRequests, lError));
 }
 
+TEST_CASE("Automation: a value can be the same as, or differ from, the same place in an earlier answer")
+{
+    Recorder lRecorder;
+
+    AutomationRequest lBefore = Request("before", "echo", { { "mean", { 10, 20, 30 } }, { "n", 1 } });
+
+    AutomationRequest lSame = Request("same", "echo", { { "mean", { 10, 20, 30 } }, { "n", 2 } });
+    lSame.Expect = nlohmann::json::parse(R"({"mean": {"$sameAs": "before"}, "n": {"$differsFrom": "before"}})");
+
+    AutomationRequest lMoved = Request("moved", "echo", { { "mean", { 10, 21, 30 } } });
+    lMoved.Expect = nlohmann::json::parse(R"({"mean": {"$sameAs": "before"}})");
+
+    AutomationRequest lStill = Request("still", "echo", { { "mean", { 10, 20, 30 } } });
+    lStill.Expect = nlohmann::json::parse(R"({"mean": {"$differsFrom": "before"}})");
+
+    AutomationRequest lUnknown = Request("unknown", "echo", { { "n", 1 } });
+    lUnknown.Expect = nlohmann::json::parse(R"({"n": {"$sameAs": "nobody"}})");
+
+    AutomationRequest lMissing = Request("missing", "echo", { { "other", 1 } });
+    lMissing.Expect = nlohmann::json::parse(R"({"other": {"$sameAs": "before"}})");
+
+    for (const AutomationRequest& lRequest : { lBefore, lSame, lMoved, lStill, lUnknown, lMissing })
+    {
+        lRecorder.Runner.Enqueue(lRequest);
+    }
+    lRecorder.Runner.Tick();
+
+    REQUIRE(lRecorder.Responses.size() == 6);
+    CHECK(lRecorder.Responses[0].bOk);
+    CHECK(lRecorder.Responses[1].bOk);
+    CHECK_FALSE(lRecorder.Responses[2].bOk);
+    CHECK(lRecorder.Responses[2].Error == "the answer differs: mean is [10,21,30], expected the same as in 'before' ([10,20,30])");
+    CHECK_FALSE(lRecorder.Responses[3].bOk);
+    CHECK(lRecorder.Responses[3].Error == "the answer differs: mean is [10,20,30], as in 'before': expected it to differ");
+    CHECK_FALSE(lRecorder.Responses[4].bOk);
+    CHECK(lRecorder.Responses[4].Error == "the answer differs: n: no earlier answer 'nobody' to compare with");
+    CHECK_FALSE(lRecorder.Responses[5].bOk);
+    CHECK(lRecorder.Responses[5].Error == "the answer differs: other is not in the answer 'before'");
+
+    // Without earlier answers, a comparison has nothing to hold to.
+    OpaaxString lWhy;
+    CHECK_FALSE(MatchesExpected(nlohmann::json::parse(R"({"n": {"$sameAs": "before"}})"),
+                                nlohmann::json::parse(R"({"n": 1})"), lWhy));
+}
+
 TEST_CASE("Automation: commands.list describes every command, sorted, with its help")
 {
     Recorder lRecorder;

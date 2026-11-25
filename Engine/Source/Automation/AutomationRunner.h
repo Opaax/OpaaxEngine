@@ -37,6 +37,9 @@ namespace Opaax
         OpaaxString    Error;                               // when not: why
     };
 
+    /** An earlier request's answer by its id, or null (it did not answer ok, or no request has that id). */
+    using AutomationAnswerLookup = TFunction<const nlohmann::json*(const OpaaxString& InId)>;
+
     /** The automation names of a command's result and handler (Commands/CommandTypes.h). */
     using AutomationResult  = CommandResult;
     using AutomationHandler = CommandHandler;
@@ -107,6 +110,9 @@ namespace Opaax
         /** Runs what comes after the wait, once. */
         void FinishWait();
 
+        /** Finds an earlier answer by its request's id. */
+        AutomationAnswerLookup Earlier() const;
+
         // =============================================================================
         // Members
         // =============================================================================
@@ -129,6 +135,9 @@ namespace Opaax
         Uint64 m_Failed   = 0;
 
         bool m_bLogResponses = true;
+
+        /** The answers of the requests that answered ok, by id: what $sameAs and $differsFrom compare with. */
+        TUnorderedMap<OpaaxString, nlohmann::json, OpaaxHash> m_Answers;
     };
 
     /**
@@ -137,6 +146,13 @@ namespace Opaax
      * differ ("maps/1/focused is false, expected true").
      */
     bool MatchesExpected(const nlohmann::json& InExpected, const nlohmann::json& InActual, OpaaxString& OutWhy);
+
+    /**
+     * The same, where a value can also be compared with the same place in an earlier answer:
+     * {"$sameAs": "id"} or {"$differsFrom": "id"} (numbers within 1e-4).
+     */
+    bool MatchesExpected(const nlohmann::json& InExpected, const nlohmann::json& InActual, OpaaxString& OutWhy,
+                         const AutomationAnswerLookup& InEarlier);
 
     /**
      * A request from its JSON, {"id", "command", "params", "expectFailure", "expect"}. False (with

@@ -21,9 +21,54 @@ namespace Opaax
 
         /** MatchesExpected below a path: InPath names where InActual is ("" for the whole answer). */
         bool MatchesAt(const nlohmann::json& InExpected, const nlohmann::json& InActual, const OpaaxString& InPath,
-                       OpaaxString& OutWhy)
+                       OpaaxString& OutWhy, const AutomationAnswerLookup* InEarlier)
         {
             const auto lWhere = [&InPath]() { return InPath.IsEmpty() ? OpaaxString("the answer") : InPath; };
+
+            // The same place in an earlier answer: {"$sameAs": "id"}, {"$differsFrom": "id"}.
+            const auto lSameAs  = InExpected.is_object() ? InExpected.find("$sameAs")      : InExpected.end();
+            const auto lDiffers = InExpected.is_object() ? InExpected.find("$differsFrom") : InExpected.end();
+            if (lSameAs != InExpected.end() || lDiffers != InExpected.end())
+            {
+                const bool            bSame = lSameAs != InExpected.end();
+                const nlohmann::json& lId   = bSame ? *lSameAs : *lDiffers;
+                if (!lId.is_string())
+                {
+                    OutWhy = lWhere() + ": $sameAs and $differsFrom name an earlier request's id";
+                    return false;
+                }
+
+                const OpaaxString     lName    = FromJsonString(lId.get<nlohmann::json::string_t>());
+                const nlohmann::json* lEarlier = (InEarlier != nullptr && *InEarlier) ? (*InEarlier)(lName) : nullptr;
+                if (lEarlier == nullptr)
+                {
+                    OutWhy = lWhere() + ": no earlier answer '" + lName + "' to compare with";
+                    return false;
+                }
+
+                const nlohmann::json::json_pointer lPlace(InPath.IsEmpty() ? nlohmann::json::string_t()
+                                                                           : ToJsonString(OpaaxString("/") + InPath));
+                if (!lEarlier->contains(lPlace))
+                {
+                    OutWhy = lWhere() + " is not in the answer '" + lName + "'";
+                    return false;
+                }
+
+                const nlohmann::json& lThen = lEarlier->at(lPlace);
+                OpaaxString           lIgnored;
+                const bool            bEqual = MatchesAt(lThen, InActual, InPath, lIgnored, nullptr)
+                                            && MatchesAt(InActual, lThen, InPath, lIgnored, nullptr);
+                if (bSame && !bEqual)
+                {
+                    OutWhy = lWhere() + " is " + ToJsonText(InActual) + ", expected the same as in '" + lName + "' ("
+                           + ToJsonText(lThen) + ")";
+                }
+                else if (!bSame && bEqual)
+                {
+                    OutWhy = lWhere() + " is " + ToJsonText(InActual) + ", as in '" + lName + "': expected it to differ";
+                }
+                return bSame == bEqual;
+            }
 
             // A bound instead of a value: {"$atLeast": 3}, {"$atMost": 8}, or both.
             const auto lAtLeast = InExpected.is_object() ? InExpected.find("$atLeast") : InExpected.end();
@@ -67,7 +112,7 @@ namespace Opaax
                         OutWhy = lPath + " is missing";
                         return false;
                     }
-                    if (!MatchesAt(lValue, *lIt, lPath, OutWhy))
+                    if (!MatchesAt(lValue, *lIt, lPath, OutWhy, InEarlier))
                     {
                         return false;
                     }
@@ -87,7 +132,7 @@ namespace Opaax
                 {
                     const OpaaxString lPath = InPath.IsEmpty() ? OpaaxString::FromUInt(lIndex)
                                                                : InPath + "/" + OpaaxString::FromUInt(lIndex);
-                    if (!MatchesAt(InExpected[lIndex], InActual[lIndex], lPath, OutWhy))
+                    if (!MatchesAt(InExpected[lIndex], InActual[lIndex], lPath, OutWhy, InEarlier))
                     {
                         return false;
                     }
@@ -110,7 +155,8 @@ namespace Opaax
          * passes with what the command refused ({"refused": why}), and fails when it did not refuse.
          * One with an "expect" fails when the answer does not hold what it names.
          */
-        AutomationResponse MakeResponse(const AutomationRequest& InRequest, AutomationResult InResult)
+        AutomationResponse MakeResponse(const AutomationRequest& InRequest, AutomationResult InResult,
+                                        const AutomationAnswerLookup& InEarlier)
         {
             AutomationResponse lResponse;
             lResponse.Id      = InRequest.Id;
@@ -131,7 +177,8 @@ namespace Opaax
             }
 
             OpaaxString lWhy;
-            if (InResult.bOk && !InRequest.Expect.is_null() && !MatchesExpected(InRequest.Expect, InResult.Value, lWhy))
+            if (InResult.bOk && !InRequest.Expect.is_null()
+                && !MatchesExpected(InRequest.Expect, InResult.Value, lWhy, InEarlier))
             {
                 lResponse.Error = "the answer differs: " + lWhy;
                 return lResponse;
@@ -206,7 +253,7 @@ namespace Opaax
             const TFunction<AutomationResult()> lAnswer = Move(m_DeferredAnswer);
             m_DeferredAnswer  = nullptr;
             m_DeferredOnClose = nullptr;
-            Respond(MakeResponse(m_Deferred, Guarded(lAnswer)));
+            Respond(MakeResponse(m_Deferred, Guarded(lAnswer), Earlier()));
         }
 
         if (m_AfterWait)
@@ -234,7 +281,7 @@ namespace Opaax
             const TFunction<AutomationResult()> lOnClose = Move(m_DeferredOnClose);
             m_DeferredAnswer  = nullptr;
             m_DeferredOnClose = nullptr;
-            Respond(lOnClose ? MakeResponse(m_Deferred, Guarded(lOnClose))
+            Respond(lOnClose ? MakeResponse(m_Deferred, Guarded(lOnClose), Earlier())
                              : MakeFailure(m_Deferred, "the app closed before this request finished"));
         }
 
@@ -281,7 +328,7 @@ namespace Opaax
             }
             else
             {
-                Respond(MakeResponse(InRequest, Move(lResult)));
+                Respond(MakeResponse(InRequest, Move(lResult), Earlier()));
             }
 
             // Nothing to wait for: what comes after the wait happens now.
@@ -292,12 +339,25 @@ namespace Opaax
             return;
         }
 
-        Respond(MakeResponse(InRequest, Move(lResult)));
+        Respond(MakeResponse(InRequest, Move(lResult), Earlier()));
+    }
+
+    AutomationAnswerLookup AutomationRunner::Earlier() const
+    {
+        return [this](const OpaaxString& InId) -> const nlohmann::json*
+        {
+            const auto lIt = m_Answers.find(InId);
+            return lIt != m_Answers.end() ? &lIt->second : nullptr;
+        };
     }
 
     void AutomationRunner::Respond(AutomationResponse InResponse)
     {
         ++m_Answered;
+        if (InResponse.bOk && !InResponse.Id.IsEmpty())
+        {
+            m_Answers[InResponse.Id] = InResponse.Result;
+        }
         if (!InResponse.bOk)
         {
             ++m_Failed;
@@ -322,7 +382,13 @@ namespace Opaax
     // =========================================================================
     bool MatchesExpected(const nlohmann::json& InExpected, const nlohmann::json& InActual, OpaaxString& OutWhy)
     {
-        return MatchesAt(InExpected, InActual, OpaaxString(), OutWhy);
+        return MatchesAt(InExpected, InActual, OpaaxString(), OutWhy, nullptr);
+    }
+
+    bool MatchesExpected(const nlohmann::json& InExpected, const nlohmann::json& InActual, OpaaxString& OutWhy,
+                         const AutomationAnswerLookup& InEarlier)
+    {
+        return MatchesAt(InExpected, InActual, OpaaxString(), OutWhy, &InEarlier);
     }
 
     // =========================================================================
