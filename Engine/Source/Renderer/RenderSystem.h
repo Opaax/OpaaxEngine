@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Renderer/Post/SceneTargetPlan.h"
 #include "RHI/ICommandBuffer.h"   // ELoadOp
+#include "RHI/Shader.h"
 #include "RHI/TextureSampling.h"
 
 namespace Opaax
@@ -113,6 +114,13 @@ namespace Opaax
          * @return Null if there is no device
          */
         TUniquePtr<ITexture2D> CreateTexture(const TextureDesc& InDesc, const void* InPixels);
+
+        /**
+         * Compiles a game's shader (see IRHIDevice::CreateShader): one that fails is logged and invalid.
+         * Release it before the device is destroyed.
+         * @return Null if there is no device
+         */
+        TUniquePtr<IShader> CreateShader(const ShaderDesc& InDesc);
 
         /** Writable textures alive now; 0 without a device. */
         Uint32 GetWritableTextureCount() const;

@@ -30,6 +30,7 @@
 #include "UI/UILayer.h"
 
 #include "Renderer/ShaderSource.h"
+#include "Engine/FrameClock.h"
 #include "Core/IO/FileIO.h"
 
 #include "World/WorldManager.h"
@@ -167,6 +168,9 @@ namespace Opaax
 
         m_RenderSystem->SetTextureFilter(lRenderCfg.TextureFilter);
 
+        m_MaterialShaders = MakeUnique<MaterialShaderCache>(
+            [this](const ShaderDesc& InDesc) { return m_RenderSystem->CreateShader(InDesc); });
+
         // Window resize comes through the event bus.
         OpaaxApplication::GetAppService<IEngine>().GetEngineEventBus().GetEventBus()
             .Subscribe<WindowResize>(this, &RendererManager::HandleWindowResize);
@@ -219,6 +223,15 @@ namespace Opaax
         m_UIAssetCache.clear();
         m_MissingTexture.reset();
 
+        // The materials' shaders, after their pipelines.
+        if (m_MaterialShaders != nullptr && m_RenderSystem != nullptr)
+        {
+            Renderer2D& lRenderer = m_RenderSystem->GetRenderer2D();
+            m_MaterialShaders->Clear([&lRenderer](const IShader& InShader) { lRenderer.ForgetShader(InShader); });
+        }
+        m_MaterialShaders.reset();
+        m_ShaderAssetCache.clear();
+
         m_RenderSystem.reset(); // waits idle, then tears down
         m_Surface = nullptr;
     }
@@ -232,6 +245,9 @@ namespace Opaax
     {
         // Fraction of a fixed step past the last one, for display interpolation only.
         m_FrameAlpha = static_cast<float>(InAlpha);
+
+        // Each frame's own length, unscaled: the app's time runs while a world is paused.
+        m_AppTime += OpaaxApplication::GetAppService<IEngine>().GetFrameClock().GetDelta();
 
         // After the steps and the camera: what is queued now sits on the poses drawn.
         for (const BeforeDrawHook& lHook : m_BeforeDraw)
@@ -545,12 +561,14 @@ namespace Opaax
         return lLights;
     }
 
-    QuadLighting RendererManager::ResolveLighting(const TAssetRef<Material2D>& InMaterial)
+    RendererManager::ResolvedMaterial RendererManager::ResolveMaterial(const TAssetRef<Material2D>& InMaterial,
+                                                                       World& InWorld)
     {
-        QuadLighting lLighting;
+        ResolvedMaterial lResolved;
+        QuadLighting&    lLighting = lResolved.Lighting;
         if (InMaterial.IsEmpty())
         {
-            return lLighting;
+            return lResolved;
         }
 
         const OpaaxStringID lKey(InMaterial.Path);
@@ -566,7 +584,7 @@ namespace Opaax
         const Material2D* lMaterial = lIt->second.Get();
         if (lMaterial == nullptr)
         {
-            return lLighting;
+            return lResolved;
         }
 
         lLighting.bLit      = lMaterial->bLit;
@@ -576,7 +594,50 @@ namespace Opaax
         lLighting.Emissive = Vector3F{ ScreenToLinear(lMaterial->EmissiveColor.r) * lStrength,
                                        ScreenToLinear(lMaterial->EmissiveColor.g) * lStrength,
                                        ScreenToLinear(lMaterial->EmissiveColor.b) * lStrength };
-        return lLighting;
+
+        // Its own shader: the values are read every frame, so a saved edit shows on the next one.
+        if (IShader* lShader = ResolveMaterialShader(lMaterial->Shader))
+        {
+            QuadMaterial& lShading = lResolved.Shading;
+            lShading.Shader   = lShader;
+            lShading.Block    = MakeMaterialBlock(*lMaterial, WorldTimeFor(InWorld), m_AppTime);
+            lShading.Texture0 = ResolveTexture(lMaterial->Texture0);
+            lShading.Texture1 = ResolveTexture(lMaterial->Texture1);
+        }
+        return lResolved;
+    }
+
+    IShader* RendererManager::ResolveMaterialShader(const TAssetRef<SpriteShader>& InShader)
+    {
+        if (InShader.IsEmpty() || m_MaterialShaders == nullptr)
+        {
+            return nullptr;
+        }
+
+        const OpaaxStringID lKey(InShader.Path);
+        auto lIt = m_ShaderAssetCache.find(lKey.GetId());
+        if (lIt == m_ShaderAssetCache.end())
+        {
+            // Kept even when it fails to load: the cache below logs it once.
+            lIt = m_ShaderAssetCache.emplace(lKey.GetId(),
+                                             LoadAsset(OpaaxApplication::GetAppService<IEngine>().GetResources(),
+                                                       OpaaxApplication::GetAppService<IPaths>(), InShader)).first;
+        }
+
+        return m_MaterialShaders->Resolve(InShader.Path, lIt->second.Get());
+    }
+
+    double RendererManager::WorldTimeFor(const World& InWorld) const
+    {
+        // A drawn world sits between its last two steps (PoseFor): its time does too. Paused, the
+        // alpha holds, so the time stands still.
+        const double lStepped = InWorld.GetSteppedTime();
+        if (!m_bInterpolate || InWorld.GetStepCount() == 0)
+        {
+            return lStepped;
+        }
+
+        return lStepped - (1.0 - static_cast<double>(m_FrameAlpha)) * InWorld.GetLastStepDelta();
     }
 
     RendererManager::LightingMaps RendererManager::RenderLightingMaps(World& InWorld, Renderer2D& InRenderer,
@@ -851,13 +912,14 @@ namespace Opaax
 
                 const DisplayPose lPose = PoseFor(InWorld, InEntity, InXf);
 
-                QuadLighting lLighting    = ResolveLighting(InSprite.Material);
-                lLighting.bReceiveShadows = ReceivesShadows(InWorld, InEntity);
+                ResolvedMaterial lMaterial         = ResolveMaterial(InSprite.Material, InWorld);
+                lMaterial.Lighting.bReceiveShadows = ReceivesShadows(InWorld, InEntity);
 
                 InRenderer.DrawSprite(lPose.Position, InSprite.Size * lPose.Scale, *lTexture, InSprite.Color,
                                       Maths::DegreesToRadians(lPose.RotationDeg),
                                       InSprite.Layer, InSprite.OrderInLayer,
-                                      lUV.UVMin, lUV.UVMax, QuadMask{}, lLighting, MakeUVBounds(lUV.UVMin, lUV.UVMax));
+                                      lUV.UVMin, lUV.UVMax, QuadMask{}, lMaterial.Lighting,
+                                      MakeUVBounds(lUV.UVMin, lUV.UVMax), lMaterial.Shading);
             });
     }
 
@@ -1316,7 +1378,21 @@ namespace Opaax
 
     RendererInfo RendererManager::GetInfo() const
     {
-        return m_RenderSystem != nullptr ? m_RenderSystem->GetInfo() : RendererInfo{};
+        if (m_RenderSystem == nullptr)
+        {
+            return RendererInfo{};
+        }
+
+        RendererInfo lInfo = m_RenderSystem->GetInfo();
+        if (m_MaterialShaders != nullptr)
+        {
+            for (const MaterialShaderCache::Entry& lEntry : m_MaterialShaders->GetEntries())
+            {
+                lInfo.MaterialShaders.emplace_back(RendererInfo::MaterialShader{ lEntry.Path, lEntry.bValid });
+            }
+        }
+        lInfo.MaterialPipelines = m_RenderSystem->GetRenderer2D().GetMaterialPipelineCount();
+        return lInfo;
     }
 
     // =========================================================================

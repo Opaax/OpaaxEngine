@@ -214,6 +214,7 @@ set(OPAAX_TEST_SOURCES
     Renderer/FontTests.cpp
     Renderer/Lighting2DTests.cpp
     Renderer/Material2DTests.cpp
+    Renderer/MaterialShaderCacheTests.cpp
     Renderer/RenderTargetCacheTests.cpp
     Renderer/RenderTargetTests.cpp
     Renderer/SceneTargetPlanTests.cpp

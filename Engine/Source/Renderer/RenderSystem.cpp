@@ -88,6 +88,17 @@ namespace Opaax
         return m_Device->CreateTexture(InDesc, InPixels);
     }
 
+    TUniquePtr<IShader> RenderSystem::CreateShader(const ShaderDesc& InDesc)
+    {
+        if (!IsValidDevice())
+        {
+            OPAAX_LOG(LogRenderSystem, Error, "RenderSystem::CreateShader — no device; no shader created.");
+            return nullptr;
+        }
+
+        return m_Device->CreateShader(InDesc);
+    }
+
     Uint32 RenderSystem::GetWritableTextureCount() const
     {
         return IsValidDevice() ? m_Device->GetWritableTextureCount() : 0u;
